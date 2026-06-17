@@ -75,7 +75,7 @@ import "rider-app" SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBecknConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
-import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
+import "rider-app" Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 import "rider-app" Tools.HTTPManager (prepareCRISHttpManager)
 
 instance HasSchemaName Beam.MerchantOperatingCityT where

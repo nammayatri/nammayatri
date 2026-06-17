@@ -39,6 +39,7 @@ import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Shutdown
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import Lib.SessionizerMetrics.Prometheus.Internal (EventCounterMetric, registerEventRequestCounterMetric)
 import Lib.SessionizerMetrics.Types.Event (EventStreamMap)
 import Passetto.Client (PassettoContext)
@@ -78,7 +79,7 @@ instance FromDhall ConsumerConfig where
         Nothing -> noAutoCommit
         Just v -> autoCommit (Millis $ fromIntegral v)
 
-data ConsumerType = LOCATION_UPDATE | BROADCAST_MESSAGE | FLEET_COMMUNICATION_DISPATCH | RIDE_EVENTS_CONSUMER deriving (Generic, FromDhall, Read, Eq)
+data ConsumerType = LOCATION_UPDATE | BROADCAST_MESSAGE | FLEET_COMMUNICATION_DISPATCH | RIDE_EVENTS_CONSUMER | FINANCE_LEDGER_ACCOUNT_CONSUMER deriving (Generic, FromDhall, Read, Eq)
 
 type ConsumerRecordD = ConsumerRecord (Maybe ByteString) (Maybe ByteString)
 
@@ -87,6 +88,7 @@ instance Show ConsumerType where
   show LOCATION_UPDATE = "location-update"
   show FLEET_COMMUNICATION_DISPATCH = "fleet-communication-dispatch"
   show RIDE_EVENTS_CONSUMER = "ride-events-consumer"
+  show FINANCE_LEDGER_ACCOUNT_CONSUMER = "finance-ledger-account-consumer"
 
 -- | Which transport a given Dhall deployment uses. Each consumer-type Dhall
 -- file picks one; switching is a config change, not a code change.
@@ -137,7 +139,8 @@ data AppCfg = AppCfg
     maxShards :: Int,
     jobInfoMap :: M.Map Text Bool,
     blackListedJobs :: [Text],
-    shortDurationRetryCfg :: RetryCfg
+    shortDurationRetryCfg :: RetryCfg,
+    financeEventsPublisherCfg :: Maybe FinanceEventsPublisherCfg -- We need this config here also in case Ride events consumers call finance events, e.g. to credit referral wallet
   }
   deriving (Generic, FromDhall)
 
@@ -199,7 +202,8 @@ data AppEnv = AppEnv
     jobInfoMap :: M.Map Text Bool,
     blackListedJobs :: [Text],
     shortDurationRetryCfg :: RetryCfg,
-    cloudType :: Maybe CloudType
+    cloudType :: Maybe CloudType,
+    financeEventsPublisherCfg :: Maybe FinanceEventsPublisherCfg
   }
   deriving (Generic)
 

@@ -44,7 +44,9 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg, publishLedgerAccountUpdate)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerExtra
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Finance.EInvoice
 import SharedLogic.Finance.Wallet (computeTdsRateReason)
@@ -320,7 +322,10 @@ getOrCreateSellerRevenueAccount currency merchantId merchantOperatingCityId = do
   getOrCreateAccount input
 
 createPrepaidHold ::
-  (BeamFlow m r) =>
+  ( BeamFlow m r,
+    Redis.HedisFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
+  ) =>
   CounterpartyType ->
   Text -> -- Owner ID
   HighPrecMoney ->
@@ -394,7 +399,11 @@ voidPrepaidHold counterpartyType ownerId referenceId reason mbVehicleCategory = 
       forM_ pendingEntries $ \entry -> voidEntry entry.id reason
 
 settlePrepaidHoldByReference ::
-  (BeamFlow m r) =>
+  ( BeamFlow m r,
+    Redis.HedisFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg),
+    MonadIO m
+  ) =>
   CounterpartyType ->
   Text ->
   Text ->
@@ -413,20 +422,30 @@ settlePrepaidHoldByReference counterpartyType ownerId referenceId finalAmount mb
               entries
       foldM
         ( \_ entry -> do
-            let settleAmount = finalAmount
-            -- Read starting balances before applying deltas
-            fromStartBal <- fromMaybe 0 <$> getBalance entry.fromAccountId
-            toStartBal <- fromMaybe 0 <$> getBalance entry.toAccountId
-            resFrom <- updateBalanceByDelta entry.fromAccountId (-1 * settleAmount)
-            case resFrom of
-              Left err -> pure $ Left err
-              Right fromEndBal -> do
-                resTo <- updateBalanceByDelta entry.toAccountId settleAmount
-                case resTo of
-                  Left err -> pure $ Left err
-                  Right toEndBal -> do
-                    settleEntryWithBalancesAndAmount entry.id settleAmount fromStartBal fromEndBal toStartBal toEndBal
-                    pure $ Right ()
+            -- If finalAmount differs from the original hold amount, update the entry
+            -- before publishing. The consumer's settleEntry reads entry.amount to
+            -- compute balance deltas (Liability from → balance decreases by amount),
+            -- so this must happen before publishLedgerAccountUpdate.
+            when (entry.amount /= finalAmount) $
+              QLedgerExtra.updateAmount finalAmount entry.id
+            logInfo $
+              "Publishing prepaid hold entry for async settlement: entryId="
+                <> entry.id.getId
+                <> " ownerId="
+                <> ownerId
+                <> " referenceId="
+                <> referenceId
+                <> " holdAmount="
+                <> show entry.amount
+                <> " finalAmount="
+                <> show finalAmount
+            publishLedgerAccountUpdate entry.id
+            logInfo $
+              "Published prepaid hold entry for async settlement: entryId="
+                <> entry.id.getId
+                <> " referenceId="
+                <> referenceId
+            pure $ Right ()
         )
         (Right ())
         pendingEntries
@@ -436,7 +455,8 @@ creditPrepaidBalance ::
     EncFlow m r,
     Redis.HedisFlow m r,
     Metrics.CoreMetrics m,
-    HasRequestId r
+    HasRequestId r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   CounterpartyType ->
   Text -> -- Owner ID
@@ -714,7 +734,10 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
     (_, _, _, _, _, _, Left err) -> pure $ Left err
 
 debitPrepaidBalance ::
-  (BeamFlow m r) =>
+  ( BeamFlow m r,
+    Redis.HedisFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
+  ) =>
   CounterpartyType ->
   Text -> -- Owner ID
   HighPrecMoney -> -- Final ride fare (base fare for settlement)
@@ -769,7 +792,8 @@ handleSubscriptionExpiry ::
   ( BeamFlow m r,
     Redis.HedisFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   DSP.SubscriptionPurchase ->
   m ()

@@ -15,6 +15,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id (cast)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
@@ -43,7 +44,8 @@ notificationAndOrderStatusUpdate ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasField "blackListedJobs" r [Text],
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Job 'OrderAndNotificationStatusUpdate ->
   m ExecutionResult

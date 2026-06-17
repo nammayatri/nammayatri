@@ -21,6 +21,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.PTCircuitBreaker as CB
@@ -50,7 +51,8 @@ confirm ::
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text],
     HasField "cloudType" r (Maybe CloudType),
-    HasMasterCloudForwarder r
+    HasMasterCloudForwarder r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Merchant ->
   MerchantOperatingCity ->
@@ -128,7 +130,8 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
         HasField "isMetroTestTransaction" r Bool,
         HasField "blackListedJobs" r [Text],
         HasField "cloudType" r (Maybe CloudType),
-        HasMasterCloudForwarder r
+        HasMasterCloudForwarder r,
+        HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
       ) =>
       DOrder ->
       m ()

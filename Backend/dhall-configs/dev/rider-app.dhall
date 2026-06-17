@@ -534,4 +534,5 @@ in  { esqDBCfg
       , masterSecret = Some "123"
       }
     , bapHostRedirectMap = [] : List { mapKey : Text, mapValue : Optional Text }
+    , financeEventsPublisherCfg = Some { streamPrefix = "", shardCount = +8 }
     }

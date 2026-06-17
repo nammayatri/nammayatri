@@ -23,7 +23,6 @@ module Lib.Finance.Ledger.Service
     -- * Status management
     updateEntryStatus,
     settleEntry,
-    settleEntryWithBalancesAndAmount,
     voidEntry,
     markEntriesAsPaidOut,
 
@@ -60,6 +59,8 @@ where
 import qualified Data.Aeson as Aeson
 import Kernel.Beam.Functions (findAllWithKV, updateWithKV)
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Storage.Hedis.Config (HedisFlow)
 import Kernel.Types.Common ()
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
@@ -68,6 +69,7 @@ import Lib.Finance.Domain.Types.Account (Account)
 import qualified Lib.Finance.Domain.Types.Account as Account
 import Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Error.Types
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg, publishLedgerAccountUpdate)
 import Lib.Finance.Ledger.Interface
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Beam.LedgerEntry as BeamLE
@@ -122,10 +124,14 @@ createEntry input = do
   QLedger.create entry
   pure $ Right entry
 
--- | Create a ledger entry AND update account balances atomically
+-- | Create a ledger entry as PENDING and publish to the finance events stream.
 -- LAW 1: Credits = Debits (fromAccount debited, toAccount credited)
 createEntryWithBalanceUpdate ::
-  (BeamFlow.BeamFlow m r) =>
+  ( BeamFlow.BeamFlow m r,
+    HedisFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg),
+    MonadIO m
+  ) =>
   LedgerEntryInput ->
   m (Either FinanceError LedgerEntry)
 createEntryWithBalanceUpdate input = do
@@ -135,31 +141,19 @@ createEntryWithBalanceUpdate input = do
   case (mbFromAccount, mbToAccount) of
     (Nothing, _) -> pure $ Left $ AccountError AccountNotFound (show input.fromAccountId)
     (_, Nothing) -> pure $ Left $ AccountError AccountNotFound (show input.toAccountId)
-    (Just fromAccount, Just toAccount) -> do
+    (Just _, Just _) -> do
       now <- getCurrentTime
       entryId <- generateGUID
-      let amount = input.amount
-          fromStartBal = fromAccount.balance
-          toStartBal = toAccount.balance
-          isAssetOrExpenseAccount acc = acc.accountType == Account.Asset || acc.accountType == Account.Expense
-          fromEndBal =
-            if isAssetOrExpenseAccount fromAccount
-              then fromStartBal + amount
-              else fromStartBal - amount
-          toEndBal =
-            if isAssetOrExpenseAccount toAccount
-              then toStartBal - amount
-              else toStartBal + amount
       let entry =
             LedgerEntry
               { id = Id entryId,
                 fromAccountId = input.fromAccountId,
                 toAccountId = input.toAccountId,
                 concernedIndividualId = input.concernedIndividualId,
-                amount = amount,
+                amount = input.amount,
                 currency = input.currency,
                 entryType = input.entryType,
-                status = input.status,
+                status = PENDING,
                 referenceType = input.referenceType,
                 referenceId = input.referenceId,
                 reversalOf = Nothing,
@@ -167,10 +161,10 @@ createEntryWithBalanceUpdate input = do
                 settledAt = Nothing,
                 metadata = input.metadata,
                 reconciliationStatus = Nothing,
-                fromStartingBalance = Just fromStartBal,
-                fromEndingBalance = Just fromEndBal,
-                toStartingBalance = Just toStartBal,
-                toEndingBalance = Just toEndBal,
+                fromStartingBalance = Nothing,
+                fromEndingBalance = Nothing,
+                toStartingBalance = Nothing,
+                toEndingBalance = Nothing,
                 settlementStatus = input.settlementStatus,
                 settlementId = Nothing,
                 settlementTimestamp = Nothing,
@@ -181,14 +175,22 @@ createEntryWithBalanceUpdate input = do
                 updatedAt = now
               }
       QLedger.create entry
-      _ <- QAccount.updateBalance fromEndBal input.fromAccountId
-      _ <- QAccount.updateBalance toEndBal input.toAccountId
+      logInfo $ "Publishing ledger entry for async settlement: entryId=" <> entryId <> " refType=" <> input.referenceType <> " refId=" <> input.referenceId
+      publishLedgerAccountUpdate (Id entryId)
+      logInfo $ "Published ledger entry for async settlement: entryId=" <> entryId
       pure $ Right entry
 
 -- | Create a reversal entry for an existing entry
 -- LAW 2: History is immutable - we create a new entry, not modify the old one
+-- The reversal entry is created as PENDING with swapped from/to accounts.
+-- settleEntry in the consumer applies the correct inverse balance delta
+-- automatically because the account roles are swapped.
 createReversal ::
-  (BeamFlow.BeamFlow m r) =>
+  ( BeamFlow.BeamFlow m r,
+    HedisFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg),
+    MonadIO m
+  ) =>
   Id LedgerEntry -> -- Entry to reverse
   Text -> -- Reason for reversal
   m (Either FinanceError LedgerEntry)
@@ -204,18 +206,18 @@ createReversal originalId reason = do
       let reversal =
             LedgerEntry
               { id = Id reversalId,
-                fromAccountId = original.toAccountId, -- Swap
+                fromAccountId = original.toAccountId, -- Swap from/to so settleEntry computes the inverse delta
                 toAccountId = original.fromAccountId,
                 concernedIndividualId = original.concernedIndividualId,
                 amount = original.amount,
                 currency = original.currency,
                 entryType = Reversal,
-                status = SETTLED, -- Reversals are immediately settled
+                status = PENDING, -- Settled asynchronously via FINANCE_LEDGER_ACCOUNT_CONSUMER
                 referenceType = original.referenceType,
                 referenceId = original.referenceId,
                 reversalOf = Just originalId,
                 voidReason = Nothing,
-                settledAt = Just now,
+                settledAt = Nothing,
                 metadata = Just $ Aeson.String reason,
                 reconciliationStatus = original.reconciliationStatus,
                 fromStartingBalance = Nothing,
@@ -233,16 +235,12 @@ createReversal originalId reason = do
               }
 
       QLedger.create reversal
-
-      -- Update account balances: undo the original's type-aware delta.
-      -- createEntryWithBalanceUpdate applies from +amount / to -amount for Asset|Expense
-      -- accounts and the opposite for the rest, so the reversal must invert exactly that
-      -- per account type (a flat from +/to - doubles Asset|Expense balances).
-      mbFrom <- QAccount.findById original.fromAccountId
-      mbTo <- QAccount.findById original.toAccountId
-      let isAssetOrExpenseAccount acc = acc.accountType == Account.Asset || acc.accountType == Account.Expense
-      forM_ mbFrom $ \a -> QAccount.updateBalance (if isAssetOrExpenseAccount a then a.balance - original.amount else a.balance + original.amount) original.fromAccountId
-      forM_ mbTo $ \a -> QAccount.updateBalance (if isAssetOrExpenseAccount a then a.balance + original.amount else a.balance - original.amount) original.toAccountId
+      -- Balance update is handled by settleEntry in the consumer: swapped accounts
+      -- cause createEntryWithBalanceUpdate's Asset/Expense rule to invert exactly
+      -- the original entry's delta (a flat from+/to- would double Asset|Expense balances).
+      logInfo $ "Publishing reversal entry for async settlement: reversalId=" <> reversalId <> " originalId=" <> originalId.getId <> " refType=" <> original.referenceType
+      publishLedgerAccountUpdate (Id reversalId)
+      logInfo $ "Published reversal entry for async settlement: reversalId=" <> reversalId
 
       pure $ Right reversal
 
@@ -264,71 +262,72 @@ updateEntryStatus entryId newStatus = do
 -- entry transitions out of PENDING/DUE, using the same Asset/Expense rule as
 -- 'createEntryWithBalanceUpdate'. Writes the resulting balance snapshots onto
 -- the entry. If the entry is already SETTLED (or not found / VOIDED), no-op.
+--
+-- Acquires per-account Redis locks internally in canonical (lexicographic) order
+-- to prevent deadlocks when two entries touch the same pair of accounts
+-- concurrently. Uses double-checked locking: pre-lock fetch for early exit,
+-- re-fetch under lock for idempotency.
 settleEntry ::
-  (BeamFlow.BeamFlow m r) =>
+  ( BeamFlow.BeamFlow m r,
+    HedisFlow m r
+  ) =>
   Id LedgerEntry ->
   m ()
 settleEntry entryId = do
+  -- Pre-lock fetch: skip quickly if already settled or not found.
   mbEntry <- QLedger.findById entryId
-  forM_ mbEntry $ \entry ->
-    when (entry.status == PENDING || entry.status == DUE) $ do
-      mbFrom <- QAccount.findById entry.fromAccountId
-      mbTo <- QAccount.findById entry.toAccountId
-      case (mbFrom, mbTo) of
-        (Just fromAccount, Just toAccount) -> do
-          now <- getCurrentTime
-          let amount = entry.amount
-              isAssetOrExpenseAccount acc = acc.accountType == Account.Asset || acc.accountType == Account.Expense
-              fromStartBal = fromAccount.balance
-              toStartBal = toAccount.balance
-              fromEndBal =
-                if isAssetOrExpenseAccount fromAccount
-                  then fromStartBal + amount
-                  else fromStartBal - amount
-              toEndBal =
-                if isAssetOrExpenseAccount toAccount
-                  then toStartBal - amount
-                  else toStartBal + amount
-          _ <- QAccount.updateBalance fromEndBal entry.fromAccountId
-          _ <- QAccount.updateBalance toEndBal entry.toAccountId
-          let updatedEntry =
-                entry
-                  { status = SETTLED,
-                    settledAt = Just now,
-                    fromStartingBalance = Just fromStartBal,
-                    fromEndingBalance = Just fromEndBal,
-                    toStartingBalance = Just toStartBal,
-                    toEndingBalance = Just toEndBal
-                  }
-          QLedger.updateByPrimaryKey updatedEntry
-        _ -> pure ()
-
--- | Settle an entry, update its amount, AND write balance snapshots.
--- Use when the final settled amount differs from the original hold amount (e.g., fare recalculation).
-settleEntryWithBalancesAndAmount ::
-  (BeamFlow.BeamFlow m r) =>
-  Id LedgerEntry ->
-  HighPrecMoney -> -- settledAmount (the actual/final amount)
-  HighPrecMoney -> -- fromStartingBalance
-  HighPrecMoney -> -- fromEndingBalance
-  HighPrecMoney -> -- toStartingBalance
-  HighPrecMoney -> -- toEndingBalance
-  m ()
-settleEntryWithBalancesAndAmount entryId settledAmount fromStartBal fromEndBal toStartBal toEndBal = do
-  now <- getCurrentTime
-  mbEntry <- QLedger.findById entryId
-  forM_ mbEntry $ \entry -> do
-    let updatedEntry =
-          entry
-            { amount = settledAmount,
-              status = SETTLED,
-              settledAt = Just now,
-              fromStartingBalance = Just fromStartBal,
-              fromEndingBalance = Just fromEndBal,
-              toStartingBalance = Just toStartBal,
-              toEndingBalance = Just toEndBal
-            }
-    QLedger.updateByPrimaryKey updatedEntry
+  case mbEntry of
+    Nothing -> logWarning $ "settleEntry: ledger entry not found entryId=" <> entryId.getId
+    Just entry ->
+      when (entry.status == PENDING || entry.status == DUE) $ do
+        let fromAccId = entry.fromAccountId.getId
+            toAccId = entry.toAccountId.getId
+            -- Re-fetch under lock for idempotency (double-checked locking).
+            applySettle = do
+              mbEntry' <- QLedger.findById entryId
+              forM_ mbEntry' $ \entry' ->
+                when (entry'.status == PENDING || entry'.status == DUE) $ do
+                  mbFrom <- QAccount.findById entry'.fromAccountId
+                  mbTo <- QAccount.findById entry'.toAccountId
+                  case (mbFrom, mbTo) of
+                    (Just fromAccount, Just toAccount) -> do
+                      now <- getCurrentTime
+                      let amount = entry'.amount
+                          isAssetOrExpenseAccount acc = acc.accountType == Account.Asset || acc.accountType == Account.Expense
+                          fromStartBal = fromAccount.balance
+                          toStartBal = toAccount.balance
+                          fromEndBal =
+                            if isAssetOrExpenseAccount fromAccount
+                              then fromStartBal + amount
+                              else fromStartBal - amount
+                          toEndBal =
+                            if isAssetOrExpenseAccount toAccount
+                              then toStartBal - amount
+                              else toStartBal + amount
+                      _ <- QAccount.updateBalance fromEndBal entry'.fromAccountId
+                      _ <- QAccount.updateBalance toEndBal entry'.toAccountId
+                      let updatedEntry =
+                            entry'
+                              { status = SETTLED,
+                                settledAt = Just now,
+                                fromStartingBalance = Just fromStartBal,
+                                fromEndingBalance = Just fromEndBal,
+                                toStartingBalance = Just toStartBal,
+                                toEndingBalance = Just toEndBal
+                              }
+                      QLedger.updateByPrimaryKey updatedEntry
+                    _ -> pure ()
+        logInfo $ "settleEntry: acquiring locks entryId=" <> entryId.getId <> " fromAccount=" <> fromAccId <> " toAccount=" <> toAccId
+        if fromAccId == toAccId
+          then Hedis.withWaitAndLockRedis ("finance_account:" <> fromAccId) 30 lockPollDelayUs applySettle
+          else do
+            -- Canonical ordering (lexicographic) prevents deadlock when two
+            -- entries touch the same pair of accounts concurrently.
+            let (firstAccId, secondAccId) = if fromAccId < toAccId then (fromAccId, toAccId) else (toAccId, fromAccId)
+            Hedis.withWaitAndLockRedis ("finance_account:" <> firstAccId) 30 lockPollDelayUs $
+              Hedis.withWaitAndLockRedis ("finance_account:" <> secondAccId) 30 lockPollDelayUs applySettle
+  where
+    lockPollDelayUs = 10000 -- 10 ms between lock-acquisition retries
 
 -- | Void an entry (mark as VOIDED with reason)
 voidEntry ::

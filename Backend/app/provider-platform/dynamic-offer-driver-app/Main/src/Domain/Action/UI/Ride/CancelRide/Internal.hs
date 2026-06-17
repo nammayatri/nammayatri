@@ -69,7 +69,8 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), createReversal, getEntriesByReference, invoice, runFinance, settleEntry, transferPending, transferWithoutAttribution, transfer_, voidEntry)
+import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), createReversal, getEntriesByReference, invoice, runFinance, transferPending, transferWithoutAttribution, transfer_, voidEntry)
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg, publishLedgerAccountUpdate)
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -160,7 +161,8 @@ cancelRideImpl ::
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
-    ClickhouseFlow m r
+    ClickhouseFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Id DRide.Ride ->
   DRide.RideEndedBy ->
@@ -693,7 +695,8 @@ cancellationLedgerRefs =
 applyCancellationLedgerAction ::
   ( EsqDBFlow m r,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   SRB.Booking ->
   DRide.Ride ->
@@ -745,8 +748,12 @@ applyCancellationLedgerAction booking ride action transporterConfig = do
         else do
           entries <- concat <$> mapM (`getEntriesByReference` refId) cancellationLedgerRefs
           Kernel.Prelude.forM_ entries $ \e ->
-            when (e.status == PENDING || e.status == DUE) $ settleEntry e.id
-          logInfo $ "Settled cancellation ledger entries for bookingId: " <> refId
+            if e.status == PENDING || e.status == DUE
+              then do
+                logInfo $ "Publishing cancellation ledger entry for async settlement: entryId=" <> e.id.getId <> " bookingId=" <> refId
+                publishLedgerAccountUpdate e.id
+                logInfo $ "Published cancellation ledger entry for async settlement: entryId=" <> e.id.getId <> " bookingId=" <> refId
+              else logInfo $ "Cancellation ledger entry already settled: entryId=" <> e.id.getId <> " status=" <> show e.status <> " bookingId=" <> refId
       settleCustomerCancellationDues booking ride
       -- Effective cancellation charge that now stands; drives both fare params and service VAT.
       let (effectiveCancellationFee, effectiveCancellationTax) =

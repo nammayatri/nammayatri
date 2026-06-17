@@ -6,6 +6,8 @@ let genericCommon = ../generic/common.dhall
 
 let appCfg = ./dynamic-offer-driver-app.dhall
 
+let ltsPort = Natural/show (env:LOCATION_TRACKING_SERVICE_PORT ? 8081)
+
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = env:DB_PRIMARY_PORT ? 5434
@@ -48,6 +50,17 @@ let hedisClusterCfg =
       , connectReadOnly = True
       }
 
+let hedisSecondaryClusterCfg =
+      { connectHost = "localhost"
+      , connectPort = env:REDIS_SECONDARY_CLUSTER_PORT ? 30002
+      , connectAuth = None Text
+      , connectDatabase = +0
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = None Integer
+      , connectReadOnly = True
+      }
+
 let consumerProperties =
       { groupId = "broadcast-messages-compute"
       , brockers =
@@ -61,9 +74,6 @@ let kvConfigUpdateFrequency = +10
 let kafkaConsumerCfg =
       { topicNames = [ "broadcast-messages" ], consumerProperties }
 
-let availabilityTimeWindowOption =
-      { period = +7, periodType = common.periodType.Days }
-
 let cacheConfig = { configsExpTime = +86400 }
 
 let cacConfig =
@@ -76,9 +86,76 @@ let cacConfig =
       , enableCac = False
       }
 
+let kafkaProducerCfg =
+      { brokers =
+        [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
+      , kafkaCompression = common.kafkaCompression.LZ4
+      }
+
+let secondaryKafkaProducerCfg = Some kafkaProducerCfg
+
+let kafkaClickhouseCfg =
+      { username = sec.clickHouseUsername
+      , host = "localhost"
+      , port = env:CLICKHOUSE_PORT ? 8123
+      , password = sec.clickHousePassword
+      , database = "atlas_kafka"
+      , tls = False
+      , retryInterval = [ +0 ]
+      }
+
+let serviceClickhouseCfg =
+      { username = sec.clickHouseUsername
+      , host = "localhost"
+      , port = env:CLICKHOUSE_PORT ? 8123
+      , password = sec.clickHousePassword
+      , database = "atlas_app"
+      , tls = False
+      , retryInterval = [ +0 ]
+      }
+
+let dashboardClickhouseCfg = serviceClickhouseCfg
+
+let inMemConfig = { enableInMem = False, maxInMemSize = +100000000 }
+
+let TransportKind = < Kafka | RedisStream >
+
+let ltsCfg = { url = "http://localhost:${ltsPort}/", secondaryUrl = None Text }
+
+let sampleKafkaConfig
+    : genericCommon.kafkaConfig
+    = { topicName = "dynamic-offer-driver-events-updates"
+      , kafkaKey = "dynamic-offer-driver"
+      }
+
+let eventStreamMap =
+      [ { streamName = genericCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig =
+            genericCommon.streamConfig.KafkaStream sampleKafkaConfig
+        , eventTypes =
+          [ genericCommon.eventType.RideCreated
+          , genericCommon.eventType.RideEnded
+          ]
+        }
+      ]
+
+let schedulerSetName = "Scheduled_Jobs"
+
+let schedulerType = common.schedulerType.RedisBased
+
+let maxShards = +5
+
+let jobInfoMap = [] : List { mapKey : Text, mapValue : Bool }
+
+let blackListedJobs = [] : List Text
+
+let shortDurationRetryCfg = genericCommon.shortDurationRetryCfg
+
 in  { hedisCfg
     , ltsRedisCfg = hedisCfg
+    , secondaryLTSRedisCfg = Some hedisCfg
     , hedisClusterCfg
+    , hedisSecondaryClusterCfg
     , hedisNonCriticalCfg = hedisCfg
     , hedisNonCriticalClusterCfg = hedisClusterCfg
     , hedisMigrationStage = False
@@ -86,11 +163,8 @@ in  { hedisCfg
     , esqDBCfg
     , esqDBReplicaCfg
     , cacheConfig
-    , dumpEvery = +10
+    , transport = TransportKind.Kafka
     , kafkaConsumerCfg
-    , timeBetweenUpdates = +10
-    , availabilityTimeWindowOption
-    , granualityPeriodType = common.periodType.Hours
     , httpClientOptions = common.httpClientOptions
     , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9994)
     , encTools = appCfg.encTools
@@ -104,5 +178,37 @@ in  { hedisCfg
     , cacConfig
     , kvConfigUpdateFrequency
     , healthCheckAppCfg = None genericCommon.healthCheckAppCfgT
+    , kafkaProducerCfg
+    , secondaryKafkaProducerCfg
+    , kafkaClickhouseCfg
+    , serviceClickhouseCfg
+    , dashboardClickhouseCfg
+    , kafkaReadBatchSize = +10
+    , kafkaReadBatchDelay = +10
+    , consumerStartTime = None Integer
+    , consumerEndTime = None Integer
+    , inMemConfig
     , smsCfg = appCfg.smsCfg
+    , redisStreamCfg =
+        None
+          { streamPrefix : Text
+          , shardCount : Integer
+          , consumerGroupName : Text
+          , readBatchSize : Integer
+          , readBlockMilliseconds : Integer
+          , claimMinIdleMs : Integer
+          , claimIntervalSeconds : Integer
+          , maxDeliveries : Integer
+          , pauseFlagKey : Text
+          , pauseSleepSeconds : Integer
+          }
+    , ltsCfg
+    , eventStreamMap
+    , schedulerSetName
+    , schedulerType
+    , maxShards
+    , jobInfoMap
+    , blackListedJobs
+    , shortDurationRetryCfg
+    , financeEventsPublisherCfg = Some { streamPrefix = "", shardCount = +8 }
     }

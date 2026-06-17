@@ -12,7 +12,6 @@ module Lib.Finance.Account.Service
     getAccount,
     getOrCreateAccount,
     getBalance,
-    updateBalanceByDelta,
     findAccountsByCounterparty,
     findAccountByCounterpartyAndType,
 
@@ -104,25 +103,6 @@ getBalance ::
 getBalance accountId = do
   mbAccount <- QAccount.findById accountId
   pure $ mbAccount <&> (.balance)
-
--- | Update balance by a delta amount
--- Positive delta = credit, Negative delta = debit
-updateBalanceByDelta ::
-  (BeamFlow.BeamFlow m r) =>
-  Id Account ->
-  HighPrecMoney -> -- Delta (can be positive or negative)
-  m (Either FinanceError HighPrecMoney) -- New balance
-updateBalanceByDelta accountId delta = do
-  mbAccount <- QAccount.findById accountId
-  case mbAccount of
-    Nothing -> pure $ Left $ AccountError AccountNotFound (show accountId)
-    Just account -> do
-      let newBalance = account.balance + delta
-      -- Check for negative balance on liability accounts
-      when (account.accountType == Liability && newBalance < 0) $
-        pure () -- Could enforce business rules here
-      QAccount.updateBalance newBalance accountId
-      pure $ Right newBalance
 
 -- | Find the pooled (no sub-ledger) account for a counterparty by type.
 findAccountsByCounterparty ::

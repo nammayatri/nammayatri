@@ -84,6 +84,7 @@ library
     , exceptions
     , external
     , extra
+    , finance-kernel
     , generic-lens
     , haskell-cac
     , hspec

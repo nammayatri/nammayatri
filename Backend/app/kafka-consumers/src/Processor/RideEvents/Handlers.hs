@@ -56,6 +56,7 @@ import Kernel.Utils.Time (secondsToNominalDiffTime)
 import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
 import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import qualified Lib.LocationUpdates.Internal as LU
 import Lib.Scheduler.Environment (JobCreator)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
@@ -409,7 +410,9 @@ handleReferral ::
     CoreMetrics.CoreMetrics m,
     CHConfig.ClickhouseFlow m r,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Redis.HedisFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   RideEndedEvent ->
   m ()

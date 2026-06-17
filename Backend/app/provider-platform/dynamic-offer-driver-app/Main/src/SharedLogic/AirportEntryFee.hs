@@ -35,6 +35,7 @@ import Lib.Finance
     runFinance,
     transfer,
   )
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified SharedLogic.FareCalculator as FareCalculator
 import qualified SharedLogic.Finance.Wallet as Wallet
@@ -73,7 +74,7 @@ checkAirportEntryFeeBalanceBeforeStartRide enabled driverId booking =
 -- | At EndRide, for airport inner-zone: two transfers via FinanceM — GST to GovtIndirect, net to ParkingFeeRecipient (one per city).
 --   Allows negative balance; does nothing if feature off or required fee 0.
 deductAirportEntryFeeAtEndRide ::
-  (BeamFlow m r, CacheFlow m r, Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m) =>
+  (BeamFlow m r, CacheFlow m r, Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m, HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)) =>
   DRide.Ride ->
   SRB.Booking ->
   m ()

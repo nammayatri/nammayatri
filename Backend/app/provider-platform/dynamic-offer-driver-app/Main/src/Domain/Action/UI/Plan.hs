@@ -53,6 +53,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -367,7 +368,8 @@ class Subscription a where
       EsqDBFlow m r,
       Redis.HedisFlow m r,
       HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-      HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+      HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+      HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
     ) =>
     a ->
     Id SP.Person ->
@@ -457,7 +459,8 @@ getSubcriptionStatusWithPlanPrepaid ::
     EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Id SP.Person ->
   m (Maybe DI.DriverAutoPayStatus, Maybe DriverPlan)

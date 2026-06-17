@@ -48,6 +48,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import Lib.Scheduler (SchedulerType)
 import Lib.Scheduler.Environment (SchedulerConfig (..))
 import Lib.SessionizerMetrics.Prometheus.Internal
@@ -140,7 +141,8 @@ data HandlerEnv = HandlerEnv
     blackListedJobs :: [Text],
     cloudType :: Maybe CloudType,
     sftpConfig :: SFTPConfig,
-    masterCloudProxyConfig :: MCF.MasterCloudProxyConfig
+    masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
+    financeEventsPublisherCfg :: Maybe FinanceEventsPublisherCfg
   }
   deriving (Generic)
 

@@ -145,12 +145,14 @@ import qualified Domain.Types.TransporterConfig as DTC
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Stripe.Types as Stripe
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance
 import qualified Lib.Finance.Domain.Types.LedgerEntry
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -569,7 +571,10 @@ financeCtxFromRide booking ride mbPanCard isOnline = do
 -- Wallet entry delta (for topup/payout)
 
 createWalletEntryDelta ::
-  (BeamFlow m r) =>
+  ( BeamFlow m r,
+    Redis.HedisFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
+  ) =>
   CounterpartyType ->
   Text -> -- Owner ID
   HighPrecMoney -> -- Delta (positive credit, negative debit)

@@ -128,6 +128,7 @@ library:
           - -j4
   dependencies:
     - dynamic-offer-driver-app
+    - finance-kernel
     - sessionizer-metrics
     - mobility-core
     - beckn-spec

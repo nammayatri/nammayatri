@@ -78,6 +78,7 @@ import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -835,6 +836,7 @@ createPaymentOrder ::
     ServiceFlow m r,
     FinanceBeamFlow.BeamFlow m r,
     HasField "isMetroTestTransaction" r Bool,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg),
     HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   [FTBooking.FRFSTicketBooking] ->
