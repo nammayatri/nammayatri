@@ -2799,6 +2799,8 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
 
       SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
+      when (merchant.overwriteAssociation == Just True) $
+        QRCAssociation.endAllRCAssociationsForDriver person.id
 
       void $ DRBReg.verify authId True fleetOwnerId (mbOperator <&> (.id)) transporterConfig Common.AuthVerifyReq {otp = req.otp, deviceToken = deviceToken}
 
@@ -4467,6 +4469,12 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
   (pnType, messageBuilder) <- case req.approve of
     Just True -> do
       QFDV.approveFleetDriverAssociation driverId (Id fleetOwnerId) req.reason
+      -- Approving a driver-initiated request is the moment the DCO actually joins the fleet, so
+      -- they give up their own vehicles: end all active driver-RC associations (no
+      -- associatedTill=2099 row should remain). Gated on overwriteAssociation, matching the
+      -- consent/OTP fleet-join flows.
+      when (merchant.overwriteAssociation == Just True) $
+        QRCAssociation.endAllRCAssociationsForDriver driverId
       when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $
         QDBA.deleteById driverId
 
@@ -5106,32 +5114,24 @@ postDriverFleetChangeDriver merchantShortId opCity requestorId driverId mbFleetO
   (mbEntityRole, mbEntityId) <- validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let personId = cast @Common.Driver @DP.Person driverId
   fleetOwnerId <- fromMaybeM (InvalidRequest "fleetOwnerId required") mbEntityId
-  fleetAssoc <- FDV.findByDriverIdAndFleetOwnerId personId fleetOwnerId True >>= fromMaybeM (InvalidRequest "Driver is not active in this fleet")
-  -- Resolve + validate the new operator BEFORE breaking any association, so an invalid
-  -- operator code / missing fleet operator can't leave the driver stranded (no fleet,
-  -- no operator, vehicles detached). Mirrors the operator/fleet-operator change flows.
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  void $ FDV.findByDriverIdAndFleetOwnerId personId fleetOwnerId True >>= fromMaybeM (InvalidRequest "Driver is not active in this fleet")
   newOperatorId <- case mbEntityRole of
     Just DP.FLEET_OWNER -> do
-      -- fleet owner can't pass an operator code: driver inherits the fleet's current operator
       fleetOperatorAssoc <- FOV.findActiveByFleetOwnerId (Id fleetOwnerId) >>= fromMaybeM (InvalidRequest "Fleet has no active operator association")
       pure fleetOperatorAssoc.operatorId
     _ -> do
-      -- admin/operator: newOperatorCode mandatory, re-link to the specified operator
       newOperatorCode <- fromMaybeM (InvalidRequest "newOperatorCode is required for admin/operator change") req.newOperatorCode
       operator <- SA.resolveOperatorByCode merchantOpCityId newOperatorCode
       pure operator.id.getId
-  -- New operator validated; now break the old fleet-driver link (+ all driver-vehicle
-  -- links) and create the new operator link.
   AC.withAssociation (AC.guardNoLiveRideByDriver personId) $ do
-    FDV.endById fleetAssoc.id
+    -- Ends the driver's fleet-driver AND driver-operator associations (analytics + unlink
+    -- notifications) in one call. NOTE: throws when merchant.overwriteAssociation is off.
+    SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig driver
     QRCAssociation.endAllRCAssociationsForDriver personId
-    -- End the driver's existing active operator association before creating the new one,
-    -- so the driver never ends up with two active driver_operator_association rows
-    -- (single-active invariant, mirroring the driver/operator change flow).
-    mbExistingOperatorAssoc <- QDOAExtra.findByDriverId personId True
-    whenJust mbExistingOperatorAssoc $ \existing -> QDOAExtra.endById existing.id
     newAssoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId personId newOperatorId DomainRC.defaultAssociationEnd
     DOV.create newAssoc
   pure Success

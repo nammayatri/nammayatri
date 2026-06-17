@@ -71,7 +71,6 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverIdentityInfoUpdate,
     postDriverOperatorChange,
     postDriverFleetOperatorChange,
-    postDriverFleetOperatorCreate,
   )
 where
 
@@ -141,8 +140,8 @@ import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Association.Change as AC
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import SharedLogic.DriverFleetOperatorAssociation (checkDriverOperatorAssociation, checkFleetDriverAssociation, checkFleetOperatorAssociation, isAssociationBetweenTwoPerson)
-import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
+import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverOnboarding.Status (ResponseStatus (..))
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
@@ -173,6 +172,7 @@ import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.DriverProfileQuestions as QDriverProfileQuestions
 import qualified Storage.Queries.DriverRCAssociation as QDriverRCAssociation
 import qualified Storage.Queries.DriverReferral as QDriverReferral
+import qualified Storage.Queries.FleetDriverAssociation as QFleetDriverAssociation
 import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperator
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.HyperVergeSdkLogs as QHyperVergeSdkLogs
@@ -1641,32 +1641,31 @@ postDriverIdentityInfoUpdate merchantShortId opCity driverId requestorId req = d
         (castFromCommon <$> req.addressDocumentType)
         req.addressState
   pure Success
-  
+
 postDriverOperatorChange :: ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Common.ChangeDriverOperatorReq -> Flow APISuccess
 postDriverOperatorChange merchantShortId opCity requestorId reqDriverId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person reqDriverId
-  -- Validate the driver exists and belongs to this merchant + operating city
-  -- (prevents cross-tenant operator swaps via a foreign driverId).
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $
     throwError (PersonDoesNotExist personId.getId)
   when (personId.getId /= requestorId) $ do
-    entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, personId] merchantOpCityId
-    whenJust (find (\e -> e.id == Id requestorId) entities) $ \requestor -> do
-      isValid <- isAssociationBetweenTwoPerson requestor driver
-      unless isValid $ throwError AccessDenied
+    -- driver already fetched above; only the requestor needs resolving. A missing requestor
+    -- must FAIL (AccessDenied), not silently skip the authorization check.
+    entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId] merchantOpCityId
+    requestor <- find (\e -> e.id == Id requestorId) entities & fromMaybeM AccessDenied
+    isValid <- isAssociationBetweenTwoPerson requestor driver
+    unless isValid $ throwError AccessDenied
   newOperatorCode <- fromMaybeM (InvalidRequest "newOperatorCode is required") req.newOperatorCode
   operator <- SA.resolveOperatorByCode merchantOpCityId newOperatorCode
   oldAssoc <- QDriverOperator.findByDriverId personId True >>= fromMaybeM (InvalidRequest "No active operator association for driver")
   when (oldAssoc.operatorId == operator.id.getId) $ throwError (InvalidRequest "New operator equals current operator")
-  -- Mark old association ended (associatedTill=now) via endById, which goes through the KV
-  -- layer (updateWithKV) -- the row is updated in BOTH Postgres and Redis. The ended row is
-  -- retained in Postgres and streams to ClickHouse via the drainer; it is not hard-deleted
-  -- (hard deletes are invisible to the Kafka/ClickHouse pipeline). Then create the new association.
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   AC.withAssociation (AC.guardNoLiveRideByDriver personId) $ do
-    QDriverOperator.endById oldAssoc.id
+    -- Reuse the legacy helper (analytics + unlink notifications). Ends the driver's existing
+    -- fleet/operator associations. NOTE: throws when merchant.overwriteAssociation is off.
+    SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig driver
     newAssoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId personId operator.id.getId DomainRC.defaultAssociationEnd
     QDriverOperator.create newAssoc
   pure Success
@@ -1675,8 +1674,6 @@ postDriverFleetOperatorChange :: ShortId DM.Merchant -> Context.City -> Text -> 
 postDriverFleetOperatorChange merchantShortId opCity _requestorId fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  -- Admin-only flow: just validate the fleet owner exists and belongs to this merchant +
-  -- operating city (fleetOwnerId is a raw path param).
   let fleetOwnerPersonId = Id fleetOwnerId :: Id DP.Person
   fleetOwner <- QPerson.findById fleetOwnerPersonId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId)
   unless (merchant.id == fleetOwner.merchantId && merchantOpCityId == fleetOwner.merchantOperatingCityId) $
@@ -1684,27 +1681,15 @@ postDriverFleetOperatorChange merchantShortId opCity _requestorId fleetOwnerId r
   newOperatorCode <- fromMaybeM (InvalidRequest "newOperatorCode is required") req.newOperatorCode
   operator <- SA.resolveOperatorByCode merchantOpCityId newOperatorCode
   oldAssoc <- QFleetOperator.findActiveByFleetOwnerId (Id fleetOwnerId)
-  -- Reject re-assigning the fleet's current operator (mirrors the driver/operator change
-  -- guard); otherwise the existing active link is needlessly ended and recreated.
   whenJust oldAssoc $ \old -> when (old.operatorId == operator.id.getId) $ throwError (InvalidRequest "New operator equals current operator")
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   AC.withAssociation (AC.guardNoLiveRideInFleet fleetOwnerId) $ do
-    whenJust oldAssoc $ \old -> QFleetOperator.endById old.id
+    fleetDriverIds <- QFleetDriverAssociation.getActiveDriverIdsByFleetOwnerId fleetOwnerId
+    QDriverRCAssociation.endRCAssociationsForDrivers fleetDriverIds
+    -- End the fleet's existing operator association(s) via the legacy helper (analytics + unlink
+    -- notification). NOTE: this only ends when merchant.overwriteAssociation is on; otherwise it
+    -- is a no-op (the function's "allow multiple operators" path).
+    SA.endFleetAssociationsIfAllowed merchant merchantOpCityId transporterConfig fleetOwner
     newAssoc <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId fleetOwnerId operator.id.getId DomainRC.defaultAssociationEnd
     QFleetOperator.create newAssoc
-  pure Success
-
-postDriverFleetOperatorCreate :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Common.CreateFleetOperatorReq -> Flow APISuccess
-postDriverFleetOperatorCreate merchantShortId opCity _requestorId fleetOwnerId req = do
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  let fleetOwnerPersonId = Id fleetOwnerId :: Id DP.Person
-  fleetOwner <- QPerson.findById fleetOwnerPersonId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId)
-  unless (merchant.id == fleetOwner.merchantId && merchantOpCityId == fleetOwner.merchantOperatingCityId) $
-    throwError (PersonDoesNotExist fleetOwnerId)
-  existingAssoc <- QFleetOperator.findActiveByFleetOwnerId (Id fleetOwnerId)
-  whenJust existingAssoc $ \_ ->
-    throwError (InvalidRequest "Fleet already has an active operator association; use the change API")
-  operator <- SA.resolveOperatorByCode merchantOpCityId req.operatorCode
-  newAssoc <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId fleetOwnerId operator.id.getId DomainRC.defaultAssociationEnd
-  QFleetOperator.create newAssoc
   pure Success

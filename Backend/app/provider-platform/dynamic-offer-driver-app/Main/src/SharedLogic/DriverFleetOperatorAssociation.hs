@@ -1,5 +1,6 @@
 module SharedLogic.DriverFleetOperatorAssociation
   ( checkForDriverAssociationOverwrite,
+    guardDriverNotAssociated,
     endDriverAssociationsIfAllowed,
     endFleetAssociationsIfAllowed,
     makeFleetOperatorAssociation,
@@ -46,13 +47,23 @@ checkForDriverAssociationOverwrite ::
   Id DP.Person ->
   Flow ()
 checkForDriverAssociationOverwrite merchant driverId = do
-  unless (merchant.overwriteAssociation == Just True) $ do
-    existingFDAssociations <- QFDA.findAllByDriverId driverId True
-    unless (null existingFDAssociations) $ do
-      throwError (InvalidRequest "Driver already associated with a fleet")
+  -- Skip the fleet read entirely when overwrite is enabled (the guard is a no-op then).
+  hasActiveFleetAssoc <-
+    if merchant.overwriteAssociation == Just True
+      then pure False
+      else not . null <$> QFDA.findAllByDriverId driverId True
+  guardDriverNotAssociated merchant driverId hasActiveFleetAssoc
 
+-- Same "driver must not already belong to a fleet/operator" guard, but the caller passes a
+-- pre-fetched flag for the active fleet association so we don't re-read fleet_driver_association.
+-- No-op when overwriteAssociation is enabled.
+guardDriverNotAssociated :: DM.Merchant -> Id DP.Person -> Bool -> Flow ()
+guardDriverNotAssociated merchant driverId hasActiveFleetAssoc =
+  unless (merchant.overwriteAssociation == Just True) $ do
+    when hasActiveFleetAssoc $
+      throwError (InvalidRequest "Driver already associated with a fleet")
     existingDOAssociations <- QDOA.findAllByDriverId driverId True
-    unless (null existingDOAssociations) $ do
+    unless (null existingDOAssociations) $
       throwError (InvalidRequest "Driver is already associated with an operator")
 
 resolveOperatorByCode :: Id DMOC.MerchantOperatingCity -> Text -> Flow DP.Person

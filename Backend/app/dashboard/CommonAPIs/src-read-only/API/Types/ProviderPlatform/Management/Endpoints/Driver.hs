@@ -112,13 +112,6 @@ newtype ClearOnRideStuckDriversRes = ClearOnRideStuckDriversRes {driverIds :: [K
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data CreateFleetOperatorReq = CreateFleetOperatorReq {operatorCode :: Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance Kernel.Types.HideSecrets.HideSecrets CreateFleetOperatorReq where
-  hideSecrets = Kernel.Prelude.identity
-
 newtype DeleteRCReq = DeleteRCReq {rcNo :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -460,11 +453,7 @@ data UpdateVehicleVariantReq = UpdateVehicleVariantReq {rcId :: Kernel.Prelude.T
 instance Kernel.Types.HideSecrets.HideSecrets UpdateVehicleVariantReq where
   hideSecrets = Kernel.Prelude.identity
 
-<<<<<<< HEAD
-type API = ("driver" :> (GetDriverDocumentsInfo :<|> PostDriverPersonNumbers :<|> PostDriverUpdateTagBulk :<|> PostDriverDriverDataDecryption :<|> PostDriverPersonId :<|> GetDriverAadhaarInfo :<|> GetDriverAadhaarInfobyMobileNumber :<|> GetDriverList :<|> GetDriverActivity :<|> PostDriverDisable :<|> PostDriverAcRestrictionUpdate :<|> PostDriverBlockWithReasonHelper :<|> PostDriverBlock :<|> GetDriverBlockReasonList :<|> PostDriverUnblockHelper :<|> GetDriverLocation :<|> DeleteDriverPermanentlyDelete :<|> PostDriverUnlinkDL :<|> PostDriverUnlinkAadhaar :<|> PostDriverUpdatePhoneNumber :<|> PostDriverUpdateByPhoneNumber :<|> PostDriverUpdateName :<|> PostDriverDeleteRC :<|> GetDriverClearStuckOnRide :<|> PostDriverSendDummyNotification :<|> PostDriverChangeOperatingCity :<|> GetDriverGetOperatingCity :<|> PostDriverPauseOrResumeServiceCharges :<|> PostDriverUpdateRCInvalidStatus :<|> PostDriverUpdateRCInvalidStatusByRCNumber :<|> PostDriverUpdateVehicleVariant :<|> PostDriverBulkReviewRCVariant :<|> PostDriverUpdateDriverTag :<|> PostDriverClearFee :<|> GetDriverPanAadharSelfieDetails :<|> PostDriverSyncDocAadharPan :<|> PostDriverUpdateVehicleManufacturing :<|> PostDriverVehicleAppendSelectedServiceTiers :<|> PostDriverVehicleUpsertSelectedServiceTiers :<|> PostDriverRefundByPayout :<|> GetDriverSecurityDepositStatus :<|> GetDriverPanAadharSelfieDetailsList :<|> PostDriverBulkSubscriptionServiceUpdate :<|> GetDriverStatsHelper :<|> GetDriverEarningsHelper :<|> PostDriverTdsRateUpdate :<|> PostDriverUpdateMerchant :<|> GetDriverAirportPreference :<|> PostDriverAirportPreference :<|> GetDriverSearchRequestStats :<|> GetDriverIdentityInfoHelper :<|> PostDriverIdentityInfoUpdateHelper))
-=======
-type API = ("driver" :> (GetDriverDocumentsInfo :<|> PostDriverPersonNumbers :<|> PostDriverUpdateTagBulk :<|> PostDriverDriverDataDecryption :<|> PostDriverPersonId :<|> GetDriverAadhaarInfo :<|> GetDriverAadhaarInfobyMobileNumber :<|> GetDriverList :<|> GetDriverActivity :<|> PostDriverDisable :<|> PostDriverAcRestrictionUpdate :<|> PostDriverBlockWithReasonHelper :<|> PostDriverBlock :<|> GetDriverBlockReasonList :<|> PostDriverUnblockHelper :<|> GetDriverLocation :<|> DeleteDriverPermanentlyDelete :<|> PostDriverUnlinkDL :<|> PostDriverUnlinkAadhaar :<|> PostDriverUpdatePhoneNumber :<|> PostDriverUpdateByPhoneNumber :<|> PostDriverUpdateName :<|> PostDriverDeleteRC :<|> GetDriverClearStuckOnRide :<|> PostDriverSendDummyNotification :<|> PostDriverChangeOperatingCity :<|> GetDriverGetOperatingCity :<|> PostDriverPauseOrResumeServiceCharges :<|> PostDriverUpdateRCInvalidStatus :<|> PostDriverUpdateRCInvalidStatusByRCNumber :<|> PostDriverUpdateVehicleVariant :<|> PostDriverBulkReviewRCVariant :<|> PostDriverUpdateDriverTag :<|> PostDriverClearFee :<|> GetDriverPanAadharSelfieDetails :<|> PostDriverSyncDocAadharPan :<|> PostDriverUpdateVehicleManufacturing :<|> PostDriverVehicleAppendSelectedServiceTiers :<|> PostDriverVehicleUpsertSelectedServiceTiers :<|> PostDriverRefundByPayout :<|> GetDriverSecurityDepositStatus :<|> GetDriverPanAadharSelfieDetailsList :<|> PostDriverBulkSubscriptionServiceUpdate :<|> GetDriverStatsHelper :<|> GetDriverEarningsHelper :<|> PostDriverTdsRateUpdate :<|> PostDriverUpdateMerchant :<|> GetDriverAirportPreference :<|> PostDriverAirportPreference :<|> GetDriverSearchRequestStats :<|> PostDriverOperatorChangeHelper :<|> PostDriverFleetOperatorChangeHelper :<|> PostDriverFleetOperatorCreateHelper))
->>>>>>> 64d672fb95 (backend/refactor: storing history association of driver/fleet/operator/rc association)
+type API = ("driver" :> (GetDriverDocumentsInfo :<|> PostDriverPersonNumbers :<|> PostDriverUpdateTagBulk :<|> PostDriverDriverDataDecryption :<|> PostDriverPersonId :<|> GetDriverAadhaarInfo :<|> GetDriverAadhaarInfobyMobileNumber :<|> GetDriverList :<|> GetDriverActivity :<|> PostDriverDisable :<|> PostDriverAcRestrictionUpdate :<|> PostDriverBlockWithReasonHelper :<|> PostDriverBlock :<|> GetDriverBlockReasonList :<|> PostDriverUnblockHelper :<|> GetDriverLocation :<|> DeleteDriverPermanentlyDelete :<|> PostDriverUnlinkDL :<|> PostDriverUnlinkAadhaar :<|> PostDriverUpdatePhoneNumber :<|> PostDriverUpdateByPhoneNumber :<|> PostDriverUpdateName :<|> PostDriverDeleteRC :<|> GetDriverClearStuckOnRide :<|> PostDriverSendDummyNotification :<|> PostDriverChangeOperatingCity :<|> GetDriverGetOperatingCity :<|> PostDriverPauseOrResumeServiceCharges :<|> PostDriverUpdateRCInvalidStatus :<|> PostDriverUpdateRCInvalidStatusByRCNumber :<|> PostDriverUpdateVehicleVariant :<|> PostDriverBulkReviewRCVariant :<|> PostDriverUpdateDriverTag :<|> PostDriverClearFee :<|> GetDriverPanAadharSelfieDetails :<|> PostDriverSyncDocAadharPan :<|> PostDriverUpdateVehicleManufacturing :<|> PostDriverVehicleAppendSelectedServiceTiers :<|> PostDriverVehicleUpsertSelectedServiceTiers :<|> PostDriverRefundByPayout :<|> GetDriverSecurityDepositStatus :<|> GetDriverPanAadharSelfieDetailsList :<|> PostDriverBulkSubscriptionServiceUpdate :<|> GetDriverStatsHelper :<|> GetDriverEarningsHelper :<|> PostDriverTdsRateUpdate :<|> PostDriverUpdateMerchant :<|> GetDriverAirportPreference :<|> PostDriverAirportPreference :<|> GetDriverSearchRequestStats :<|> GetDriverIdentityInfoHelper :<|> PostDriverIdentityInfoUpdateHelper :<|> PostDriverOperatorChangeHelper :<|> PostDriverFleetOperatorChangeHelper))
 
 type GetDriverDocumentsInfo = ("documents" :> "info" :> Get '[JSON] Dashboard.Common.Driver.DriverDocumentsInfoRes)
 
@@ -776,7 +765,6 @@ type GetDriverSearchRequestStats =
       :> Get '[JSON] DriverSearchRequestStatsRes
   )
 
-<<<<<<< HEAD
 type GetDriverIdentityInfo = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "identityInfo" :> Get '[JSON] DriverIdentityInfoRes)
 
 type GetDriverIdentityInfoHelper =
@@ -788,10 +776,13 @@ type GetDriverIdentityInfoHelper =
 
 type PostDriverIdentityInfoUpdate =
   ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "identityInfo" :> "update" :> ReqBody '[JSON] UpdateDriverIdentityInfoReq
-=======
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
 type PostDriverOperatorChange =
   ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "operator" :> "change" :> ReqBody '[JSON] ChangeDriverOperatorReq
->>>>>>> 64d672fb95 (backend/refactor: storing history association of driver/fleet/operator/rc association)
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
@@ -803,8 +794,9 @@ type PostDriverIdentityInfoUpdateHelper =
            "requestorId"
            Kernel.Prelude.Text
       :> ReqBody '[JSON] UpdateDriverIdentityInfoReq
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
-  
+
 type PostDriverOperatorChangeHelper =
   ( Capture "requestorId" Kernel.Prelude.Text :> Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "operator" :> "change"
       :> ReqBody
@@ -825,21 +817,6 @@ type PostDriverFleetOperatorChangeHelper =
       :> ReqBody
            '[JSON]
            ChangeFleetOperatorReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
-  )
-
-type PostDriverFleetOperatorCreate =
-  ( Capture "fleetOwnerId" Kernel.Prelude.Text :> "fleet" :> "operator" :> "create" :> ReqBody '[JSON] CreateFleetOperatorReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
-
-type PostDriverFleetOperatorCreateHelper =
-  ( Capture "requestorId" Kernel.Prelude.Text :> Capture "fleetOwnerId" Kernel.Prelude.Text :> "fleet" :> "operator" :> "create"
-      :> ReqBody
-           '[JSON]
-           CreateFleetOperatorReq
       :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
@@ -899,16 +876,15 @@ data DriverAPIs = DriverAPIs
     postDriverAirportPreference :: Kernel.Types.Id.Id Dashboard.Common.Driver -> AirportPreferenceReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverSearchRequestStats :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Data.Time.Day -> Kernel.Prelude.Maybe Data.Time.Day -> EulerHS.Types.EulerClient DriverSearchRequestStatsRes,
     getDriverIdentityInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverIdentityInfoRes,
-    postDriverIdentityInfoUpdate :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> UpdateDriverIdentityInfoReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postDriverIdentityInfoUpdate :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> UpdateDriverIdentityInfoReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverOperatorChange :: Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Driver -> ChangeDriverOperatorReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverFleetOperatorChange :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> ChangeFleetOperatorReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverFleetOperatorCreate :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> CreateFleetOperatorReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postDriverFleetOperatorChange :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> ChangeFleetOperatorReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)
 mkDriverAPIs driverClient = (DriverAPIs {..})
   where
-    getDriverDocumentsInfo :<|> postDriverPersonNumbers :<|> postDriverUpdateTagBulk :<|> postDriverDriverDataDecryption :<|> postDriverPersonId :<|> getDriverAadhaarInfo :<|> getDriverAadhaarInfobyMobileNumber :<|> getDriverList :<|> getDriverActivity :<|> postDriverDisable :<|> postDriverAcRestrictionUpdate :<|> postDriverBlockWithReason :<|> postDriverBlock :<|> getDriverBlockReasonList :<|> postDriverUnblock :<|> getDriverLocation :<|> deleteDriverPermanentlyDelete :<|> postDriverUnlinkDL :<|> postDriverUnlinkAadhaar :<|> postDriverUpdatePhoneNumber :<|> postDriverUpdateByPhoneNumber :<|> postDriverUpdateName :<|> postDriverDeleteRC :<|> getDriverClearStuckOnRide :<|> postDriverSendDummyNotification :<|> postDriverChangeOperatingCity :<|> getDriverGetOperatingCity :<|> postDriverPauseOrResumeServiceCharges :<|> postDriverUpdateRCInvalidStatus :<|> postDriverUpdateRCInvalidStatusByRCNumber :<|> postDriverUpdateVehicleVariant :<|> postDriverBulkReviewRCVariant :<|> postDriverUpdateDriverTag :<|> postDriverClearFee :<|> getDriverPanAadharSelfieDetails :<|> postDriverSyncDocAadharPan :<|> postDriverUpdateVehicleManufacturing :<|> postDriverVehicleAppendSelectedServiceTiers :<|> postDriverVehicleUpsertSelectedServiceTiers :<|> postDriverRefundByPayout :<|> getDriverSecurityDepositStatus :<|> getDriverPanAadharSelfieDetailsList :<|> postDriverBulkSubscriptionServiceUpdate :<|> getDriverStats :<|> getDriverEarnings :<|> postDriverTdsRateUpdate :<|> postDriverUpdateMerchant :<|> getDriverAirportPreference :<|> postDriverAirportPreference :<|> getDriverSearchRequestStats :<|> getDriverIdentityInfo :<|> postDriverIdentityInfoUpdate :<|> postDriverOperatorChange :<|> postDriverFleetOperatorChange :<|> postDriverFleetOperatorCreate = driverClient
+    getDriverDocumentsInfo :<|> postDriverPersonNumbers :<|> postDriverUpdateTagBulk :<|> postDriverDriverDataDecryption :<|> postDriverPersonId :<|> getDriverAadhaarInfo :<|> getDriverAadhaarInfobyMobileNumber :<|> getDriverList :<|> getDriverActivity :<|> postDriverDisable :<|> postDriverAcRestrictionUpdate :<|> postDriverBlockWithReason :<|> postDriverBlock :<|> getDriverBlockReasonList :<|> postDriverUnblock :<|> getDriverLocation :<|> deleteDriverPermanentlyDelete :<|> postDriverUnlinkDL :<|> postDriverUnlinkAadhaar :<|> postDriverUpdatePhoneNumber :<|> postDriverUpdateByPhoneNumber :<|> postDriverUpdateName :<|> postDriverDeleteRC :<|> getDriverClearStuckOnRide :<|> postDriverSendDummyNotification :<|> postDriverChangeOperatingCity :<|> getDriverGetOperatingCity :<|> postDriverPauseOrResumeServiceCharges :<|> postDriverUpdateRCInvalidStatus :<|> postDriverUpdateRCInvalidStatusByRCNumber :<|> postDriverUpdateVehicleVariant :<|> postDriverBulkReviewRCVariant :<|> postDriverUpdateDriverTag :<|> postDriverClearFee :<|> getDriverPanAadharSelfieDetails :<|> postDriverSyncDocAadharPan :<|> postDriverUpdateVehicleManufacturing :<|> postDriverVehicleAppendSelectedServiceTiers :<|> postDriverVehicleUpsertSelectedServiceTiers :<|> postDriverRefundByPayout :<|> getDriverSecurityDepositStatus :<|> getDriverPanAadharSelfieDetailsList :<|> postDriverBulkSubscriptionServiceUpdate :<|> getDriverStats :<|> getDriverEarnings :<|> postDriverTdsRateUpdate :<|> postDriverUpdateMerchant :<|> getDriverAirportPreference :<|> postDriverAirportPreference :<|> getDriverSearchRequestStats :<|> getDriverIdentityInfo :<|> postDriverIdentityInfoUpdate :<|> postDriverOperatorChange :<|> postDriverFleetOperatorChange = driverClient
 
 data DriverUserActionType
   = GET_DRIVER_DOCUMENTS_INFO
@@ -961,14 +937,10 @@ data DriverUserActionType
   | GET_DRIVER_AIRPORT_PREFERENCE
   | POST_DRIVER_AIRPORT_PREFERENCE
   | GET_DRIVER_SEARCH_REQUEST_STATS
-<<<<<<< HEAD
   | GET_DRIVER_IDENTITY_INFO
   | POST_DRIVER_IDENTITY_INFO_UPDATE
-=======
   | POST_DRIVER_OPERATOR_CHANGE
   | POST_DRIVER_FLEET_OPERATOR_CHANGE
-  | POST_DRIVER_FLEET_OPERATOR_CREATE
->>>>>>> 64d672fb95 (backend/refactor: storing history association of driver/fleet/operator/rc association)
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

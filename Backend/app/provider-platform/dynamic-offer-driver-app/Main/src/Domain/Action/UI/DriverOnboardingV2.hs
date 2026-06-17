@@ -65,6 +65,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
+import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.DriverOnboarding.Digilocker
@@ -99,7 +100,6 @@ import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverGstin as QDGTIN
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLicense as QDL
-import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverPanCard as QDPC
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverSSN as QDriverSSN
@@ -1365,12 +1365,9 @@ postDriverLinkToFleet (mbDriverId, merchantId, _) req = do
         Just _ -> throwError $ InvalidRequest "Driver already has a pending fleet association request with this fleet"
         Nothing -> do
           merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-          unless (merchant.overwriteAssociation == Just True) $ do
-            when (any (.isActive) driverFleetAssocs) $
-              throwError (InvalidRequest "Driver already associated with a fleet")
-            existingDriverOperatorAssocs <- QDOA.findAllByDriverId driverId True
-            unless (null existingDriverOperatorAssocs) $
-              throwError (InvalidRequest "Driver is already associated with an operator")
+          -- Reuse the fleet associations already fetched above; the shared guard only adds the
+          -- driver-operator read (and short-circuits entirely when overwrite is enabled).
+          SA.guardDriverNotAssociated merchant driverId (any (.isActive) driverFleetAssocs)
           let requestReason = fromMaybe "Driver requested to join fleet" req.requestReason
           FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just requestReason)
   return Success
