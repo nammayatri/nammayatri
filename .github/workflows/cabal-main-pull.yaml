@@ -113,7 +113,7 @@ jobs:
           cd "$BAKED/Backend"
           echo "pwd inside namespace: $(pwd)"
           nix develop .#backend --command bash -c '
-            export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/main/.cabal-dir
+            export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/ec2-nix-runner-pasta-1/main/.cabal-dir
             cabal repl dynamic-offer-driver-app --repl-options="-fno-code -fwrite-interface" --builddir=dist-newrepl-driver <<< ":quit"
           '
           NAMESPACE_SCRIPT
@@ -133,7 +133,7 @@ jobs:
           cd "$BAKED/Backend"
           echo "pwd inside namespace: $(pwd)"
           nix develop .#backend --command bash -c '
-            export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/main/.cabal-dir
+            export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/ec2-nix-runner-pasta-1/main/.cabal-dir
             cabal repl rider-app --repl-options="-fno-code -fwrite-interface" --builddir=dist-newrepl-rider <<< ":quit"
           '
           NAMESPACE_SCRIPT
