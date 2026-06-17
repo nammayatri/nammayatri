@@ -1658,9 +1658,7 @@ postDriverOperatorChange merchantShortId opCity requestorId reqDriverId req = do
       isValid <- isAssociationBetweenTwoPerson requestor driver
       unless isValid $ throwError AccessDenied
   newOperatorCode <- fromMaybeM (InvalidRequest "newOperatorCode is required") req.newOperatorCode
-  dr <- QDriverReferral.findByReferralCodeAndMerchantCityId (Just merchantOpCityId) (Id newOperatorCode) >>= fromMaybeM (InvalidRequest $ "Unknown operator code: " <> newOperatorCode)
-  operator <- QPerson.findById dr.driverId >>= fromMaybeM (PersonDoesNotExist dr.driverId.getId)
-  unless (operator.role == DP.OPERATOR) $ throwError (InvalidRequest "Operator code does not belong to an operator")
+  operator <- SA.resolveOperatorByCode merchantOpCityId newOperatorCode
   oldAssoc <- QDriverOperator.findByDriverId personId True >>= fromMaybeM (InvalidRequest "No active operator association for driver")
   when (oldAssoc.operatorId == operator.id.getId) $ throwError (InvalidRequest "New operator equals current operator")
   -- Mark old association ended (associatedTill=now) via endById, which goes through the KV
@@ -1669,7 +1667,7 @@ postDriverOperatorChange merchantShortId opCity requestorId reqDriverId req = do
   -- (hard deletes are invisible to the Kafka/ClickHouse pipeline). Then create the new association.
   AC.withAssociation (AC.guardNoLiveRideByDriver personId) $ do
     QDriverOperator.endById oldAssoc.id
-    newAssoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId personId operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+    newAssoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId personId operator.id.getId DomainRC.defaultAssociationEnd
     QDriverOperator.create newAssoc
   pure Success
 
@@ -1684,16 +1682,14 @@ postDriverFleetOperatorChange merchantShortId opCity _requestorId fleetOwnerId r
   unless (merchant.id == fleetOwner.merchantId && merchantOpCityId == fleetOwner.merchantOperatingCityId) $
     throwError (PersonDoesNotExist fleetOwnerId)
   newOperatorCode <- fromMaybeM (InvalidRequest "newOperatorCode is required") req.newOperatorCode
-  dr <- QDriverReferral.findByReferralCodeAndMerchantCityId (Just merchantOpCityId) (Id newOperatorCode) >>= fromMaybeM (InvalidRequest $ "Unknown operator code: " <> newOperatorCode)
-  operator <- QPerson.findById dr.driverId >>= fromMaybeM (PersonDoesNotExist dr.driverId.getId)
-  unless (operator.role == DP.OPERATOR) $ throwError (InvalidRequest "Operator code does not belong to an operator")
+  operator <- SA.resolveOperatorByCode merchantOpCityId newOperatorCode
   oldAssoc <- QFleetOperator.findActiveByFleetOwnerId (Id fleetOwnerId)
   -- Reject re-assigning the fleet's current operator (mirrors the driver/operator change
   -- guard); otherwise the existing active link is needlessly ended and recreated.
   whenJust oldAssoc $ \old -> when (old.operatorId == operator.id.getId) $ throwError (InvalidRequest "New operator equals current operator")
   AC.withAssociation (AC.guardNoLiveRideInFleet fleetOwnerId) $ do
     whenJust oldAssoc $ \old -> QFleetOperator.endById old.id
-    newAssoc <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId fleetOwnerId operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+    newAssoc <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId fleetOwnerId operator.id.getId DomainRC.defaultAssociationEnd
     QFleetOperator.create newAssoc
   pure Success
 
@@ -1708,9 +1704,7 @@ postDriverFleetOperatorCreate merchantShortId opCity _requestorId fleetOwnerId r
   existingAssoc <- QFleetOperator.findActiveByFleetOwnerId (Id fleetOwnerId)
   whenJust existingAssoc $ \_ ->
     throwError (InvalidRequest "Fleet already has an active operator association; use the change API")
-  dr <- QDriverReferral.findByReferralCodeAndMerchantCityId (Just merchantOpCityId) (Id req.operatorCode) >>= fromMaybeM (InvalidRequest $ "Unknown operator code: " <> req.operatorCode)
-  operator <- QPerson.findById dr.driverId >>= fromMaybeM (PersonDoesNotExist dr.driverId.getId)
-  unless (operator.role == DP.OPERATOR) $ throwError (InvalidRequest "Operator code does not belong to an operator")
-  newAssoc <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId fleetOwnerId operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+  operator <- SA.resolveOperatorByCode merchantOpCityId req.operatorCode
+  newAssoc <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId fleetOwnerId operator.id.getId DomainRC.defaultAssociationEnd
   QFleetOperator.create newAssoc
   pure Success

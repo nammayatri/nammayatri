@@ -8,6 +8,7 @@ module SharedLogic.DriverFleetOperatorAssociation
     checkFleetDriverAssociation,
     checkFleetOperatorAssociation,
     checkDriverOperatorAssociation,
+    resolveOperatorByCode,
   )
 where
 
@@ -33,6 +34,7 @@ import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
+import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.Person as QP
@@ -52,6 +54,13 @@ checkForDriverAssociationOverwrite merchant driverId = do
     existingDOAssociations <- QDOA.findAllByDriverId driverId True
     unless (null existingDOAssociations) $ do
       throwError (InvalidRequest "Driver is already associated with an operator")
+
+resolveOperatorByCode :: Id DMOC.MerchantOperatingCity -> Text -> Flow DP.Person
+resolveOperatorByCode merchantOpCityId code = do
+  dr <- QDR.findByReferralCodeAndMerchantCityId (Just merchantOpCityId) (Id code) >>= fromMaybeM (InvalidRequest $ "Unknown operator code: " <> code)
+  operator <- QP.findById dr.driverId >>= fromMaybeM (PersonDoesNotExist dr.driverId.getId)
+  unless (operator.role == DP.OPERATOR) $ throwError (InvalidRequest "Operator code does not belong to an operator")
+  pure operator
 
 endDriverAssociationsIfAllowed ::
   DM.Merchant ->
