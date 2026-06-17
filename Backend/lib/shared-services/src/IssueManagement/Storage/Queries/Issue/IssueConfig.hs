@@ -26,6 +26,7 @@ updateByPrimaryKey IssueConfig {..} =
       Set BeamIC.onKaptMarkIssueResMsgs (getId <$> onKaptMarkIssueResMsgs),
       Set BeamIC.onIssueCloseMsgs (getId <$> onIssueCloseMsgs),
       Set BeamIC.reopenCount reopenCount,
+      Set BeamIC.messageTransformationConfig messageTransformationConfig,
       Set BeamIC.updatedAt updatedAt
     ]
     [Is BeamIC.id $ Eq (getId id)]
