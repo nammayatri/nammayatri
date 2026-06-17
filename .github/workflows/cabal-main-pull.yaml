@@ -106,7 +106,7 @@ jobs:
         run: |
           set -o pipefail
           BAKED=/home/mdvenkatesh/actions-runner/runner-1/_work/nammayatri/nammayatri
-          CANON_CACHE=/home/mdvenkatesh/ny-cabal-unoptimized-cache/runner-1/main
+          CANON_CACHE=/home/mdvenkatesh/ny-cabal-unoptimized-cache/ec2-nix-runner-pasta-1/main
           PR_CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/main
           mkdir -p "$BAKED" "$CANON_CACHE"
           cat > /tmp/ns-repl-driver-${{ github.run_id }}.sh <<NAMESPACE_SCRIPT
@@ -134,7 +134,7 @@ jobs:
         run: |
           set -o pipefail
           BAKED=/home/mdvenkatesh/actions-runner/runner-1/_work/nammayatri/nammayatri
-          CANON_CACHE=/home/mdvenkatesh/ny-cabal-unoptimized-cache/runner-1/main
+          CANON_CACHE=/home/mdvenkatesh/ny-cabal-unoptimized-cache/ec2-nix-runner-pasta-1/main
           PR_CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/main
           mkdir -p "$BAKED" "$CANON_CACHE"
           cat > /tmp/ns-repl-rider-${{ github.run_id }}.sh <<NAMESPACE_SCRIPT
