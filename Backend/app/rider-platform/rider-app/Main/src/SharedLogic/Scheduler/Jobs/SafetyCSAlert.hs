@@ -190,6 +190,7 @@ buildSosDetails person req ticketId = do
         flow = req.flow,
         rideId = Just rideId,
         ticketId = ticketId,
+        requesterId = Nothing,
         mediaFiles = [],
         merchantId = Just (cast person.merchantId),
         merchantOperatingCityId = Just (cast person.merchantOperatingCityId),

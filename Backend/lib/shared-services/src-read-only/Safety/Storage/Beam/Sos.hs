@@ -22,6 +22,7 @@ data SosT f = SosT
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     personId :: B.C f Kernel.Prelude.Text,
+    requesterId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     rideId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     sosState :: B.C f (Kernel.Prelude.Maybe Safety.Domain.Types.Sos.SosState),
     status :: B.C f Safety.Domain.Types.Sos.SosStatus,

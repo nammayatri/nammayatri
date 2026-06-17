@@ -33,6 +33,7 @@ in  { dbUserId = "atlas_app_user"
     , clickHouseUsername = "default"
     , clickHousePassword = ""
     , locationTrackingServiceKey = "ae288466-2add-11ee-be56-0242ac120002"
+    , zendeskWebhookToken = "changeme-zendesk-webhook-token"
     , ondcTokenMap
     , googleSAPrivateKey
     , parkingApiKey = "test-parking-api-key"
