@@ -14,7 +14,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..), ExpireSubscriptionPurchaseJobData (..))
-import SharedLogic.Finance.Prepaid (activateNextQueuedPurchaseExpiry, handleSubscriptionExpiry)
+import SharedLogic.Finance.Prepaid (activateNextQueuedPurchaseExpiry, handleSubscriptionExpiry, resolvePrepaidScope)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.SubscriptionPurchase as QSP
 
@@ -44,7 +44,8 @@ expireSubscriptionPurchase Job {id = jobId, jobInfo} = withLogTag ("JobId-" <> j
       handleSubscriptionExpiry purchase
       -- After expiry, activate the next queued purchase's expiry timer (deferred FIFO)
       when (purchase.status == DSP.ACTIVE) $ do
-        mbActivated <- activateNextQueuedPurchaseExpiry purchase.ownerId purchase.ownerType purchase.vehicleCategory
+        prepaidScope <- resolvePrepaidScope purchase.merchantOperatingCityId purchase.vehicleCategory
+        mbActivated <- activateNextQueuedPurchaseExpiry purchase.ownerId purchase.ownerType prepaidScope
         whenJust mbActivated $ \(nextPurchaseId, expiry) -> do
           now <- getCurrentTime
           let delay = diffUTCTime expiry now
