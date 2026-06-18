@@ -1,5 +1,6 @@
 module Storage.Queries.SearchRequestExtra where
 
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.RiderDetails as RD
@@ -85,6 +86,16 @@ updateMultipleByRequestId searchRequest isScheduled =
    in if isScheduled
         then updateOneWithKVWithOptions Nothing True updates condition
         else updateOneWithKV updates condition
+
+updatePaymentInstrument ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id SearchRequest ->
+  Maybe DMPM.PaymentInstrument ->
+  m ()
+updatePaymentInstrument searchRequestId paymentInstrument =
+  updateOneWithKV
+    [Se.Set BeamSR.paymentInstrument paymentInstrument]
+    [Se.Is BeamSR.id (Se.Eq $ getId searchRequestId)]
 
 findSearchRequestById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id SearchRequest] -> m [SearchRequest]
 findSearchRequestById srIds =
