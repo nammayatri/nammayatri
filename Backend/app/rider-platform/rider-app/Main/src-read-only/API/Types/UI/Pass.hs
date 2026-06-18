@@ -15,6 +15,7 @@ import qualified Domain.Types.PassType
 import qualified Domain.Types.PurchasedPass
 import qualified Domain.Types.PurchasedPassPayment
 import EulerHS.Prelude hiding (id)
+import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.External.Payment.Juspay.Types.CreateOrder
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -61,7 +62,12 @@ data PassInfoAPIEntity = PassInfoAPIEntity {passCategory :: PassCategoryAPIEntit
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PassSelectReq = PassSelectReq {imeiNumber :: Data.Text.Text, profilePicture :: Data.Text.Text, startDate :: Data.Time.Day}
+data PassSelectReq = PassSelectReq
+  { imeiNumber :: Data.Text.Text,
+    passPhotoMediaId :: Data.Maybe.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
+    profilePicture :: Data.Maybe.Maybe Data.Text.Text,
+    startDate :: Data.Time.Day
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -85,10 +91,6 @@ data PassTypeAPIEntity = PassTypeAPIEntity
     title :: Data.Text.Text
   }
   deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data PassUploadProfilePictureReq = PassUploadProfilePictureReq {imeiNumber :: Data.Text.Text, profilePicture :: Data.Text.Text, purchasedPassId :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass}
-  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PassVerifyReq = PassVerifyReq

@@ -13,6 +13,8 @@ module Domain.Action.UI.Pass
     postMultimodalPassActivateTodayUtil,
     postMultimodalPassSelectUtil,
     postMultimodalPassUploadProfilePicture,
+    getMultimodalPassPhoto,
+    fetchPassPhotoFromS3,
     postMultimodalPassUpdateProfilePictureUtil,
     buildPurchasedPassAPIEntity,
     postMultimodalPassSetPrefSrcAndDest,
@@ -20,6 +22,7 @@ module Domain.Action.UI.Pass
 where
 
 import qualified API.Types.UI.Pass as PassAPI
+import qualified AWS.S3 as S3
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 import Control.Monad.Extra (mapMaybeM)
@@ -43,6 +46,11 @@ import qualified Domain.Types.PurchasedPassPayment as DPurchasedPassPayment
 import qualified Domain.Types.RiderConfig
 import qualified Environment
 import qualified EulerHS.Prelude as EHS
+import qualified IssueManagement.Common.UI.Issue as IssueCommon
+import qualified IssueManagement.Domain.Action.UI.Issue as IssueAction
+import qualified IssueManagement.Domain.Types.MediaFile as DMF
+import qualified IssueManagement.Storage.BeamFlow
+import qualified IssueManagement.Storage.Queries.MediaFile as QMediaFile
 import qualified JsonLogic
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
@@ -72,7 +80,9 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Offer as SOffer
 import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
 import qualified SharedLogic.Utils as SLUtils
+import Storage.Beam.IssueManagement ()
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Pass as CQPass
 import qualified Storage.CachedQueries.PassCategory as CQPassCategory
@@ -144,9 +154,10 @@ postMultimodalPassSelectUtil ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe (Id.Id DMF.MediaFile) ->
   Maybe DT.Day ->
   Environment.Flow PassAPI.PassSelectionAPIEntity
-postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture mbStartDay = do
+postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture mbPassPhotoMediaId mbStartDay = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   pass <- B.runInReplica $ QPass.findById passId >>= fromMaybeM (PassNotFound passId.getId)
@@ -155,12 +166,12 @@ postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDevic
 
   -- Check if user has all required documents
   unless isDashboard $ do
-    validateRequiredDocuments mbProfilePicture person pass.documentsRequired
+    validateRequiredDocuments mbProfilePicture mbPassPhotoMediaId person pass.documentsRequired
   mbDeviceId <- if isDashboard then return Nothing else Just <$> getDeviceId person mbDeviceIdParam mbImeiParam
 
   -- Use Redis lock to prevent race condition when purchasing pass
   let lockKey = mkPassPurchaseLockKey personId pass.passTypeId
-  Redis.whenWithLockRedisAndReturnValue lockKey 60 (purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture) >>= \case
+  Redis.whenWithLockRedisAndReturnValue lockKey 60 (purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture mbPassPhotoMediaId) >>= \case
     Left _ -> do
       logError $ "Pass purchase already in progress for personId: " <> personId.getId <> " and passTypeId: " <> pass.passTypeId.getId
       throwError (InvalidRequest "Pass purchase already in progress, please try again")
@@ -184,8 +195,9 @@ purchasePassWithPayment ::
   Maybe DT.Day ->
   Maybe Text ->
   Maybe Text ->
+  Maybe (Id.Id DMF.MediaFile) ->
   m PassAPI.PassSelectionAPIEntity
-purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture = do
+purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture mbPassPhotoMediaId = do
   -- Check if pass is already purchased and active
   now <- getCurrentTime
   purchasedPassPaymentId <- generateGUID
@@ -266,6 +278,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   maxValidDays = pass.maxValidDays,
                   deviceSwitchCount = 0,
                   profilePicture = mbProfilePicture <|> person.profilePicture,
+                  passPhotoMediaId = mbPassPhotoMediaId,
                   deviceId = deviceId,
                   status = initialStatus,
                   merchantId = pass.merchantId,
@@ -301,6 +314,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             passEnum = passType >>= (.passEnum),
             merchantOperatingCityId = pass.merchantOperatingCityId,
             profilePicture = mbProfilePicture <|> person.profilePicture,
+            passPhotoMediaId = mbPassPhotoMediaId,
             createdAt = now,
             updatedAt = now
           }
@@ -394,10 +408,12 @@ postMultimodalPassSelect ::
     Maybe Text ->
     Maybe Text ->
     Maybe Text ->
+    Maybe Text ->
     Maybe DT.Day ->
     Environment.Flow PassAPI.PassSelectionAPIEntity
   )
-postMultimodalPassSelect = postMultimodalPassSelectUtil False
+postMultimodalPassSelect ids passId mbDeviceIdParam mbImeiParam mbPassPhotoMediaIdParam mbProfilePicture mbStartDay =
+  postMultimodalPassSelectUtil False ids passId mbDeviceIdParam mbImeiParam mbProfilePicture (Id.Id <$> mbPassPhotoMediaIdParam) mbStartDay
 
 postMultimodalPassV2Select ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
@@ -408,25 +424,30 @@ postMultimodalPassV2Select ::
     Environment.Flow PassAPI.PassSelectionAPIEntity
   )
 postMultimodalPassV2Select (mbPersonId, merchantId) passId req =
-  postMultimodalPassSelect (mbPersonId, merchantId) passId Nothing (Just req.imeiNumber) (Just req.profilePicture) (Just req.startDate)
+  postMultimodalPassSelectUtil False (mbPersonId, merchantId) passId Nothing (Just req.imeiNumber) req.profilePicture req.passPhotoMediaId (Just req.startDate)
 
 -- Generate Redis lock key for pass purchase
 mkPassPurchaseLockKey :: Id.Id DP.Person -> Id.Id DPassType.PassType -> Text
 mkPassPurchaseLockKey personId passTypeId =
   "PassPurchase:PersonId:" <> personId.getId <> ":PassTypeId:" <> passTypeId.getId
 
--- Validate that the person has all required documents for the pass
-validateRequiredDocuments :: (MonadFlow m) => Maybe Text -> DP.Person -> [DPass.PassDocumentType] -> m ()
-validateRequiredDocuments mbProfilePicture person requiredDocs = do
-  let missingDocs = filter (not . hasDocument mbProfilePicture person) requiredDocs
+-- Validate that the person has all required documents for the pass.
+-- Profile picture is intentionally NOT mandatory at select time: it's consumed
+-- if the client sends it, but its absence does not fail the purchase. The pass
+-- moves to PhotoPending after payment and the user can upload the photo later
+-- (uploadProfilePicture). Other documents (e.g. Aadhaar) remain mandatory.
+validateRequiredDocuments :: (MonadFlow m) => Maybe Text -> Maybe (Id.Id DMF.MediaFile) -> DP.Person -> [DPass.PassDocumentType] -> m ()
+validateRequiredDocuments mbProfilePicture mbPassPhotoMediaId person requiredDocs = do
+  let mandatoryDocs = filter (/= DPass.ProfilePicture) requiredDocs
+      missingDocs = filter (not . hasDocument mbProfilePicture mbPassPhotoMediaId person) mandatoryDocs
   unless (null missingDocs) $ do
     let missingDocNames = show missingDocs
     throwError $ InvalidRequest $ "Missing required documents: " <> missingDocNames
 
 -- Check if person has a specific document
-hasDocument :: Maybe Text -> DP.Person -> DPass.PassDocumentType -> Bool
-hasDocument mbProfilePicture person docType = case docType of
-  DPass.ProfilePicture -> isJust (mbProfilePicture <|> person.profilePicture)
+hasDocument :: Maybe Text -> Maybe (Id.Id DMF.MediaFile) -> DP.Person -> DPass.PassDocumentType -> Bool
+hasDocument mbProfilePicture mbPassPhotoMediaId person docType = case docType of
+  DPass.ProfilePicture -> isJust mbPassPhotoMediaId || isJust (mbProfilePicture <|> person.profilePicture)
   DPass.Aadhaar -> person.aadhaarVerified
 
 -- Check if two date ranges overlap
@@ -661,7 +682,7 @@ checkEligibility logics personData = do
 
 -- Build PurchasedPass API Entity
 buildPurchasedPassAPIEntity ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, IssueManagement.Storage.BeamFlow.BeamFlow m r) =>
   Maybe Lang.Language ->
   DP.Person ->
   Maybe Text ->
@@ -695,6 +716,10 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
   mbLastVerified <- QPassVerifyTransaction.findLastVerifiedVehicleNumberByPurchasePassId purchasedPass.id
   let lastVerifiedVehicleNumber = fmap fst mbLastVerified
   let isAutoVerified = (mbLastVerified >>= snd) == Just True
+  -- Prefer the uploaded media file (new flow) and resolve it to a URL; fall back to the legacy inline photo.
+  mbMediaUrl <- case purchasedPass.passPhotoMediaId of
+    Just mediaId -> fmap (.url) <$> QMediaFile.findById mediaId
+    Nothing -> pure Nothing
   return $
     PassAPI.PurchasedPassAPIEntity
       { id = purchasedPass.id,
@@ -707,7 +732,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         startDate = purchasedPass.startDate,
         deviceMismatch,
         deviceSwitchAllowed = purchasedPass.deviceSwitchCount < maxSwitchCount,
-        profilePicture = purchasedPass.profilePicture <|> person.profilePicture,
+        profilePicture = mbMediaUrl <|> purchasedPass.profilePicture <|> person.profilePicture,
         daysToExpire = daysToExpire,
         purchaseDate = DT.utctDay purchasedPass.createdAt,
         expiryDate = purchasedPass.endDate,
@@ -731,7 +756,7 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
   case (mbPurchasedPassPayment, mbPurchasedPass) of
     (Just purchasedPassPayment, Just purchasedPass) -> do
       let isDashboard = fromMaybe False purchasedPassPayment.isDashboard
-      let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (isJust purchasedPass.profilePicture) (purchasedPassPayment.startDate > DT.utctDay istTime) status
+      let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (isJust purchasedPass.profilePicture || isJust purchasedPass.passPhotoMediaId) (purchasedPassPayment.startDate > DT.utctDay istTime) status
       let activeLikeStatuses = [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]
       let refundStatuses = [DPurchasedPass.RefundPending, DPurchasedPass.RefundInitiated, DPurchasedPass.RefundFailed, DPurchasedPass.Refunded]
       mbDuplicateActivePayment <-
@@ -781,6 +806,7 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
               QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
             when (passStatus `elem` activeLikeStatuses) $ do
               QPurchasedPass.updateProfilePictureById purchasedPassPayment.profilePicture purchasedPass.id
+              QPurchasedPass.updatePassPhotoMediaIdById purchasedPassPayment.passPhotoMediaId purchasedPass.id
               when (passStatus == DPurchasedPass.Active && purchasedPassPayment.startDate <= today && purchasedPassPayment.endDate >= today) $
                 QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
           case purchasedPassPayment.status of
@@ -1068,8 +1094,8 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
 
   let sourceStop =
         getNearestStop routeStopMapping passVerifyReq.currentLat passVerifyReq.currentLon
-          <|> ((listToMaybe routeStopMapping) <&> (.stopCode))
-      destinationStop = (safeTail routeStopMapping) <&> (.stopCode)
+          <|> (listToMaybe routeStopMapping <&> (.stopCode))
+      destinationStop = safeTail routeStopMapping <&> (.stopCode)
   id <- generateGUID
   now <- getCurrentTime
   let passVerifyTransaction =
@@ -1339,7 +1365,7 @@ postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) 
   let today = DT.utctDay istTime
   normalizedMbStartDate <- case mbStartDate of
     Just d | d == today -> return Nothing
-    Just d | (d < today && not isDashboard) -> throwError (PassActivationNotReady purchasedPass.id.getId "Cannot schedule pass for a past date")
+    Just d | d < today && not isDashboard -> throwError (PassActivationNotReady purchasedPass.id.getId "Cannot schedule pass for a past date")
     _ -> return mbStartDate
 
   case normalizedMbStartDate of
@@ -1391,36 +1417,65 @@ postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) 
     QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus purchasedPass.benefitDescription purchasedPass.benefitType purchasedPass.benefitValue purchasedPass.passAmount
   return APISuccess.Success
 
+-- | Upload a pass photo in one call: stream the image to S3 (reusing the
+-- IssueManagement media-upload flow, stored under "pass-photo/<personId>/..."),
+-- then attach the resulting media id to the (PhotoPending) pass and flip it to
+-- Active/PreBooked. Returns the media id (fileId), which the client uses to
+-- render the photo via GET /multimodal/pass/photo/{mediaId}.
 postMultimodalPassUploadProfilePicture ::
   ( ( Maybe (Id.Id DP.Person),
       Id.Id DM.Merchant
     ) ->
-    PassAPI.PassUploadProfilePictureReq ->
-    Environment.Flow APISuccess.APISuccess
+    Id.Id DPurchasedPass.PurchasedPass ->
+    Maybe Text ->
+    IssueCommon.IssueMediaUploadReq ->
+    Environment.Flow IssueCommon.IssueMediaUploadRes
   )
-postMultimodalPassUploadProfilePicture (mbCallerPersonId, _merchantId) req = do
+postMultimodalPassUploadProfilePicture (mbCallerPersonId, merchantId) purchasedPassId mbImeiNumber req = do
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
-  purchasedPass <- QPurchasedPass.findById req.purchasedPassId >>= fromMaybeM (PurchasedPassNotFound req.purchasedPassId.getId)
+  purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
 
   unless (purchasedPass.personId == personId) $ throwError AccessDenied
 
   unless (purchasedPass.status == DPurchasedPass.PhotoPending) $
     throwError (InvalidRequest "Pass is not in PhotoPending status")
 
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  uploadRes <- IssueAction.mediaUploadToS3 merchant.mediaFileSizeUpperLimit merchant.mediaFileUrlPattern req "pass-photo" personId.getId
+  let mediaId = uploadRes.fileId
+
   istTime <- getLocalCurrentTime (19800 :: Seconds)
   let today = DT.utctDay istTime
   let newStatus = if purchasedPass.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
   QPurchasedPass.updateStatusById newStatus purchasedPass.id
-  QPurchasedPass.updateProfilePictureById (Just req.profilePicture) purchasedPass.id
-  QPurchasedPass.updateDeviceIdById req.imeiNumber purchasedPass.deviceSwitchCount purchasedPass.id
+  QPurchasedPass.updatePassPhotoMediaIdById (Just mediaId) purchasedPass.id
+  whenJust mbImeiNumber $ \imeiNumber ->
+    QPurchasedPass.updateDeviceIdById imeiNumber purchasedPass.deviceSwitchCount purchasedPass.id
 
-  -- Update purchasedPassPayment table as well
+  -- Attach the media id to the still-PhotoPending payment rows, then flip their status.
+  QPurchasedPassPayment.updatePassPhotoMediaIdByPurchasedPassIdAndStatus (Just mediaId) purchasedPass.id [DPurchasedPass.PhotoPending]
   purchasedPassPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusStartDateGreaterThan Nothing Nothing purchasedPass.id DPurchasedPass.PhotoPending purchasedPass.startDate
-  forM_ purchasedPassPayments $ \payment -> do
-    QPurchasedPassPayment.updateStatusAndProfilePictureByOrderId newStatus (Just req.profilePicture) payment.orderId
+  forM_ purchasedPassPayments $ \payment ->
+    QPurchasedPassPayment.updateStatusByOrderId newStatus payment.orderId
 
-  return APISuccess.Success
+  return uploadRes
 
+-- | Fetch a pass photo's raw content from S3 by its media id, for rendering.
+-- Only the owner (whose id is embedded in the S3 path) may fetch it.
+getMultimodalPassPhoto ::
+  ( ( Maybe (Id.Id DP.Person),
+      Id.Id DM.Merchant
+    ) ->
+    Id.Id DMF.MediaFile ->
+    Environment.Flow Text
+  )
+getMultimodalPassPhoto (mbCallerPersonId, _merchantId) mediaId = do
+  personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
+  fetchPassPhotoFromS3 personId mediaId
+
+-- | Attach an already-uploaded pass-photo media id to a pass (used by the
+-- dashboard after it uploads the image to S3). Stores the media id on the pass
+-- and its active/pending payment rows.
 postMultimodalPassUpdateProfilePictureUtil ::
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -1429,18 +1484,29 @@ postMultimodalPassUpdateProfilePictureUtil ::
   Id.Id DP.Person ->
   Id.Id DM.Merchant ->
   Id.Id DPurchasedPass.PurchasedPass ->
-  Text ->
+  Id.Id DMF.MediaFile ->
   m APISuccess.APISuccess
-postMultimodalPassUpdateProfilePictureUtil personId merchantId purchasedPassId profilePicture = do
+postMultimodalPassUpdateProfilePictureUtil personId merchantId purchasedPassId mediaId = do
   purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
   unless (purchasedPass.personId == personId) $ throwError AccessDenied
   unless (purchasedPass.merchantId == merchantId) $ throwError AccessDenied
-  QPurchasedPass.updateProfilePictureById (Just profilePicture) purchasedPass.id
+  QPurchasedPass.updatePassPhotoMediaIdById (Just mediaId) purchasedPass.id
 
   let validStatuses = [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]
-  QPurchasedPassPayment.updateProfilePictureByPurchasedPassIdAndStatus (Just profilePicture) purchasedPass.id validStatuses
+  QPurchasedPassPayment.updatePassPhotoMediaIdByPurchasedPassIdAndStatus (Just mediaId) purchasedPass.id validStatuses
 
   return APISuccess.Success
+
+-- | Fetch a pass photo's raw content from S3 by media id, verifying the file
+-- belongs to the given person (their id is embedded in the S3 path). Shared by
+-- the customer GET endpoint and the dashboard render flow.
+fetchPassPhotoFromS3 :: Id.Id DP.Person -> Id.Id DMF.MediaFile -> Environment.Flow Text
+fetchPassPhotoFromS3 personId mediaId = do
+  mediaFile <- QMediaFile.findById mediaId >>= fromMaybeM (InvalidRequest "Pass photo not found")
+  s3FilePath <- mediaFile.s3FilePath & fromMaybeM (InvalidRequest "Pass photo has no associated S3 path")
+  when (T.isInfixOf ".." s3FilePath) $ throwError (InvalidRequest "filePath must not contain path-traversal sequences")
+  unless (T.isInfixOf ("pass-photo/" <> personId.getId <> "/") s3FilePath) $ throwError AccessDenied
+  S3.get (T.unpack s3FilePath)
 
 postMultimodalPassSetPrefSrcAndDest ::
   ( ( Maybe (Id.Id DP.Person),
