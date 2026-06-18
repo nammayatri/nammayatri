@@ -13,6 +13,21 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder
 import Servant
 import Tools.Auth
 
+data MarshalPersonReq = MarshalPersonReq
+  { email :: Kernel.Prelude.Maybe Data.Text.Text,
+    firstName :: Kernel.Prelude.Maybe Data.Text.Text,
+    lastName :: Kernel.Prelude.Maybe Data.Text.Text,
+    merchantShortId :: Data.Text.Text,
+    mobileCountryCode :: Data.Text.Text,
+    mobileNumber :: Data.Text.Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+newtype MarshalPersonResp = MarshalPersonResp {customerId :: Kernel.Types.Id.Id Domain.Types.Person.Person}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data ParkingBookingReq = ParkingBookingReq
   { amount :: Kernel.Types.Common.HighPrecMoney,
     customerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
