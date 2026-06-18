@@ -125,3 +125,28 @@ BEGIN
           AND ma.operating_city::text = c.city
     );
 END $$;
+
+-- In local dev, mirror all JUSPAY_ADMIN access-matrix entries to FLEET_OWNER so that
+-- integration tests can call any dashboard API as a fleet owner without needing
+-- per-endpoint access-matrix maintenance.
+-- Role IDs: JUSPAY_ADMIN = '37947162-3b5d-4ed6-bcac-08841be1534d'
+--           FLEET_OWNER  = 'e5a69a26-d165-455a-a711-33a41e0d4812'
+DO $$
+DECLARE
+    fleet_owner_role_id TEXT := 'e5a69a26-d165-455a-a711-33a41e0d4812';
+    admin_role_id       TEXT := '37947162-3b5d-4ed6-bcac-08841be1534d';
+BEGIN
+    INSERT INTO atlas_bpp_dashboard.access_matrix
+        (id, role_id, api_entity, user_access_type, user_action_type, created_at, updated_at)
+    SELECT
+        gen_random_uuid()::text,
+        fleet_owner_role_id,
+        am.api_entity,
+        am.user_access_type,
+        am.user_action_type,
+        now(),
+        now()
+    FROM atlas_bpp_dashboard.access_matrix am
+    WHERE am.role_id = admin_role_id
+    ON CONFLICT DO NOTHING;
+END $$;

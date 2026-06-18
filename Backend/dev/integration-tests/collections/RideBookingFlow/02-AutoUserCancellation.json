@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "NY Auto User Cancellation",
-    "description": "Auto ride with rider cancellation after assignment | Fix: Rider Auth now uses {{bap_short_id}} instead of hardcoded 'NAMMA_YATRI', so Delhi (BHARAT_TAXI) and Kolkata (JATRI_SAATHI) riders authenticate against the correct BAP merchant and the serviceability geofence check uses the right region list.",
+    "description": "Auto ride with rider cancellation after assignment",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -333,7 +333,7 @@
           },
           {
             "key": "token",
-            "value": "{{driver_id}}"
+            "value": "{{driver_token}}"
           },
           {
             "key": "vt",
@@ -440,7 +440,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n    \"mobileNumber\": \"{{_test_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{bap_short_id}}\"\n}"
+          "raw": "{\n    \"mobileNumber\": \"{{_test_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"NAMMA_YATRI\"\n}"
         },
         "url": {
           "raw": "{{baseUrl_app}}/auth",
@@ -524,7 +524,7 @@
           },
           {
             "key": "token",
-            "value": "{{driver_id}}"
+            "value": "{{driver_token}}"
           },
           {
             "key": "vt",
@@ -711,9 +711,11 @@
           "listen": "prerequest",
           "script": {
             "exec": [
-              "// Wait briefly before checking nearby requests",
-              "const start = Date.now();",
-              "while (Date.now() - start < 1000) { /* busy wait */ }"
+              "// Minimal wait on first attempt; retries wait inside the test script",
+              "var attempt = parseInt(pm.collectionVariables.get('_nearby_attempt') || '0');",
+              "if (attempt === 0) {",
+              "    var start = Date.now(); while (Date.now() - start < 1000) { /* busy wait */ }",
+              "}"
             ],
             "type": "text/javascript"
           }
@@ -727,13 +729,28 @@
               "    var req = d.searchRequestsForDriver[0];",
               "    pm.environment.set('searchTryId', req.searchTryId);",
               "    console.log('Got search request, searchTryId:', req.searchTryId, 'baseFare:', req.baseFare, 'variant:', req.requestedVehicleVariant);",
+              "    pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "    pm.test('Has search requests', function () {",
+              "        pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty;",
+              "    });",
+              "    pm.collectionVariables.set('_nearby_attempt', '0');",
               "} else {",
-              "    console.log('WARNING: No nearby ride requests found for driver. Response:', JSON.stringify(d));",
-              "}",
-              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
-              "pm.test('Has search requests', function () {",
-              "    pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty;",
-              "});"
+              "    // Allocator batches can take a few seconds; retry up to 4 times with a 3s busy-wait between attempts",
+              "    var attempt = parseInt(pm.collectionVariables.get('_nearby_attempt') || '0');",
+              "    if (attempt < 4) {",
+              "        console.log('No nearby requests (attempt ' + (attempt + 1) + '/4), retrying in 3s...');",
+              "        var t0 = Date.now(); while (Date.now() - t0 < 3000) {}",
+              "        pm.collectionVariables.set('_nearby_attempt', String(attempt + 1));",
+              "        pm.execution.setNextRequest('Get Nearby Ride Requests (Driver)');",
+              "    } else {",
+              "        pm.collectionVariables.set('_nearby_attempt', '0');",
+              "        console.log('WARNING: No nearby ride requests after 4 retries. Response:', JSON.stringify(d));",
+              "        pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "        pm.test('Has search requests', function () {",
+              "            pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty;",
+              "        });",
+              "    }",
+              "}"
             ],
             "type": "text/javascript"
           }
