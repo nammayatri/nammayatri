@@ -188,6 +188,7 @@ data DocumentType
   | Rating
   | BotApproval
   | NomineeDetails
+  | DriverVehicleNOC
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 

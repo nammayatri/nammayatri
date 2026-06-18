@@ -1289,6 +1289,9 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
     DVC.LocalResidenceProof -> do
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.LocalResidenceProof
       return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing)
+    DVC.DriverVehicleNOC -> do
+      let (status, reason, url) = checkImageValidity entityImagesInfo DVC.DriverVehicleNOC
+      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing)
     DVC.TrainingForm -> do
       status <- checkLMSTrainingStatus driverId merchantOpCityId
       return (status, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing)
@@ -1449,6 +1452,7 @@ getInProgressDriverDocuments role driverId entityImagesInfo docType possibleVehi
     DDVC.DrivingSchoolCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.DrivingSchoolCertificate onlyImageLookup filteredDocVerificationConfigs
     DDVC.PoliceVerificationCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.PoliceVerificationCertificate onlyImageLookup filteredDocVerificationConfigs
     DDVC.LocalResidenceProof -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.LocalResidenceProof onlyImageLookup filteredDocVerificationConfigs
+    DDVC.DriverVehicleNOC -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.DriverVehicleNOC onlyImageLookup filteredDocVerificationConfigs
     DDVC.TrainingForm -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.TrainingForm onlyImageLookup filteredDocVerificationConfigs
     DDVC.DriverInspectionHub -> do
       mbStatus <- getInspectionHubStatusForResponseStatus DOHR.DRIVER_ONBOARDING_INSPECTION (Just driverId) Nothing

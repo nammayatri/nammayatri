@@ -268,6 +268,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
   businessLicenseImgs <- getDriverImages merchant.id DVC.BusinessLicense
   aadhaarImgs <- getDriverImages merchant.id DVC.AadhaarCard
   vehicleNOCImgs <- getDriverImages merchant.id DVC.VehicleNOC
+  driverVehicleNOCImgs <- getDriverImages merchant.id DVC.DriverVehicleNOC
   localResidenceProofImgs <- getDriverImages merchant.id DVC.LocalResidenceProof
   policeVerificationCertificateImgs <- getDriverImages merchant.id DVC.PoliceVerificationCertificate
   drivingSchoolCertificateImgs <- getDriverImages merchant.id DVC.DrivingSchoolCertificate
@@ -307,6 +308,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
         businessLicense = businessLicenseImgs,
         aadhaar = aadhaarImgs,
         vehicleNOC = vehicleNOCImgs,
+        driverVehicleNOC = driverVehicleNOCImgs,
         odometer = odometerImg,
         gstCertificate = gstImgs,
         localResidenceProof = localResidenceProofImgs,
@@ -495,6 +497,7 @@ mapDocumentType Common.GSTCertificate = DVC.GSTCertificate
 mapDocumentType Common.BackgroundVerification = DVC.BackgroundVerification
 mapDocumentType Common.UploadProfileImage = DVC.UploadProfile
 mapDocumentType Common.VehicleNOC = DVC.VehicleNOC
+mapDocumentType Common.DriverVehicleNOC = DVC.DriverVehicleNOC
 mapDocumentType Common.BusinessLicense = DVC.BusinessLicense
 mapDocumentType Common.VehicleFront = DVC.VehicleFront
 mapDocumentType Common.VehicleBack = DVC.VehicleBack
