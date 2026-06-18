@@ -155,7 +155,7 @@ cancel req merchant booking mbActiveSearchTry = do
         Just ride -> do
           driver <- QPers.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
           fork "cancelRide - Notify driver" $
-            Notify.notifyOnCancel booking.merchantOperatingCityId booking driver bookingCR.source
+            Notify.notifyOnCancel booking.merchantOperatingCityId ride.id booking driver bookingCR.source
           isValueAddNP <- CQVAN.isValueAddNP booking.bapId
           vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
           isReallocat <- reAllocateBookingIfPossible isValueAddNP (fromMaybe False req.userReallocationEnabled) merchant booking ride driver vehicle bookingCR False
