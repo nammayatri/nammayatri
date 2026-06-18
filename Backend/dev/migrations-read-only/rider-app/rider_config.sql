@@ -751,3 +751,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_edit_location_without_ride 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ALTER COLUMN enable_edit_location_without_ride SET DEFAULT true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN special_location_tier_order_config json ;

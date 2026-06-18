@@ -96,6 +96,14 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be VehicleServiceTierO
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForList ''VehicleServiceTierOrderConfig)
 
+data SpecialLocationTierOrderConfig = SpecialLocationTierOrderConfig {orderArray :: [Domain.Types.ServiceTierType.ServiceTierType], specialLocationName :: Text}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Read, Ord)
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be SpecialLocationTierOrderConfig where
+  sqlValueSyntax = autoSqlValueSyntax
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForList ''SpecialLocationTierOrderConfig)
+
 data SyncDispatchScope
   = AllRides
   | SpecialLocationOnly (Maybe [Id SL.SpecialLocation])
