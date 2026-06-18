@@ -22,6 +22,7 @@ import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Types.DailyStats as DDS
+import qualified Domain.Types.DriverOperatorAssociation as DDOA
 import qualified Domain.Types.DriverReferral as DR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -139,8 +140,14 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
           person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
           SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
           DriverInformation.updateReferredByOperatorId (Just dr.driverId.getId) personId
-          driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId DomainRC.defaultAssociationEnd
-          void $ QDOA.create driverOperatorAssData
+          mbExistingInactiveAssoc <- B.runInReplica $ QDOA.findByDriverIdAndOperatorId personId dr.driverId False
+          case mbExistingInactiveAssoc of
+            Just existingAssoc -> do
+              now <- getCurrentTime
+              QDOA.updateByPrimaryKey existingAssoc {DDOA.isActive = True, DDOA.associatedOn = Just now, DDOA.updatedAt = now}
+            Nothing -> do
+              driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId DomainRC.defaultAssociationEnd True
+              void $ QDOA.create driverOperatorAssData
           Analytics.handleDriverAnalyticsAndFlowStatus
             transporterConfig
             personId
