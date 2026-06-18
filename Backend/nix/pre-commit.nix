@@ -138,7 +138,7 @@
             exec >/dev/tty 2>&1
           fi
           echo ">> pre-push: incremental cabal build all — verifying changed packages + dependents (live output below)"
-          echo "We trust you and not doing cabal build all, kindly don't exploit :)"
+          echo "Skipping cabal build all for now, we trust your changes are correct — please don't break the build :)"
         '';
       });
     };

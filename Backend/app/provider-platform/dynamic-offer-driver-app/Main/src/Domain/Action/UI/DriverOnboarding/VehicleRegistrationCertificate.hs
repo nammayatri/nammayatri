@@ -69,6 +69,7 @@ import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as ODC
+import qualified Domain.Types.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.HyperVergeVerification as Domain
@@ -896,6 +897,8 @@ deactivateRC isTaxiBoothRequest transporterConfig rc driverId = do
     throwError (InvalidRequest "Driver can't deactivate RC which is not active with them")
   removeVehicle isTaxiBoothRequest driverId
   DAQuery.deactivateRCForDriver False driverId rc.id
+  now <- getCurrentTime
+  DIQuery.updateActivityWithDriverFlowStatus False (Just DCommon.OFFLINE) (Just DDFS.OFFLINE) Nothing (Just now) (cast driverId)
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverId
   return ()
 
