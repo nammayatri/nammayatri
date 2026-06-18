@@ -7,6 +7,7 @@ imports:
   KaptureConfig: IssueManagement.Common
   ExotelMapping: Domain.Types.Extra.RiderConfig
   VehicleServiceTierOrderConfig: Domain.Types.Extra.RiderConfig
+  SpecialLocationTierOrderConfig: Domain.Types.Extra.RiderConfig
   SyncSearchDispatchConfig: Domain.Types.Extra.RiderConfig
   Value: Data.Aeson
   NominalDiffTime: Kernel.Prelude
@@ -207,6 +208,7 @@ RiderConfig:
     ticketingPermissionConfig: Maybe Value
     userServiceTierOrderConfig: "[VehicleServiceTierOrderConfig]"
     defaultServiceTierOrderConfig: "[ServiceTierType]"
+    specialLocationTierOrderConfig: "Maybe [SpecialLocationTierOrderConfig]"
     boostSearchPreSelectionServiceTierConfig: "[VehicleServiceTierOrderConfig]"
     noOfRideRequestsConfig: Int
     busTrackingConfig: "Maybe BusTrackingConfig"
@@ -298,6 +300,7 @@ RiderConfig:
     fareCacheInterCitySearchLocations : Maybe Value
     userServiceTierOrderConfig: Maybe Value
     defaultServiceTierOrderConfig: Maybe [ServiceTierType]
+    specialLocationTierOrderConfig: Maybe Value
     boostSearchPreSelectionServiceTierConfig: Maybe Value
     noOfRideRequestsConfig: Maybe Int
     busTrackingConfig: Maybe Value
@@ -366,6 +369,7 @@ RiderConfig:
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Kernel.Utils.JSON.valueToMaybe|E
     userServiceTierOrderConfig: fromMaybe [] (userServiceTierOrderConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
     defaultServiceTierOrderConfig: fromMaybe Domain.Types.ServiceTierType.allServiceTiersTypes defaultServiceTierOrderConfig|E
+    specialLocationTierOrderConfig: specialLocationTierOrderConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     boostSearchPreSelectionServiceTierConfig: fromMaybe [] (boostSearchPreSelectionServiceTierConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
     busTierSortingConfig: (busTierSortingConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
     serviceTierRelationshipCfg: (serviceTierRelationshipCfg >>= Kernel.Utils.JSON.valueToMaybe)|E
@@ -425,6 +429,7 @@ RiderConfig:
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Just . Data.Aeson.toJSON|E
     userServiceTierOrderConfig: (Just . Data.Aeson.toJSON)|I
     defaultServiceTierOrderConfig: Just defaultServiceTierOrderConfig|E
+    specialLocationTierOrderConfig: (specialLocationTierOrderConfig >>= Just . Data.Aeson.toJSON)|E
     boostSearchPreSelectionServiceTierConfig: (Just . Data.Aeson.toJSON)|I
     busTierSortingConfig: (busTierSortingConfig >>= Just . Data.Aeson.toJSON)|E
     serviceTierRelationshipCfg: (serviceTierRelationshipCfg >>= Just . Data.Aeson.toJSON)|E
@@ -540,6 +545,7 @@ RiderConfig:
     fareCacheInterCitySearchLocations : "json"
     userServiceTierOrderConfig : "json"
     defaultServiceTierOrderConfig: text []
+    specialLocationTierOrderConfig: "json"
     boostSearchPreSelectionServiceTierConfig: "json"
     blockedUntilInMins: int
     ticketingPermissionConfig: "json"

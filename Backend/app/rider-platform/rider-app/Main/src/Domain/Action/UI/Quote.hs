@@ -233,9 +233,17 @@ buildGetQuotesRes searchRequest estimateList quoteList mbRiderConfig = do
   estimates' <- getEstimates searchRequest enableRideHailingOffers isReferredRide providerLookup estimateList
   let vehicleServiceTierOrderConfig = maybe [] (.userServiceTierOrderConfig) mbRiderConfig
       defaultServiceTierOrderConfig = maybe [] (.defaultServiceTierOrderConfig) mbRiderConfig
+      mbSpecialLocationName = listToMaybe $ mapMaybe (.specialLocationName) estimateList
+      mbSpecialLocationConfig = do
+        name <- mbSpecialLocationName
+        configs <- mbRiderConfig >>= (.specialLocationTierOrderConfig)
+        find (\c -> c.specialLocationName == name) configs
       mbUserConfig = mostFrequentVehicleCategoryConfig mostFrequentVehicleCategory vehicleServiceTierOrderConfig
-      estimates = estimatesSorting estimates' mbUserConfig defaultServiceTierOrderConfig
-      sortedQuotes = quotesSorting offers mbUserConfig defaultServiceTierOrderConfig
+      (effectiveMbUserConfig, effectiveDefaultConfig) = case mbSpecialLocationConfig of
+        Just config -> (Nothing, config.orderArray)
+        Nothing -> (mbUserConfig, defaultServiceTierOrderConfig)
+      estimates = estimatesSorting estimates' effectiveMbUserConfig effectiveDefaultConfig
+      sortedQuotes = quotesSorting offers effectiveMbUserConfig effectiveDefaultConfig
   return $
     GetQuotesRes
       { fromLocation = DL.makeLocationAPIEntity searchRequest.fromLocation,
