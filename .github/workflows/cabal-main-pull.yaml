@@ -124,6 +124,11 @@ jobs:
           cd "$BAKED/Backend"
           rm -f dist-newrepl-driver
           ln -sfn "$CANON_CACHE/dist-newrepl-driver" dist-newrepl-driver
+          echo "=== bind-mount diagnostics ==="
+          echo "pwd realpath:        $(realpath .)"
+          echo "builddir realpath:   $(realpath dist-newrepl-driver)"
+          echo "cabal file hash:     $(sha256sum app/provider-platform/dynamic-offer-driver-app/Main/dynamic-offer-driver-app.cabal)"
+          echo "=============================="
           nix develop .#backend --command bash -c '
             export CABAL_DIR=$CANON_CACHE/.cabal-dir
             cabal repl dynamic-offer-driver-app --repl-options="-fno-code -fwrite-interface" --builddir=dist-newrepl-driver <<< ":quit"
@@ -148,6 +153,11 @@ jobs:
           cd "$BAKED/Backend"
           rm -f dist-newrepl-rider
           ln -sfn "$CANON_CACHE/dist-newrepl-rider" dist-newrepl-rider
+          echo "=== bind-mount diagnostics ==="
+          echo "pwd realpath:        $(realpath .)"
+          echo "builddir realpath:   $(realpath dist-newrepl-rider)"
+          echo "cabal file hash:     $(sha256sum app/rider-platform/rider-app/Main/rider-app.cabal)"
+          echo "=============================="
           nix develop .#backend --command bash -c '
             export CABAL_DIR=$CANON_CACHE/.cabal-dir
             cabal repl rider-app --repl-options="-fno-code -fwrite-interface" --builddir=dist-newrepl-rider <<< ":quit"
