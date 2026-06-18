@@ -13,6 +13,7 @@ let googleRouteConfigType =
       { computeAlternativeRoutes : Bool
       , routePreference : RoutingPreference
       , url : Text
+      , useRouteMatrix : Optional Bool
       }
 
 let doNotUseRealGoogle =

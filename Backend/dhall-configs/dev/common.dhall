@@ -22,6 +22,7 @@ let googleRouteConfig =
       { computeAlternativeRoutes = False
       , routePreference = "TRAFFIC_AWARE_OPTIMAL"
       , url = "https://routes.googleapis.com/"
+      , useRouteMatrix = None Bool
       }
 
 let googleCfg =
