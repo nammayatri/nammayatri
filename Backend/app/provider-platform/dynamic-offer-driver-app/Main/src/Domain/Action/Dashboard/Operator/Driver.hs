@@ -52,12 +52,14 @@ import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.OperationHub as DOH
 import Domain.Types.OperationHubRequests
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified Domain.Types.ReviewRequest as DRR
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Environment
 import EulerHS.Prelude (whenNothing_, (<|>))
@@ -107,6 +109,7 @@ import qualified Storage.Queries.DriverRCAssociationExtra as QDRC
 import qualified Storage.Queries.DriverRCAssociationExtra as SQDRA
 import qualified Storage.Queries.DriverSSN as QDSSN
 import qualified Storage.Queries.DriverUdyam as QUDYAM
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIExtra
 import qualified Storage.Queries.Image as IQuery
@@ -593,23 +596,50 @@ postDriverOperatorSendJoiningOtp merchantShortId opCity requestorId req = do
   case mbPerson of
     Nothing -> DRBReg.auth merchantShortId opCity req -------------- to onboard a driver that is not the part of the fleet
     Just person -> do
-      withLogTag ("personId_" <> getId person.id) $ do
-        SA.checkForDriverAssociationOverwrite merchant person.id
-        let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
-        otpCode <- maybe generateOTPCode return useFakeOtpM
-        whenNothing_ useFakeOtpM $ do
-          let operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
-          (mbSender, message, templateId, messageType) <-
-            MessageBuilder.buildOperatorJoiningMessage merchantOpCityId $
-              MessageBuilder.BuildOperatorJoiningMessageReq
-                { otp = otpCode,
-                  operatorName = operatorName
-                }
-          let sender = fromMaybe smsCfg.sender mbSender
-          Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType) >>= Sms.checkSmsResult
-        let key = makeOperatorDriverOtpKey phoneNumber
-        Redis.setExp key otpCode 3600
-      pure $ Common.AuthRes {authId = "ALREADY_USING_APPLICATION", attempts = 0}
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      if transporterConfig.overrideOperatorDriverJoiningWithDeepLink == Just True
+        then do
+          withLogTag ("personId_" <> getId person.id) $ do
+            activeAssociations <- B.runInReplica $ QDOA.findAllByDriverId person.id True
+            activeFleetAssociations <- B.runInReplica $ QFDA.findAllByDriverId person.id True
+            unless (null activeFleetAssociations) $
+              throwError (InvalidRequest "Driver already associated with a fleet")
+            case find (\assoc -> assoc.operatorId /= operator.id.getId) activeAssociations of
+              Just _ -> throwError (InvalidRequest "Already existing with another operations partner")
+              Nothing -> do
+                when (any (\assoc -> assoc.operatorId == operator.id.getId) activeAssociations) $
+                  throwError (InvalidRequest "Driver already associated with operator")
+                mbExistingInactiveAssoc <- B.runInReplica $ QDOA.findByDriverIdAndOperatorId person.id operator.id False
+                whenNothing_ mbExistingInactiveAssoc $ do
+                  assoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId person.id operator.id.getId DomainRC.defaultAssociationEnd False
+                  QDOA.create assoc
+                (mbSender, message, templateId, messageType) <-
+                  MessageBuilder.buildOperatorJoinAndDownloadAppMessage merchantOpCityId $
+                    MessageBuilder.BuildOperatorJoinAndDownloadAppMessageReq
+                      { operatorName = operator.firstName
+                      }
+                let sender = fromMaybe smsCfg.sender mbSender
+                Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType)
+                  >>= Sms.checkSmsResult
+          pure $ Common.AuthRes {authId = "DIRECTLY_ASSOCIATED", attempts = 0}
+        else do
+          withLogTag ("personId_" <> getId person.id) $ do
+            SA.checkForDriverAssociationOverwrite merchant person.id
+            let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
+            otpCode <- maybe generateOTPCode return useFakeOtpM
+            whenNothing_ useFakeOtpM $ do
+              let operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
+              (mbSender, message, templateId, messageType) <-
+                MessageBuilder.buildOperatorJoiningMessage merchantOpCityId $
+                  MessageBuilder.BuildOperatorJoiningMessageReq
+                    { otp = otpCode,
+                      operatorName = operatorName
+                    }
+              let sender = fromMaybe smsCfg.sender mbSender
+              Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType) >>= Sms.checkSmsResult
+            let key = makeOperatorDriverOtpKey phoneNumber
+            Redis.setExp key otpCode 3600
+          pure $ Common.AuthRes {authId = "ALREADY_USING_APPLICATION", attempts = 0}
 
 ---------------------------------------------------------------------
 postDriverOperatorVerifyJoiningOtp ::
@@ -638,7 +668,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
 
       deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
       let regId = Id authId :: Id SR.RegistrationToken
-      res <-
+      _ <-
         DReg.verify
           regId
           DReg.AuthVerifyReq
@@ -647,7 +677,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
               whatsappNotificationEnroll = Nothing
             }
 
-      verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator res.person transporterConfig
+      verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person transporterConfig
 
       DOR.makeDriverReferredByOperator merchantOpCityId person.id operator.id
 
@@ -673,27 +703,6 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person transporterConfig
 
   pure Success
-  where
-    verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person transporterConfig = do
-      checkAssocOperator <-
-        B.runInReplica $
-          QDOA.findByDriverIdAndOperatorId person.id operator.id True
-      when (isJust checkAssocOperator) $
-        throwError (InvalidRequest "Driver already associated with operator")
-
-      assoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId person.id operator.id.getId DomainRC.defaultAssociationEnd
-      QDOA.create assoc
-      Analytics.handleDriverAnalyticsAndFlowStatus
-        transporterConfig
-        person.id
-        Nothing
-        ( \driverInfo -> do
-            activeSubCount <- QSubscriptionPurchaseExtra.countActiveSubscriptionsForOwner person.id.getId DSP.DRIVER
-            AnalyticsExtra.adjustOperatorDriverAssociationAnalytics transporterConfig operator.id.getId 1 activeSubCount driverInfo.enabled
-        )
-        ( \driverInfo -> do
-            DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.OPERATOR operator.id.getId driverInfo.driverFlowStatus
-        )
 
 makeOperatorDriverOtpKey :: Text -> Text
 makeOperatorDriverOtpKey phoneNo = "Operator:Driver:PhoneNo" <> phoneNo
@@ -1287,3 +1296,35 @@ getDriverRequestReviewHistory merchantShortId opCity apiEntityType reviewRequest
     castFromApiEntityType API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER = DRR.FLEET_OWNER
 
     castFromApiReqType API.Types.ProviderPlatform.Operator.Driver.BOT_REVIEW = DRR.BOT_REVIEW
+
+---------------------------------------------------------------------
+-- Associates an already-onboarded driver with an operator. Shared by the OTP verify flow
+-- (postDriverOperatorVerifyJoiningOtp) and the OTP-bypass flow (postDriverOperatorSendJoiningOtp
+-- when transporterConfig.overrideOperatorDriverJoiningWithDeepLink is enabled).
+verifyAndAssociateDriverWithOperator ::
+  DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DP.Person ->
+  DP.Person ->
+  TransporterConfig ->
+  Flow ()
+verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person transporterConfig = do
+  checkAssocOperator <-
+    B.runInReplica $
+      QDOA.findByDriverIdAndOperatorId person.id operator.id True
+  when (isJust checkAssocOperator) $
+    throwError (InvalidRequest "Driver already associated with operator")
+
+  assoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId person.id operator.id.getId DomainRC.defaultAssociationEnd True
+  QDOA.create assoc
+  Analytics.handleDriverAnalyticsAndFlowStatus
+    transporterConfig
+    person.id
+    Nothing
+    ( \driverInfo -> do
+        activeSubCount <- QSubscriptionPurchaseExtra.countActiveSubscriptionsForOwner person.id.getId DSP.DRIVER
+        AnalyticsExtra.adjustOperatorDriverAssociationAnalytics transporterConfig operator.id.getId 1 activeSubCount driverInfo.enabled
+    )
+    ( \driverInfo -> do
+        DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.OPERATOR operator.id.getId driverInfo.driverFlowStatus
+    )

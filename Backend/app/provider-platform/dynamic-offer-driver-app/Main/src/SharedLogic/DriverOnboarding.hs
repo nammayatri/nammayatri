@@ -86,8 +86,8 @@ import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverPanCard as DPQuery
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
-import qualified Storage.Queries.FleetOwnerInformation as FOI
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
+import qualified Storage.Queries.FleetOwnerInformation as FOI
 import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Image as Query
