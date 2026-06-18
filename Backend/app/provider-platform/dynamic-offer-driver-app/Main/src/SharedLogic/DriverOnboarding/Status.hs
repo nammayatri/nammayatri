@@ -18,6 +18,8 @@ module SharedLogic.DriverOnboarding.Status
     validateMandatoryVehicleDocsForRC,
     fetchVehicleDocStatusesForRC,
     fetchDriverDocStatusesForPerson,
+    dependencyDocsAllValid,
+    hasActiveFleetAssociation,
     recomputeFleetVerifiedAndEnabled,
     recomputeDriverVerifiedAndEnabled,
     botApproveAndReconcile,
@@ -166,6 +168,20 @@ docAppliesToDriver (Just isFleetDriver) applicableTo = case applicableTo of
   DVC.FLEET_AND_INDIVIDUAL -> True
   DVC.FLEET -> isFleetDriver
   DVC.INDIVIDUAL -> not isFleetDriver
+
+-- | True iff the driver has an active fleet association (→ treated as fleet-side for the applicableTo split).
+hasActiveFleetAssociation :: Id DP.Person -> Flow Bool
+hasActiveFleetAssociation personId = isJust <$> QFDA.findByDriverId personId True
+
+-- | Are all of @deps@ VALID, counting only those that apply per dvc `applicableTo`?
+--   @mbIsFleetDriver = Nothing@ disables the split (vehicle / fleet-owner / legacy → all deps required);
+--   @driverConfigs@ supplies each dep's `applicableTo` (pass [] when no split is needed).
+dependencyDocsAllValid :: Maybe Bool -> [DVC.DocumentVerificationConfig] -> [DVC.DocumentType] -> [DocumentStatusItem] -> Bool
+dependencyDocsAllValid mbIsFleetDriver driverConfigs deps docStatuses =
+  all (`elem` validDocTypes) (filter depApplies deps)
+  where
+    validDocTypes = map (.documentType) $ filter (\d -> d.verificationStatus == VALID) docStatuses
+    depApplies dep = maybe True (\c -> docAppliesToDriver mbIsFleetDriver c.applicableTo) (find (\c -> c.documentType == dep) driverConfigs)
 
 data StatusRes' = StatusRes'
   { driverDocuments :: [DocumentStatusItem],
@@ -987,11 +1003,16 @@ botApproveAndReconcile ::
 botApproveAndReconcile merchantOperatingCity person transporterConfig = do
   let language = fromMaybe merchantOperatingCity.language person.language
   (allDocVerificationConfigs, driverDocuments, vehicleCategory) <- fetchDriverDocStatusesForPerson person merchantOperatingCity transporterConfig language (Just True)
-  let botApprovalDeps = case allDocVerificationConfigs of
-        Left fleetConfigs -> maybe [] (.dependencyDocumentType) $ find (\c -> c.documentType == DVC.BotApproval) fleetConfigs
-        Right driverConfigs -> maybe [] (.dependencyDocumentType) $ find (\c -> c.documentType == DVC.BotApproval) driverConfigs
-      validDocTypes = map (.documentType) $ filter (\d -> d.verificationStatus == VALID) driverDocuments
-      dependencyDocsValid = all (`elem` validDocTypes) botApprovalDeps
+  -- BotApproval's dependency docs must be VALID. On the DVC (driver) side a dep counts only if it applies per
+  -- `applicableTo` (a fleet driver skips INDIVIDUAL-only deps like OperatorPartnerCode); FleetOwnerDVC has no split.
+  isFleetDriver <- case allDocVerificationConfigs of
+    Right _ -> hasActiveFleetAssociation person.id
+    Left _ -> pure False
+  let dependencyDocsValid = case allDocVerificationConfigs of
+        Left fleetConfigs ->
+          dependencyDocsAllValid Nothing [] (maybe [] (.dependencyDocumentType) $ find (\c -> c.documentType == DVC.BotApproval) fleetConfigs) driverDocuments
+        Right driverConfigs ->
+          dependencyDocsAllValid (Just isFleetDriver) driverConfigs (maybe [] (.dependencyDocumentType) $ find (\c -> c.documentType == DVC.BotApproval) driverConfigs) driverDocuments
   -- Force BotApproval VALID: ReviewRequest isn't COMPLETED yet, but approval is committed.
   fork "botApproveAndReconcile: recompute verified/enabled" $ do
     let docs' = map forceBotApprovalValid driverDocuments

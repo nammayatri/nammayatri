@@ -165,7 +165,11 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
         if transporterConfig.enableManualDocumentStatusCheck == Just True
           then Just DDVS.ADMIN_PENDING
           else Nothing
-  createFleetOwnerInfo person.id merchantId mbfleetType mbFleetName mbEnabled mbgstNumber mbReferredOperatorId mbTicketPlaceId (Just $ merchantOperatingCity.id) transporterConfig.taxConfig.defaultTdsRate defaultDocsVerificationStatus
+      -- Under BOT flow the fleet owner is enabled only via the BOT review (submit/review/request →
+      -- recomputeFleetVerifiedAndEnabled), so register as not-enabled. Legacy (non-BOT) keeps the
+      -- existing default-enabled behavior.
+      mbEnabled' = if transporterConfig.enableBotFlow == Just True then Just False else mbEnabled
+  createFleetOwnerInfo person.id merchantId mbfleetType mbFleetName mbEnabled' mbgstNumber mbReferredOperatorId mbTicketPlaceId (Just $ merchantOperatingCity.id) transporterConfig.taxConfig.defaultTdsRate defaultDocsVerificationStatus
   whenJust mbReferredOperatorId $ \referredOperatorId -> do
     fleetOperatorAssData <- SA.makeFleetOperatorAssociation merchantId merchantOpCityId (person.id.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     QFOA.create fleetOperatorAssData

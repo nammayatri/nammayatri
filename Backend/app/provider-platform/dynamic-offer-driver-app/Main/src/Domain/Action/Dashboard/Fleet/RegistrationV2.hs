@@ -228,7 +228,10 @@ enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOpe
         mbFleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId
         pure $ isNothing (mbFleetOwnerInfo >>= (.registeredAt))
       else pure False
-  if registrationPending || adminApprovalRequired == Just True
+  -- Under BOT flow, fleet enablement is owned by the BOT review (submit/review/request →
+  -- recomputeFleetVerifiedAndEnabled), so don't enable here at registration/finalize.
+  let enableBotFlow = transporterConfig.enableBotFlow == Just True
+  if registrationPending || adminApprovalRequired == Just True || enableBotFlow
     then pure False
     else do
       let role = case mbfleetType of
