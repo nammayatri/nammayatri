@@ -22,6 +22,7 @@ imports:
   TagNameValue: Lib.Yudhishthira.Types
   ParcelType: Domain.Types.ParcelType
   PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
+  PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
   CloudType: Kernel.Types.Version
   Version: Kernel.Types.Version
   Device: Kernel.Types.Version
@@ -91,6 +92,7 @@ SearchRequest:
     isReserveRide: Maybe Bool
     numberOfLuggages: Maybe Int
     paymentMode: Maybe PaymentMode
+    paymentInstrument: Maybe PaymentInstrument
     cloudType: Maybe CloudType
     userClientDevice: Maybe Device
     userBundleVersion: Maybe Version

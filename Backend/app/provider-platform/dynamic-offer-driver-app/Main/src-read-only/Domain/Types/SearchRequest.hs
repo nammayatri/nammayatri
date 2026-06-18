@@ -61,6 +61,7 @@ data SearchRequest = SearchRequest
     numberOfLuggages :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     parcelQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     parcelType :: Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType,
+    paymentInstrument :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
     paymentMode :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
     pickupGateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     pickupZoneGateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
