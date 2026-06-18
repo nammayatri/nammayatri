@@ -254,11 +254,22 @@ getUpcomingOrActiveByDriverId (Id personId) =
 getActiveBookingAndRideByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [(Ride, Booking)]
 getActiveBookingAndRideByDriverId (Id personId) = do
   now <- getCurrentTime
+  rides <- mapMaybeM (\status' -> findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [status']]]) [Ride.INPROGRESS, Ride.NEW]
+  when (null rides) $
+    logError $ "No active ride found for driverId: " <> personId
   rideBooking <-
     mapMaybeM
-      (\ride -> maybeM (pure Nothing) (\booking -> pure $ Just (ride, booking)) (QBooking.findById ride.bookingId))
-      =<< mapMaybeM (\status' -> findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.Eq status']]) [Ride.INPROGRESS, Ride.NEW]
-  pure $ filter (not . stuckMeterRide now) rideBooking
+      ( \ride -> do
+          mbBooking <- QBooking.findById ride.bookingId
+          when (isNothing mbBooking) $
+            logError $ "No booking found for rideId: " <> ride.id.getId <> " driverId: " <> personId
+          pure $ mbBooking <&> (ride,)
+      )
+      rides
+  let result = filter (not . stuckMeterRide now) rideBooking
+  when (length result /= length rideBooking) $
+    logError $ "Filtered stuck meter rides for driverId: " <> personId <> " before: " <> show (length rideBooking) <> " after: " <> show (length result)
+  pure result
   where
     stuckMeterRide now (ride, booking) =
       let olderThanADay = diffUTCTime now ride.createdAt >= (secondsToNominalDiffTime $ Seconds 86400)
