@@ -441,6 +441,31 @@ newtype RideStartedParam = RideStartedParam
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+newtype ServiceTierChangedParam = ServiceTierChangedParam
+  { serviceTierName :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+notifyOnServiceTierChange ::
+  ServiceFlow m r =>
+  SRB.Booking ->
+  Text ->
+  m ()
+notifyOnServiceTierChange booking newServiceTierName = do
+  let personId = booking.riderId
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let entity = Notification.Entity Notification.Product booking.id.getId (ServiceTierChangedParam newServiceTierName)
+      dynamicParams = ServiceTierChangedParam newServiceTierName
+  dynamicNotifyPerson
+    person
+    (createNotificationReq "SERVICE_TIER_CHANGED" identity)
+    dynamicParams
+    entity
+    booking.tripCategory
+    [("serviceTierName", newServiceTierName)]
+    (Just booking.configInExperimentVersions)
+    Nothing
+
 newtype TripAssignedData = TripAssignedData
   { tripCategory :: Maybe TripCategory
   }
