@@ -102,42 +102,57 @@ jobs:
           echo "dist-newrepl-driver size:"; du -sh "$CACHE_ROOT/dist-newrepl-driver" 2>/dev/null || echo "  (empty)"
           echo "dist-newrepl-rider size:";  du -sh "$CACHE_ROOT/dist-newrepl-rider"  2>/dev/null || echo "  (empty)"
 
+      - name: Sync cabal config from push runner
+        run: |
+          CANON_CACHE=/home/mdvenkatesh/ny-cabal-unoptimized-cache/ec2-nix-runner-pasta-1/main
+          PR_CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/main
+          mkdir -p "$PR_CACHE_ROOT/.cabal-dir"
+          cp "$CANON_CACHE/.cabal-dir/config" "$PR_CACHE_ROOT/.cabal-dir/config" 2>/dev/null || true
+
       - name: Repl check — dynamic-offer-driver-app (path-normalized)
         run: |
           set -o pipefail
           BAKED=/home/mdvenkatesh/actions-runner/runner-1/_work/nammayatri/nammayatri
-          mkdir -p "$BAKED"
+          CANON_CACHE=/home/mdvenkatesh/ny-cabal-unoptimized-cache/ec2-nix-runner-pasta-1/main
+          PR_CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/main
+          mkdir -p "$BAKED" "$CANON_CACHE"
           cat > /tmp/ns-repl-driver-${{ github.run_id }}.sh <<'NAMESPACE_SCRIPT'
           #!/usr/bin/env bash
           set -e
           mount --bind "$GITHUB_WORKSPACE" "$BAKED"
+          mount --bind "$PR_CACHE_ROOT" "$CANON_CACHE"
           cd "$BAKED/Backend"
-          echo "pwd inside namespace: $(pwd)"
+          rm -f dist-newrepl-driver
+          ln -sfn "$CANON_CACHE/dist-newrepl-driver" dist-newrepl-driver
           nix develop .#backend --command bash -c '
-            export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/main/.cabal-dir
+            export CABAL_DIR=$CANON_CACHE/.cabal-dir
             cabal repl dynamic-offer-driver-app --repl-options="-fno-code -fwrite-interface" --builddir=dist-newrepl-driver <<< ":quit"
           '
           NAMESPACE_SCRIPT
           chmod +x /tmp/ns-repl-driver-${{ github.run_id }}.sh
-          BAKED="$BAKED" unshare -r --mount bash /tmp/ns-repl-driver-${{ github.run_id }}.sh
+          BAKED="$BAKED" CANON_CACHE="$CANON_CACHE" PR_CACHE_ROOT="$PR_CACHE_ROOT" unshare -r --mount bash /tmp/ns-repl-driver-${{ github.run_id }}.sh
           rm -f /tmp/ns-repl-driver-${{ github.run_id }}.sh
 
       - name: Repl check — rider-app (path-normalized)
         run: |
           set -o pipefail
           BAKED=/home/mdvenkatesh/actions-runner/runner-1/_work/nammayatri/nammayatri
-          mkdir -p "$BAKED"
+          CANON_CACHE=/home/mdvenkatesh/ny-cabal-unoptimized-cache/ec2-nix-runner-pasta-1/main
+          PR_CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/main
+          mkdir -p "$BAKED" "$CANON_CACHE"
           cat > /tmp/ns-repl-rider-${{ github.run_id }}.sh <<'NAMESPACE_SCRIPT'
           #!/usr/bin/env bash
           set -e
           mount --bind "$GITHUB_WORKSPACE" "$BAKED"
+          mount --bind "$PR_CACHE_ROOT" "$CANON_CACHE"
           cd "$BAKED/Backend"
-          echo "pwd inside namespace: $(pwd)"
+          rm -f dist-newrepl-rider
+          ln -sfn "$CANON_CACHE/dist-newrepl-rider" dist-newrepl-rider
           nix develop .#backend --command bash -c '
-            export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/main/.cabal-dir
+            export CABAL_DIR=$CANON_CACHE/.cabal-dir
             cabal repl rider-app --repl-options="-fno-code -fwrite-interface" --builddir=dist-newrepl-rider <<< ":quit"
           '
           NAMESPACE_SCRIPT
           chmod +x /tmp/ns-repl-rider-${{ github.run_id }}.sh
-          BAKED="$BAKED" unshare -r --mount bash /tmp/ns-repl-rider-${{ github.run_id }}.sh
+          BAKED="$BAKED" CANON_CACHE="$CANON_CACHE" PR_CACHE_ROOT="$PR_CACHE_ROOT" unshare -r --mount bash /tmp/ns-repl-rider-${{ github.run_id }}.sh
           rm -f /tmp/ns-repl-rider-${{ github.run_id }}.sh
