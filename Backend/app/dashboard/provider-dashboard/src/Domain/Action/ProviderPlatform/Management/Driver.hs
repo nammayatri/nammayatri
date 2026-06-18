@@ -63,6 +63,8 @@ module Domain.Action.ProviderPlatform.Management.Driver
     getDriverAirportPreference,
     postDriverAirportPreference,
     getDriverSearchRequestStats,
+    getDriverIdentityInfo,
+    postDriverIdentityInfoUpdate,
   )
 where
 
@@ -420,3 +422,17 @@ getDriverSearchRequestStats :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo
 getDriverSearchRequestStats merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverSearchRequestStats) driverId
+
+getDriverIdentityInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Environment.Flow Common.DriverIdentityInfoRes
+getDriverIdentityInfo merchantShortId opCity apiTokenInfo driverId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let requestorId = apiTokenInfo.personId.getId
+  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverIdentityInfo) driverId requestorId
+
+postDriverIdentityInfoUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateDriverIdentityInfoReq -> Environment.Flow APISuccess
+postDriverIdentityInfoUpdate merchantShortId opCity apiTokenInfo driverId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) (Just driverId) Nothing (Just req)
+  T.withTransactionStoring transaction $ do
+    let requestorId = apiTokenInfo.personId.getId
+    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverIdentityInfoUpdate) driverId requestorId req

@@ -34,6 +34,9 @@ imports:
   MerchantOperatingCity: Dashboard.Common
   ServiceTierType: Dashboard.Common
   UpsertDriverServiceTiersCsvReq: Dashboard.Common.Driver
+  IndianState: Kernel.Types.Beckn.Context
+  Day: Data.Time
+  AddressDocumentType: Dashboard.Common.Driver
 
 module: Driver
 
@@ -624,7 +627,62 @@ apis:
       response:
         type: DriverSearchRequestStatsRes
 
+  - GET: # GetDriverIdentityInfoAPI
+      endpoint: /{driverId}/identityInfo
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: DriverIdentityInfoRes
+      helperApi:
+        - GET:
+            endpoint: /{driverId}/identityInfo/{requestorId}
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              requestorId: Text
+            response:
+              type: DriverIdentityInfoRes
+
+  - POST: # UpdateDriverIdentityInfoAPI
+      endpoint: /{driverId}/identityInfo/update
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: UpdateDriverIdentityInfoReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/identityInfo/update/{requestorId}
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              requestorId: Text
+            request:
+              type: UpdateDriverIdentityInfoReq
+            response:
+              type: APISuccess
+
 types:
+  DriverIdentityInfoRes:
+    - driverId: Id Driver
+    - nomineeName: Maybe Text
+    - nomineeRelationship: Maybe Text
+    - nomineeDob: Maybe Day
+    - address: Maybe Text
+    - addressDocumentType: Maybe AddressDocumentType
+    - addressState: Maybe IndianState
+    - derive: "'HideSecrets"
+  UpdateDriverIdentityInfoReq:
+    - nomineeName: Maybe Text
+    - nomineeRelationship: Maybe Text
+    - nomineeDob: Maybe Day
+    - address: Maybe Text
+    - addressDocumentType: Maybe AddressDocumentType
+    - addressState: Maybe IndianState
+    - derive: "'HideSecrets"
   DriverListRes:
     - totalItems: Int # for backward compatibility
     - summary: Summary

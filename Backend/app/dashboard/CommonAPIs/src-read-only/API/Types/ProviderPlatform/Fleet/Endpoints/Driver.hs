@@ -27,6 +27,7 @@ import qualified Kernel.External.Notification.FCM.Types
 import qualified Kernel.Prelude
 import qualified Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
@@ -93,13 +94,6 @@ instance Kernel.Types.HideSecrets.HideSecrets AddVehicleReq where
 data Address = Address {point :: Kernel.External.Maps.Types.LatLong, address :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data AddressDocumentType
-  = RationCard
-  | UtilityBill
-  | Passport
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
 data AllTimeFleetAnalyticsRes = AllTimeFleetAnalyticsRes
   { activeVehicle :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -1191,12 +1185,16 @@ data UpdateDriverReq = UpdateDriverReq
     dob :: Kernel.Prelude.Maybe Data.Time.Day,
     email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    addressDocumentType :: Kernel.Prelude.Maybe AddressDocumentType,
+    addressDocumentType :: Kernel.Prelude.Maybe Dashboard.Common.Driver.AddressDocumentType,
     fleetDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     stripeAddress :: Kernel.Prelude.Maybe Dashboard.Common.Driver.StripeAddress,
     stripeIdNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    fleetType :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetType
+    fleetType :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetType,
+    nomineeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    nomineeDob :: Kernel.Prelude.Maybe Data.Time.Day,
+    nomineeRel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    addressState :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -2781,8 +2779,6 @@ data DriverUserActionType
   | GET_DRIVER_VEHICLE_INFO
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-$(mkHttpInstancesForEnum ''AddressDocumentType)
 
 $(mkHttpInstancesForEnum ''DriverMode)
 

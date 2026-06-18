@@ -67,6 +67,8 @@ module Domain.Action.Dashboard.Management.Driver
     getDriverAirportPreference,
     postDriverAirportPreference,
     getDriverSearchRequestStats,
+    getDriverIdentityInfo,
+    postDriverIdentityInfoUpdate,
   )
 where
 
@@ -119,6 +121,7 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Documents as Documents
@@ -134,6 +137,7 @@ import SharedLogic.Allocator
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import SharedLogic.DriverFleetOperatorAssociation (checkDriverOperatorAssociation, checkFleetDriverAssociation, checkFleetOperatorAssociation, isAssociationBetweenTwoPerson)
+import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverOnboarding.Status (ResponseStatus (..))
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
@@ -155,6 +159,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AadhaarCardExtra as QAadhaarCardExtra
 import qualified Storage.Queries.DailyStats as QDailyStats
+import qualified Storage.Queries.DriverIdentityInfo as QDII
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverPanCard as QPanCard
@@ -1536,3 +1541,83 @@ getDriverSearchRequestStats merchantShortId opCity driverId = do
     castResponse DI.Accept = Common.Accept
     castResponse DI.Reject = Common.Reject
     castResponse DI.Pulled = Common.Pulled
+
+getDriverIdentityInfo ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Dashboard.Common.Driver ->
+  Text ->
+  Flow Common.DriverIdentityInfoRes
+getDriverIdentityInfo merchantShortId _opCity driverId requestorId = do
+  _ <- findMerchantByShortId merchantShortId
+  let personId = cast driverId
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  mbRequestor <- QPerson.findById (Id requestorId)
+  whenJust mbRequestor $ \requestor -> do
+    isValid <- isAssociationBetweenTwoPerson requestor driver
+    unless isValid $ throwError AccessDenied
+  driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
+  mbIdentityInfo <- QDII.findByDriverId personId
+  let info = DIInfo.getIdentityInfo mbIdentityInfo driverInfo
+  pure
+    Common.DriverIdentityInfoRes
+      { driverId = driverId,
+        nomineeName = info.nomineeName,
+        nomineeRelationship = info.nomineeRelationship,
+        nomineeDob = info.nomineeDob,
+        address = info.address,
+        addressDocumentType = castToCommon <$> info.addressDocumentType,
+        addressState = info.addressState
+      }
+
+castToCommon :: DrInfo.AddressDocumentType -> Common.AddressDocumentType
+castToCommon = \case
+  DrInfo.RationCard -> Common.RationCard
+  DrInfo.UtilityBill -> Common.UtilityBill
+  DrInfo.Passport -> Common.Passport
+  DrInfo.VoterId -> Common.VoterId
+  DrInfo.LifeInsurancePolicy -> Common.LifeInsurancePolicy
+  DrInfo.Others -> Common.Others
+
+castFromCommon :: Common.AddressDocumentType -> DrInfo.AddressDocumentType
+castFromCommon = \case
+  Common.RationCard -> DrInfo.RationCard
+  Common.UtilityBill -> DrInfo.UtilityBill
+  Common.Passport -> DrInfo.Passport
+  Common.VoterId -> DrInfo.VoterId
+  Common.LifeInsurancePolicy -> DrInfo.LifeInsurancePolicy
+  Common.Others -> DrInfo.Others
+
+postDriverIdentityInfoUpdate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Dashboard.Common.Driver ->
+  Text ->
+  Common.UpdateDriverIdentityInfoReq ->
+  Flow APISuccess
+postDriverIdentityInfoUpdate merchantShortId opCity driverId requestorId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast driverId
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  mbRequestor <- QPerson.findById (Id requestorId)
+  whenJust mbRequestor $ \requestor -> do
+    isValid <- isAssociationBetweenTwoPerson requestor driver
+    unless isValid $ throwError AccessDenied
+  driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
+  Redis.withLockRedis (DIInfo.driverIdentityInfoLockKey personId) 10 $ do
+    mbExisting <- QDII.findByDriverId personId
+    void $
+      DIInfo.upsertDriverIdentityInfo
+        mbExisting
+        personId
+        merchant.id
+        merchantOpCityId
+        driverInfo
+        req.nomineeName
+        req.nomineeRelationship
+        req.nomineeDob
+        req.address
+        (castFromCommon <$> req.addressDocumentType)
+        req.addressState
+  pure Success
