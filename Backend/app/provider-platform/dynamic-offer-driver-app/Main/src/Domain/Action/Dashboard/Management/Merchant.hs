@@ -1038,6 +1038,7 @@ castDDocumentType = \case
   DVC.ProfilePhoto -> Common.ProfilePhoto
   DVC.PanCard -> Common.PanCard
   DVC.VehicleNOC -> Common.VehicleNOC
+  DVC.DriverVehicleNOC -> Common.DriverVehicleNOC
   DVC.BusinessLicense -> Common.BusinessLicense
   DVC.Odometer -> Common.Odometer
   DVC.AadhaarCard -> Common.AadhaarCard
@@ -1145,6 +1146,7 @@ castDocumentType = \case
   Common.ProfilePhoto -> DVC.ProfilePhoto
   Common.PanCard -> DVC.PanCard
   Common.VehicleNOC -> DVC.VehicleNOC
+  Common.DriverVehicleNOC -> DVC.DriverVehicleNOC
   Common.BusinessLicense -> DVC.BusinessLicense
   Common.Odometer -> DVC.Odometer
   Common.InspectionHub -> DVC.InspectionHub

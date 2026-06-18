@@ -779,6 +779,7 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.BackgroundVerification -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BackgroundVerification
   Domain.Types.DocumentVerificationConfig.UploadProfile -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.UploadProfileImage
   Domain.Types.DocumentVerificationConfig.VehicleNOC -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleNOC
+  Domain.Types.DocumentVerificationConfig.DriverVehicleNOC -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DriverVehicleNOC
   Domain.Types.DocumentVerificationConfig.BusinessLicense -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BusinessLicense
   Domain.Types.DocumentVerificationConfig.VehicleFront -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleFront
   Domain.Types.DocumentVerificationConfig.VehicleBack -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleBack
