@@ -19,6 +19,9 @@ imports:
   CumulativeOfferResp: SharedLogic.Offer
   VerificationStatus: Domain.Types.PassDetails
   Value: Data.Aeson
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+  IssueMediaUploadReq: IssueManagement.Common.UI.Issue
+  IssueMediaUploadRes: IssueManagement.Common.UI.Issue
 
 module: Pass
 types:
@@ -82,16 +85,12 @@ types:
   PassSelectReq:
     startDate: Day
     imeiNumber: Text
-    profilePicture: Text
+    profilePicture: Maybe Text
+    passPhotoMediaId: Maybe (Id MediaFile)
 
   PassSwitchDeviceIdReq:
     deviceId: Maybe Text
     imeiNumber: Maybe Text
-
-  PassUploadProfilePictureReq:
-    purchasedPassId: Id PurchasedPass
-    profilePicture: Text
-    imeiNumber: Text
 
   PurchasedPassAPIEntity:
     id: Id PurchasedPass
@@ -155,6 +154,7 @@ apis:
         deviceId: Text
         imeiNumber: Text
         profilePicture: Text
+        passPhotoMediaId: Text
       response:
         type: PassSelectionAPIEntity
 
@@ -219,12 +219,24 @@ apis:
         type: APISuccess
 
   - POST:
-      endpoint: /multimodal/pass/uploadProfilePicture
+      endpoint: /multimodal/pass/{purchasedPassId}/uploadProfilePicture
       auth: TokenAuth
-      request:
-        type: PassUploadProfilePictureReq
+      params:
+        purchasedPassId: Id PurchasedPass
+      query:
+        imeiNumber: Text
+      multipart:
+        type: IssueMediaUploadReq
       response:
-        type: APISuccess
+        type: IssueMediaUploadRes
+
+  - GET:
+      endpoint: /multimodal/pass/photo/{mediaId}
+      auth: TokenAuth
+      params:
+        mediaId: Id MediaFile
+      response:
+        type: Text
 
   - POST:
       endpoint: /multimodal/pass/set/prefSrcAndDest/{purchasedPassId}
