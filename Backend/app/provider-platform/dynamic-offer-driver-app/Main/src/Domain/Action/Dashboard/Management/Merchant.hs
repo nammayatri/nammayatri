@@ -2092,6 +2092,11 @@ postMerchantConfigFareProductSetEnabled merchantShortId opCity req = do
     CQMOC.findByMerchantIdAndCity merchant.id opCity
       >>= fromMaybeM
         (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  -- An empty selection must not silently report success.
+  when (null req.areas) $ throwError (InvalidRequest "areas must be non-empty")
+  when (null req.vehicleServiceTiers) $ throwError (InvalidRequest "vehicleServiceTiers must be non-empty")
+  whenJust req.tripCategories $ \tcs -> when (null tcs) $ throwError (InvalidRequest "tripCategories, if provided, must be non-empty")
+  whenJust req.searchSources $ \ss -> when (null ss) $ throwError (InvalidRequest "searchSources, if provided, must be non-empty")
   areas <- forM req.areas $ \a ->
     fromMaybeM (InvalidRequest $ "Invalid area: " <> a) (readMaybe (T.unpack a) :: Maybe SL.Area)
   tiers <- forM req.vehicleServiceTiers $ \t ->
@@ -2102,40 +2107,41 @@ postMerchantConfigFareProductSetEnabled merchantShortId opCity req = do
   mbSources <- forM req.searchSources $
     mapM $ \s ->
       fromMaybeM (InvalidRequest $ "Invalid searchSource: " <> s) (readMaybe (T.unpack s) :: Maybe DFareProduct.SearchSource)
-  touched <- fmap concat $
-    forM areas $ \area ->
-      fmap concat $
-        forM tiers $ \tier -> do
-          products <- SQF.findAllByMerchantOpCityIdAreaVehicle merchantOpCity.id area tier
-          let filtered =
-                filter
-                  ( \p ->
-                      maybe True (p.tripCategory `elem`) mbTripCats
-                        && maybe True (p.searchSource `elem`) mbSources
-                  )
-                  products
-              groupKey :: DFareProduct.FareProduct -> (Text, Text, Text)
-              groupKey p = (show p.tripCategory, show p.searchSource, show p.timeBounds)
-              -- One logical config per (tripCategory, searchSource, timeBounds); duplicates collapse.
-              groups = DL.groupBy (\x y -> groupKey x == groupKey y) $ DL.sortOn groupKey filtered
-          fmap concat $
-            forM groups $ \grp ->
-              if req.enabled
-                then case DL.find (.enabled) grp of
-                  Just _ -> pure [] -- already enabled → idempotent no-op
-                  Nothing -> case grp of
-                    (keep : rest) -> do
-                      SQF.updateFareProductEnabled True keep.id -- flip in place: FarePolicy values preserved
-                      forM_ rest (CQFProduct.delete . (.id)) -- collapse duplicates → one row per key
-                      pure grp
-                    [] -> pure []
-                else do
-                  let (lives, others) = DL.partition (.enabled) grp
-                  forM_ lives $ \live -> SQF.updateFareProductEnabled False live.id
-                  forM_ others (CQFProduct.delete . (.id)) -- remove already-disabled debris
-                  pure grp
+  -- Gather every matching product, grouped into one logical config per
+  -- (tripCategory, searchSource, timeBounds) — peak + non-peak included.
+  let groupKey :: DFareProduct.FareProduct -> (Text, Text, Text)
+      groupKey p = (show p.tripCategory, show p.searchSource, show p.timeBounds)
+      matches p =
+        maybe True (p.tripCategory `elem`) mbTripCats
+          && maybe True (p.searchSource `elem`) mbSources
+  groups <-
+    fmap concat $
+      forM areas $ \area ->
+        fmap concat $
+          forM tiers $ \tier -> do
+            products <- filter matches <$> SQF.findAllByMerchantOpCityIdAreaVehicle merchantOpCity.id area tier
+            pure $ DL.groupBy (\x y -> groupKey x == groupKey y) (DL.sortOn groupKey products)
+  -- Per group, keep EXACTLY ONE row (prefer the currently-live one so its
+  -- FarePolicy/fares survive; otherwise a deterministic pick by id), set it to the
+  -- requested state, and collapse the rest. Always keeping one row is what
+  -- guarantees a later re-enable can find the config — disabling twice is a no-op.
+  let resolveGroup grp = case DL.find (.enabled) grp of
+        Just keeper -> Just (keeper, filter (\p -> p.id /= keeper.id) grp)
+        Nothing -> case DL.sortOn (\p -> p.id.getId) grp of
+          (keeper : rest) -> Just (keeper, rest)
+          [] -> Nothing
+      resolved = concatMap (\g -> maybe [] (\r -> [r]) (resolveGroup g)) groups
+      keepers = map fst resolved
+      deletions = concatMap snd resolved
+  forM_ keepers $ \k -> when (k.enabled /= req.enabled) $ SQF.updateFareProductEnabled req.enabled k.id
+  forM_ deletions (CQFProduct.delete . (.id))
+  -- Clean up fare policies left with no referencing fare product (avoid orphans),
+  -- but only when nothing else references them.
+  forM_ (DL.nub (map (.farePolicyId) deletions)) $ \fpId -> do
+    stillReferenced <- SQF.findAllFareProductByFarePolicyId fpId
+    when (null stillReferenced) $ CQFP.delete fpId
   -- clearCache also drops the city-list key, so list/export see the new state immediately.
-  forM_ touched CQFProduct.clearCache
+  forM_ (keepers <> deletions) CQFProduct.clearCache
   pure Success
 
 getMerchantConfigFarePolicyExport :: ShortId DM.Merchant -> Context.City -> Flow Text
