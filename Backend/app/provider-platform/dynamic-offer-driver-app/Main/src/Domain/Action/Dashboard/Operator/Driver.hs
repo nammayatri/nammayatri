@@ -260,15 +260,14 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
           then do
             (vehicleDocItem, allDocumentVerificationConfigs) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOpCity transporterConfig language registrationNo Nothing
             let vehicleCategory = fromMaybe vehicleDocItem.userSelectedVehicleCategory vehicleDocItem.verifiedVehicleCategory
-            depsValid <- inspectionDependenciesValid merchantOpCity.id DVC.InspectionHub vehicleCategory vehicleDocItem.documents
+            -- Vehicle docs: no fleet-driver/individual applicableTo split → Nothing, [].
+            depsValid <- inspectionDependenciesValid merchantOpCity.id DVC.InspectionHub Nothing [] vehicleCategory vehicleDocItem.documents
             pure (Just (vehicleDocItem, allDocumentVerificationConfigs), depsValid)
           else (Nothing,) <$> SStatus.fetchAndCheckVehicleDocsValidForEnabling rc merchantOpCity transporterConfig language registrationNo
       when allVehicleDocsVerified $ do
         if enableBotFlow
           then -- BOT: mark RC verified now, then reconcile in the fork.
           whenJust mbVehicleDocs $ \(vehicleDocItem, allDocumentVerificationConfigs) -> do
-            rcHash <- getDbHash registrationNo
-            QVRC.updateVerifiedByCertificateNumberHash (Just True) rcHash
             SStatus.forkRecomputeVehicleVerified registrationNo vehicleDocItem allDocumentVerificationConfigs
           else QVRC.updateApproved (Just True) rc.id
         -- Cancel pending vehicle inspection reminders for all drivers using this RC
@@ -310,8 +309,10 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       allDriverDocsVerified <-
         if enableBotFlow
           then do
-            (_allDocVerificationConfigs, driverDocStatuses, vehicleCategory) <- SStatus.fetchDriverDocStatusesForPerson person merchantOpCity transporterConfig language Nothing
-            inspectionDependenciesValid merchantOpCity.id DVC.DriverInspectionHub vehicleCategory driverDocStatuses
+            (allDocVerificationConfigs, driverDocStatuses, vehicleCategory) <- SStatus.fetchDriverDocStatusesForPerson person merchantOpCity transporterConfig language Nothing
+            isFleetDriver <- SStatus.hasActiveFleetAssociation person.id
+            let driverConfigs = case allDocVerificationConfigs of Right cs -> cs; Left _ -> []
+            inspectionDependenciesValid merchantOpCity.id DVC.DriverInspectionHub (Just isFleetDriver) driverConfigs vehicleCategory driverDocStatuses
           else SStatus.fetchAndCheckDriverDocsValidForEnabling person merchantOpCity transporterConfig language
       when allDriverDocsVerified $ do
         unless enableBotFlow $ do
@@ -329,13 +330,13 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
 
     -- True iff the inspection-hub config's dependency docs are all VALID. Drives APPROVED vs PENDING.
-    inspectionDependenciesValid merchantOpCityId inspectionHubDocType vehicleCategory docStatuses = do
+    -- On the driver side a dep counts only if it applies per dvc `applicableTo` (a fleet driver skips
+    -- INDIVIDUAL-only deps like OperatorPartnerCode); pass Nothing/[] for vehicle docs (no applicableTo split).
+    inspectionDependenciesValid merchantOpCityId inspectionHubDocType mbIsFleetDriver driverConfigs vehicleCategory docStatuses = do
       mbInspectionCfg <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId inspectionHubDocType vehicleCategory Nothing
-      case mbInspectionCfg of
-        Nothing -> pure True
-        Just inspectionCfg -> do
-          let validDocTypes = map (.documentType) (filter (\doc -> doc.verificationStatus == SStatus.VALID) docStatuses)
-          pure $ all (`elem` validDocTypes) inspectionCfg.dependencyDocumentType
+      pure $ case mbInspectionCfg of
+        Nothing -> True
+        Just inspectionCfg -> SStatus.dependencyDocsAllValid mbIsFleetDriver driverConfigs inspectionCfg.dependencyDocumentType docStatuses
 
     getMerchantInfo mShortId city = do
       merchant <- findMerchantByShortId mShortId
@@ -904,6 +905,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
                   transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
                   dependencyDocsValid <- SStatus.botApproveAndReconcile merchantOpCity person transporterConfig
                   pure (if dependencyDocsValid then DRR.COMPLETED else DRR.IN_PROGRESS, Nothing, Nothing)
+            unless driverInfo.verified $ throwError (InvalidRequest "Driver is not verified")
             if driverInfo.approved == Just True
               then runReconcile
               else do
@@ -934,6 +936,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
         rcInfo <- QVRC.findByPrimaryKey rcId >>= fromMaybeM (VehicleNotFound reqId)
         if isDocReqEmpty
           then do
+            when (rcInfo.verified /= Just True) $ throwError (InvalidRequest "RC is not verified")
             unless (rcInfo.approved == Just True) $ QVRC.updateByPrimaryKey rcInfo {DVRC.approved = Just True}
             pure (DRR.COMPLETED, rcInfo.unencryptedCertificateNumber, Nothing)
           else do
