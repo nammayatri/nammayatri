@@ -66,6 +66,7 @@ import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.Booking as SB
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Type as SLT
+import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
