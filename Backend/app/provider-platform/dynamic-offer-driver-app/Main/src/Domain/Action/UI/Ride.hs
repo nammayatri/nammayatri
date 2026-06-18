@@ -205,7 +205,9 @@ listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay 
   mbEarningsLabels <- if rideEarningsEnabled then Just <$> RideCommon.fetchEarningsLabels driverLanguage else pure Nothing
   rides <- case (driverInfo.onRide, mbOnlyActive) of
     (True, Just True) -> QRide.getActiveBookingAndRideByDriverId driverId
-    (False, Just True) -> return []
+    (False, Just True) -> do
+            logError $ "OnRide is False for driverId: " <> driverId.getId
+            return []
     _ -> QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDays
 
   driverRideLis <- forM rides $ \(ride, booking) -> do
