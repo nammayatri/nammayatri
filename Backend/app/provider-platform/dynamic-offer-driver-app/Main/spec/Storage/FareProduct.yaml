@@ -72,6 +72,19 @@ FareProduct:
       where:
         and: [merchantOperatingCityId, area, enabled]
 
+    # Airport-ops enable/disable: all products for a (city, area, vehicle) across every
+    # timeBounds (peak + non-peak) and both enabled states — the handler then groups by key.
+    findAllByMerchantOpCityIdAreaVehicle:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, area, vehicleServiceTier]
+
+    # Flip the enabled flag in place (no recreate → values in the linked FarePolicy preserved).
+    updateFareProductEnabled:
+      kvFunction: updateWithKV
+      params: [enabled]
+      where: id
+
   sqlType:
     vehicleVariant: character varying (60)
     merchantOperatingCityId: character (36)
