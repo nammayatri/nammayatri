@@ -95,6 +95,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, runFinance, transfer, transferWithoutAttribution, transfer_)
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -174,7 +175,8 @@ endRideTransaction ::
     HasField "rideEventsPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Id DP.Driver ->
   SRB.Booking ->
@@ -278,7 +280,8 @@ processEndRideFinance ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
     Redis.HedisLTSFlowEnv r,
-    BeamFlow m r
+    BeamFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Merchant ->
   Ride.Ride ->
@@ -435,7 +438,8 @@ createDriverWalletTransaction ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Ride.Ride ->
   SRB.Booking ->

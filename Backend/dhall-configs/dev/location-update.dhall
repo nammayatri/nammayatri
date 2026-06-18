@@ -2,7 +2,11 @@ let common = ./common.dhall
 
 let sec = ./secrets/dynamic-offer-driver-app.dhall
 
+let genericCommon = ../generic/common.dhall
+
 let appCfg = ./dynamic-offer-driver-app.dhall
+
+let ltsPort = Natural/show (env:LOCATION_TRACKING_SERVICE_PORT ? 8081)
 
 let esqDBCfg =
       { connectHost = "localhost"
@@ -138,6 +142,39 @@ let cacConfig =
 
 let inMemConfig = { enableInMem = False, maxInMemSize = +100000000 }
 
+let TransportKind = < Kafka | RedisStream >
+
+let ltsCfg = { url = "http://localhost:${ltsPort}/", secondaryUrl = None Text }
+
+let sampleKafkaConfig
+    : genericCommon.kafkaConfig
+    = { topicName = "dynamic-offer-driver-events-updates"
+      , kafkaKey = "dynamic-offer-driver"
+      }
+
+let eventStreamMap =
+      [ { streamName = genericCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig =
+            genericCommon.streamConfig.KafkaStream sampleKafkaConfig
+        , eventTypes =
+          [ genericCommon.eventType.RideCreated
+          , genericCommon.eventType.RideEnded
+          ]
+        }
+      ]
+
+let schedulerSetName = "Scheduled_Jobs"
+
+let schedulerType = common.schedulerType.RedisBased
+
+let maxShards = +5
+
+let jobInfoMap = [] : List { mapKey : Text, mapValue : Bool }
+
+let blackListedJobs = [] : List Text
+
+let shortDurationRetryCfg = genericCommon.shortDurationRetryCfg
+
 in  { hedisCfg
     , hedisClusterCfg
     , hedisNonCriticalCfg = hedisCfg
@@ -149,11 +186,8 @@ in  { hedisCfg
     , esqDBCfg
     , esqDBReplicaCfg
     , cacheConfig
-    , dumpEvery = +10
+    , transport = TransportKind.Kafka
     , kafkaConsumerCfg
-    , timeBetweenUpdates = +10
-    , availabilityTimeWindowOption
-    , granualityPeriodType = common.periodType.Hours
     , httpClientOptions = common.httpClientOptions
     , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9994)
     , encTools = appCfg.encTools
@@ -177,4 +211,26 @@ in  { hedisCfg
     , inMemConfig
     , hedisSecondaryClusterCfg
     , smsCfg = appCfg.smsCfg
+    , redisStreamCfg =
+        None
+          { streamPrefix : Text
+          , shardCount : Integer
+          , consumerGroupName : Text
+          , readBatchSize : Integer
+          , readBlockMilliseconds : Integer
+          , claimMinIdleMs : Integer
+          , claimIntervalSeconds : Integer
+          , maxDeliveries : Integer
+          , pauseFlagKey : Text
+          , pauseSleepSeconds : Integer
+          }
+    , ltsCfg
+    , eventStreamMap
+    , schedulerSetName
+    , schedulerType
+    , maxShards
+    , jobInfoMap
+    , blackListedJobs
+    , shortDurationRetryCfg
+    , financeEventsPublisherCfg = Some { streamPrefix = "", shardCount = +8 }
     }

@@ -108,6 +108,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import Lib.Payment.Domain.Types.Common
 import qualified Lib.Payment.Domain.Types.Offer as DOffer
@@ -710,7 +711,8 @@ updateShortId mbPaymentServiceType isTestTransaction shortId =
 
 createOrderService ::
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
@@ -813,7 +815,8 @@ buildSDKPayloadDetails req order = do
 
 buildPaymentOrder ::
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
@@ -2347,7 +2350,8 @@ mkCreatePayoutOrderReq mRoutingId mConnectedAccountId CreatePayoutServiceReq {..
 
 createPayoutService ::
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->

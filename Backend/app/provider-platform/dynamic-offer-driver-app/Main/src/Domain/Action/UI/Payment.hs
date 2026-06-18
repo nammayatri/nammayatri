@@ -88,6 +88,7 @@ import Lib.Finance
     transfer,
   )
 import Lib.Finance.Domain.Types.Account ()
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import Lib.Finance.Ledger.Service ()
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -207,7 +208,8 @@ getStatus ::
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Id DOrder.PaymentOrder ->
@@ -341,7 +343,8 @@ getStatusV2 ::
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Text ->
@@ -535,7 +538,8 @@ processWalletTopupWebhook ::
     CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   DP.Person ->
   DOrder.PaymentOrder ->
@@ -584,7 +588,8 @@ processPayment ::
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Id DM.Merchant ->
   DP.Driver ->
@@ -617,7 +622,8 @@ processNonClearedDriverFees ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -640,7 +646,8 @@ processSubscriptionPurchasePayment ::
     Redis.HedisLTSFlowEnv r,
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -786,7 +793,8 @@ updatePrepaidBalanceAndExpiry ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -865,7 +873,8 @@ updatePaymentStatus ::
     EsqDBFlow m r,
     Redis.HedisLTSFlowEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Id DP.Person ->
   Id DMOC.MerchantOperatingCity ->
@@ -1042,7 +1051,8 @@ processMandate ::
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    EncFlow m r
+    EncFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   (DP.ServiceNames, DSC.SubscriptionConfig) ->
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->

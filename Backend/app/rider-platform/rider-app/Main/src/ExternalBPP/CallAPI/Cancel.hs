@@ -19,6 +19,7 @@ import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -47,7 +48,8 @@ cancel ::
     HasField "ltsHedisEnv" r Redis.HedisEnv,
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text],
-    HasMasterCloudForwarder r
+    HasMasterCloudForwarder r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Merchant ->
   MerchantOperatingCity ->

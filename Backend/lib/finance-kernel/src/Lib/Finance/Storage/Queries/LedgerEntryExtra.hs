@@ -4,6 +4,7 @@ module Lib.Finance.Storage.Queries.LedgerEntryExtra where
 
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common (HighPrecMoney)
 import qualified Kernel.Types.Id
 import qualified Lib.Finance.Domain.Types.Account
 import qualified Lib.Finance.Domain.Types.LedgerEntry as Domain
@@ -11,6 +12,21 @@ import qualified Lib.Finance.Storage.Beam.BeamFlow
 import qualified Lib.Finance.Storage.Beam.LedgerEntry as Beam
 import Lib.Finance.Storage.Queries.LedgerEntry ()
 import qualified Sequelize as Se
+
+-- | Update only the amount field of a ledger entry.
+-- Used before publishing to the finance events stream when the final settled
+-- amount differs from the original hold amount (e.g. fare adjustment at ride end).
+-- The consumer's settleEntry reads entry.amount to compute balance deltas, so
+-- this must be called before publishLedgerAccountUpdate.
+updateAmount ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  HighPrecMoney ->
+  Kernel.Types.Id.Id Domain.LedgerEntry ->
+  m ()
+updateAmount amount entryId =
+  updateWithKV
+    [Se.Set Beam.amount amount]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId entryId)]
 
 -- | Find ledger entries by reference type (IN list) and reference ID
 findByReferenceIn ::

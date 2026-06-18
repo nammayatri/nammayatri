@@ -31,6 +31,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
@@ -58,7 +59,8 @@ sendCustomerRefund ::
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     FinanceBeamFlow.BeamFlow m r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Job 'MetroIncentivePayout ->
   m ExecutionResult
@@ -107,7 +109,8 @@ callPayout ::
     SchedulerFlow r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->

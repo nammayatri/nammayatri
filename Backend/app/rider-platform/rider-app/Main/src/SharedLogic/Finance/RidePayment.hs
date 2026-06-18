@@ -150,6 +150,7 @@ import Kernel.Utils.Common (MonadFlow, getCurrentTime, logDebug, logError, logIn
 import Lib.Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg, publishLedgerAccountUpdate)
 import qualified Lib.Finance.Invoice.Service as FInvoiceService
 import qualified Lib.Finance.Ledger.Service
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
@@ -493,7 +494,7 @@ upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platfo
 --   create PENDING entries as usual, then immediately settle them so the
 --   ledger ends in the captured state with no outstanding rider obligation.
 createFullyDiscountedRidePaymentLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, MonadFlow m, HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)) =>
   FinanceCtx ->
   HighPrecMoney -> -- rideFare (original, before discount)
   HighPrecMoney -> -- gstAmount
@@ -559,20 +560,20 @@ riderObligationRefTypes =
 --   'createRidePaymentLedger' and voided together with the ledger entries
 --   in 'voidRidePaymentLedger'.
 settleRidePaymentLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, MonadFlow m, HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)) =>
   FinanceCtx ->
   [Id LE.LedgerEntry] -> -- entry IDs from createRidePaymentLedger
   Text -> -- settlement reason
   m (Either FinanceError ())
 settleRidePaymentLedger ctx entryIds settledReason = do
   entryDetails <- forM entryIds $ \entryId -> do
-    mbEntry <- getEntry entryId
-    settleEntry entryId
-    pure mbEntry
+    logInfo $ "Publishing ride payment ledger entry for async settlement: entryId=" <> entryId.getId <> " reason=" <> settledReason
+    publishLedgerAccountUpdate entryId
+    getEntry entryId
   let settledEntries = catMaybes entryDetails
       isOnline = ctx.isOnline
   logInfo $
-    "Settled " <> show (length settledEntries) <> " ride payment ledger entries, reason: "
+    "Published " <> show (length settledEntries) <> " ride payment ledger entries for async settlement, reason="
       <> settledReason
       <> ", isOnline="
       <> show isOnline
@@ -691,7 +692,7 @@ releaseCashbackEntriesReservation entryIds = do
 --   Idempotent: if all supplied entries are already PAID_OUT we no-op
 --   (and skip creating a duplicate drain transfer).
 markCashbackEntriesAsPaidOut ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, MonadFlow m, HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)) =>
   FinanceCtx ->
   [Id LE.LedgerEntry] -> -- original cashback entry IDs (from PayoutRequest.ledgerEntryIds)
   HighPrecMoney -> -- payout amount (drives the OwnerLiability → BuyerExternal drain)
@@ -714,7 +715,10 @@ markCashbackEntriesAsPaidOut ctx entryIds amount payoutRequestId = do
           logError $ "Failed to create cashback payout drain transfer: " <> show err
           pure $ Left err
         Right (_, transferEntryIds) -> do
-          forM_ transferEntryIds $ \tid -> Lib.Finance.Ledger.Service.settleEntry tid
+          forM_ transferEntryIds $ \tid -> do
+            logInfo $ "Publishing cashback drain entry for async settlement: entryId=" <> tid.getId <> " payoutRequestId=" <> payoutRequestId
+            publishLedgerAccountUpdate tid
+            logInfo $ "Published cashback drain entry for async settlement: entryId=" <> tid.getId
           let allPaidOutIds = map (.id) eligible <> transferEntryIds
           Lib.Finance.Ledger.Service.markEntriesAsPaidOut allPaidOutIds payoutRequestId
           logInfo $

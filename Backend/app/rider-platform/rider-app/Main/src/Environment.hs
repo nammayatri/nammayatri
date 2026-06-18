@@ -71,6 +71,7 @@ import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg (..))
 import Lib.Scheduler.Types
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
@@ -205,7 +206,8 @@ data AppCfg = AppCfg
     blackListedJobs :: [Text],
     sftpConfig :: SFTPConfig,
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
-    bapHostRedirectMap :: BapHostRedirectMap
+    bapHostRedirectMap :: BapHostRedirectMap,
+    financeEventsPublisherCfg :: Maybe FinanceEventsPublisherCfg
   }
   deriving (Generic, FromDhall)
 
@@ -327,7 +329,8 @@ data AppEnv = AppEnv
     cloudType :: Maybe CloudType,
     sftpConfig :: SFTPConfig,
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
-    bapHostRedirectMap :: BapHostRedirectMap
+    bapHostRedirectMap :: BapHostRedirectMap,
+    financeEventsPublisherCfg :: Maybe FinanceEventsPublisherCfg
   }
   deriving (Generic)
 

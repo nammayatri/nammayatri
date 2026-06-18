@@ -32,6 +32,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified Lib.Payment.Domain.Action as DPayment
 import Lib.Payment.Storage.Beam.BeamFlow
@@ -79,6 +80,7 @@ onInit ::
     EncFlow m r,
     ServiceFlow m r,
     HasField "isMetroTestTransaction" r Bool,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg),
     Metrics.HasBAPMetrics m r,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl]
@@ -137,6 +139,7 @@ createPayments ::
     EncFlow m r,
     ServiceFlow m r,
     HasField "isMetroTestTransaction" r Bool,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg),
     HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   [FTBooking.FRFSTicketBooking] ->

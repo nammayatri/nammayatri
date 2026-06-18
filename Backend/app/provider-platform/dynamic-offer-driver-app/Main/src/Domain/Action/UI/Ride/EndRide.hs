@@ -81,6 +81,7 @@ import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import qualified Lib.LocationUpdates as LocUpd
 import qualified Lib.LocationUpdates.Internal as LocUpdInternal
 import Lib.Scheduler.Environment (JobCreator)
@@ -251,7 +252,8 @@ type EndRideFlow m r =
     JobCreator r m,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
-    Esq.EsqDBReplicaFlow m r
+    Esq.EsqDBReplicaFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   )
 
 driverEndRide ::

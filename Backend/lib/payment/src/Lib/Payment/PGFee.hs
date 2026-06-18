@@ -15,6 +15,7 @@ import qualified Lib.Finance.Domain.Types.Account as Account
 import Lib.Finance.Domain.Types.IndirectTaxTransaction (GstCreditType (..))
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import Lib.Finance.Error.Types (FinanceError)
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import Lib.Finance.FinanceM
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 
@@ -56,7 +57,7 @@ computePGFee config =
 --
 --   The Liability account accumulates the total owed to the PG (baseFee + GST).
 recordPGFeeLedgerEntries ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)) =>
   PGFeeType ->
   PGFeeConfig ->
   Text -> -- merchantId

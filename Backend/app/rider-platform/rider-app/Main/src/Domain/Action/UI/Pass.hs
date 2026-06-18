@@ -61,6 +61,7 @@ import qualified Kernel.Types.Id as Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import qualified Lib.JourneyLeg.Common.FRFSJourneyUtils as FRFSJourneyUtils
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -175,7 +176,8 @@ purchasePassWithPayment ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     EsqDBReplicaFlow m r,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Bool ->
   DP.Person ->

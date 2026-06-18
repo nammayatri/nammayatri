@@ -63,6 +63,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Lib.DriverCoins.Types
 import qualified Lib.DriverCoins.Types as DCT
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.CancellationCoins as CancellationCoins
@@ -87,7 +88,7 @@ import qualified Tools.DynamicLogic as TDL
 import qualified Tools.Notifications as Notify
 import Tools.Utils
 
-type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, ClickhouseFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r)
+type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, ClickhouseFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r, HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg))
 
 getCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m Int
 getCoinsByDriverId driverId timeDiffFromUtc = Hedis.withLockRedisAndReturnValue driverId.getId 60 $ do
@@ -576,7 +577,7 @@ driverMonetaryRewardEvent driverId merchantId merchantOpCityId eventType entityI
     else do
       forM_ filteredConfigAll (\wc -> calculateMonetaryRewardCash eventType driverId merchantId merchantOpCityId (DWC.eventFunction wc) (DWC.monetaryRewardAmount wc) transporterConfig entityId vehCategory mbFleetOwnerId)
 
-calculateMonetaryRewardCash :: EventFlow m r => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> HighPrecMoney -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe (Id DP.Person) -> m Bool
+calculateMonetaryRewardCash :: (EventFlow m r, HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)) => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> HighPrecMoney -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe (Id DP.Person) -> m Bool
 calculateMonetaryRewardCash eventType driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId _ mbFleetOwnerId = do
   case eventType of
     DCT.EndRide {tripCategoryType} -> hMonetaryRewardEndRide driverId merchantId merchantOpCityId tripCategoryType eventFunction amount transporterConfig entityId mbFleetOwnerId
@@ -594,7 +595,7 @@ runActionWhenValidMonetaryRewardConditions conditions action = do
       isValid <- condition
       if isValid then checkAllConditions xs else pure False
 
-hMonetaryRewardEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.TripCategoryType -> DCT.DriverCoinsFunctionType -> HighPrecMoney -> TransporterConfig -> Maybe Text -> Maybe (Id DP.Person) -> m Bool
+hMonetaryRewardEndRide :: (EventFlow m r, HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.TripCategoryType -> DCT.DriverCoinsFunctionType -> HighPrecMoney -> TransporterConfig -> Maybe Text -> Maybe (Id DP.Person) -> m Bool
 hMonetaryRewardEndRide driverId merchantId merchantOpCityId tripCategoryType eventFunction amount transporterConfig entityId mbFleetOwnerId = do
   case eventFunction of
     DCT.RidesCompleted a -> do
@@ -604,7 +605,7 @@ hMonetaryRewardEndRide driverId merchantId merchantOpCityId tripCategoryType eve
       runActionWhenValidMonetaryRewardConditions [pure (validRideCount == a)] $ updateEventAndGetMonetaryRewardCredit driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId mbFleetOwnerId
     _ -> pure False
 
-updateEventAndGetMonetaryRewardCredit :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> HighPrecMoney -> TransporterConfig -> Maybe Text -> Maybe (Id DP.Person) -> m Bool
+updateEventAndGetMonetaryRewardCredit :: (EventFlow m r, HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> HighPrecMoney -> TransporterConfig -> Maybe Text -> Maybe (Id DP.Person) -> m Bool
 updateEventAndGetMonetaryRewardCredit driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId mbFleetOwnerId = do
   let referenceId = fromMaybe "wallet_incentive" entityId
   logDebug $

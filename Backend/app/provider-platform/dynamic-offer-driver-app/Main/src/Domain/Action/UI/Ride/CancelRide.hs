@@ -54,6 +54,7 @@ import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.DriverCoins.Coins as DC
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.CallBAPInternal
@@ -117,7 +118,8 @@ cancelRideHandle ::
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
-    CH.ClickhouseFlow m r
+    CH.ClickhouseFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   ServiceHandle m
 cancelRideHandle =

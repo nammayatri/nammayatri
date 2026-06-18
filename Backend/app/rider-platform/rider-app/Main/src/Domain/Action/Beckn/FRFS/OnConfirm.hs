@@ -56,6 +56,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
@@ -112,7 +113,8 @@ validateRequest ::
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text],
-    HasMasterCloudForwarder r
+    HasMasterCloudForwarder r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   DOrder ->
   m (Merchant, Booking.FRFSTicketBooking, [DFRFSQuoteCategory.FRFSQuoteCategory])
@@ -155,7 +157,8 @@ onConfirmFailure ::
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text],
-    HasMasterCloudForwarder r
+    HasMasterCloudForwarder r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   BecknConfig ->
   Booking.FRFSTicketBooking ->

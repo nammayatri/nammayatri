@@ -17,6 +17,7 @@ where
 import qualified Data.Text as T
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude
+import Kernel.Storage.Hedis.Config (HedisFlow)
 import Kernel.Types.Error
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
@@ -24,6 +25,7 @@ import qualified Lib.Finance.Account.Service as FAccountSvc
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import qualified Lib.Finance.Domain.Types.LedgerEntry as FLE
 import Lib.Finance.Error.Types (FinanceError (..), LedgerErrorCode (..))
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import qualified Lib.Finance.FinanceM as Finance
 import qualified Lib.Finance.Ledger.Service as FLedger
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FBeamFlow
@@ -197,7 +199,7 @@ findEntriesForWallet DWP.BURN = FLedger.getEntriesByReferenceAndFromAccount
 findEntriesForWallet _ = FLedger.getEntriesByReferenceAndToAccount
 
 recordLoyaltyHistory ::
-  (FBeamFlow.BeamFlow m r, MonadFlow m) =>
+  (FBeamFlow.BeamFlow m r, MonadFlow m, HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)) =>
   DWallet.Wallet ->
   DWP.WalletPaymentKind ->
   HighPrecMoney -> -- aggregated points across this (program, kind) for the transaction
@@ -216,7 +218,11 @@ recordLoyaltyHistory wallet kind points domainEntityId = do
         (Finance.transfer source dest points refType)
 
 recordLoyaltyHistoryReversal ::
-  (FBeamFlow.BeamFlow m r) =>
+  ( FBeamFlow.BeamFlow m r,
+    HedisFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg),
+    MonadIO m
+  ) =>
   DWallet.Wallet ->
   DWP.WalletPaymentKind ->
   Text -> -- domainEntityId
@@ -318,7 +324,7 @@ reconcileWalletFromProgram wallet program = do
     parsePoints t = realToFrac <$> (readMaybe (T.unpack t) :: Maybe Double)
 
 processLoyaltyInfoFromOrderStatus ::
-  (FBeamFlow.BeamFlow m r, PBeamFlow.BeamFlow m r, Log m, MonadTime m) =>
+  (FBeamFlow.BeamFlow m r, PBeamFlow.BeamFlow m r, Log m, MonadTime m, HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)) =>
   Text -> -- personId
   DOrder.PaymentOrder ->
   Text -> -- domainEntityId (e.g. frfs_ticket_booking_payment.id; caller falls back to orderId when absent) — stamped on each WalletHistory row
@@ -499,7 +505,7 @@ upsertWalletHistory wp wallet programType kind mbCampaignId points mbReversed mb
       pure wh
 
 processProgramLedger ::
-  (FBeamFlow.BeamFlow m r, PBeamFlow.BeamFlow m r, Log m, MonadFlow m) =>
+  (FBeamFlow.BeamFlow m r, PBeamFlow.BeamFlow m r, Log m, MonadFlow m, HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)) =>
   DWallet.Wallet ->
   DWP.WalletPaymentKind ->
   HighPrecMoney -> -- aggregated points

@@ -43,6 +43,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverCoins.Coins as Coins
 import Lib.DriverCoins.Types
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPO
@@ -279,7 +280,8 @@ useCoinsHandler ::
     EncFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    PaymentBeamFlow.BeamFlow m r
+    PaymentBeamFlow.BeamFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ConvertCoinToCashReq ->
@@ -308,7 +310,8 @@ handler ::
     EncFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    PaymentBeamFlow.BeamFlow m r
+    PaymentBeamFlow.BeamFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ConvertCoinToCashReq ->
@@ -388,7 +391,8 @@ redeemCoins ::
     EncFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    PaymentBeamFlow.BeamFlow m r
+    PaymentBeamFlow.BeamFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Id SP.Person ->
   Id DM.Merchant ->

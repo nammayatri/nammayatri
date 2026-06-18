@@ -55,6 +55,7 @@ import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg (..))
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
@@ -194,7 +195,8 @@ data AppCfg = AppCfg
     ttenTokenCacheExpiry :: Seconds,
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
     enableLtsPoolDataForPooling :: Bool,
-    rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg
+    rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
+    financeEventsPublisherCfg :: Maybe FinanceEventsPublisherCfg
   }
   deriving (Generic, FromDhall)
 
@@ -323,7 +325,8 @@ data AppEnv = AppEnv
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
     masterCloudForwarderManager :: Http.Manager,
     enableLtsPoolDataForPooling :: Bool,
-    rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg
+    rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
+    financeEventsPublisherCfg :: Maybe FinanceEventsPublisherCfg
   }
   deriving (Generic)
 

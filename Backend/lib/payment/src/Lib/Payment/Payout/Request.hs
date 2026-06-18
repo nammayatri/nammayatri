@@ -33,6 +33,7 @@ import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (Currency, HighPrecMoney, MonadFlow, fromMaybeM, generateGUID, getCurrentTime, logDebug, logError, logInfo, throwError)
 import qualified Lib.Finance.Domain.Types.StateTransition as ST
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DCommon
@@ -202,7 +203,8 @@ retryPayoutWith canRetry executePayout payoutRequest = do
 submitPayoutRequest ::
   ( EncFlow m r,
     PaymentBeamFlow.BeamFlow m r,
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   PayoutSubmission ->
   (DPayment.CreatePayoutServiceReq -> m IPayout.CreatePayoutOrderResp) ->
@@ -228,7 +230,8 @@ submitPayoutRequest submission payoutCall = do
 executePayoutRequest ::
   ( EncFlow m r,
     PaymentBeamFlow.BeamFlow m r,
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Currency ->
   Payout.PayoutServiceFlow ->
@@ -245,7 +248,8 @@ executePayoutRequest = executePayoutRequestInternal Nothing
 executePayoutRequestInternal ::
   ( EncFlow m r,
     PaymentBeamFlow.BeamFlow m r,
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Maybe HighPrecMoney -> -- explicit transferAmount override (Nothing = use amount)
   Currency ->

@@ -141,6 +141,7 @@ library:
           - -j4
   dependencies:
     - dynamic-offer-driver-app
+    - finance-kernel
     - rider-app
 
 executables:

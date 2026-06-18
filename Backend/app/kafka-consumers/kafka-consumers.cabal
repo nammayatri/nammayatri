@@ -32,12 +32,14 @@ library
       Environment
       Processor.BroadcastMessage.Processor
       Processor.FleetCommunication.Processor
+      Processor.Ledger.LedgerAccountProcessor
       Processor.LocationUpdate.Processor
       Processor.LocationUpdate.Types
       Processor.RideEvents.Handlers
       Processor.RideEvents.Idempotency
       Processor.RideEvents.InternalHelpers
       Processor.RideEvents.Processor
+      Storage.Beam.Finance
       SystemConfigsOverride
       Transporter.Kafka.Flow
       Transporter.RedisStream.Flow
@@ -102,6 +104,7 @@ library
     , errors
     , esqueleto
     , euler-hs
+    , finance-kernel
     , hedis
     , hw-kafka-client
     , location-updates

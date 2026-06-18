@@ -36,6 +36,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler
@@ -72,7 +73,8 @@ sendDriverReferralPayoutJobData ::
     SchedulerFlow r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Job 'DriverReferralPayout ->
   m ExecutionResult
@@ -145,7 +147,8 @@ callPayout ::
     EsqDBFlow m r,
     SchedulerFlow r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   DS.DailyStats ->
   DI.DriverInformation ->
@@ -177,7 +180,8 @@ callPayoutHandler ::
     EsqDBFlow m r,
     SchedulerFlow r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   DS.DailyStats ->
   DI.DriverInformation ->
@@ -280,7 +284,8 @@ processScheduledRegistrationRefunds ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Id DMOC.MerchantOperatingCity ->
   [DPC.PayoutConfig] ->

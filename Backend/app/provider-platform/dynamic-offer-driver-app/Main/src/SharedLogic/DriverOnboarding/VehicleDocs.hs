@@ -755,3 +755,4 @@ getBotApprovalStatusForVehicle :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
 getBotApprovalStatusForVehicle rcId registrationNo = do
   mbReq <- SQRR.findLatestByEntityAndType rcId DRR.VEHICLE DRR.BOT_REVIEW (Just registrationNo)
   pure $ mapReviewRequestStatusToResponseStatus ((.requestStatus) <$> mbReq)
+

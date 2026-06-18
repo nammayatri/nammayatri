@@ -455,6 +455,8 @@ let emailServiceConfig =
 
 let rideEventsPublisherCfg = Some { streamPrefix = "", shardCount = +10 }
 
+let financeEventsPublisherCfg = Some { streamPrefix = "", shardCount = +8 }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , kafkaClickhouseCfg
@@ -575,4 +577,5 @@ in  { esqDBCfg
       { masterUrl = None Text, masterSecret = Some "123" }
     , enableLtsPoolDataForPooling = True
     , rideEventsPublisherCfg
+    , financeEventsPublisherCfg
     }

@@ -145,4 +145,5 @@ in  { hedisCfg
     , consumerEndTime = Some +20
     , inMemConfig
     , smsCfg = appCfg.smsCfg
+    , financeEventsPublisherCfg = Some { streamPrefix = "", shardCount = +8 }
     }

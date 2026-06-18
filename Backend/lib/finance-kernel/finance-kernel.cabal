@@ -34,6 +34,7 @@ library
       Lib.Finance.Core.Money
       Lib.Finance.Core.Types
       Lib.Finance.Error.Types
+      Lib.Finance.FinanceEvents.Publisher
       Lib.Finance.FinanceM
       Lib.Finance.Invoice.Interface
       Lib.Finance.Invoice.InvoiceNumber
@@ -167,6 +168,7 @@ library
     , euler-hs
     , exceptions
     , filepath
+    , hashable
     , mobility-core
     , mtl
     , openapi3

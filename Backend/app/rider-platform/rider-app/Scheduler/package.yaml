@@ -130,6 +130,7 @@ library:
     - rider-app
     - mobility-core
     - beckn-spec
+    - finance-kernel
     - sessionizer-metrics
     - external
     - haskell-cac

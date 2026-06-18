@@ -34,6 +34,7 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
@@ -92,7 +93,8 @@ sendScheduledRideAssignedOnUpdate ::
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
-    CH.ClickhouseFlow m r
+    CH.ClickhouseFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Job 'ScheduledRideAssignedOnUpdate ->
   m ExecutionResult
@@ -301,7 +303,8 @@ cancelOrReallocate ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
-    CH.ClickhouseFlow m r
+    CH.ClickhouseFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   DRide.Ride ->
   Text ->

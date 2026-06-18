@@ -84,6 +84,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Kernel.Utils.Time as KUT
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -459,7 +460,8 @@ rideAssignedReqHandler ::
     HasKafkaProducer r,
     HasFlowEnv m r '["isMetroTestTransaction" ::: Bool],
     HasField "blackListedJobs" r [Text],
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   ValidatedRideAssignedReq ->
   m ()
@@ -519,7 +521,8 @@ rideAssignedReqHandler req = do
         HasKafkaProducer r,
         HasFlowEnv m r '["isMetroTestTransaction" ::: Bool],
         HasField "blackListedJobs" r [Text],
-        FinanceBeamFlow.BeamFlow m r
+        FinanceBeamFlow.BeamFlow m r,
+        HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
       ) =>
       ValidatedRideAssignedReq ->
       Maybe DMerchant.Merchant ->
@@ -864,7 +867,8 @@ rideCompletedReqHandler ::
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     HasField "blackListedJobs" r [Text],
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   ValidatedRideCompletedReq ->
   m ()
@@ -1324,7 +1328,8 @@ cancellationTransaction ::
     SchedulerFlow r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   DRB.Booking ->
   Maybe DRide.Ride ->
@@ -1734,7 +1739,8 @@ customerReferralPayout ::
     MonadFlow m,
     EncFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   DRide.Ride ->
   Currency ->

@@ -40,6 +40,7 @@ import Kernel.Utils.Shutdown
 import Network.Wai.Handler.Warp
 import qualified Processor.BroadcastMessage.Processor as BMProcessor
 import qualified Processor.FleetCommunication.Processor as FCProcessor
+import qualified Processor.Ledger.LedgerAccountProcessor as LedgerAccountProcessor
 import qualified Processor.LocationUpdate.Processor as LCProcessor
 import qualified Processor.LocationUpdate.Types as LU
 import qualified Processor.RideEvents.Processor as RideEventsProcessor
@@ -119,6 +120,9 @@ startKafkaTransport flowRt appEnv = do
           batchSize = maybe 100 (fromIntegral . (.batchSize)) appEnv.healthCheckAppCfg
       KafkaFlow.runBatch flowRt appEnv kc batchSize $ \batch ->
         LCProcessor.processLocationData enabledCityIds batch
+    FINANCE_LEDGER_ACCOUNT_CONSUMER ->
+      KafkaFlow.runPerEvent flowRt appEnv kc $ \entryId _key ->
+        LedgerAccountProcessor.processLedgerAccountUpdate entryId
 
 ------------------------------------------------------------
 -- Redis-Stream transport dispatch
@@ -142,6 +146,8 @@ startRedisStreamTransport flowRt appEnv = do
       let enabledCityIds = maybe [] (.enabledMerchantCityIds) appEnv.healthCheckAppCfg
       RSFlow.runBatch flowRt appEnv cfg instanceName $ \(entries :: [LU.LocationEntry]) ->
         LCProcessor.processLocationData enabledCityIds (map (\e -> (e.locationUpdate, e.driverId)) entries)
+    FINANCE_LEDGER_ACCOUNT_CONSUMER ->
+      RSFlow.run flowRt appEnv cfg instanceName LedgerAccountProcessor.processLedgerAccountUpdate
 
 -- | Wire format for BROADCAST_MESSAGE on the Redis-Stream transport.
 -- Kafka carries the driver id in the message key; for RedisStream we bundle

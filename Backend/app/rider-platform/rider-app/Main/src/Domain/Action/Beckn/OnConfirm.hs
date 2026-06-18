@@ -45,6 +45,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
@@ -153,7 +154,8 @@ onConfirm ::
     HasBAPMetrics m r,
     EventStreamFlow m r,
     HasFlowEnv m r '["isMetroTestTransaction" ::: Bool],
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   ValidatedOnConfirmReq ->
   m ()

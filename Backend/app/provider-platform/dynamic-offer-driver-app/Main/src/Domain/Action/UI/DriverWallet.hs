@@ -79,6 +79,7 @@ import Lib.Finance
     transfer,
   )
 import qualified Lib.Finance.Domain.Types.Account as FAccount
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntry
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -630,7 +631,8 @@ initiateWalletPayout ::
     BeamFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   PayoutContext ->
   HighPrecMoney -> -- payoutable balance
@@ -826,7 +828,8 @@ recordAirportCashRecharge ::
   ( BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m
+    MonadFlow m,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   (Id DP.Person, Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
   HighPrecMoney ->

@@ -25,6 +25,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSUtils as FRFSUtils
@@ -64,7 +65,8 @@ handleCancelledStatus ::
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text],
     HasShortDurationRetryCfg r c,
-    HasLongDurationRetryCfg r c
+    HasLongDurationRetryCfg r c,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Merchant.Merchant ->
   DFRFSTicketBooking.FRFSTicketBooking ->

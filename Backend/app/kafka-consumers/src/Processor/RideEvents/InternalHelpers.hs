@@ -66,6 +66,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Time (secondsFromTimeOfDay)
 import qualified "dynamic-offer-driver-app" Lib.DriverCoins.Coins as DC
 import qualified "dynamic-offer-driver-app" Lib.DriverCoins.Types as DCT
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import "dynamic-offer-driver-app" SharedLogic.FareCalculator (timeZoneIST)
 import "dynamic-offer-driver-app" SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import "dynamic-offer-driver-app" SharedLogic.Finance.Wallet (createWalletEntryDelta, walletReferenceD2DReferral)
@@ -101,7 +102,9 @@ sendReferralFCM ::
     Esq.EsqDBReplicaFlow m r,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     CHConfig.ClickhouseFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Redis.HedisFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Bool ->
   Ride.Ride ->
@@ -246,7 +249,9 @@ sendDriverToDriverReferralReward ::
   ( CacheFlow m r,
     Esq.EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Redis.HedisFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Bool ->
   Ride.Ride ->
@@ -363,7 +368,9 @@ sendDriverToDriverReferralReward validRide ride _booking mbRiderDetails transpor
 creditReferralWallet ::
   ( CacheFlow m r,
     Esq.EsqDBFlow m r,
-    MonadFlow m
+    MonadFlow m,
+    Redis.HedisFlow m r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   HighPrecMoney ->
   Id DP.Person ->

@@ -102,4 +102,5 @@ in  { hedisCfg
     , cacConfig
     , healthCheckAppCfg = None genericCommon.healthCheckAppCfgT
     , smsCfg = appCfg.smsCfg
+    , financeEventsPublisherCfg = Some { streamPrefix = "", shardCount = +8 }
     }

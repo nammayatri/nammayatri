@@ -30,6 +30,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
@@ -58,7 +59,8 @@ executePaymentIntentJob ::
     SchedulerFlow r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Job 'ExecutePaymentIntent ->
   m ExecutionResult
@@ -172,7 +174,8 @@ cancelExecutePaymentIntentJob ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Job 'CancelExecutePaymentIntent ->
   m ExecutionResult

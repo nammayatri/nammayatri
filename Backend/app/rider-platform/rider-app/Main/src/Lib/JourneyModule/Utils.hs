@@ -59,6 +59,7 @@ import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
@@ -1400,7 +1401,7 @@ createRecentLocationForMultimodal journey = do
           SQRL.create recentLocation
     _ -> return ()
 
-postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => TPayment.PaymentServiceType -> Person -> Id Merchant -> Id MerchantOperatingCity -> [DFRFSTicketBooking.FRFSTicketBooking] -> Maybe Bool -> Bool -> m (Maybe DOrder.PaymentOrder)
+postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool, HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg), HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => TPayment.PaymentServiceType -> Person -> Id Merchant -> Id MerchantOperatingCity -> [DFRFSTicketBooking.FRFSTicketBooking] -> Maybe Bool -> Bool -> m (Maybe DOrder.PaymentOrder)
 postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer isMockPayment = do
   frfsConfig <-
     getConfig (FRFSConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQFRFS.findByMerchantOperatingCityId person.merchantOperatingCityId (Just [])))

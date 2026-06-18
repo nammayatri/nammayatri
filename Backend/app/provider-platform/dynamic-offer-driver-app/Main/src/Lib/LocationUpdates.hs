@@ -46,6 +46,7 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import "location-updates" Lib.LocationUpdates as Reexport
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
@@ -105,7 +106,8 @@ type LocationUpdateFlow m r c =
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
-    HasField "rideEventsPublisherCfg" r (Maybe RideEventsPublisherCfg)
+    HasField "rideEventsPublisherCfg" r (Maybe RideEventsPublisherCfg),
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   )
 
 getDeviationForPoint :: LatLong -> [LatLong] -> Meters

@@ -45,6 +45,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Coins as Coins
 import Lib.DriverCoins.Types
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.SystemConfigs ()
@@ -79,7 +80,8 @@ bulkUpdateByDriverId ::
     CacheFlow m r,
     CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -153,7 +155,8 @@ bulkUpdateByDriverIdV2 ::
     CacheFlow m r,
     CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->

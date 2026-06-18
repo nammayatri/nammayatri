@@ -39,6 +39,7 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -152,7 +153,8 @@ accumulateCancellationPenalty ::
     Redis.HedisFlow m r,
     EventStreamFlow m r,
     Metrics.HasCoreMetrics r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Bool -> -- isWalletEnabled
   SRB.Booking ->

@@ -84,6 +84,7 @@ import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import Lib.Finance.Domain.Types.Invoice (Invoice)
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.Error.Types (FinanceError (..))
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import Lib.Finance.Invoice.Interface (DirectTaxInput (..), GstAmountBreakdown, IndirectTaxInput (..), InvoiceInput (..), InvoiceLineItem)
 import Lib.Finance.Invoice.Service (createDirectTaxEntry, createIndirectTaxEntry, createInvoice)
 import Lib.Finance.Ledger.Interface (LedgerEntryInput (..))
@@ -503,7 +504,7 @@ collectEntryId entryId =
 --   Skips if amount <= 0.  Automatically collects the entry ID.
 --   Returns the entry ID if created (Nothing if skipped due to amount <= 0).
 transfer ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, Redis.HedisFlow m r, HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)) =>
   AccountRole ->
   AccountRole ->
   HighPrecMoney ->
@@ -537,7 +538,7 @@ transfer fromRole toRole amount refType = do
       pure (Just result.id)
 
 transferWithoutAttribution ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, Redis.HedisFlow m r, HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)) =>
   AccountRole ->
   AccountRole ->
   HighPrecMoney ->
@@ -574,7 +575,7 @@ transferWithoutAttribution fromRole toRole amount refType = do
 --   Use for intermediate legs (e.g. BuyerAsset -> BuyerExternal)
 --   that should not appear on invoices.
 transfer_ ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, Redis.HedisFlow m r, HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)) =>
   AccountRole ->
   AccountRole ->
   HighPrecMoney ->
@@ -645,7 +646,7 @@ transferPending fromRole toRole amount refType = do
 -- | Like 'transfer' but allows zero-amount entries (e.g. placeholder TDS entries).
 --   Skips only for negative amounts.  Automatically collects the entry ID.
 transferAllowZero ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, Redis.HedisFlow m r, HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)) =>
   AccountRole ->
   AccountRole ->
   HighPrecMoney ->

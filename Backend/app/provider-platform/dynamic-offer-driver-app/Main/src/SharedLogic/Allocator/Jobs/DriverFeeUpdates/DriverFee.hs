@@ -58,6 +58,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id (Id (Id), cast)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.Finance.FinanceEvents.Publisher (FinanceEventsPublisherCfg)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
@@ -818,7 +819,8 @@ sendManualPaymentLink ::
     HasField "smsCfg" r SmsConfig,
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasKafkaProducer r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)
   ) =>
   Job 'SendManualPaymentLink ->
   m ExecutionResult
@@ -848,7 +850,7 @@ sendManualPaymentLink Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
           ReSchedule <$> getRescheduledTime subscriptionConfigs.genericJobRescheduleTime
 
 processAndSendManualPaymentLink ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig, HasKafkaProducer r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig, HasKafkaProducer r, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasField "financeEventsPublisherCfg" r (Maybe FinanceEventsPublisherCfg)) =>
   [DPlan.DriverPlan] ->
   SubscriptionConfig ->
   Id Merchant ->
