@@ -4524,6 +4524,10 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
         || isJust req.stripeIdNumber
         || isJust req.fleetName
         || isJust req.fleetType
+        || isJust req.nomineeDob
+        || isJust req.nomineeName
+        || isJust req.nomineeRel
+        || isJust req.addressState
     )
     $ do
       case driver.role of
@@ -4532,7 +4536,7 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
           let dob = fmap (\d -> UTCTime d 0) req.dob <|> driverInfo.driverDob
           Redis.withLockRedis (DIInfo.driverIdentityInfoLockKey personId) 10 $ do
             mbExisting <- QDII.findByDriverId personId
-            void $ DIInfo.upsertDriverIdentityInfo mbExisting personId driver.merchantId driver.merchantOperatingCityId driverInfo Nothing Nothing Nothing req.address (castAddressDocumentType <$> req.addressDocumentType) Nothing
+            void $ DIInfo.upsertDriverIdentityInfo mbExisting personId driver.merchantId driver.merchantOperatingCityId driverInfo req.nomineeName req.nomineeRel req.nomineeDob req.address (castAddressDocumentType <$> req.addressDocumentType) req.addressState
           QDriverInfo.updateDriverDobAndAddress dob Nothing Nothing personId
         role | DCommon.checkFleetOwnerRole role -> do
           fleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
@@ -4559,6 +4563,9 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
       Common.RationCard -> DI.RationCard
       Common.UtilityBill -> DI.UtilityBill
       Common.Passport -> DI.Passport
+      Common.VoterId -> DI.VoterId
+      Common.LifeInsurancePolicy -> DI.LifeInsurancePolicy
+      Common.Others -> DI.Others
 
 getDriverFleetVehicleListStats :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Day -> Day -> Flow Common.FleetVehicleStatsRes
 getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId mbRequestorId mbVehicleNo mbLimit mbOffset fromDay toDay = do

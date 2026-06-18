@@ -34,6 +34,8 @@ imports:
   Person: Dashboard.Common
   Merchant: Dashboard.Common
   MerchantOperatingCity: Dashboard.Common
+  IndianState: Kernel.Types.Beckn.Context
+  AddressDocumentType: Dashboard.Common.Driver
 module: Driver
 
 apis:
@@ -1577,10 +1579,11 @@ types:
     - stripeIdNumber: Maybe Text
     - fleetName: Maybe Text
     - fleetType: Maybe FleetType
+    - nomineeName: Maybe Text
+    - nomineeDob: Maybe Day
+    - nomineeRel: Maybe Text
+    - addressState: Maybe IndianState
     - derive: "'HideSecrets"
-  AddressDocumentType:
-    enum: RationCard | UtilityBill | Passport
-    derive: "HttpInstance"
   DriverDetailsRes:
     - driverId: Id Driver
     - firstName: Text
