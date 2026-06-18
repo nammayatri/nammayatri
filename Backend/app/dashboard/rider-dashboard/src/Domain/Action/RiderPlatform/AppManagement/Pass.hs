@@ -9,6 +9,7 @@ module Domain.Action.RiderPlatform.AppManagement.Pass
     getPassCustomerPaymentStatus,
     postPassCustomerPassResetDeviceSwitchCount,
     postPassCustomerPassUpdateProfilePicture,
+    getPassCustomerPassPhoto,
     postPassCustomerPassRestore,
   )
 where
@@ -16,6 +17,7 @@ where
 import qualified API.Client.RiderPlatform.AppManagement
 import qualified API.Types.Dashboard.AppManagement.Pass
 import qualified "rider-app" API.Types.UI.Pass
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Time
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "rider-app" Domain.Types.Pass
@@ -25,6 +27,8 @@ import qualified Domain.Types.PurchasedPassPayment
 import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
+import qualified IssueManagement.Common.UI.Issue
+import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
@@ -76,14 +80,21 @@ postPassCustomerPassResetDeviceSwitchCount merchantShortId opCity apiTokenInfo c
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.postPassCustomerPassResetDeviceSwitchCount) customerId purchasedPassId)
 
-postPassCustomerPassUpdateProfilePicture :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> API.Types.Dashboard.AppManagement.Pass.UpdateProfilePictureReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postPassCustomerPassUpdateProfilePicture :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> IssueManagement.Common.UI.Issue.IssueMediaUploadReq -> Environment.Flow IssueManagement.Common.UI.Issue.IssueMediaUploadRes)
 postPassCustomerPassUpdateProfilePicture merchantShortId opCity apiTokenInfo customerId purchasedPassId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
-  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.postPassCustomerPassUpdateProfilePicture) customerId purchasedPassId req)
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (addMultipartBoundary "XXX00XXX" . (.passDSL.postPassCustomerPassUpdateProfilePicture)) customerId purchasedPassId req
+  where
+    addMultipartBoundary :: LBS.ByteString -> (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> (LBS.ByteString, req) -> res) -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> req -> res
+    addMultipartBoundary boundary clientFn customerId_ purchasedPassId_ reqBody = clientFn customerId_ purchasedPassId_ (boundary, reqBody)
 
 postPassCustomerPassRestore :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postPassCustomerPassRestore merchantShortId opCity apiTokenInfo customerId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.postPassCustomerPassRestore) customerId)
+
+getPassCustomerPassPhoto :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile -> Environment.Flow Kernel.Prelude.Text)
+getPassCustomerPassPhoto merchantShortId opCity apiTokenInfo customerId mediaId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.getPassCustomerPassPhoto) customerId mediaId

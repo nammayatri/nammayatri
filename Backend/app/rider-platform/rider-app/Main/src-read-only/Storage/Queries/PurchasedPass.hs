@@ -6,6 +6,7 @@ module Storage.Queries.PurchasedPass (module Storage.Queries.PurchasedPass, modu
 
 import qualified Domain.Types.Person
 import qualified Domain.Types.PurchasedPass
+import qualified IssueManagement.Domain.Types.MediaFile
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -25,7 +26,7 @@ createMany = traverse_ create
 
 findAllByPersonIdsAndStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  ([Kernel.Types.Id.Id Domain.Types.Person.Person] -> Domain.Types.PurchasedPass.StatusType -> m [Domain.Types.PurchasedPass.PurchasedPass])
+  ([Kernel.Types.Id.Id Domain.Types.Person.Person] -> Domain.Types.PurchasedPass.StatusType -> m ([Domain.Types.PurchasedPass.PurchasedPass]))
 findAllByPersonIdsAndStatus personId status = do findAllWithKV [Se.And [Se.Is Beam.personId $ Se.In (Kernel.Types.Id.getId <$> personId), Se.Is Beam.status $ Se.Eq status]]
 
 findByPassNumber :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> m (Maybe Domain.Types.PurchasedPass.PurchasedPass))
@@ -35,6 +36,13 @@ updateDeviceSwitchCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kerne
 updateDeviceSwitchCount deviceSwitchCount id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.deviceSwitchCount (Just deviceSwitchCount), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updatePassPhotoMediaIdById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile) -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> m ())
+updatePassPhotoMediaIdById passPhotoMediaId id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.passPhotoMediaId (Kernel.Types.Id.getId <$> passPhotoMediaId), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updatePersonIdById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> m ())
 updatePersonIdById personId id = do
@@ -71,6 +79,7 @@ updateByPrimaryKey (Domain.Types.PurchasedPass.PurchasedPass {..}) = do
       Se.Set Beam.passDescription passDescription,
       Se.Set Beam.passName passName,
       Se.Set Beam.passNumber passNumber,
+      Se.Set Beam.passPhotoMediaId (Kernel.Types.Id.getId <$> passPhotoMediaId),
       Se.Set Beam.passTypeId (Kernel.Types.Id.getId passTypeId),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.preferredDestination preferredDestination,

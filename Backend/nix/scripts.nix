@@ -32,6 +32,16 @@ _:
       # + config-sync-server).
       localTestDashboardPorts = [ 7070 7083 8090 ];
       killLocalTestDashboardPortsScript = killPortsSnippet localTestDashboardPorts;
+      # Python interpreter with the deps that Backend/dev/config-sync needs
+      # (see config-sync/requirements.txt). Used by the `import-config-data` script.
+      configSyncPython = pkgs.python3.withPackages (ps: with ps; [
+        boto3
+        psycopg2
+        requests
+        rich
+        python-dotenv
+        websockets
+      ]);
     in
     {
       mission-control.scripts = {
@@ -436,6 +446,23 @@ _:
               rm -rf -- "$p"
             done
             echo "Done."
+          '';
+        };
+
+        import-config-data = {
+          category = "Backend";
+          description = "Import config data from a remote env into the local DB (config-sync). Source env defaults to master; override with CONFIG_SYNC_FROM=prod|prod_international. Extra args pass through (e.g. --dry-run, --force-fetch).";
+          exec = ''
+            set -euo pipefail
+            FROM_ENV="''${CONFIG_SYNC_FROM:-master}"
+            cd "''${FLAKE_ROOT}/Backend/dev/config-sync"
+            # The connection/patch config files are gitignored; seed them from
+            # the checked-in templates on first run.
+            [ -f assets/environments.json ] || cp assets/environments.json.example assets/environments.json
+            [ -f assets/patches.json ] || cp assets/patches.json.example assets/patches.json
+            echo "── Importing config data: $FROM_ENV → local ──"
+            ${configSyncPython}/bin/python3 config_transfer.py import --from "$FROM_ENV" --to local --fetch \
+              --fetch-url "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/''${FROM_ENV}_to_local/v2" "$@"
           '';
         };
 

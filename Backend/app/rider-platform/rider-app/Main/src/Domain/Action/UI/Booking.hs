@@ -74,6 +74,7 @@ import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
 import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.Serviceability as Serviceability
 import SharedLogic.Type as SLT
+import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
