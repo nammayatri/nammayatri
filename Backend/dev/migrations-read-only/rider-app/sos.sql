@@ -23,3 +23,4 @@ ALTER TABLE atlas_app.sos ADD PRIMARY KEY ( id);
 ALTER TABLE atlas_app.sos ADD COLUMN external_status_history text ;
 ALTER TABLE atlas_app.sos ADD COLUMN external_reference_status text ;
 ALTER TABLE atlas_app.sos ADD COLUMN external_reference_id text ;
+ALTER TABLE atlas_app.sos ADD COLUMN requester_id text ;

@@ -24,6 +24,7 @@ data Sos = Sos
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Safety.Domain.Types.Common.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Safety.Domain.Types.Common.MerchantOperatingCity),
     personId :: Kernel.Types.Id.Id Safety.Domain.Types.Common.Person,
+    requesterId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Safety.Domain.Types.Common.Ride),
     sosState :: Kernel.Prelude.Maybe Safety.Domain.Types.Sos.SosState,
     status :: Safety.Domain.Types.Sos.SosStatus,

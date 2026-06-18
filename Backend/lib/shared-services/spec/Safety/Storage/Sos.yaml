@@ -18,6 +18,7 @@ Sos:
     flow : SosType
     status : SosStatus
     ticketId : Maybe Text
+    requesterId : Maybe Text
     mediaFiles : "[Id MediaFile]"
     trackingExpiresAt : Maybe UTCTime
     sosState : Maybe SosState
@@ -81,6 +82,10 @@ Sos:
     findByTicketId:
       kvFunction: findOneWithKV
       where: ticketId
+    updateRequesterId:
+      kvFunction: updateOneWithKV
+      params: [requesterId]
+      where: id
     findByPersonId:
       kvFunction: findAllWithKV
       where: personId
