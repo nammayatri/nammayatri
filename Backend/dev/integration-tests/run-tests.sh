@@ -55,6 +55,7 @@ AIRPORT_DIR="$SCRIPT_DIR/collections/AirportTaxiFlow"
 TOLL_CONFIG_DIR="$SCRIPT_DIR/collections/TollConfigFlow"
 TOLL_RIDE_DIR="$SCRIPT_DIR/collections/TollRideFlow"
 DRIVER_IMAGE_DIR="$SCRIPT_DIR/collections/DriverImageFlow"
+PAN_HARD_CHECK_DIR="$SCRIPT_DIR/collections/PanHardCheckFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
 DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
@@ -505,6 +506,12 @@ run_scheduler() {
 run_loyalty() { run_frfs "$LOYALTY_DIR" "LOYALTY WALLET" "${1:-}" "${2:-}"; }
 run_stcl() { run_frfs "$STCL_DIR" "STCL MEMBERSHIP" "${1:-}" "${2:-}"; }
 run_driver_image() { run_frfs "$DRIVER_IMAGE_DIR" "DRIVER IMAGE" "${1:-}" "${2:-}"; }
+# Delegates to the collection's own run.sh — it sets transporter_config.pan_hard_check,
+# resolves seed driver/fleet-owner ids, runs newman, and resets the flag on exit.
+run_pan_hard_check() {
+    [ -x "$PAN_HARD_CHECK_DIR/run.sh" ] || { echo "No PanHardCheck runner at $PAN_HARD_CHECK_DIR/run.sh"; exit 1; }
+    "$PAN_HARD_CHECK_DIR/run.sh" "${1:-NY_Bangalore}"
+}
 run_intercity() { run_frfs "$INTERCITY_DIR" "INTERCITY" "${1:-}" "${2:-}"; }
 run_rental() { run_frfs "$RENTAL_DIR" "RENTAL" "${1:-}" "${2:-}"; }
 run_fleet() { run_frfs "$FLEET_DIR" "FLEET MANAGEMENT" "${1:-}" "${2:-}"; }
@@ -578,6 +585,7 @@ show_help() {
     echo "  ./run-tests.sh toll-ride BT_Delhi             # Toll on estimate + auto ride (Delhi)"
     echo "  --setup             Seed toll dashboard access_matrix + provider-dashboard.sql"
     echo "  driver-image        Run driver image fetch API tests"
+    echo "  pan-hard-check      Run PAN hard-check tests (business PAN rejected for DRIVER/FLEET_OWNER)"
     echo "  --list              List all available suites and cities"
     echo "  --check             Check for stuck DB entities"
     echo "  -d                  Debug: capture per-API service logs to assets/test-logs/"
@@ -695,6 +703,9 @@ case "${1:-}" in
         ;;
     driver-image)
         run_driver_image "${2:-}" "${3:-}"
+        ;;
+    pan|pan-hard-check)
+        run_pan_hard_check "${2:-}"
         ;;
     "")
         run_rides

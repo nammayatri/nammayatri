@@ -46,6 +46,7 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     isNameCompareRequired,
     inferPanTypeFromNumber,
     isBusinessPan,
+    validateIndividualPANCheck,
     getDriverDocumentInfo,
     getDocumentImage,
     isNameComparePercentageValid,
@@ -1210,3 +1211,14 @@ inferPanTypeFromNumber panNumber =
 
 isBusinessPan :: Maybe Text -> Bool
 isBusinessPan = maybe False ((== Just DPan.BUSINESS) . inferPanTypeFromNumber)
+
+-- | When a merchant enables individualPANCheck, reject business PANs (4th char ≠ 'P')
+-- for individual drivers (incl. fleet drivers) and individual fleet owners.
+-- Business fleet owners and other roles are exempt, as they may hold a business PAN.
+validateIndividualPANCheck :: DTC.TransporterConfig -> Person.Person -> Text -> Flow ()
+validateIndividualPANCheck transporterConfig person panNumber =
+  when (transporterConfig.individualPANCheck == Just True && isIndividualRole person.role) $
+    when (inferPanTypeFromNumber (removeSpaceAndDash panNumber) /= Just DPan.INDIVIDUAL) $
+      throwError (InvalidRequest "Business PAN card not be accepted please upload individual PAN")
+  where
+    isIndividualRole role = role == Person.DRIVER || role == Person.FLEET_OWNER

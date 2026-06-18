@@ -1036,7 +1036,8 @@ TransporterConfig:
       derive': Generic, Show, ToJSON, FromJSON, ToSchema, Eq
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff",
-      "automatic_r_c_activation_cut_off")]
+      "automatic_r_c_activation_cut_off"), ("individualPANCheck",
+      "individual_pan_check")]
     - Custom Domain.Types.UtilsTH.mkCacParseInstance
   fields:
     merchantId: Id Merchant
@@ -1273,6 +1274,7 @@ TransporterConfig:
     allowDuplicateAadhaar: Maybe Bool
     allowDuplicateUdyam: Maybe Bool
     allowPanAadhaarLinkage: Maybe Bool
+    individualPANCheck: Maybe Bool
     cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
     distanceWeightage: Maybe Int
     driverCallingOption: "Maybe CallingOption"

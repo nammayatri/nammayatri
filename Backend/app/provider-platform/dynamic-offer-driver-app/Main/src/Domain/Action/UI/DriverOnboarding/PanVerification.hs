@@ -119,6 +119,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
   (blocked, driverDocument) <- DVRC.getDriverDocumentInfo person
   when blocked $ throwError AccountBlocked
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  DVRC.validateIndividualPANCheck transporterConfig person req.panNumber
   case transporterConfig.allowDuplicatePan of
     Just False -> do
       panHash <- getDbHash req.panNumber
