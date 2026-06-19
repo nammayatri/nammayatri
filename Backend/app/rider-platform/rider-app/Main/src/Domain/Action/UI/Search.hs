@@ -793,8 +793,11 @@ calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person sea
             calcPoints = True,
             mode = Just Maps.CAR
           }
+      sourceLatLong = NE.head (NE.fromList latLongs)
+  mbSpecialLocation <- QSpecialLocation.findSpecialLocationByLatLongFull sourceLatLong
+  let mbSpecialLocationEnforceToll = (QSpecialLocation.filterGates mbSpecialLocation True) >>= (.enforceTollRoute)
   mbRedisFlag :: Maybe Bool <- Redis.safeGet (DSrv.enforceTollRouteRedisKey person.id)
-  let mustEnforceToll = fromMaybe False mbEnforceTollRoute || fromMaybe False mbRedisFlag
+  let mustEnforceToll = fromMaybe False mbEnforceTollRoute || fromMaybe False mbRedisFlag || fromMaybe False mbSpecialLocationEnforceToll
       isAvoidTollEffective = if mustEnforceToll then False else riderConfig.isAvoidToll
   routeResponse <- Maps.getRoutes (Just isAvoidTollEffective) person.id person.merchantId (Just merchantOperatingCity.id) (Just searchRequestId.getId) request
 
