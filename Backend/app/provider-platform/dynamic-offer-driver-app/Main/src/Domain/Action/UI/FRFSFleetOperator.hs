@@ -19,6 +19,8 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import Environment (Flow)
 import EulerHS.Prelude hiding (id, unpack)
+import Kernel.External.Maps.Types (LatLong (..))
+import Kernel.External.MultiModal.Utils (decode)
 import Kernel.Prelude (listToMaybe)
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Beckn.Context
@@ -138,7 +140,7 @@ getV2FrfsRoute (_, _merchantId, merchantOpCityId) routeCode mbConfigId mbPlatfor
         totalStops = Just $ length stops,
         stops = Just $ map snd stops,
         timeBounds = Nothing,
-        waypoints = Nothing,
+        waypoints = route.encodedPolyline <&> decode <&> fmap (\point -> LatLong {lat = point.latitude, lon = point.longitude}),
         integratedBppConfigId = getId integratedBPPConfig.id
       }
 
