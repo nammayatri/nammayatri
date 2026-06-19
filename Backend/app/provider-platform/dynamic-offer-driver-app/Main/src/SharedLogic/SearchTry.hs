@@ -57,6 +57,7 @@ import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQ
+import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import qualified Tools.Metrics as Metrics
@@ -132,6 +133,7 @@ initiateDriverSearchBatch ::
   m DST.SearchTry
 initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
   searchTry <- createNewSearchTry
+  QSR.updatePaymentInstrument searchReq.id ((.paymentInstrument) <$> paymentMethodInfo)
   withTryCatch
     "initiateDriverSearchBatch"
     ( do
