@@ -165,7 +165,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           driverMaxExtraFee = Just $ maybe 0 roundToIntegral nearbyReq.driverMaxExtraFee,
           driverMaxExtraFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverMaxExtraFee,
           driverDefaultStepFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverDefaultStepFee, -- TODO :: Deprecate this after UI stops consuming
-          driverDefaultStepFeeWithCurrencyV2 = flip PriceAPIEntity nearbyReq.currency <$> (min nearbyReq.driverMaxExtraFee driverDefaultStepFee),
+          driverDefaultStepFeeWithCurrencyV2 = flip PriceAPIEntity nearbyReq.currency . roundAmountByCurrency' nearbyReq.currency <$> (min nearbyReq.driverMaxExtraFee driverDefaultStepFee),
           driverStepFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> driverStepFee,
           rideRequestPopupDelayDuration = delayDuration,
           specialLocationTag = searchRequest.specialLocationTag,
@@ -199,7 +199,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           isSafetyPlus = fromMaybe False nearbyReq.isSafetyPlus,
           coinsRewardedOnGoldTierRide = nearbyReq.coinsRewardedOnGoldTierRide,
           safetyPlusCharges = Just safetyCharges,
-          commissionCharges = nearbyReq.commissionCharges,
+          commissionCharges = roundAmountByCurrency' nearbyReq.currency <$> nearbyReq.commissionCharges,
           ..
         }
   where
