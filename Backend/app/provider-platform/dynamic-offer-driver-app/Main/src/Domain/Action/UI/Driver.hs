@@ -269,6 +269,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
+import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidAvailableBalanceByOwner)
 import qualified SharedLogic.Finance.Wallet as FWallet
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -937,6 +938,29 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' c
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantOpCityId Nothing
   makeDriverInformationRes merchantOpCityId driverEntity driverInfo merchant driverReferralCode driverStats driverGoHomeInfo (Just currentDues) (Just manualDues) mbMd5Digest operatorReferral ((.operatorId) <$> doa) inactiveFda activeFda mbFleetInfo
 
+checkPrepaidGoOnlineEligibility ::
+  (MonadFlow m, BeamFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+  Id SP.Person ->
+  TransporterConfig ->
+  Maybe DVC.VehicleCategory ->
+  m ()
+checkPrepaidGoOnlineEligibility personId transporterConfig mbCurrentVehicleCategory = do
+  let isolationEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
+      mbVehicleCategory = if isolationEnabled then mbCurrentVehicleCategory else Nothing
+  (ownerType, ownerId, counterparty) <-
+    QFDA.findByDriverId (cast personId) True >>= \case
+      Just fleetDriverAssociation -> pure (DSP.FLEET_OWNER, fleetDriverAssociation.fleetOwnerId, counterpartyFleetOwner)
+      Nothing -> pure (DSP.DRIVER, personId.getId, counterpartyDriver)
+  -- Minimum-balance threshold, mirroring the ride-accept check in initializeRide
+  let prepaidThreshold =
+        fromMaybe 0 $ case ownerType of
+          DSP.FLEET_OWNER -> transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold
+          DSP.DRIVER -> transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold
+  activePurchases <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType Plan.PREPAID_SUBSCRIPTION mbVehicleCategory
+  availableBalance <- fromMaybe 0 <$> getPrepaidAvailableBalanceByOwner counterparty ownerId mbVehicleCategory
+  when (null activePurchases || availableBalance <= prepaidThreshold) $
+    throwError (NoActivePrepaidPlan personId.getId)
+
 setActivity ::
   ( MonadFlow m,
     BeamFlow m r,
@@ -962,21 +986,25 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
         when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
           merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
           mbVehicle <- QVehicle.findById personId
-          DriverSpecificSubscriptionData {..} <- getDriverSpecificSubscriptionDataWithSubsConfig (personId, merchantId, merchantOpCityId) transporterConfig driverInfo mbVehicle Plan.YATRI_SUBSCRIPTION
-          let commonSubscriptionChecks = not isOnFreeTrial && not transporterConfig.allowDefaultPlanAllocation
-          (planBasedChecks, changeBasedChecks) <- do
-            if isSubscriptionEnabledAtCategoryLevel
-              then do
-                let planBasedChecks' = planMandatoryForCategory && isNothing autoPayStatus && commonSubscriptionChecks && isEnabledForCategory
-                let isSubscriptionEnabledAtCategoryLevelUI = (mbDriverPlan >>= (.isCategoryLevelSubscriptionEnabled)) == Just True
-                let changeBasedChecks' = (isSubscriptionVehicleCategoryChanged || isSubscriptionCityChanged) && commonSubscriptionChecks && isEnabledForCategory && isSubscriptionEnabledAtCategoryLevelUI
-                pure (planBasedChecks', changeBasedChecks')
-              else do
-                let isEnableForVariant = maybe False (`elem` transporterConfig.variantsToEnableForSubscription) (mbVehicle <&> (.variant))
-                let planBasedChecks' = transporterConfig.isPlanMandatory && isNothing autoPayStatus && commonSubscriptionChecks && isEnableForVariant
-                pure (planBasedChecks', False)
-          let isVehicleVariantDisabledForSubscription = maybe False (`elem` fromMaybe [] vehicleVariantsDisabledForSubscription) (mbVehicle <&> (.variant))
-          when ((planBasedChecks || changeBasedChecks) && not isVehicleVariantDisabledForSubscription) $ throwError (NoPlanSelected personId.getId)
+          -- Eligibility check for prepaid drivers:
+          if Plan.PREPAID_SUBSCRIPTION `elem` driverInfo.servicesEnabledForSubscription
+            then checkPrepaidGoOnlineEligibility personId transporterConfig (mbVehicle >>= (.category))
+            else do
+              DriverSpecificSubscriptionData {..} <- getDriverSpecificSubscriptionDataWithSubsConfig (personId, merchantId, merchantOpCityId) transporterConfig driverInfo mbVehicle Plan.YATRI_SUBSCRIPTION
+              let commonSubscriptionChecks = not isOnFreeTrial && not transporterConfig.allowDefaultPlanAllocation
+              (planBasedChecks, changeBasedChecks) <- do
+                if isSubscriptionEnabledAtCategoryLevel
+                  then do
+                    let planBasedChecks' = planMandatoryForCategory && isNothing autoPayStatus && commonSubscriptionChecks && isEnabledForCategory
+                    let isSubscriptionEnabledAtCategoryLevelUI = (mbDriverPlan >>= (.isCategoryLevelSubscriptionEnabled)) == Just True
+                    let changeBasedChecks' = (isSubscriptionVehicleCategoryChanged || isSubscriptionCityChanged) && commonSubscriptionChecks && isEnabledForCategory && isSubscriptionEnabledAtCategoryLevelUI
+                    pure (planBasedChecks', changeBasedChecks')
+                  else do
+                    let isEnableForVariant = maybe False (`elem` transporterConfig.variantsToEnableForSubscription) (mbVehicle <&> (.variant))
+                    let planBasedChecks' = transporterConfig.isPlanMandatory && isNothing autoPayStatus && commonSubscriptionChecks && isEnableForVariant
+                    pure (planBasedChecks', False)
+              let isVehicleVariantDisabledForSubscription = maybe False (`elem` fromMaybe [] vehicleVariantsDisabledForSubscription) (mbVehicle <&> (.variant))
+              when ((planBasedChecks || changeBasedChecks) && not isVehicleVariantDisabledForSubscription) $ throwError (NoPlanSelected personId.getId)
           when merchant.onlinePayment $ do
             driverBankAccount <-
               QFDA.findByDriverId driverId True >>= \case
