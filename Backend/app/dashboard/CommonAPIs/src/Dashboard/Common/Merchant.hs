@@ -1107,3 +1107,18 @@ data WhiteListOperatingCityRes = WhiteListOperatingCityRes
 
 instance HideSecrets WhiteListOperatingCityReq where
   hideSecrets = identity
+
+-- Airport-ops: enable/disable a vehicle for a special location (all gates/areas, trip categories,
+-- search sources) across ALL time bounds. String lists are parsed to domain types in the handler.
+data SetFareProductEnabledReq = SetFareProductEnabledReq
+  { enabled :: Bool,
+    areas :: [Text],
+    vehicleServiceTiers :: [Text],
+    tripCategories :: Maybe [Text],
+    searchSources :: Maybe [Text]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets SetFareProductEnabledReq where
+  hideSecrets = identity
