@@ -10,35 +10,49 @@ the one file you need to read.
 
 ## Architecture
 
+The dashboard + test-local-api run on your laptop (`, run-local-test-dashboard`);
+the backend stack, test-context-api and mock-server come up together via
+`, run-mobility-stack-dev` — so when that stack runs on a devbox, so do
+test-context-api and the mocks. The dashboard just points its context-api base
+at whichever host the stack runs on (`localStorage.ny.contextApiBase`).
+
 ```
-            ┌─────────────────────────────────────────────────────────────┐
-            │                  test-dashboard (React)                     │
-            │                  http://localhost:7070                      │
-            │  tabs: Collections │ Custom Flows │ Finance │ Remote Stack  │
-            └──────────────┬─────────────────────────────┬────────────────┘
-                           │ HTTP/SSE                    │ HTTP/SSE
-                           ▼                             ▼
-       ┌──────────────────────────────┐   ┌────────────────────────────────┐
-       │   test-context-api (7082)    │   │     test-local-api (7083)      │
-       │   Python ThreadingHTTPServer │   │     Python ThreadingHTTPServer │
-       │                              │   │                                │
-       │ • /api/collections           │   │ • /api/control-center/{...}    │
-       │ • /api/config-sync           │   │ • /api/ny-react-native/{...}   │
-       │ • /api/terminal/{...}        │   │ • /api/remote/{deploy,start,   │
-       │   (PTY for prereq scripts)   │   │     stream,input,resize,stop}  │
-       │ • DB resets / log tailing    │   │ • /api/git/refs                │
-       └─────────────┬────────────────┘   └────────────────┬───────────────┘
-                     │ psycopg2/HTTP                       │ subprocess + ssh/rsync
-                     ▼                                     ▼
-        ┌──────────────────────────┐         ┌────────────────────────────┐
-        │  mobility-stack          │         │  Remote host (or localhost)│
-        │  rider-app (8013),       │         │  runs `, run-test-context- │
-        │  driver-app (8016),      │         │  server` inside a PTY      │
-        │  dashboards (8017/8018), │         │  streamed back via SSE     │
-        │  mock-registry (8020),   │         └────────────────────────────┘
-        │  mock-server (8080),     │
-        │  postgres/redis/kafka    │
-        └──────────────────────────┘
+  ┌──────────────────────────────────────────────────────────────┐
+  │  , run-local-test-dashboard   (your laptop)                   │
+  │                                                                │
+  │   test-dashboard (React)  http://localhost:7070                │
+  │   tabs: Collections │ Custom Flows │ Finance │ Remote Stack     │
+  │        │                                     │                 │
+  │        │ HTTP/SSE                            │ HTTP/SSE         │
+  │        │                           ┌─────────▼──────────────┐  │
+  │        │                           │  test-local-api (7083) │  │
+  │        │                           │  • /api/control-center │  │
+  │        │                           │  • /api/ny-react-native│  │
+  │        │                           │  • /api/remote/{...}   │  │
+  │        │                           │  • /api/git/refs       │  │
+  │        │                           └─────────┬──────────────┘  │
+  └────────┼─────────────────────────────────────┼─────────────────┘
+           │ HTTP/SSE                             │ subprocess + ssh/rsync
+           │ (context-api base = localhost        ▼
+           │  OR a devbox)              ┌────────────────────────────┐
+           │                            │ Remote host (or localhost) │
+           │                            │ runs `, run-mobility-stack-│
+           │                            │ dev` inside a PTY,         │
+           │                            │ streamed back via SSE      │
+           │                            └────────────────────────────┘
+           ▼
+  ┌──────────────────────────────────────────────────────────────┐
+  │  , run-mobility-stack-dev   (local OR devbox)                 │
+  │                                                                │
+  │   test-context-api (7082)        mock-server (8080)            │
+  │   • /api/collections             Juspay/Stripe/FCM/SMS/…       │
+  │   • /api/config-sync                                           │
+  │   • /api/terminal/{...} (PTY)    rider-app (8013)              │
+  │   • DB resets / log tailing      driver-app (8016)             │
+  │     (psycopg2 + backend HTTP)    dashboards (8017/8018)        │
+  │                                  mock-registry (8020)          │
+  │                                  postgres/redis/kafka          │
+  └──────────────────────────────────────────────────────────────┘
                      ▲
                      │ HTTP calls under test
                      │
@@ -70,9 +84,9 @@ Path: `Backend/dev/mock-servers/`, port `8080`, process namespace `test`.
 
 A single Python service that mocks Juspay / Stripe / PayTM / Acko / SOS /
 WhatsApp / CMRL / CRIS / FCM / SMS / etc. The Postman collections target it
-via `{{mockServerUrl}}` and `{{mock_fcm_url}}`. Started only when the test
-profile is active; on Master/cloud envs it isn't running and the auto-skip
-ensures those steps don't try to call it.
+via `{{mockServerUrl}}` and `{{mock_fcm_url}}`. Comes up with the backend stack
+(`, run-mobility-stack-dev`, profiles `backend`/`full`); on Master/cloud envs it
+isn't running and the auto-skip ensures those steps don't try to call it.
 
 ### `test-tool/context-api/` — the control plane (port 7082)
 Process: `test-context-api`.
@@ -95,9 +109,11 @@ Backs almost every dashboard action. Endpoints (selected):
   PTY sessions used to run Postman prerequest scripts and other helper shells.
 - Service-log tailing (`tail -f` over the Haskell process log files).
 
-It needs Postgres (5434), Redis, Kafka, Passetto and the backend HTTP
-endpoints up — co-locate it with `, run-mobility-stack-dev` on the same host,
-or point its `BACKEND_HOST` at a remote one.
+It needs Postgres (5434), Redis, Kafka, Passetto and the backend HTTP endpoints
+up, so it is brought up **as part of** `, run-mobility-stack-dev` (profile
+`backend`) on the same host as the stack. When that stack runs on a devbox,
+test-context-api runs there too; the local dashboard reaches it by setting its
+context-api base to that host (see Remote Stack below).
 
 ### `test-tool/local-api/` — host-side launcher (port 7083)
 Process: `test-local-api`.
@@ -109,7 +125,7 @@ Handles things the browser can't do for itself:
 - Lists git refs for repos under `data/`.
 - **Remote stack** (this directory): `POST /api/remote/deploy` rsyncs the repo
   to an SSH target (skipped for `localhost`), `POST /api/remote/start` opens
-  a PTY over SSH and runs `, run-test-context-server` there. The dashboard's
+  a PTY over SSH and runs `, run-mobility-stack-dev` there. The dashboard's
   **Remote Stack** tab is a thin wrapper over these endpoints and reuses the
   same xterm.js `Terminal` component used by `context-api`'s PTY API.
 
@@ -128,7 +144,7 @@ Where you actually drive a test run. Tabs:
 - **Custom Flows** — bespoke step trees not modelled as Postman collections.
 - **Finance Visualization** — read-only view over the finance side-effects of
   a recent ride / booking.
-- **Remote Stack** — SSH deploy + run `, run-test-context-server` against a
+- **Remote Stack** — SSH deploy + run `, run-mobility-stack-dev` against a
   remote host; flip the dashboard's `context-api` base to that host's `:7082`
   once it's healthy (stored in `localStorage` under `ny.contextApiBase`).
 
@@ -136,21 +152,19 @@ The dashboard talks to test-context-api for data, test-local-api for
 host/remote actions, and the backend services directly via the local proxy
 for live API calls.
 
-## Setup: three-terminal workflow
+## Setup: two-terminal workflow
 
-The default `, run-mobility-stack-dev` brings up **only** the backend stack
-(`ny` + `tools` namespaces). The test infrastructure runs in separate
-terminals so each piece can be restarted independently — or, for the test
-infra, run on a different host.
+`, run-mobility-stack-dev` brings up the backend stack (`ny` + `tools`)
+**together with** test-context-api (7082) and mock-server (8080).
+`, run-local-test-dashboard` brings up just the browser-facing pieces
+(test-dashboard + test-local-api), which can point at a backend stack running
+locally or on a devbox.
 
 ```bash
-# Terminal 1 — backend (rider/driver/dashboards/db/redis/kafka/…)
+# Terminal 1 — backend stack + test-context-api (7082) + mock-server (8080)
 , run-mobility-stack-dev
 
-# Terminal 2 — test infrastructure (mock-server + test-context-api)
-, run-test-context-server
-
-# Terminal 3 — dashboard + local-api
+# Terminal 2 — test dashboard (7070) + test-local-api (7083)
 , run-local-test-dashboard
 # → open http://localhost:7070
 ```
@@ -165,15 +179,14 @@ If you want the previous "everything in one process-compose UI" experience:
 This is the same set of processes as before, just under the new name.
 
 ### Profiles in nix
-Each of the four commands maps to a single `services.nammayatri.profile`
-value, applied to the same `Backend/nix/services/nammayatri.nix` module:
+Each command maps to a single `services.nammayatri.profile` value, applied to
+the same `Backend/nix/services/nammayatri.nix` module:
 
-| Command                       | profile         | Processes                                            |
-|-------------------------------|-----------------|------------------------------------------------------|
-| `, run-mobility-stack-dev`    | `backend`       | `ny` + `tools`                                       |
-| `, run-test-context-server`   | `testContext`   | `mock-server`, `test-context-api`                    |
-| `, run-local-test-dashboard`  | `testDashboard` | `test-local-api`, `test-dashboard`                   |
-| `, run-mobility-stack-full`   | `full`          | everything (`ny` + `tools` + all four test procs)    |
+| Command                       | profile         | Processes                                                   |
+|-------------------------------|-----------------|-------------------------------------------------------------|
+| `, run-mobility-stack-dev`    | `backend`       | `ny` + `tools` + `test-context-api` + `mock-server`         |
+| `, run-local-test-dashboard`  | `testDashboard` | `test-dashboard`, `test-local-api`, `config-sync-server`    |
+| `, run-mobility-stack-full`   | `full`          | everything (`ny` + `tools` + all test procs)                |
 
 Disabled processes are excluded from process-compose entirely, so cross-profile
 `depends_on` entries don't block startup. Infra services (postgres / redis /
@@ -192,9 +205,9 @@ The **Remote Stack** tab in the dashboard lets you target an SSH-reachable host.
 3. Click **Deploy** — rsyncs the local repo to the remote, excluding `.git`,
    `data/`, `node_modules`, `dist-newstyle`, etc. (full list lives in
    `local-api/server.py` as `REMOTE_EXCLUDES`).
-4. Click **Start test-context-server** — opens an `ssh -tt` PTY into a fresh
-   bash login shell that runs `cd <remoteDir>/Backend && nix develop -c , run-test-context-server`
-   (the **Command** field lets you customize this).
+4. Click **Start mobility-stack-dev** — opens an `ssh -tt` PTY into a fresh
+   bash login shell that runs `cd Backend && nix develop .#backend -c , run-mobility-stack-dev`
+   (the **Command** field shows this canonical command).
 5. Click **Use this context-api** — sets `localStorage.ny.contextApiBase =
    http://<host>:7082` and reloads. From then on the dashboard's collection
    scanner, prerequest PTY, log tailer, etc. all hit the remote. **Reset**
