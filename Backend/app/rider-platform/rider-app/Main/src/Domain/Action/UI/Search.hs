@@ -776,6 +776,8 @@ calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchReques
           }
       sourceLatLong = NE.head (NE.fromList latLongs)
   mbSpecialLocation <- QSpecialLocation.findSpecialLocationByLatLongFull sourceLatLong
+  whenJust mbSpecialLocation $ \specLoc ->
+    QSearchRequest.updateFromSpecialLocationId searchRequestId (Just specLoc.id.getId)
   let mbSpecialLocationEnforceToll = (QSpecialLocation.filterGates mbSpecialLocation True) >>= (.enforceTollRoute)
   mbRedisFlag :: Maybe Bool <- Redis.safeGet (DSrv.enforceTollRouteRedisKey person.id)
   let mustEnforceToll = fromMaybe False mbEnforceTollRoute || fromMaybe False mbRedisFlag || fromMaybe False mbSpecialLocationEnforceToll
