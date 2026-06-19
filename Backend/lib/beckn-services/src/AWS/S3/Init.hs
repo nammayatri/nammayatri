@@ -40,7 +40,7 @@ buildS3Env (S3AwsConf a) = do
       putH = put'' a.bucketName,
       putRawH = putRaw'' a.bucketName,
       deleteH = delete'' a.bucketName,
-      generateUploadUrlH = generateUploadUrl' a.bucketName,
-      generateDownloadUrlH = generateDownloadUrl' a.bucketName,
-      headRequestH = headRequest' a.bucketName
+      generateUploadUrlH = generateUploadUrl' a.region a.bucketName,
+      generateDownloadUrlH = generateDownloadUrl' a.region a.bucketName,
+      headRequestH = headRequest' a.region a.bucketName
     }
