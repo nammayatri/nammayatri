@@ -120,8 +120,8 @@ data RouteWithBuses = RouteWithBuses
 -- Create Redis key for a route
 mkRouteKey :: Maybe Text -> Text -> Text
 mkRouteKey mbRedisPrefix routeId = case mbRedisPrefix of
-  Just prefix -> prefix <> ":route:" <> routeId
-  Nothing -> "route:" <> routeId
+  Just prefix | prefix /= "" -> prefix <> ":route:" <> routeId
+  _ -> "route:" <> routeId
 
 -- Get all buses for a single route
 getRoutesBuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv), HasField "cloudType" r (Maybe CloudType)) => Text -> DIBC.IntegratedBPPConfig -> m RouteWithBuses
@@ -131,10 +131,7 @@ getRoutesBuses routeId integratedBppConfig = do
         DIBC.DIRECT config -> config.redisPrefix
         _ -> Nothing
   let key = mkRouteKey redisPrefix routeId
-  cloudType <- asks (.cloudType)
-  busDataPairs <- case cloudType of
-    Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.hGetAll key
-    _ -> withCrossAppRedisNew $ Hedis.hGetAll key
+  busDataPairs <- Hedis.runInMultiCloudLTSRedisForList $ Hedis.hGetAll key
   let buses = map (uncurry FullBusData) busDataPairs
   return $ RouteWithBuses routeId buses
 
