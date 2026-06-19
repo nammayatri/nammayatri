@@ -107,3 +107,9 @@ updateOffersFraudCheckFailureReason (Id searchRequestId) failureReason = do
     [ Se.Is BeamSR.id (Se.Eq searchRequestId),
       Se.Is BeamSR.offersFraudCheckFailureReason (Se.Eq Nothing)
     ]
+
+updateFromSpecialLocationId :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Text -> m ()
+updateFromSpecialLocationId (Id searchRequestId) fromSpecialLocationId =
+  updateOneWithKV
+    [Se.Set BeamSR.fromSpecialLocationId fromSpecialLocationId]
+    [Se.Is BeamSR.id (Se.Eq searchRequestId)]
