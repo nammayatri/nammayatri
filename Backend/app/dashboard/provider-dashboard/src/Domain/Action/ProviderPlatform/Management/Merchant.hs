@@ -38,6 +38,7 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     getMerchantConfigFarePolicyExport,
     getMerchantConfigFarePolicyDetails,
     getMerchantConfigFareProductList,
+    postMerchantConfigFareProductSetEnabled,
     postMerchantConfigOperatingCityCreate,
     postMerchantSchedulerTrigger,
     postMerchantUpdateOnboardingVehicleVariantMapping,
@@ -72,6 +73,7 @@ where
 import qualified API.Client.ProviderPlatform.Management as Client
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
 import qualified Dashboard.Common
+import qualified Dashboard.Common.Merchant
 import qualified Data.Text as T
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -629,3 +631,9 @@ deleteMerchantTollDelete merchantShortId opCity apiTokenInfo tollId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.deleteMerchantTollDelete) tollId
+
+postMerchantConfigFareProductSetEnabled :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Dashboard.Common.Merchant.SetFareProductEnabledReq -> Flow APISuccess
+postMerchantConfigFareProductSetEnabled merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigFareProductSetEnabled) req
