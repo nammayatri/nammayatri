@@ -21,6 +21,7 @@ import qualified Domain.Types as DVST
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.ConditionalCharges as DAC
 import Domain.Types.DriverGoHomeRequest (DriverGoHomeRequest)
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.ParcelType as DParcel
@@ -115,7 +116,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     isSafetyPlus :: Bool,
     coinsRewardedOnGoldTierRide :: Maybe Int,
     safetyPlusCharges :: Maybe HighPrecMoney,
-    commissionCharges :: Maybe HighPrecMoney
+    commissionCharges :: Maybe HighPrecMoney,
+    isPaymentOnline :: Maybe Bool
   }
   deriving (Generic, ToSchema, Show)
 
@@ -200,12 +202,15 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           coinsRewardedOnGoldTierRide = nearbyReq.coinsRewardedOnGoldTierRide,
           safetyPlusCharges = Just safetyCharges,
           commissionCharges = nearbyReq.commissionCharges,
+          isPaymentOnline = deriveIsPaymentOnline searchRequest.paymentInstrument,
           ..
         }
   where
     minNonZero Nothing b = b
     minNonZero (Just 0) b = b
     minNonZero a b = min a b
+    deriveIsPaymentOnline :: Maybe DMPM.PaymentInstrument -> Maybe Bool
+    deriveIsPaymentOnline = fmap (\case DMPM.Cash -> False; _ -> True)
 
 extractDriverPickupCharges :: DFP.FarePolicyDetailsD s -> Maybe HighPrecMoney
 extractDriverPickupCharges farePolicyDetails =
