@@ -51,18 +51,16 @@ getChangeServiceTierQuotes (_personId, _merchantId) bookingId = do
   -- Reuse existing search results logic, then filter
   searchResults <- QuoteAction.getQuotes searchRequestId (Just True)
 
-  -- Filter quotes: different tier and higher fare than current booking
-  let currentFare = booking.estimatedTotalFare
-      currentFareAmount = currentFare.amount
-      isHigherTierQuote = \case
-        QuoteAction.OnDemandCab q -> q.vehicleVariant /= booking.vehicleServiceTierType && toHighPrecMoney q.estimatedTotalFare > currentFareAmount
-        QuoteAction.OnRentalCab q -> q.vehicleVariant /= booking.vehicleServiceTierType && toHighPrecMoney q.estimatedTotalFare > currentFareAmount
-        QuoteAction.OnMeterRide q -> q.vehicleVariant /= booking.vehicleServiceTierType && toHighPrecMoney q.estimatedTotalFare > currentFareAmount
+  -- Filter quotes: different tier
+  let notSameTierQuote = \case
+        QuoteAction.OnDemandCab q -> q.vehicleVariant /= booking.vehicleServiceTierType
+        QuoteAction.OnRentalCab q -> q.vehicleVariant /= booking.vehicleServiceTierType
+        QuoteAction.OnMeterRide q -> q.vehicleVariant /= booking.vehicleServiceTierType
         _ -> False
 
   pure
     searchResults
-      { QuoteAction.quotes = filter isHigherTierQuote searchResults.quotes,
+      { QuoteAction.quotes = filter notSameTierQuote searchResults.quotes,
         QuoteAction.estimates = [],
         QuoteAction.journey = Nothing
       }
