@@ -96,7 +96,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be VehicleServiceTierO
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForList ''VehicleServiceTierOrderConfig)
 
-data SpecialLocationTierOrderConfig = SpecialLocationTierOrderConfig {orderArray :: [Domain.Types.ServiceTierType.ServiceTierType], specialLocationName :: Text}
+data SpecialLocationTierOrderConfig = SpecialLocationTierOrderConfig {orderArray :: [Domain.Types.ServiceTierType.ServiceTierType], specialLocationId :: Text}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Read, Ord)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be SpecialLocationTierOrderConfig where
