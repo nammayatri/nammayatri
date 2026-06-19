@@ -563,7 +563,7 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
         when (isFleetRole person.role) $
           void $ recomputeFleetVerifiedAndEnabled person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
         when (person.role == DP.DRIVER) $
-          void $ recomputeDriverVerifiedAndEnabled merchantOpCityId merchantId person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory (mDL >>= (.driverName)) onboardingVehicleCategory transporterConfig
+          void $ recomputeDriverVerifiedAndEnabled merchantOpCityId merchantId person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory (mDL >>= (.driverName)) onboardingVehicleCategory transporterConfig Nothing
         -- Vehicle status list (+ vehicle `verified` write, handled inside getVehicleDocuments under enableBotFlow)
         getVehicleDocuments driverDocConfigs person.role vehicleDocumentsUnverified transporterConfig.requiresOnboardingInspection transporterConfig.vehicleCategoryExcludedFromVerification True driverDocuments merchantOpCityId
       else -- Legacy enablement (unchanged): conditional on separateDriverVehicleEnablement.
@@ -948,10 +948,11 @@ recomputeDriverVerifiedAndEnabled ::
   Maybe Text ->
   Maybe DVC.VehicleCategory ->
   DTC.TransporterConfig ->
+  Maybe Bool ->
   Flow Bool
-recomputeDriverVerifiedAndEnabled merchantOpCityId merchantId person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory driverName onboardingVehicleCategory transporterConfig = do
+recomputeDriverVerifiedAndEnabled merchantOpCityId merchantId person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory driverName onboardingVehicleCategory transporterConfig mbIsFleetDriver = do
   driverInfo <- DIQuery.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
-  isFleetDriver <- isJust <$> QFDA.findByDriverId person.id True
+  isFleetDriver <- maybe (hasActiveFleetAssociation person.id) pure mbIsFleetDriver
   -- A fleet driver (active fleet association) skips INDIVIDUAL-only docs like OperatorPartnerCode, via applicableTo.
   let allMandatoryDocsValid = checkAllDriverDocsValid' ForVerified (Just isFleetDriver) allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
       allEnablingDocsValid = checkAllDriverDocsValid' ForEnabling (Just isFleetDriver) allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
@@ -1018,7 +1019,7 @@ botApproveAndReconcile merchantOperatingCity person transporterConfig = do
     let docs' = map forceBotApprovalValid driverDocuments
     if isFleetRole person.role
       then void $ recomputeFleetVerifiedAndEnabled person allDocVerificationConfigs docs' vehicleCategory Nothing
-      else void $ recomputeDriverVerifiedAndEnabled merchantOperatingCity.id merchantOperatingCity.merchantId person allDocVerificationConfigs docs' vehicleCategory Nothing Nothing Nothing transporterConfig
+      else void $ recomputeDriverVerifiedAndEnabled merchantOperatingCity.id merchantOperatingCity.merchantId person allDocVerificationConfigs docs' vehicleCategory Nothing Nothing Nothing transporterConfig (Just isFleetDriver)
   pure dependencyDocsValid
   where
     forceBotApprovalValid :: DocumentStatusItem -> DocumentStatusItem
