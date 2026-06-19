@@ -54,8 +54,8 @@ defaultBusTrackingConfigFRFS =
 
 nearbyBusKeyFRFS :: Maybe Text -> Text
 nearbyBusKeyFRFS mbRedisPrefix = case mbRedisPrefix of
-  Just prefix -> prefix <> ":bus_locations"
-  Nothing -> "bus_locations"
+  Just prefix | prefix /= "" -> prefix <> ":bus_locations"
+  _ -> "bus_locations"
 
 topVehicleCandidatesKeyFRFS :: Text -> Text
 topVehicleCandidatesKeyFRFS journeyLegId = "journeyLegTopVehicleCandidates:" <> journeyLegId
@@ -283,14 +283,11 @@ getVehicleMetadata vehicleNumbers integratedBppConfig = do
         DIBC.ONDC config -> config.redisPrefix
         DIBC.DIRECT config -> config.redisPrefix
         _ -> Nothing
-  cloudType <- asks (.cloudType)
-  case cloudType of
-    Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.hmGet (vehicleMetaKey redisPrefix) vehicleNumbers
-    _ -> CQMMB.withCrossAppRedisNew $ Hedis.hmGet (vehicleMetaKey redisPrefix) vehicleNumbers
+  Hedis.runInMultiCloudLTSRedisForMaybeList $ Hedis.hmGet (vehicleMetaKey redisPrefix) vehicleNumbers
   where
     vehicleMetaKey :: Maybe Text -> Text
     vehicleMetaKey mbRedisPrefix = case mbRedisPrefix of
-      Just prefix -> prefix <> ":bus_metadata_v2"
+      Just prefix | prefix /= "" -> prefix <> ":bus_metadata_v2"
       _ -> "bus_metadata_v2"
 
 getBusLiveInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), HasShortDurationRetryCfg r c, HasKafkaProducer r) => Text -> DIBC.IntegratedBPPConfig -> m (Maybe BusDataWithRoutesInfo)
@@ -303,11 +300,8 @@ getNearbyBusesFRFS userPos' riderConfig integratedBppConfig = do
         DIBC.ONDC config -> config.redisPrefix
         DIBC.DIRECT config -> config.redisPrefix
         _ -> Nothing
-  cloudType <- asks (.cloudType)
   busesBS <-
-    mapM (pure . decodeUtf8) =<< case cloudType of
-      Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.geoSearch (nearbyBusKeyFRFS redisPrefix) (Hedis.FromLonLat userPos'.lon userPos'.lat) (Hedis.ByRadius nearbyBusSearchRadius "km")
-      _ -> CQMMB.withCrossAppRedisNew $ Hedis.geoSearch (nearbyBusKeyFRFS redisPrefix) (Hedis.FromLonLat userPos'.lon userPos'.lat) (Hedis.ByRadius nearbyBusSearchRadius "km")
+    mapM (pure . decodeUtf8) =<< Hedis.runInMultiCloudLTSRedisForList (Hedis.geoSearch (nearbyBusKeyFRFS redisPrefix) (Hedis.FromLonLat userPos'.lon userPos'.lat) (Hedis.ByRadius nearbyBusSearchRadius "km"))
   logDebug $ "getNearbyBusesFRFS: busesBS: " <> show busesBS
   buses <-
     if null busesBS
