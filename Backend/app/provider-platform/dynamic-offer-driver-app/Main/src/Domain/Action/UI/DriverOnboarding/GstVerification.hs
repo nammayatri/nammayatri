@@ -17,6 +17,8 @@ module Domain.Action.UI.DriverOnboarding.GstVerification
     DriverGstinRes,
     verifyGstin,
     onVerifyGst,
+    assertUploadedGstLinkedToExistingPan,
+    assertUploadedPanLinkedToExistingGst,
   )
 where
 
@@ -145,7 +147,12 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let mbGstVerificationService =
         (if isDashboard then merchantServiceUsageConfig.dashboardGstVerificationService else merchantServiceUsageConfig.gstVerificationService)
+  let gstPanLinkCheckRequired = DCommon.checkFleetOwnerRole person.role && fromMaybe False transporterConfig.isGstPanLinkCheckRequired
   let runBody = do
+        -- Inside the lock so the read of the existing PAN and the create of this GST
+        -- are atomic w.r.t. a concurrent PAN upload for the same person (TOCTOU).
+        when gstPanLinkCheckRequired $
+          assertUploadedGstLinkedToExistingPan person req.gstin (Id req.imageId)
         case mbGstVerificationService of
           Just VI.Idfy -> do
             mdriverGstInformation <- DGQuery.findByDriverId person.id
@@ -159,7 +166,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
             gstin <- encrypt req.gstin
             QFOI.updateGstImage (Just gstin) (Just req.imageId) person.id
           _ -> pure ()
-  if DVRC.isNameCompareRequired transporterConfig verifyBy
+  if DVRC.isNameCompareRequired transporterConfig verifyBy || gstPanLinkCheckRequired
     then Redis.withWaitOnLockRedisWithExpiry (DVRC.makeDocumentVerificationLockKey personId.getId) 10 10 runBody
     else runBody
   res <- case person.role of
@@ -328,6 +335,35 @@ onVerifyGstHandler person imageId1 imageId2 output = do
         when (((image1 >>= (.verificationStatus)) /= Just Documents.VALID) && ((image2 >>= (.verificationStatus)) /= Just Documents.VALID)) $
           mapM_ (maybe (return ()) (ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard."))) [Just imageId1, imageId2]
   if legalNameMissing then rejectForMissingLegalName else markImagesValidIfNeeded
+
+assertUploadedGstLinkedToExistingPan :: Person.Person -> Text -> Id Image.Image -> Flow ()
+assertUploadedGstLinkedToExistingPan person gstin imageId = do
+  mPanCard <- DPQuery.findByDriverId person.id
+  whenJust mPanCard $ \panCard -> do
+    panNumber <- decrypt panCard.panCardNumber
+    rejectIfPanGstUnlinked person panNumber gstin imageId
+
+assertUploadedPanLinkedToExistingGst :: Person.Person -> Text -> Id Image.Image -> Flow ()
+assertUploadedPanLinkedToExistingGst person panNumber imageId = do
+  mDriverGstin <- DGQuery.findByDriverId person.id
+  whenJust mDriverGstin $ \driverGstin -> do
+    gstin <- decrypt driverGstin.gstin
+    rejectIfPanGstUnlinked person panNumber gstin imageId
+
+rejectIfPanGstUnlinked :: Person.Person -> Text -> Text -> Id Image.Image -> Flow ()
+rejectIfPanGstUnlinked person panNumber gstin imageId = do
+  let normalizedPan = T.toUpper (removeSpaceAndDash panNumber)
+      normalizedGstin = T.toUpper (removeSpaceAndDash gstin)
+  unless (normalizedPan `T.isInfixOf` normalizedGstin) $ do
+    logWarning $
+      "rejectIfPanGstUnlinked: PAN not linked to GST, rejecting upload. driverId="
+        <> person.id.getId
+        <> " pan="
+        <> maskText panNumber
+        <> " gstin="
+        <> maskText gstin
+    Utils.cleanupUploadedImages [imageId] person.id
+    throwError (InvalidRequest "PAN and GST do not belong to the same entity (the PAN must match the GST holder's PAN)")
 
 mkIdfyVerificationEntityGst :: MonadFlow m => Person.Person -> Id Image.Image -> Text -> UTCTime -> DIdfy.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> m DIdfy.IdfyVerification
 mkIdfyVerificationEntityGst person imageId1 requestId now imageExtractionValidation encryptedGst = do
