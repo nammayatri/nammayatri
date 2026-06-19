@@ -22,6 +22,7 @@ imports:
   UpsertSpecialLocationCsvReq: Dashboard.Common.Merchant
   UpsertDriverPoolConfigCsvReq: Dashboard.Common.Merchant
   APISuccessWithUnprocessedEntities: Dashboard.Common.Merchant
+  SetFareProductEnabledReq: Dashboard.Common.Merchant
   SpecialLocation: Lib.Types.SpecialLocation
   SpecialLocationFull: Lib.Queries.SpecialLocation
   UpsertSpecialLocationReq: Dashboard.Common.Merchant
@@ -370,6 +371,13 @@ apis:
         enabled: Bool
       response:
         type: FareProductListRes
+  - POST: # FareProductSetEnabledAPI
+      endpoint: /config/fareProduct/setEnabled
+      auth: ApiAuthV2
+      request:
+        type: SetFareProductEnabledReq
+      response:
+        type: APISuccess
   - POST: # CreateMerchantOperatingCityAPI
       endpoint: /config/operatingCity/create
       auth: ApiAuthV2
