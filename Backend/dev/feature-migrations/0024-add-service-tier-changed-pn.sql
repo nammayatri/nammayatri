@@ -8,7 +8,7 @@ INSERT INTO atlas_app.merchant_push_notification (
     fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, should_trigger, created_at, updated_at
 )
 SELECT
-    'SERVICE_TIER_CHANGED',
+    'TRIP_UPDATED',
     'SERVICE_TIER_CHANGED',
     moc.merchant_id,
     moc.id,
