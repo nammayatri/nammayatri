@@ -194,6 +194,7 @@ data DriverError
   = DriverAccountDisabled
   | DriverWithoutVehicle Text
   | NoPlanSelected Text
+  | NoActivePrepaidPlan Text
   | DriverAccountBlocked BlockErrorPayload
   | DriverAccountAlreadyBlocked
   | DriverUnsubscribed
@@ -216,6 +217,7 @@ instance IsBaseError DriverError where
   toMessage DriverAccountDisabled = Just "Driver account has been disabled. He can't go online and receive ride offers in this state."
   toMessage (DriverWithoutVehicle personId) = Just $ "Driver with id = " <> personId <> " has no linked vehicle"
   toMessage (NoPlanSelected personId) = Just $ "Driver with id = " <> personId <> " has not selected any plan"
+  toMessage (NoActivePrepaidPlan personId) = Just $ "Driver with id = " <> personId <> " has no active prepaid subscription with sufficient balance. Please recharge to go online."
   toMessage (DriverAccountBlocked _) = Just "Driver account has been blocked."
   toMessage DriverAccountAlreadyBlocked = Just "Driver account has been already blocked."
   toMessage DriverUnsubscribed = Just "Driver has been unsubscibed from platform. Pay pending amount to subscribe back."
@@ -236,6 +238,7 @@ instance IsHTTPError DriverError where
     DriverAccountDisabled -> "DRIVER_ACCOUNT_DISABLED"
     DriverWithoutVehicle _ -> "DRIVER_WITHOUT_VEHICLE"
     NoPlanSelected _ -> "NO_PLAN_SELECTED"
+    NoActivePrepaidPlan _ -> "NO_ACTIVE_PREPAID_PLAN"
     DriverAccountBlocked _ -> "DRIVER_ACCOUNT_BLOCKED"
     DriverAccountAlreadyBlocked -> "DRIVER_ACCOUNT_ALREADY_BLOCKED"
     DriverUnsubscribed -> "DRIVER_UNSUBSCRIBED"
@@ -254,6 +257,7 @@ instance IsHTTPError DriverError where
     DriverAccountDisabled -> E403
     DriverWithoutVehicle _ -> E400
     NoPlanSelected _ -> E400
+    NoActivePrepaidPlan _ -> E403
     DriverAccountBlocked _ -> E403
     DriverAccountAlreadyBlocked -> E403
     DriverUnsubscribed -> E403
