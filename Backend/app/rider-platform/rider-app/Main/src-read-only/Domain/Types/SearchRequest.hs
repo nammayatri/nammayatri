@@ -48,6 +48,7 @@ data SearchRequest = SearchRequest
     destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     device :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    discoveredSpecialLocationId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     distance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverIdentifier :: Kernel.Prelude.Maybe Domain.Types.RefereeLink.DriverIdentifier,
