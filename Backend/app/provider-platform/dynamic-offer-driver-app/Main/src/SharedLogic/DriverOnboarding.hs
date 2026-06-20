@@ -1180,3 +1180,13 @@ isNameCompareRequired transporterConfig verifyBy =
 
 makeDocumentVerificationLockKey :: Text -> Text
 makeDocumentVerificationLockKey personId = "DocumentVerificationLock:" <> personId
+
+endFleetRCAssociationIfPossible ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id Person ->
+  Id VehicleRegistrationCertificate ->
+  m ()
+endFleetRCAssociationIfPossible fleetOwnerId rcId = do
+  now <- getCurrentTime
+  mbFleetRc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId fleetOwnerId rcId now
+  whenJust mbFleetRc $ \fleetRc -> FRCAssoc.endById fleetRc.id

@@ -50,6 +50,7 @@ import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
 import Tools.Error
@@ -131,6 +132,9 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
           DriverInformation.incrementReferralCountByPersonId (Just newtotalRef) dr.driverId
           return Success
         Person.OPERATOR -> do
+          existingFleetAssocs <- QFDA.findAllByDriverId personId True
+          unless (null existingFleetAssocs) $
+            throwError (InvalidRequest "Fleet-linked drivers cannot apply an operator referral code; their operator is derived from the fleet")
           merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
           person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
           SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
