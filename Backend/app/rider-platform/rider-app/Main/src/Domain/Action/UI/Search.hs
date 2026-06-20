@@ -415,8 +415,9 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       justMultimodalSearch
       multimodalSearchRequestId
       busLocationData
-      (fromSpecialLocationId <|> mbDiscoveredSpecialLocId)
+      fromSpecialLocationId
       toSpecialLocationId
+      mbDiscoveredSpecialLocId
 
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
@@ -687,8 +688,9 @@ buildSearchRequest ::
   [BusLocation] ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId busLocationData fromSpecialLocationId toSpecialLocationId = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId busLocationData fromSpecialLocationId toSpecialLocationId discoveredSpecialLocationId = do
   let searchMode =
         if isReservedRideSearch
           then Just SearchRequest.RESERVE
