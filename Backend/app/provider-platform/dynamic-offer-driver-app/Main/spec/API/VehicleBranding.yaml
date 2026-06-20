@@ -1,0 +1,129 @@
+imports:
+  Image: Domain.Types.Image
+  VehicleBranding: Domain.Types.VehicleBranding
+  BrandingCategory: Domain.Types.VehicleBranding
+  BrandingType: Domain.Types.VehicleBranding
+  BrandingSize: Domain.Types.VehicleBranding
+  VerificationStatus: Kernel.Types.Documents
+  UTCTime: Kernel.Prelude
+
+module: VehicleBranding
+
+# Growth > Vehicle Branding — capture / list / verify / metrics endpoints (design plan v6).
+#
+# DRAFT FOR REVIEW: run `, run-generator` to generate API.Types.UI.VehicleBranding +
+# the Servant API + handler stubs in src/Domain/Action/UI/VehicleBranding.hs; implement the
+# stubs (resolve principal D9, resolve rcId, dedupe/flags B5, metrics aggregation B6).
+#
+# AUTH (open — to finalize in Phase 2): these are drafted as driver-app UI endpoints with
+# TokenAuth. The capture/verify/metrics flows are driven by Control Center *ops* (not drivers),
+# so the final wiring may instead expose these via the dashboard Management API layer
+# (ApiAuthV2, alongside ProviderPlatform/Management/API/DriverRegistration.yaml) which CC's
+# bppApi already reaches. Decide before implementing handlers (plan R4/D9).
+
+types:
+  VehicleBrandingCreateReq:
+    registrationNo: Text
+    driverMobile: Maybe Text
+    imageId: Id Image
+    category: BrandingCategory
+    brandingType: BrandingType
+    brandingSize: BrandingSize
+    vehicleRating: Maybe Int
+    lat: Maybe Double
+    lon: Maybe Double
+    gpsAccuracyM: Maybe Double
+    notes: Maybe Text
+
+  VehicleBrandingCreateRes:
+    id: Id VehicleBranding
+    verificationStatus: VerificationStatus
+    flags: "[Text]"            # e.g. gps_missing | vehicle_unmatched | duplicate
+
+  VehicleBrandingRecord:
+    id: Id VehicleBranding
+    registrationNo: Text
+    rcId: Maybe Text
+    driverMobile: Maybe Text
+    category: BrandingCategory
+    brandingType: BrandingType
+    brandingSize: BrandingSize
+    vehicleRating: Maybe Int
+    imageId: Maybe (Id Image)
+    lat: Maybe Double
+    lon: Maybe Double
+    gpsAccuracyM: Maybe Double
+    notes: Maybe Text
+    flags: "[Text]"
+    verificationStatus: VerificationStatus
+    rejectReason: Maybe Text
+    createdAt: UTCTime
+
+  VehicleBrandingListRes:
+    records: "[VehicleBrandingRecord]"
+    totalCount: Int
+
+  UpdateBrandingStatusReq:
+    enum: "Approve, Reject RejectInfo"
+
+  RejectInfo:
+    reason: Text
+
+  BrandingBreakdownRow:
+    key: Text
+    count: Int
+
+  VehicleBrandingMetricsRes:
+    cumulativeVerifiedVehicles: Int
+    branded30d: Int
+    verified30d: Int
+    pending: Int
+    rejected30d: Int
+    byCategory: "[BrandingBreakdownRow]"
+    byBrandingType: "[BrandingBreakdownRow]"
+    byCity: "[BrandingBreakdownRow]"
+
+apis:
+  - POST:
+      endpoint: /vehicleBranding/create
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.VehicleBranding.VehicleBrandingCreateReq
+      response:
+        type: API.Types.UI.VehicleBranding.VehicleBrandingCreateRes
+
+  - GET:
+      endpoint: /vehicleBranding/list
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        verificationStatus: VerificationStatus
+        category: BrandingCategory
+        brandingType: BrandingType
+        registrationNo: Text
+        from: UTCTime
+        to: UTCTime
+        limit: Int
+        offset: Int
+      response:
+        type: API.Types.UI.VehicleBranding.VehicleBrandingListRes
+
+  - POST:
+      endpoint: /vehicleBranding/{brandingId}/updateStatus
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        brandingId: Id VehicleBranding
+      request:
+        type: API.Types.UI.VehicleBranding.UpdateBrandingStatusReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - GET:
+      endpoint: /vehicleBranding/metrics
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        from: UTCTime
+        to: UTCTime
+        category: BrandingCategory
+        brandingType: BrandingType
+      response:
+        type: API.Types.UI.VehicleBranding.VehicleBrandingMetricsRes

@@ -1,0 +1,81 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Image: Domain.Types.Image
+  VehicleRegistrationCertificate: Domain.Types.VehicleRegistrationCertificate
+  VerificationStatus: Kernel.Types.Documents
+
+# Growth > Vehicle Branding — dedicated storage (design plan v6, Decision D2/D14).
+# A branding record is a first-class row here (NOT a row in the shared document flow),
+# so branding attributes are typed/indexed columns and the vehicle is the first-class key.
+#
+# DRAFT FOR REVIEW: run `, run-generator` (Backend/, inside nix shell) to generate
+# Domain.Types.VehicleBranding, Storage.Beam.VehicleBranding, Storage.Queries.VehicleBranding
+# and the SQL migration before `cabal build all`. Generated artefacts are intentionally
+# NOT committed in this draft.
+#
+# Secondary-key note (CLAUDE.md): merchantId / merchantOperatingCityId / status are on the
+# secondary-key deny list. City-, status- and date-scoped list/metrics queries therefore live
+# in the EXTRA_QUERY_FILE (src/Storage/Queries/VehicleBrandingExtra.hs), not as KV queries.
+
+VehicleBranding:
+  tableName: vehicle_branding
+  types:
+    BrandingCategory:
+      enum: "Auto,Cab,Bike,Bus,Metro,Outdoor,Other"
+      derive: "Eq,Ord,Read"
+    BrandingType:
+      enum: "Sticker,Lights,Wrap,Goodies,Others"
+      derive: "Eq,Ord,Read"
+    BrandingSize:
+      enum: "Normal,Small,Large"
+      derive: "Eq,Ord,Read"
+  fields:
+    id: Id VehicleBranding
+    registrationNo: Text            # normalised (uppercase, spaces stripped); the vehicle key
+    rcId: Maybe (Id VehicleRegistrationCertificate)   # set when RC is matched, else null + isVehicleUnmatched
+    driverId: Maybe (Id Person)     # resolved driver (optional)
+    driverMobile: Maybe Text        # PII — see plan R6; encrypt in a later pass if required
+    capturedById: Id Person         # the capturing principal (agent, or resolved driver) — plan D9
+    category: BrandingCategory
+    brandingType: BrandingType
+    brandingSize: BrandingSize
+    vehicleRating: Maybe Int        # 1..5 (validated in handler; default 3-Average set client-side)
+    imageId: Maybe (Id Image)       # primary proof photo (reused image -> S3 pipeline)
+    lat: Maybe Double
+    lon: Maybe Double
+    gpsAccuracyM: Maybe Double
+    notes: Maybe Text
+    isGpsMissing: Maybe Bool        # flag: GPS unavailable/denied at capture
+    isVehicleUnmatched: Maybe Bool  # flag: registrationNo had no RC match
+    isDuplicate: Maybe Bool         # flag: an existing VALID row matched (rcId/regNo + brandingType)
+    verificationStatus: VerificationStatus   # PENDING -> VALID | INVALID
+    verifiedById: Maybe (Id Person)
+    rejectReason: Maybe Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  constraints:
+    id: PrimaryKey
+    registrationNo: SecondaryKey
+    rcId: SecondaryKey
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByRegistrationNo:
+      kvFunction: findAllWithKV
+      where: registrationNo
+    findByRcId:
+      kvFunction: findAllWithKV
+      where: rcId
+    findByRcIdAndBrandingType:    # dedupe check on create
+      kvFunction: findAllWithKV
+      where:
+        and: [rcId, brandingType]
+    updateVerificationStatus:
+      kvFunction: updateWithKV
+      params: [verificationStatus, verifiedById, rejectReason, updatedAt]
+      where: id
+  extraOperations:
+    - EXTRA_QUERY_FILE   # city/status/date-scoped list + metrics aggregation (GROUP BY) live here
