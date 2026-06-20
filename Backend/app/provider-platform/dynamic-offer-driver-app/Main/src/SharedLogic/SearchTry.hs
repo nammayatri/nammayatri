@@ -133,7 +133,7 @@ initiateDriverSearchBatch ::
   m DST.SearchTry
 initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
   searchTry <- createNewSearchTry
-  QSR.updatePaymentInstrument searchReq.id ((.paymentInstrument) <$> paymentMethodInfo)
+  whenJust paymentMethodInfo $ \pmi -> QSR.updatePaymentInstrument searchReq.id (Just pmi.paymentInstrument)
   withTryCatch
     "initiateDriverSearchBatch"
     ( do
