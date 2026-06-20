@@ -65,8 +65,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
     getDriverSearchRequestStats,
     getDriverIdentityInfo,
     postDriverIdentityInfoUpdate,
-    postDriverOperatorChange,
-    postDriverFleetOperatorChange,
+    postDriverAssociationChange,
   )
 where
 
@@ -439,14 +438,8 @@ postDriverIdentityInfoUpdate merchantShortId opCity apiTokenInfo driverId req = 
     let requestorId = apiTokenInfo.personId.getId
     Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverIdentityInfoUpdate) driverId requestorId req
 
-postDriverOperatorChange :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.ChangeDriverOperatorReq -> Environment.Flow APISuccess)
-postDriverOperatorChange merchantShortId opCity apiTokenInfo driverId req = do
+postDriverAssociationChange :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Common.ChangeAssociationReq -> Environment.Flow APISuccess)
+postDriverAssociationChange merchantShortId opCity apiTokenInfo subjectId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) (Just driverId) Nothing (Just req)
-  T.withTransactionStoring transaction (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverOperatorChange) apiTokenInfo.personId.getId driverId req)
-
-postDriverFleetOperatorChange :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Common.ChangeFleetOperatorReq -> Environment.Flow APISuccess)
-postDriverFleetOperatorChange merchantShortId opCity apiTokenInfo fleetOwnerId req = do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
-  T.withTransactionStoring transaction (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverFleetOperatorChange) apiTokenInfo.personId.getId fleetOwnerId req)
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) (Just (Id subjectId)) Nothing (Just req)
+  T.withTransactionStoring transaction (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverAssociationChange) apiTokenInfo.personId.getId subjectId req)

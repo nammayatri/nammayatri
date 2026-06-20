@@ -631,8 +631,9 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
   case mbAuthId of
     Just authId -> do
       smsCfg <- asks (.smsCfg)
-
       SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
+      when (merchant.overwriteAssociation == Just True) $
+        QDRC.endAllRCAssociationsForDriver person.id
 
       deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
       let regId = Id authId :: Id SR.RegistrationToken
@@ -665,6 +666,8 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       when (otp /= req.otp) $ throwError InvalidOtp
 
       SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
+      when (merchant.overwriteAssociation == Just True) $
+        QDRC.endAllRCAssociationsForDriver person.id
 
       verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person transporterConfig
 

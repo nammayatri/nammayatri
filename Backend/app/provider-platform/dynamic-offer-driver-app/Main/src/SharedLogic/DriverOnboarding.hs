@@ -840,6 +840,16 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.NomineeDetails -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.NomineeDetails
   Domain.Types.DocumentVerificationConfig.FleetRegistration -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.FleetRegistration
 
+endFleetRCAssociationIfPossible ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id Person ->
+  Id VehicleRegistrationCertificate ->
+  m ()
+endFleetRCAssociationIfPossible fleetOwnerId rcId = do
+  now <- getCurrentTime
+  mbFleetRc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId fleetOwnerId rcId now
+  whenJust mbFleetRc $ \fleetRc -> FRCAssoc.endById fleetRc.id
+
 -- Shared document-onboarding helpers (moved from Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate):
 -- these are used across RC, PAN, Aadhaar, DL, GST and Idfy webhook flows.
 
