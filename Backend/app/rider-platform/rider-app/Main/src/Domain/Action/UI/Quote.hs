@@ -233,7 +233,7 @@ buildGetQuotesRes searchRequest estimateList quoteList mbRiderConfig = do
   estimates' <- getEstimates searchRequest enableRideHailingOffers isReferredRide providerLookup estimateList
   let vehicleServiceTierOrderConfig = maybe [] (.userServiceTierOrderConfig) mbRiderConfig
       defaultServiceTierOrderConfig = maybe [] (.defaultServiceTierOrderConfig) mbRiderConfig
-      specialLocationTierOrderConfig = getSpecialLocationTierOrder searchRequest.fromSpecialLocationId mbRiderConfig
+      specialLocationTierOrderConfig = getSpecialLocationTierOrder searchRequest.discoveredSpecialLocationId mbRiderConfig
       mbUserConfig = if null specialLocationTierOrderConfig then mostFrequentVehicleCategoryConfig mostFrequentVehicleCategory vehicleServiceTierOrderConfig else specialLocationTierOrderConfig
       estimates = estimatesSorting estimates' mbUserConfig defaultServiceTierOrderConfig
       sortedQuotes = quotesSorting offers mbUserConfig defaultServiceTierOrderConfig
