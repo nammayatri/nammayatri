@@ -107,3 +107,4 @@ updateOffersFraudCheckFailureReason (Id searchRequestId) failureReason = do
     [ Se.Is BeamSR.id (Se.Eq searchRequestId),
       Se.Is BeamSR.offersFraudCheckFailureReason (Se.Eq Nothing)
     ]
+
