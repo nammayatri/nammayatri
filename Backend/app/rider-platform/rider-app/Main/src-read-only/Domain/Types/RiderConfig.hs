@@ -168,6 +168,7 @@ data RiderConfig = RiderConfig
     singleModeWalkSpeed :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     sosTrackingLink :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sourceOfServiceTier :: Domain.Types.RiderConfig.ServiceTierSource,
+    specialLocationTierOrderConfig :: Kernel.Prelude.Maybe [Domain.Types.Extra.RiderConfig.SpecialLocationTierOrderConfig],
     specialVehicleNotificationConfigs :: Kernel.Prelude.Maybe [Domain.Types.RiderConfig.SpecialVehicleNotificationConfig],
     specialZoneRadius :: Kernel.Prelude.Int,
     staticCustomerIdThresholdDay :: Kernel.Prelude.Maybe Data.Time.Day,

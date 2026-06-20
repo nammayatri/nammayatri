@@ -166,6 +166,7 @@ data RiderConfigT f = RiderConfigT
     singleModeWalkSpeed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     sosTrackingLink :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     sourceOfServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.RiderConfig.ServiceTierSource),
+    specialLocationTierOrderConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     specialVehicleNotificationConfigs :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     specialZoneRadius :: B.C f Kernel.Prelude.Int,
     staticCustomerIdThresholdDay :: B.C f (Kernel.Prelude.Maybe Data.Time.Day),

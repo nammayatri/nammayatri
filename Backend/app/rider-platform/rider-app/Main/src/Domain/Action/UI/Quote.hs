@@ -62,7 +62,7 @@ import qualified Domain.Types.SearchRequest as SSR
 import Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.Trip as DTrip
 import Environment
-import EulerHS.Prelude hiding (find, group, id, length, map, maximumBy, sum)
+import EulerHS.Prelude hiding (find, group, id, length, map, maximumBy, null, sum)
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
 import Kernel.Prelude hiding (whenJust)
@@ -232,7 +232,8 @@ buildGetQuotesRes searchRequest estimateList quoteList mbRiderConfig = do
   estimates' <- getEstimates searchRequest enableRideHailingOffers isReferredRide providerLookup estimateList
   let vehicleServiceTierOrderConfig = maybe [] (.userServiceTierOrderConfig) mbRiderConfig
       defaultServiceTierOrderConfig = maybe [] (.defaultServiceTierOrderConfig) mbRiderConfig
-      mbUserConfig = mostFrequentVehicleCategoryConfig mostFrequentVehicleCategory vehicleServiceTierOrderConfig
+      specialLocationTierOrderConfig = getSpecialLocationTierOrder searchRequest.fromSpecialLocationId mbRiderConfig
+      mbUserConfig = if null specialLocationTierOrderConfig then mostFrequentVehicleCategoryConfig mostFrequentVehicleCategory vehicleServiceTierOrderConfig else specialLocationTierOrderConfig
       estimates = estimatesSorting estimates' mbUserConfig defaultServiceTierOrderConfig
       sortedQuotes = quotesSorting offers mbUserConfig defaultServiceTierOrderConfig
   return $
@@ -503,26 +504,34 @@ getJourneys searchRequest hasMultimodalSearch = do
           toStationPlatformCode = routeDetail.toStopPlatformCode
         }
 
-mostFrequentVehicleCategoryConfig :: Maybe DVST.ServiceTierType -> [VehicleServiceTierOrderConfig] -> Maybe VehicleServiceTierOrderConfig
-mostFrequentVehicleCategoryConfig Nothing _ = Nothing
-mostFrequentVehicleCategoryConfig (Just vehicleServiceTier) orderArray =
-  find (\v -> v.vehicle == vehicleServiceTier) orderArray
+getSpecialLocationTierOrder :: Maybe Text -> Maybe DRC.RiderConfig -> [DVST.ServiceTierType]
+getSpecialLocationTierOrder Nothing _ = []
+getSpecialLocationTierOrder (Just specialLocId) mbRiderConfig = fromMaybe [] $ do
+  riderConfig <- mbRiderConfig
+  configs <- riderConfig.specialLocationTierOrderConfig
+  config <- find (\c -> c.specialLocationId == specialLocId) configs
+  return config.orderArray
+
+mostFrequentVehicleCategoryConfig :: Maybe DVST.ServiceTierType -> [VehicleServiceTierOrderConfig] -> [DVST.ServiceTierType]
+mostFrequentVehicleCategoryConfig Nothing _ = []
+mostFrequentVehicleCategoryConfig (Just vehicleServiceTier) configs =
+  maybe [] (.orderArray) $ find (\v -> v.vehicle == vehicleServiceTier) configs
 
 -- Sorting function
-estimatesSorting :: [UEstimate.EstimateAPIEntity] -> Maybe VehicleServiceTierOrderConfig -> [DVST.ServiceTierType] -> [UEstimate.EstimateAPIEntity]
-estimatesSorting list Nothing order = sortBy (comparing (\estimate -> vehicleOrderIndex order estimate.serviceTierType)) list
-estimatesSorting list (Just config) _ =
-  sortBy (comparing (\estimate -> vehicleOrderIndex config.orderArray estimate.serviceTierType)) list
+estimatesSorting :: [UEstimate.EstimateAPIEntity] -> [DVST.ServiceTierType] -> [DVST.ServiceTierType] -> [UEstimate.EstimateAPIEntity]
+estimatesSorting list userOrder defaultOrder =
+  let order = if null userOrder then defaultOrder else userOrder
+   in sortBy (comparing (\estimate -> vehicleOrderIndex order estimate.serviceTierType)) list
 
-quotesSorting :: [OfferRes] -> Maybe VehicleServiceTierOrderConfig -> [DVST.ServiceTierType] -> [OfferRes]
-quotesSorting list mbConfig defaultOrder =
-  let order = maybe defaultOrder (.orderArray) mbConfig
+quotesSorting :: [OfferRes] -> [DVST.ServiceTierType] -> [DVST.ServiceTierType] -> [OfferRes]
+quotesSorting list userOrder defaultOrder =
+  let order = if null userOrder then defaultOrder else userOrder
    in sortBy (comparing (offerVehicleOrderIndex order)) list
   where
-    offerVehicleOrderIndex order = \case
-      OnDemandCab q -> vehicleOrderIndex order q.vehicleVariant
-      OnRentalCab q -> vehicleOrderIndex order q.vehicleVariant
-      OnMeterRide q -> vehicleOrderIndex order q.vehicleVariant
+    offerVehicleOrderIndex o = \case
+      OnDemandCab q -> vehicleOrderIndex o q.vehicleVariant
+      OnRentalCab q -> vehicleOrderIndex o q.vehicleVariant
+      OnMeterRide q -> vehicleOrderIndex o q.vehicleVariant
       Metro _ -> maxBound
       PublicTransport _ -> maxBound
 
