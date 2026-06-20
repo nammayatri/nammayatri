@@ -147,9 +147,9 @@ import Kernel.Types.TimeBound as TB
 import Kernel.Types.Value (MandatoryValue, OptionalValue)
 import Kernel.Utils.Common
 import Kernel.Utils.Geometry
-import qualified Lib.GateInfo.Geometry as GGeom
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Validation
+import qualified Lib.GateInfo.Geometry as GGeom
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Queries.SpecialLocationGeom as QSLG
@@ -3618,7 +3618,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             region = show req.city,
             state = req.state,
             city = req.city,
-            geom = Just req.geom
+            geom = Just req.geomGeoJson
           }
 
     buildMerchant merchantId merchantData currentTime DM.Merchant {city = _city, ..} =
