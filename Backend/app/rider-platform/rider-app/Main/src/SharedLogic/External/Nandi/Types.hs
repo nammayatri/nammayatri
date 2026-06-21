@@ -35,6 +35,8 @@ data NandiTable
   | FleetEtmMappingInternal
   | FleetObuMappingInternal
   | WaybillsInternal
+  | BusShiftTypeInternal
+  | BusScheduleTypeInternal
   deriving (Show, Read, Eq, Ord, Generic, ToSchema)
 
 nandiTableToText :: NandiTable -> Text
@@ -54,6 +56,8 @@ nandiTableToText WaybillDeviceInternal = "waybill_device_internal"
 nandiTableToText FleetEtmMappingInternal = "fleet_etm_mapping_internal"
 nandiTableToText FleetObuMappingInternal = "fleet_obu_mapping_internal"
 nandiTableToText WaybillsInternal = "waybills_internal"
+nandiTableToText BusShiftTypeInternal = "bus_shift_type_internal"
+nandiTableToText BusScheduleTypeInternal = "bus_schedule_type_internal"
 
 nandiTableFromText :: Text -> Either Text NandiTable
 nandiTableFromText "route_internal" = Right RouteInternal
@@ -72,6 +76,8 @@ nandiTableFromText "waybill_device_internal" = Right WaybillDeviceInternal
 nandiTableFromText "fleet_etm_mapping_internal" = Right FleetEtmMappingInternal
 nandiTableFromText "fleet_obu_mapping_internal" = Right FleetObuMappingInternal
 nandiTableFromText "waybills_internal" = Right WaybillsInternal
+nandiTableFromText "bus_shift_type_internal" = Right BusShiftTypeInternal
+nandiTableFromText "bus_schedule_type_internal" = Right BusScheduleTypeInternal
 nandiTableFromText t = Left $ "Unknown NandiTable: " <> t
 
 instance ToJSON NandiTable where
@@ -92,7 +98,7 @@ instance ToParamSchema NandiTable where
 
 instance Bounded NandiTable where
   minBound = RouteInternal
-  maxBound = WaybillsInternal
+  maxBound = BusScheduleTypeInternal
 
 instance Enum NandiTable where
   toEnum 0 = RouteInternal
@@ -111,6 +117,8 @@ instance Enum NandiTable where
   toEnum 13 = FleetEtmMappingInternal
   toEnum 14 = FleetObuMappingInternal
   toEnum 15 = WaybillsInternal
+  toEnum 16 = BusShiftTypeInternal
+  toEnum 17 = BusScheduleTypeInternal
   toEnum n = error $ "NandiTable.toEnum: bad argument " <> show n
   fromEnum RouteInternal = 0
   fromEnum RoutePointInternal = 1
@@ -128,6 +136,8 @@ instance Enum NandiTable where
   fromEnum FleetEtmMappingInternal = 13
   fromEnum FleetObuMappingInternal = 14
   fromEnum WaybillsInternal = 15
+  fromEnum BusShiftTypeInternal = 16
+  fromEnum BusScheduleTypeInternal = 17
 
 -- | Waybill lifecycle statuses.
 data WaybillStatus
@@ -277,7 +287,7 @@ instance FromJSON BreakType where
     v -> fail $ "Unknown BreakType: " <> T.unpack v
 
 data NandiRouteRow = NandiRouteRow
-  { route_id :: Int64,
+  { route_id :: Value,
     created_at :: Maybe UTCTime,
     description :: Maybe Text,
     route_direction :: Maybe Text,
@@ -289,16 +299,16 @@ data NandiRouteRow = NandiRouteRow
     status :: Maybe Text,
     updated_at :: Maybe UTCTime,
     via :: Maybe Text,
-    bus_service_type_id :: Int64,
-    end_point_id :: Int64,
-    start_point_id :: Int64,
+    bus_service_type_id :: Value,
+    end_point_id :: Value,
+    start_point_id :: Value,
     route_distance :: Maybe Double,
     gtfs_id :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiRoutePointRow = NandiRoutePointRow
-  { route_points_id :: Int64,
+  { route_points_id :: Value,
     created_at :: Maybe UTCTime,
     deleted :: Bool,
     fare_stage :: Maybe Text,
@@ -309,14 +319,14 @@ data NandiRoutePointRow = NandiRoutePointRow
     travel_distance :: Int,
     travel_time :: Maybe Text,
     updated_at :: Maybe UTCTime,
-    bus_stop_id :: Int64,
-    route_id :: Int64,
+    bus_stop_id :: Value,
+    route_id :: Value,
     gtfs_id :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiBusScheduleRow = NandiBusScheduleRow
-  { schedule_id :: Int64,
+  { schedule_id :: Value,
     created_at :: Maybe UTCTime,
     deleted :: Bool,
     effective_from :: Maybe UTCTime,
@@ -328,16 +338,16 @@ data NandiBusScheduleRow = NandiBusScheduleRow
     schedule_type_code :: Maybe Text,
     status :: Maybe Text,
     updated_at :: Maybe UTCTime,
-    entity_id :: Int64,
-    route_id :: Int64,
-    service_type_id :: Int64,
-    schedule_type_id :: Int64,
+    entity_id :: Value,
+    route_id :: Value,
+    service_type_id :: Value,
+    schedule_type_id :: Value,
     gtfs_id :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiBusScheduleTripRow = NandiBusScheduleTripRow
-  { schedule_trip_id :: Int64,
+  { schedule_trip_id :: Value,
     created_at :: Maybe UTCTime,
     deleted :: Bool,
     effective_end_date :: Maybe UTCTime,
@@ -347,14 +357,14 @@ data NandiBusScheduleTripRow = NandiBusScheduleTripRow
     start_time :: Maybe Text,
     status :: Maybe Text,
     updated_at :: Maybe UTCTime,
-    calendar_id :: Int64,
-    schedule_id :: Int64,
+    calendar_id :: Value,
+    schedule_id :: Value,
     gtfs_id :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiBusScheduleTripDetailRow = NandiBusScheduleTripDetailRow
-  { schedule_trip_detail_id :: Int64,
+  { schedule_trip_detail_id :: Value,
     break_time :: Maybe Text,
     break_type :: Maybe BreakType,
     created_at :: Maybe UTCTime,
@@ -371,20 +381,20 @@ data NandiBusScheduleTripDetailRow = NandiBusScheduleTripDetailRow
     trip_order :: Int,
     trip_type :: Maybe TripType,
     updated_at :: Maybe UTCTime,
-    calendar_id :: Int64,
-    route_number_id :: Int64,
-    schedule_trip_id :: Int64,
+    calendar_id :: Value,
+    route_number_id :: Value,
+    schedule_trip_id :: Value,
     is_active_trip :: Bool,
-    trip_end_time :: Maybe Text,
-    trip_start_time :: Maybe Text,
-    sync_end_time :: Maybe Text,
-    sync_start_time :: Maybe Text,
+    trip_end_time :: Maybe Int,
+    trip_start_time :: Maybe Int,
+    sync_end_time :: Maybe Int,
+    sync_start_time :: Maybe Int,
     gtfs_id :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiBusScheduleTripFlexiRow = NandiBusScheduleTripFlexiRow
-  { schedule_trip_flexi_id :: Int64,
+  { schedule_trip_flexi_id :: Value,
     break_time :: Maybe Text,
     break_type :: Maybe BreakType,
     created_at :: Maybe UTCTime,
@@ -401,21 +411,21 @@ data NandiBusScheduleTripFlexiRow = NandiBusScheduleTripFlexiRow
     trip_order :: Int,
     trip_type :: Maybe TripType,
     updated_at :: Maybe UTCTime,
-    calendar_id :: Int64,
-    route_number_id :: Int64,
-    schedule_trip_id :: Int64,
-    waybill_id :: Int64,
+    calendar_id :: Value,
+    route_number_id :: Value,
+    schedule_trip_id :: Value,
+    waybill_id :: Value,
     is_active_trip :: Bool,
-    trip_end_time :: Maybe Text,
-    trip_start_time :: Maybe Text,
-    sync_end_time :: Maybe Text,
-    sync_start_time :: Maybe Text,
+    trip_end_time :: Maybe Int,
+    trip_start_time :: Maybe Int,
+    sync_end_time :: Maybe Int,
+    sync_start_time :: Maybe Int,
     gtfs_id :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiServiceTypeRow = NandiServiceTypeRow
-  { service_type_id :: Int64,
+  { service_type_id :: Value,
     abbreviation :: Maybe Text,
     created_at :: Maybe UTCTime,
     deleted :: Bool,
@@ -430,7 +440,7 @@ data NandiServiceTypeRow = NandiServiceTypeRow
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiStopRow = NandiStopRow
-  { bus_stop_id :: Int64,
+  { bus_stop_id :: Value,
     bus_stop_code :: Maybe Text,
     bus_stop_name :: Maybe Text,
     bus_stop_name_local_lang :: Maybe Text,
@@ -444,8 +454,8 @@ data NandiStopRow = NandiStopRow
     route_status :: Maybe Text,
     status :: Maybe Text,
     stop_direction :: Maybe Text,
-    stop_group_id :: Maybe Int,
-    stop_type_id :: Int,
+    stop_group_id :: Maybe Value,
+    stop_type_id :: Value,
     sub_stage :: Maybe Text,
     toll_fee :: Maybe Int,
     toll_zone :: Maybe Text,
@@ -455,7 +465,7 @@ data NandiStopRow = NandiStopRow
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiDesignationRow = NandiDesignationRow
-  { designation_id :: Int64,
+  { designation_id :: Value,
     created_at :: Maybe UTCTime,
     deleted :: Bool,
     designation_name :: Text,
@@ -468,7 +478,7 @@ data NandiDesignationRow = NandiDesignationRow
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiEmployeeRow = NandiEmployeeRow
-  { emp_id :: Int64,
+  { emp_id :: Value,
     address :: Maybe Text,
     basic_amount :: Maybe Double,
     created_at :: Maybe UTCTime,
@@ -487,16 +497,16 @@ data NandiEmployeeRow = NandiEmployeeRow
     token_no :: Maybe Text,
     updated_at :: Maybe UTCTime,
     week_off :: Maybe Text,
-    department_id :: Int64,
-    designation_id :: Int64,
-    entity_id :: Int64,
-    organization_id :: Int64,
+    department_id :: Value,
+    designation_id :: Value,
+    entity_id :: Value,
+    organization_id :: Value,
     gtfs_id :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiEntityRow = NandiEntityRow
-  { entity_id :: Int64,
+  { entity_id :: Value,
     created_at :: Maybe UTCTime,
     deleted :: Bool,
     entity_address :: Maybe Text,
@@ -507,28 +517,28 @@ data NandiEntityRow = NandiEntityRow
     entity_remark :: Maybe Text,
     entity_status :: Text,
     updated_at :: Maybe UTCTime,
-    organization_id :: Int64,
+    organization_id :: Value,
     gtfs_id :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiVehicleRow = NandiVehicleRow
-  { vehicle_id :: Int64,
+  { vehicle_id :: Value,
     created_at :: Maybe UTCTime,
     deleted :: Bool,
     fleet_no :: Maybe Text,
     status :: Maybe Text,
     updated_at :: Maybe UTCTime,
     vehicle_no :: Maybe Text,
-    bus_service_type_id :: Int64,
-    entity_id :: Int64,
-    organization_id :: Int64,
+    bus_service_type_id :: Value,
+    entity_id :: Value,
+    organization_id :: Value,
     gtfs_id :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiWaybillDeviceRow = NandiWaybillDeviceRow
-  { waybill_device_id :: Int64,
+  { waybill_device_id :: Value,
     created_at :: Maybe UTCTime,
     deleted :: Bool,
     device_serial_no :: Maybe Text,
@@ -536,13 +546,13 @@ data NandiWaybillDeviceRow = NandiWaybillDeviceRow
     is_primary :: Maybe Bool,
     is_uploaded :: Maybe Bool,
     updated_at :: Maybe UTCTime,
-    waybill_id :: Int64,
+    waybill_id :: Value,
     gtfs_id :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiFleetEtmMappingRow = NandiFleetEtmMappingRow
-  { fleet_etm_mapping_id :: Int64,
+  { fleet_etm_mapping_id :: Value,
     vehicle_no :: Text,
     gtfs_id :: Text,
     etm_serial_no :: Text,
@@ -553,7 +563,7 @@ data NandiFleetEtmMappingRow = NandiFleetEtmMappingRow
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiFleetObuMappingRow = NandiFleetObuMappingRow
-  { fleet_obu_mapping_id :: Int64,
+  { fleet_obu_mapping_id :: Value,
     vehicle_no :: Text,
     gtfs_id :: Text,
     obu_id :: Text,
@@ -564,7 +574,7 @@ data NandiFleetObuMappingRow = NandiFleetObuMappingRow
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiWaybillRow = NandiWaybillRow
-  { waybill_id :: Int64,
+  { waybill_id :: Value,
     audited_date :: Maybe UTCTime,
     bag_master :: Maybe Text,
     challan_no :: Maybe Int64,
@@ -580,7 +590,7 @@ data NandiWaybillRow = NandiWaybillRow
     device_serial_number :: Maybe Text,
     is_flexi :: Bool,
     no_of_device :: Int,
-    schedule_id :: Int64,
+    schedule_id :: Value,
     schedule_no :: Maybe Text,
     schedule_trip_name :: Maybe Text,
     schedule_type :: Maybe Text,
@@ -590,18 +600,39 @@ data NandiWaybillRow = NandiWaybillRow
     updated_at :: Maybe UTCTime,
     vehicle_no :: Maybe Text,
     waybill_no :: Maybe Text,
-    entity_id :: Int64,
-    schedule_trip_id :: Int64,
-    service_type_id :: Int64,
-    shift_type_id :: Int64,
+    entity_id :: Value,
+    schedule_trip_id :: Value,
+    service_type_id :: Value,
+    shift_type_id :: Value,
     tablet_id :: Maybe Text,
     gtfs_id :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
+data NandiShiftTypeRow = NandiShiftTypeRow
+  { shift_type_id :: Text,
+    shift_type_code :: Maybe Text,
+    description :: Maybe Text,
+    gtfs_id :: Maybe Text,
+    deleted :: Maybe Bool,
+    created_at :: Maybe UTCTime,
+    updated_at :: Maybe UTCTime
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data NandiScheduleTypeRow = NandiScheduleTypeRow
+  { schedule_type_id :: Text,
+    schedule_type_code :: Maybe Text,
+    schedule_type_name :: Maybe Text,
+    deleted :: Maybe Bool,
+    created_at :: Maybe UTCTime,
+    updated_at :: Maybe UTCTime
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
 -- ─── NandiRow sum type ────────────────────────────────────────────────────────
 
--- | One row from any of the 16 operator DB tables.
+-- | One row from any of the 17 operator DB tables.
 -- The constructor identifies which table it came from.
 data NandiRow
   = RowRoute NandiRouteRow
@@ -620,6 +651,8 @@ data NandiRow
   | RowFleetEtmMapping NandiFleetEtmMappingRow
   | RowFleetObuMapping NandiFleetObuMappingRow
   | RowWaybill NandiWaybillRow
+  | RowShiftType NandiShiftTypeRow
+  | RowScheduleType NandiScheduleTypeRow
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 -- | Decode a raw Aeson Value into the correct NandiRow constructor
@@ -641,6 +674,8 @@ decodeNandiRow WaybillDeviceInternal v = RowWaybillDevice <$> parseEither parseJ
 decodeNandiRow FleetEtmMappingInternal v = RowFleetEtmMapping <$> parseEither parseJSON v
 decodeNandiRow FleetObuMappingInternal v = RowFleetObuMapping <$> parseEither parseJSON v
 decodeNandiRow WaybillsInternal v = RowWaybill <$> parseEither parseJSON v
+decodeNandiRow BusShiftTypeInternal v = RowShiftType <$> parseEither parseJSON v
+decodeNandiRow BusScheduleTypeInternal v = RowScheduleType <$> parseEither parseJSON v
 
 newtype FilteredServiceSubTypes = FilteredServiceSubTypes [BecknV2.FRFS.Enums.ServiceSubType]
   deriving (Show)
@@ -1092,43 +1127,43 @@ data RowsAffectedResp = RowsAffectedResp
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data ServiceType = ServiceType
-  { service_type_id :: Int64,
+  { service_type_id :: Value,
     service_type_code :: Maybe Text,
     service_type_name :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiRoute = NandiRoute
-  { route_id :: Int64,
+  { route_id :: Value,
     route_number :: Maybe Text,
     route_name :: Maybe Text,
     route_direction :: Maybe Text,
-    start_point_id :: Int64,
-    end_point_id :: Int64
+    start_point_id :: Value,
+    end_point_id :: Value
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data Depot = Depot
-  { entity_id :: Int64,
+  { entity_id :: Value,
     entity_name :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data ScheduleNumber = ScheduleNumber
-  { schedule_id :: Int64,
+  { schedule_id :: Value,
     schedule_number :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data Fleet = Fleet
-  { vehicle_id :: Int64,
+  { vehicle_id :: Value,
     vehicle_no :: Maybe Text,
     fleet_no :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data Employee = Employee
-  { emp_id :: Int64,
+  { emp_id :: Value,
     first_name :: Text,
     last_name :: Maybe Text,
     token_no :: Maybe Text,
@@ -1137,7 +1172,7 @@ data Employee = Employee
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiTripDetail = NandiTripDetail
-  { schedule_trip_detail_id :: Int64,
+  { schedule_trip_detail_id :: Value,
     trip_number :: Int,
     trip_order :: Int,
     trip_type :: Maybe TripType,
@@ -1147,15 +1182,15 @@ data NandiTripDetail = NandiTripDetail
     break_type :: Maybe BreakType,
     shift_type :: Maybe ShiftType,
     distance :: Maybe Double,
-    route_id :: Int64,
-    schedule_trip_id :: Int64,
+    route_id :: Value,
+    schedule_trip_id :: Value,
     is_active_trip :: Bool,
     entity_name :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data UpdateWaybillStatusReq = UpdateWaybillStatusReq
-  { waybill_id :: Int64,
+  { waybill_id :: Value,
     status :: WaybillStatus
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
@@ -1164,7 +1199,7 @@ instance HideSecrets UpdateWaybillStatusReq where
   hideSecrets = identity
 
 data UpdateWaybillFleetReq = UpdateWaybillFleetReq
-  { waybill_id :: Int64,
+  { waybill_id :: Value,
     fleet_no :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
@@ -1173,7 +1208,7 @@ instance HideSecrets UpdateWaybillFleetReq where
   hideSecrets = identity
 
 data UpdateWaybillTabletReq = UpdateWaybillTabletReq
-  { waybill_id :: Int64,
+  { waybill_id :: Value,
     tablet_id :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
