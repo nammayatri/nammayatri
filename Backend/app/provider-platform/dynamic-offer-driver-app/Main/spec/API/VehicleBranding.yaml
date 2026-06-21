@@ -25,7 +25,8 @@ types:
   VehicleBrandingCreateReq:
     registrationNo: Text
     driverMobile: Maybe Text
-    imageId: Id Image
+    image: Text                 # base64-encoded proof photo (reused image->S3 pipeline)
+    fileExtension: Maybe Text
     category: BrandingCategory
     brandingType: BrandingType
     brandingSize: BrandingSize
