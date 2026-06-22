@@ -365,7 +365,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             blocked = False,
             numOfLocks = 0,
             verified = False,
-            subscribed = True,
+            subscribed = transporterConfig.enableBotFlow /= Just True,
             isPetModeEnabled = False,
             paymentPending = False,
             autoPayStatus = Nothing,
