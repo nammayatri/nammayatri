@@ -28,6 +28,7 @@ import qualified ExternalBPP.CallAPI.Status as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Types as CallExternalBPP
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
@@ -63,7 +64,6 @@ import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
-import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBookingPaymentCategory as QFRFSTicketBookingPaymentCategory
@@ -375,6 +375,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
       let isSingleMode = fromMaybe False booking.isSingleMode
       splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled isSingleMode
       staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
+      udf1 <- SLUtils.getPersonUdf1 person
       let createOrderReq =
             Payment.CreateOrderReq
               { orderId = paymentOrder.id.getId,
@@ -397,7 +398,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                 basket = Nothing,
                 paymentRules = Nothing,
                 autoRefundPostSuccess = Nothing,
-                paymentFilter = Nothing
+                paymentFilter = Nothing,
+                udf1 = udf1
               }
       mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
       isMetroTestTransaction <- asks (.isMetroTestTransaction)

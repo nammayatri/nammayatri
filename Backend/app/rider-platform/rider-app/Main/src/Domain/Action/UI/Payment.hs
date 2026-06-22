@@ -135,6 +135,7 @@ createOrder (personId, merchantId) rideId = do
   isPercentageSplitEnabled <- Payment.getIsPercentageSplit merchantId person.merchantOperatingCityId Nothing Payment.Normal
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled totalFare.amount [] isPercentageSplitEnabled False
   staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
+  udf1 <- SLUtils.getPersonUdf1 person
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = rideId.getId,
@@ -157,7 +158,8 @@ createOrder (personId, merchantId) rideId = do
             basket = Nothing,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing
+            paymentFilter = Nothing,
+            udf1 = udf1
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
@@ -196,6 +198,7 @@ createRideBookingPaymentOrder booking = do
       pure $ Just mapping.terminalId
     Nothing -> pure Nothing
 
+  udf1 <- SLUtils.getPersonUdf1 person
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrderId,
@@ -218,7 +221,8 @@ createRideBookingPaymentOrder booking = do
             basket = Nothing,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing
+            paymentFilter = Nothing,
+            udf1 = udf1
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant booking.merchantId
       commonPersonId = cast @DP.Person @DPayment.Person person.id
@@ -852,6 +856,7 @@ postWalletRecharge (personId, merchantId) req = do
                 }
           )
           req.programId
+  udf1 <- SLUtils.getPersonUdf1 person
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrderId,
@@ -874,7 +879,8 @@ postWalletRecharge (personId, merchantId) req = do
             basket = Nothing,
             paymentRules = mbPaymentRules,
             autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing
+            paymentFilter = Nothing,
+            udf1 = udf1
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId

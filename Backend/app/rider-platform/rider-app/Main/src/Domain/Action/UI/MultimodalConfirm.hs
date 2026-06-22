@@ -375,6 +375,7 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
   isPercentageSplitEnabled <- Payment.getIsPercentageSplit (cast paymentOrder.merchantId) merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled isSingleMode
   staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
+  udf1 <- SLUtils.getPersonUdf1 person
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrder.id.getId,
@@ -397,7 +398,8 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
             basket = Nothing,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing
+            paymentFilter = Nothing,
+            udf1 = udf1
           }
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
