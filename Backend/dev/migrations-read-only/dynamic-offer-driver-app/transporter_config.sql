@@ -947,3 +947,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN individual_pan_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_gst_pan_link_check_required boolean  default false;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN supported_map_providers text ;

@@ -460,7 +460,8 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             nomineeRelationship = Nothing,
             driverBankAccountDetails = Nothing,
             isBlockedForScheduledPayout = Nothing,
-            disabledReasonFlag = Nothing
+            disabledReasonFlag = Nothing,
+            preferredMapProvider = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo
