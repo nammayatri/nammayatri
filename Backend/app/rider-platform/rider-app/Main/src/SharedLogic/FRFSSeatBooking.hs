@@ -86,23 +86,24 @@ holdSeats tripId seatIds fromIdx toIdx holdId ttl seatBitMapTtl = do
           toBS (length seatIds),
           toBS seatBitMapTtl
         ]
-  pSeatKeys <- traverse Redis.buildKey seatKeys
-  pMetaKey <- Redis.buildKey mKey
-  pTimerKey <- Redis.buildKey tKey
-  let allKeys = pSeatKeys ++ [pMetaKey, pTimerKey]
-  res :: Integer <-
-    Redis.runHedis
-      ( RawRedis.eval Lua.holdSeatScript allKeys args ::
-          RawRedis.Redis (Either RawRedis.Reply Integer)
-      )
-  case res of
-    1 -> do
-      logInfo $ "SeatBooking:holdSeats SUCCESS holdId=" <> holdId <> " tripId=" <> tripId
-      void $ Redis.sAdd "active-seat-holds" [ActiveSeatHold tripId holdId]
-      pure True
-    _ -> do
-      logWarning $ "SeatBooking:holdSeats CONFLICT holdId=" <> holdId <> " tripId=" <> tripId <> " seats=" <> show seatIdStrs
-      pure False
+  Redis.runInMasterCloudRedisCell $ do
+    pSeatKeys <- traverse Redis.buildKey seatKeys
+    pMetaKey <- Redis.buildKey mKey
+    pTimerKey <- Redis.buildKey tKey
+    let allKeys = pSeatKeys ++ [pMetaKey, pTimerKey]
+    res :: Integer <-
+      Redis.runHedis
+        ( RawRedis.eval Lua.holdSeatScript allKeys args ::
+            RawRedis.Redis (Either RawRedis.Reply Integer)
+        )
+    case res of
+      1 -> do
+        logInfo $ "SeatBooking:holdSeats SUCCESS holdId=" <> holdId <> " tripId=" <> tripId
+        void $ Redis.sAdd "active-seat-holds" [ActiveSeatHold tripId holdId]
+        pure True
+      _ -> do
+        logWarning $ "SeatBooking:holdSeats CONFLICT holdId=" <> holdId <> " tripId=" <> tripId <> " seats=" <> show seatIdStrs
+        pure False
 
 releaseHold ::
   (MonadFlow m, Redis.HedisFlow m r) =>
@@ -111,36 +112,37 @@ releaseHold ::
   m ()
 releaseHold tripId holdId = do
   logInfo $ "SeatBooking:releaseHold attempting holdId=" <> holdId <> " tripId=" <> tripId
-  Redis.withLockRedis (holdLockKey tripId holdId) 10 $ do
-    let mKey = metaKey tripId holdId
-        tKey = timerKey tripId holdId
-    mbMeta :: Maybe SeatHoldMeta <- Redis.get mKey
-    case mbMeta of
-      Nothing -> do
-        logInfo $ "SeatBooking:releaseHold no-op (meta not found) holdId=" <> holdId <> " tripId=" <> tripId
-        pure ()
-      Just meta -> do
-        logInfo $ "SeatBooking:releaseHold clearing bits holdId=" <> holdId <> " tripId=" <> tripId <> " seats=" <> show meta.seatIds <> " range=[" <> show meta.fromIdx <> "," <> show meta.toIdx <> ")"
-        let seatIds = meta.seatIds
-            fromIdx = meta.fromIdx
-            toIdx = meta.toIdx
-            seatKeys =
-              map (seatKey tripId . Id) seatIds
-            args =
-              [ toBS fromIdx,
-                toBS toIdx,
-                toBS (length seatIds)
-              ]
-        pSeatKeys <- traverse Redis.buildKey seatKeys
-        void $
-          Redis.runHedis
-            ( RawRedis.eval Lua.clearMultiScript pSeatKeys args ::
-                RawRedis.Redis (Either RawRedis.Reply Integer)
-            )
-        Redis.del mKey
-        Redis.del tKey
-        void $ Redis.srem "active-seat-holds" [ActiveSeatHold tripId holdId]
-        logInfo $ "SeatBooking:releaseHold completed holdId=" <> holdId <> " tripId=" <> tripId
+  Redis.runInMasterCloudRedisCell $
+    Redis.withLockRedis (holdLockKey tripId holdId) 10 $ do
+      let mKey = metaKey tripId holdId
+          tKey = timerKey tripId holdId
+      mbMeta :: Maybe SeatHoldMeta <- Redis.get mKey
+      case mbMeta of
+        Nothing -> do
+          logInfo $ "SeatBooking:releaseHold no-op (meta not found) holdId=" <> holdId <> " tripId=" <> tripId
+          pure ()
+        Just meta -> do
+          logInfo $ "SeatBooking:releaseHold clearing bits holdId=" <> holdId <> " tripId=" <> tripId <> " seats=" <> show meta.seatIds <> " range=[" <> show meta.fromIdx <> "," <> show meta.toIdx <> ")"
+          let seatIds = meta.seatIds
+              fromIdx = meta.fromIdx
+              toIdx = meta.toIdx
+              seatKeys =
+                map (seatKey tripId . Id) seatIds
+              args =
+                [ toBS fromIdx,
+                  toBS toIdx,
+                  toBS (length seatIds)
+                ]
+          pSeatKeys <- traverse Redis.buildKey seatKeys
+          void $
+            Redis.runHedis
+              ( RawRedis.eval Lua.clearMultiScript pSeatKeys args ::
+                  RawRedis.Redis (Either RawRedis.Reply Integer)
+              )
+          Redis.del mKey
+          Redis.del tKey
+          void $ Redis.srem "active-seat-holds" [ActiveSeatHold tripId holdId]
+          logInfo $ "SeatBooking:releaseHold completed holdId=" <> holdId <> " tripId=" <> tripId
 
 confirmBooking ::
   (MonadFlow m, Redis.HedisFlow m r) =>
@@ -149,19 +151,20 @@ confirmBooking ::
   m ()
 confirmBooking tripId holdId = do
   logInfo $ "SeatBooking:confirmBooking attempting holdId=" <> holdId <> " tripId=" <> tripId
-  Redis.withLockRedis (holdLockKey tripId holdId) 10 $ do
-    let mKey = metaKey tripId holdId
-        tKey = timerKey tripId holdId
-    mbMeta :: Maybe SeatHoldMeta <- Redis.get mKey
-    case mbMeta of
-      Nothing -> do
-        logWarning $ "SeatBooking:confirmBooking no-op (meta not found, hold may have expired) holdId=" <> holdId <> " tripId=" <> tripId
-        pure ()
-      Just _ -> do
-        void $ Redis.srem "active-seat-holds" [ActiveSeatHold tripId holdId]
-        Redis.del mKey
-        Redis.del tKey
-        logInfo $ "SeatBooking:confirmBooking completed (bits retained) holdId=" <> holdId <> " tripId=" <> tripId
+  Redis.runInMasterCloudRedisCell $
+    Redis.withLockRedis (holdLockKey tripId holdId) 10 $ do
+      let mKey = metaKey tripId holdId
+          tKey = timerKey tripId holdId
+      mbMeta :: Maybe SeatHoldMeta <- Redis.get mKey
+      case mbMeta of
+        Nothing -> do
+          logWarning $ "SeatBooking:confirmBooking no-op (meta not found, hold may have expired) holdId=" <> holdId <> " tripId=" <> tripId
+          pure ()
+        Just _ -> do
+          void $ Redis.srem "active-seat-holds" [ActiveSeatHold tripId holdId]
+          Redis.del mKey
+          Redis.del tKey
+          logInfo $ "SeatBooking:confirmBooking completed (bits retained) holdId=" <> holdId <> " tripId=" <> tripId
 
 bookingHoldsKey :: Text -> Text
 bookingHoldsKey bookingId = "booking-holds:" <> bookingId
@@ -170,16 +173,17 @@ trackHoldForBooking :: (MonadFlow m, Redis.HedisFlow m r) => Text -> Text -> Int
 trackHoldForBooking bookingId holdId ttl' = do
   logInfo $ "SeatBooking:trackHoldForBooking bookingId=" <> bookingId <> " holdId=" <> holdId
   let k = bookingHoldsKey bookingId
-  void $ Redis.sAddExp k [holdId] ttl'
+  Redis.runInMasterCloudRedisCell $
+    void $ Redis.sAddExp k [holdId] ttl'
 
 releaseAbandonedHolds :: (MonadFlow m, Redis.HedisFlow m r) => Text -> Text -> Text -> m ()
 releaseAbandonedHolds tripId bookingId successfulHoldId = do
   let k = bookingHoldsKey bookingId
-  allHolds <- Redis.sMembers k
+  allHolds <- Redis.runInMasterCloudRedisCell $ Redis.sMembers k
   let abandonedHolds = filter (/= successfulHoldId) allHolds
   logInfo $ "SeatBooking:releaseAbandonedHolds bookingId=" <> bookingId <> " tripId=" <> tripId <> " successfulHoldId=" <> successfulHoldId <> " abandonedCount=" <> show (length abandonedHolds)
   forM_ abandonedHolds $ \h -> releaseHold tripId h
-  Redis.del k
+  Redis.runInMasterCloudRedisCell $ Redis.del k
 
 releaseConfirmedSeats ::
   (MonadFlow m, Redis.HedisFlow m r) =>
@@ -196,19 +200,20 @@ releaseConfirmedSeats tripId seatIds fromIdx toIdx = do
           toBS toIdx,
           toBS (length seatIds)
         ]
-  pSeatKeys <- traverse Redis.buildKey seatKeys
-  void $
-    Redis.runHedis
-      ( RawRedis.eval Lua.clearMultiScript pSeatKeys args ::
-          RawRedis.Redis (Either RawRedis.Reply Integer)
-      )
+  Redis.runInMasterCloudRedisCell $ do
+    pSeatKeys <- traverse Redis.buildKey seatKeys
+    void $
+      Redis.runHedis
+        ( RawRedis.eval Lua.clearMultiScript pSeatKeys args ::
+            RawRedis.Redis (Either RawRedis.Reply Integer)
+        )
   logInfo $ "SeatBooking:releaseConfirmedSeats completed tripId=" <> tripId
 
 -- | Standard functions (Availability check doesn't need hold hashtags)
 getTripAvailability :: (MonadFlow m, Redis.HedisFlow m r) => Text -> Int -> Int -> [Seat.Seat] -> m [SeatWithStatus]
 getTripAvailability tripId fromIdx toIdx seats = do
   let keys = map (\s -> seatKey tripId s.id) seats
-  bitmaps <- mapM Redis.tryGetFromCluster keys
+  bitmaps <- Redis.runInMasterCloudRedisCell $ mapM Redis.tryGetFromCluster keys
   return $ zipWith (checkSeatStatus fromIdx toIdx) seats bitmaps
 
 checkSeatStatus :: Int -> Int -> Seat.Seat -> Maybe BS.ByteString -> SeatWithStatus
