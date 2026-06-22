@@ -322,7 +322,9 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
         isPercentageSplitEnabled <- TPayment.getIsPercentageSplit merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
         splitSettlementDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled pass.amount vendorSplitList isPercentageSplitEnabled True
+        basket <- TPayment.mkOfferBasket merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase pass.amount 1
         staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
+        udf1 <- SLUtils.getPersonUdf1 person
         let createOrderReq =
               Payment.CreateOrderReq
                 { orderId = paymentOrderId.getId,
@@ -342,10 +344,11 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   metadataExpiryInMins = Nothing,
                   metadataGatewayReferenceId = Nothing,
                   splitSettlementDetails,
-                  basket = Nothing,
+                  basket = Just basket,
                   paymentRules = Nothing,
                   autoRefundPostSuccess = Nothing,
-                  paymentFilter = Nothing
+                  paymentFilter = Nothing,
+                  udf1 = udf1
                 }
 
         let commonMerchantId = Id.cast @DM.Merchant @DPayment.Merchant merchantId

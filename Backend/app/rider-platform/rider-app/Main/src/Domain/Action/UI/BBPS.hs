@@ -88,6 +88,7 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing Payment.BBPS
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled bbpsAmount [] False False
   staticCustomerId <- SLUtils.getStaticCustomerId person req.mobileNumber
+  udf1 <- SLUtils.getPersonUdf1 person
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = req.bbpsTxnId,
@@ -110,7 +111,8 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
             basket = Nothing,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing
+            paymentFilter = Nothing,
+            udf1 = udf1
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId
       commonMerchantOperatingCityId = Kernel.Types.Id.cast @MerchantOperatingCity.MerchantOperatingCity @DPayment.MerchantOperatingCity person.merchantOperatingCityId

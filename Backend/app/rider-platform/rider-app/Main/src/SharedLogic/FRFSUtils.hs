@@ -863,6 +863,7 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
         _ -> False
   splitSettlementDetails <- Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amount vendorSplitArr isPercentageSplitEnabled isSingleMode
   staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
+  udf1 <- SLUtils.getPersonUdf1 person
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = orderId.getId,
@@ -885,7 +886,8 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
             basket = basket,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing
+            paymentFilter = Nothing,
+            udf1 = udf1
           }
   let mocId = merchantOperatingCityId
       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId

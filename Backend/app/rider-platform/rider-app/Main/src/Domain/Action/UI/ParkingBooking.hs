@@ -72,6 +72,7 @@ postMultimodalParkingBook mbApiKey req = do
   customerEmail <- fromMaybe "noreply@nammayatri.in" <$> mapM decrypt person.email
   customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
+  udf1 <- SLUtils.getPersonUdf1 person
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrderId,
@@ -94,7 +95,8 @@ postMultimodalParkingBook mbApiKey req = do
             basket = Nothing,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing
+            paymentFilter = Nothing,
+            udf1 = udf1
           }
 
   let commonMerchantId = Kernel.Types.Id.cast @Domain.Types.Merchant.Merchant @DPayment.Merchant person.merchantId
