@@ -41,6 +41,16 @@ ON CONFLICT (service_name, merchant_operating_city_id) DO UPDATE
   SET config_json = EXCLUDED.config_json,
       updated_at = now();
 
+-- Add Signzy to the challan provider priority list on the usage config
+-- (getPendingChallanCount reads this; without it the call fails with
+--  "No challan search provider configured").
+UPDATE atlas_driver_offer_bpp.merchant_service_usage_config muc
+SET challan_providers_priority_list = '{Signzy}', updated_at = now()
+FROM atlas_driver_offer_bpp.merchant_operating_city moc
+WHERE moc.merchant_short_id = 'NAMMA_YATRI_PARTNER'
+  AND moc.city = 'Bangalore'
+  AND muc.merchant_operating_city_id = moc.id;
+
 -- Verify
 SELECT 'merchant_service_config seed' as check, service_name, merchant_operating_city_id
 FROM atlas_driver_offer_bpp.merchant_service_config

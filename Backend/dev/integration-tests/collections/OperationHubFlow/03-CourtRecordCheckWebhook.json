@@ -149,17 +149,19 @@
               "var d = pm.response.json(); var a=parseInt(pm.collectionVariables.get('_p2'))||0;",
               "var cr = (d.rows && d.rows[0]) ? d.rows[0].court_record : null;",
               "if (typeof cr === 'string') { try { cr = JSON.parse(cr); } catch(e){} }",
-              "if (cr) {",
+              "var res = (cr && cr.result) ? cr.result : null;",
+              "if (res) {",
               "  pm.collectionVariables.set('_p2','0');",
-              "  pm.test('court_record present', function(){ pm.expect(cr).to.not.be.null; });",
-              "  pm.test('json field risk_type=high', function(){ pm.expect(cr.risk_type).to.eql('high'); });",
-              "  pm.test('json field number_of_cases=3', function(){ pm.expect(String(cr.number_of_cases)).to.eql('3'); });",
-              "  pm.test('json field status=completed', function(){ pm.expect(cr.status).to.eql('completed'); });",
+              "  pm.test('court_record result present', function(){ pm.expect(res).to.not.be.null; });",
+              "  pm.test('json field risk_type=high', function(){ pm.expect(res.risk_type).to.eql('high'); });",
+              "  pm.test('json field number_of_cases=3', function(){ pm.expect(String(res.number_of_cases)).to.eql('3'); });",
+              "  pm.test('json field status=completed', function(){ pm.expect(res.status).to.eql('completed'); });",
+              "  pm.test('no errorMessage on success', function(){ pm.expect(cr.errorMessage == null).to.be.true; });",
               "} else if (a < 8) {",
               "  pm.collectionVariables.set('_p2', String(a+1)); postman.setNextRequest(pm.info.requestName);",
               "} else {",
               "  pm.collectionVariables.set('_p2','0');",
-              "  pm.test('court_record stored within retries', function(){ pm.expect(cr).to.not.be.null; });",
+              "  pm.test('court_record result stored within retries', function(){ pm.expect(res).to.not.be.null; });",
               "}"
             ]
           }
@@ -299,9 +301,10 @@
             "exec": [
               "var d = pm.response.json(); var a=parseInt(pm.collectionVariables.get('_p5'))||0;",
               "var cr=(d.rows&&d.rows[0])?d.rows[0].court_record:null; if(typeof cr==='string'){try{cr=JSON.parse(cr);}catch(e){}}",
-              "if (cr && cr.risk_type==='low') { pm.collectionVariables.set('_p5','0'); pm.test('court_record overwritten high->low', function(){ pm.expect(cr.risk_type).to.eql('low'); }); }",
+              "var res=(cr&&cr.result)?cr.result:null;",
+              "if (res && res.risk_type==='low') { pm.collectionVariables.set('_p5','0'); pm.test('court_record overwritten high->low', function(){ pm.expect(res.risk_type).to.eql('low'); }); }",
               "else if (a<8) { pm.collectionVariables.set('_p5',String(a+1)); postman.setNextRequest(pm.info.requestName); }",
-              "else { pm.collectionVariables.set('_p5','0'); pm.test('court_record overwritten within retries', function(){ pm.expect(cr && cr.risk_type).to.eql('low'); }); }"
+              "else { pm.collectionVariables.set('_p5','0'); pm.test('court_record overwritten within retries', function(){ pm.expect(res && res.risk_type).to.eql('low'); }); }"
             ]
           }
         }

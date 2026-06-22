@@ -9,7 +9,6 @@ import qualified Domain.Types.DriverIdentityInfo
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import qualified Kernel.External.Verification.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
@@ -25,12 +24,13 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverIdentityInfo.DriverIdentityInfo] -> m ())
 createMany = traverse_ create
 
+findAllByDriverIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id Domain.Types.Person.Person] -> m ([Domain.Types.DriverIdentityInfo.DriverIdentityInfo]))
+findAllByDriverIds driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.In (Kernel.Types.Id.getId <$> driverId)]
+
 findByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverIdentityInfo.DriverIdentityInfo))
 findByDriverId driverId = do findOneWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateCourtRecord ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.External.Verification.Types.CRCVerificationResponse -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateCourtRecord :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.DriverIdentityInfo.CourtRecordResult -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateCourtRecord courtRecord driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.courtRecord (Data.Aeson.toJSON <$> courtRecord), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]

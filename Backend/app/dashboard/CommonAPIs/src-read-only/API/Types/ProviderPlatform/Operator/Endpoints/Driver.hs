@@ -15,6 +15,7 @@ import qualified Data.Time.Calendar
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.External.Notification.FCM.Types
+import qualified Kernel.External.Verification.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
@@ -32,6 +33,10 @@ data AllTimeOperatorAnalyticsRes = AllTimeOperatorAnalyticsRes
     totalAssociatedDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalEnabledDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CourtRecordResult = CourtRecordResult {result :: Kernel.Prelude.Maybe Kernel.External.Verification.Types.CRCVerificationResponse, errorMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -85,7 +90,9 @@ data EntityDetails = EntityDetails
     entityId :: Kernel.Prelude.Text,
     name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    rcNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    rcNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    courtRecord :: Kernel.Prelude.Maybe CourtRecordResult,
+    pendingChallan :: Kernel.Prelude.Maybe PendingChallanResult
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -145,6 +152,10 @@ data OperationHubDriverRequest = OperationHubDriverRequest
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data OperationHubReqResp = OperationHubReqResp {requests :: [OperationHubDriverRequest], summary :: Dashboard.Common.Summary}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PendingChallanResult = PendingChallanResult {pendingChallanCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int, errorMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -281,15 +292,15 @@ type GetDriverOperatorFetchHubRequests =
            "mbRegistrationNo"
            Kernel.Prelude.Text
       :> Get
-           '[JSON]
+           ('[JSON])
            OperationHubReqResp
   )
 
-type GetDriverOperationGetAllHubs = ("operation" :> "getAllHubs" :> Get '[JSON] [OperationHub])
+type GetDriverOperationGetAllHubs = ("operation" :> "getAllHubs" :> Get ('[JSON]) [OperationHub])
 
-type PostDriverOperatorRespondHubRequest = ("operator" :> "respond" :> "hubRequest" :> ReqBody '[JSON] RespondHubRequest :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverOperatorRespondHubRequest = ("operator" :> "respond" :> "hubRequest" :> ReqBody ('[JSON]) RespondHubRequest :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
-type PostDriverOperatorCreateRequest = ("operator" :> "createRequest" :> ReqBody '[JSON] DriverOperationHubRequest :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverOperatorCreateRequest = ("operator" :> "createRequest" :> ReqBody ('[JSON]) DriverOperationHubRequest :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
 type GetDriverOperatorList =
   ( "operator" :> "list" :> QueryParam "isActive" Kernel.Prelude.Bool :> QueryParam "limit" Kernel.Prelude.Int
@@ -308,7 +319,7 @@ type GetDriverOperatorList =
            "mbStatus"
            API.Types.ProviderPlatform.Fleet.Endpoints.Driver.DriverMode
       :> Get
-           '[JSON]
+           ('[JSON])
            DriverInfoResp
   )
 
@@ -334,29 +345,29 @@ type GetDriverOperatorListHelper =
            "requestorId"
            Kernel.Prelude.Text
       :> Get
-           '[JSON]
+           ('[JSON])
            DriverInfoResp
   )
 
 type PostDriverOperatorSendJoiningOtp =
-  ( "operator" :> "sendJoiningOtp" :> ReqBody '[JSON] Dashboard.ProviderPlatform.Management.DriverRegistration.AuthReq
+  ( "operator" :> "sendJoiningOtp" :> ReqBody ('[JSON]) Dashboard.ProviderPlatform.Management.DriverRegistration.AuthReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes
   )
 
 type PostDriverOperatorSendJoiningOtpHelper =
   ( "operator" :> "sendJoiningOtp" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            Dashboard.ProviderPlatform.Management.DriverRegistration.AuthReq
-      :> Post '[JSON] Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes
+      :> Post ('[JSON]) Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes
   )
 
 type PostDriverOperatorVerifyJoiningOtp =
-  ( "operator" :> "verifyJoiningOtp" :> QueryParam "authId" Kernel.Prelude.Text :> ReqBody '[JSON] VerifyOperatorJoiningOtpReq
+  ( "operator" :> "verifyJoiningOtp" :> QueryParam "authId" Kernel.Prelude.Text :> ReqBody ('[JSON]) VerifyOperatorJoiningOtpReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
   )
 
@@ -365,16 +376,16 @@ type PostDriverOperatorVerifyJoiningOtpHelper =
       :> MandatoryQueryParam
            "requestorId"
            Kernel.Prelude.Text
-      :> ReqBody '[JSON] VerifyOperatorJoiningOtpReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+      :> ReqBody ('[JSON]) VerifyOperatorJoiningOtpReq
+      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
   )
 
-type GetDriverOperatorDashboardAnalyticsAllTime = ("operator" :> "dashboard" :> "analytics" :> "allTime" :> Get '[JSON] AllTimeOperatorAnalyticsRes)
+type GetDriverOperatorDashboardAnalyticsAllTime = ("operator" :> "dashboard" :> "analytics" :> "allTime" :> Get ('[JSON]) AllTimeOperatorAnalyticsRes)
 
 type GetDriverOperatorDashboardAnalyticsAllTimeHelper =
   ( Capture "requestorId" Kernel.Prelude.Text :> "operator" :> "dashboard" :> "analytics" :> "allTime"
       :> Get
-           '[JSON]
+           ('[JSON])
            AllTimeOperatorAnalyticsRes
   )
 
@@ -383,7 +394,7 @@ type GetDriverOperatorDashboardAnalytics =
       :> MandatoryQueryParam
            "to"
            Data.Time.Calendar.Day
-      :> Get '[JSON] FilteredOperatorAnalyticsRes
+      :> Get ('[JSON]) FilteredOperatorAnalyticsRes
   )
 
 type GetDriverOperatorDashboardAnalyticsHelper =
@@ -392,7 +403,7 @@ type GetDriverOperatorDashboardAnalyticsHelper =
            "from"
            Data.Time.Calendar.Day
       :> MandatoryQueryParam "to" Data.Time.Calendar.Day
-      :> Get '[JSON] FilteredOperatorAnalyticsRes
+      :> Get ('[JSON]) FilteredOperatorAnalyticsRes
   )
 
 type GetDriverReviewQueueRequest =
@@ -423,16 +434,16 @@ type GetDriverReviewQueueRequest =
            "approved"
            Kernel.Prelude.Bool
       :> Get
-           '[JSON]
+           ('[JSON])
            ReviewQueueResp
   )
 
-type PostDriverSubmitReviewRequest = ("submit" :> "review" :> "request" :> ReqBody '[JSON] SubmitReviewRequest :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverSubmitReviewRequest = ("submit" :> "review" :> "request" :> ReqBody ('[JSON]) SubmitReviewRequest :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
 type PostDriverSubmitReviewRequestHelper =
-  ( Capture "requestorId" Kernel.Prelude.Text :> "submit" :> "review" :> "request" :> ReqBody '[JSON] SubmitReviewRequest
+  ( Capture "requestorId" Kernel.Prelude.Text :> "submit" :> "review" :> "request" :> ReqBody ('[JSON]) SubmitReviewRequest
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
   )
 
@@ -467,23 +478,23 @@ type GetDriverRequestReviewHistory =
            "mbRcId"
            Kernel.Prelude.Text
       :> Get
-           '[JSON]
+           ('[JSON])
            ReviewRequestHistoryList
   )
 
 data DriverAPIs = DriverAPIs
-  { getDriverOperatorFetchHubRequests :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe RequestStatus -> Kernel.Prelude.Maybe RequestType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id OperationHub) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient OperationHubReqResp,
-    getDriverOperationGetAllHubs :: EulerHS.Types.EulerClient [OperationHub],
-    postDriverOperatorRespondHubRequest :: RespondHubRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverOperatorCreateRequest :: DriverOperationHubRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverOperatorList :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.Driver.DriverMode -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverInfoResp,
-    postDriverOperatorSendJoiningOtp :: Kernel.Prelude.Text -> Dashboard.ProviderPlatform.Management.DriverRegistration.AuthReq -> EulerHS.Types.EulerClient Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes,
-    postDriverOperatorVerifyJoiningOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> VerifyOperatorJoiningOtpReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverOperatorDashboardAnalyticsAllTime :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient AllTimeOperatorAnalyticsRes,
-    getDriverOperatorDashboardAnalytics :: Kernel.Prelude.Text -> Data.Time.Calendar.Day -> Data.Time.Calendar.Day -> EulerHS.Types.EulerClient FilteredOperatorAnalyticsRes,
-    getDriverReviewQueueRequest :: EntityType -> ReviewRequestType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient ReviewQueueResp,
-    postDriverSubmitReviewRequest :: Kernel.Prelude.Text -> SubmitReviewRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverRequestReviewHistory :: EntityType -> ReviewRequestType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe ReviewRequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient ReviewRequestHistoryList
+  { getDriverOperatorFetchHubRequests :: (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (RequestStatus) -> Kernel.Prelude.Maybe (RequestType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id OperationHub) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient OperationHubReqResp),
+    getDriverOperationGetAllHubs :: (EulerHS.Types.EulerClient [OperationHub]),
+    postDriverOperatorRespondHubRequest :: (RespondHubRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postDriverOperatorCreateRequest :: (DriverOperationHubRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    getDriverOperatorList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Fleet.Endpoints.Driver.DriverMode) -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverInfoResp),
+    postDriverOperatorSendJoiningOtp :: (Kernel.Prelude.Text -> Dashboard.ProviderPlatform.Management.DriverRegistration.AuthReq -> EulerHS.Types.EulerClient Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes),
+    postDriverOperatorVerifyJoiningOtp :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Text -> VerifyOperatorJoiningOtpReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    getDriverOperatorDashboardAnalyticsAllTime :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient AllTimeOperatorAnalyticsRes),
+    getDriverOperatorDashboardAnalytics :: (Kernel.Prelude.Text -> Data.Time.Calendar.Day -> Data.Time.Calendar.Day -> EulerHS.Types.EulerClient FilteredOperatorAnalyticsRes),
+    getDriverReviewQueueRequest :: (EntityType -> ReviewRequestType -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> EulerHS.Types.EulerClient ReviewQueueResp),
+    postDriverSubmitReviewRequest :: (Kernel.Prelude.Text -> SubmitReviewRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    getDriverRequestReviewHistory :: (EntityType -> ReviewRequestType -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (ReviewRequestStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient ReviewRequestHistoryList)
   }
 
 mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)
@@ -507,8 +518,8 @@ data DriverUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(mkHttpInstancesForEnum ''RequestStatus)
+$(mkHttpInstancesForEnum (''RequestStatus))
 
-$(mkHttpInstancesForEnum ''RequestType)
+$(mkHttpInstancesForEnum (''RequestType))
 
-$(Data.Singletons.TH.genSingletons [''DriverUserActionType])
+$(Data.Singletons.TH.genSingletons [(''DriverUserActionType)])

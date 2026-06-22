@@ -94,6 +94,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverGstin as QDGST
+import qualified Storage.Queries.DriverIdentityInfo as QDII
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import qualified Storage.Queries.DriverLicense as DLQuery
@@ -300,14 +301,17 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       let reqUpdatedStatus = if allVehicleDocsVerified then castReqStatusToDomain request.status else PENDING
       void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
 
-      when allVehicleDocsVerified $
-        fork "fetchPendingChallanCount" $
-          void $
-            withTryCatch "fetchPendingChallanCount" $ do
-              let challanReq = ChallanSearchTypes.PendingChallanReq {vehicleNumber = registrationNo}
-              challanResp <- ChallanSearch.getPendingChallanCount merchantOpCity.id challanReq
-              QVRC.updatePendingChallanCount (Just challanResp.pendingChallanCount) rc.id
+      -- BOT-flow only: the pending-challan result is consumed by the BOT, so don't call the paid 3P API
+      when (enableBotFlow && allVehicleDocsVerified) $
+        fork "fetchPendingChallanCount" $ do
+          let challanReq = ChallanSearchTypes.PendingChallanReq {vehicleNumber = registrationNo}
+          result <- withTryCatch "fetchPendingChallanCount" $ ChallanSearch.getPendingChallanCount merchantOpCity.id challanReq
+          case result of
+            Right challanResp -> do
+              QVRC.updatePendingChallan (Just DVRC.PendingChallanResult {pendingChallanCount = Just challanResp.pendingChallanCount, errorMessage = Nothing}) rc.id
               logInfo $ "Pending challan count for RC " <> registrationNo <> ": " <> show challanResp.pendingChallanCount
+            Left err ->
+              QVRC.updatePendingChallan (Just DVRC.PendingChallanResult {pendingChallanCount = Nothing, errorMessage = Just (show err)}) rc.id
 
       -- RC auto-activation is legacy-only; under enableBotFlow the RC is activated by the BOT/statusHandler.
       unless enableBotFlow $
@@ -822,8 +826,10 @@ getDriverReviewQueueRequest merchantShortId opCity entityType reviewRequestType 
             else do
               persons <- runInReplica $ QPerson.getDriversByIdIn [Id dId.getId | dId <- driverIds]
               let personMap = HashMap.fromList [(p.id.getId, p) | p <- persons]
+              identityInfos <- QDII.findAllByDriverIds [Id dId.getId | dId <- driverIds]
+              let crcMap = HashMap.fromList [(ii.driverId.getId, ii) | ii <- identityInfos]
               let pairedList = [(di, p) | di <- driverInfoList, Just p <- [HashMap.lookup di.driverId.getId personMap]]
-              mapM buildDriverReviewItem pairedList
+              mapM (buildDriverReviewItem crcMap) pairedList
     API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> do
       finalPersonIds <- getFinalPersonIds merchant.id
       case finalPersonIds of
@@ -857,8 +863,9 @@ getDriverReviewQueueRequest merchantShortId opCity entityType reviewRequestType 
         (Nothing, Just eId) -> Just [eId]
         (Just ids, Just eId) -> Just (filter (== eId) ids)
 
-    buildDriverReviewItem (driverInfo, person) = do
+    buildDriverReviewItem crcMap (driverInfo, person) = do
       mobileNumber <- mapM decrypt person.mobileNumber
+      let courtRecord = mkApiCourtRecord <$> (HashMap.lookup driverInfo.driverId.getId crcMap >>= (.courtRecord))
       pure $
         API.Types.ProviderPlatform.Operator.Driver.ReviewQueue
           { entityDetails =
@@ -867,7 +874,9 @@ getDriverReviewQueueRequest merchantShortId opCity entityType reviewRequestType 
                   name = Just $ T.strip (person.firstName <> maybe "" (" " <>) person.middleName <> maybe "" (" " <>) person.lastName),
                   mobileNumber,
                   entityId = driverInfo.driverId.getId,
-                  rcNo = Nothing
+                  rcNo = Nothing,
+                  courtRecord,
+                  pendingChallan = Nothing
                 },
             createdAt = driverInfo.updatedAt,
             updatedAt = driverInfo.updatedAt,
@@ -886,7 +895,9 @@ getDriverReviewQueueRequest merchantShortId opCity entityType reviewRequestType 
                   name = Just $ T.strip (person.firstName <> maybe "" (" " <>) person.middleName <> maybe "" (" " <>) person.lastName),
                   mobileNumber,
                   entityId = fleetOwnerInfo.fleetOwnerPersonId.getId,
-                  rcNo = Nothing
+                  rcNo = Nothing,
+                  courtRecord = Nothing,
+                  pendingChallan = Nothing
                 },
             createdAt = fleetOwnerInfo.updatedAt,
             updatedAt = fleetOwnerInfo.updatedAt,
@@ -904,7 +915,9 @@ getDriverReviewQueueRequest merchantShortId opCity entityType reviewRequestType 
                   name = Nothing,
                   mobileNumber = Nothing,
                   entityId = rc.id.getId,
-                  rcNo = rc.unencryptedCertificateNumber
+                  rcNo = rc.unencryptedCertificateNumber,
+                  courtRecord = Nothing,
+                  pendingChallan = mkApiPendingChallan <$> rc.pendingChallan
                 },
             createdAt = rc.updatedAt,
             updatedAt = rc.updatedAt,
@@ -912,6 +925,12 @@ getDriverReviewQueueRequest merchantShortId opCity entityType reviewRequestType 
             enabled = Nothing,
             approved = rc.approved
           }
+
+    mkApiCourtRecord cr =
+      API.Types.ProviderPlatform.Operator.Driver.CourtRecordResult {result = cr.result, errorMessage = cr.errorMessage}
+
+    mkApiPendingChallan pc =
+      API.Types.ProviderPlatform.Operator.Driver.PendingChallanResult {pendingChallanCount = pc.pendingChallanCount, errorMessage = pc.errorMessage}
 
 postDriverSubmitReviewRequest ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -1204,7 +1223,9 @@ getDriverRequestReviewHistory merchantShortId opCity apiEntityType reviewRequest
                   entityId = req.entityId,
                   name = mbPersonName,
                   mobileNumber = mbPersonMobileNumber,
-                  rcNo = req.rcNo
+                  rcNo = req.rcNo,
+                  courtRecord = Nothing,
+                  pendingChallan = Nothing
                 },
             requestStatus = castToApiReqStatus req.requestStatus,
             reviewerId = fmap (.getId) req.reviewerId,

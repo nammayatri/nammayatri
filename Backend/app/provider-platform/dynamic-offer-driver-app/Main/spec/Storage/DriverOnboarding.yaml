@@ -276,6 +276,9 @@ VehicleRegistrationCertificate:
     DocsVerificationStatus:
       enum: "ADMIN_PENDING,ADMIN_APPROVED,ADMIN_REJECTED"
       derive: "ToParamSchema"
+    PendingChallanResult:
+      pendingChallanCount: Maybe Int
+      errorMessage: Maybe Text
   fields:
     id: Id VehicleRegistrationCertificate
     documentImageId: Id Image
@@ -314,7 +317,7 @@ VehicleRegistrationCertificate:
     approved: Maybe Bool # Set by the BOT API on approval. (verified/enabled are statusHandler-computed; approved is the BOT gate.)
     verified: Maybe Bool # statusHandler-computed: true iff all isMandatory vehicle docs are VALID (InspectionHub is one of them). Bidirectional.
     docsVerificationStatus: Maybe DocsVerificationStatus
-    pendingChallanCount: Maybe Int
+    pendingChallan: Maybe PendingChallanResult
     vehicleImageId: Maybe (Id MediaFile)
   default:
     approved: "false"
@@ -323,6 +326,14 @@ VehicleRegistrationCertificate:
     certificateNumberHash: "!SecondaryKey" # forcing to be a secondary key
     documentImageId: SecondaryKey
     fleetOwnerId: SecondaryKey # high fan-out (fleet -> many RCs), monitor SET size
+  sqlType:
+    pendingChallan: json
+  beamType:
+    pendingChallan: Maybe Value
+  toTType:
+    pendingChallan: Data.Aeson.toJSON <$> pendingChallan|E
+  fromTType:
+    pendingChallan: Kernel.Utils.JSON.valueToMaybe =<< pendingChallan|E
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -370,9 +381,9 @@ VehicleRegistrationCertificate:
       kvFunction: updateOneWithKV
       params: [approved]
       where: id
-    updatePendingChallanCount:
+    updatePendingChallan:
       kvFunction: updateOneWithKV
-      params: [pendingChallanCount]
+      params: [pendingChallan]
       where: id
     updateMerchantIdAndCityIdById:
       kvFunction: updateWithKV

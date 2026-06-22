@@ -117,3 +117,14 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN v
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN pending_challan_count integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN pending_challan json ;
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate DROP COLUMN pending_challan_count ;
+
+
+------- SQL updates -------
+

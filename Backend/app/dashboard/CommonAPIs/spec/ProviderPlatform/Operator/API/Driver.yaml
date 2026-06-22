@@ -9,6 +9,7 @@ imports:
   DriverMode: API.Types.ProviderPlatform.Fleet.Endpoints.Driver
   DocumentType: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
   Image: Dashboard.Common
+  CRCVerificationResponse: Kernel.External.Verification.Types
 
 module: Driver
 
@@ -317,6 +318,16 @@ types:
     - name: Maybe Text
     - mobileNumber: Maybe Text
     - rcNo: Maybe Text
+    - courtRecord: Maybe CourtRecordResult
+    - pendingChallan: Maybe PendingChallanResult
+
+  CourtRecordResult:
+    - result: Maybe CRCVerificationResponse
+    - errorMessage: Maybe Text
+
+  PendingChallanResult:
+    - pendingChallanCount: Maybe Int
+    - errorMessage: Maybe Text
 
   ReviewQueueResp:
     - reviewQueue : [ReviewQueue]
