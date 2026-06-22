@@ -41,7 +41,7 @@ let hedisCfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
-      , connectReadOnly = True
+      , connectReadOnly = False
       }
 
 let hedisClusterCfg =
@@ -52,7 +52,7 @@ let hedisClusterCfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
-      , connectReadOnly = True
+      , connectReadOnly = False
       }
 
 let hedisSecondaryClusterCfg =
@@ -63,7 +63,7 @@ let hedisSecondaryClusterCfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
-      , connectReadOnly = True
+      , connectReadOnly = False
       }
 
 let kafkaClickhouseCfg =

@@ -4,13 +4,24 @@
 -- The app now reads city/region boundary polygons from this text column (parsed +
 -- point-in-polygon in Haskell, cached in memory) instead of PostGIS at runtime.
 
--- Always regenerate geom_geo_json from the binary geom column (SRID 4326) so
--- that all rows have correct WGS84 [lon, lat] GeoJSON regardless of what the
--- config-sync SQL seed injected into the column.
 UPDATE atlas_app.geometry
-SET geom_geo_json = ST_AsGeoJSON(ST_SetSRID(geom, 4326), 6)
+SET geom_geo_json = ST_AsGeoJSON(
+  CASE
+    WHEN ST_SRID(geom) = 4326 THEN geom
+    WHEN ST_SRID(geom) = 0 THEN ST_SetSRID(geom, 4326)
+    ELSE ST_Transform(geom, 4326)
+  END,
+  6
+)
 WHERE geom IS NOT NULL;
 
 UPDATE atlas_driver_offer_bpp.geometry
-SET geom_geo_json = ST_AsGeoJSON(ST_SetSRID(geom, 4326), 6)
+SET geom_geo_json = ST_AsGeoJSON(
+  CASE
+    WHEN ST_SRID(geom) = 4326 THEN geom
+    WHEN ST_SRID(geom) = 0 THEN ST_SetSRID(geom, 4326)
+    ELSE ST_Transform(geom, 4326)
+  END,
+  6
+)
 WHERE geom IS NOT NULL;

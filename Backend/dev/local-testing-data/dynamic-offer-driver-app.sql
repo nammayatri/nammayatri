@@ -14,36 +14,22 @@
 --
 -- Idempotent via NOT EXISTS — safe to re-apply.
 
--- ────────────────────────────────────────────────────────────────────────
--- 0. Geometry fixes (BPP side)
--- ────────────────────────────────────────────────────────────────────────
-
--- Fix geometry rows where state='Delhi' (invalid IndianState value) → 'NationalCapitalTerritory'.
 UPDATE atlas_driver_offer_bpp.geometry
   SET state = 'NationalCapitalTerritory'
   WHERE state = 'Delhi';
 
--- Fix Delhi geometry polygon — config-sync seeds placeholder coordinates.
--- Replace geom_geo_json with a bounding box covering all of Delhi (28.4–28.9°N, 76.8–77.4°E).
 UPDATE atlas_driver_offer_bpp.geometry
   SET geom_geo_json = '{"type":"MultiPolygon","coordinates":[[[[76.8,28.4],[77.4,28.4],[77.4,28.9],[76.8,28.9],[76.8,28.4]]]]}'
+    , geom = ST_SetSRID(
+        ST_GeomFromGeoJSON('{"type":"MultiPolygon","coordinates":[[[[76.8,28.4],[77.4,28.4],[77.4,28.9],[76.8,28.9],[76.8,28.4]]]]}'),
+        4326
+      )
   WHERE city = 'Delhi';
 
--- ────────────────────────────────────────────────────────────────────────
--- 0b. Disable prepaid wallet check for test merchants
--- ────────────────────────────────────────────────────────────────────────
--- Disable prepaid_subscription_and_wallet_enabled for ALL merchants in dev so that
--- filterByWalletBalance does not drop seed drivers (no real wallet balance in dev).
 UPDATE atlas_driver_offer_bpp.merchant
   SET prepaid_subscription_and_wallet_enabled = false
   WHERE prepaid_subscription_and_wallet_enabled = true;
 
--- 0c. Allow default plan allocation for all dev merchants
--- ────────────────────────────────────────────────────────────────────────
--- Many merchants (NAMMA_YATRI_PARTNER etc.) have is_subscription_enabled_at_category_level=true
--- in subscription_config. Without a driver_plan row, setActivity throws NoPlanSelected.
--- Setting allow_default_plan_allocation=true makes commonSubscriptionChecks=false,
--- bypassing the plan requirement for dev seed drivers.
 UPDATE atlas_driver_offer_bpp.transporter_config
   SET allow_default_plan_allocation = true;
 
@@ -172,19 +158,11 @@ WHERE NOT EXISTS (
   WHERE di.driver_id = md5(m.id || ':seed-driver-person')::uuid::text
 );
 
--- Force-enable ALL drivers in dev so the test tool can go online.
--- This covers both seed drivers and any real drivers created via registration
--- flows (which default to enabled = false).
 UPDATE atlas_driver_offer_bpp.driver_information
 SET enabled = true, subscribed = true, updated_at = now()
 WHERE driver_id IN (
   SELECT p.id FROM atlas_driver_offer_bpp.person p WHERE p.role = 'DRIVER'
 );
--- Clear any stale on_ride flag left by incomplete test rides. An on-ride driver
--- is only matched if forwardBatchingEnabled (off in dev), so a stuck
--- on_ride=true silently drops the driver from every pool (offRideFinal=0) and
--- the driver never receives nearbyRideRequest. Only reset drivers that have no
--- genuinely-active ride.
 UPDATE atlas_driver_offer_bpp.driver_information
 SET on_ride = false, updated_at = now()
 WHERE on_ride = true
@@ -193,7 +171,6 @@ WHERE on_ride = true
     WHERE r.driver_id = driver_information.driver_id
       AND r.status IN ('NEW','INPROGRESS')
   );
--- Seed drivers additionally get verified = true
 UPDATE atlas_driver_offer_bpp.driver_information
 SET verified = true, updated_at = now()
 WHERE driver_id IN (
@@ -201,9 +178,6 @@ WHERE driver_id IN (
   FROM atlas_driver_offer_bpp.merchant m
 );
 
--- Assign a primary city to seed drivers that have no merchant_operating_city_id.
--- Prefer well-known test cities (Delhi, Kolkata, Bangalore, Chennai, Kochi) so
--- the driver lands in a city with configured geometry and vehicle service tiers.
 UPDATE atlas_driver_offer_bpp.person p
 SET merchant_operating_city_id = (
     SELECT moc.id
