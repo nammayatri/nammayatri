@@ -925,3 +925,6 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN use_category_ba
 
 ------- SQL updates -------
 
+
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN supported_map_providers text ;

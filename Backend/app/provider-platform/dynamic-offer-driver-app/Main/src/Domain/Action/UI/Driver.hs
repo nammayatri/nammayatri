@@ -1407,6 +1407,10 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
       nomineeName = req.nomineeName <|> driverInfo.nomineeName
       nomineeRelationship = req.nomineeRelationship <|> driverInfo.nomineeRelationship
       preferredMapProvider = req.preferredMapProvider <|> driverInfo.preferredMapProvider
+  whenJust req.preferredMapProvider $ \mp -> do
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    whenJust transporterConfig.supportedMapProviders $ \supported ->
+      unless (mp `elem` supported) $ throwError $ InvalidRequest "Map provider not supported by merchant"
   -- Compute vehicle-related fields (use existing values if no vehicle or no request)
   (canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, canSwitchToRental, canSwitchToInterCity, canSwitchToIntraCity, availableUpiApps) <-
     case mVehicle of

@@ -54,6 +54,7 @@ imports:
   Base64: Kernel.Types.Base64
   Map: Data.Map.Strict
   OnboardingAs: Domain.Types.DriverInformation
+  MapProvider: Domain.Types.DriverInformation
 
 Merchant:
   derives: Generic,Show,'UsageSafety
@@ -1295,6 +1296,7 @@ TransporterConfig:
     sendMembershipIdInProfile: Maybe Bool
     stclConfig: Maybe StclConfig # STCL membership tunables. Any field left as Nothing falls back to defaults in Domain.Action.UI.StclMembership.
     useCategoryBasedVerificationPriorityList: Maybe Bool
+    supportedMapProviders: "Maybe [MapProvider]" # Merchant-level allowlist constraining driver-selectable map providers; Nothing = allow all.
 
   beamType:
     currency: Maybe Currency

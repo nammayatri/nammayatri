@@ -290,6 +290,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     subscription :: Kernel.Prelude.Bool,
     subscriptionConfig :: Domain.Types.TransporterConfig.SubscriptionConfig,
     subscriptionStartTime :: Kernel.Prelude.UTCTime,
+    supportedMapProviders :: Kernel.Prelude.Maybe [Domain.Types.DriverInformation.MapProvider],
     taxConfig :: Domain.Types.TransporterConfig.TaxConfig,
     tdsFromEmail :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     thresholdCancellationPercentageToUnlist :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
