@@ -328,6 +328,7 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOpCity.id (Just placeId) Payment.Normal
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled amount.amount (fromMaybe [] vendorSplits) False False
   staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
+  udf1 <- SLUtils.getPersonUdf1 person
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = ticketBooking.id.getId,
@@ -350,7 +351,8 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             basket = Nothing,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing
+            paymentFilter = Nothing,
+            udf1 = udf1
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId_

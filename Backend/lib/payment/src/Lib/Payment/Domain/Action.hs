@@ -357,6 +357,7 @@ data CreatePaymentServiceReq = CreatePaymentServiceReq
     metadataExpiryInMins :: Maybe Int,
     basket :: Maybe [Payment.Basket],
     paymentRules :: Maybe Payment.PaymentRules,
+    udf1 :: Maybe Text,
     -- Offer-specific
     offerId :: Maybe Text,
     discountAmount :: Maybe HighPrecMoney,
@@ -530,7 +531,8 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
                 basket = req.basket,
                 paymentRules = req.paymentRules,
                 autoRefundPostSuccess = Nothing,
-                paymentFilter = Nothing
+                paymentFilter = Nothing,
+                udf1 = req.udf1
               }
       resp <- createPaymentCall paymentReq
       now <- getCurrentTime

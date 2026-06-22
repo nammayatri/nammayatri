@@ -838,6 +838,7 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
                 metadataExpiryInMins = Nothing,
                 basket = Nothing,
                 paymentRules = Nothing,
+                udf1 = Nothing,
                 offerId = req.offerId <&> (.getId),
                 discountAmount = Just req.discountAmount,
                 payoutAmount = Nothing,
