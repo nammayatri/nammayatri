@@ -631,11 +631,6 @@ sortMaybe = DL.sortBy compareVehicles
 removeSpaceAndDash :: Text -> Text
 removeSpaceAndDash = T.replace "-" "" . T.replace " " ""
 
-panMatchesGstin :: Text -> Text -> Bool
-panMatchesGstin pan gstin = norm pan `T.isInfixOf` norm gstin
-  where
-    norm = T.toUpper . removeSpaceAndDash
-
 convertTextToDay :: Maybe Text -> Maybe Day
 convertTextToDay a = do
   a_ <- a

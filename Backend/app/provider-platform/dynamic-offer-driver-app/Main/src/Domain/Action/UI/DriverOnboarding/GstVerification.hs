@@ -135,13 +135,6 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
     _ -> pure ()
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
-  when (DCommon.checkFleetOwnerRole person.role) $ do
-    mDriverPan <- DPQuery.findByDriverId person.id
-    whenJust mDriverPan $ \driverPan -> do
-      panNumber <- decrypt driverPan.panCardNumber
-      unless (panMatchesGstin panNumber req.gstin) $ do
-        Utils.cleanupUploadedImages [Id req.imageId] person.id
-        throwError PanGstNumberMismatch
   merchantServiceUsageConfig <-
     getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
@@ -338,14 +331,14 @@ onVerifyGstHandler person imageId1 imageId2 output = do
 
 assertUploadedGstLinkedToExistingPan :: Person.Person -> Text -> Id Image.Image -> Flow ()
 assertUploadedGstLinkedToExistingPan person gstin imageId = do
-  mPanCard <- DPQuery.findByDriverId person.id
+  mPanCard <- DPQuery.findValidByDriverId person.id
   whenJust mPanCard $ \panCard -> do
     panNumber <- decrypt panCard.panCardNumber
     rejectIfPanGstUnlinked person panNumber gstin imageId
 
 assertUploadedPanLinkedToExistingGst :: Person.Person -> Text -> Id Image.Image -> Flow ()
 assertUploadedPanLinkedToExistingGst person panNumber imageId = do
-  mDriverGstin <- DGQuery.findByDriverId person.id
+  mDriverGstin <- DGQuery.findValidByDriverId person.id
   whenJust mDriverGstin $ \driverGstin -> do
     gstin <- decrypt driverGstin.gstin
     rejectIfPanGstUnlinked person panNumber gstin imageId
@@ -354,7 +347,9 @@ rejectIfPanGstUnlinked :: Person.Person -> Text -> Text -> Id Image.Image -> Flo
 rejectIfPanGstUnlinked person panNumber gstin imageId = do
   let normalizedPan = T.toUpper (removeSpaceAndDash panNumber)
       normalizedGstin = T.toUpper (removeSpaceAndDash gstin)
-  unless (normalizedPan `T.isInfixOf` normalizedGstin) $ do
+      -- A GSTIN embeds the holder's PAN at characters 3-12, so the PAN must sit at that exact slice
+      panInGstin = T.take 10 (T.drop 2 normalizedGstin)
+  unless (panInGstin == normalizedPan) $ do
     logWarning $
       "rejectIfPanGstUnlinked: PAN not linked to GST, rejecting upload. driverId="
         <> person.id.getId
@@ -363,7 +358,7 @@ rejectIfPanGstUnlinked person panNumber gstin imageId = do
         <> " gstin="
         <> maskText gstin
     Utils.cleanupUploadedImages [imageId] person.id
-    throwError (InvalidRequest "PAN and GST do not belong to the same entity (the PAN must match the GST holder's PAN)")
+    throwError PanGstNumberMismatch
 
 mkIdfyVerificationEntityGst :: MonadFlow m => Person.Person -> Id Image.Image -> Text -> UTCTime -> DIdfy.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> m DIdfy.IdfyVerification
 mkIdfyVerificationEntityGst person imageId1 requestId now imageExtractionValidation encryptedGst = do
