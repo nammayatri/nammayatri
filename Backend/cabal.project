@@ -6,6 +6,7 @@ packages:
   app/rider-platform/rider-app-drainer
   app/rider-platform/rider-app/Main
   app/rider-platform/rider-app/Scheduler
+  app/rider-platform/rider-app/search-result-aggregator
   app/dashboard/rider-dashboard
   app/dashboard/provider-dashboard
   app/dashboard/Lib

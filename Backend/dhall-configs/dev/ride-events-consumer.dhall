@@ -99,7 +99,7 @@ let dashboardClickhouseCfg = serviceClickhouseCfg
 let inMemConfig = { enableInMem = False, maxInMemSize = +100000000 }
 
 let consumerProperties =
-      { groupId = "broadcast-messages-compute"
+      { groupId = "ride-events-consumer"
       , brockers =
         [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
       , autoCommit = None Integer
@@ -108,8 +108,7 @@ let consumerProperties =
 
 let kvConfigUpdateFrequency = +10
 
-let kafkaConsumerCfg =
-      { topicNames = [ "broadcast-messages" ], consumerProperties }
+let kafkaConsumerCfg = { topicNames = [ "ride-events" ], consumerProperties }
 
 let cacheConfig = { configsExpTime = +86400 }
 
@@ -123,13 +122,27 @@ let cacConfig =
       , enableCac = False
       }
 
+let redisStreamCfg =
+      Some
+        { streamPrefix = ""
+        , shardCount = +10
+        , consumerGroupName = "ride-events-consumers"
+        , readBatchSize = +100
+        , readBlockMilliseconds = +1000
+        , claimMinIdleMs = +30000
+        , claimIntervalSeconds = +10
+        , maxDeliveries = +5
+        , pauseFlagKey = "ride-events-consumer-pause"
+        , pauseSleepSeconds = +5
+        }
+
 in  { hedisCfg
-    , ltsRedisCfg = hedisCfg
-    , secondaryLTSRedisCfg = Some hedisCfg
     , hedisClusterCfg
     , hedisSecondaryClusterCfg
     , hedisNonCriticalCfg = hedisCfg
     , hedisNonCriticalClusterCfg = hedisClusterCfg
+    , ltsRedisCfg = hedisCfg
+    , secondaryLTSRedisCfg = Some hedisCfg
     , hedisMigrationStage = False
     , cutOffHedisCluster = False
     , esqDBCfg
@@ -141,8 +154,8 @@ in  { hedisCfg
     , encTools = appCfg.encTools
     , loggerConfig =
             common.loggerConfig
-        //  { logFilePath = "/tmp/kafka-consumers-broadcast-messages.log"
-            , logRawSql = True
+        //  { logFilePath = "/tmp/kafka-consumers-ride-events.log"
+            , logRawSql = False
             }
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
@@ -154,26 +167,14 @@ in  { hedisCfg
     , dashboardClickhouseCfg
     , kafkaProducerCfg
     , secondaryKafkaProducerCfg
-    , kafkaReadBatchSize = +10
+    , kafkaReadBatchSize = +100
     , kafkaReadBatchDelay = +10
     , consumerStartTime = None Integer
     , consumerEndTime = None Integer
     , inMemConfig
     , smsCfg = appCfg.smsCfg
-    , transport = TransportKind.Kafka
-    , redisStreamCfg =
-        None
-          { streamPrefix : Text
-          , shardCount : Integer
-          , consumerGroupName : Text
-          , readBatchSize : Integer
-          , readBlockMilliseconds : Integer
-          , claimMinIdleMs : Integer
-          , claimIntervalSeconds : Integer
-          , maxDeliveries : Integer
-          , pauseFlagKey : Text
-          , pauseSleepSeconds : Integer
-          }
+    , transport = TransportKind.RedisStream
+    , redisStreamCfg
     , ltsCfg = LocationTrackingeServiceConfig
     , eventStreamMap =
         [] : List

@@ -4,6 +4,15 @@ let sec = ./secrets/dynamic-offer-driver-app.dhall
 
 let appCfg = ./dynamic-offer-driver-app.dhall
 
+let globalCommon = ../generic/common.dhall
+
+let ltsPort = Natural/show (env:LOCATION_TRACKING_SERVICE_PORT ? 8081)
+
+let TransportKind = < Kafka | RedisStream >
+
+let LocationTrackingeServiceConfig =
+      { url = "http://localhost:${ltsPort}/", secondaryUrl = None Text }
+
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = env:DB_PRIMARY_PORT ? 5434
@@ -149,11 +158,7 @@ in  { hedisCfg
     , esqDBCfg
     , esqDBReplicaCfg
     , cacheConfig
-    , dumpEvery = +10
     , kafkaConsumerCfg
-    , timeBetweenUpdates = +10
-    , availabilityTimeWindowOption
-    , granualityPeriodType = common.periodType.Hours
     , httpClientOptions = common.httpClientOptions
     , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9994)
     , encTools = appCfg.encTools
@@ -177,4 +182,31 @@ in  { hedisCfg
     , inMemConfig
     , hedisSecondaryClusterCfg
     , smsCfg = appCfg.smsCfg
+    , transport = TransportKind.Kafka
+    , redisStreamCfg =
+        None
+          { streamPrefix : Text
+          , shardCount : Integer
+          , consumerGroupName : Text
+          , readBatchSize : Integer
+          , readBlockMilliseconds : Integer
+          , claimMinIdleMs : Integer
+          , claimIntervalSeconds : Integer
+          , maxDeliveries : Integer
+          , pauseFlagKey : Text
+          , pauseSleepSeconds : Integer
+          }
+    , ltsCfg = LocationTrackingeServiceConfig
+    , eventStreamMap =
+        [] : List
+               { streamName : globalCommon.eventStreamNameType
+               , streamConfig : globalCommon.streamConfig
+               , eventTypes : List globalCommon.eventType
+               }
+    , schedulerSetName = "Scheduled_Jobs"
+    , schedulerType = common.schedulerType.RedisBased
+    , maxShards = +5
+    , jobInfoMap = [] : List { mapKey : Text, mapValue : Bool }
+    , blackListedJobs = [] : List Text
+    , shortDurationRetryCfg = common.shortDurationRetryCfg
     }

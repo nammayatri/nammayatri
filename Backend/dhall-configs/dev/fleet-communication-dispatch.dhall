@@ -6,6 +6,13 @@ let genericCommon = ../generic/common.dhall
 
 let appCfg = ./dynamic-offer-driver-app.dhall
 
+let ltsPort = Natural/show (env:LOCATION_TRACKING_SERVICE_PORT ? 8081)
+
+let TransportKind = < Kafka | RedisStream >
+
+let LocationTrackingeServiceConfig =
+      { url = "http://localhost:${ltsPort}/", secondaryUrl = None Text }
+
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = env:DB_PRIMARY_PORT ? 5434
@@ -104,9 +111,6 @@ let kvConfigUpdateFrequency = +10
 let kafkaConsumerCfg =
       { topicNames = [ "fleet-communication-dispatch" ], consumerProperties }
 
-let availabilityTimeWindowOption =
-      { period = +7, periodType = common.periodType.Days }
-
 let cacheConfig = { configsExpTime = +86400 }
 
 let cacConfig =
@@ -120,6 +124,8 @@ let cacConfig =
       }
 
 in  { hedisCfg
+    , ltsRedisCfg = hedisCfg
+    , secondaryLTSRedisCfg = Some hedisCfg
     , hedisClusterCfg
     , hedisSecondaryClusterCfg
     , hedisNonCriticalCfg = hedisCfg
@@ -129,11 +135,7 @@ in  { hedisCfg
     , esqDBCfg
     , esqDBReplicaCfg
     , cacheConfig
-    , dumpEvery = +10
     , kafkaConsumerCfg
-    , timeBetweenUpdates = +10
-    , availabilityTimeWindowOption
-    , granualityPeriodType = common.periodType.Hours
     , httpClientOptions = common.httpClientOptions
     , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9995)
     , encTools = appCfg.encTools
@@ -159,4 +161,31 @@ in  { hedisCfg
     , consumerEndTime = None Integer
     , inMemConfig
     , smsCfg = appCfg.smsCfg
+    , transport = TransportKind.Kafka
+    , redisStreamCfg =
+        None
+          { streamPrefix : Text
+          , shardCount : Integer
+          , consumerGroupName : Text
+          , readBatchSize : Integer
+          , readBlockMilliseconds : Integer
+          , claimMinIdleMs : Integer
+          , claimIntervalSeconds : Integer
+          , maxDeliveries : Integer
+          , pauseFlagKey : Text
+          , pauseSleepSeconds : Integer
+          }
+    , ltsCfg = LocationTrackingeServiceConfig
+    , eventStreamMap =
+        [] : List
+               { streamName : genericCommon.eventStreamNameType
+               , streamConfig : genericCommon.streamConfig
+               , eventTypes : List genericCommon.eventType
+               }
+    , schedulerSetName = "Scheduled_Jobs"
+    , schedulerType = common.schedulerType.RedisBased
+    , maxShards = +5
+    , jobInfoMap = [] : List { mapKey : Text, mapValue : Bool }
+    , blackListedJobs = [] : List Text
+    , shortDurationRetryCfg = common.shortDurationRetryCfg
     }
