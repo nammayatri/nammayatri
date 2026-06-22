@@ -590,7 +590,7 @@ sendRideAssignedUpdateToBAP booking ride driver veh isScheduledRideAssignment = 
   rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideAssignedBuildReq
   let generatedMsg = A.encode rideAssignedMsgV2
   logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
-  when isScheduledRideAssignment $ Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken EmptyDynamicParam
+  when isScheduledRideAssignment $ Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken (Just ride.id) EmptyDynamicParam
   void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig merchant.id
   where
     notificationType = Notification.DRIVER_ASSIGNMENT

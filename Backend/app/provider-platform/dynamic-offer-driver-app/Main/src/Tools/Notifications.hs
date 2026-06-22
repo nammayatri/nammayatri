@@ -289,7 +289,7 @@ sendFeedbackBadgeNotification merchantOpCityId driver entityData = do
     let dynamicParams = [("rating", show entityData.rating), ("badgeCount", maybe "0" show entityData.badgeCount)]
         title = buildTemplate dynamicParams merchantPN.title
         body = buildTemplate dynamicParams merchantPN.body
-    notifyDriverWithProviders merchantOpCityId Notification.FEEDBACK_BADGE_PN title body driver driver.deviceToken entityData
+    notifyDriverWithProviders merchantOpCityId Notification.FEEDBACK_BADGE_PN title body driver driver.deviceToken Nothing entityData
 
 -- NEW_RIDE_AVAILABLE
 -- title = FCMNotificationTitle "New ride available for offering"
@@ -322,11 +322,12 @@ notifyOnCancel ::
     Hedis.HedisLTSFlowEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
+  Id DRide.Ride ->
   Booking ->
   Person ->
   SBCR.CancellationSource ->
   m ()
-notifyOnCancel merchantOpCityId booking person cancellationSource = do
+notifyOnCancel merchantOpCityId rideId booking person cancellationSource = do
   let newCityId = cityFallback person.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   subCategory <- getSubCategory cancellationSource
   dynamicFCMNotifyPerson
@@ -335,7 +336,7 @@ notifyOnCancel merchantOpCityId booking person cancellationSource = do
     person.deviceToken
     (fromMaybe ENGLISH person.language)
     (Just booking.tripCategory)
-    (createFCMReq "NOTIFY_DRIVER_ON_CANCEL" booking.id.getId FCM.Product (\r -> r {subCategory = Just subCategory, priority = Nothing}))
+    (createFCMReq "NOTIFY_DRIVER_ON_CANCEL" rideId.getId FCM.Product (\r -> r {subCategory = Just subCategory, priority = Nothing}))
     (Just ())
     [ ("startTime", showTimeIst (booking.startTime))
     ]
@@ -425,6 +426,28 @@ notifyDriver ::
   m ()
 notifyDriver merchantOpCityId = sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing
 
+rideEntityNotificationCategories :: [Notification.Category]
+rideEntityNotificationCategories =
+  [ Notification.TRIP_STARTED,
+    Notification.DRIVER_ASSIGNMENT,
+    Notification.CANCELLED_PRODUCT
+  ]
+
+mkNotificationEntity ::
+  ToJSON a =>
+  Id DMOC.MerchantOperatingCity ->
+  Notification.Category ->
+  Maybe (Id DRide.Ride) ->
+  a ->
+  Notification.Entity a
+mkNotificationEntity merchantOpCityId category mbRideId dataSend =
+  case (category, mbRideId) of
+    (cat, Just rideId)
+      | cat `elem` rideEntityNotificationCategories ->
+        Notification.Entity Notification.Product rideId.getId dataSend
+    _ ->
+      Notification.Entity Notification.Merchant merchantOpCityId.getId dataSend
+
 notifyDriverWithProviders ::
   ( ServiceFlow m r,
     CacheFlow m r,
@@ -440,9 +463,10 @@ notifyDriverWithProviders ::
   Text ->
   Person ->
   Maybe FCM.FCMRecipientToken ->
+  Maybe (Id DRide.Ride) ->
   a ->
   m ()
-notifyDriverWithProviders merchantOpCityId category title body driver mbDeviceToken dataSend =
+notifyDriverWithProviders merchantOpCityId category title body driver mbDeviceToken mbRideId dataSend =
   runWithServiceConfigForProviders merchantOpCityId driver.clientId driver.clientDevice notificationData EulerHS.Prelude.id (clearDeviceToken driver.id)
   where
     notificationData =
@@ -451,7 +475,7 @@ notifyDriverWithProviders merchantOpCityId category title body driver mbDeviceTo
           subCategory = Nothing,
           showNotification = Notification.SHOW,
           messagePriority = Just Notification.HIGH,
-          entity = Notification.Entity Notification.Merchant merchantOpCityId.getId dataSend,
+          entity = mkNotificationEntity merchantOpCityId category mbRideId dataSend,
           dynamicParams = EmptyDynamicParam,
           body = body,
           title = title,
@@ -1356,7 +1380,7 @@ notifyOnRideStarted ride booking = do
   let dynamicParams = [("offerAdjective", offerAdjective)]
   let title = buildTemplate dynamicParams mbMerchantPN.title
       body = buildTemplate dynamicParams mbMerchantPN.body
-  notifyDriverWithProviders merchantOperatingCityId Notification.TRIP_STARTED title body person person.deviceToken EmptyDynamicParam
+  notifyDriverWithProviders merchantOperatingCityId Notification.TRIP_STARTED title body person person.deviceToken (Just ride.id) EmptyDynamicParam
 
 data WMBTripAssignedData = WMBTripAssignedData
   { tripTransactionId :: Id DTT.TripTransaction,
@@ -1387,10 +1411,10 @@ notifyWmbOnRide ::
 notifyWmbOnRide driverId merchantOperatingCityId status title body entityData = do
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   case status of
-    DTT.TRIP_ASSIGNED -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_ASSIGNED title body person person.deviceToken entityData
-    DTT.COMPLETED -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_FINISHED title body person person.deviceToken entityData
-    DTT.CANCELLED -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_FINISHED title body person person.deviceToken entityData -- TODO :: Change this to WMB_TRIP_CANCELLED
-    DTT.IN_PROGRESS -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_STARTED title body person person.deviceToken entityData
+    DTT.TRIP_ASSIGNED -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_ASSIGNED title body person person.deviceToken Nothing entityData
+    DTT.COMPLETED -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_FINISHED title body person person.deviceToken Nothing entityData
+    DTT.CANCELLED -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_FINISHED title body person person.deviceToken Nothing entityData -- TODO :: Change this to WMB_TRIP_CANCELLED
+    DTT.IN_PROGRESS -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_STARTED title body person person.deviceToken Nothing entityData
     _ -> pure ()
 
 ----------------- we have to remove this once YATRI_PARTNER is migrated to new version ------------------
