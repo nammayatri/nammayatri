@@ -39,6 +39,15 @@ findByPanNumberAndNotInValid personId = do
         ]
     ]
 
+findValidByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe DriverPanCard)
+findValidByDriverId driverId = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq driverId.getId,
+          Se.Is Beam.verificationStatus $ Se.Eq Documents.VALID
+        ]
+    ]
+
 upsertPanRecord :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => DriverPanCard -> m ()
 upsertPanRecord a@DriverPanCard {..} =
   findOneWithKV [Se.Is Beam.driverId $ Se.Eq driverId.getId] >>= \case

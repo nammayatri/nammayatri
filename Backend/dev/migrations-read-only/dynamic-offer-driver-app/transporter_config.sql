@@ -942,3 +942,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_bot_flow
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN individual_pan_check boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_gst_pan_link_check_required boolean  default false;

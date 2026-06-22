@@ -39,6 +39,15 @@ findByGstNumberAndNotInValid personId = do
         ]
     ]
 
+findValidByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe DriverGstin)
+findValidByDriverId driverId = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq driverId.getId,
+          Se.Is Beam.verificationStatus $ Se.Eq Documents.VALID
+        ]
+    ]
+
 findGSTInByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe DriverGstin)
 findGSTInByDriverId personId = do
   findOneWithKV [Se.Is Beam.driverId $ Se.Eq personId.getId]
