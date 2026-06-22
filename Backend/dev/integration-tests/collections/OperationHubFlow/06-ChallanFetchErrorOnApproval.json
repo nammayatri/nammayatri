@@ -1,0 +1,813 @@
+{
+	"info": {
+		"name": "Challan Fetch Error on Vehicle Approval (3P failure capture)",
+		"description": "E2E test that the challan-fetch FAILURE is captured and persisted. Mirrors the success flow (register driver+RC, inspection request, approve) but points the ChallanSearch_Signzy provider URL at a dead port so the forked getPendingChallanCount throws; the fork's Left branch then stores pending_challan = {pendingChallanCount: null, errorMessage: <err>}. Asserts the error is persisted (errorMessage non-null, pendingChallanCount null). Final step restores the working provider config. RUN SERIALLY (mutates the shared ChallanSearch_Signzy merchant_service_config).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"exec": [
+					"(function () {",
+					"  var envType = pm.environment.get('envType') || 'Local';",
+					"  if (envType === 'Local') return;",
+					"  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+					"  if (raw.indexOf('mockServerUrl') !== -1) {",
+					"    console.log('[skip] mock-only request on envType=' + envType);",
+					"    if (pm.execution && typeof pm.execution.skipRequest === 'function') pm.execution.skipRequest();",
+					"  }",
+					"})();",
+					"",
+					"if (!pm.collectionVariables.get('_test_driver_number')) {",
+					"    var driverNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+					"    var fleetNum  = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+					"    var rcNumber  = 'KA' + String(Math.floor(10 + Math.random() * 89)) + 'CH' + String(Math.floor(1000 + Math.random() * 8999));",
+					"    pm.collectionVariables.set('_test_driver_number', driverNum);",
+					"    pm.collectionVariables.set('_test_fleet_owner_number', fleetNum);",
+					"    pm.collectionVariables.set('_test_rc_number', rcNumber);",
+					"    console.log('Test driver:', driverNum, 'fleet owner:', fleetNum, 'RC:', rcNumber);",
+					"}"
+				],
+				"type": "text/javascript"
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "00 - Seed Operation Hub (Mock SQL)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Seed operation hub returns 200', function () { pm.response.to.have.status(200); });",
+							"var d = pm.response.json();",
+							"console.log('Operation hub seed result:', JSON.stringify(d));"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_driver_offer_bpp\",\n  \"table_name\": \"operation_hub\",\n  \"values\": {\n    \"id\": \"test-hub-001\",\n    \"name\": \"Test Inspection Hub Bangalore\",\n    \"address\": \"HSR Layout, Bangalore\",\n    \"lat\": 12.9141,\n    \"lon\": 77.6446,\n    \"mobile_number\": \"9999900000\",\n    \"merchant_id\": \"7f7896dd-787e-4a0b-8675-e9e6fe93bb8f\",\n    \"merchant_operating_city_id\": \"f067bccf-5b34-fb51-a5a3-9d6fa6baac26\"\n  },\n  \"touch_timestamps\": true,\n  \"on_conflict_do_nothing\": true\n}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/sql/insert",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"mock",
+						"sql",
+						"insert"
+					]
+				}
+			}
+		},
+		{
+			"name": "01 - Inject BROKEN Challan Search Config (dead port -> fetch fails)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Seed ChallanSearch_Signzy config returns 200', function () { pm.response.to.have.status(200); });",
+							"var d = pm.response.json();",
+							"console.log('SQL insert result:', JSON.stringify(d));"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_driver_offer_bpp\",\n  \"table_name\": \"merchant_service_config\",\n  \"set\": {\n    \"config_json\": \"{\\\"url\\\":\\\"http://localhost:9/signzy\\\",\\\"apiKey\\\":\\\"0.1.0|0|vz507BJYdc0xsVE+S7w3rinEFPEJtMfyDzbAKVGXpW9dIX7lamM9z5WQ7L4PqVBGbSK437ipdy4Ov0ewg6U=\\\"}\"\n  },\n  \"where_clause\": [\n    {\"column_name\": \"service_name\", \"val\": \"ChallanSearch_Signzy\", \"op\": \"=\"}\n  ],\n  \"touch_updated_at\": true\n}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/sql/update",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"mock",
+						"sql",
+						"update"
+					]
+				}
+			}
+		},
+		{
+			"name": "02 - Fleet Owner Login OTP",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Fleet owner login returns 200', function () { pm.response.to.have.status(200); });",
+							"var d = pm.response.json();",
+							"var fid = d.personId || d.getId || d.id || (typeof d === 'string' ? d : null);",
+							"pm.environment.set('fleet_owner_id', fid);",
+							"console.log('Fleet Owner ID:', fid);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{bpp_dashboard_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"mobileNumber\": \"{{_test_fleet_owner_number}}\", \"mobileCountryCode\": \"+91\"}"
+				},
+				"url": {
+					"raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp?enabled=true",
+					"host": [
+						"{{baseURL_BPP_Driver_Direct}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"fleet",
+						"v2",
+						"login",
+						"otp"
+					],
+					"query": [
+						{
+							"key": "enabled",
+							"value": "true"
+						}
+					]
+				}
+			}
+		},
+		{
+			"name": "03 - Fleet Owner Verify OTP",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Fleet owner verify OTP returns 200', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{bpp_dashboard_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"mobileNumber\": \"{{_test_fleet_owner_number}}\", \"mobileCountryCode\": \"+91\", \"otp\": \"{{login_otp}}\"}"
+				},
+				"url": {
+					"raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/verify/otp",
+					"host": [
+						"{{baseURL_BPP_Driver_Direct}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"fleet",
+						"v2",
+						"verify",
+						"otp"
+					]
+				}
+			}
+		},
+		{
+			"name": "04 - Driver Auth",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.environment.set('driver_authId', d.authId);",
+							"pm.test('Driver auth returns 200', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"mobileNumber\": \"{{_test_driver_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{driver_merchant_id}}\", \"merchantOperatingCity\": \"{{city}}\"}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/auth",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"auth"
+					]
+				}
+			}
+		},
+		{
+			"name": "05 - Driver OTP Verify",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.environment.set('driver_token', d.token);",
+							"pm.environment.set('driver_id', d.person.id);",
+							"console.log('Driver ID:', d.person.id, 'Token:', d.token);",
+							"pm.test('Driver OTP verify returns 200', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-device-challan\"}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"auth",
+						"{{driver_authId}}",
+						"verify"
+					]
+				}
+			}
+		},
+		{
+			"name": "06 - Upload RC Image (validateImage)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Image validate returns 200', function () { pm.response.to.have.status(200); });",
+							"var d = pm.response.json();",
+							"pm.environment.set('rc_image_id', d.imageId);",
+							"console.log('RC Image ID:', d.imageId);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"image\": \"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\", \"imageType\": \"VehicleRegistrationCertificate\", \"rcNumber\": null, \"validationStatus\": null, \"vehicleCategory\": null}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"driver",
+						"register",
+						"validateImage"
+					]
+				}
+			}
+		},
+		{
+			"name": "07 - Register RC (with vehicleDetails, sync path)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Register RC returns 200', function () { pm.response.to.have.status(200); });",
+							"console.log('RC registered:', pm.collectionVariables.get('_test_rc_number'));"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"vehicleRegistrationCertNumber\": \"{{_test_rc_number}}\", \"imageId\": \"{{rc_image_id}}\", \"operatingCity\": \"{{city}}\", \"dateOfRegistration\": \"2023-01-15T00:00:00Z\", \"vehicleCategory\": \"CAR\", \"vehicleDetails\": {\"vehicleManufacturer\": \"Maruti\", \"vehicleModel\": \"Swift Dzire\", \"vehicleColour\": \"White\", \"vehicleDoors\": 4, \"vehicleSeatBelts\": 4, \"vehicleModelYear\": 2023}}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/driver/register/rc",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"driver",
+						"register",
+						"rc"
+					]
+				}
+			}
+		},
+		{
+			"name": "08 - Verify RC Status (poll until VALID)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"if (!pm.collectionVariables.get('_07_attempt')) pm.collectionVariables.set('_07_attempt', '0');",
+							"var attempt = parseInt(pm.collectionVariables.get('_07_attempt')) || 0;",
+							"if (attempt > 0) { var t0 = Date.now(); while (Date.now() - t0 < 2000) {} }"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status returns 200', function () { pm.response.to.have.status(200); });",
+							"var d = pm.response.json();",
+							"var attempt = parseInt(pm.collectionVariables.get('_07_attempt')) || 0;",
+							"",
+							"// Find our RC in the vehicle documents",
+							"var rcNumber = pm.collectionVariables.get('_test_rc_number');",
+							"var vehicleDocs = d.vehicleDocuments || [];",
+							"var ourVehicle = vehicleDocs.find(function(v) { return v.registrationNo === rcNumber; });",
+							"",
+							"console.log('Step 07 attempt', attempt + 1, ': vehicleDocs count:', vehicleDocs.length, ', found our RC:', !!ourVehicle);",
+							"",
+							"if (ourVehicle) {",
+							"  var rcDoc = (ourVehicle.documents || []).find(function(doc) { return doc.documentType === 'VehicleRegistrationCertificate'; });",
+							"  var rcStatus = rcDoc ? rcDoc.verificationStatus : 'NOT_FOUND';",
+							"  console.log('RC verification status:', rcStatus);",
+							"",
+							"  if (rcStatus === 'VALID' || rcStatus === 'MANUAL_VERIFICATION_REQUIRED') {",
+							"    pm.collectionVariables.set('_07_attempt', '0');",
+							"    pm.test('RC is verified', function () {",
+							"      pm.expect(['VALID', 'MANUAL_VERIFICATION_REQUIRED']).to.include(rcStatus);",
+							"    });",
+							"  } else if (attempt < 5) {",
+							"    pm.collectionVariables.set('_07_attempt', String(attempt + 1));",
+							"    postman.setNextRequest(pm.info.requestName);",
+							"  } else {",
+							"    pm.collectionVariables.set('_07_attempt', '0');",
+							"    pm.test('RC verified within retries', function () {",
+							"      pm.expect(['VALID', 'MANUAL_VERIFICATION_REQUIRED']).to.include(rcStatus);",
+							"    });",
+							"  }",
+							"} else if (attempt < 5) {",
+							"  pm.collectionVariables.set('_07_attempt', String(attempt + 1));",
+							"  postman.setNextRequest(pm.info.requestName);",
+							"} else {",
+							"  pm.collectionVariables.set('_07_attempt', '0');",
+							"  pm.test('RC found in status response', function () { pm.expect(ourVehicle).to.not.be.undefined; });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_namma_P}}/driver/register/status?onlyMandatoryDocs=true",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"driver",
+						"register",
+						"status"
+					],
+					"query": [
+						{
+							"key": "onlyMandatoryDocs",
+							"value": "true"
+						}
+					]
+				}
+			}
+		},
+		{
+			"name": "09 - Get All Operation Hubs",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Get hubs returns 200', function () { pm.response.to.have.status(200); });",
+							"var hubs = pm.response.json();",
+							"pm.test('At least one hub exists', function () { pm.expect(hubs.length).to.be.above(0); });",
+							"pm.environment.set('operation_hub_id', hubs[0].id);",
+							"console.log('Using hub:', hubs[0].id, hubs[0].name);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{bpp_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operation/getAllHubs",
+					"host": [
+						"{{baseURL_BPP_Driver_Direct}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"operation",
+						"getAllHubs"
+					]
+				}
+			}
+		},
+		{
+			"name": "10 - Create Hub Request (ONBOARDING_INSPECTION)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Create hub request returns 200', function () { pm.response.to.have.status(200); });",
+							"var d = pm.response.json();",
+							"pm.test('Request creation succeeds', function () { pm.expect(d.result).to.eql('Success'); });",
+							"console.log('Hub request created for vehicle inspection, RC:', pm.collectionVariables.get('_test_rc_number'));"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{bpp_dashboard_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"creatorId\": \"{{fleet_owner_id}}\", \"operationHubId\": \"{{operation_hub_id}}\", \"driverId\": \"{{driver_id}}\", \"registrationNo\": \"{{_test_rc_number}}\", \"requestType\": \"ONBOARDING_INSPECTION\"}"
+				},
+				"url": {
+					"raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/createRequest",
+					"host": [
+						"{{baseURL_BPP_Driver_Direct}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"operator",
+						"createRequest"
+					]
+				}
+			}
+		},
+		{
+			"name": "11 - Fetch Hub Request ID (poll for KV drainer)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"if (!pm.collectionVariables.get('_10_attempt')) pm.collectionVariables.set('_10_attempt', '0');",
+							"var attempt = parseInt(pm.collectionVariables.get('_10_attempt')) || 0;",
+							"if (attempt > 0) { var t0 = Date.now(); while (Date.now() - t0 < 2000) {} }",
+							"else { var t0 = Date.now(); while (Date.now() - t0 < 2000) {} }"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Fetch returns 200', function () { pm.response.to.have.status(200); });",
+							"var d = pm.response.json();",
+							"var attempt = parseInt(pm.collectionVariables.get('_10_attempt')) || 0;",
+							"console.log('Step 10 attempt', attempt + 1, ': got', d.requests ? d.requests.length : 0, 'requests');",
+							"",
+							"var rcNumber = pm.collectionVariables.get('_test_rc_number');",
+							"if (d.requests && d.requests.length > 0) {",
+							"  var match = d.requests.find(function(r) { return r.registrationNo === rcNumber; });",
+							"  if (match) {",
+							"    pm.collectionVariables.set('_10_attempt', '0');",
+							"    pm.environment.set('hub_request_id', match.id);",
+							"    console.log('Hub request ID:', match.id, 'status:', match.requestStatus);",
+							"    pm.test('Hub request found for our RC', function () { pm.expect(match).to.not.be.undefined; });",
+							"  } else if (attempt < 8) {",
+							"    pm.collectionVariables.set('_10_attempt', String(attempt + 1));",
+							"    postman.setNextRequest(pm.info.requestName);",
+							"  } else {",
+							"    pm.collectionVariables.set('_10_attempt', '0');",
+							"    pm.test('Hub request found after retries', function () { pm.expect(match).to.not.be.undefined; });",
+							"  }",
+							"} else if (attempt < 8) {",
+							"  pm.collectionVariables.set('_10_attempt', String(attempt + 1));",
+							"  postman.setNextRequest(pm.info.requestName);",
+							"} else {",
+							"  pm.collectionVariables.set('_10_attempt', '0');",
+							"  pm.test('At least one request after retries', function () { pm.expect(d.requests.length).to.be.above(0); });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{bpp_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/fetch/hubRequests?mbRegistrationNo={{_test_rc_number}}&mbStatus=\"PENDING\"&mbLimit=10&mbOffset=0",
+					"host": [
+						"{{baseURL_BPP_Driver_Direct}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"operator",
+						"fetch",
+						"hubRequests"
+					],
+					"query": [
+						{
+							"key": "mbRegistrationNo",
+							"value": "{{_test_rc_number}}"
+						},
+						{
+							"key": "mbStatus",
+							"value": "\"PENDING\""
+						},
+						{
+							"key": "mbLimit",
+							"value": "10"
+						},
+						{
+							"key": "mbOffset",
+							"value": "0"
+						}
+					]
+				}
+			}
+		},
+		{
+			"name": "12 - Approve Hub Request (triggers challan search)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Approve hub request returns 200', function () { pm.response.to.have.status(200); });",
+							"var d = pm.response.json();",
+							"pm.test('Approval succeeds', function () { pm.expect(d.result).to.eql('Success'); });",
+							"console.log('Hub request APPROVED — challan search should fire in background');"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{bpp_dashboard_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"operationHubRequestId\": \"{{hub_request_id}}\", \"operatorId\": \"{{fleet_owner_id}}\", \"remarks\": \"Vehicle inspection passed - integration test\", \"status\": \"APPROVED\"}"
+				},
+				"url": {
+					"raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/respond/hubRequest",
+					"host": [
+						"{{baseURL_BPP_Driver_Direct}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"operator",
+						"respond",
+						"hubRequest"
+					]
+				}
+			}
+		},
+		{
+			"name": "13 - Verify challan fetch ERROR persisted on VRC (poll DB via mock SQL)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"if (!pm.collectionVariables.get('_12_attempt')) pm.collectionVariables.set('_12_attempt', '0');",
+							"var attempt = parseInt(pm.collectionVariables.get('_12_attempt')) || 0;",
+							"// Wait for the forked background challan-search task to complete",
+							"var wait = attempt === 0 ? 3000 : 2000;",
+							"var t0 = Date.now(); while (Date.now() - t0 < wait) {}"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('SQL select returns 200', function () { pm.response.to.have.status(200); });",
+							"var d = pm.response.json();",
+							"var attempt = parseInt(pm.collectionVariables.get('_12_attempt')) || 0;",
+							"console.log('attempt', attempt + 1, ': rows:', d.count, JSON.stringify(d.rows));",
+							"var vrc = (d.rows && d.rows.length > 0) ? d.rows[0] : null;",
+							"pm.test('Our VRC exists in DB', function () { pm.expect(vrc).to.not.be.null; });",
+							"var pc = vrc ? vrc.pending_challan : null;",
+							"if (typeof pc === 'string') { try { pc = JSON.parse(pc); } catch (e) {} }",
+							"if (pc && pc.errorMessage !== null && pc.errorMessage !== undefined) {",
+							"  pm.collectionVariables.set('_12_attempt', '0');",
+							"  pm.test('errorMessage is captured (non-null)', function () { pm.expect(pc.errorMessage).to.be.a('string'); pm.expect(pc.errorMessage.length).to.be.above(0); });",
+							"  pm.test('pendingChallanCount is null on failure', function () { pm.expect(pc.pendingChallanCount == null).to.be.true; });",
+							"  console.log('SUCCESS: challan fetch error persisted:', pc.errorMessage);",
+							"} else if (attempt < 8) {",
+							"  pm.collectionVariables.set('_12_attempt', String(attempt + 1));",
+							"  postman.setNextRequest(pm.info.requestName);",
+							"} else {",
+							"  pm.collectionVariables.set('_12_attempt', '0');",
+							"  pm.test('challan fetch error persisted within retries', function () { pm.expect(pc && pc.errorMessage).to.not.be.null; });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"vehicle_registration_certificate\", \"select\": [\"id\", \"pending_challan\", \"verification_status\", \"unencrypted_certificate_number\"], \"where_clause\": [{\"column_name\": \"unencrypted_certificate_number\", \"val\": \"{{_test_rc_number}}\", \"op\": \"=\"}], \"limit\": 5}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/sql/select",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"mock",
+						"sql",
+						"select"
+					]
+				}
+			}
+		},
+		{
+			"name": "14 - Restore working Challan Search Config",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('restore config 200', function () { pm.response.to.have.status(200); });"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"merchant_service_config\", \"set\": {\"config_json\": \"{\\\"url\\\":\\\"http://localhost:8080/signzy\\\",\\\"apiKey\\\":\\\"0.1.0|0|vz507BJYdc0xsVE+S7w3rinEFPEJtMfyDzbAKVGXpW9dIX7lamM9z5WQ7L4PqVBGbSK437ipdy4Ov0ewg6U=\\\"}\"}, \"where_clause\": [{\"column_name\": \"service_name\", \"val\": \"ChallanSearch_Signzy\", \"op\": \"=\"}]}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/sql/update",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"mock",
+						"sql",
+						"update"
+					]
+				}
+			}
+		}
+	]
+}

@@ -4,6 +4,7 @@
 
 module Storage.Queries.VehicleRegistrationCertificate (module Storage.Queries.VehicleRegistrationCertificate, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Data.Time.Calendar
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
@@ -92,12 +93,12 @@ updateOxygen ::
   (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
 updateOxygen oxygen id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.oxygen oxygen, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updatePendingChallanCount ::
+updatePendingChallan ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
-updatePendingChallanCount pendingChallanCount id = do
+  (Kernel.Prelude.Maybe Domain.Types.VehicleRegistrationCertificate.PendingChallanResult -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
+updatePendingChallan pendingChallan id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.pendingChallanCount pendingChallanCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateOneWithKV [Se.Set Beam.pendingChallan (Data.Aeson.toJSON <$> pendingChallan), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateVehicleImageId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -147,7 +148,7 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.mYManufacturing mYManufacturing,
       Se.Set Beam.manufacturerModel manufacturerModel,
       Se.Set Beam.oxygen oxygen,
-      Se.Set Beam.pendingChallanCount pendingChallanCount,
+      Se.Set Beam.pendingChallan (Data.Aeson.toJSON <$> pendingChallan),
       Se.Set Beam.permitExpiry permitExpiry,
       Se.Set Beam.pucExpiry pucExpiry,
       Se.Set Beam.rejectReason rejectReason,

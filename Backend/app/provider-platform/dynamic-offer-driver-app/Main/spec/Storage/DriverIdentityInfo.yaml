@@ -11,6 +11,11 @@ imports:
 DriverIdentityInfo:
   tableName: driver_identity_info
 
+  types:
+    CourtRecordResult:
+      result: Maybe CRCVerificationResponse
+      errorMessage: Maybe Text
+
   fields:
     driverId: Id Person
     nomineeName: Maybe Text
@@ -19,7 +24,7 @@ DriverIdentityInfo:
     address: Maybe Text
     addressDocumentType: Maybe AddressDocumentType
     addressState: Maybe IndianState
-    courtRecord: Maybe CRCVerificationResponse
+    courtRecord: Maybe CourtRecordResult
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     createdAt: UTCTime
@@ -44,6 +49,10 @@ DriverIdentityInfo:
     findByDriverId:
       kvFunction: findOneWithKV
       where: driverId
+    findAllByDriverIds:
+      kvFunction: findAllWithKV
+      where:
+        in: [driverId]
     updateCourtRecord:
       kvFunction: updateOneWithKV
       params: [courtRecord]

@@ -34,7 +34,7 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     mYManufacturing :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
     manufacturerModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    pendingChallanCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    pendingChallan :: Kernel.Prelude.Maybe Domain.Types.VehicleRegistrationCertificate.PendingChallanResult,
     permitExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     pucExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -90,7 +90,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
           mYManufacturing = mYManufacturing entity,
           manufacturerModel = manufacturerModel entity,
           oxygen = oxygen entity,
-          pendingChallanCount = pendingChallanCount entity,
+          pendingChallan = pendingChallan entity,
           permitExpiry = permitExpiry entity,
           pucExpiry = pucExpiry entity,
           rejectReason = rejectReason entity,
@@ -138,7 +138,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
             mYManufacturing = mYManufacturing entity,
             manufacturerModel = manufacturerModel entity,
             oxygen = oxygen entity,
-            pendingChallanCount = pendingChallanCount entity,
+            pendingChallan = pendingChallan entity,
             permitExpiry = permitExpiry entity,
             pucExpiry = pucExpiry entity,
             rejectReason = rejectReason entity,
@@ -176,6 +176,9 @@ instance EncryptedItem' VehicleRegistrationCertificate where
   fromUnencrypted = fst
 
 data DocsVerificationStatus = ADMIN_PENDING | ADMIN_APPROVED | ADMIN_REJECTED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+data PendingChallanResult = PendingChallanResult {errorMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text, pendingChallanCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocsVerificationStatus))
 

@@ -15,18 +15,18 @@ import qualified Kernel.Types.Beckn.Context
 import Tools.Beam.UtilsTH
 
 data DriverIdentityInfoT f = DriverIdentityInfoT
-  { address :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    addressDocumentType :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType),
-    addressState :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState),
-    courtRecord :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    driverId :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    nomineeDob :: B.C f (Kernel.Prelude.Maybe Data.Time.Day),
-    nomineeName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    nomineeRelationship :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { address :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    addressDocumentType :: (B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType)),
+    addressState :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState)),
+    courtRecord :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    driverId :: (B.C f Kernel.Prelude.Text),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    nomineeDob :: (B.C f (Kernel.Prelude.Maybe Data.Time.Day)),
+    nomineeName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    nomineeRelationship :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -36,6 +36,6 @@ instance B.Table DriverIdentityInfoT where
 
 type DriverIdentityInfo = DriverIdentityInfoT Identity
 
-$(enableKVPG ''DriverIdentityInfoT ['driverId] [])
+$(enableKVPG (''DriverIdentityInfoT) [('driverId)] [])
 
-$(mkTableInstances ''DriverIdentityInfoT "driver_identity_info")
+$(mkTableInstances (''DriverIdentityInfoT) "driver_identity_info")

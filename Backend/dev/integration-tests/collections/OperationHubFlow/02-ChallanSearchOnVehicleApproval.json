@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Challan Search on Vehicle Inspection Approval",
-    "description": "End-to-end test: registers a driver, creates a VRC via register/rc with vehicleDetails (sync path), creates an ONBOARDING_INSPECTION hub request, approves it, and verifies that the Signzy challan search fires and updates pending_challan_count on the VRC.\n\nPrerequisites:\n  1. Run setup-challan-search-test.sql to seed ChallanSearch_Signzy config\n  2. Mock server running on localhost:8080 with signzy mock service",
+    "description": "End-to-end test: registers a driver, creates a VRC via register/rc with vehicleDetails (sync path), creates an ONBOARDING_INSPECTION hub request, approves it, and verifies that the Signzy challan search fires and updates pending_challan (json {pendingChallanCount, errorMessage}) on the VRC.\n\nPrerequisites:\n  1. Run setup-challan-search-test.sql to seed ChallanSearch_Signzy config\n  2. Mock server running on localhost:8080 with signzy mock service",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -731,22 +731,28 @@
               "var vrc = (d.rows && d.rows.length > 0) ? d.rows[0] : null;",
               "pm.test('Our VRC exists in DB', function () { pm.expect(vrc).to.not.be.null; });",
               "",
-              "if (vrc && vrc.pending_challan_count !== null && vrc.pending_challan_count !== undefined) {",
+              "var pc = vrc ? vrc.pending_challan : null;",
+              "if (typeof pc === 'string') { try { pc = JSON.parse(pc); } catch (e) {} }",
+              "var count = pc ? pc.pendingChallanCount : null;",
+              "if (count !== null && count !== undefined) {",
               "  pm.collectionVariables.set('_12_attempt', '0');",
               "  pm.test('Pending challan count is a number', function () {",
-              "    pm.expect(vrc.pending_challan_count).to.be.a('number');",
+              "    pm.expect(count).to.be.a('number');",
               "  });",
               "  pm.test('Pending challan count equals mock value (3)', function () {",
-              "    pm.expect(vrc.pending_challan_count).to.eql(3);",
+              "    pm.expect(count).to.eql(3);",
               "  });",
-              "  console.log('SUCCESS: VRC', vrc.id, 'pending_challan_count =', vrc.pending_challan_count);",
+              "  pm.test('No fetch error stored', function () {",
+              "    pm.expect(pc.errorMessage == null).to.be.true;",
+              "  });",
+              "  console.log('SUCCESS: VRC', vrc.id, 'pendingChallanCount =', count);",
               "} else if (attempt < 8) {",
               "  pm.collectionVariables.set('_12_attempt', String(attempt + 1));",
               "  postman.setNextRequest(pm.info.requestName);",
               "} else {",
               "  pm.collectionVariables.set('_12_attempt', '0');",
-              "  pm.test('Pending challan count was updated (after 8 retries)', function () {",
-              "    pm.expect(vrc && vrc.pending_challan_count).to.not.be.null;",
+              "  pm.test('Pending challan was updated (after 8 retries)', function () {",
+              "    pm.expect(count).to.not.be.null;",
               "  });",
               "}"
             ],
@@ -764,7 +770,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"vehicle_registration_certificate\", \"select\": [\"id\", \"pending_challan_count\", \"verification_status\", \"unencrypted_certificate_number\"], \"where_clause\": [{\"column_name\": \"unencrypted_certificate_number\", \"val\": \"{{_test_rc_number}}\", \"op\": \"=\"}], \"limit\": 5}"
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"vehicle_registration_certificate\", \"select\": [\"id\", \"pending_challan\", \"verification_status\", \"unencrypted_certificate_number\"], \"where_clause\": [{\"column_name\": \"unencrypted_certificate_number\", \"val\": \"{{_test_rc_number}}\", \"op\": \"=\"}], \"limit\": 5}"
         },
         "url": {
           "raw": "{{mockServerUrl}}/mock/sql/select",
