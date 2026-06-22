@@ -834,8 +834,7 @@ data GetCityResp = GetCityResp
   { city :: Maybe Text,
     state :: Maybe Context.IndianState,
     language :: Maybe Maps.Language,
-    lat :: Double,
-    lon :: Double,
+    location :: LatLong,
     status :: APISuccess
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -2887,7 +2886,7 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig serviceName = d
 getCity :: GetCityReq -> Flow GetCityResp
 getCity req = do
   let latLng = req.location
-      mkResp mbCity mbState mbLang = GetCityResp {city = mbCity, state = mbState, language = mbLang, lat = req.location.lat, lon = req.location.lon, status = APISuccess.Success}
+      mkResp mbCity mbState mbLang = GetCityResp {city = mbCity, state = mbState, language = mbLang, location = req.location, status = APISuccess.Success}
       withMOCInfo cityVal mbMId = do
         mbMoc <- case mbMId of
           Just mId -> CQMOC.findByMerchantIdAndCity mId cityVal
