@@ -204,7 +204,9 @@ data GoogleCfgUpdateReq = GoogleCfgUpdateReq
     googlePlaceNewUrl :: BaseUrl,
     useNewPlaces :: Bool,
     googleAutocompleteParams :: Maybe [Text],
-    mobilityBillingUrl :: Maybe BaseUrl
+    mobilityBillingUrl :: Maybe BaseUrl,
+    useRouteMatrix :: Maybe Bool,
+    googleRouteMatrixCfg :: Maybe Maps.GoogleRouteMatrixCfg
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
