@@ -30,6 +30,8 @@ buildGoogleConfig encTools GoogleCfgUnencrypted {..} = do
     GoogleConfig
       GoogleCfg
         { googleKey = googleKeyEncrypted,
+          useRouteMatrix = Nothing,
+          googleRouteMatrixCfg = Nothing,
           ..
         }
 
