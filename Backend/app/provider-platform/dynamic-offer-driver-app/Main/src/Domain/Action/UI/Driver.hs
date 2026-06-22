@@ -983,19 +983,22 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
             unless driverBankAccount.chargesEnabled $ throwError (DriverChargesDisabled driverId.getId)
           unless (driverInfo.enabled) $ throwError DriverAccountDisabled
           unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
-          -- BOT-flow go-online gates: an active vehicle is required; a fleet driver additionally
-          -- requires their fleet to be enabled with an active fleet subscription.
+          -- BOT-flow go-online checks (separate): active vehicle required; a fleet driver needs their fleet
+          -- enabled with an active fleet subscription; an individual (non-fleet) driver needs their own subscription.
           when (transporterConfig.enableBotFlow == Just True) $ do
             unless (isJust mbVehicle) $
               throwError $ InvalidRequest "Cannot go online: no active vehicle linked"
             mbFleetAssoc <- QFDA.findByDriverId driverId True
-            whenJust mbFleetAssoc $ \fda -> do
-              fleetOwnerInfo <- QFOI.findByPrimaryKey (Id fda.fleetOwnerId) >>= fromMaybeM (PersonNotFound fda.fleetOwnerId)
-              unless fleetOwnerInfo.enabled $
-                throwError $ InvalidRequest "Cannot go online: fleet is not enabled"
-              mbFleetSub <- QSPE.findLatestActiveByOwnerAndServiceName (\_ -> pure ()) fda.fleetOwnerId DSP.FLEET_OWNER Plan.PREPAID_SUBSCRIPTION Nothing
-              unless (isJust mbFleetSub) $
-                throwError $ InvalidRequest "Cannot go online: fleet subscription is not active"
+            case mbFleetAssoc of
+              Just fda -> do
+                fleetOwnerInfo <- QFOI.findByPrimaryKey (Id fda.fleetOwnerId) >>= fromMaybeM (PersonNotFound fda.fleetOwnerId)
+                unless fleetOwnerInfo.enabled $
+                  throwError $ InvalidRequest "Cannot go online: fleet is not enabled"
+                mbFleetSub <- QSPE.findLatestActiveByOwnerAndServiceName (\_ -> pure ()) fda.fleetOwnerId DSP.FLEET_OWNER Plan.PREPAID_SUBSCRIPTION Nothing
+                unless (isJust mbFleetSub) $
+                  throwError $ InvalidRequest "Cannot go online: fleet subscription is not active"
+              Nothing ->
+                unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
           when driverInfo.blocked $ do
             case driverInfo.blockExpiryTime of
               Just expiryTime -> do
