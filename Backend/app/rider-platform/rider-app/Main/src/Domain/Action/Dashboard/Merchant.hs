@@ -411,6 +411,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             enforceTollRoute = mbExistingSpLoc >>= (.enforceTollRoute),
             render = request.render,
             supportNumber = request.supportNumber,
+            paymentModes = (mbExistingSpLoc >>= (.paymentModes)) <|> Just [SL.CASH],
             ..
           }
 
@@ -1480,6 +1481,16 @@ parseGateTags fieldValue =
       let tagList = filter (not . T.null) $ map T.strip $ T.splitOn "," tags
        in if null tagList then Nothing else Just tagList
 
+-- | Parse an optional comma-separated list of payment modes (e.g. "CASH,ONLINE").
+--   Returns Nothing when the field is empty/absent or any token is not a valid
+--   'PaymentMode', so the caller can fall back to the default.
+parsePaymentModes :: Maybe Text -> Maybe [SL.PaymentMode]
+parsePaymentModes mbFieldValue = do
+  raw <- mbFieldValue >>= cleanField
+  let tokens = filter (not . T.null) $ map T.strip $ T.splitOn "," raw
+  modes <- traverse (readMaybe . T.unpack) tokens
+  if null modes then Nothing else Just modes
+
 --------------------------------------------------------------------------------------------------------------------
 
 data SpecialLocationCSVRow = SpecialLocationCSVRow
@@ -1521,7 +1532,8 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoNotificationActiveTillInSec :: Maybe Text,
     enforceTollRoute :: Maybe Text,
     render :: Maybe Text,
-    enableQueueFilter :: Maybe Text
+    enableQueueFilter :: Maybe Text,
+    paymentModes :: Maybe Text
   }
   deriving (Show)
 
@@ -1567,6 +1579,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> optional (r .: "enforce_toll_route")
       <*> optional (r .: "render")
       <*> optional (r .: "enable_queue_filter")
+      <*> optional (r .: "payment_modes")
 
 postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
@@ -1620,6 +1633,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
           supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
           mbRender :: Maybe DSL.RenderType = readMaybeCSVField idx (fromMaybe "" row.render) "Render"
+          mbPaymentModes :: Maybe [SL.PaymentMode] = parsePaymentModes row.paymentModes
       enabled :: Bool <- readCSVField idx row.enabled "Enabled"
       gateInfoId <- maybe generateGUID (pure . Id) (cleanField =<< row.gateInfoId)
       gateInfoName :: Text <- cleanCSVField idx row.gateInfoName "Gate Info (name)"
@@ -1661,7 +1675,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 isQueueEnabled = mbIsQueueEnabled,
                 enforceTollRoute = mbEnforceTollRoute,
                 render = mbRender,
-                supportNumber = supportNumber
+                supportNumber = supportNumber,
+                paymentModes = Just (fromMaybe [SL.CASH] mbPaymentModes)
               }
           gateInfo =
             DGI.GateInfo
