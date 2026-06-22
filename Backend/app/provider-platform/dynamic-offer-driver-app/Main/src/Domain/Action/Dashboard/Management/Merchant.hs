@@ -3338,6 +3338,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             enforceTollRoute = mbExistingSpLoc >>= (.enforceTollRoute),
             render = request.render,
             supportNumber = request.supportNumber,
+            paymentModes = (mbExistingSpLoc >>= (.paymentModes)) <|> Just [SL.CASH],
             ..
           }
 

@@ -97,7 +97,8 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoNotificationActiveTillInSec :: Maybe Text,
     enforceTollRoute :: Maybe Text,
     render :: Maybe Text,
-    enableQueueFilter :: Maybe Text
+    enableQueueFilter :: Maybe Text,
+    paymentModes :: Maybe Text
   }
   deriving (Show)
 
@@ -143,6 +144,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> optional (r .: "enforce_toll_route")
       <*> optional (r .: "render")
       <*> optional (r .: "enable_queue_filter")
+      <*> optional (r .: "payment_modes")
 
 ---------------------------------------------------------------------
 -- CSV Helper Functions
@@ -185,6 +187,16 @@ parseGateTags fieldValue =
     Just tags ->
       let tagList = filter (not . T.null) $ map T.strip $ T.splitOn "," tags
        in if null tagList then Nothing else Just tagList
+
+-- | Parse an optional comma-separated list of payment modes (e.g. "CASH,ONLINE").
+--   Returns Nothing when the field is empty/absent or any token is not a valid
+--   'PaymentMode', so the caller can fall back to the default.
+parsePaymentModes :: Maybe Text -> Maybe [SL.PaymentMode]
+parsePaymentModes mbFieldValue = do
+  raw <- mbFieldValue >>= cleanField
+  let tokens = filter (not . T.null) $ map T.strip $ T.splitOn "," raw
+  modes <- traverse (readMaybe . T.unpack) tokens
+  if null modes then Nothing else Just modes
 
 ---------------------------------------------------------------------
 -- Main Upsert Function
@@ -254,6 +266,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
       mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
       supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
       mbRender :: Maybe DSL.RenderType = readMaybeCSVField idx (fromMaybe "" row.render) "Render"
+      mbPaymentModes :: Maybe [SL.PaymentMode] = parsePaymentModes row.paymentModes
   pickupPriority :: Int <- readCSVField idx row.pickupPriority "Pickup Priority"
   dropPriority :: Int <- readCSVField idx row.dropPriority "Drop Priority"
   gateInfoId <- maybe generateGUID (pure . Id) (cleanField =<< row.gateInfoId)
@@ -297,7 +310,8 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             isQueueEnabled = mbIsQueueEnabled,
             enforceTollRoute = mbEnforceTollRoute,
             render = mbRender,
-            supportNumber = supportNumber
+            supportNumber = supportNumber,
+            paymentModes = Just (fromMaybe [SL.CASH] mbPaymentModes)
           }
       gateInfo =
         DGI.GateInfo

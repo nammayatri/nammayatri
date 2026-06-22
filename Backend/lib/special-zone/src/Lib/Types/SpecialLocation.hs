@@ -40,6 +40,14 @@ data RenderType
 
 $(mkBeamInstancesForEnum ''RenderType)
 
+data PaymentMode
+  = PAYTMEDC
+  | CASH
+  | ONLINE
+  deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForEnum ''PaymentMode)
+
 data Merchant
 
 data MerchantOperatingCity
@@ -64,6 +72,7 @@ data SpecialLocation = SpecialLocation
     render :: Maybe RenderType,
     priority :: Int,
     supportNumber :: Maybe Text,
+    paymentModes :: Maybe [PaymentMode],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
