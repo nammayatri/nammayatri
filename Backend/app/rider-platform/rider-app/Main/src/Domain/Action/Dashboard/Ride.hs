@@ -499,7 +499,7 @@ bookingCancel Common.BookingCancelledReq {bookingId = reqBookingId} = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCReason.ByMerchant)
   bookingCancellationReason <- buildBookingCancellationReason booking (mbRide <&> (.id))
   _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
-  _ <- QRB.updateStatus booking.id DTB.CANCELLED
+  _ <- QRB.updateStatus booking.riderId booking.id DTB.CANCELLED
   _ <- QBPL.makeAllInactiveByBookingId booking.id
   _ <- whenJust mbRide $ \ride -> void $ QRide.updateStatus ride.id DRide.CANCELLED
   void $ QBCReason.upsert bookingCancellationReason

@@ -151,7 +151,7 @@ buildRideEntity booking updRide newRideInfo = do
 rideBookingTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int) => DB.BookingStatus -> DRide.RideStatus -> DB.Booking -> RideEntity -> m ()
 rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity = do
   unless (booking.status == bookingNewStatus) $ do
-    QB.updateStatus booking.id bookingNewStatus
+    QB.updateStatus booking.riderId booking.id bookingNewStatus
   -- not making booking parties link inactive as this function is not used
   case rideEntity of
     UpdatedRide (DUpdatedRide {ride, rideOldStatus}) -> do
@@ -181,7 +181,7 @@ onStatus req = withDynamicLogLevel "rider-onstatus-domain" $ do
       logDebug $ "RIDER_ONSTATUS_DOMAIN_DEBUG: Processing ValidatedNewBookingDetails for booking: " <> booking.id.getId
       mbExistingRide <- B.runInReplica $ QRide.findActiveByRBId booking.id
       unless (booking.status == bookingNewStatus) $ do
-        QB.updateStatus booking.id bookingNewStatus
+        QB.updateStatus booking.riderId booking.id bookingNewStatus
       -- not making booking parties link inactive as this function is not used
       whenJust mbExistingRide \existingRide -> do
         unless (existingRide.status == rideNewStatus) $ do

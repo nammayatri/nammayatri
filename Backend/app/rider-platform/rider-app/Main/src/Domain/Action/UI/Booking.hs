@@ -187,11 +187,34 @@ checkBookingsForStatus [] = pure ()
 
 getBookingList :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Text -> Bool -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Maybe (Id DMOC.MerchantOperatingCity) -> Flow ([SRB.Booking], [SRB.Booking])
 getBookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId = do
+  useCachedActiveRidesList <- asks (.useCachedActiveRidesList)
+  getBookingListImpl useCachedActiveRidesList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId
+
+getBookingListImpl :: Bool -> (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Text -> Bool -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Maybe (Id DMOC.MerchantOperatingCity) -> Flow ([SRB.Booking], [SRB.Booking])
+getBookingListImpl True (Just personId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset (Just True) mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId = do
+  let mbFromDate = millisecondsToUTC <$> mbFromDate'
+      mbToDate = millisecondsToUTC <$> mbToDate'
+  mbActiveRbIds <- QRB.getActiveRideAvailableFromCacheKey personId
+  case mbActiveRbIds of
+    Just activeRbIds -> do
+      case activeRbIds of
+        [singleRideWhichIsMostOfTheTime] -> do
+          mbBookings <- QR.findBookingDetialsByBookingId singleRideWhichIsMostOfTheTime
+          case mbBookings of
+            Nothing -> do
+              otherActiveParties <- QR.findOtherActivePartyBooking (Just personId) mbBookingStatus mbClientId mbFromDate mbToDate
+              case otherActiveParties of
+                [] -> getBookingListImpl False (Just personId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset (Just True) mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId
+                bxs -> return (bxs, bxs)
+            Just booking -> return ([booking], [booking])
+        _ -> getBookingListImpl False (Just personId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset (Just True) mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId
+    Nothing -> return ([], [])
+getBookingListImpl _ (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId = do
   logInfo $ "getBookingList: Executing query for personId=" <> show mbPersonId <> ", merchantId=" <> show merchantId <> ", onlyActive=" <> show mbOnlyActive
   let mbFromDate = millisecondsToUTC <$> mbFromDate'
       mbToDate = millisecondsToUTC <$> mbToDate'
   let mbOnlyDashboard = if onlyDashboard then Just True else Nothing
-  (rbList, allbookings) <- if Just True == mbOnlyActive then runInMultiCloud $ QR.findAllByRiderIdAndRide mbPersonId mbAgentId mbOnlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList mbMerchantOperatingCityId else QR.findAllByRiderIdAndRide mbPersonId mbAgentId mbOnlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList mbMerchantOperatingCityId
+  (rbList, allbookings) <- QR.findAllByRiderIdAndRide mbPersonId mbAgentId mbOnlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList mbMerchantOperatingCityId
   let limit = maybe 10 fromIntegral mbLimit
   if null rbList
     then do

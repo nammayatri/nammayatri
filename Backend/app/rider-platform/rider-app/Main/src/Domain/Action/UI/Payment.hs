@@ -340,7 +340,7 @@ pollPaytmEdcPaymentStatus merchantId _merchantOperatingCityId personId orderId =
                   eitherCancelResult <- withTryCatch "PaytmEDC:CancelBookingOnPollFailure" $ DCancel.cancel booking Nothing cancelReq SBCR.ByApplication
                   case eitherCancelResult of
                     Right dCancelRes -> do
-                      void $ QRideB.updateStatus booking.id SRB.CANCELLED
+                      void $ QRideB.updateStatus booking.riderId booking.id SRB.CANCELLED
                       void $ QBPL.makeAllInactiveByBookingId booking.id
                       void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes Nothing
                       logInfo $ "PaytmEDC poll: Successfully cancelled booking " <> bookingIdText <> " due to poll failures"

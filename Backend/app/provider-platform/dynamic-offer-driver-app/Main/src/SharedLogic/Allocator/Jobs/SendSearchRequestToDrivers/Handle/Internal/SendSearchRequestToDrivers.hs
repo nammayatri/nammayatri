@@ -166,7 +166,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       let timedOutQueueDrivers = filter (\srfd -> isNothing srfd.response && srfd.pickupZone) activeSRFDs
       forM_ timedOutQueueDrivers $ \srfd ->
         SpecialZoneDriverDemand.handleQueueSkipIfApplicable searchReq.pickupZoneGateId (show searchTry.vehicleServiceTier) srfd.driverId searchReq.providerId (searchTry.id.getId <> ":" <> srfd.driverId.getId)
-  whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
+  whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId Nothing searchTry.id.getId -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
 
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do

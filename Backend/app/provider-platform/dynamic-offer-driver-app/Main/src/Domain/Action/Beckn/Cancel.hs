@@ -334,7 +334,7 @@ cancelSearch _merchantId searchTry = do
         throwError RideRequestAlreadyAccepted
     driverSearchReqs <- QSRD.findAllActiveBySRId searchTry.requestId Domain.Active
     QST.cancelActiveTriesByRequestId searchTry.requestId
-    QSRD.setInactiveAndPulledByIds $ (.id) <$> driverSearchReqs
+    QSRD.setInactiveAndPulledByIds driverSearchReqs
     QDQ.setInactiveBySRId searchTry.requestId
     for_ driverSearchReqs $ \driverReq -> do
       driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
