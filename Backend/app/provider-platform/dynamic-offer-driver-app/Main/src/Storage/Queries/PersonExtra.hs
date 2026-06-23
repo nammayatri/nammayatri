@@ -612,6 +612,7 @@ updatePersonDetails person = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamP.firstName $ person.firstName,
+      Se.Set BeamP.middleName $ person.middleName,
       Se.Set BeamP.lastName $ person.lastName,
       Se.Set BeamP.mobileCountryCode $ person.mobileCountryCode,
       Se.Set BeamP.mobileNumberEncrypted $ person.mobileNumber <&> unEncrypted . (.encrypted),
