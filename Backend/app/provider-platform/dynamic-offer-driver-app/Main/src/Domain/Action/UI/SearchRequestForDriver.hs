@@ -202,7 +202,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           coinsRewardedOnGoldTierRide = nearbyReq.coinsRewardedOnGoldTierRide,
           safetyPlusCharges = Just safetyCharges,
           commissionCharges = nearbyReq.commissionCharges,
-          isPaymentOnline = deriveIsPaymentOnline searchRequest.paymentInstrument,
+          isPaymentOnline = deriveIsPaymentOnline searchTry.paymentInstrument,
           ..
         }
   where

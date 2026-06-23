@@ -56,44 +56,63 @@ In both popup-bearing flows the caller already populates
 
 ## Design
 
-### Chosen approach: persist on `SearchRequest`, write once centrally
+### Chosen approach: persist on `SearchTry`, set at creation time
 
-Add `paymentInstrument :: Maybe PaymentInstrument` to the BPP `SearchRequest`, and
-persist it **once** inside `initiateDriverSearchBatch` from the batch input's
-`paymentMethodInfo`. The existing DB re-fetch in the builder then makes it available to
-`makeSearchRequestForDriverAPIEntity`, which derives `isPaymentOnline`.
+Add `paymentInstrument :: Maybe PaymentInstrument` to the BPP `SearchTry`, and set it
+**at row-creation time** inside `buildSearchTry` (called by `createNewSearchTry` within
+`initiateDriverSearchBatch`). The popup builder `makeSearchRequestForDriverAPIEntity`
+already receives `searchTry` as a parameter, so the field is available immediately
+with no extra DB read.
 
-```
+```text
 Select.hs (estimate) ─┐
                       ├─► DriverSearchBatchInput{searchReq, paymentMethodInfo}
 Confirm.hs (static) ──┘            │
                                    ▼
-                    initiateDriverSearchBatch  ──►  QSR.updatePaymentInstrument
-                                   │                (persist on SearchRequest row)
-                                   ▼
-                    sendSearchRequestToDrivers ──► QSR.findById (re-fetch)
-                                   │
-                                   ▼
-              makeSearchRequestForDriverAPIEntity ──► isPaymentOnline (derived)
+                    initiateDriverSearchBatch
+                         │
+                         ▼
+                    createNewSearchTry
+                         │
+                         ▼
+                    buildSearchTry(..., mbPaymentInstrument)
+                         │   ← INSERT search_try with payment_instrument set
+                         ▼
+                    QST.create searchTry
+                         │
+                         ▼
+              makeSearchRequestForDriverAPIEntity(searchTry)
+                         │
+                         ▼
+                    isPaymentOnline = deriveIsPaymentOnline searchTry.paymentInstrument
 ```
 
 ### Why this approach (and why not the alternatives)
 
-**Store on `SearchRequest`, not on the per-driver `SearchRequestForDriver` rows.**
+**Store on `SearchTry`, not on `SearchRequest`.**
+- `SearchTry` is created at exactly the moment the driver batch is initiated, which is
+  also when `paymentMethodInfo` is in scope (via `DriverSearchBatchInput`). The
+  instrument can therefore be **set during INSERT**, with no separate UPDATE step.
+- `makeSearchRequestForDriverAPIEntity` already receives `searchTry` as a parameter;
+  reading `searchTry.paymentInstrument` requires **zero** new plumbing.
+- `SearchRequest` is created earlier (during the BECKN `search` handler) before payment
+  info is known. Storing there would require a later UPDATE, adding a write-after-insert
+  gap and the risk of the field being missing if the update fails.
+
+**Store on `SearchTry`, not on the per-driver `SearchRequestForDriver` rows.**
 - Payment method is a property of the **ride**, identical for every driver in the
   batch. Putting it on each `SearchRequestForDriver` row duplicates one value across N
   rows with no per-driver meaning.
-- The read side (`buildSearchRequestForDriver`, `makeSearchRequestForDriverAPIEntity`)
-  only has the `SearchRequest` in scope and already re-fetches it from DB, so reading
-  from `SearchRequest` needs **zero** new plumbing.
-- The per-row alternative would force threading `paymentMethodInfo` as a new parameter
-  through `initiateDriverSearchBatch → sendSearchRequestToDrivers →
-  buildSearchRequestForDriver` (three signature changes) for no semantic gain.
 
-**Write once in `initiateDriverSearchBatch`, not in each handler.**
-- It is the single funnel both flows pass through, and it already has both `searchReq`
-  and `paymentMethodInfo` in scope. One write site covers the estimate flow and the
-  direct-quote static-offer flow with no per-handler edits.
+**Write once at creation, not as a separate update.**
+- No UPDATE-after-INSERT means no window where the field is absent from a freshly-
+  created row, and no exception-safety gap between `createNewSearchTry` and the batch
+  notification logic.
+
+**Write once in `buildSearchTry`, not in each handler.**
+- Both popup-bearing flows (`select` and `confirm`/static-offer) call
+  `initiateDriverSearchBatch`, which calls `createNewSearchTry` / `buildSearchTry`.
+  One write site covers both flows with no per-handler edits.
 
 **Store the full `PaymentInstrument`, derive the cash/online flag at the edge.**
 - Mirrors the existing `Booking.paymentInstrument` column
@@ -106,15 +125,15 @@ Confirm.hs (static) ──┘            │
 
 ### Cases handled
 
-- **Estimate / dynamic-offer flow** — payment from `select`, persisted at
-  `initiateDriverSearchBatch`, shown on the post-select popup. ✅
+- **Estimate / dynamic-offer flow** — payment from `select`, set on `SearchTry` at
+  creation inside `initiateDriverSearchBatch`, available to the popup builder
+  immediately. ✅
 - **Direct-quote static-offer flow** (`*OnDemandStaticOffer`) — payment from the
-  booking, persisted at `initiateDriverSearchBatch` (called inside
-  `handleStaticOfferFlow`), shown on the post-confirm popup. ✅
-- **Scheduled rides** — the batch fires later via the allocator
-  (`isAllocatorBatch = True`, so the builder does not re-fetch), but the scheduled job
-  reloads the `SearchRequest` from DB when it runs, so the persisted field survives.
-  ✅ (verify during testing — see Verification).
+  booking, set on `SearchTry` at creation inside `initiateDriverSearchBatch` (called
+  via `handleStaticOfferFlow`), available to the popup builder. ✅
+- **Scheduled rides** — `paymentInstrument` is set on the `SearchTry` row at INSERT
+  time and persisted in the DB. When the allocator fires the deferred batch it re-reads
+  the `SearchTry` from DB, so the field is present. ✅
 
 ### Cases NOT handled (by design)
 
@@ -129,8 +148,8 @@ Confirm.hs (static) ──┘            │
 
 ## Backward Compatibility (hard requirement)
 
-- **DB column is nullable** (`Maybe PaymentInstrument`); existing rows become `NULL`.
-  The generated migration adds the column with no `NOT NULL` and no default. No
+- **DB column is nullable** (`Maybe PaymentInstrument`); existing `search_try` rows
+  become `NULL`. The migration adds the column with no `NOT NULL` and no default. No
   backfill.
 - **Response field is additive `Maybe`**: the popup JSON gains one optional
   `isPaymentOnline` field (`omitNothingFields = True`, so it is absent when `Nothing`).
@@ -138,8 +157,9 @@ Confirm.hs (static) ──┘            │
   as "unknown".
 - **No wire-format change to BECKN** and **no BAP change** — payment already arrives at
   the BPP via `select`/`init` as it does today.
-- **Internal signature change** is limited to a new persistence query and one call
-  site; no public API or BECKN contract changes.
+- **Internal signature change** extends `buildSearchTry`'s positional argument list by
+  one `Maybe PaymentInstrument` parameter; both call sites inside `createNewSearchTry`
+  are updated. No public API or BECKN contract changes.
 - **Default behavior unchanged**: with no instrument known, the popup looks exactly as
   it does today.
 
@@ -155,9 +175,8 @@ Confirm.hs (static) ──┘            │
 ## Verification
 
 - `cd Backend && cabal build dynamic-offer-driver-app` — clean under `-Werror`.
-- Confirm the generator produced a migration in
-  `dev/migrations/dynamic-offer-driver-app/` adding `payment_instrument` to the
-  `search_request` table.
+- Confirm the migration in `dev/migrations-read-only/dynamic-offer-driver-app/search_try.sql`
+  adds `payment_instrument` (nullable, no default) to the `search_try` table.
 - Estimate flow: trigger a search → select with a Cash method, assert the
   `nearbyRideRequest` popup payload has `isPaymentOnline = false`; repeat with an
   online method and assert `true`.
@@ -170,10 +189,11 @@ Confirm.hs (static) ──┘            │
 
 | File | Change |
 |------|--------|
-| `spec/Storage/SearchRequest.yaml` | Add `PaymentInstrument` import + `paymentInstrument: Maybe PaymentInstrument` field |
-| `src-read-only/Domain/Types/SearchRequest.hs` | Generated: field |
-| `src-read-only/Storage/Beam/SearchRequest.hs` | Generated: Beam column |
-| `dev/migrations/dynamic-offer-driver-app/*.sql` | Generated: nullable column |
-| `src/Storage/Queries/SearchRequestExtra.hs` | Add `updatePaymentInstrument` query |
+| `spec/Storage/SearchTry.yaml` | Add `PaymentInstrument` import + `paymentInstrument: Maybe PaymentInstrument` field |
+| `src-read-only/Domain/Types/SearchTry.hs` | Generated: field |
+| `src-read-only/Storage/Beam/SearchTry.hs` | Generated: Beam column |
+| `src-read-only/Storage/Queries/OrphanInstances/SearchTry.hs` | Generated: fromTType'/toTType' |
+| `src-read-only/Storage/Queries/SearchTry.hs` | Generated: updateByPrimaryKey |
+| `dev/migrations-read-only/dynamic-offer-driver-app/search_try.sql` | Nullable column on search_try |
 | `src/SharedLogic/SearchTry.hs` | Persist instrument from `paymentMethodInfo` in `initiateDriverSearchBatch` |
 | `src/Domain/Action/UI/SearchRequestForDriver.hs` | Add `isPaymentOnline` to `SearchRequestForDriverAPIEntity`; derive it in `makeSearchRequestForDriverAPIEntity` |

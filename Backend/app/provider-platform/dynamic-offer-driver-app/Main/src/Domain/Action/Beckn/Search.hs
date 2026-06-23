@@ -673,7 +673,6 @@ buildSearchRequest DSearchReq {..} bapCity mbPickupGateId mbSpecialZoneGateId mb
         numberOfLuggages = numberOfLuggages,
         cloudType = cloudType,
         specialLocationName = mbSpecialLocName,
-        paymentInstrument = Nothing,
         ..
       }
 
