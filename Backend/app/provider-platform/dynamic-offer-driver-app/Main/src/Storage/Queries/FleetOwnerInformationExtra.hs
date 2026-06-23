@@ -366,6 +366,23 @@ updateFleetOwnerEnabledAndVerifiedStatus enabled verified fleetOwnerPersonId = d
     ]
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
+-- | Downgrade-only: set `enabled`/`verified` to False only when the corresponding flag is True,
+--   leaving the other field untouched. (For doc-invalidation; never re-enables/re-verifies.)
+updateFleetOwnerDowngradeStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Bool ->
+  Bool ->
+  Kernel.Types.Id.Id DP.Person ->
+  m ()
+updateFleetOwnerDowngradeStatus disableEnabled disableVerified fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    ( [Se.Set Beam.updatedAt _now]
+        <> [Se.Set Beam.enabled False | disableEnabled]
+        <> [Se.Set Beam.verified False | disableVerified]
+    )
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
 updateBusinessLicenseNumberById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) =>
   Maybe (EncryptedHashed Text) ->

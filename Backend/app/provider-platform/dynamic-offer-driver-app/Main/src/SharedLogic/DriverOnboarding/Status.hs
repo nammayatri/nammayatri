@@ -957,7 +957,8 @@ recomputeDriverVerifiedAndEnabled merchantOpCityId merchantId person allDocVerif
   let allMandatoryDocsValid = checkAllDriverDocsValid' ForVerified (Just isFleetDriver) allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
       allEnablingDocsValid = checkAllDriverDocsValid' ForEnabling (Just isFleetDriver) allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
   when (allMandatoryDocsValid /= driverInfo.verified) $
-    DIQueryExtra.updateVerified allMandatoryDocsValid (cast person.id)
+    -- Downgrading verified revokes approved (re-approval required); the disable branch below does the same.
+    DIQueryExtra.updateVerifiedAndApprovedState (cast person.id) allMandatoryDocsValid (if allMandatoryDocsValid then Nothing else Just False)
   let shouldEnable = allMandatoryDocsValid && allEnablingDocsValid && driverInfo.approved == Just True
   if shouldEnable && not driverInfo.enabled
     then do

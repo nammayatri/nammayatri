@@ -173,6 +173,7 @@ enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verified =
 -- | Set the driver's enabled state to False with analytics + LTS pool sync (the inverse of
 --   'enableAndTriggerOnboardingAlertsAndMessages'). @mbVerified@ optionally co-writes `verified`
 --   (Nothing leaves it untouched). Used by the enableBotFlow recompute when docs become invalid.
+--   Under enableBotFlow the disable also revokes `approved` (handled inside the analytics helper).
 disableDriverWithAnalytics :: Id DMOC.MerchantOperatingCity -> Id Person -> Maybe Bool -> Flow ()
 disableDriverWithAnalytics merchantOpCityId personId mbVerified = do
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)

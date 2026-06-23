@@ -197,6 +197,7 @@ updateDocsVerificationStatusByCertificateNumberHash docsVerificationStatus certi
     [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certificateHash]
 
 -- | Set RC `verified` by cert-number hash; skips no-op writes (the `IS NULL` OR keeps the first write null-safe).
+--   Downgrading `verified` to False also revokes `approved` (re-approval required), mirroring the driver side.
 updateVerifiedByCertificateNumberHash ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe Bool ->
@@ -205,9 +206,11 @@ updateVerifiedByCertificateNumberHash ::
 updateVerifiedByCertificateNumberHash verified certificateHash = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set BeamVRC.verified verified,
-      Se.Set BeamVRC.updatedAt now
-    ]
+    ( [ Se.Set BeamVRC.verified verified,
+        Se.Set BeamVRC.updatedAt now
+      ]
+        <> [Se.Set BeamVRC.approved (Just False) | verified == Just False]
+    )
     [ Se.And
         [ Se.Is BeamVRC.certificateNumberHash $ Se.Eq certificateHash,
           Se.Or
