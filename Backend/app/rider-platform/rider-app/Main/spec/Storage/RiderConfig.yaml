@@ -235,6 +235,7 @@ RiderConfig:
     trackVehicleKeyExpiry: Maybe Int
     distanceToNearestStopThreshold: Maybe Int
     validateSetOnboardingVehicleRequest: Maybe Bool
+    nonAllowedOverrideFleetNoServiceTiers: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
     domainPublicTransportDataVersion: Maybe Int
     updateTicketValidityInSecondsPostSetOnboarding: Maybe Seconds
     enableRideEndOffers: Bool
@@ -308,6 +309,7 @@ RiderConfig:
     busTierSortingConfig: Maybe Value
     specialVehicleNotificationConfigs: Maybe Value
     serviceTierRelationshipCfg: Maybe Value
+    nonAllowedOverrideFleetNoServiceTiers: Maybe Value
     pickupInstructionsThreshold: Maybe Int
     pickupInstructionsProximityMeters: Maybe Int
     initiateFirstMultimodalJourney: Maybe Bool
@@ -375,6 +377,7 @@ RiderConfig:
     boostSearchPreSelectionServiceTierConfig: fromMaybe [] (boostSearchPreSelectionServiceTierConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
     busTierSortingConfig: (busTierSortingConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
     serviceTierRelationshipCfg: (serviceTierRelationshipCfg >>= Kernel.Utils.JSON.valueToMaybe)|E
+    nonAllowedOverrideFleetNoServiceTiers: (nonAllowedOverrideFleetNoServiceTiers >>= Kernel.Utils.JSON.valueToMaybe)|E
     noOfRideRequestsConfig: fromMaybe 5 noOfRideRequestsConfig|E
     busTrackingConfig: busTrackingConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     specialVehicleNotificationConfigs: (specialVehicleNotificationConfigs >>= Kernel.Utils.JSON.valueToMaybe)|E
@@ -436,6 +439,7 @@ RiderConfig:
     boostSearchPreSelectionServiceTierConfig: (Just . Data.Aeson.toJSON)|I
     busTierSortingConfig: (busTierSortingConfig >>= Just . Data.Aeson.toJSON)|E
     serviceTierRelationshipCfg: (serviceTierRelationshipCfg >>= Just . Data.Aeson.toJSON)|E
+    nonAllowedOverrideFleetNoServiceTiers: (nonAllowedOverrideFleetNoServiceTiers >>= Just . Data.Aeson.toJSON)|E
     noOfRideRequestsConfig: Just noOfRideRequestsConfig|E
     busTrackingConfig: busTrackingConfig >>= Just . Data.Aeson.toJSON|E
     specialVehicleNotificationConfigs: (specialVehicleNotificationConfigs >>= Just . Data.Aeson.toJSON)|E
@@ -557,6 +561,7 @@ RiderConfig:
     busTierSortingConfig: "json"
     specialVehicleNotificationConfigs: "json"
     serviceTierRelationshipCfg: "json"
+    nonAllowedOverrideFleetNoServiceTiers: "json"
     metricsBlacklistPatterns: text []
     ptCircuitBreakerConfig: "json"
     staticCustomerIdThresholdDay: date

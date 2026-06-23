@@ -2572,6 +2572,11 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
         else pure vehicleLiveRouteInfo
     Nothing -> JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = journey.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId journey.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigNotFound journey.merchantOperatingCityId.getId)
+  whenJust booking.vehicleNumber $ \bookingVeh ->
+    when (bookingVeh /= vehicleLiveRouteInfo.vehicleNumber) $ do
+      let blockedOverrideTiers = fromMaybe [] riderConfig.nonAllowedOverrideFleetNoServiceTiers
+      when (vehicleLiveRouteInfo.serviceType `elem` blockedOverrideTiers) $
+        throwError $ VehicleServiceTierUnserviceable ("Fleet override from " <> bookingVeh <> " to " <> vehicleLiveRouteInfo.vehicleNumber <> " is not allowed for service tier " <> show vehicleLiveRouteInfo.serviceType)
   let routeStations :: Maybe [FRFSTicketService.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
   let mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
   case mbServiceTier of
