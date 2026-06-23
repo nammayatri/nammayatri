@@ -719,23 +719,47 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
 
     checkAndUpdateEnabledStatus :: Id DMOC.MerchantOperatingCity -> Common.DocumentType -> DP.Person -> Flow Bool
     checkAndUpdateEnabledStatus merchantOpCityId docType person = do
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      let enableBotFlow = transporterConfig.enableBotFlow == Just True
+      -- isMandatory → verified, isMandatoryForEnabling → enabled (deliberately split).
       case person.role of
         role | DCommon.checkFleetOwnerRole role -> do
-          mbFleetVerificationConfig <- QFODVC.findByPrimaryKey (mapDocumentType docType) merchantOpCityId person.role
-          let isMandatory = maybe False (.isMandatory) mbFleetVerificationConfig
-          if isMandatory
+          mbCfg <- QFODVC.findByPrimaryKey (mapDocumentType docType) merchantOpCityId person.role
+          let blocksVerified = maybe False (.isMandatory) mbCfg
+              blocksEnabled = maybe False (\c -> fromMaybe c.isMandatory c.isMandatoryForEnabling) mbCfg
+          if enableBotFlow
             then do
-              QFOI.updateFleetOwnerEnabledStatus False person.id
-              pure True
-            else pure False
+              -- BOT: downgrade enabled/verified independently (single query; leaves non-blocked field untouched).
+              when (blocksEnabled || blocksVerified) $ QFOI.updateFleetOwnerDowngradeStatus blocksEnabled blocksVerified person.id
+              pure (blocksEnabled || blocksVerified)
+            else do
+              -- Legacy: isMandatory drives only enabled.
+              when blocksVerified $ QFOI.updateFleetOwnerEnabledStatus False person.id
+              pure blocksVerified
         DP.DRIVER -> do
-          mbVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just (mapDocumentType docType), vehicleCategory = Just DVCat.CAR}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (mapDocumentType docType) DVCat.CAR Nothing))
-          let isMandatory = maybe False (\config -> fromMaybe config.isMandatory config.isMandatoryForEnabling) mbVerificationConfig
-          when isMandatory $ do
-            transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-            Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig person.id False Nothing
-          pure False
+          mbCfg <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just (mapDocumentType docType), vehicleCategory = Just DVCat.CAR}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (mapDocumentType docType) DVCat.CAR Nothing))
+          let blocksVerified = maybe False (.isMandatory) mbCfg
+              blocksEnabled = maybe False (\c -> fromMaybe c.isMandatory c.isMandatoryForEnabling) mbCfg
+          if enableBotFlow
+            then do
+              applyDriverDocInvalidation transporterConfig person.id blocksEnabled blocksVerified
+              pure (blocksEnabled || blocksVerified)
+            else do
+              -- Legacy: mandatory drives only enabled.
+              when blocksEnabled $ Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig person.id False Nothing
+              pure False
         _ -> pure False
+
+-- | BOT doc invalidation: downgrade enabled/verified separately, and revoke approved.
+--   enabled cases go through analytics (which also revokes approved under BOT); the verified-only case
+--   writes verified+approved in one query (leaving enabled untouched).
+applyDriverDocInvalidation :: DTC.TransporterConfig -> Id DP.Person -> Bool -> Bool -> Flow ()
+applyDriverDocInvalidation transporterConfig personId blocksEnabled blocksVerified =
+  case (blocksEnabled, blocksVerified) of
+    (True, True) -> Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig personId False (Just False)
+    (True, False) -> Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig personId False Nothing
+    (False, True) -> QDriverInfo.updateVerifiedAndApprovedState (cast personId) False (Just False)
+    (False, False) -> pure ()
 
 postDriverRegistrationRegisterDl :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RegisterDLReq -> Flow APISuccess
 postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.RegisterDLReq {..} = do
@@ -1762,11 +1786,18 @@ castReqTypeToDomain = \case
 handleMandatoryDocRejection :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DP.Person -> DVC.DocumentType -> Id DImage.Image -> Flow ()
 handleMandatoryDocRejection _merchantId merchantOperatingCityId driverId docType imageId = do
   docConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, documentType = Just docType, vehicleCategory = Nothing}) (Just (CQDVC.findByMerchantOpCityIdAndDocumentType merchantOperatingCityId docType Nothing))
-  let isMandatory = Kernel.Prelude.any (\cfg -> fromMaybe cfg.isMandatory cfg.isMandatoryForEnabling) docConfigs
-  when isMandatory $ do
+  -- isMandatory → verified, isMandatoryForEnabling → enabled (split).
+  let blocksVerified = Kernel.Prelude.any (.isMandatory) docConfigs
+      blocksEnabled = Kernel.Prelude.any (\cfg -> fromMaybe cfg.isMandatory cfg.isMandatoryForEnabling) docConfigs
+  when (blocksEnabled || blocksVerified) $ do
     transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
     let isVehicleDoc = docType `elem` SDO.defaultVehicleDocumentTypes
         separateEnablement = transporterConfig.separateDriverVehicleEnablement == Just True
+        -- BOT splits enabled/verified; legacy disables both together.
+        disableDriver =
+          if transporterConfig.enableBotFlow == Just True
+            then applyDriverDocInvalidation transporterConfig driverId blocksEnabled blocksVerified
+            else QDriverInfo.updateEnabledVerifiedState (cast driverId) False (Just False) Nothing
     if isVehicleDoc
       then do
         -- Resolve the specific RC tied to the rejected document
@@ -1777,10 +1808,9 @@ handleMandatoryDocRejection _merchantId merchantOperatingCityId driverId docType
             QRCAssoc.deactivateRCForDriver False driverId rcId
             QVehicle.deleteByDriverid driverId
             -- If not separate enablement, also disable the driver
-            unless separateEnablement $
-              QDriverInfo.updateEnabledVerifiedState (cast driverId) False (Just False)
+            unless separateEnablement disableDriver
       else -- Driver doc rejected: disable the driver
-        QDriverInfo.updateEnabledVerifiedState (cast driverId) False (Just False)
+        disableDriver
 
 resolveRcIdFromDocument :: DVC.DocumentType -> Id DImage.Image -> Flow (Maybe (Id DRC.VehicleRegistrationCertificate))
 resolveRcIdFromDocument docType imageId = case docType of
