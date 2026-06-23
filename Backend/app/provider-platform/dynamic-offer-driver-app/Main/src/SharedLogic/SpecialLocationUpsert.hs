@@ -188,15 +188,15 @@ parseGateTags fieldValue =
       let tagList = filter (not . T.null) $ map T.strip $ T.splitOn "," tags
        in if null tagList then Nothing else Just tagList
 
--- | Parse an optional comma-separated list of payment modes (e.g. "CASH,ONLINE").
---   Returns Nothing when the field is empty/absent or any token is not a valid
---   'PaymentMode', so the caller can fall back to the default.
-parsePaymentModes :: Maybe Text -> Maybe [SL.PaymentMode]
-parsePaymentModes mbFieldValue = do
-  raw <- mbFieldValue >>= cleanField
-  let tokens = filter (not . T.null) $ map T.strip $ T.splitOn "," raw
-  modes <- traverse (readMaybe . T.unpack) tokens
-  if null modes then Nothing else Just modes
+-- | Resolve the payment-modes CSV cell, throwing on an invalid token (rather than
+--   silently dropping it). Returns 'Nothing' when the cell is omitted/blank so the
+--   merge step can distinguish "not provided" (preserve existing / default on create)
+--   from an explicit value. Parsing/normalization live in 'SL.parsePaymentModes'.
+resolvePaymentModes :: Int -> Maybe Text -> Flow (Maybe [SL.PaymentMode])
+resolvePaymentModes idx mbFieldValue =
+  case SL.parsePaymentModes mbFieldValue of
+    Left badToken -> throwError $ InvalidRequest $ "Invalid payment mode: " <> badToken <> " at row: " <> show idx
+    Right mbModes -> pure mbModes
 
 ---------------------------------------------------------------------
 -- Main Upsert Function
@@ -266,7 +266,6 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
       mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
       supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
       mbRender :: Maybe DSL.RenderType = readMaybeCSVField idx (fromMaybe "" row.render) "Render"
-      mbPaymentModes :: Maybe [SL.PaymentMode] = parsePaymentModes row.paymentModes
   pickupPriority :: Int <- readCSVField idx row.pickupPriority "Pickup Priority"
   dropPriority :: Int <- readCSVField idx row.dropPriority "Drop Priority"
   gateInfoId <- maybe generateGUID (pure . Id) (cleanField =<< row.gateInfoId)
@@ -290,6 +289,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
         gateGeom <- GGeom.getGeoJsonFromKML gateInfoGeomFile >>= fromMaybeM (InvalidRequest $ "Not able to convert the given KML to GeoJSON for gateInfo: " <> gateInfoName)
         return $ Just gateGeom
       else return Nothing
+  resolvedPaymentModes <- resolvePaymentModes idx row.paymentModes
   let specialLocation =
         DSL.SpecialLocation
           { id = Id locationName,
@@ -311,7 +311,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             enforceTollRoute = mbEnforceTollRoute,
             render = mbRender,
             supportNumber = supportNumber,
-            paymentModes = Just (fromMaybe [SL.CASH] mbPaymentModes)
+            paymentModes = resolvedPaymentModes
           }
       gateInfo =
         DGI.GateInfo
@@ -443,9 +443,11 @@ processSpecialLocationAndGatesGroup opCity merchantOpCity specialLocationAndGate
 -- for fields parsed via `optional` in the FromNamedRecord instance.
 ---------------------------------------------------------------------
 mergeSpecialLocationWithExisting :: DSL.SpecialLocation -> Maybe DSL.SpecialLocation -> DSL.SpecialLocation
-mergeSpecialLocationWithExisting new Nothing = new
+mergeSpecialLocationWithExisting new Nothing =
+  new{DSL.paymentModes = new.paymentModes <|> Just SL.defaultPaymentModes}
 mergeSpecialLocationWithExisting new (Just old) =
-  new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled
+  new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled,
+      DSL.paymentModes = new.paymentModes <|> old.paymentModes
      }
 
 mergeGateInfoWithExisting :: DGI.GateInfo -> Maybe DGI.GateInfo -> DGI.GateInfo
