@@ -176,7 +176,7 @@ onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
             logInfo "Merchant not configured to send dashboard sms"
   case booking.bookingDetails of
     DRB.DriverOfferDetails _ -> return ()
-    _ -> void $ QRB.updateStatus booking.id DRB.CONFIRMED
+    _ -> void $ QRB.updateStatus booking.riderId booking.id DRB.CONFIRMED
 -- TODO: Find a Better way to remove this from on_confirm.
 -- void $ QRB.updateStatus booking.id DRB.CONFIRMED
 onConfirm (ValidatedRideAssigned req) = DCommon.rideAssignedReqHandler req

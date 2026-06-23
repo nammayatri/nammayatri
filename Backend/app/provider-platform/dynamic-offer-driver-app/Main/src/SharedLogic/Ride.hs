@@ -592,7 +592,7 @@ deactivateExistingQuotes :: Id DTMM.MerchantOperatingCity -> Id Merchant -> Id P
 deactivateExistingQuotes merchantOpCityId merchantId quoteDriverId searchTryId estimatedFare mbTransporterConfig = do
   driverSearchReqs <- QSRD.findAllActiveBySTId searchTryId SReqD.Active
   QDQ.setInactiveBySTId searchTryId
-  QSRD.setInactiveBySTId searchTryId
+  QSRD.setInactiveBySTId (Just driverSearchReqs) searchTryId.getId
   transporterConfig <- case mbTransporterConfig of
     Just transporterConfig -> pure transporterConfig
     Nothing -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
