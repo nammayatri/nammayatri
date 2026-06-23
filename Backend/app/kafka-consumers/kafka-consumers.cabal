@@ -34,6 +34,7 @@ library
       Processor.FleetCommunication.Processor
       Processor.LocationUpdate.Processor
       Processor.LocationUpdate.Types
+      Processor.Rewards.Processor
       Processor.RideEvents.Handlers
       Processor.RideEvents.Idempotency
       Processor.RideEvents.InternalHelpers

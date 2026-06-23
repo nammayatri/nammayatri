@@ -30,6 +30,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as Text
 import Data.Time hiding (getCurrentTime)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import qualified Domain.Action.Rewards.Producer as RewardsProducer
 import Domain.Action.UI.Cancel (makeCustomerBlockingKey)
 import Domain.Action.UI.HotSpot
 import Domain.Action.UI.RidePayment as Reexport
@@ -1125,6 +1126,13 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   when (isJust paymentStatus && booking.paymentStatus /= Just DRB.PAID) $ QRB.updatePaymentStatus booking.id (fromJust paymentStatus)
   whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
   QRide.updateMultiple updRide.id updRide
+  fork "Increment completed count for rider stats" $ do
+    void $ CCR.incrementCompletedCount booking.riderId 1
+  fork "Publish reward eval requested" $ do
+    RewardsProducer.publishRewardEvalRequested
+      booking.riderId
+      booking.merchantOperatingCityId
+      (fromMaybe now rideEndTime)
   offerDiscountBreakup <-
     if rideDiscountAmount > 0
       then do

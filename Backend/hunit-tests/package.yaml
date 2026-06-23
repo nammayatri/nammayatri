@@ -98,6 +98,9 @@ library:
     - EmailOtpUnitTests
     - MerchantDocumentUnitTests
     - MediaFileUploadStatusUnitTests
+    - RewardsEvaluatorTests
+    - RewardsCouponTemplatedTests
+    - RewardsCouponPoolTests
 
 executables:
   hunit-tests:

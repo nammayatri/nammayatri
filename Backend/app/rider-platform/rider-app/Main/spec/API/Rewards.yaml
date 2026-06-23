@@ -1,0 +1,57 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  RewardUnlock: Domain.Types.RewardUnlock
+  UnlockStatus: Domain.Types.RewardUnlock
+  RedemptionTargetType: Domain.Types.RewardCampaign
+  Value: Data.Aeson
+  APISuccess: Kernel.Types.APISuccess
+
+module: Rewards
+
+types:
+  RewardUnlockSummary:
+    unlockId: Id RewardUnlock
+    campaignName: Text
+    sponsorName: Text
+    sponsorLogoUrl: Maybe Text
+    cohortName: Text
+    rewardTitle: Text
+    rewardImageUrl: Maybe Text
+    unlockedAt: UTCTime
+    status: UnlockStatus
+    couponValidTill: Maybe UTCTime
+    couponCode: Maybe Text
+    redemptionTargetType: RedemptionTargetType
+    redemptionTargetUrl: Maybe Text
+    claimedAt: Maybe UTCTime
+    presentation: Maybe Value
+
+  ClaimCouponResp:
+    couponCode: Maybe Text
+    redemptionTargetType: RedemptionTargetType
+    redemptionTargetUrl: Maybe Text
+    couponValidTill: Maybe UTCTime
+
+apis:
+  - GET:
+      endpoint: /rewards
+      auth: TokenAuth
+      response:
+        type: "[RewardUnlockSummary]"
+
+  - POST:
+      endpoint: /rewards/{unlockId}/claim
+      auth: TokenAuth
+      params:
+        unlockId: Id RewardUnlock
+      response:
+        type: ClaimCouponResp
+
+  - POST:
+      endpoint: /rewards/{unlockId}/redeemed
+      auth: TokenAuth
+      params:
+        unlockId: Id RewardUnlock
+      response:
+        type: APISuccess

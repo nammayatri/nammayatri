@@ -1,0 +1,73 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Value: Data.Aeson
+
+RewardCampaign:
+  tableName: reward_campaign
+  derives: "Generic, Show, Eq"
+  fields:
+    id: Id RewardCampaign
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    name: Text
+    description: Maybe Text
+    sponsorType: SponsorType
+    sponsorName: Text
+    sponsorLogoUrl: Maybe Text
+    couponSourceType: CouponSourceType
+    couponTemplate: Maybe Text
+    redemptionTargetType: RedemptionTargetType
+    redemptionTargetUrl: Maybe Text
+    claimMode: ClaimMode
+    reclaimPolicy: Maybe Value
+    startsAt: UTCTime
+    endsAt: Maybe UTCTime
+    status: CampaignStatus
+    displayOrder: Int
+    createdBy: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  types:
+    SponsorType:
+      enum: "Internal, External"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+    CouponSourceType:
+      enum: "Pool, Templated"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+    RedemptionTargetType:
+      enum: "InApp, ExternalUrl, ExternalManual"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+    ClaimMode:
+      enum: "AutoClaim, ManualClaim"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+    CampaignStatus:
+      enum: "Draft, Active, Paused, Ended"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SponsorType>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <SponsorType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CouponSourceType>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <CouponSourceType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <RedemptionTargetType>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <RedemptionTargetType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ClaimMode>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <ClaimMode>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CampaignStatus>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <CampaignStatus>
+  constraints:
+    id: PrimaryKey
+  default:
+    claimMode: "'AutoClaim'"
+    status: "'Draft'"
+    displayOrder: "0"
+  fromTType:
+    reclaimPolicy: Kernel.Prelude.identity|I
+  toTType:
+    reclaimPolicy: Kernel.Prelude.identity|I
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+  extraOperations:
+    - EXTRA_QUERY_FILE
