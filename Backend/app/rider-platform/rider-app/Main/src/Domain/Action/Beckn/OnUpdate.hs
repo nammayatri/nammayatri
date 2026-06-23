@@ -474,7 +474,7 @@ onUpdate = \case
   OUValidatedBookingReallocationReq ValidatedBookingReallocationReq {..} -> do
     mbRide <- QRide.findActiveByRBId booking.id
     bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) reallocationSource
-    void $ QRB.updateStatus booking.id DRB.AWAITING_REASSIGNMENT
+    void $ QRB.updateStatus booking.riderId booking.id DRB.AWAITING_REASSIGNMENT
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     QBCR.upsert bookingCancellationReason
     void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
@@ -489,7 +489,7 @@ onUpdate = \case
     logTagInfo ("EstimateId-" <> getId estimate.id) "Estimate repetition."
 
     void $ QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimate.id
-    void $ QRB.updateStatus booking.id DRB.REALLOCATED
+    void $ QRB.updateStatus booking.riderId booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     void $ QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, otherSelectedEstimates = Nothing, validTill = searchReq.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
     void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
@@ -532,7 +532,7 @@ onUpdate = \case
     QBPL.makeAllInactiveByBookingId booking.id
     void $ QRB.createBooking newBooking
     void $ QBPL.createMany newBookingParties
-    void $ QRB.updateStatus booking.id DRB.REALLOCATED
+    void $ QRB.updateStatus booking.riderId booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     void $ QPFS.updateStatus booking.riderId flowStatus
     void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id

@@ -53,26 +53,29 @@ createMany = traverse_ createOne
       let endTime = T.addUTCTime (-60) now -- conservative 1min lookback time to accomodate different configs for SearchRequestForDriver expiry
       void $ Hedis.withCrossAppRedis $ Hedis.zRemRangeByScore (searchReqestForDriverkey driverId) (utcToMilliseconds startTime) (utcToMilliseconds endTime)
 
-setInactiveBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HedisFlow m r) => Id SearchTry -> m ()
-setInactiveBySTId (Id searchTryId) = do
-  srfds <- findAllWithKV [Se.And [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId), Se.Is BeamSRFD.status (Se.Eq Domain.Active)]]
+setInactiveBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HedisFlow m r) => Maybe [SearchRequestForDriver] -> Text -> m ()
+setInactiveBySTId mbSrfds searchTryId = do
+  srfds <-
+    case mbSrfds of
+      Just srfds -> pure srfds
+      Nothing -> findAllWithKVAndConditionalDB [Se.And [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId), Se.Is BeamSRFD.status (Se.Eq Domain.Active)]] Nothing
   now <- getCurrentTime
-  mapM_
-    ( \s -> do
-        (personOS, merchantOpCityId) <- getDriverMobileType (Domain.driverId s)
-        transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing
-        isDriverValid <- isDriverValidToCache (transporterConfig <&> TC.cachedDevicesOSForSearchRequest) personOS
-        when isDriverValid do
-          void $ Hedis.withCrossAppRedis $ Hedis.zRem (searchReqestForDriverkey $ getId $ Domain.driverId s) [getId $ Domain.id s]
-    )
-    srfds -- this will remove the key from redis
+  fork "updating SRFD cache in BG" $
+    mapM_
+      ( \s -> do
+          (personOS, merchantOpCityId) <- getDriverMobileType (Domain.driverId s)
+          transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing
+          isDriverValid <- isDriverValidToCache (transporterConfig <&> TC.cachedDevicesOSForSearchRequest) personOS
+          when isDriverValid do
+            void $ Hedis.withCrossAppRedis $ Hedis.zRem (searchReqestForDriverkey $ getId $ Domain.driverId s) [getId $ Domain.id s]
+      )
+      srfds -- this will remove the key from redis
   updateWithKV
     [Se.Set BeamSRFD.status Domain.Inactive, Se.Set BeamSRFD.updatedAt (Just now)]
     [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId)]
 
-setInactiveAndPulledByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id SearchRequestForDriver] -> m ()
-setInactiveAndPulledByIds srdIds = do
-  srfds <- findAllWithKV [Se.And [Se.Is BeamSRFD.id (Se.In $ (.getId) <$> srdIds), Se.Is BeamSRFD.status (Se.Eq Domain.Active)]]
+setInactiveAndPulledByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [SearchRequestForDriver] -> m ()
+setInactiveAndPulledByIds srfds = do
   now <- getCurrentTime
   mapM_
     ( \s -> do
@@ -88,7 +91,7 @@ setInactiveAndPulledByIds srdIds = do
       Se.Set BeamSRFD.response (Just Domain.Pulled),
       Se.Set BeamSRFD.updatedAt (Just now)
     ]
-    [Se.Is BeamSRFD.id (Se.In $ (.getId) <$> srdIds)]
+    [Se.Is BeamSRFD.id (Se.In $ (.id.getId) <$> srfds)]
 
 findByDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HedisFlow m r) => Id Person -> m [SearchRequestForDriver]
 findByDriver (Id driverId) = do
