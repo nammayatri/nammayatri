@@ -36,6 +36,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler
@@ -83,6 +84,7 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
       statusForRetry = jobData.statusForRetry
       toScheduleNextPayout = jobData.toScheduleNextPayout
       schedulePayoutForDay = jobData.schedulePayoutForDay
+      actor = Finance.System -- using System for job handlers
   payoutConfigList <- getConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, isPayoutEnabled = Just True}) (Just (CQPC.findAllByMerchantOpCityId merchantOpCityId Nothing))
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let reschuleTimeDiff = listToMaybe payoutConfigList <&> (.timeDiff)
@@ -95,7 +97,7 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
   statsWithVpaList <- mapM getStatsWithVpaList dStatsList
   let dailyStatsWithVpaList = filter (\dsv -> (isJust dsv.payoutVpa && dsv.dInfo.payoutVpaStatus /= Just DI.MANUALLY_ADDED) && (dsv.dInfo.isBlockedForReferralPayout /= Just True)) statsWithVpaList -- filter blocked drivers
   -- Process registration refunds independently of daily-stats batch
-  processScheduledRegistrationRefunds merchantOpCityId payoutConfigList
+  processScheduledRegistrationRefunds merchantOpCityId payoutConfigList actor
   if null dailyStatsForEveryDriverList
     then do
       when toScheduleNextPayout $ do
@@ -117,7 +119,7 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
     else do
       for_ dailyStatsWithVpaList $ \executionData -> do
         fork ("processing Payout for DriverId : " <> executionData.dailyStats.driverId.getId) $ do
-          callPayout executionData.dailyStats executionData.dInfo executionData.payoutVpa payoutConfigList statusForRetry
+          callPayout executionData.dailyStats executionData.dInfo executionData.payoutVpa payoutConfigList statusForRetry actor
 
       ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
   where
@@ -152,13 +154,14 @@ callPayout ::
   Maybe Text ->
   [DPC.PayoutConfig] ->
   DS.PayoutStatus ->
+  Finance.Actor ->
   m ()
-callPayout ds driverInfo payoutVpa payoutConfigList statusForRetry = do
+callPayout ds driverInfo payoutVpa payoutConfigList statusForRetry actor = do
   isLocked <- dailyStatsLock ds.id
   if isLocked
     then do
       finally
-        (callPayoutHandler ds driverInfo payoutVpa payoutConfigList statusForRetry)
+        (callPayoutHandler ds driverInfo payoutVpa payoutConfigList statusForRetry actor)
         ( do
             Redis.unlockRedis (dailyStatsLockKey ds.id)
         )
@@ -184,8 +187,9 @@ callPayoutHandler ::
   Maybe Text ->
   [DPC.PayoutConfig] ->
   DS.PayoutStatus ->
+  Finance.Actor ->
   m ()
-callPayoutHandler DS.DailyStats {..} _driverInfo payoutVpa payoutConfigList statusForRetry = do
+callPayoutHandler DS.DailyStats {..} _driverInfo payoutVpa payoutConfigList statusForRetry actor = do
   mbVehicle <- QV.findById driverId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   let payoutConfig' = find (\payoutConfig -> payoutConfig.vehicleCategory == vehicleCategory) payoutConfigList
@@ -218,7 +222,7 @@ callPayoutHandler DS.DailyStats {..} _driverInfo payoutVpa payoutConfigList stat
                   logDebug $ "calling create payoutOrder with driverId: " <> driverId.getId <> " | amount: " <> show directBase <> " | orderId: " <> show uid
                   let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount merchantOperatingCity.currency phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) payoutVpa payoutConfig.orderType payoutServiceFlow Nothing
                       createPayoutOrderCall = TP.createPayoutOrder payoutServiceName person.merchantOperatingCityId person.id mbPersonBankAccount
-                  mbPayoutOrderResp <- withTryCatch "createPayoutService:callPayout" $ Payout.createPayoutService (cast person.merchantId) (cast <$> merchantOperatingCityId) (cast driverId) (Just [id]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
+                  mbPayoutOrderResp <- withTryCatch "createPayoutService:callPayout" $ Payout.createPayoutService (cast person.merchantId) (cast <$> merchantOperatingCityId) (cast driverId) (Just [id]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing actor
                   errorCatchAndHandle id driverId.getId uid mbPayoutOrderResp payoutConfig statusForRetry (\_ -> pure ())
                 else do
                   Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId.getId) 3 3 $ do
@@ -284,8 +288,9 @@ processScheduledRegistrationRefunds ::
   ) =>
   Id DMOC.MerchantOperatingCity ->
   [DPC.PayoutConfig] ->
+  Finance.Actor ->
   m ()
-processScheduledRegistrationRefunds merchantOpCityId payoutConfigList = do
+processScheduledRegistrationRefunds merchantOpCityId payoutConfigList actor = do
   pendingRefundFees <- QDF.findPendingRegistrationRefunds (Just 50) (cast merchantOpCityId) DPlan.YATRI_SUBSCRIPTION
   for_ pendingRefundFees $ \driverFee -> do
     let driverId = driverFee.driverId
@@ -320,7 +325,7 @@ processScheduledRegistrationRefunds merchantOpCityId payoutConfigList = do
                     entityName = DLP.REGISTRATION_REFUND
                     createPayoutOrderCall = TP.createPayoutOrder payoutServiceName person.merchantOperatingCityId person.id mbPersonBankAccount
                 logDebug $ "Initiating scheduled registration refund for driverId: " <> driverId.getId <> " | amount: " <> show registrationAmount <> " | orderId: " <> uid
-                result <- try @_ @SomeException $ Payout.createPayoutService (cast person.merchantId) (Just $ cast driverFee.merchantOperatingCityId) (cast driverId) Nothing (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
+                result <- try @_ @SomeException $ Payout.createPayoutService (cast person.merchantId) (Just $ cast driverFee.merchantOperatingCityId) (cast driverId) Nothing (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing actor
                 case result of
                   Right _ -> pure ()
                   Left err -> do

@@ -13,6 +13,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
 import Kernel.Types.Id (Id (..), cast)
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import Lib.LocationUpdates (LocationUpdateFlow)
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -98,10 +99,11 @@ executeSpecialZonePayoutRequest ::
     LocationUpdateFlow m r c
   ) =>
   DPR.PayoutRequest ->
+  Finance.Actor ->
   m ()
-executeSpecialZonePayoutRequest payoutRequest = do
+executeSpecialZonePayoutRequest payoutRequest actor = do
   SharedRide.safeApplyVehicleBalanceForPayout payoutRequest
-  _ <- SpecialZonePayout.executeSpecialZonePayout payoutRequest
+  _ <- SpecialZonePayout.executeSpecialZonePayout payoutRequest actor
   pure ()
 
 castPayoutOrderStatusToPayoutRequestStatus :: IPayout.PayoutOrderStatus -> DPR.PayoutRequestStatus

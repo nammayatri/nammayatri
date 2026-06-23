@@ -28,6 +28,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance (AccountRole (..), FinanceCtx, runFinance, transfer)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Invoice.Interface as InvoiceI
 import qualified Lib.Finance.Invoice.Service as InvoiceSvc
@@ -44,8 +45,8 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
-populateTipAmount :: Id Ride -> HighPrecMoney -> Maybe Text -> Flow APISuccess
-populateTipAmount rideId tipAmount apiKey = do
+populateTipAmount :: Id Ride -> HighPrecMoney -> Maybe Text -> Finance.Actor -> Flow APISuccess
+populateTipAmount rideId tipAmount apiKey actor = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let merchantId = fromMaybe booking.providerId ride.merchantId
@@ -75,11 +76,11 @@ populateTipAmount rideId tipAmount apiKey = do
           Just _driverInfo -> do
             mbPanCard <- pure Nothing -- panCard lookup not strictly required for invoice regeneration
             -- Tip payment is always platform-mediated via the rider's card → isOnline=True.
-            ctx <- Wallet.buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig True
+            ctx <- Wallet.buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig True actor
             -- Step 1a: reverse any prior Tips entries (handles multi-tip-update edge case)
             let priorTipsEntries = List.filter (\e -> e.referenceType == Wallet.walletReferenceTips) priorCtx.priorEntries
             forM_ priorTipsEntries $ \e -> do
-              rRes <- LedgerSvc.createReversal e.id "tip-update: superseded by new tip amount"
+              rRes <- LedgerSvc.createReversal e.id "tip-update: superseded by new tip amount" actor
               case rRes of
                 Left err -> logError $ "Failed to reverse prior Tips entry " <> e.id.getId <> ": " <> show err
                 Right _ -> pure ()
@@ -130,7 +131,7 @@ populateTipAmount rideId tipAmount apiKey = do
       Aeson.Error err -> error $ "PopulateTipAmount.parseLineItems: prior invoice lineItems failed to decode: " <> T.pack err
 
     invoiceToInput :: FInvoice.Invoice -> FinanceCtx -> [InvoiceI.InvoiceLineItem] -> InvoiceI.InvoiceInput
-    invoiceToInput inv ctx lineItems =
+    invoiceToInput inv ctx lineItems = do
       InvoiceI.InvoiceInput
         { invoiceType = inv.invoiceType,
           paymentOrderId = inv.paymentOrderId,
@@ -168,5 +169,6 @@ populateTipAmount rideId tipAmount apiKey = do
           issuedByTaxNo = Nothing,
           paymentMode = inv.paymentMode, -- preserve original; tip regen doesn't change payment method
           periodStart = inv.periodStart, -- preserve original (Nothing for non-aggregated invoices)
-          periodEnd = inv.periodEnd
+          periodEnd = inv.periodEnd,
+          actor
         }

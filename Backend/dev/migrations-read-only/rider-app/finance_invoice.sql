@@ -63,3 +63,9 @@ ALTER TABLE atlas_app.finance_invoice ADD COLUMN period_end timestamp with time 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN signed_qr_code text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_invoice ADD COLUMN updated_by text ;
+ALTER TABLE atlas_app.finance_invoice ADD COLUMN created_by text ;

@@ -31,6 +31,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Action as LibPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.Common as LibPayment
@@ -144,9 +145,10 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
 
   -- PaymentServiceType for createOrderService (STCL)
   let paymentServiceType = fromMaybe DOrder.STCL req.paymentServiceType
+      actor = Finance.Person driverId.getId
 
   -- Create payment order
-  createOrderResp <- SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) createOrderReq (Just paymentServiceType)
+  createOrderResp <- SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) createOrderReq (Just paymentServiceType) actor
 
   -- Encrypt sensitive fields for storage (aadharNumber from frontend is ignored - not stored)
   encryptedPAN <- encrypt req.panNumber
@@ -231,6 +233,7 @@ postBuyAdditionalShares ::
   )
 postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = do
   driverId <- mbDriverId & fromMaybeM (InvalidRequest "Driver ID not found in authentication context")
+  let actor = Finance.Person driverId.getId
 
   when (req.numberOfShares <= 0) $
     throwError $ InvalidRequest "numberOfShares must be greater than 0"
@@ -332,7 +335,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
                   autoRefundPostSuccess = Nothing,
                   paymentFilter = Nothing
                 }
-        SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) resumeReq (Just paymentServiceType)
+        SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) resumeReq (Just paymentServiceType) actor
       Nothing -> do
         -- No PENDING (or the in-flight one was mismatched and just retired above): create a new top-up.
         let existingShares = sum (map Domain.numberOfShares submittedApps)
@@ -382,7 +385,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
                   paymentFilter = Nothing
                 }
 
-        createOrderResp <- SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) createOrderReq (Just paymentServiceType)
+        createOrderResp <- SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) createOrderReq (Just paymentServiceType) actor
 
         -- New PENDING row inherits KYC/address/bank/vehicle/nominee/declaration from the latest SUBMITTED row.
         -- The share-allocation fields are left Nothing and will be populated by stclMemberShipOrderStatusHandler

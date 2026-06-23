@@ -21,6 +21,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import qualified Lib.Finance.Account.Service as FAccountSvc
+import Lib.Finance.Core.Types (Actor)
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import qualified Lib.Finance.Domain.Types.LedgerEntry as FLE
 import Lib.Finance.Error.Types (FinanceError (..), LedgerErrorCode (..))
@@ -127,8 +128,8 @@ getOrCreateWalletForPerson personId programType programId currency merchantId mb
       QWallet.create wallet
       pure (wallet, account)
 
-mkLoyaltyFinanceCtx :: DWallet.Wallet -> Text -> Finance.FinanceCtx
-mkLoyaltyFinanceCtx wallet refId =
+mkLoyaltyFinanceCtx :: DWallet.Wallet -> Text -> Actor -> Finance.FinanceCtx
+mkLoyaltyFinanceCtx wallet refId actor =
   Finance.FinanceCtx
     { merchantId = wallet.merchantId,
       merchantOpCityId = fromMaybe "" wallet.merchantOperatingCityId,
@@ -153,7 +154,8 @@ mkLoyaltyFinanceCtx wallet refId =
       panOfParty = Nothing,
       panType = Nothing,
       tdsRateReason = Nothing,
-      emitLedgerEntries = True
+      emitLedgerEntries = True,
+      actor
     }
 
 data LedgerWriteOutcome
@@ -166,10 +168,11 @@ runLoyaltyTransfer ::
   (FBeamFlow.BeamFlow m r, MonadFlow m) =>
   DWallet.Wallet ->
   Text -> -- referenceId for the FinanceCtx (== ledger entry's reference_id)
+  Actor ->
   Finance.FinanceM m (Maybe (Id FLE.LedgerEntry)) ->
   m (Either FinanceError LedgerWriteOutcome)
-runLoyaltyTransfer wallet refId action = do
-  result <- Finance.runFinance (mkLoyaltyFinanceCtx wallet refId) action
+runLoyaltyTransfer wallet refId actor action = do
+  result <- Finance.runFinance (mkLoyaltyFinanceCtx wallet refId actor) action
   case result of
     Left err -> pure (Left err)
     Right (Just entryId, _) -> pure (Right (WrittenNew entryId))
@@ -202,8 +205,9 @@ recordLoyaltyHistory ::
   DWP.WalletPaymentKind ->
   HighPrecMoney -> -- aggregated points across this (program, kind) for the transaction
   Text -> -- domainEntityId (used as refId)
+  Actor ->
   m (Either FinanceError LedgerWriteOutcome)
-recordLoyaltyHistory wallet kind points domainEntityId = do
+recordLoyaltyHistory wallet kind points domainEntityId actor = do
   let (refTypeEnum, source, dest) = historyLedgerLegs kind
       refType = loyaltyReferenceTypeText refTypeEnum
   entriesForWallet <- findEntriesForWallet kind refType domainEntityId wallet.accountId
@@ -213,6 +217,7 @@ recordLoyaltyHistory wallet kind points domainEntityId = do
       runLoyaltyTransfer
         wallet
         domainEntityId
+        actor
         (Finance.transfer source dest points refType)
 
 recordLoyaltyHistoryReversal ::
@@ -220,8 +225,9 @@ recordLoyaltyHistoryReversal ::
   DWallet.Wallet ->
   DWP.WalletPaymentKind ->
   Text -> -- domainEntityId
+  Actor ->
   m (Either FinanceError LedgerWriteOutcome)
-recordLoyaltyHistoryReversal wallet kind domainEntityId = do
+recordLoyaltyHistoryReversal wallet kind domainEntityId actor = do
   let (refTypeEnum, _, _) = historyLedgerLegs kind
       refType = loyaltyReferenceTypeText refTypeEnum
   entriesForWallet <- findEntriesForWallet kind refType domainEntityId wallet.accountId
@@ -231,7 +237,7 @@ recordLoyaltyHistoryReversal wallet kind domainEntityId = do
       case findReversalOf original.id entriesForWallet of
         Just rev -> pure (Right (AlreadyWritten rev.id))
         Nothing -> do
-          res <- FLedger.createReversal original.id "Juspay loyalty entry reversed"
+          res <- FLedger.createReversal original.id "Juspay loyalty entry reversed" actor
           pure $ fmap (WrittenNew . (.id)) res
 
 nonReversalEntries :: [FLE.LedgerEntry] -> [FLE.LedgerEntry]
@@ -323,10 +329,11 @@ processLoyaltyInfoFromOrderStatus ::
   DOrder.PaymentOrder ->
   Text -> -- domainEntityId (e.g. frfs_ticket_booking_payment.id; caller falls back to orderId when absent) — stamped on each WalletHistory row
   Payment.LoyaltyInfo ->
+  Actor ->
   (Text -> m (Maybe FAccount.CounterpartyType)) -> -- resolveProgram
   m [LoyaltyProgramSummary] -> -- fetchFullInfo
   m ()
-processLoyaltyInfoFromOrderStatus personId order domainEntityId loyalty resolveProgram fetchFullInfo = do
+processLoyaltyInfoFromOrderStatus personId order domainEntityId loyalty actor resolveProgram fetchFullInfo = do
   let merchantId = order.merchantId.getId
       mbMerchantOperatingCityId = (.getId) <$> order.merchantOperatingCityId
       currency = order.currency
@@ -347,6 +354,8 @@ processLoyaltyInfoFromOrderStatus personId order domainEntityId loyalty resolveP
       <> show (length loyalty.earnDetails)
       <> " burnCount="
       <> show (length loyalty.burnDetails)
+      <> " actor="
+      <> show actor
 
   let payloadTotalEarned = sum (map (.points) loyalty.earnDetails)
       payloadTotalBurned = sum [sum (map (.points) burn.burnOptions) | burn <- loyalty.burnDetails]
@@ -387,7 +396,7 @@ processLoyaltyInfoFromOrderStatus personId order domainEntityId loyalty resolveP
             buckets = baseBucket ++ campaignBuckets
         forM_ buckets $ \(mbCampaignId, pts, mbBucketReversed) ->
           void $ upsertWalletHistory wp wallet programType kind mbCampaignId pts mbBucketReversed Nothing domainEntityId
-        processProgramLedger wallet kind earn.points domainEntityId isOrderCharged earn.reversedPoints
+        processProgramLedger wallet kind earn.points domainEntityId isOrderCharged earn.reversedPoints actor
 
   forM_ loyalty.burnDetails $ \burn -> do
     mbProgramType <- resolveProgram burn.programId
@@ -404,7 +413,7 @@ processLoyaltyInfoFromOrderStatus personId order domainEntityId loyalty resolveP
           (wallet, _acc) <-
             getOrCreateWalletForPerson personId programType burn.programId currency merchantId mbMerchantOperatingCityId
           void $ upsertWalletHistory wp wallet programType DWP.BURN Nothing totalPoints burn.reversedPoints Nothing domainEntityId
-          processProgramLedger wallet DWP.BURN totalPoints domainEntityId isOrderCharged burn.reversedPoints
+          processProgramLedger wallet DWP.BURN totalPoints domainEntityId isOrderCharged burn.reversedPoints actor
 
   reconcileRes <- try @_ @SomeException fetchFullInfo
   case reconcileRes of
@@ -506,10 +515,11 @@ processProgramLedger ::
   Text -> -- domainEntityId
   Bool -> -- isOrderCharged
   Maybe HighPrecMoney -> -- reversedPoints
+  Actor ->
   m ()
-processProgramLedger wallet kind points domainEntityId isOrderCharged mbReversed = do
+processProgramLedger wallet kind points domainEntityId isOrderCharged mbReversed actor = do
   when isOrderCharged $ do
-    res <- recordLoyaltyHistory wallet kind points domainEntityId
+    res <- recordLoyaltyHistory wallet kind points domainEntityId actor
     case res of
       Left err -> logError $ "recordLoyaltyHistory failed refId=" <> domainEntityId <> " kind=" <> show kind <> ": " <> show err
       Right (WrittenNew _) -> do
@@ -518,7 +528,7 @@ processProgramLedger wallet kind points domainEntityId isOrderCharged mbReversed
       Right (AlreadyWritten _) -> pure ()
       Right Skipped -> pure ()
   whenJust mbReversed $ \rev -> when (rev > 0) $ do
-    revRes <- recordLoyaltyHistoryReversal wallet kind domainEntityId
+    revRes <- recordLoyaltyHistoryReversal wallet kind domainEntityId actor
     case revRes of
       Left err -> logError $ "recordLoyaltyHistoryReversal failed refId=" <> domainEntityId <> " kind=" <> show kind <> ": " <> show err
       Right (WrittenNew _) -> do

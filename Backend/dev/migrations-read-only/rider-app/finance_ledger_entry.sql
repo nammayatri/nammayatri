@@ -56,3 +56,15 @@ CREATE INDEX CONCURRENTLY finance_ledger_entry_idx_to_account_id ON atlas_app.fi
 CREATE INDEX CONCURRENTLY finance_ledger_entry_idx_concerned_individual_id_timestamp ON atlas_app.finance_ledger_entry USING btree (concerned_individual_id, timestamp);
 CREATE INDEX CONCURRENTLY finance_ledger_entry_idx_from_account_id_timestamp ON atlas_app.finance_ledger_entry USING btree (from_account_id, timestamp);
 CREATE INDEX CONCURRENTLY finance_ledger_entry_idx_to_account_id_timestamp ON atlas_app.finance_ledger_entry USING btree (to_account_id, timestamp);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN updated_by text ;
+ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN created_by text ;
+
+
+------- SQL updates -------
+
+DROP INDEX finance_ledger_entry_idx_to_account_id_timestamp;
+CREATE INDEX CONCURRENTLY finance_ledger_entry_idx_timestamp_to_account_id ON atlas_app.finance_ledger_entry USING btree (timestamp, to_account_id);

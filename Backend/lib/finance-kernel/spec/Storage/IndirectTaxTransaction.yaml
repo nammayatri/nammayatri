@@ -4,6 +4,7 @@
 imports:
   UTCTime: Kernel.Prelude
   HighPrecMoney: Kernel.Types.Common
+  Actor: Lib.Finance.Core.Types
 
 IndirectTaxTransaction:
   tableName: indirect_tax_transaction
@@ -49,6 +50,10 @@ IndirectTaxTransaction:
     merchantId: Text
     merchantOperatingCityId: Text
     createdAt: UTCTime
+
+    # --- Audit ---
+    createdBy: Maybe Actor                          # Who created this record
+    updatedBy: Maybe Actor                          # Who updated this record
 
   constraints:
     id: PrimaryKey

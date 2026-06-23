@@ -40,6 +40,7 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Person as QPerson
@@ -222,7 +223,8 @@ postSubscriptionCollectManualPayments merchantShortId opCity driverId serviceNam
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   let dataClearManualSelectedDues = Domain.Action.UI.Driver.ClearManualSelectedDues {driverFeeIds = fromMaybe [] req.paymentIds}
-  _ <- Domain.Action.UI.Driver.clearDriverDues (Kernel.Types.Id.cast driverId, m.id, mOCityId) serviceName (Just dataClearManualSelectedDues) Nothing
+      actor = Finance.System -- TODO apiTokenInfo.personId.getId for dashboard handler
+  _ <- Domain.Action.UI.Driver.clearDriverDues (Kernel.Types.Id.cast driverId, m.id, mOCityId) serviceName (Just dataClearManualSelectedDues) Nothing actor
   return Kernel.Types.APISuccess.Success
 
 postSubscriptionFeeWaiveOff ::

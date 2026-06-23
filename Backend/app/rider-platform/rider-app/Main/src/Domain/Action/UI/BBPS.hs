@@ -39,6 +39,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error
+import Lib.Finance.Core.Types (Actor (..))
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
@@ -120,7 +121,8 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
       createOrderCall = Payment.createOrder person.merchantId person.merchantOperatingCityId Nothing Payment.BBPS (Just person.id.getId) person.clientSdkVersion Nothing
       createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.BBPS isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False Nothing
+  let actor = Person personId.getId
+  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.BBPS isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False Nothing actor
   case mCreateOrderRes of
     Just createOrderRes -> do
       let bbpsInfo =

@@ -76,6 +76,7 @@ import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (MonadFlow)
 import Lib.Finance.Account.Interface (AccountInput (..))
 import Lib.Finance.Account.Service (getOrCreateAccount)
+import Lib.Finance.Core.Types (Actor)
 import Lib.Finance.Domain.Types.Account
 import Lib.Finance.Domain.Types.DirectTaxTransaction (DirectTaxTransaction, TdsRateReason (..))
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
@@ -122,7 +123,9 @@ data FinanceCtx = FinanceCtx
     tdsRateReason :: Maybe TdsRateReason,
     emitLedgerEntries :: Bool,
     fromLocationAddress :: Maybe Text,
-    issuedToName :: Maybe Text
+    issuedToName :: Maybe Text,
+    actor :: Actor -- FIXME check redundancy
+    -- updatedBy :: Actor -- do we need separate field?
   }
   deriving (Eq, Show, Generic)
 
@@ -530,7 +533,8 @@ transfer fromRole toRole amount refType = do
                 metadata = Nothing,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
-                settlementStatus = Nothing
+                settlementStatus = Nothing,
+                actor = ctx.actor
               }
       result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
       collectEntryId result.id
@@ -564,7 +568,8 @@ transferWithoutAttribution fromRole toRole amount refType = do
                 metadata = Nothing,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
-                settlementStatus = Nothing
+                settlementStatus = Nothing,
+                actor = ctx.actor
               }
       result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
       collectEntryId result.id
@@ -599,7 +604,8 @@ transfer_ fromRole toRole amount refType = do
               metadata = Nothing,
               merchantId = ctx.merchantId,
               merchantOperatingCityId = ctx.merchantOpCityId,
-              settlementStatus = Nothing
+              settlementStatus = Nothing,
+              actor = ctx.actor
             }
     _ <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
     pure ()
@@ -636,7 +642,8 @@ transferPending fromRole toRole amount refType = do
                 metadata = Nothing,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
-                settlementStatus = Nothing
+                settlementStatus = Nothing,
+                actor = ctx.actor
               }
       result <- liftFinanceM (createEntry entryInput)
       collectEntryId result.id
@@ -672,7 +679,8 @@ transferAllowZero fromRole toRole amount refType = do
                 metadata = Nothing,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
-                settlementStatus = Nothing
+                settlementStatus = Nothing,
+                actor = ctx.actor
               }
       result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
       collectEntryId result.id
@@ -702,7 +710,7 @@ invoice ::
   InvoiceConfig ->
   FinanceM m (Maybe (Id Invoice))
 invoice config = do
-  ctx <- ask
+  ctx <- ask -- TODO redundant actor
   if not ctx.emitLedgerEntries
     then pure Nothing
     else invoiceInner ctx config
@@ -755,7 +763,9 @@ invoiceInner ctx config = do
             isVat = config.isVat,
             issuedToTaxNo = config.issuedToTaxNo,
             issuedByTaxNo = if config.isVat then ctx.merchantVatNumber else ctx.merchantGstin,
-            paymentMode = config.paymentMode
+            paymentMode = config.paymentMode,
+            -- Audit
+            actor = ctx.actor
           }
   inv <- liftFinanceM (createInvoice invoiceInput ids)
   pure (Just inv.id)
@@ -775,7 +785,8 @@ data IndirectTaxConfig = IndirectTaxConfig
     externalCharges :: Maybe HighPrecMoney,
     isVat :: Bool,
     issuedToTaxNo :: Maybe Text,
-    issuedByTaxNo :: Maybe Text
+    issuedByTaxNo :: Maybe Text,
+    actor :: Actor
   }
   deriving (Eq, Show, Generic)
 
@@ -833,6 +844,7 @@ recordIndirectTax config = do
             sacCode = config.sacCode,
             externalCharges = config.externalCharges,
             invoiceNumber = Nothing,
+            actor = config.actor,
             merchantId = ctx.merchantId,
             merchantOperatingCityId = ctx.merchantOpCityId,
             isVat = config.isVat,

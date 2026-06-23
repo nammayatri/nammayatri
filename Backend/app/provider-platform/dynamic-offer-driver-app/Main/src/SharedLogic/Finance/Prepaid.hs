@@ -330,8 +330,9 @@ createPrepaidHold ::
   Text -> -- Reference ID
   Maybe Value ->
   Maybe DVC.VehicleCategory -> -- Sub-ledger scope (Nothing = pooled)
+  Actor ->
   m (Either FinanceError ())
-createPrepaidHold counterpartyType ownerId amount currency merchantId merchantOperatingCityId referenceId metadata mbVehicleCategory = do
+createPrepaidHold counterpartyType ownerId amount currency merchantId merchantOperatingCityId referenceId metadata mbVehicleCategory actor = do
   mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId mbVehicleCategory
   mbSellerRideCredit <- getOrCreateSellerRideCreditAccount currency merchantId merchantOperatingCityId
   case (mbOwnerAccount, mbSellerRideCredit) of
@@ -354,7 +355,8 @@ createPrepaidHold counterpartyType ownerId amount currency merchantId merchantOp
                     metadata = metadata,
                     merchantId = merchantId,
                     merchantOperatingCityId = merchantOperatingCityId,
-                    settlementStatus = Nothing
+                    settlementStatus = Nothing,
+                    actor
                   }
           entryRes <- createEntry entryInput
           case entryRes of
@@ -452,8 +454,9 @@ creditPrepaidBalance ::
   Maybe InvoiceCreationParams -> -- Optional invoice creation params
   Maybe DPanCard.DriverPanCard -> -- Optional PAN card data
   Maybe DVC.VehicleCategory -> -- Sub-ledger scope (Nothing = pooled)
+  Actor ->
   m (Either FinanceError (HighPrecMoney, Maybe (Id FInvoice.Invoice)))
-creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate mbGstBreakdown currency merchantId merchantOperatingCityId referenceId metadata mbInvoiceParams mbPanCard mbVehicleCategory = do
+creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate mbGstBreakdown currency merchantId merchantOperatingCityId referenceId metadata mbInvoiceParams mbPanCard mbVehicleCategory actor = do
   let gstAmount = case mbGstBreakdown of
         Just breakdown -> fromMaybe 0 breakdown.cgstAmount + fromMaybe 0 breakdown.sgstAmount + fromMaybe 0 breakdown.igstAmount
         Nothing -> 0
@@ -519,7 +522,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                           metadata = Nothing,
                           merchantId = merchantId,
                           merchantOperatingCityId = merchantOperatingCityId,
-                          settlementStatus = Nothing
+                          settlementStatus = Nothing,
+                          actor
                         }
                 result <- createEntryWithBalanceUpdate gstEntry
                 pure $ either (const Nothing) (Just . (.id)) result
@@ -547,7 +551,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                               metadata = Nothing,
                               merchantId = merchantId,
                               merchantOperatingCityId = merchantOperatingCityId,
-                              settlementStatus = Nothing
+                              settlementStatus = Nothing,
+                              actor
                             }
                     result <- createEntryWithBalanceUpdate liabilityEntry
                     pure $ either (const Nothing) (Just . (.id)) result
@@ -577,7 +582,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                               metadata = Nothing,
                               merchantId = merchantId,
                               merchantOperatingCityId = merchantOperatingCityId,
-                              settlementStatus = Nothing
+                              settlementStatus = Nothing,
+                              actor
                             }
                     result <- createEntryWithBalanceUpdate tdsEntry
                     pure $ either (const Nothing) (Just . (.id)) result
@@ -604,7 +610,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                           metadata = metadata,
                           merchantId = merchantId,
                           merchantOperatingCityId = merchantOperatingCityId,
-                          settlementStatus = Nothing
+                          settlementStatus = Nothing,
+                          actor
                         }
                 result <- createEntryWithBalanceUpdate creditEntry
                 pure $ either (const Nothing) (Just . (.id)) result
@@ -686,7 +693,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                     issuedByTaxNo = invoiceParams.merchantGstin,
                     paymentMode = Just "ONLINE", -- subscription paid via Juspay autopay/manual
                     periodStart = Nothing,
-                    periodEnd = Nothing
+                    periodEnd = Nothing,
+                    actor
                   }
           invoiceResult <- createInvoice invoiceInput entryIds
           case invoiceResult of
@@ -696,7 +704,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
               -- Any uncaught exception from the forked action is logged and
               -- swallowed so the process is never crashed by a GSP failure.
               fork "generate B2B e-invoice" $
-                SharedLogic.Finance.EInvoice.generateEInvoiceForInvoice inv
+                SharedLogic.Finance.EInvoice.generateEInvoiceForInvoice inv actor
                   `catch` ( \(e :: SomeException) ->
                               logError $ "GSTEInvoice: background fork failed: " <> show e
                           )
@@ -725,8 +733,9 @@ debitPrepaidBalance ::
   Text -> -- Reference ID (booking ID)
   Maybe Value ->
   Maybe DVC.VehicleCategory -> -- Sub-ledger scope (Nothing = pooled)
+  Actor ->
   m (Either FinanceError HighPrecMoney)
-debitPrepaidBalance counterpartyType ownerId finalFare revenueAmount currency merchantId merchantOperatingCityId referenceId _metadata mbVehicleCategory = do
+debitPrepaidBalance counterpartyType ownerId finalFare revenueAmount currency merchantId merchantOperatingCityId referenceId _metadata mbVehicleCategory actor = do
   mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId mbVehicleCategory
   mbSellerLiability <- getOrCreateSellerLiabilityAccount currency merchantId merchantOperatingCityId
   mbSellerRevenue <- getOrCreateSellerRevenueAccount currency merchantId merchantOperatingCityId
@@ -751,7 +760,8 @@ debitPrepaidBalance counterpartyType ownerId finalFare revenueAmount currency me
                       metadata = Nothing,
                       merchantId = merchantId,
                       merchantOperatingCityId = merchantOperatingCityId,
-                      settlementStatus = Nothing
+                      settlementStatus = Nothing,
+                      actor
                     }
             _ <- createEntryWithBalanceUpdate revenueEntry
             pure ()
@@ -772,8 +782,9 @@ handleSubscriptionExpiry ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
   DSP.SubscriptionPurchase ->
+  Actor ->
   m ()
-handleSubscriptionExpiry purchase = do
+handleSubscriptionExpiry purchase actor = do
   when (purchase.status == DSP.ACTIVE) $ do
     let counterpartyType = case purchase.ownerType of
           DSP.FLEET_OWNER -> counterpartyFleetOwner
@@ -826,12 +837,14 @@ handleSubscriptionExpiry purchase = do
                       metadata = Nothing,
                       merchantId = merchantId,
                       merchantOperatingCityId = merchantOperatingCityId,
-                      settlementStatus = Nothing
+                      settlementStatus = Nothing,
+                      actor
                     }
             _ <- createEntryWithBalanceUpdate revenueEntry
             pure ()
 
           -- 2. Credit Transfer: Owner RideCredit -> Seller RideCredit
+
           let creditTransferEntry =
                 LedgerEntryInput
                   { fromAccountId = ownerAccount.id,
@@ -846,7 +859,8 @@ handleSubscriptionExpiry purchase = do
                     metadata = Nothing,
                     merchantId = merchantId,
                     merchantOperatingCityId = merchantOperatingCityId,
-                    settlementStatus = Nothing
+                    settlementStatus = Nothing,
+                    actor
                   }
           _ <- createEntryWithBalanceUpdate creditTransferEntry
           pure ()
@@ -854,7 +868,7 @@ handleSubscriptionExpiry purchase = do
           logInfo $ "Failed to get accounts for subscription expiry: " <> referenceId
           pure ()
 
-    QSP.updateStatusById DSP.EXPIRED purchase.id
+    QSP.updateStatusById DSP.EXPIRED (Just actor) purchase.id
     logInfo $ "Subscription " <> purchase.id.getId <> " expired. Expired credits: " <> show expiredCredits
     when (purchase.ownerType == DSP.DRIVER) $
       void $
@@ -877,8 +891,9 @@ checkAndMarkExhaustedSubscriptions ::
   Text -> -- Owner ID
   DSP.SubscriptionOwnerType ->
   Maybe DVC.VehicleCategory -> -- Category scope for FIFO isolation (Nothing = pooled)
+  Actor ->
   m ([Id DSP.SubscriptionPurchase], Bool)
-checkAndMarkExhaustedSubscriptions counterpartyType ownerId ownerType mbVehicleCategory = do
+checkAndMarkExhaustedSubscriptions counterpartyType ownerId ownerType mbVehicleCategory actor = do
   allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
   mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId mbVehicleCategory
   let currentBalance = fromMaybe 0 mbBalance
@@ -893,7 +908,7 @@ checkAndMarkExhaustedSubscriptions counterpartyType ownerId ownerType mbVehicleC
       if balance <= restCredits
         then do
           -- Oldest subscription's credits are fully consumed
-          QSP.updateStatusById DSP.EXHAUSTED oldest.id
+          QSP.updateStatusById DSP.EXHAUSTED (Just actor) oldest.id
           logInfo $ "Subscription " <> oldest.id.getId <> " marked EXHAUSTED"
           -- Continue checking (there might be more to exhaust)
           go rest balance (acc <> [oldest.id]) True
@@ -911,8 +926,9 @@ activateNextQueuedPurchaseExpiry ::
   Text -> -- Owner ID
   DSP.SubscriptionOwnerType ->
   Maybe DVC.VehicleCategory -> -- Category scope for FIFO isolation (Nothing = pooled)
+  Actor ->
   m (Maybe (Id DSP.SubscriptionPurchase, UTCTime))
-activateNextQueuedPurchaseExpiry ownerId ownerType mbVehicleCategory = do
+activateNextQueuedPurchaseExpiry ownerId ownerType mbVehicleCategory actor = do
   allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
   let sorted = DL.sortOn (.purchaseTimestamp) allActive
       -- Find first ACTIVE purchase with no expiryDate (queued)
@@ -924,7 +940,7 @@ activateNextQueuedPurchaseExpiry ownerId ownerType mbVehicleCategory = do
         Just plan -> do
           now <- getCurrentTime
           let expiryDate = fmap (\days -> addUTCTime (fromIntegral (days * 60 * 60 * 24)) now) plan.validityInDays
-          QSPE.updateExpiryAndStartDateById expiryDate (Just now) nextPurchase.id
+          QSPE.updateExpiryAndStartDateById expiryDate (Just now) (Just actor) nextPurchase.id
           logInfo $ "Activated expiry for queued subscription " <> nextPurchase.id.getId <> " with expiryDate: " <> show expiryDate <> " startDate: " <> show now
           pure $ (nextPurchase.id,) <$> expiryDate
         Nothing -> do

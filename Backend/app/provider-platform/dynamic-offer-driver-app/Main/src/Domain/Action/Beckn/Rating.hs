@@ -42,6 +42,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
+import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.VehicleServiceTier (fetchVehicleTierForDriverWithUsageRestriction)
 import Storage.Beam.IssueManagement ()
@@ -122,7 +123,8 @@ handler merchantId req ride = do
               SQD.incFavouriteRiderCount ride.driverId
       logDebug "Driver Rating Coin Event"
       fork "DriverCoinRating Event" $ do
-        DC.driverCoinsEvent driverId Nothing merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions)
+        let actor = Finance.System -- using System for beckn request handlers
+        DC.driverCoinsEvent driverId Nothing merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions) actor
     Nothing -> do
       logError $ "Booking not found for bookingId : " <> req.bookingId.getId
       pure ()

@@ -8,6 +8,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
+import qualified Lib.Finance.Core.Types
 import qualified Tools.Beam.UtilsTH
 
 data PgPaymentSettlementReport = PgPaymentSettlementReport
@@ -20,7 +21,7 @@ data PgPaymentSettlementReport = PgPaymentSettlementReport
     chargebackReasonCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     chargebackStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
-    createdBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    createdBy :: Kernel.Prelude.Maybe Lib.Finance.Core.Types.Actor,
     currency :: Kernel.Types.Common.Currency,
     disputeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disputeType :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.DisputeType,
@@ -60,6 +61,7 @@ data PgPaymentSettlementReport = PgPaymentSettlementReport
     txnType :: Lib.Finance.Domain.Types.PgPaymentSettlementReport.TxnType,
     uniqueSplitId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
+    updatedBy :: Kernel.Prelude.Maybe Lib.Finance.Core.Types.Actor,
     utr :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vendorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }

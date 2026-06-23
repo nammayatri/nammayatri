@@ -32,6 +32,7 @@ import Kernel.Types.Id (Id (..))
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import qualified Lib.Payment.Payout.Registration as Registration
@@ -193,8 +194,9 @@ postPayoutUpdateVpa (mbPersonId, _merchantId, merchantOpCityId) req = do
   -- Process backlog referral payouts with the just-verified VPA.
   -- processPreviousPayoutAmount uses tryLockRedis (non-blocking), so concurrent
   -- calls from rapid VPA updates are dropped — no risk of double-pay.
+  let actor = Finance.Person personId.getId
   fork ("processing backlog payout for driver via updateVpa " <> personId.getId) $
-    DAP.processPreviousPayoutAmount personId (Just req.vpa) merchantOpCityId
+    DAP.processPreviousPayoutAmount personId (Just req.vpa) merchantOpCityId actor
   pure Kernel.Types.APISuccess.Success
 
 getPayoutRegistration ::
@@ -205,6 +207,18 @@ getPayoutRegistration ::
     Environment.Flow DD.ClearDuesRes
   )
 getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = do
+  let actor = maybe Finance.System (Finance.Person . (.getId)) mbPersonId -- avoid throwing unnecessary errors
+  getPayoutRegistrationWithActor (mbPersonId, merchantId, merchantOpCityId) actor
+
+getPayoutRegistrationWithActor ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Finance.Actor ->
+    Environment.Flow DD.ClearDuesRes
+  )
+getPayoutRegistrationWithActor (mbPersonId, merchantId, merchantOpCityId) actor = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let isFleetOwner = DCommon.checkFleetOwnerRole person.role
@@ -244,6 +258,7 @@ getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = do
       person.lastName
       isSplitEnabled
       payoutConfig.isAutoRefundEnabled
+      actor
 
   -- Store orderId for recovery/replay if webhook fails
   if isFleetOwner
@@ -264,6 +279,7 @@ postPayoutCreateOrder ::
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
 postPayoutCreateOrder (mbPersonId, merchantId, merchantOpCityId) req = do
+  let actor = maybe Finance.System (Finance.Person . (.getId)) mbPersonId -- avoid throwing unnecessary errors
   void $ throwError $ InvalidRequest "You're Not Authorized To Use This API"
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
@@ -275,7 +291,7 @@ postPayoutCreateOrder (mbPersonId, merchantId, merchantOpCityId) req = do
   let entityName = DLP.MANUAL
       createPayoutOrderCall = TP.createPayoutOrder payoutServiceName merchantOpCityId person.id mbPersonBankAccount
   merchantOperatingCity <- CQMOC.findById (Kernel.Types.Id.cast merchantOpCityId) >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  void $ Payout.createPayoutService (Kernel.Types.Id.cast merchantId) (Just $ Kernel.Types.Id.cast merchantOpCityId) (Kernel.Types.Id.cast personId) (Just [personId.getId]) (Just entityName) (show merchantOperatingCity.city) (mkCreatePayoutServiceReq merchantOperatingCity.currency payoutServiceFlow req) createPayoutOrderCall Nothing
+  void $ Payout.createPayoutService (Kernel.Types.Id.cast merchantId) (Just $ Kernel.Types.Id.cast merchantOpCityId) (Kernel.Types.Id.cast personId) (Just [personId.getId]) (Just entityName) (show merchantOperatingCity.city) (mkCreatePayoutServiceReq merchantOperatingCity.currency payoutServiceFlow req) createPayoutOrderCall Nothing actor
   pure Kernel.Types.APISuccess.Success
 
 mkCreatePayoutServiceReq :: Currency -> IPayout.PayoutServiceFlow -> API.Types.UI.ReferralPayout.CreatePayoutOrderReq -> Payout.CreatePayoutServiceReq

@@ -62,6 +62,7 @@ import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
+import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import SharedLogic.Booking
 import SharedLogic.Cancel
@@ -138,10 +139,11 @@ cancel req merchant booking mbActiveSearchTry = do
     QRB.updateStatus booking.id SRB.CANCELLED
     when booking.isScheduled $ removeBookingFromRedis booking
     fork "DriverRideCancelledCoin" $ do
+      let actor = Finance.System -- using System for beckn request handlers
       whenJust mbRide $ \ride -> do
         logDebug $ "RideCancelled Coin Event by customer distance to pickup" <> show disToPickup
         logDebug "RideCancelled Coin Event by customer"
-        DC.driverCoinsEvent ride.driverId Nothing merchant.id booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup DCT.CancellationByCustomer (fromMaybe (DTCR.CancellationReasonCode "Other") bookingCR.reasonCode)) (Just $ ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions)
+        DC.driverCoinsEvent ride.driverId Nothing merchant.id booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup DCT.CancellationByCustomer (fromMaybe (DTCR.CancellationReasonCode "Other") bookingCR.reasonCode)) (Just $ ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions) actor
 
         let riderBlacklistTtl = fromMaybe 3600 transporterConfig.driverRiderBlacklistDurationSeconds
         whenJust booking.riderId (DP.addDriverToRiderCancelledList riderBlacklistTtl ride.driverId)
@@ -246,8 +248,9 @@ cancel req merchant booking mbActiveSearchTry = do
         whenJust cancelChargesBase $ \baseCancellation -> do
           whenJust mbRide $ \ride -> do
             let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
+            let actor = Finance.System -- using System for beckn request handlers
             when ((isPrepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet) && baseCancellation + cancellationTaxAmount > 0) $
-              createCancellationLedgerEntries booking ride baseCancellation cancellationTaxAmount transporterConfig
+              createCancellationLedgerEntries booking ride baseCancellation cancellationTaxAmount transporterConfig actor
 
         whenJust mbActiveSearchTry $ cancelSearch merchant.id
         -- Reload ride by primary key to pick up persisted cancellationChargesOnCancel

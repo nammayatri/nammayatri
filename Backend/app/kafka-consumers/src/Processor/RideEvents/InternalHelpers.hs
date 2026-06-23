@@ -66,6 +66,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Time (secondsFromTimeOfDay)
 import qualified "dynamic-offer-driver-app" Lib.DriverCoins.Coins as DC
 import qualified "dynamic-offer-driver-app" Lib.DriverCoins.Types as DCT
+import qualified Lib.Finance.Core.Types as Finance
 import "dynamic-offer-driver-app" SharedLogic.FareCalculator (timeZoneIST)
 import "dynamic-offer-driver-app" SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import "dynamic-offer-driver-app" SharedLogic.Finance.Wallet (createWalletEntryDelta, walletReferenceD2DReferral)
@@ -123,7 +124,8 @@ sendReferralFCM validRide ride booking mbRiderDetails transporterConfig = do
                 referralTitle = "Your referred customer has completed their first ride"
             sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
             fork "DriverToCustomerReferralCoin Event : " $ do
-              DC.driverCoinsEvent driver.id Nothing driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions)
+              let actor = Finance.System -- using System for consumers
+              DC.driverCoinsEvent driver.id Nothing driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions) actor
           mbVehicle <- QV.findById referredDriverId
           let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
           payoutConfig <- CPC.findByPrimaryKey driver.merchantOperatingCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) driver.merchantOperatingCityId.getId)
@@ -385,6 +387,7 @@ creditReferralWallet amount driverId_ dailyStatsId earningsKey currency merchant
             [ AKey.fromText earningsKey A..= amount,
               "dailyStatsId" A..= dailyStatsId
             ]
+    let actor = Finance.System -- using System for consumers
     resp <-
       createWalletEntryDelta
         counterparty
@@ -396,6 +399,7 @@ creditReferralWallet amount driverId_ dailyStatsId earningsKey currency merchant
         walletReferenceD2DReferral
         dailyStatsId
         (Just metadata)
+        actor
     case resp of
       Left err -> do
         logError $ "Failed to create referral wallet entry for driverId: " <> driverId_.getId <> " dailyStatsId: " <> dailyStatsId <> " err: " <> show err

@@ -47,6 +47,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.IndirectTaxTransaction.IndirectTaxT
   updateWithKV
     [ Se.Set Beam.cgstAmount cgstAmount,
       Se.Set Beam.counterpartyId counterpartyId,
+      Se.Set Beam.createdBy createdBy,
       Se.Set Beam.creditOrDebitNoteNumber creditOrDebitNoteNumber,
       Se.Set Beam.externalCharges externalCharges,
       Se.Set Beam.gstCreditType gstCreditType,
@@ -69,6 +70,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.IndirectTaxTransaction.IndirectTaxT
       Se.Set Beam.totalTaxAmount totalTaxAmount,
       Se.Set Beam.transactionDate transactionDate,
       Se.Set Beam.transactionType transactionType,
+      Se.Set Beam.updatedBy updatedBy,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -81,6 +83,7 @@ instance FromTType' Beam.IndirectTaxTransaction Lib.Finance.Domain.Types.Indirec
           { cgstAmount = cgstAmount,
             counterpartyId = counterpartyId,
             createdAt = createdAt,
+            createdBy = createdBy,
             creditOrDebitNoteNumber = creditOrDebitNoteNumber,
             externalCharges = externalCharges,
             gstCreditType = gstCreditType,
@@ -104,6 +107,7 @@ instance FromTType' Beam.IndirectTaxTransaction Lib.Finance.Domain.Types.Indirec
             totalTaxAmount = totalTaxAmount,
             transactionDate = transactionDate,
             transactionType = transactionType,
+            updatedBy = updatedBy,
             updatedAt = updatedAt
           }
 
@@ -113,6 +117,7 @@ instance ToTType' Beam.IndirectTaxTransaction Lib.Finance.Domain.Types.IndirectT
       { Beam.cgstAmount = cgstAmount,
         Beam.counterpartyId = counterpartyId,
         Beam.createdAt = createdAt,
+        Beam.createdBy = createdBy,
         Beam.creditOrDebitNoteNumber = creditOrDebitNoteNumber,
         Beam.externalCharges = externalCharges,
         Beam.gstCreditType = gstCreditType,
@@ -136,5 +141,6 @@ instance ToTType' Beam.IndirectTaxTransaction Lib.Finance.Domain.Types.IndirectT
         Beam.totalTaxAmount = totalTaxAmount,
         Beam.transactionDate = transactionDate,
         Beam.transactionType = transactionType,
+        Beam.updatedBy = updatedBy,
         Beam.updatedAt = updatedAt
       }

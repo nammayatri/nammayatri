@@ -29,6 +29,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
@@ -106,8 +107,9 @@ planSubscribe planId (personId, merchantId, merchantOpCityId) mbServiceName = wi
       autoPayStatus <- fst <$> DPlan.getSubcriptionStatusWithPlan (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) personId
       if autoPayStatus == Just DI.SUSPENDED
         then do
+          let actor = Finance.Person personId.getId
           void $ DPlan.planResume (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) (personId, merchantId, merchantOpCityId)
-          Driver.ClearDuesRes {..} <- Driver.clearDriverDues (personId, merchantId, merchantOpCityId) (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) Nothing Nothing
+          Driver.ClearDuesRes {..} <- Driver.clearDriverDues (personId, merchantId, merchantOpCityId) (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) Nothing Nothing actor
           return $ DPlan.PlanSubscribeRes {..}
         else do DPlan.planSubscribe (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) planId (False, Nothing) (personId, merchantId, merchantOpCityId) DPlan.NoData
 

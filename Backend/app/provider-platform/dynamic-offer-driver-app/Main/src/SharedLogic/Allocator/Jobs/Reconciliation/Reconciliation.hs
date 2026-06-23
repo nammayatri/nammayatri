@@ -35,6 +35,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id (Id (..), cast)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerEntry
@@ -130,11 +131,12 @@ runReconciliationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       liftIO $ writeIORef resultRef Complete
       return ()
 
+    let actor = Finance.System -- using System for job handlers
     result <- case reconciliationType of
       ReconSummary.DSR_VS_LEDGER -> doReconciliationDsrVsLedger merchantId merchantOpCityId startTime endTime now
       ReconSummary.DSR_VS_SUBSCRIPTION -> doReconciliationDsrVsSubscription merchantId merchantOpCityId startTime endTime now
-      ReconSummary.DSSR_VS_SUBSCRIPTION -> doReconciliationDssrVsSubscription merchantId merchantOpCityId startTime endTime now
-      ReconSummary.PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION -> doReconciliationPgPaymentVsSubscription merchantId merchantOpCityId startTime endTime now
+      ReconSummary.DSSR_VS_SUBSCRIPTION -> doReconciliationDssrVsSubscription merchantId merchantOpCityId startTime endTime now actor
+      ReconSummary.PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION -> doReconciliationPgPaymentVsSubscription merchantId merchantOpCityId startTime endTime now actor
       ReconSummary.PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST -> doReconciliationPgPayoutVsPayoutRequest merchantId merchantOpCityId startTime endTime now
 
     -- Schedule next job for tomorrow at 3:00 AM IST
@@ -313,8 +315,9 @@ doReconciliationDssrVsSubscription ::
   UTCTime ->
   UTCTime ->
   UTCTime ->
+  Finance.Actor ->
   m ExecutionResult
-doReconciliationDssrVsSubscription merchantId merchantOpCityId startTime endTime now = do
+doReconciliationDssrVsSubscription merchantId merchantOpCityId startTime endTime now actor = do
   logInfo "Starting DSSR vs Subscription reconciliation"
 
   -- Get all active subscription purchases in date range
@@ -332,7 +335,7 @@ doReconciliationDssrVsSubscription merchantId merchantOpCityId startTime endTime
         let existingStatusMap = DomainRecon.getReconciliationStatus subscription.reconciliationStatus
             updatedMap = DomainRecon.updateReconStatus existingStatusMap DomainRecon.DSSRvsSubscription (toReconSummaryStatus entry.reconStatus)
             jsonValue = DomainRecon.mkReconciliationStatusValue updatedMap
-        QSubPurchase.updateReconciliationStatus (Just jsonValue) subscription.id
+        QSubPurchase.updateReconciliationStatus (Just jsonValue) (Just actor) subscription.id
         return $ Just entry
 
   -- Persist summaries and entries
@@ -354,8 +357,9 @@ doReconciliationPgPaymentVsSubscription ::
   UTCTime ->
   UTCTime ->
   UTCTime ->
+  Finance.Actor ->
   m ExecutionResult
-doReconciliationPgPaymentVsSubscription merchantId merchantOpCityId startTime endTime now = do
+doReconciliationPgPaymentVsSubscription merchantId merchantOpCityId startTime endTime now actor = do
   logInfo "Starting PG-Payment Settlement vs Subscription reconciliation"
 
   pgReports <- QPgPaymentSettlement.findByTxnDateRangeAndStatus merchantId.getId merchantOpCityId.getId startTime endTime
@@ -419,7 +423,7 @@ doReconciliationPgPaymentVsSubscription merchantId merchantOpCityId startTime en
         let existingStatusMap = DomainRecon.getReconciliationStatus subscription.reconciliationStatus
             updatedMap = DomainRecon.updateReconStatus existingStatusMap DomainRecon.PgPaymentVsSubscription (toReconSummaryStatus entry.reconStatus)
             jsonValue = DomainRecon.mkReconciliationStatusValue updatedMap
-        QSubPurchase.updateReconciliationStatus (Just jsonValue) subscription.id
+        QSubPurchase.updateReconciliationStatus (Just jsonValue) (Just actor) subscription.id
 
         return $ Just entry
 

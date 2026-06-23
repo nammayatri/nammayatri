@@ -15,6 +15,7 @@ import Data.Aeson (Value)
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id (Id)
+import Lib.Finance.Core.Types (Actor (..))
 import Lib.Finance.Domain.Types.Account (Account)
 import Lib.Finance.Domain.Types.LedgerEntry (EntryStatus, EntryType, SettlementStatus)
 
@@ -32,6 +33,7 @@ data LedgerEntryInput = LedgerEntryInput
     metadata :: Maybe Value,
     merchantId :: Text,
     merchantOperatingCityId :: Text,
-    settlementStatus :: Maybe SettlementStatus
+    settlementStatus :: Maybe SettlementStatus,
+    actor :: Actor
   }
   deriving (Eq, Show, Generic)

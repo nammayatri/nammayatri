@@ -8,6 +8,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.SapJournalEntry
 import Tools.Beam.UtilsTH
 
@@ -18,6 +19,7 @@ data SapJournalEntryT f = SapJournalEntryT
     bldat :: (B.C f Kernel.Prelude.Text),
     budat :: (B.C f Kernel.Prelude.Text),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    createdBy :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Core.Types.Actor)),
     currency :: (B.C f Kernel.Types.Common.Currency),
     description :: (B.C f Kernel.Prelude.Text),
     gjahr :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
@@ -33,7 +35,8 @@ data SapJournalEntryT f = SapJournalEntryT
     totalDebitAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
     transactionCount :: (B.C f Kernel.Prelude.Int),
     transactionType :: (B.C f Lib.Finance.Domain.Types.SapJournalEntry.TransactionType),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedBy :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Core.Types.Actor))
   }
   deriving (Generic, B.Beamable)
 

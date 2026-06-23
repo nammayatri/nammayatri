@@ -76,6 +76,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import Lib.Finance.Core.Types (Actor (..))
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.MerchantPaymentMethod
 import qualified SharedLogic.Payment as SPayment
@@ -287,7 +288,8 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
   when merchant.onlinePayment $ do
     whenJust paymentMethodId $ \pmId ->
       SPayment.updateDefaultPersonPaymentMethodId person pmId -- Make payment method as default payment method for customer
-    SPayment.capturePendingPaymentIfExists person merchantOperatingCityId
+    let actor = Person personId.getId
+    SPayment.capturePendingPaymentIfExists person merchantOperatingCityId actor
 
   merchantPaymentMethod <- maybe (return Nothing) (QMPM.findById . Id) req.paymentMethodId
   let paymentMethodInfo = mkPaymentMethodInfo <$> merchantPaymentMethod

@@ -63,3 +63,9 @@ ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN period_end timesta
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN signed_qr_code text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN updated_by text ;
+ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN created_by text ;

@@ -27,6 +27,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.Finance.Core.Types (Actor (..))
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
@@ -128,6 +129,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
                   let entryIds = map Id (fromMaybe [] payoutReq.ledgerEntryIds)
                   when (null entryIds) $ do
                     logError $ "No stashed entry IDs found for payoutRequest " <> payoutReq.id.getId
+                  let actor = System -- using System for webhook handlers
                   let ctx =
                         RidePaymentFinance.buildRiderFinanceCtx
                           merchantId.getId
@@ -139,6 +141,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
                           Nothing
                           Nothing
                           Nothing
+                          actor
                   void $ RidePaymentFinance.markCashbackEntriesAsPaidOut ctx entryIds payoutOrder.amount.amount payoutReq.id.getId
               else when (isPayoutStatusFailed payoutStatus) $
                 -- Webhook reported a terminal failure. Release the PROCESSING

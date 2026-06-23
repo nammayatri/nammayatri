@@ -19,6 +19,7 @@ module Domain.Action.UI.DriverWallet
     getWalletTransactions,
     getWalletTransactionHistory,
     postWalletPayout,
+    postWalletPayoutWithActor,
     postWalletTopup,
     recordAirportCashRecharge,
     getWalletPayoutHistory,
@@ -78,6 +79,7 @@ import Lib.Finance
     runFinance,
     transfer,
   )
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntry
@@ -589,6 +591,18 @@ postWalletPayout ::
     Environment.Flow APISuccess.APISuccess
   )
 postWalletPayout (mbPersonId, merchantId, mocId) = do
+  let actor = maybe Finance.System (Finance.Person . (.getId)) mbPersonId -- avoid throwing unnecessary errors
+  postWalletPayoutWithActor (mbPersonId, merchantId, mocId) actor
+
+postWalletPayoutWithActor ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id DP.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Finance.Actor ->
+    Environment.Flow APISuccess.APISuccess
+  )
+postWalletPayoutWithActor (mbPersonId, merchantId, mocId) actor = do
   ctx <- loadPayoutContext mbPersonId merchantId mocId
   ensurePayoutsEnabled ctx
   let counterparty = counterpartyFromRole ctx.person.role
@@ -608,7 +622,7 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
     logInfo $ "Payout eligibility for driver " <> ctx.driverId.getId <> ": walletBalance=" <> show walletBalance <> ", nonRedeemable=" <> show nonRedeemable <> ", redeemableEntryIds=" <> show redeemableIds
     let payoutableBalance = walletBalance - nonRedeemable
     ensureMinimumPayoutAmount ctx payoutableBalance
-    initiateWalletPayout ctx payoutableBalance PR.INSTANT Nothing (Just cutoff) (map (.getId) redeemableIds) merchantTransferAmt
+    initiateWalletPayout ctx payoutableBalance PR.INSTANT Nothing (Just cutoff) (map (.getId) redeemableIds) merchantTransferAmt actor
   pure APISuccess.Success
 
 -- | Compute the payout fee based on the PayoutFeeConfig.
@@ -639,8 +653,9 @@ initiateWalletPayout ::
   Maybe UTCTime -> -- coverageTo
   [Text] -> -- redeemable entry IDs for settlement
   HighPrecMoney -> -- merchant transfer amount (VAT input + discounts)
+  Finance.Actor ->
   m ()
-initiateWalletPayout ctx payoutableBalance payoutType coverageFrom coverageTo redeemableEntryIds merchantTransferAmount = do
+initiateWalletPayout ctx payoutableBalance payoutType coverageFrom coverageTo redeemableEntryIds merchantTransferAmount actor = do
   phoneNo <- mapM decrypt ctx.person.mobileNumber
   merchantOperatingCity <- CQMOC.findById (Kernel.Types.Id.cast ctx.person.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound ctx.person.merchantOperatingCityId.getId)
   (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- Payout.getCreatePayoutServiceFlow (Payout.SubscriptionConfigOption PREPAID_SUBSCRIPTION) DEMSC.PayoutService ctx.person.clientSdkVersion ctx.person.merchantOperatingCityId ctx.person.id
@@ -673,7 +688,8 @@ initiateWalletPayout ctx payoutableBalance payoutType coverageFrom coverageTo re
             coverageFrom = coverageFrom,
             coverageTo = coverageTo,
             ledgerEntryIds = [], -- driver side keeps Redis stash flow unchanged
-            payoutServiceFlow
+            payoutServiceFlow,
+            actor
           }
       payoutCall = Payout.createPayoutOrder payoutServiceName ctx.person.merchantOperatingCityId ctx.person.id mbPersonBankAccount
 
@@ -708,6 +724,7 @@ postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merch
   where
     doWalletTopup mbP mId mocId0 r =
       do
+        let actor = maybe Finance.System (Finance.Person . (.getId)) mbP -- avoid throwing unnecessary errors
         driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbP
         driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
         when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))
@@ -717,7 +734,7 @@ postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merch
           let mbReuseOrderId = case mbExisting of
                 Just e | e.amount == r.amount -> Just e.paymentOrderId
                 _ -> Nothing
-          (createOrderResp, returnedOrderId) <- SPayment.createWalletTopupOrder (driverId, mId, mocId0) r.amount mbReuseOrderId
+          (createOrderResp, returnedOrderId) <- SPayment.createWalletTopupOrder (driverId, mId, mocId0) r.amount mbReuseOrderId actor
           handleWalletTransaction driverId mId mocId0 r.amount mbExisting returnedOrderId
           pure $
             PlanSubscribeRes
@@ -776,8 +793,9 @@ mkDriverWalletFinanceCtx ::
   Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
   Currency ->
   Text -> -- referenceId (order id or booth receipt id)
+  Finance.Actor ->
   m FinanceCtx
-mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId = do
+mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId actor = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOpCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
   let mName = Just merchant.name
@@ -817,7 +835,8 @@ mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId = do
         tdsRateReason = Nothing,
         emitLedgerEntries = True,
         fromLocationAddress = Nothing,
-        issuedToName = Nothing
+        issuedToName = Nothing,
+        actor
       }
 
 -- | Record airport booth cash recharge: credit driver wallet (PlatformAsset → OwnerLiability)
@@ -831,8 +850,9 @@ recordAirportCashRecharge ::
   (Id DP.Person, Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
   HighPrecMoney ->
   Text -> -- referenceId for idempotency (e.g. booth receipt id)
+  Finance.Actor ->
   m ()
-recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
+recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId actor = do
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
   when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))
   when (amount <= 0) $ throwError $ InvalidRequest "Cash recharge amount must be greater than zero"
@@ -840,7 +860,7 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
   when (null existing) $ do
     merchantOpCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
     let currency = merchantOpCity.currency
-    ctx <- mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId
+    ctx <- mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId actor
     let cashRechargeInvoiceConfig =
           InvoiceConfig
             { invoiceType = SubscriptionPurchase,

@@ -45,6 +45,7 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
@@ -122,8 +123,9 @@ createOrder ::
   Maybe DeepLinkData ->
   Bool ->
   Maybe DPayment.EntityName ->
+  Finance.Actor ->
   m (CreateOrderResp, Id DOrder.PaymentOrder)
-createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesToAddOnExpiry) mbMandateOrder invoicePaymentMode existingInvoice vendorFees mbDeepLinkData splitEnabled mbEntityName = do
+createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesToAddOnExpiry) mbMandateOrder invoicePaymentMode existingInvoice vendorFees mbDeepLinkData splitEnabled mbEntityName actor = do
   mapM_ (\driverFee -> when (driverFee.status `elem` [CLEARED, EXEMPTED, COLLECTED_CASH]) $ throwError (DriverFeeAlreadySettled driverFee.id.getId)) driverFees
   mapM_ (\driverFee -> when (driverFee.status `elem` [INACTIVE, ONGOING]) $ throwError (DriverFeeNotInUse driverFee.id.getId)) driverFees
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound $ getId driverId)
@@ -178,12 +180,12 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
   mCreateOrderRes <-
     if (isJust existingInvoice && amount < 1) -- In case driver fee was cleared with coins and remaining amount is less than 1 (Juspay create order fails)
       then pure Nothing
-      else DPayment.createOrderService commonMerchantId (Just $ cast opCity) commonPersonId Nothing mbEntityName DOrder.Normal False createOrderReq createOrderCall Nothing False Nothing
+      else DPayment.createOrderService commonMerchantId (Just $ cast opCity) commonPersonId Nothing mbEntityName DOrder.Normal False createOrderReq createOrderCall Nothing False Nothing actor
   case mCreateOrderRes of
     Just createOrderRes -> return (createOrderRes{sdk_payload = createOrderRes.sdk_payload{payload = createOrderRes.sdk_payload.payload{clientId = pseudoClientId <|> createOrderRes.sdk_payload.payload.clientId}}}, cast invoiceId)
     Nothing -> do
       QIN.updateInvoiceStatusByInvoiceId INV.EXPIRED invoiceId
-      createOrder (driverId, merchantId, opCity) serviceName (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing vendorFees mbDeepLinkData splitEnabled mbEntityName -- call same function with no existing order
+      createOrder (driverId, merchantId, opCity) serviceName (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing vendorFees mbDeepLinkData splitEnabled mbEntityName actor -- call same function with no existing order
 
 mkSplitSettlementDetails :: (MonadFlow m) => [VF.VendorFee] -> HighPrecMoney -> m (Maybe SplitSettlementDetails)
 mkSplitSettlementDetails vendorFees totalAmount = do
@@ -404,8 +406,9 @@ createOrderV2 ::
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Payment.CreateOrderReq ->
   Maybe DOrder.PaymentServiceType ->
+  Finance.Actor ->
   m Payment.CreateOrderResp
-createOrderV2 (personId, merchantId, merchantOperatingCityId) createOrderReq mbPaymentServiceType = do
+createOrderV2 (personId, merchantId, merchantOperatingCityId) createOrderReq mbPaymentServiceType actor = do
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- PaymentServiceType for createOrderService (STCL, Normal, etc.)
@@ -444,6 +447,7 @@ createOrderV2 (personId, merchantId, merchantOperatingCityId) createOrderReq mbP
       Nothing -- mbCreateWalletCall
       False -- isMockPayment
       Nothing -- mbGroupId
+      actor
   mbCreateOrderResp & fromMaybeM (InternalError "Failed to create payment order")
 
 -- | Create a payment order for driver wallet topup (no Invoice/DriverFee).
@@ -460,8 +464,9 @@ createWalletTopupOrder ::
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   HighPrecMoney ->
   Maybe (Id DOrder.PaymentOrder) ->
+  Finance.Actor ->
   m (Payment.CreateOrderResp, Id DOrder.PaymentOrder)
-createWalletTopupOrder (driverId, merchantId, mocId) amount mbExistingOrderId = do
+createWalletTopupOrder (driverId, merchantId, mocId) amount mbExistingOrderId actor = do
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   merchantServiceUsageConfig <-
@@ -512,6 +517,7 @@ createWalletTopupOrder (driverId, merchantId, mocId) amount mbExistingOrderId = 
       Nothing
       False
       Nothing
+      actor
   case mbResp of
     Just createOrderRes ->
       pure (applyPseudoClientId pseudoClientId createOrderRes, Id orderId)
@@ -535,6 +541,7 @@ createWalletTopupOrder (driverId, merchantId, mocId) amount mbExistingOrderId = 
           Nothing
           False
           Nothing
+          actor
       case mbRetryResp of
         Just retryRes ->
           pure (applyPseudoClientId pseudoClientId retryRes, Id newOrderId)

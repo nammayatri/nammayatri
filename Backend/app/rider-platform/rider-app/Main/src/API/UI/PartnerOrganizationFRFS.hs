@@ -37,6 +37,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Logging as Log
 import Kernel.Utils.Common hiding (withLogTag)
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import Lib.Finance.Core.Types (Actor (..))
 import Servant hiding (route, throwError)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.SystemConfigs ()
@@ -208,7 +209,8 @@ upsertPersonAndQuoteConfirm partnerOrg req = withFlowHandlerAPI . withLogTag $ d
   unless (merchantId == partnerOrg.merchantId) $
     throwError . InvalidRequest $ "apiKey of partnerOrgId:" +|| partnerOrg.orgId ||+ " not valid for merchantId:" +|| merchantId ||+ ""
 
-  DPOFRFS.upsertPersonAndQuoteConfirm partnerOrg req
+  let actor = System
+  DPOFRFS.upsertPersonAndQuoteConfirm partnerOrg req actor
   where
     withLogTag = Log.withLogTag ("FRFS:UpsertPersonAndQuoteConfirm:PartnerOrgId:" <> partnerOrg.orgId.getId <> " FRFS:UpsertPersonAndQuoteConfirm:SearchId:" <> req.searchId.getId)
     partnerQuoteConfirmHitsCountKey :: Text

@@ -33,6 +33,7 @@ import qualified Kernel.External.Wallet as Wallet
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Finance.Core.Types (Actor (..))
 import qualified Lib.Payment.API as Payment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Servant
@@ -77,7 +78,9 @@ createOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DRide.Ride -> FlowHand
 createOrder (personId, merchantId) rideId = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DPayment.createOrder (personId, merchantId) rideId
 
 getStatus :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler DPayment.PaymentStatusResp
-getStatus (personId, merchantId) orderId = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DPayment.getStatus (personId, merchantId) orderId
+getStatus (personId, merchantId) orderId = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DPayment.getStatus (personId, merchantId) orderId actor
+  where
+    actor = Person personId.getId -- TODO move to DPayment.getStatus
 
 getOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler DOrder.PaymentOrderAPIEntity
 getOrder (personId, merchantId) orderId = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DPayment.getOrder (personId, merchantId) orderId

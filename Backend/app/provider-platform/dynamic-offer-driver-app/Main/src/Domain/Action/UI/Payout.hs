@@ -60,6 +60,7 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
@@ -305,6 +306,7 @@ payoutSettlementAction ::
   CallPayoutServiceAction ->
   Flow ()
 payoutSettlementAction merchantId merchantOperatingCityId payoutStatus amount payoutOrderId callPayoutServiceAction = do
+  let actor = Finance.System -- using System for webhook handlers
   payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
   case payoutOrder.entityName of
     Just DPayment.SPECIAL_ZONE_PAYOUT -> do
@@ -439,6 +441,7 @@ payoutSettlementAction merchantId merchantOperatingCityId payoutStatus amount pa
                     walletReferencePayout
                     payoutOrder.id.getId
                     (Just metadata)
+                    actor
                     >>= fromEitherM (\err -> InternalError ("Failed to create wallet payout entry: " <> show err))
 
                 -- Settle the covered ledger entries (mark as PAID_OUT)
@@ -493,8 +496,8 @@ payoutSettlementAction merchantId merchantOperatingCityId payoutStatus amount pa
         when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dStatsId
       callPayoutServiceAction payoutOrderId dailyStats.driverId payoutConfig
 
-processPreviousPayoutAmount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl], HasKafkaProducer r) => Id Person.Person -> Maybe Text -> Id DMOC.MerchantOperatingCity -> m ()
-processPreviousPayoutAmount personId mbVpa merchOpCity = do
+processPreviousPayoutAmount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl], HasKafkaProducer r) => Id Person.Person -> Maybe Text -> Id DMOC.MerchantOperatingCity -> Finance.Actor -> m ()
+processPreviousPayoutAmount personId mbVpa merchOpCity actor = do
   mbVehicle <- QV.findById personId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchOpCity.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing}) (Just (maybeToList <$> CQPC.findByPrimaryKey merchOpCity vehicleCategory Nothing)) >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchOpCity.getId)
@@ -525,7 +528,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
               createPayoutOrderCall = Payout.createPayoutOrder payoutServiceName merchOpCity person.id mbPersonBankAccount
           merchantOperatingCity <- CQMOC.findById (cast merchOpCity) >>= fromMaybeM (MerchantOperatingCityNotFound merchOpCity.getId)
           logDebug $ "calling create payoutOrder with driverId: " <> personId.getId <> " | amount: " <> show pendingAmount <> " | orderId: " <> show uid
-          void $ DPayment.createPayoutService (cast person.merchantId) (Just $ cast merchOpCity) (cast personId) (Just statsIds) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
+          void $ DPayment.createPayoutService (cast person.merchantId) (Just $ cast merchOpCity) (cast personId) (Just statsIds) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing actor
         (_, False) -> do
           Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey personId.getId) 3 3 $ do
             mapM_ (QDailyStats.updatePayoutStatusById DS.ManualReview) statsIds -- don't pay if amount is greater than threshold amount

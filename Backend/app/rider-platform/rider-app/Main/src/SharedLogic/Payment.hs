@@ -42,6 +42,7 @@ import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Lib.Finance.Core.Types (Actor)
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
@@ -162,8 +163,9 @@ orderStatusHandler ::
   DOrder.PaymentServiceType ->
   DOrder.PaymentOrder ->
   (Payment.OrderStatusReq -> m Payment.OrderStatusResp) ->
+  Actor ->
   m DPayment.PaymentStatusResp
-orderStatusHandler merchantOpCityId fulfillmentHandler paymentService paymentOrder orderStatusCall = do
+orderStatusHandler merchantOpCityId fulfillmentHandler paymentService paymentOrder orderStatusCall actor = do
   Redis.withWaitAndLockMasterCloudCrossAppRedis
     makePaymentOrderStatusHandlerLockKey
     60
@@ -173,7 +175,7 @@ orderStatusHandler merchantOpCityId fulfillmentHandler paymentService paymentOrd
         orderStatusResponse <- DPayment.orderStatusService commonMerchantOperatingCityId paymentOrder.personId paymentOrder.id orderStatusCall
         mbUpdatedPaymentOrder <- QPaymentOrder.findById paymentOrder.id
         let updatedPaymentOrder = fromMaybe paymentOrder mbUpdatedPaymentOrder
-        orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder updatedPaymentOrder orderStatusResponse
+        orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder updatedPaymentOrder orderStatusResponse actor
     )
   where
     makePaymentOrderStatusHandlerLockKey :: Text
@@ -203,8 +205,9 @@ orderStatusHandlerWithRefunds ::
   DOrder.PaymentOrder ->
   DOrder.PaymentOrder ->
   DPayment.PaymentStatusResp ->
+  Actor ->
   m DPayment.PaymentStatusResp
-orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder updatedPaymentOrder paymentStatusResponse = do
+orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder updatedPaymentOrder paymentStatusResponse actor = do
   refundStatusHandler paymentOrder paymentService
   eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId <-
     withTryCatch "orderStatusHandler:orderStatusHandler" $
@@ -311,6 +314,7 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
                 updatedPaymentOrder
                 domainEntityId
                 loyalty
+                actor
                 resolveProgram
                 fetchFullInfo
           case res of
@@ -585,8 +589,9 @@ markRefundPendingAndSyncOrderStatus ::
   Id Merchant.Merchant ->
   Id Person.Person ->
   Id DOrder.PaymentOrder ->
+  Actor ->
   m DPayment.PaymentStatusResp
-markRefundPendingAndSyncOrderStatus merchantId personId orderId = do
+markRefundPendingAndSyncOrderStatus merchantId personId orderId actor = do
   paymentOrder <- QPaymentOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
   let paymentServiceType = fromMaybe DOrder.Normal paymentOrder.paymentServiceType
   case paymentServiceType of
@@ -598,7 +603,7 @@ markRefundPendingAndSyncOrderStatus merchantId personId orderId = do
     _ -> pure ()
   -- Hardcoded refund handler since this is only used for refund scenarios
   let refundFulfillmentHandler _ = pure (DPayment.FulfillmentRefundPending, Nothing, Nothing)
-  syncOrderStatus refundFulfillmentHandler merchantId personId paymentOrder
+  syncOrderStatus refundFulfillmentHandler merchantId personId paymentOrder actor
   where
     markBookingsRefundPending paymentOrder = do
       bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId paymentOrder.id
@@ -634,8 +639,9 @@ syncOrderStatus ::
   Id Merchant.Merchant ->
   Id Person.Person ->
   DOrder.PaymentOrder ->
+  Actor ->
   m DPayment.PaymentStatusResp
-syncOrderStatus fulfillmentHandler merchantId personId paymentOrder = do
+syncOrderStatus fulfillmentHandler merchantId personId paymentOrder actor = do
   person <- QPerson.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   commonMerchantOperatingCityId <- paymentOrder.merchantOperatingCityId & fromMaybeM (InternalError "MerchantOperatingCityId not found in payment order")
   let paymentServiceType = fromMaybe DOrder.Normal paymentOrder.paymentServiceType
@@ -648,7 +654,7 @@ syncOrderStatus fulfillmentHandler merchantId personId paymentOrder = do
       DOrder.RideBooking -> return Nothing
       _ -> return Nothing
   let orderStatusCall = TPayment.orderStatus merchantId mocId ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
-  orderStatusHandler mocId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
+  orderStatusHandler mocId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall actor
 
 -------------------------------------------------------------------------------------------------------
 ------------------------------------- Payment Utility Functions ---------------------------------------
@@ -948,8 +954,9 @@ chargePaymentIntent ::
   Text -> -- settlement reason
   Id Person.Person ->
   DPayment.OfferStatsInput -> -- callback to build stats input (called only on success)
+  Actor ->
   m Bool
-chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType paymentIntentId rideId settledReason personId offerStatsInput = do
+chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType paymentIntentId rideId settledReason personId offerStatsInput actor = do
   let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId paymentMode
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId paymentMode
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
@@ -976,6 +983,7 @@ chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType p
                 Nothing
                 Nothing
                 Nothing
+                actor
         result <- RidePaymentFinance.settleRidePaymentLedger ctx entryIds settledReason
         case result of
           Right () -> do
@@ -1187,8 +1195,9 @@ clearDuesForPerson ::
   APIRidePayment.GetDueAmountResp ->
   Currency ->
   Payment.PaymentMethodId ->
+  Actor ->
   m APIRidePayment.ClearDuesResp
-clearDuesForPerson person duesResp currency paymentMethodId = do
+clearDuesForPerson person duesResp currency paymentMethodId actor = do
   rideId <- listToMaybe duesResp.rides <&> (.rideId) & fromMaybeM (InvalidRequest "No ride id found")
   Redis.withWaitAndLockRedis (paymentJobExecLockKey rideId.getId) 10 20 $ do
     ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
@@ -1212,7 +1221,7 @@ clearDuesForPerson person duesResp currency paymentMethodId = do
               receiptEmail = email,
               driverAccountId
             }
-    let debtLedgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
+    let debtLedgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]) actor
         debtLedgerInfo =
           mkRidePaymentLedgerInfo
             (duesResp.rideFareDue - duesResp.platformFeeDue)
@@ -1259,6 +1268,7 @@ clearDuesForPerson person duesResp currency paymentMethodId = do
           RidePaymentFinance.settledReasonDebtSettlement
           booking.riderId
           offerStatsInput
+          actor
     case captureResult of
       Right True -> do
         QRide.markPaymentStatus Ride.Completed rideId
@@ -1345,8 +1355,9 @@ capturePendingPaymentIfExists ::
   ) =>
   Person.Person ->
   Id DMOC.MerchantOperatingCity ->
+  Actor ->
   m ()
-capturePendingPaymentIfExists person merchantOperatingCityId = do
+capturePendingPaymentIfExists person merchantOperatingCityId actor = do
   -- Find most recent ride for this rider
   mbLatestRideBooking <- QRide.findMostRecentRideForRider person.id
   case mbLatestRideBooking of
@@ -1373,7 +1384,7 @@ capturePendingPaymentIfExists person merchantOperatingCityId = do
               let paymentIntentId = order.paymentServiceOrderId
               -- chargePaymentIntent will mark entries as DUE on failure, SETTLED on success
               offerStatsInput <- buildOfferStatsInput person
-              paymentCharged <- chargePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode DOrder.RideHailing paymentIntentId ride.id RidePaymentFinance.settledReasonRidePayment booking.riderId offerStatsInput
+              paymentCharged <- chargePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode DOrder.RideHailing paymentIntentId ride.id RidePaymentFinance.settledReasonRidePayment booking.riderId offerStatsInput actor
               if paymentCharged
                 then do
                   logInfo $ "Successfully captured payment for ride " <> ride.id.getId

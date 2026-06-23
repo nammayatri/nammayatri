@@ -7,6 +7,7 @@ import Data.Aeson
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Lib.Finance.Core.Types
 import qualified Tools.Beam.UtilsTH
 
 data SapJournalEntry = SapJournalEntry
@@ -16,6 +17,7 @@ data SapJournalEntry = SapJournalEntry
     bldat :: Kernel.Prelude.Text,
     budat :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
+    createdBy :: Kernel.Prelude.Maybe Lib.Finance.Core.Types.Actor,
     currency :: Kernel.Types.Common.Currency,
     description :: Kernel.Prelude.Text,
     gjahr :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -31,7 +33,8 @@ data SapJournalEntry = SapJournalEntry
     totalDebitAmount :: Kernel.Types.Common.HighPrecMoney,
     transactionCount :: Kernel.Prelude.Int,
     transactionType :: Lib.Finance.Domain.Types.SapJournalEntry.TransactionType,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    updatedBy :: Kernel.Prelude.Maybe Lib.Finance.Core.Types.Actor
   }
   deriving (Generic)
 

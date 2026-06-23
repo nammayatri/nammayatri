@@ -78,6 +78,7 @@ import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.Finance.Core.Types (Actor)
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -846,8 +847,9 @@ createPaymentOrder ::
   [Payment.VendorSplitDetails] ->
   Maybe [Payment.Basket] ->
   Bool ->
+  Actor ->
   m (Maybe DOrder.PaymentOrder)
-createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket isMockPayment = do
+createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket isMockPayment actor = do
   nwAddress <- asks (.nwAddress)
   logInfo $ "createPayments vendorSplitArr" <> show vendorSplitArr
   logInfo $ "createPayments basket" <> show basket
@@ -899,8 +901,8 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let createWalletCall = TWallet.createWallet merchantId merchantOperatingCityId
       groupId = listToMaybe $ sort (bookings <&> (.id.getId))
-  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) isMockPayment groupId
-  mapM (\resp -> DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq resp isMockPayment groupId Nothing) orderResp
+  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) isMockPayment groupId actor
+  mapM (\resp -> DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq resp isMockPayment groupId Nothing actor) orderResp
   where
     getPaymentIds = do
       orderShortId <- generateShortId

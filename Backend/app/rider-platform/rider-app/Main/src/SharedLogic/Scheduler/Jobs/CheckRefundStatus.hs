@@ -32,6 +32,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import Lib.Finance.Core.Types (Actor (..))
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -82,7 +83,8 @@ checkRefundStatusJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   refundEntry <- HQRefunds.findById refundId >>= fromMaybeM (InvalidRequest $ "refund not found for id: " <> show refundId)
   paymentOrder <- QPaymentOrder.findByShortId refundEntry.orderId >>= fromMaybeM (InvalidRequest $ "payment order not found for refund: " <> show refundEntry.id.getId)
   person <- QP.findById (cast paymentOrder.personId) >>= fromMaybeM (PersonNotFound paymentOrder.personId.getId)
-  retryStatus <- processRefundStatus refundEntry person paymentOrder
+  let actor = System -- using System for job handlers
+  retryStatus <- processRefundStatus refundEntry person paymentOrder actor
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   when retryStatus $ do
     let maxRetries = riderConfig.refundStatusUpdateRetries
@@ -124,8 +126,9 @@ processRefundStatus ::
   DRefunds.Refunds ->
   DP.Person ->
   DPaymentOrder.PaymentOrder ->
+  Actor ->
   m Bool
-processRefundStatus refundEntry person paymentOrder = do
+processRefundStatus refundEntry person paymentOrder actor = do
   let nonTerminalStatuses = [Payment.REFUND_PENDING, Payment.MANUAL_REVIEW]
       paymentServiceType = fromMaybe Payment.FRFSMultiModalBooking paymentOrder.paymentServiceType
   if refundEntry.status `elem` nonTerminalStatuses
@@ -143,7 +146,7 @@ processRefundStatus refundEntry person paymentOrder = do
 
           when (newStatus `notElem` nonTerminalStatuses) $ do
             let fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast paymentOrder.merchantId) paymentOrder.id
-            void $ SPayment.orderStatusHandler person.merchantOperatingCityId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
+            void $ SPayment.orderStatusHandler person.merchantOperatingCityId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall actor
           return True
         Nothing -> return False
     else return False
@@ -151,9 +154,9 @@ processRefundStatus refundEntry person paymentOrder = do
     -- Helper to create fulfillment handler based on payment service type
     mkFulfillmentHandler :: Payment.PaymentServiceType -> Id DM.Merchant -> Id DPaymentOrder.PaymentOrder -> DPayment.PaymentStatusResp -> m (DPayment.PaymentFulfillmentStatus, Maybe Text, Maybe Text)
     mkFulfillmentHandler serviceType merchantId orderId paymentStatusResp = case serviceType of
-      Payment.FRFSBooking -> FRFSTicketService.frfsOrderStatusHandler merchantId paymentStatusResp JMU.switchFRFSQuoteTierUtil
-      Payment.FRFSBusBooking -> FRFSTicketService.frfsOrderStatusHandler merchantId paymentStatusResp JMU.switchFRFSQuoteTierUtil
-      Payment.FRFSMultiModalBooking -> FRFSTicketService.frfsOrderStatusHandler merchantId paymentStatusResp JMU.switchFRFSQuoteTierUtil
+      Payment.FRFSBooking -> FRFSTicketService.frfsOrderStatusHandler merchantId paymentStatusResp JMU.switchFRFSQuoteTierUtil actor
+      Payment.FRFSBusBooking -> FRFSTicketService.frfsOrderStatusHandler merchantId paymentStatusResp JMU.switchFRFSQuoteTierUtil actor
+      Payment.FRFSMultiModalBooking -> FRFSTicketService.frfsOrderStatusHandler merchantId paymentStatusResp JMU.switchFRFSQuoteTierUtil actor
       Payment.FRFSPassPurchase -> do
         status <- DPayment.getTransactionStatus paymentStatusResp
         Pass.passOrderStatusHandler orderId merchantId status

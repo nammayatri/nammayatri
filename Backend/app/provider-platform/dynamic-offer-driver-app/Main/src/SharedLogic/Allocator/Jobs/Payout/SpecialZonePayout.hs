@@ -28,6 +28,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import Lib.LocationUpdates
 import qualified Lib.Payment.Domain.Action as Payout
@@ -64,10 +65,11 @@ sendSpecialZonePayout ::
   m ExecutionResult
 sendSpecialZonePayout Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
+      actor = Finance.System -- using System for job handlers
   case jobData.payoutRequestId of
-    Just prId -> handleNewFlow prId
+    Just prId -> handleNewFlow prId actor
     Nothing -> case jobData.scheduledPayoutId of
-      Just spId -> handleOldFlow spId
+      Just spId -> handleOldFlow spId actor
       Nothing -> do
         logError "SpecialZonePayout job has neither payoutRequestId nor scheduledPayoutId"
         pure Complete
@@ -87,8 +89,9 @@ handleNewFlow ::
     LocationUpdateFlow m r c
   ) =>
   Id DPR.PayoutRequest ->
+  Finance.Actor ->
   m ExecutionResult
-handleNewFlow payoutRequestId = do
+handleNewFlow payoutRequestId actor = do
   let lockKey = "payout:lock:" <> payoutRequestId.getId
   acquired <- Redis.tryLockRedis lockKey 300
   if not acquired
@@ -103,7 +106,7 @@ handleNewFlow payoutRequestId = do
             logInfo $ "PayoutRequest record not found for id: " <> show payoutRequestId
             pure Complete
           Just payoutRequest ->
-            executeSpecialZonePayout payoutRequest
+            executeSpecialZonePayout payoutRequest actor
 
 executeSpecialZonePayout ::
   ( EncFlow m r,
@@ -116,8 +119,9 @@ executeSpecialZonePayout ::
     LocationUpdateFlow m r c
   ) =>
   DPR.PayoutRequest ->
+  Finance.Actor ->
   m ExecutionResult
-executeSpecialZonePayout payoutRequest = do
+executeSpecialZonePayout payoutRequest actor = do
   let driverId = Id payoutRequest.beneficiaryId
   let merchantId = Id payoutRequest.merchantId
   let merchantOpCityId = Id payoutRequest.merchantOperatingCityId
@@ -143,7 +147,7 @@ executeSpecialZonePayout payoutRequest = do
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- TP.getCreatePayoutServiceFlow TP.MerchantServiceUsageConfigOption DEMSC.RidePayoutService person.clientSdkVersion merchantOpCityId person.id
   let payoutCall = TP.createPayoutOrder payoutServiceName merchantOpCityId person.id mbPersonBankAccount
-  mbPayoutOrder <- PayoutRequest.executePayoutRequest merchantOperatingCity.currency payoutServiceFlow payoutRequest payoutCall
+  mbPayoutOrder <- PayoutRequest.executePayoutRequest merchantOperatingCity.currency payoutServiceFlow payoutRequest actor payoutCall
   case mbPayoutOrder of
     Just payoutOrder ->
       logInfo $ "Special Zone Payout request submitted for id: " <> show payoutRequest.id <> " | orderId: " <> payoutOrder.id.getId
@@ -170,8 +174,9 @@ handleOldFlow ::
     LocationUpdateFlow m r c
   ) =>
   Id DSP.ScheduledPayout ->
+  Finance.Actor ->
   m ExecutionResult
-handleOldFlow scheduledPayoutId = do
+handleOldFlow scheduledPayoutId actor = do
   let lockKey = "payout:lock:" <> scheduledPayoutId.getId
   acquired <- Redis.tryLockRedis lockKey 300
   if not acquired
@@ -212,7 +217,7 @@ handleOldFlow scheduledPayoutId = do
                 logInfo $ "Payout was cancelled, skipping: " <> show scheduledPayoutId
                 pure Complete
               DSP.INITIATED -> do
-                executeOldSpecialZonePayout scheduledPayout
+                executeOldSpecialZonePayout scheduledPayout actor
 
 executeOldSpecialZonePayout ::
   ( EncFlow m r,
@@ -225,8 +230,9 @@ executeOldSpecialZonePayout ::
     LocationUpdateFlow m r c
   ) =>
   DSP.ScheduledPayout ->
+  Finance.Actor ->
   m ExecutionResult
-executeOldSpecialZonePayout scheduledPayout = do
+executeOldSpecialZonePayout scheduledPayout actor = do
   let driverId = Id scheduledPayout.driverId
   let merchantId = scheduledPayout.merchantId
   let merchantOpCityId = scheduledPayout.merchantOperatingCityId
@@ -314,7 +320,7 @@ executeOldSpecialZonePayout scheduledPayout = do
                   logInfo $ "Calling payout service for driver: " <> driverId.getId <> " | amount: " <> show amount <> " | orderId: " <> uid
                   let createPayoutOrderCall = TP.createPayoutOrder payoutServiceName opCityId person.id mbPersonBankAccount
 
-                  result <- try $ Payout.createPayoutService (cast mId) (Just $ cast opCityId) (cast driverId) (Just [scheduledPayout.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
+                  result <- try $ Payout.createPayoutService (cast mId) (Just $ cast opCityId) (cast driverId) (Just [scheduledPayout.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing actor
 
                   case result of
                     Left (err :: SomeException) -> do

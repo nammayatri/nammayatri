@@ -33,6 +33,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.Finance.Core.Types (Actor (..))
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
@@ -267,6 +268,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
     (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking person
     driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
     email <- mapM decrypt person.email
+    let actor = Person personId.getId
     if ride.paymentStatus == Domain.Types.Ride.Completed
       then do
         -- Tip added after payment is captured (Completed status)
@@ -290,13 +292,13 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         whenJust mbTipPaymentIntentResp $ \tipPaymentIntentResp -> do
           -- Capture tip — settlement happens automatically inside chargePaymentIntent
           offerStatsInput <- SPayment.buildOfferStatsInput person
-          tipPaymentCaptured <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.RideHailing tipPaymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonTipPayment booking.riderId offerStatsInput
+          tipPaymentCaptured <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.RideHailing tipPaymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonTipPayment booking.riderId offerStatsInput actor
           if tipPaymentCaptured
             then do
               QRide.updateTipByRideId (Just tipAmount) rideId
-              let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
+              let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]) actor
               void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
-              RidePaymentFinance.regenerateRideTipInvoice rideId.getId tipRequest.amount.amount
+              RidePaymentFinance.regenerateRideTipInvoice rideId.getId tipRequest.amount.amount actor
             else logError $ "Failed to capture tip payment intent: " <> tipPaymentIntentResp.paymentIntentId
       else do
         -- Tip added before payment is captured (NotInitiated or Initiated)
@@ -325,7 +327,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         -- ledger core (handled separately via createTipLedger), the
         -- existing core entries won't be disturbed.
         tipRideFareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId Domain.Types.FareBreakup.RIDE (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE)
-        let tipLedgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
+        let tipLedgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]) actor
         mbTipLedgerInfo <- SPayment.buildLedgerInfoFromBreakups tipRideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount 0 tipLedgerCtx
         let tipLedgerInfo =
               fromMaybe
@@ -349,7 +351,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         case mbPaymentIntentResp of
           Nothing -> do
             bookingFareBreakup <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId Domain.Types.FareBreakup.BOOKING (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.BOOKING)
-            let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
+            let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]) actor
             mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups bookingFareBreakup rideDiscountAmount ridePayoutAmount applicationFeeAmount 0 ledgerCtx
             let ledgerInfo =
                   fromMaybe
@@ -371,26 +373,26 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
                     mbLedgerInfo
             logDebug $ "makePaymentIntent (tip-applied): breakups=" <> show bookingFareBreakup <> " discount=" <> show rideDiscountAmount <> " payout=" <> show ridePayoutAmount <> " platformFee=" <> show applicationFeeAmount <> " -> ledgerInfo=" <> show ledgerInfo
             -- Create separate PENDING tip ledger entry via dedicated function
-            let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
+            let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]) actor
             void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
             when (ride.status == Domain.Types.RideStatus.COMPLETED) $ do
               let discountApplicableFareAmountTaxIncl = case RD.parseProjectFareParamsBreakup $ (\fb -> (fb.description, fb.amount.amount)) <$> bookingFareBreakup of
                     Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
                     Nothing -> fareWithTip.amount
               SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId rideId person booking.selectedOfferId fareWithTip.currency discountApplicableFareAmountTaxIncl rideDiscountAmount ledgerInfo booking
-              RidePaymentFinance.regenerateRideTipInvoice rideId.getId tipAmount.amount
+              RidePaymentFinance.regenerateRideTipInvoice rideId.getId tipAmount.amount actor
           Just paymentIntentResp -> do
             -- Create separate PENDING tip ledger entry via dedicated function
-            let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
+            let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]) actor
             void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
             -- Capture immediately — old auth was cancelled, new PI needs fresh capture
             when (ride.status == Domain.Types.RideStatus.COMPLETED) $ do
               offerStatsInput <- SPayment.buildOfferStatsInput person
-              paymentCaptured <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.RideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment booking.riderId offerStatsInput
+              paymentCaptured <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.RideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment booking.riderId offerStatsInput actor
               if paymentCaptured
                 then do
                   QRide.markPaymentStatus Domain.Types.Ride.Completed rideId
-                  RidePaymentFinance.regenerateRideTipInvoice rideId.getId tipAmount.amount
+                  RidePaymentFinance.regenerateRideTipInvoice rideId.getId tipAmount.amount actor
                 else do
                   QRide.markPaymentStatus Domain.Types.Ride.Failed rideId
                   logError $ "Failed to capture payment intent after tip: " <> paymentIntentResp.paymentIntentId
@@ -680,7 +682,8 @@ postPaymentClearDues (mbPersonId, _merchantId) req = do
         False -> throwError $ InvalidRequest "Payment method doesn't belong to Customer"
         True -> return pmId
     Nothing -> SPayment.getDefaultPaymentMethodForDues person
-  SPayment.clearDuesForPerson person duesResp currency paymentMethodId
+  let actor = Person personId.getId
+  SPayment.clearDuesForPerson person duesResp currency paymentMethodId actor
 
 -- | Capture PENDING payment for a ride. Settles ledger entries and updates ride status.
 --   Returns error if no pending entries found or caller is not the ride owner.
@@ -706,6 +709,7 @@ postPaymentRideCapture (mbPersonId, _merchantId) rideId = do
     paymentOrder <- QPaymentOrder.findById orderId >>= fromMaybeM (InvalidRequest "Payment order not found")
     let paymentIntentId = paymentOrder.paymentServiceOrderId
     offerStatsInput <- SPayment.buildOfferStatsInput person
+    let actor = Person personId.getId
     paymentCharged <-
       SPayment.chargePaymentIntent
         booking.merchantId
@@ -717,6 +721,7 @@ postPaymentRideCapture (mbPersonId, _merchantId) rideId = do
         RidePaymentFinance.settledReasonRidePayment
         booking.riderId
         offerStatsInput
+        actor
     if paymentCharged
       then do
         -- Settlement already done inside chargePaymentIntent

@@ -33,6 +33,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common (fromMaybeM, throwError)
 import Kernel.Utils.Logging (logInfo)
+import Lib.Finance.Core.Types (Actor (..))
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -42,8 +43,9 @@ import Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
 import Storage.Queries.StopFare as QRSF
 
 postFRFSTicketFrfsStatusUpdate :: (ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.FRFSTicket.FRFSStatusUpdateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postFRFSTicketFrfsStatusUpdate _merchantShortId _opCity req =
-  InternalFRFS.frfsStatusUpdate $ InternalFRFS.FRFSStatusUpdateReq {bookingIds = map cast req.bookingIds}
+postFRFSTicketFrfsStatusUpdate _merchantShortId _opCity req = do
+  let actor = System -- TODO apiTokenInfo.personId.getId for dashboard handler
+  InternalFRFS.frfsStatusUpdate (InternalFRFS.FRFSStatusUpdateReq {bookingIds = map cast req.bookingIds}) actor
 
 getFRFSTicketFrfsRoutes :: (ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow [API.Types.RiderPlatform.Management.FRFSTicket.FRFSDashboardRouteAPI])
 getFRFSTicketFrfsRoutes merchantShortId opCity searchStr limit offset vehicleType = do

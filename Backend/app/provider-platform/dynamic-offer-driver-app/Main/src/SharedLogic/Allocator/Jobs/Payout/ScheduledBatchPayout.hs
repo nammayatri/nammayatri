@@ -41,6 +41,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
@@ -260,7 +261,8 @@ processOneWalletPayout config transporterConfig merchantId merchantOpCityId pers
       when (payoutableBalance >= config.minimumPayoutAmount) $ do
         -- Skip manually-added VPAs
         unless isManuallyAdded $ do
-          initiateWalletPayout ctx payoutableBalance PR.SCHEDULED Nothing (Just cutoff) (map (.getId) redeemableIds) merchantTransferAmt
+          let actor = Finance.System -- using System for job handlers
+          initiateWalletPayout ctx payoutableBalance PR.SCHEDULED Nothing (Just cutoff) (map (.getId) redeemableIds) merchantTransferAmt actor
   case result of
     Left (e :: SomeException) -> logError $ "ScheduledWalletPayout error for " <> personId.getId <> ": " <> show e
     Right _ -> pure ()

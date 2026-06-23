@@ -5,6 +5,7 @@ imports:
   UTCTime: Kernel.Prelude
   HighPrecMoney: Kernel.Types.Common
   Currency: Kernel.Types.Common
+  Actor: Lib.Finance.Core.Types
 
 SapJournalEntry:
   tableName: sap_journal_entry
@@ -41,6 +42,10 @@ SapJournalEntry:
     merchantOperatingCityId: Text
     createdAt: UTCTime
     updatedAt: UTCTime
+
+    # --- Audit ---
+    createdBy: Maybe Actor                          # Who created this record
+    updatedBy: Maybe Actor                          # Who updated this record
 
   sqlType:
     glNumber: "text[]"

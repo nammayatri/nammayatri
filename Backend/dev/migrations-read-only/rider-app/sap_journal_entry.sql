@@ -23,3 +23,10 @@ ALTER TABLE atlas_app.sap_journal_entry ADD COLUMN transaction_count integer NOT
 ALTER TABLE atlas_app.sap_journal_entry ADD COLUMN transaction_type text NOT NULL;
 ALTER TABLE atlas_app.sap_journal_entry ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.sap_journal_entry ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.sap_journal_entry ADD COLUMN updated_by text ;
+ALTER TABLE atlas_app.sap_journal_entry ADD COLUMN created_by text ;

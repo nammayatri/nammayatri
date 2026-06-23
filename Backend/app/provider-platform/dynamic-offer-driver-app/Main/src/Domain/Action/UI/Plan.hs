@@ -53,6 +53,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -473,7 +474,8 @@ getSubcriptionStatusWithPlanPrepaid driverId = do
         subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName person.merchantOperatingCityId Nothing PREPAID_SUBSCRIPTION >>= fromMaybeM (NoSubscriptionConfigForService person.merchantOperatingCityId.getId (show PREPAID_SUBSCRIPTION))
         Just <$> getVehicleCategory (cast driverId) subscriptionConfig
       else pure Nothing
-  mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
+  let actor = Finance.Person ownerId -- FIXME is it correct?
+  mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName (\p -> handleSubscriptionExpiry p actor) ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
   pure (Nothing, mkSyntheticDriverPlanFromPurchase <$> mbPurchase)
 
 updateSubscriptionStatusGeneric ::
@@ -616,7 +618,8 @@ planList (personId, merchantId, merchantOpCityId) serviceName _mbLimit _mbOffset
             subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing PREPAID_SUBSCRIPTION >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId (show PREPAID_SUBSCRIPTION))
             Just <$> getVehicleCategory (cast personId) subscriptionConfig
           else pure Nothing
-      mbPurchase <- B.runInReplica $ QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
+      let actor = Finance.Person personId.getId
+      mbPurchase <- B.runInReplica $ QSPE.findLatestActiveByOwnerAndServiceName (\p -> handleSubscriptionExpiry p actor) ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
       pure $ mkSyntheticDriverPlanFromPurchase <$> mbPurchase
     _ -> B.runInReplica $ QDPlan.findByDriverIdWithServiceName personId serviceName
   (_, plans) <- getSubscriptionConfigAndPlan serviceName (personId, merchantId, merchantOpCityId) mDriverPlan
@@ -752,7 +755,10 @@ prepaidPlanSubscribe ::
   Flow PlanSubscribeRes
 prepaidPlanSubscribe serviceName planId (isDashboard, channel) (driverId, merchantId, merchantOpCityId) _subscriptionServiceRelatedData = do
   (_subscriptionConfig, plan, mbDeepLinkData) <- prepareSubscriptionData merchantOpCityId serviceName planId isDashboard
-  (createOrderResp, orderId) <- createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData
+  let actor
+        | isDashboard = Finance.System -- TODO apiTokenInfo.personId.getId for dashboard handler
+        | otherwise = Finance.Person driverId.getId
+  (createOrderResp, orderId) <- createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData actor
   when isDashboard $ sendSubscriptionLink createOrderResp driverId channel (isJust mbDeepLinkData)
   return $
     PlanSubscribeRes
@@ -788,7 +794,10 @@ planSubscribeGeneric serviceName planId (isDashboard, channel) (driverId, mercha
     unless (autoPayStatus == Just DI.PENDING && isSamePlan) $ do
       QDF.updateRegisterationFeeStatusByDriverIdForServiceName DF.INACTIVE driverId serviceName
     QDPlan.updatePlanIdByDriverIdAndServiceName driverId planId serviceName (Just plan.vehicleCategory) plan.merchantOpCityId
-  (createOrderResp, orderId) <- createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData
+  let actor
+        | isDashboard = Finance.System -- TODO apiTokenInfo.personId.getId for dashboard handler
+        | otherwise = Finance.Person driverId.getId
+  (createOrderResp, orderId) <- createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData actor
   when isDashboard $ sendSubscriptionLink createOrderResp driverId channel (isJust mbDeepLinkData)
   return $
     PlanSubscribeRes
@@ -1168,8 +1177,9 @@ createPrepaidSubscriptionOrder ::
   Id DMOC.MerchantOperatingCity ->
   Plan ->
   Maybe SPayment.DeepLinkData ->
+  Finance.Actor ->
   Flow (Payment.CreateOrderResp, Id DOrder.PaymentOrder)
-createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData = do
+createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData actor = do
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
@@ -1224,6 +1234,7 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
       Nothing
       False
       Nothing
+      actor
   createOrderResp <- mbCreateOrderResp & fromMaybeM (InternalError "Failed to create payment order")
   let createOrderResp' = SPayment.applyPseudoClientId pseudoClientId createOrderResp
   now <- getCurrentTime
@@ -1258,7 +1269,9 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
             merchantOperatingCityId = merchantOpCityId,
             createdAt = now,
             updatedAt = now,
-            reconciliationStatus = Nothing
+            reconciliationStatus = Nothing,
+            createdBy = Just actor,
+            updatedBy = Just actor
           }
   QSP.create subscriptionPurchase
   pure (createOrderResp', paymentOrderId)
@@ -1270,8 +1283,9 @@ createMandateInvoiceAndOrder ::
   Id DMOC.MerchantOperatingCity ->
   Plan ->
   Maybe SPayment.DeepLinkData ->
+  Finance.Actor ->
   Flow (Payment.CreateOrderResp, Id DOrder.PaymentOrder)
-createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData = do
+createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData actor = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   subscriptionConfig <-
@@ -1328,9 +1342,9 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
                 QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE invoiceId
                 return Nothing
               else return mbInvoiceIdTuple
-          SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName (driverFee : driverManualDuesFees, []) mbMandateOrder INV.MANDATE_SETUP_INVOICE finalInvoiceIdTuple vendorFees mbDeepLinkData splitEnabled Nothing
+          SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName (driverFee : driverManualDuesFees, []) mbMandateOrder INV.MANDATE_SETUP_INVOICE finalInvoiceIdTuple vendorFees mbDeepLinkData splitEnabled Nothing actor
         else do
-          SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName ([driverFee], []) mbMandateOrder INV.MANDATE_SETUP_INVOICE mbInvoiceIdTuple [] mbDeepLinkData splitEnabled Nothing
+          SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName ([driverFee], []) mbMandateOrder INV.MANDATE_SETUP_INVOICE mbInvoiceIdTuple [] mbDeepLinkData splitEnabled Nothing actor
     calculateDues driverFees = sum $ map (\dueInvoice -> roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) driverFees
     checkIfInvoiceIsReusable invoice newDriverFees = do
       allDriverFeeClubedToInvoice <- QINV.findById invoice.id

@@ -35,6 +35,7 @@ import Lib.Finance
     runFinance,
     transfer,
   )
+import Lib.Finance.Core.Types (Actor (..))
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified SharedLogic.FareCalculator as FareCalculator
 import qualified SharedLogic.Finance.Wallet as Wallet
@@ -76,8 +77,9 @@ deductAirportEntryFeeAtEndRide ::
   (BeamFlow m r, CacheFlow m r, Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m) =>
   DRide.Ride ->
   SRB.Booking ->
+  Actor ->
   m ()
-deductAirportEntryFeeAtEndRide ride booking = do
+deductAirportEntryFeeAtEndRide ride booking actor = do
   totalFee <- requiredEntryFeeForBooking booking
   when (totalFee > 0) $ do
     transporterConfig <-
@@ -115,7 +117,8 @@ deductAirportEntryFeeAtEndRide ride booking = do
               tdsRateReason = Nothing,
               emitLedgerEntries = maybe True (.emitLedgerEntries) transporterConfig.invoiceConfig,
               fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
-              issuedToName = Nothing
+              issuedToName = Nothing,
+              actor
             }
     result <-
       runFinance ctx $

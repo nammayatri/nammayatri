@@ -11,6 +11,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import Servant
 import Storage.Beam.SystemConfigs ()
 
@@ -26,4 +27,6 @@ handler =
   populateTipAmount
 
 populateTipAmount :: Id Ride -> HighPrecMoney -> Maybe Text -> FlowHandler APISuccess
-populateTipAmount rideId tipAmount = withFlowHandlerAPI . Domain.populateTipAmount rideId tipAmount
+populateTipAmount rideId tipAmount apiKey = withFlowHandlerAPI $ do
+  let actor = Finance.System -- FIXME add proper actor personId
+  Domain.populateTipAmount rideId tipAmount apiKey actor

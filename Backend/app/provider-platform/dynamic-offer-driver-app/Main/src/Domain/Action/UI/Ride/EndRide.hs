@@ -81,6 +81,7 @@ import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.LocationUpdates as LocUpd
 import qualified Lib.LocationUpdates.Internal as LocUpdInternal
 import Lib.Scheduler.Environment (JobCreator)
@@ -359,6 +360,12 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
 
   unless (rideOld.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus ("This ride cannot be ended" <> Text.pack (show rideOld.status))
 
+  let actor = case req of
+        DriverReq _ -> Finance.Person driverId.getId
+        DashboardReq _ -> Finance.System -- TODO apiTokenInfo.personId.getId for dashboard handler
+        CronJobReq _ -> Finance.System -- using System for job handlers
+        CallBasedReq callBasedEndRideReq -> Finance.Person callBasedEndRideReq.requestor.id.getId
+
   (tripEndPoint, mbOdometer, rideEndedBy') <- case req of
     DriverReq driverReq -> do
       when (DTC.isOdometerReadingsRequired booking.tripCategory && isNothing driverReq.odometer) $ throwError $ OdometerReadingRequired (show booking.tripCategory)
@@ -628,10 +635,10 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
             DC.incrementMetroRideCount driverId metroRideType expirationPeriod 1
           when (DTC.isDynamicOfferTrip booking.tripCategory && validRideTaken) $ do
             DC.incrementValidRideCount driverId expirationPeriod 1
-            DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.DynamicOfferTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions)
+            DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.DynamicOfferTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions) actor
           when (DTC.isRideOtpTrip booking.tripCategory && validRideTaken) $ do
             DC.incrementOTPValidRideCount driverId expirationPeriod 1
-            DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.OTPRideTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions)
+            DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.OTPRideTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions) actor
 
     -- GPS toll-behavior check moved to kafka-consumers RIDE_EVENTS_CONSUMER.
 

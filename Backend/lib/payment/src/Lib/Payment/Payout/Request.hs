@@ -32,6 +32,7 @@ import Kernel.Prelude
 import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (Currency, HighPrecMoney, MonadFlow, fromMaybeM, generateGUID, getCurrentTime, logDebug, logError, logInfo, throwError)
+import Lib.Finance.Core.Types (Actor)
 import qualified Lib.Finance.Domain.Types.StateTransition as ST
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -67,7 +68,8 @@ data PayoutSubmission = PayoutSubmission
     payoutType :: Maybe PayoutType,
     coverageFrom :: Maybe UTCTime,
     coverageTo :: Maybe UTCTime,
-    ledgerEntryIds :: [Text]
+    ledgerEntryIds :: [Text],
+    actor :: Actor
   }
   deriving (Show, Generic)
 
@@ -215,7 +217,7 @@ submitPayoutRequest submission payoutCall = do
   logDebug $ "Created PayoutRequest " <> payoutRequest.id.getId <> " for " <> submission.beneficiaryId <> " | amount: " <> show submission.amount
 
   -- 2. Execute
-  mbPayoutOrder <- executePayoutRequestInternal submission.transferAmount submission.currency submission.payoutServiceFlow payoutRequest payoutCall
+  mbPayoutOrder <- executePayoutRequestInternal submission.transferAmount submission.currency submission.payoutServiceFlow payoutRequest submission.actor payoutCall
   case mbPayoutOrder of
     Just po -> pure $ PayoutInitiated payoutRequest po
     Nothing -> pure $ PayoutFailed payoutRequest "Payout service call failed"
@@ -233,6 +235,7 @@ executePayoutRequest ::
   Currency ->
   Payout.PayoutServiceFlow ->
   PayoutRequest ->
+  Actor ->
   (DPayment.CreatePayoutServiceReq -> m Payout.CreatePayoutOrderResp) ->
   m (Maybe PayoutOrder.PayoutOrder)
 executePayoutRequest = executePayoutRequestInternal Nothing
@@ -251,9 +254,10 @@ executePayoutRequestInternal ::
   Currency ->
   Payout.PayoutServiceFlow ->
   PayoutRequest ->
+  Actor ->
   (DPayment.CreatePayoutServiceReq -> m IPayout.CreatePayoutOrderResp) ->
   m (Maybe PayoutOrder.PayoutOrder)
-executePayoutRequestInternal mbTransferAmount currency payoutServiceFlow payoutRequest payoutCall = do
+executePayoutRequestInternal mbTransferAmount currency payoutServiceFlow payoutRequest actor payoutCall = do
   if not (isPayoutExecutable payoutRequest)
     then do
       logInfo $ "PayoutRequest " <> payoutRequest.id.getId <> " not executable (status: " <> show payoutRequest.status <> "), skipping"
@@ -269,7 +273,7 @@ executePayoutRequestInternal mbTransferAmount currency payoutServiceFlow payoutR
 
       logDebug $ "Executing payout for PayoutRequest " <> payoutRequest.id.getId <> " | orderId: " <> orderId <> " | amount: " <> show (fromMaybe 0 payoutRequest.amount)
 
-      result <- try $ DPayment.createPayoutService merchantId mbMocId personId (Just [payoutRequest.id.getId]) (Just entityName) city createPayoutOrderReq payoutCall Nothing
+      result <- try $ DPayment.createPayoutService merchantId mbMocId personId (Just [payoutRequest.id.getId]) (Just entityName) city createPayoutOrderReq payoutCall Nothing actor
       case result of
         Left (err :: SomeException) -> do
           logError $ "Payout service call failed for PayoutRequest " <> payoutRequest.id.getId <> ": " <> show err

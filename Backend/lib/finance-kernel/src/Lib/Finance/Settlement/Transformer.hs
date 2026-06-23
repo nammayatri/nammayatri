@@ -10,6 +10,7 @@ import qualified Kernel.External.Settlement.Interface.Types as Ext
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (generateGUID, getCurrentTime)
+import Lib.Finance.Core.Types (Actor (..))
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as Dom
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 
@@ -85,7 +86,8 @@ toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId refer
         rawData = report.rawData,
         createdAt = now,
         updatedAt = now,
-        createdBy = Just "System"
+        createdBy = Just System, -- FIXME
+        updatedBy = Just System -- FIXME
       }
 
 mapTxnType :: Ext.TxnType -> Dom.TxnType

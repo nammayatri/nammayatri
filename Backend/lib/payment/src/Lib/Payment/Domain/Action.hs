@@ -108,6 +108,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
+import Lib.Finance.Core.Types (Actor)
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import Lib.Payment.Domain.Types.Common
 import qualified Lib.Payment.Domain.Types.Offer as DOffer
@@ -724,8 +725,9 @@ createOrderService ::
   Maybe (Wallet.CreateWalletReq -> m Wallet.CreateWalletResp) ->
   Bool ->
   Maybe Text ->
+  Actor ->
   m (Maybe Payment.CreateOrderResp)
-createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType isTestTransaction createOrderRequest createOrderCall _mbCreateWalletCall _isMockPayment mbGroupId = do
+createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType isTestTransaction createOrderRequest createOrderCall _mbCreateWalletCall _isMockPayment mbGroupId actor = do
   logInfo $ "CreateOrderService: "
   let updatedOrderShortId = updateShortId (Just paymentServiceType) isTestTransaction createOrderRequest.orderShortId
       createOrderReq = (createOrderRequest :: Payment.CreateOrderReq) {Payment.orderShortId = updatedOrderShortId}
@@ -733,7 +735,7 @@ createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity
   case mbExistingOrder of
     Nothing -> do
       createOrderResp <- createOrderCall createOrderReq -- api call
-      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType createOrderReq createOrderResp _isMockPayment mbGroupId Nothing
+      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType createOrderReq createOrderResp _isMockPayment mbGroupId Nothing actor
       QOrder.create paymentOrder
       return $ Just createOrderResp
     Just existingOrder -> do
@@ -826,15 +828,16 @@ buildPaymentOrder ::
   Bool ->
   Maybe Text ->
   Maybe PGFeeConfig -> -- fee config from JuspayConfig (if configured)
+  Actor ->
   m DOrder.PaymentOrder
-buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType req resp isMockPayment mbGroupId mbPGFeeConfig = do
+buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType req resp isMockPayment mbGroupId mbPGFeeConfig actor = do
   now <- getCurrentTime
   clientAuthToken <- encrypt resp.sdk_payload.payload.clientAuthToken
   -- Record PG fee ledger entries if configured
   mbFeeResult <- case mbPGFeeConfig of
     Just feeConfig -> do
       let merchantOpCityId = maybe (merchantId.getId) getId mbMerchantOpCityId
-      result <- recordPGFeeLedgerEntries PGPayment feeConfig merchantId.getId merchantOpCityId req.orderId
+      result <- recordPGFeeLedgerEntries PGPayment feeConfig merchantId.getId merchantOpCityId req.orderId actor
       case result of
         Right feeResult -> pure $ Just feeResult
         Left _err -> pure Nothing
@@ -2358,8 +2361,9 @@ createPayoutService ::
   CreatePayoutServiceReq ->
   (CreatePayoutServiceReq -> m PT.CreatePayoutOrderResp) ->
   Maybe PGFeeConfig -> -- fee config from JuspayConfig (if configured)
+  Actor ->
   m (Maybe PT.CreatePayoutOrderResp, Maybe Payment.PayoutOrder)
-createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntityName city createPayoutServiceReq createPayoutOrderCall mbPGFeeConfig = do
+createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntityName city createPayoutServiceReq createPayoutOrderCall mbPGFeeConfig actor = do
   mbExistingPayoutOrder <- QPayoutOrder.findByOrderId createPayoutServiceReq.orderId
   case mbExistingPayoutOrder of
     Nothing -> do
@@ -2370,7 +2374,7 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
       mbFeeResult <- case mbPGFeeConfig of
         Just feeConfig -> do
           let merchantOpCityId = maybe merchantId.getId getId mbMerchantOpCityId
-          result <- recordPGFeeLedgerEntries PGPayout feeConfig merchantId.getId merchantOpCityId createPayoutServiceReq.orderId
+          result <- recordPGFeeLedgerEntries PGPayout feeConfig merchantId.getId merchantOpCityId createPayoutServiceReq.orderId actor
           case result of
             Right feeResult -> pure $ Just feeResult
             Left _err -> pure Nothing

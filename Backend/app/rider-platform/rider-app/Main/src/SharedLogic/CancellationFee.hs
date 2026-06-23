@@ -24,6 +24,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common
 import Kernel.Utils.Common
+import Lib.Finance.Core.Types (Actor)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
@@ -51,10 +52,11 @@ settleCancellationFeeViaStripe ::
   HighPrecMoney ->
   Currency ->
   (CallBPPInternal.CancellationLedgerAction -> m ()) ->
+  Actor ->
   m ()
-settleCancellationFeeViaStripe booking ride personD cancellationBase cancellationTax currency syncCancellationLedger = do
+settleCancellationFeeViaStripe booking ride personD cancellationBase cancellationTax currency syncCancellationLedger actor = do
   let pickupAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]
-      ledgerCtx = RidePaymentFinance.applyBookingProviderFieldsToCtx booking $ RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId currency True booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress
+      ledgerCtx = RidePaymentFinance.applyBookingProviderFieldsToCtx booking $ RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId currency True booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress actor
       cancellationTotal = cancellationBase + cancellationTax
   (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking personD
   driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
@@ -118,7 +120,7 @@ settleCancellationFeeViaStripe booking ride personD cancellationBase cancellatio
           -- Step 4: chargePaymentIntent internally settles ledger entries
           eitherCaptured <-
             withTryCatch "[CancellationSettlement] chargePaymentIntent" $
-              SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.RideHailing cancellationPaymentIntentResp.paymentIntentId ride.id RidePaymentFinance.settledReasonRidePayment booking.riderId offerStatsInput
+              SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.RideHailing cancellationPaymentIntentResp.paymentIntentId ride.id RidePaymentFinance.settledReasonRidePayment booking.riderId offerStatsInput actor
           case eitherCaptured of
             Right True -> do
               RidePaymentFinance.markCancellationFeeInvoicePaid mbCancelInvoiceId

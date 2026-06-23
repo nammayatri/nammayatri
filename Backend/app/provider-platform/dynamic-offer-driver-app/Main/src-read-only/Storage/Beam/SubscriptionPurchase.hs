@@ -15,10 +15,12 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.Finance.Core.Types
 import Tools.Beam.UtilsTH
 
 data SubscriptionPurchaseT f = SubscriptionPurchaseT
-  { enableServiceUsageCharge :: B.C f Kernel.Prelude.Bool,
+  { createdBy :: B.C f (Kernel.Prelude.Maybe Lib.Finance.Core.Types.Actor),
+    enableServiceUsageCharge :: B.C f Kernel.Prelude.Bool,
     expiryDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     financeInvoiceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
@@ -36,6 +38,7 @@ data SubscriptionPurchaseT f = SubscriptionPurchaseT
     serviceName :: B.C f Domain.Types.Extra.Plan.ServiceNames,
     startDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     status :: B.C f Domain.Types.SubscriptionPurchase.SubscriptionPurchaseStatus,
+    updatedBy :: B.C f (Kernel.Prelude.Maybe Lib.Finance.Core.Types.Actor),
     vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     waiveOfMode :: B.C f Domain.Types.DriverPlan.WaiveOffMode,
     waiveOffEnabledOn :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

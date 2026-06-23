@@ -27,6 +27,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
+import Lib.Finance.Core.Types (Actor (..))
 import Lib.Payment.Storage.Beam.BeamFlow
 import SharedLogic.FRFSConfirm
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -59,4 +60,5 @@ onSelect onSelectReq merchant quote isSingleMode mbEnableOffer crisSdkResponse i
                 <&> (\category' -> (FRFSCategorySelectionReq {quantity = category.quantity, quoteCategoryId = category'.id, seatIds = category'.seatIds}))
           )
           onSelectReq.categories
-  void $ postFrfsQuoteV2ConfirmUtil (Just quote.riderId, merchant.id) quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer Nothing integratedBppConfig Nothing
+  let actor = System -- using System for beckn request handlers
+  void $ postFrfsQuoteV2ConfirmUtil (Just quote.riderId, merchant.id) quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer Nothing integratedBppConfig Nothing actor

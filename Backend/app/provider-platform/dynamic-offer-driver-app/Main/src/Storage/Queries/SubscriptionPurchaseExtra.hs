@@ -14,6 +14,7 @@ import Kernel.Prelude
 import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Lib.Finance.Core.Types (Actor (..))
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as ITTDomain
 import qualified Lib.Finance.Domain.Types.Invoice
 import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamITT
@@ -259,13 +260,15 @@ updateExpiryAndStartDateById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe UTCTime ->
   Maybe UTCTime ->
+  Maybe Actor ->
   Id SubscriptionPurchase ->
   m ()
-updateExpiryAndStartDateById newExpiryDate newStartDate purchaseId = do
+updateExpiryAndStartDateById newExpiryDate newStartDate updatedBy purchaseId = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.expiryDate newExpiryDate,
       Se.Set Beam.startDate newStartDate,
+      Se.Set Beam.updatedBy updatedBy,
       Se.Set Beam.updatedAt now
     ]
     [Se.Is Beam.id $ Se.Eq (getId purchaseId)]

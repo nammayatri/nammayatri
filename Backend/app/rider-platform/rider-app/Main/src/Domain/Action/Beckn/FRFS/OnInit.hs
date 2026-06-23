@@ -32,6 +32,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import Lib.Finance.Core.Types (Actor (..))
 import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified Lib.Payment.Domain.Action as DPayment
 import Lib.Payment.Storage.Beam.BeamFlow
@@ -130,7 +131,8 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
         Just _ -> do
           Just <$> createBasketFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType mbEnableOffer
         Nothing -> return Nothing
-      createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId
+      let actor = System -- using System for beckn request handlers
+      createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId actor
   where
     key journeyId = "initJourney-" <> journeyId
 
@@ -152,17 +154,18 @@ createPayments ::
   Maybe [Payment.Basket] ->
   Maybe Bool ->
   Maybe (Id DJ.Journey) ->
+  Actor ->
   m ()
-createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket mbEnableOffer mbJourneyId = do
+createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket mbEnableOffer mbJourneyId actor = do
   ticketBookingPaymentsExist <- mapM (fmap isNothing . QFRFSTicketBookingPayment.findTicketBookingPayment) bookings
   let isMockPayment = all (\booking -> fromMaybe False booking.isMockPayment) bookings
   mbPaymentOrder <-
     if and ticketBookingPaymentsExist
       then do
-        paymentOrder <- createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket isMockPayment
+        paymentOrder <- createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket isMockPayment actor
         return paymentOrder
       else do
-        updatedPaymentOrder <- JourneyUtils.postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer isMockPayment
+        updatedPaymentOrder <- JourneyUtils.postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer isMockPayment actor
         return updatedPaymentOrder
   case mbPaymentOrder of
     Just paymentOrder -> mapM_ (markBookingApproved paymentOrder) bookings

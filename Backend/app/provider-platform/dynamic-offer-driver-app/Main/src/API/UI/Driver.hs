@@ -59,6 +59,7 @@ import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
@@ -404,7 +405,10 @@ getDriverPayments :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperat
 getDriverPayments authInfo mbFrom mbTo mbStatus mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getDriverPayments authInfo mbFrom mbTo mbStatus mbLimit mbOffset DPlan.YATRI_SUBSCRIPTION
 
 clearDriverDues :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DPlan.ServiceNames -> FlowHandler DDriver.ClearDuesRes
-clearDriverDues authInfo serviceName = withFlowHandlerAPI $ DDriver.clearDriverDues authInfo (fromMaybe DPlan.YATRI_SUBSCRIPTION serviceName) Nothing Nothing
+clearDriverDues authInfo serviceName = withFlowHandlerAPI $ do
+  let (personId, _, _) = authInfo
+  let actor = Finance.Person personId.getId
+  DDriver.clearDriverDues authInfo (fromMaybe DPlan.YATRI_SUBSCRIPTION serviceName) Nothing Nothing actor
 
 getDriverPaymentsHistoryV2 :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe InvoicePaymentMode -> Maybe Int -> Maybe Int -> Maybe DPlan.ServiceNames -> FlowHandler DDriver.HistoryEntityV2
 getDriverPaymentsHistoryV2 authInfo pMode mbLimit mbOffset serviceName = withFlowHandlerAPI $ DDriver.getDriverPaymentsHistoryV2 authInfo pMode mbLimit mbOffset (fromMaybe DPlan.YATRI_SUBSCRIPTION serviceName)

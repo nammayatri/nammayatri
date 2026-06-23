@@ -30,6 +30,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Invoice.Interface as InvoiceI
 import qualified Lib.Finance.Invoice.Service as InvoiceSvc
@@ -88,6 +89,7 @@ runAggregatedCommissionInvoiceCreationJob Job {id, jobInfo} = withLogTag ("JobId
       periodEnd = jobData.periodEnd
       lockKey = "AggCommJob:" <> mocId.getId <> ":" <> issuedToId <> ":" <> show periodEnd
       recipient = show issuedToType <> " " <> issuedToId
+      actor = Finance.System -- using System for job handlers
 
   -- Lock per (mocId, issuedToId, periodEnd) — defends against duplicate-chain firings
   -- that the Allocator's per-row lock can't catch.
@@ -111,7 +113,7 @@ runAggregatedCommissionInvoiceCreationJob Job {id, jobInfo} = withLogTag ("JobId
               | periodStart <= lastEnd ->
                 pure $ Terminate $ "AggCom: jobData.periodStart " <> show periodStart <> " <= lastAggThrough " <> show lastEnd <> " for " <> recipient <> "; periodStart overlaps already-covered range"
             _ -> do
-              tryEmitInvoice mId mocId issuedToId issuedToType periodStart periodEnd mbInvoiceConfig
+              tryEmitInvoice mId mocId issuedToId issuedToType periodStart periodEnd mbInvoiceConfig actor
               scheduleNextRun mId mocId issuedToId issuedToType periodEnd transporterConfig
               pure Complete
 
@@ -132,8 +134,9 @@ tryEmitInvoice ::
   UTCTime ->
   UTCTime ->
   Maybe DTC.InvoiceConfig ->
+  Finance.Actor ->
   m ()
-tryEmitInvoice mId mocId issuedToId issuedToType periodStart periodEnd mbInvoiceConfig = do
+tryEmitInvoice mId mocId issuedToId issuedToType periodStart periodEnd mbInvoiceConfig actor = do
   rinfo <- resolveRecipientInfo issuedToType issuedToId
   merchant <- CQM.findById mId >>= fromMaybeM (MerchantNotFound mId.getId)
   mocCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
@@ -141,7 +144,7 @@ tryEmitInvoice mId mocId issuedToId issuedToType periodStart periodEnd mbInvoice
   -- PDF seller block just shows live-fetched business ID + VAT.
   let sellerName = mbInvoiceConfig >>= (.invoiceSellerName)
       sellerAddress = mbInvoiceConfig >>= (.invoiceSellerAddress)
-  emitInvoice merchant sellerName sellerAddress mocCity.currency mocId rinfo issuedToId issuedToType periodStart periodEnd mbInvoiceConfig
+  emitInvoice merchant sellerName sellerAddress mocCity.currency mocId rinfo issuedToId issuedToType periodStart periodEnd mbInvoiceConfig actor
 
 -- | Supplier-side fields per recipient. FLEET_OWNER pulls from FleetOwnerInformation;
 -- DRIVER only carries the display name (no address/tax IDs at supplier level).
@@ -202,8 +205,9 @@ emitInvoice ::
   UTCTime ->
   UTCTime ->
   Maybe DTC.InvoiceConfig ->
+  Finance.Actor ->
   m ()
-emitInvoice merchant sellerName sellerAddress currency mocId info recipientId recipientType pStart pEnd mbInvoiceConfig = do
+emitInvoice merchant sellerName sellerAddress currency mocId info recipientId recipientType pStart pEnd mbInvoiceConfig actor = do
   let batchSize = fromMaybe defaultCommissionAggregationBatchSize (mbInvoiceConfig >>= (.commissionAggregationBatchSize))
   commissions <- fetchAllCommissionsInRange mocId.getId pStart pEnd (Just recipientId) batchSize
   if null commissions
@@ -247,7 +251,8 @@ emitInvoice merchant sellerName sellerAddress currency mocId info recipientId re
                 isVat = isVat,
                 issuedToTaxNo = info.riVatNumber,
                 issuedByTaxNo = merchant.vatNumber,
-                paymentMode = Nothing
+                paymentMode = Nothing,
+                actor
               }
       result <- InvoiceSvc.createInvoice input []
       case result of

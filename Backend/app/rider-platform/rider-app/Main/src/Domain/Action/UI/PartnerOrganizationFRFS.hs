@@ -81,6 +81,7 @@ import Kernel.Utils.JSON (removeNullFields)
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Lib.Finance.Core.Types (Actor)
 import SharedLogic.FRFSConfirm
 import qualified SharedLogic.FRFSUtils as Utils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -595,8 +596,8 @@ mkQuoteRes (quote, quoteCategories) = do
         ..
       }
 
-upsertPersonAndQuoteConfirm :: PartnerOrganization -> UpsertPersonAndQuoteConfirmReq -> Flow UpsertPersonAndQuoteConfirmRes
-upsertPersonAndQuoteConfirm partnerOrg req = do
+upsertPersonAndQuoteConfirm :: PartnerOrganization -> UpsertPersonAndQuoteConfirmReq -> Actor -> Flow UpsertPersonAndQuoteConfirmRes
+upsertPersonAndQuoteConfirm partnerOrg req actor = do
   search <- QSearch.findById req.searchId >>= fromMaybeM (FRFSSearchNotFound req.searchId.getId)
   if isNothing search.isOnSearchReceived
     then do
@@ -611,7 +612,7 @@ upsertPersonAndQuoteConfirm partnerOrg req = do
       mbBooking <- QFTB.findByQuoteId req.quoteId
       case mbBooking of
         Just booking -> cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg
-        Nothing -> createNewBookingAndTriggerInit partnerOrg req regPOCfg
+        Nothing -> createNewBookingAndTriggerInit partnerOrg req regPOCfg actor
 
 mkQuoteFromCache :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Station -> Station -> FRFSConfig -> PartnerOrganization -> Maybe (Id PartnerOrgTransaction) -> Id DFRFSSearch.FRFSSearch -> m (Maybe [(DFRFSQuote.FRFSQuote, [FRFSQuoteCategory.FRFSQuoteCategory])])
 mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransactionId searchId = do
@@ -754,8 +755,8 @@ cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg = do
       where
         mkCategoryMetadataAPIEntity FRFSQuoteCategory.QuoteCategoryMetadata {..} = FRFSTypes.FRFSTicketCategoryMetadataAPIEntity {..}
 
-createNewBookingAndTriggerInit :: PartnerOrganization -> UpsertPersonAndQuoteConfirmReq -> DPOC.RegistrationConfig -> Flow UpsertPersonAndQuoteConfirmRes
-createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
+createNewBookingAndTriggerInit :: PartnerOrganization -> UpsertPersonAndQuoteConfirmReq -> DPOC.RegistrationConfig -> Actor -> Flow UpsertPersonAndQuoteConfirmRes
+createNewBookingAndTriggerInit partnerOrg req regPOCfg actor = do
   quote <- QQuote.findById req.quoteId >>= fromMaybeM (FRFSQuoteNotFound req.quoteId.getId)
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId req.quoteId
   let selections =
@@ -815,7 +816,7 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
               ( \quoteCategory -> FRFSTypes.FRFSCategorySelectionReq {quoteCategoryId = quoteCategory.id, quantity = quoteCategory.selectedQuantity, seatIds = Nothing}
               )
               updatedQuoteCategories
-      bookingRes <- postFrfsQuoteV2ConfirmUtil (Just personId, fromStation.merchantId) quote selectedQuoteCategories Nothing Nothing Nothing (Just False) integratedBPPConfig Nothing
+      bookingRes <- postFrfsQuoteV2ConfirmUtil (Just personId, fromStation.merchantId) quote selectedQuoteCategories Nothing Nothing Nothing (Just False) integratedBPPConfig Nothing actor
       let body = UpsertPersonAndQuoteConfirmResBody {bookingInfo = bookingRes, token}
       Redis.unlockRedis lockKey
       return

@@ -10,6 +10,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -41,10 +42,11 @@ expireSubscriptionPurchase Job {id = jobId, jobInfo} = withLogTag ("JobId-" <> j
       logInfo $ "Subscription purchase not found: " <> jobData.subscriptionPurchaseId.getId
       pure Complete
     Just purchase -> do
-      handleSubscriptionExpiry purchase
+      let actor = Finance.System -- using System for job handlers
+      handleSubscriptionExpiry purchase actor
       -- After expiry, activate the next queued purchase's expiry timer (deferred FIFO)
       when (purchase.status == DSP.ACTIVE) $ do
-        mbActivated <- activateNextQueuedPurchaseExpiry purchase.ownerId purchase.ownerType purchase.vehicleCategory
+        mbActivated <- activateNextQueuedPurchaseExpiry purchase.ownerId purchase.ownerType purchase.vehicleCategory actor
         whenJust mbActivated $ \(nextPurchaseId, expiry) -> do
           now <- getCurrentTime
           let delay = diffUTCTime expiry now

@@ -39,6 +39,7 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -160,8 +161,9 @@ accumulateCancellationPenalty ::
   [LYT.TagNameValue] ->
   DTC.TransporterConfig ->
   DP.Person ->
+  Finance.Actor ->
   m ()
-accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterConfig driver = do
+accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterConfig driver actor = do
   when (validCancellationPenaltyApplicable `elem` rideTags && isJust booking.fareParams.driverCancellationPenaltyAmount) $ do
     case booking.fareParams.driverCancellationPenaltyAmount of
       Just penaltyAmount ->
@@ -169,7 +171,7 @@ accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterC
           then do
             mbPanCard <- QPanCard.findByDriverId ride.driverId
             mbDriverInfo <- QDI.findById (cast ride.driverId)
-            ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
+            ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True actor
             result <- runFinance ctx $ do
               _ <- transfer OwnerLiability OwnerExpense penaltyAmount walletReferenceDriverCancellationCharges
               invoice

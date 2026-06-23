@@ -7,6 +7,7 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   Value: Data.Aeson
   Account: Lib.Finance.Domain.Types.Account
+  Actor: Lib.Finance.Core.Types
 
 LedgerEntry:
   tableName: finance_ledger_entry
@@ -53,6 +54,10 @@ LedgerEntry:
     createdAt: UTCTime
     reconciliationStatus: Maybe Value
 
+    # --- Audit ---
+    createdBy: Maybe Actor                          # Who created this record
+    updatedBy: Maybe Actor                          # Who updated this record
+
   constraints:
     id: PrimaryKey
     fromAccountId: SecondaryKey
@@ -98,24 +103,25 @@ LedgerEntry:
       kvFunction: findAllWithKV
       where: status
 
+    # TODO updateBy for all queries
     updateStatus:
       kvFunction: updateWithKV
-      params: [status]
+      params: [status, updatedBy]
       where: id
 
     updateSettled:
       kvFunction: updateWithKV
-      params: [status, settledAt]
+      params: [status, settledAt, updatedBy]
       where: id
 
     updateVoided:
       kvFunction: updateWithKV
-      params: [status, voidReason]
+      params: [status, voidReason,updatedBy]
       where: id
 
     updateSettlementStatus:
       kvFunction: updateWithKV
-      params: [settlementStatus, settlementId, settlementTimestamp]
+      params: [settlementStatus, settlementId, settlementTimestamp, updatedBy]
       where: id
 
   extraIndexes:

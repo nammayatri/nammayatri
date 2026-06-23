@@ -19,6 +19,7 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess
 import Kernel.Utils.Common
+import Lib.Finance.Core.Types (Actor (..))
 import Servant
 import Storage.Beam.SystemConfigs ()
 
@@ -33,4 +34,6 @@ handler =
   frfsStatusUpdate
 
 frfsStatusUpdate :: Domain.FRFSStatusUpdateReq -> FlowHandler APISuccess
-frfsStatusUpdate = withFlowHandlerAPI . Domain.frfsStatusUpdate
+frfsStatusUpdate req = withFlowHandlerAPI $ Domain.frfsStatusUpdate req actor
+  where
+    actor = System

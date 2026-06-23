@@ -53,6 +53,7 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import Lib.Finance.Core.Types (Actor (..))
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import Lib.Payment.Domain.Types.Refunds (Refunds (..))
@@ -362,7 +363,8 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
       createOrderCall = Payment.createOrder merchantId merchantOpCity.id (Just placeId) Payment.Normal (Just person.id.getId) person.clientSdkVersion Nothing
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let createWalletCall = Wallet.createWallet merchantId merchantOpCity.id
-  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast merchantOpCity.id) commonPersonId Nothing Nothing Payment.Normal isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False Nothing
+  let actor = Person personId_.getId -- TODO apiTokenInfo.personId.getId for dashboard handler
+  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast merchantOpCity.id) commonPersonId Nothing Nothing Payment.Normal isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False Nothing actor
   case mCreateOrderRes of
     Just createOrderRes -> return createOrderRes
     Nothing -> do

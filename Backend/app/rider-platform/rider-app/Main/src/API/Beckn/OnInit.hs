@@ -33,6 +33,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.Finance.Core.Types (Actor (..))
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
@@ -66,8 +67,9 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
             let isPaytmEdcPaymentBeforeConfirm =
                   booking.requiresPaymentBeforeConfirm
                     && booking.paymentInstrument == Just DMPM.BoothOnline
+                actor = System -- using System for beckn request handlers
             if isPaytmEdcPaymentBeforeConfirm
-              then void $ DPayment.createRideBookingPaymentOrder booking
+              then void $ DPayment.createRideBookingPaymentOrder booking actor
               else handle (errHandler booking) . void . withShortRetry $ do
                 confirmBecknReq <- ACL.buildConfirmReqV2 onInitRes
                 Metrics.startMetricsBap Metrics.CONFIRM onInitRes.merchant.name transactionId booking.merchantOperatingCityId.getId

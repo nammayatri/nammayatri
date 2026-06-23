@@ -43,6 +43,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverCoins.Coins as Coins
 import Lib.DriverCoins.Types
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPO
@@ -285,11 +286,12 @@ useCoinsHandler ::
   ConvertCoinToCashReq ->
   m APISuccess
 useCoinsHandler (driverId, merchantId, merchantOpCityId) ConvertCoinToCashReq {..} = do
+  let actor = Finance.Person driverId.getId
   isLocked <- withLockDriverId
   if isLocked
     then do
       finally
-        (handler (driverId, merchantId, merchantOpCityId) ConvertCoinToCashReq {..})
+        (handler (driverId, merchantId, merchantOpCityId) ConvertCoinToCashReq {..} actor)
         ( do
             Redis.unlockRedis mkLockKey
             logDebug $ "Coins Conversion for DriverId: " <> driverId.getId <> "Converted to Cash"
@@ -312,8 +314,9 @@ handler ::
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ConvertCoinToCashReq ->
+  Finance.Actor ->
   m APISuccess
-handler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {..} = do
+handler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {..} actor = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   unless (transporterConfig.coinFeature) $
@@ -342,7 +345,7 @@ handler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {..} = do
     then do
       payoutOrderId <-
         case coinRedemptionType of
-          Just DirectPayout -> redeemCoins driverId merchantId_ merchantOpCityId transporterConfig vehCategory driver calculatedAmount
+          Just DirectPayout -> redeemCoins driverId merchantId_ merchantOpCityId transporterConfig vehCategory driver calculatedAmount actor
           _ -> do
             void $ QDS.updateCoinFieldsByDriverId driverId calculatedAmount
             return Nothing
@@ -397,8 +400,9 @@ redeemCoins ::
   DVC.VehicleCategory ->
   SP.Person ->
   HighPrecMoney ->
+  Finance.Actor ->
   m (Maybe (Id DPO.PayoutOrder))
-redeemCoins driverId merchantId merchantOpCityId transporterConfig vehCategory driver calculatedAmount = do
+redeemCoins driverId merchantId merchantOpCityId transporterConfig vehCategory driver calculatedAmount actor = do
   unless (fromMaybe False transporterConfig.enableCoinsToDirectPayout) $
     throwError $ InvalidRequest "Coins to direct payout is not enabled"
   payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Just vehCategory, isPayoutEnabled = Nothing}) (Just (maybeToList <$> CQPC.findByPrimaryKey merchantOpCityId vehCategory Nothing)) >>= fromMaybeM (PayoutConfigNotFound (show vehCategory) merchantOpCityId.getId)
@@ -416,7 +420,7 @@ redeemCoins driverId merchantId merchantOpCityId transporterConfig vehCategory d
   let createPayoutOrderReq = DPayment.mkCreatePayoutServiceReq uid calculatedAmount transporterConfig.currency phoneNo driver.email driverId.getId "converted from coins" (Just driver.firstName) vpa payoutConfig.orderType payoutServiceFlow Nothing
       entityName = DPayment.COINS_REDEMPTION
       createPayoutOrderCall = Payout.createPayoutOrder payoutServiceName merchantOpCityId driver.id mbPersonBankAccount
-  void $ DPayment.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast driverId) (Just [driverId.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
+  void $ DPayment.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast driverId) (Just [driverId.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing actor
   void $ QDS.updateCoinsFieldsForDirectPayout driverId calculatedAmount
   pure $ Just $ Id uid
 

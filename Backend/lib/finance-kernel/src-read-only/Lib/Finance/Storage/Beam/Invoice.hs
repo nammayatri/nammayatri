@@ -10,11 +10,13 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.Invoice
 import Tools.Beam.UtilsTH
 
 data InvoiceT f = InvoiceT
   { createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    createdBy :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Core.Types.Actor)),
     currency :: (B.C f Kernel.Types.Common.Currency),
     dueAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     id :: (B.C f Kernel.Prelude.Text),
@@ -49,6 +51,7 @@ data InvoiceT f = InvoiceT
     supplierTaxNo :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     taxBreakdown :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     totalAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
+    updatedBy :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Core.Types.Actor)),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)

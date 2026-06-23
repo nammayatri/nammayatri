@@ -30,6 +30,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
+import Lib.Finance.Core.Types (Actor (..))
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -81,8 +82,9 @@ paymentOrderStatusCheckJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   mapM_
     ( \paymentOrder -> do
         result <-
-          withTryCatch "paymentOrderStatusCheckJob:processPaymentOrder" $
-            processPaymentOrder merchantId' merchantOperatingCityId' paymentOrder
+          withTryCatch "paymentOrderStatusCheckJob:processPaymentOrder" $ do
+            let actor = System -- using System for job handlers
+            processPaymentOrder merchantId' merchantOperatingCityId' paymentOrder actor
         case result of
           Left err -> do
             logError $ "Payment order status check failed for order " <> paymentOrder.id.getId <> ": " <> show err
@@ -129,20 +131,21 @@ processPaymentOrder ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   DOrder.PaymentOrder ->
+  Actor ->
   m ()
-processPaymentOrder merchantId merchantOperatingCityId paymentOrder = do
+processPaymentOrder merchantId merchantOperatingCityId paymentOrder actor = do
   person <- QPerson.findById (cast paymentOrder.personId) >>= fromMaybeM (PersonNotFound paymentOrder.personId.getId)
   let paymentServiceType = fromMaybe Payment.FRFSMultiModalBooking paymentOrder.paymentServiceType
       orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
       fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast merchantId) paymentOrder.id
-  void $ SPayment.orderStatusHandler merchantOperatingCityId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
+  void $ SPayment.orderStatusHandler merchantOperatingCityId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall actor
   where
     -- Helper to create fulfillment handler based on payment service type
     mkFulfillmentHandler :: Payment.PaymentServiceType -> Id DM.Merchant -> Id DOrder.PaymentOrder -> DPayment.PaymentStatusResp -> m (DPayment.PaymentFulfillmentStatus, Maybe Text, Maybe Text)
     mkFulfillmentHandler serviceType mId orderId paymentStatusResp = case serviceType of
-      Payment.FRFSBooking -> FRFSTicketService.frfsOrderStatusHandler mId paymentStatusResp JMU.switchFRFSQuoteTierUtil
-      Payment.FRFSBusBooking -> FRFSTicketService.frfsOrderStatusHandler mId paymentStatusResp JMU.switchFRFSQuoteTierUtil
-      Payment.FRFSMultiModalBooking -> FRFSTicketService.frfsOrderStatusHandler mId paymentStatusResp JMU.switchFRFSQuoteTierUtil
+      Payment.FRFSBooking -> FRFSTicketService.frfsOrderStatusHandler mId paymentStatusResp JMU.switchFRFSQuoteTierUtil actor
+      Payment.FRFSBusBooking -> FRFSTicketService.frfsOrderStatusHandler mId paymentStatusResp JMU.switchFRFSQuoteTierUtil actor
+      Payment.FRFSMultiModalBooking -> FRFSTicketService.frfsOrderStatusHandler mId paymentStatusResp JMU.switchFRFSQuoteTierUtil actor
       Payment.FRFSPassPurchase -> do
         status <- DPayment.getTransactionStatus paymentStatusResp
         Pass.passOrderStatusHandler orderId mId status

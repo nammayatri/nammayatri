@@ -38,6 +38,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import Lib.Finance.Core.Types (Actor (..))
 import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
 import Lib.Finance.Domain.Types.DirectTaxTransaction (DirectTaxTransaction (..))
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
@@ -131,7 +132,9 @@ createInvoice input entryIds = do
             updatedAt = now,
             irn = Nothing,
             signedQRCode = Nothing,
-            paymentMode = input.paymentMode
+            paymentMode = input.paymentMode,
+            createdBy = Just input.actor,
+            updatedBy = Just input.actor
           }
 
   QInvoice.create invoice
@@ -179,7 +182,8 @@ createInvoice input entryIds = do
                     merchantOperatingCityId = input.merchantOperatingCityId,
                     isVat = isVat,
                     issuedToTaxNo = input.issuedToTaxNo,
-                    issuedByTaxNo = input.issuedByTaxNo
+                    issuedByTaxNo = input.issuedByTaxNo,
+                    actor = input.actor
                   }
           void $ createIndirectTaxEntry indirectTaxInput
         | toAccount.counterpartyType == Just GOVERNMENT_DIRECT -> do
@@ -264,6 +268,8 @@ createIndirectTaxEntry input = do
             invoiceNumber = input.invoiceNumber,
             creditOrDebitNoteNumber = Nothing,
             externalCharges = input.externalCharges,
+            createdBy = Just input.actor,
+            updatedBy = Just input.actor,
             merchantId = input.merchantId,
             merchantOperatingCityId = input.merchantOperatingCityId,
             createdAt = now,
@@ -330,7 +336,8 @@ updateInvoiceStatus ::
   InvoiceStatus ->
   m ()
 updateInvoiceStatus invoiceId newStatus = do
-  QInvoice.updateStatus newStatus invoiceId
+  let actor = System -- FIXME add proper actor
+  QInvoice.updateStatus newStatus (Just actor) invoiceId
 
 -- | Get all ledger entries linked to an invoice
 getEntriesForInvoice ::

@@ -37,6 +37,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as Dom
 import qualified Lib.Finance.Domain.Types.SapJournalEntry as SJE
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
@@ -79,7 +80,7 @@ runSAPReportDispatchJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
       merchantId = jobData.merchantId
       merchantOperatingCityId = jobData.merchantOperatingCityId
-
+      actor = Finance.System -- using System for job handlers
   let lockKey = "SAPReportDispatch:" <> merchantId.getId <> ":" <> merchantOperatingCityId.getId
 
   mbResult <- Hedis.whenWithLockRedisAndReturnValue lockKey lockTTLSeconds $ do
@@ -107,16 +108,16 @@ runSAPReportDispatchJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
           Right token -> do
             result <- try @_ @SomeException $ do
               subTotals <- fetchSubscriptionTotals merchantOperatingCityId fromTime toTime
-              subPurchaseOk <- dispatchSubscriptionPurchase sapCfg token merchantId.getId merchantOperatingCityId.getId retries subTotals
+              subPurchaseOk <- dispatchSubscriptionPurchase sapCfg token merchantId.getId merchantOperatingCityId.getId retries subTotals actor
 
               reports <- fetchPgReportsInBatches merchantId.getId fromTime toTime
               let orders = filter (\r -> r.txnType == Dom.ORDER) reports
                   refunds = filter (\r -> r.txnType == Dom.REFUND) reports
                   chargebacks = filter (\r -> r.txnType == Dom.CHARGEBACK) reports
 
-              pgSettlementOrderOk <- dispatchEntry sapCfg token merchantId.getId merchantOperatingCityId.getId retries PGSettlementOrder orders
-              refundOk <- dispatchEntry sapCfg token merchantId.getId merchantOperatingCityId.getId retries RefundEntry refunds
-              chargebackOk <- dispatchEntry sapCfg token merchantId.getId merchantOperatingCityId.getId retries ChargebackEntry chargebacks
+              pgSettlementOrderOk <- dispatchEntry sapCfg token merchantId.getId merchantOperatingCityId.getId retries PGSettlementOrder orders actor
+              refundOk <- dispatchEntry sapCfg token merchantId.getId merchantOperatingCityId.getId retries RefundEntry refunds actor
+              chargebackOk <- dispatchEntry sapCfg token merchantId.getId merchantOperatingCityId.getId retries ChargebackEntry chargebacks actor
 
               pure $ subPurchaseOk && pgSettlementOrderOk && refundOk && chargebackOk
             case result of
@@ -165,11 +166,12 @@ runSAPReportDispatchJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       Int ->
       SAPEntryType ->
       [Dom.PgPaymentSettlementReport] ->
+      Finance.Actor ->
       m Bool
-    dispatchEntry _ _ _ _ _ entryType [] = do
+    dispatchEntry _ _ _ _ _ entryType [] _ = do
       logInfo $ "No reports for " <> show entryType <> ", skipping"
       pure True
-    dispatchEntry sapCfg token mId mocid maxRetries entryType reports = do
+    dispatchEntry sapCfg token mId mocid maxRetries entryType reports actor = do
       let label = show entryType
       logInfo $ "Dispatching " <> show (length reports) <> " " <> label <> " entries to SAP"
       req <- buildJournalRequest sapCfg entryType reports
@@ -177,12 +179,12 @@ runSAPReportDispatchJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       case result of
         Left err -> do
           logError $ "SAP " <> label <> " dispatch failed after " <> show maxRetries <> " retries: " <> err
-          saveSapJournalEntries req Nothing SJE.FAILED (toTransactionType entryType) (length reports) mId mocid (Just err)
+          saveSapJournalEntries req Nothing SJE.FAILED (toTransactionType entryType) (length reports) mId mocid (Just err) actor
           pure False
         Right resp -> do
           forM_ resp.responseHeaders $ \hdr ->
             logInfo $ "SAP " <> label <> " dispatch response: batchId=" <> fromMaybe "" hdr.batchId <> " msgtyp=" <> fromMaybe "" hdr.msgtyp
-          saveSapJournalEntries req (Just resp) SJE.SUCCESS (toTransactionType entryType) (length reports) mId mocid Nothing
+          saveSapJournalEntries req (Just resp) SJE.SUCCESS (toTransactionType entryType) (length reports) mId mocid Nothing actor
           pure True
 
     scheduleNextDispatchJob ::
@@ -393,12 +395,13 @@ dispatchSubscriptionPurchase ::
   Text ->
   Int ->
   SubscriptionTotals ->
+  Finance.Actor ->
   m Bool
-dispatchSubscriptionPurchase _ _ _ _ _ totals
+dispatchSubscriptionPurchase _ _ _ _ _ totals _
   | totals.grossAmount == 0 && totals.netAmount == 0 = do
     logInfo "No subscription purchase data found, skipping"
     pure True
-dispatchSubscriptionPurchase sapCfg token mId mocid maxRetries totals = do
+dispatchSubscriptionPurchase sapCfg token mId mocid maxRetries totals actor = do
   logInfo $
     "Dispatching aggregated subscription purchase to SAP:"
       <> " grossAmount="
@@ -416,11 +419,11 @@ dispatchSubscriptionPurchase sapCfg token mId mocid maxRetries totals = do
   case result of
     Left err -> do
       logError $ "SAP SubscriptionPurchase dispatch failed after " <> show maxRetries <> " retries: " <> err
-      saveSapJournalEntries req Nothing SJE.FAILED SJE.SubscriptionPurchase 1 mId mocid (Just err)
+      saveSapJournalEntries req Nothing SJE.FAILED SJE.SubscriptionPurchase 1 mId mocid (Just err) actor
       pure False
     Right resp -> do
       logInfo $ "SAP SubscriptionPurchase dispatch response: " <> show resp
-      saveSapJournalEntries req (Just resp) SJE.SUCCESS SJE.SubscriptionPurchase 1 mId mocid Nothing
+      saveSapJournalEntries req (Just resp) SJE.SUCCESS SJE.SubscriptionPurchase 1 mId mocid Nothing actor
       pure True
 
 buildSubscriptionJournalRequest ::
@@ -496,8 +499,9 @@ saveSapJournalEntries ::
   Text ->
   Text ->
   Maybe Text ->
+  Finance.Actor ->
   m ()
-saveSapJournalEntries req mbResp entryStatus txnType txnCount mId mocid mbErrMsg = do
+saveSapJournalEntries req mbResp entryStatus txnType txnCount mId mocid mbErrMsg actor = do
   now <- getCurrentTime
   let reqHeaders = req.headers
       respHeaders = maybe (repeat Nothing) (map Just . (.responseHeaders)) mbResp
@@ -524,6 +528,8 @@ saveSapJournalEntries req mbResp entryStatus txnType txnCount mId mocid mbErrMsg
           sapMessage = (mbRespHeader >>= (.message)) <|> mbErrMsg,
           status = entryStatus,
           rawResponse = (.rawXml) <$> mbResp,
+          createdBy = Just actor,
+          updatedBy = Just actor,
           merchantId = mId,
           merchantOperatingCityId = mocid,
           createdAt = now,

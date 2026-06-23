@@ -51,6 +51,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.Analytics as Analytics
@@ -140,6 +141,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
               Nothing -> transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold
             balance = fromMaybe 0 mbAvailableBalance
         when (balance < rideFare + threshold) $ throwError (InvalidRequest "Low balance.")
+        let actor = Finance.Person ownerId
         _ <-
           createPrepaidHold
             counterpartyType
@@ -151,6 +153,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
             booking.id.getId
             Nothing
             mbVehicleCategory
+            actor
             >>= fromEitherM (\err -> InternalError ("Failed to create prepaid hold: " <> show err))
         pure ()
   otpCode <-

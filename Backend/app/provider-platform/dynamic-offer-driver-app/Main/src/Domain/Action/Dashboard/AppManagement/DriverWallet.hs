@@ -20,6 +20,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -55,7 +56,8 @@ postDriverWalletWalletPayout ::
 postDriverWalletWalletPayout merchantShortId opCity driverId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Kernel.Prelude.Nothing merchant (Kernel.Prelude.Just opCity)
-  DDriverWallet.postWalletPayout (Kernel.Prelude.Just driverId, merchant.id, merchantOpCityId)
+  let actor = Finance.System -- TODO apiTokenInfo.personId.getId for dashboard handler
+  DDriverWallet.postWalletPayoutWithActor (Kernel.Prelude.Just driverId, merchant.id, merchantOpCityId) actor
 
 postDriverWalletWalletTopup ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -77,7 +79,8 @@ postDriverWalletWalletAirportCashRecharge ::
 postDriverWalletWalletAirportCashRecharge merchantShortId opCity driverId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Kernel.Prelude.Nothing merchant (Kernel.Prelude.Just opCity)
-  DDriverWallet.recordAirportCashRecharge (driverId, merchant.id, merchantOpCityId) req.amount req.referenceId
+  let actor = Finance.System -- TODO apiTokenInfo.personId.getId for dashboard handler
+  DDriverWallet.recordAirportCashRecharge (driverId, merchant.id, merchantOpCityId) req.amount req.referenceId actor
   Kernel.Prelude.pure APISuccess.Success
 
 getDriverWalletWalletPayoutHistory ::

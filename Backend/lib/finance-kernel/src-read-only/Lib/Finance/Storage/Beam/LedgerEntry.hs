@@ -9,6 +9,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Tools.Beam.UtilsTH
 
@@ -16,6 +17,7 @@ data LedgerEntryT f = LedgerEntryT
   { amount :: (B.C f Kernel.Types.Common.HighPrecMoney),
     concernedIndividualId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    createdBy :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Core.Types.Actor)),
     currency :: (B.C f Kernel.Types.Common.Currency),
     entryType :: (B.C f Lib.Finance.Domain.Types.LedgerEntry.EntryType),
     fromAccountId :: (B.C f Kernel.Prelude.Text),
@@ -38,6 +40,7 @@ data LedgerEntryT f = LedgerEntryT
     toAccountId :: (B.C f Kernel.Prelude.Text),
     toEndingBalance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     toStartingBalance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    updatedBy :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Core.Types.Actor)),
     voidReason :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }

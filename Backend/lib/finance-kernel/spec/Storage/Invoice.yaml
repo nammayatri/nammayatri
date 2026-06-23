@@ -9,6 +9,7 @@ imports:
   LedgerEntry: Lib.Finance.Domain.Types.LedgerEntry
   InvoiceType: Domain.Types.Invoice
   IssuedToType: Domain.Types.Invoice
+  Actor: Lib.Finance.Core.Types
 
 Invoice:
   tableName: finance_invoice
@@ -56,6 +57,10 @@ Invoice:
     signedQRCode : Maybe Text
     paymentMode: Maybe Text
 
+    # --- Audit ---
+    createdBy: Maybe Actor                          # Who created this record
+    updatedBy: Maybe Actor                          # Who updated this record
+
   sqlType:
     lineItems: jsonb
 
@@ -83,12 +88,12 @@ Invoice:
 
     updateStatus:
       kvFunction: updateWithKV
-      params: [status]
+      params: [status, updatedBy]
       where: id
 
     updateIrnAndSignedQRByInvoiceId:
       kvFunction: updateWithKV
-      params: [irn, signedQRCode]
+      params: [irn, signedQRCode, updatedBy]
       where: id
 
     findByReferenceId:

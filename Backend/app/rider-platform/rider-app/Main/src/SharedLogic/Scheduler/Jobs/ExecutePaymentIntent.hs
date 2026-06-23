@@ -29,6 +29,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Finance.Core.Types (Actor (..))
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
@@ -117,7 +118,8 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             -- ledgerInfo uses ride fare only (without tip) — tip has its own ledger entry via createTipLedger
             rideFareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId DFareBreakup.RIDE (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId DFareBreakup.RIDE)
             -- ExecutePaymentIntent is the online-payment scheduler path → isOnline=True.
-            let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId booking.merchantOperatingCityId.getId fare.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
+            let actor = System -- using System for job handlers
+            let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId booking.merchantOperatingCityId.getId fare.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]) actor
             mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups rideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount 0 ledgerCtx
             let ledgerInfo =
                   fromMaybe
@@ -146,7 +148,7 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
               Nothing -> SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId ride.id person booking.selectedOfferId fareWithTip.currency discountApplicableFareAmountTaxIncl rideDiscountAmount ledgerInfo booking
               Just paymentIntentResp -> do
                 offerStatsInput <- buildOfferStatsInput person
-                paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.RideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment booking.riderId offerStatsInput
+                paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.RideHailing paymentIntentResp.paymentIntentId rideId RidePaymentFinance.settledReasonRidePayment booking.riderId offerStatsInput actor
                 if paymentCharged
                   then do
                     -- Apply offer stats after successful charge
@@ -204,5 +206,6 @@ cancelExecutePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
             merchantOpCity.city
             action
             ride.bppRideId.getId
-  CancellationFee.settleCancellationFeeViaStripe booking ride person cancellationAmount.amount cancellationTax cancellationAmount.currency syncCancellationLedger
+  let actor = System -- using System for job handlers
+  CancellationFee.settleCancellationFeeViaStripe booking ride person cancellationAmount.amount cancellationTax cancellationAmount.currency syncCancellationLedger actor
   return Complete

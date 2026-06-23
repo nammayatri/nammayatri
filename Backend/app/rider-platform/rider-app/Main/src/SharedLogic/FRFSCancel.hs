@@ -25,6 +25,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.Finance.Core.Types (Actor)
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSUtils as FRFSUtils
@@ -72,8 +73,9 @@ handleCancelledStatus ::
   HighPrecMoney ->
   Text ->
   Bool ->
+  Actor ->
   m (Maybe Text, Maybe Text, FRFSUtils.FRFSFareParameters)
-handleCancelledStatus _merchant booking refundAmount cancellationCharges messageId counterCancellationPossible = do
+handleCancelledStatus _merchant booking refundAmount cancellationCharges messageId counterCancellationPossible actor = do
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   paymentBooking <- QTBP.findTicketBookingPayment booking >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
@@ -93,7 +95,7 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges message
       void $ QTBooking.updateIsBookingCancellableByBookingId (Just True) booking.id
       void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
       void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
-      void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
+      void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId actor
   releaseSeatsIfHeld booking quoteCategories
   void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (fareParameters.totalQuantity))
   void $ CQP.clearPSCache booking.riderId

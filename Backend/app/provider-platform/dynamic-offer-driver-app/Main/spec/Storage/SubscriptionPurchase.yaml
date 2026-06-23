@@ -11,6 +11,7 @@ imports:
   ServiceNames: Domain.Types.Extra.Plan
   Invoice: Lib.Finance.Domain.Types.Invoice
   Value: Data.Aeson
+  Actor: Lib.Finance.Core.Types
 
 SubscriptionPurchase:
   tableName: subscription_purchase
@@ -49,6 +50,10 @@ SubscriptionPurchase:
     merchantOperatingCityId: Id MerchantOperatingCity
     reconciliationStatus: Maybe Value
 
+    # --- Audit ---
+    createdBy: Maybe Actor                          # Who created this record
+    updatedBy: Maybe Actor                          # Who updated this record
+
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SubscriptionPurchaseStatus>
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SubscriptionPurchaseStatus>
@@ -83,11 +88,11 @@ SubscriptionPurchase:
 
     updateStatusById:
       kvFunction: updateOneWithKV
-      params: [status, updatedAt]
+      params: [status, updatedBy, updatedAt]
       where: id
     updateReconciliationStatus:
       kvFunction: updateOneWithKV
-      params: [reconciliationStatus, updatedAt]
+      params: [reconciliationStatus, updatedBy, updatedAt]
       where: id
 
   extraOperations:

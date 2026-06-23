@@ -33,6 +33,7 @@ import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.API.Payout as PayoutAPI
 import qualified Lib.Payment.API.Payout.Types as PayoutTypes
 import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
@@ -50,15 +51,16 @@ import Tools.Error
 payoutServer ::
   Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
+  Finance.Actor ->
   ServerT PayoutAPI.DashboardAPI Environment.Flow
-payoutServer merchantShortId opCity =
+payoutServer merchantShortId opCity actor =
   PayoutAPI.payoutDashboardHandler
     PayoutAPI.PayoutDashboardHandlerConfig
       { refreshPayoutRequest = CommonPayout.refreshPayoutRequestStatus,
-        executePayoutRetry = CommonPayout.executeSpecialZonePayoutRequest,
+        executePayoutRetry = \req -> CommonPayout.executeSpecialZonePayoutRequest req actor,
         handleDeleteVpa = DashboardPayoutRequest.deleteVpa,
         handleUpdateVpa = DashboardPayoutRequest.updateVpa,
-        handleRefundRegistrationAmount = DashboardPayoutRequest.refundRegistrationAmount merchantShortId opCity,
+        handleRefundRegistrationAmount = \req -> DashboardPayoutRequest.refundRegistrationAmount merchantShortId opCity req actor,
         merchantCity = opCity,
         mkHistoryItemEnricher = buildHistoryItemEnricher merchantShortId opCity
       }
@@ -110,8 +112,9 @@ getPayoutPayout ::
   Id.Id PayoutRequest.PayoutRequest ->
   Environment.Flow PayoutTypes.PayoutRequestResp
 getPayoutPayout merchantShortId opCity payoutRequestId = do
-  let (_history :<|> getById :<|> _retry :<|> _cancel :<|> _cash :<|> _deleteVpa :<|> _updateVpa :<|> _refund) =
-        payoutServer merchantShortId opCity
+  let actor = Finance.System -- TODO apiTokenInfo.personId.getId for dashboard handler
+      (_history :<|> getById :<|> _retry :<|> _cancel :<|> _cash :<|> _deleteVpa :<|> _updateVpa :<|> _refund) =
+        payoutServer merchantShortId opCity actor
   getById payoutRequestId
 
 getPayoutPayoutHistory ::
@@ -126,8 +129,9 @@ getPayoutPayoutHistory ::
   Maybe UTCTime ->
   Environment.Flow PayoutTypes.PayoutHistoryRes
 getPayoutPayoutHistory merchantShortId opCity mbDriverId mbDriverPhoneNo mbFrom mbIsFailedOnly mbLimit mbOffset mbTo = do
-  let (history :<|> _getById :<|> _retry :<|> _cancel :<|> _cash :<|> _deleteVpa :<|> _updateVpa :<|> _refund) =
-        payoutServer merchantShortId opCity
+  let actor = Finance.System -- TODO apiTokenInfo.personId.getId for dashboard handler
+      (history :<|> _getById :<|> _retry :<|> _cancel :<|> _cash :<|> _deleteVpa :<|> _updateVpa :<|> _refund) =
+        payoutServer merchantShortId opCity actor
   history mbDriverId mbDriverPhoneNo mbFrom mbIsFailedOnly mbLimit mbOffset mbTo
 
 data RiderDetailsWithRide = RiderDetailsWithRide
@@ -229,8 +233,9 @@ postPayoutPayoutRetry ::
   Id.Id PayoutRequest.PayoutRequest ->
   Environment.Flow PayoutTypes.PayoutSuccess
 postPayoutPayoutRetry merchantShortId opCity payoutRequestId = do
-  let (_history :<|> _getById :<|> retry :<|> _cancel :<|> _cash :<|> _deleteVpa :<|> _updateVpa :<|> _refund) =
-        payoutServer merchantShortId opCity
+  let actor = Finance.System -- TODO apiTokenInfo.personId.getId for dashboard handler
+      (_history :<|> _getById :<|> retry :<|> _cancel :<|> _cash :<|> _deleteVpa :<|> _updateVpa :<|> _refund) =
+        payoutServer merchantShortId opCity actor
   retry payoutRequestId
 
 postPayoutPayoutCancel ::
@@ -240,8 +245,9 @@ postPayoutPayoutCancel ::
   PayoutTypes.PayoutCancelReq ->
   Environment.Flow PayoutTypes.PayoutSuccess
 postPayoutPayoutCancel merchantShortId opCity payoutRequestId req = do
-  let (_history :<|> _getById :<|> _retry :<|> cancelPayout :<|> _cash :<|> _deleteVpa :<|> _updateVpa :<|> _refund) =
-        payoutServer merchantShortId opCity
+  let actor = Finance.System -- TODO apiTokenInfo.personId.getId for dashboard handler
+      (_history :<|> _getById :<|> _retry :<|> cancelPayout :<|> _cash :<|> _deleteVpa :<|> _updateVpa :<|> _refund) =
+        payoutServer merchantShortId opCity actor
   cancelPayout payoutRequestId req
 
 postPayoutPayoutCash ::
@@ -251,8 +257,9 @@ postPayoutPayoutCash ::
   PayoutTypes.PayoutCashUpdateReq ->
   Environment.Flow PayoutTypes.PayoutSuccess
 postPayoutPayoutCash merchantShortId opCity payoutRequestId req = do
-  let (_history :<|> _getById :<|> _retry :<|> _cancel :<|> markCash :<|> _deleteVpa :<|> _updateVpa :<|> _refund) =
-        payoutServer merchantShortId opCity
+  let actor = Finance.System -- TODO apiTokenInfo.personId.getId for dashboard handler
+      (_history :<|> _getById :<|> _retry :<|> _cancel :<|> markCash :<|> _deleteVpa :<|> _updateVpa :<|> _refund) =
+        payoutServer merchantShortId opCity actor
   markCash payoutRequestId req
 
 postPayoutPayoutVpaDelete ::
@@ -261,8 +268,9 @@ postPayoutPayoutVpaDelete ::
   PayoutTypes.DeleteVpaReq ->
   Environment.Flow PayoutTypes.PayoutSuccess
 postPayoutPayoutVpaDelete merchantShortId opCity req = do
-  let (_history :<|> _getById :<|> _retry :<|> _cancel :<|> _cash :<|> deleteVpa :<|> _updateVpa :<|> _refund) =
-        payoutServer merchantShortId opCity
+  let actor = Finance.System -- TODO apiTokenInfo.personId.getId for dashboard handler
+      (_history :<|> _getById :<|> _retry :<|> _cancel :<|> _cash :<|> deleteVpa :<|> _updateVpa :<|> _refund) =
+        payoutServer merchantShortId opCity actor
   deleteVpa req
 
 postPayoutPayoutVpaUpdate ::
@@ -271,8 +279,9 @@ postPayoutPayoutVpaUpdate ::
   PayoutTypes.UpdateVpaReq ->
   Environment.Flow PayoutTypes.PayoutSuccess
 postPayoutPayoutVpaUpdate merchantShortId opCity req = do
-  let (_history :<|> _getById :<|> _retry :<|> _cancel :<|> _cash :<|> _deleteVpa :<|> updateVpa :<|> _refund) =
-        payoutServer merchantShortId opCity
+  let actor = Finance.System -- TODO apiTokenInfo.personId.getId for dashboard handler
+      (_history :<|> _getById :<|> _retry :<|> _cancel :<|> _cash :<|> _deleteVpa :<|> updateVpa :<|> _refund) =
+        payoutServer merchantShortId opCity actor
   updateVpa req
 
 postPayoutPayoutVpaRefundRegistration ::
@@ -281,8 +290,9 @@ postPayoutPayoutVpaRefundRegistration ::
   PayoutTypes.RefundRegAmountReq ->
   Environment.Flow PayoutTypes.PayoutSuccess
 postPayoutPayoutVpaRefundRegistration merchantShortId opCity req = do
-  let (_history :<|> _getById :<|> _retry :<|> _cancel :<|> _cash :<|> _deleteVpa :<|> _updateVpa :<|> refundReg) =
-        payoutServer merchantShortId opCity
+  let actor = Finance.System -- TODO apiTokenInfo.personId.getId for dashboard handler
+      (_history :<|> _getById :<|> _retry :<|> _cancel :<|> _cash :<|> _deleteVpa :<|> _updateVpa :<|> refundReg) =
+        payoutServer merchantShortId opCity actor
   refundReg req
 
 postPayoutPayoutScheduledPayoutConfigUpsert ::

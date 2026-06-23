@@ -11,6 +11,7 @@ where
 
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
+import Lib.Finance.Core.Types (Actor)
 import qualified Lib.Finance.Domain.Types.Account as Account
 import Lib.Finance.Domain.Types.IndirectTaxTransaction (GstCreditType (..))
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
@@ -62,8 +63,9 @@ recordPGFeeLedgerEntries ::
   Text -> -- merchantId
   Text -> -- merchantOperatingCityId
   Text -> -- referenceId (orderId)
+  Actor ->
   m (Either FinanceError PGFeeResult)
-recordPGFeeLedgerEntries feeType config merchantId merchantOpCityId referenceId = do
+recordPGFeeLedgerEntries feeType config merchantId merchantOpCityId referenceId actor = do
   let gstAmount = config.pgBaseFee * realToFrac config.pgGstRate
       (expenseRole, liabilityRole) = case feeType of
         PGPayment -> (PGPaymentExpense, PGPaymentLiability)
@@ -93,7 +95,8 @@ recordPGFeeLedgerEntries feeType config merchantId merchantOpCityId referenceId 
             tdsRateReason = Nothing,
             emitLedgerEntries = True,
             fromLocationAddress = Nothing,
-            issuedToName = Nothing
+            issuedToName = Nothing,
+            actor
           }
   result <- runFinance ctx $ do
     -- 1. Base fee: Liability → Expense (DR Expense, CR Liability)
@@ -117,7 +120,8 @@ recordPGFeeLedgerEntries feeType config merchantId merchantOpCityId referenceId 
               externalCharges = Nothing,
               isVat = False, -- PG fees are always GST
               issuedToTaxNo = Nothing,
-              issuedByTaxNo = Nothing
+              issuedByTaxNo = Nothing,
+              actor
             }
   case result of
     Left err -> pure $ Left err

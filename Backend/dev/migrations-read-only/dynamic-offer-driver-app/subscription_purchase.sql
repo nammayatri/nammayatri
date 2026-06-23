@@ -39,3 +39,9 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_purchase ADD COLUMN reconciliati
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_purchase ADD COLUMN start_date timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_purchase ADD COLUMN updated_by text ;
+ALTER TABLE atlas_driver_offer_bpp.subscription_purchase ADD COLUMN created_by text ;

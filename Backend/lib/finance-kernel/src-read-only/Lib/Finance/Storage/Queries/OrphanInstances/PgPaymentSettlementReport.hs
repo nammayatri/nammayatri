@@ -66,6 +66,7 @@ instance FromTType' Beam.PgPaymentSettlementReport Lib.Finance.Domain.Types.PgPa
             txnType = txnType,
             uniqueSplitId = uniqueSplitId,
             updatedAt = updatedAt,
+            updatedBy = updatedBy,
             utr = utr,
             vendorId = vendorId
           }
@@ -122,6 +123,7 @@ instance ToTType' Beam.PgPaymentSettlementReport Lib.Finance.Domain.Types.PgPaym
         Beam.txnType = txnType,
         Beam.uniqueSplitId = uniqueSplitId,
         Beam.updatedAt = updatedAt,
+        Beam.updatedBy = updatedBy,
         Beam.utr = utr,
         Beam.vendorId = vendorId
       }

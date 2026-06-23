@@ -30,6 +30,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
 import Lib.DriverCoins.Types as DCT
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Reminder.Helper (cancelRemindersForDriverByDocumentType, recordDocumentCompletion)
@@ -359,6 +360,7 @@ markVideoByStatus (mbPersonId, merchantId, merchantOpCityId) req status = do
 postLmsQuestionConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id DM.Merchant, Kernel.Types.Id.Id DMOC.MerchantOperatingCity) -> API.Types.UI.LmsModule.QuestionConfirmReq -> Environment.Flow API.Types.UI.LmsModule.QuestionConfirmRes
 postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = do
   personId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
+  let actor = Finance.Person personId.getId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   driverStats <- runInReplica $ QDriverStats.findById driver.id >>= fromMaybeM DriverInfoNotFound
   moduleInfo <- fromMaybeM (LmsModuleNotFound req.moduleId.getId) . find ((== req.moduleId) . (.id)) =<< SCQL.getAllModules Nothing Nothing merchantOpCityId
@@ -403,7 +405,7 @@ postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = do
                   Nothing ->
                     if (isCorrect && (length allModulesCompletionInfo == 1))
                       then do
-                        _ <- DC.driverCoinsEvent personId Nothing _merchantId merchantOpCityId DCT.LMS (Just req.questionId.getId) Nothing Nothing Nothing
+                        _ <- DC.driverCoinsEvent personId Nothing _merchantId merchantOpCityId DCT.LMS (Just req.questionId.getId) Nothing Nothing Nothing actor
                         return (Just True)
                       else do return Nothing
                   _ -> pure Nothing
@@ -473,7 +475,8 @@ postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = do
                   -- adding bonus coins
                   if ((all (== 1) completedQuestionAttempts) && totalModuleCompletionEntries == 1 && moduleInfo.bonusCoinEventFunction /= Nothing)
                     then do
-                      _ <- DC.driverCoinsEvent personId Nothing _merchantId merchantOpCityId DCT.LMSBonus (Just moduleInfo.id.getId) Nothing Nothing Nothing
+                      let actor = Finance.Person personId.getId
+                      _ <- DC.driverCoinsEvent personId Nothing _merchantId merchantOpCityId DCT.LMSBonus (Just moduleInfo.id.getId) Nothing Nothing Nothing actor
                       return (Just True)
                     else do return (Nothing)
                 else do return Nothing

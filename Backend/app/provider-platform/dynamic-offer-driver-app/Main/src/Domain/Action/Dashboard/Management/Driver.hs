@@ -126,6 +126,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import qualified Lib.Yudhishthira.Flow.Dashboard as Yudhishthira
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
@@ -927,7 +928,8 @@ postDriverClearFee _merchantShortId _opCity driverId req = do
   let feeType = castCommonFeeTypeToDomainFeeType req.feeType
   let currency = fromMaybe INR req.currency
       gstPercentages = (,) <$> req.sgstPercentage <*> req.cgstPercentage
-  void $ DDriver.clearDriverFeeWithCreate (personId, driver.merchantId, merchantOpCityId) serviceName (gstBreakup gstPercentages req.platformFee) feeType currency Nothing req.sendManualLink
+      actor = Finance.System -- TODO apiTokenInfo.personId.getId for dashboard handler
+  void $ DDriver.clearDriverFeeWithCreate (personId, driver.merchantId, merchantOpCityId) serviceName (gstBreakup gstPercentages req.platformFee) feeType currency Nothing req.sendManualLink actor
   return Kernel.Types.APISuccess.Success
   where
     castCommonFeeTypeToDomainFeeType feeTypeCommon = case feeTypeCommon of
@@ -1096,7 +1098,8 @@ postDriverRefundByPayout merchantShortId _opCity driverId req = do
             driverFeeType = mapFeeType req.driverFeeType,
             refundAmountSegregation = req.refundAmountSegregation
           }
-  void $ DDriver.refundByPayoutDriverFee (personId, driver.merchantId, merchantOpCityId) refundByPayoutReq
+      actor = Finance.System -- TODO apiTokenInfo.personId.getId for dashboard handler
+  void $ DDriver.refundByPayoutDriverFee (personId, driver.merchantId, merchantOpCityId) refundByPayoutReq actor
   return Success
 
 mapFeeType :: Common.DriverFeeType -> DDF.FeeType

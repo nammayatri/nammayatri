@@ -31,6 +31,7 @@ let outputPath =
         , { _1 = riderMigrationPath, _2 = "atlas_app" }
         ]
       , _purescriptFrontend = ""
+      , _configPilot = outputPrefix ++ "Storage/ConfigPilot/Config"
       }
 
 let GeneratorType =
@@ -49,6 +50,7 @@ let GeneratorType =
       | DOMAIN_TYPE
       | SQL
       | PURE_SCRIPT_FRONTEND
+      | CONFIG_PILOT
       >
 
 let ImportType = < SIMPLE | QUALIFIED >

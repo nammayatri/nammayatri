@@ -731,7 +731,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             approved = Just False,
             updatedAt = now,
             vehicleImageId = Nothing,
-            verified = Nothing
+            verified = Nothing,
+            pendingChallanCount = Nothing -- FIXME to make it compiled
           }
     initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures = do
       case mVehicleRC of

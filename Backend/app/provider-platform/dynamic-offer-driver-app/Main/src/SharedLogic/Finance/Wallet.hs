@@ -150,6 +150,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -410,8 +411,9 @@ buildFinanceCtx ::
   Maybe DDI.DriverInformation ->
   DTC.TransporterConfig ->
   Bool -> -- isOnline (True = online/card/platform-wallet, False = cash)
+  Finance.Actor ->
   m FinanceCtx
-buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig isOnline = do
+buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig isOnline actor = do
   let merchantId = fromMaybe booking.providerId ride.merchantId
       mid = merchantId.getId
       mocid = booking.merchantOperatingCityId.getId
@@ -483,7 +485,8 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig i
         tdsRateReason = rateReason,
         emitLedgerEntries = maybe True (\DTC.InvoiceConfig {emitLedgerEntries = e} -> e) transporterConfig.invoiceConfig,
         fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
-        issuedToName = Nothing
+        issuedToName = Nothing,
+        actor
       }
 
 -- | Pure helper to compute TDS rate reason from PAN card data and LDC status.
@@ -529,8 +532,8 @@ resolveIsOnlineFromBooking booking = do
 
 -- | Build a minimal FinanceCtx without invoice fields (for callers that
 --   only need transfers, not invoices).
-financeCtxFromRide :: (EncFlow m r, MonadFlow m) => SRB.Booking -> DRide.Ride -> Maybe DPanCard.DriverPanCard -> Bool -> m FinanceCtx
-financeCtxFromRide booking ride mbPanCard isOnline = do
+financeCtxFromRide :: (EncFlow m r, MonadFlow m) => SRB.Booking -> DRide.Ride -> Maybe DPanCard.DriverPanCard -> Bool -> Finance.Actor -> m FinanceCtx
+financeCtxFromRide booking ride mbPanCard isOnline actor = do
   let merchantId = fromMaybe booking.providerId ride.merchantId
       (cType, cId) = case ride.fleetOwnerId of
         Just fleetOwnerId -> (FLEET_OWNER, fleetOwnerId.getId)
@@ -563,7 +566,8 @@ financeCtxFromRide booking ride mbPanCard isOnline = do
         tdsRateReason = rateReason,
         emitLedgerEntries = True,
         fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
-        issuedToName = Nothing
+        issuedToName = Nothing,
+        actor
       }
 
 -- Wallet entry delta (for topup/payout)
@@ -579,8 +583,9 @@ createWalletEntryDelta ::
   Text -> -- Reference type
   Text -> -- Reference ID
   Maybe Value ->
+  Finance.Actor ->
   m (Either FinanceError HighPrecMoney)
-createWalletEntryDelta counterpartyType ownerId delta currency merchantId merchantOperatingCityId referenceType referenceId metadata = do
+createWalletEntryDelta counterpartyType ownerId delta currency merchantId merchantOperatingCityId referenceType referenceId metadata actor = do
   if delta == 0
     then do
       mbBalance <- getWalletBalanceByOwner counterpartyType ownerId
@@ -632,7 +637,8 @@ createWalletEntryDelta counterpartyType ownerId delta currency merchantId mercha
                     metadata = metadata,
                     merchantId = merchantId,
                     merchantOperatingCityId = merchantOperatingCityId,
-                    settlementStatus = if delta > 0 && referenceType `elem` walletCreditRefs then Just UNSETTLED else Nothing
+                    settlementStatus = if delta > 0 && referenceType `elem` walletCreditRefs then Just UNSETTLED else Nothing,
+                    actor
                   }
           entryRes <- createEntryWithBalanceUpdate entryInput
           case entryRes of

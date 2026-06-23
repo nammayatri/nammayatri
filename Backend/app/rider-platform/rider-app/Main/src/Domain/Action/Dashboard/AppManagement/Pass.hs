@@ -32,6 +32,7 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Error
+import Lib.Finance.Core.Types (Actor (..))
 import qualified Lib.Payment.Domain.Action
 import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified SharedLogic.PassRestore as PassRestore
@@ -66,7 +67,8 @@ postPassCustomerPassSelect merchantShortId _opCity personId passId req = do
 getPassCustomerPaymentStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> Environment.Flow Lib.Payment.Domain.Action.PaymentStatusResp)
 getPassCustomerPaymentStatus merchantShortId _opCity personId orderId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  UIPayment.getStatus (personId, merchant.id) orderId
+  let actor = Person personId.getId -- TODO apiTokenInfo.personId.getId for dashboard handler
+  UIPayment.getStatus (personId, merchant.id) orderId actor
 
 postPassCustomerPassResetDeviceSwitchCount :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postPassCustomerPassResetDeviceSwitchCount merchantShortId _opCity personId purchasedPassId = do

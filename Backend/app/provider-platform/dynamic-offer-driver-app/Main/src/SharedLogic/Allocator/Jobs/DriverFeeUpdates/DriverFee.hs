@@ -58,6 +58,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id (Id (Id), cast)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
@@ -859,6 +860,7 @@ processAndSendManualPaymentLink ::
   UTCTime ->
   m ()
 processAndSendManualPaymentLink driverPlansToProccess subscriptionConfigs merchantId opCityId serviceName mbDeepLinkExpiry endTime now = do
+  let actor = Finance.System -- using System for job handlers
   forM_ driverPlansToProccess $ \driverPlanForManualCharge -> do
     let driverId = driverPlanForManualCharge.driverId
     -- Rate limiting check: max subscriptionConfigs.maxRetryCount messages per driver within configured expiry window
@@ -874,7 +876,7 @@ processAndSendManualPaymentLink driverPlansToProccess subscriptionConfigs mercha
       let mbDeepLinkData = if allowDeepLink then Just $ SPayment.DeepLinkData {sendDeepLink = Just True, expiryTimeInMinutes = mbDeepLinkExpiry} else Nothing --Nothing
       if not $ null getPendingAndOverDueDriverFees
         then do
-          resp' <- withTryCatch "clearDriverDues:processAndSendManualPaymentLink" $ DDriver.clearDriverDues (driverId, merchantId, opCityId) serviceName Nothing mbDeepLinkData
+          resp' <- withTryCatch "clearDriverDues:processAndSendManualPaymentLink" $ DDriver.clearDriverDues (driverId, merchantId, opCityId) serviceName Nothing mbDeepLinkData actor
           errorCatchAndHandle
             driverId
             resp'

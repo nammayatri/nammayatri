@@ -238,6 +238,7 @@ import qualified Lib.DriverCoins.Coins as Coins
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import qualified Lib.Finance.Account.Service as FAccount
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccountTypes
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -2565,8 +2566,9 @@ clearDriverDues ::
   ServiceNames ->
   Maybe ClearManualSelectedDues ->
   Maybe SPayment.DeepLinkData ->
+  Finance.Actor ->
   m ClearDuesRes
-clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq mbDeepLinkData = do
+clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq mbDeepLinkData actor = do
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
@@ -2599,13 +2601,13 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
   (vendorFees, finalInvoices) <- applyVendorMigrations subscriptionConfig.vendorMigrationMappings roundedVendorFees sortedInvoices
   clearDueResp <- do
     case finalInvoices of
-      [] -> mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (dueDriverFees, []) Nothing INV.MANUAL_INVOICE Nothing vendorFees mbDeepLinkData splitEnabled Nothing
+      [] -> mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (dueDriverFees, []) Nothing INV.MANUAL_INVOICE Nothing vendorFees mbDeepLinkData splitEnabled Nothing actor
       (invoice_ : restinvoices) -> do
         mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) restinvoices
         (invoice, currentDuesForExistingInvoice, newDues) <- validateExistingInvoice invoice_ dueDriverFees
         let driverFeeForCurrentInvoice = filter (\dfee -> dfee.id.getId `elem` currentDuesForExistingInvoice) dueDriverFees
         let driverFeeToBeAddedOnExpiry = filter (\dfee -> dfee.id.getId `elem` newDues) dueDriverFees
-        mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing INV.MANUAL_INVOICE invoice vendorFees mbDeepLinkData splitEnabled Nothing
+        mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing INV.MANUAL_INVOICE invoice vendorFees mbDeepLinkData splitEnabled Nothing actor
   let mbPaymentLink = clearDueResp.orderResp.payment_links
       payload = clearDueResp.orderResp.sdk_payload.payload
       mbAmount = readMaybe (T.unpack payload.amount) :: Maybe HighPrecMoney
@@ -3201,8 +3203,9 @@ clearDriverFeeWithCreate ::
   Currency ->
   Maybe SPayment.DeepLinkData ->
   Bool ->
+  Finance.Actor ->
   m ClearDuesRes
-clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbCgst, mbSgst) feeType currency mbDeepLinkData sendPaymentLink = do
+clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbCgst, mbSgst) feeType currency mbDeepLinkData sendPaymentLink actor = do
   dueDriverFee <- QDF.findAllFeeByTypeServiceStatusAndDriver serviceName personId [feeType] [DDF.PAYMENT_PENDING]
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName
@@ -3242,13 +3245,13 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
   resp <- do
     case sortedInvoices of
       -- if no invoice is present, then create a new invoice for all the driver fees
-      [] -> do mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFee, []) Nothing (feeTypeToInvoicetype feeType) Nothing vendorFees mbDeepLinkData splitEnabled Nothing
+      [] -> do mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFee, []) Nothing (feeTypeToInvoicetype feeType) Nothing vendorFees mbDeepLinkData splitEnabled Nothing actor
       (invoice_ : restinvoices) -> do
         mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) restinvoices
         (invoice, currentDuesForExistingInvoice, newDues) <- validateExistingInvoice invoice_ driverFee
         let driverFeeForCurrentInvoice = filter (\dfee -> dfee.id.getId `elem` currentDuesForExistingInvoice) driverFee
         let driverFeeToBeAddedOnExpiry = filter (\dfee -> dfee.id.getId `elem` newDues) driverFee
-        mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing (feeTypeToInvoicetype feeType) invoice vendorFees mbDeepLinkData splitEnabled Nothing
+        mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing (feeTypeToInvoicetype feeType) invoice vendorFees mbDeepLinkData splitEnabled Nothing actor
   let mbPaymentLink = resp.orderResp.payment_links
       payload = resp.orderResp.sdk_payload.payload
       mbAmount = readMaybe (T.unpack payload.amount) :: Maybe HighPrecMoney
@@ -3348,7 +3351,9 @@ verifyVpaStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r, HasF
 verifyVpaStatus (personId, _, opCityId) = do
   void $ QDriverInformation.updatePayoutVpaStatus (Just DriverInfo.VERIFIED_BY_USER) personId
   driverInfo <- QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
-  fork ("processing backlog payout for driver via verify vpaStatus " <> personId.getId) $ Payout.processPreviousPayoutAmount (cast personId) driverInfo.payoutVpa opCityId
+  let actor = Finance.Person personId.getId
+  fork ("processing backlog payout for driver via verify vpaStatus " <> personId.getId) $
+    Payout.processPreviousPayoutAmount (cast personId) driverInfo.payoutVpa opCityId actor
   pure Success
 
 getSecurityDepositDfStatus ::
@@ -3406,8 +3411,8 @@ data RefundByPayoutReq = RefundByPayoutReq
 mkPayoutLockKeyByDriverAndService :: Id SP.Person -> ServiceNames -> Text
 mkPayoutLockKeyByDriverAndService person serviceName = "POUT:REF:DRIVER:ID:" <> person.getId <> ":SN:" <> show serviceName
 
-refundByPayoutDriverFee :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> RefundByPayoutReq -> Flow APISuccess
-refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
+refundByPayoutDriverFee :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> RefundByPayoutReq -> Finance.Actor -> Flow APISuccess
+refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq actor = do
   let serviceName = refundByPayoutReq.serviceName
   when (refundByPayoutReq.refundAmountDeduction < 0.0) $ throwError (InternalError "Repair charge is less than 0")
   Redis.whenWithLockRedis (mkPayoutLockKeyByDriverAndService personId serviceName) 60 $ do
@@ -3446,7 +3451,7 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
       when (createPayoutOrderReq.amount < 0.0) $ throwError (InternalError "refund amount is less than 0")
       (_, mbPayoutOrder) <- do
         if createPayoutOrderReq.amount > 0.0
-          then DPayment.createPayoutService (cast person.merchantId) (Just $ cast person.merchantOperatingCityId) (cast personId) (Just $ map ((.getId) . (.id)) driverFeeToPayout) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
+          then DPayment.createPayoutService (cast person.merchantId) (Just $ cast person.merchantOperatingCityId) (cast personId) (Just $ map ((.getId) . (.id)) driverFeeToPayout) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing actor
           else pure (Nothing, Nothing)
       whenJust mbPayoutOrder $ \payoutOrder -> do
         let refundAmountSegregation = fromMaybe "NA" refundByPayoutReq.refundAmountSegregation

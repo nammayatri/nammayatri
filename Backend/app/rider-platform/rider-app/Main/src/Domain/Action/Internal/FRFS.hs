@@ -26,6 +26,7 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Finance.Core.Types (Actor)
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import Tools.Error
@@ -38,8 +39,9 @@ newtype FRFSStatusUpdateReq = FRFSStatusUpdateReq
 ---------------------------------------------------------------------
 frfsStatusUpdate ::
   FRFSStatusUpdateReq ->
+  Actor ->
   Flow APISuccess
-frfsStatusUpdate req = do
+frfsStatusUpdate req actor = do
   let reqBookingIds = req.bookingIds
   mapM_
     ( \bookingId -> do
@@ -49,7 +51,7 @@ frfsStatusUpdate req = do
               personId = booking.riderId
           bookingPayments <- QFRFSTicketBookingPayment.findAllTBPByBookingId bookingId
           let uniqueBookingPayments = nubBy ((==) `on` (.paymentOrderId)) $ sortBy (compare `on` (.paymentOrderId)) bookingPayments
-          mapM_ (\paymentBooking -> getStatus (personId, merchantId) paymentBooking.paymentOrderId) uniqueBookingPayments
+          mapM_ (\paymentBooking -> getStatus (personId, merchantId) paymentBooking.paymentOrderId actor) uniqueBookingPayments
     )
     reqBookingIds
 

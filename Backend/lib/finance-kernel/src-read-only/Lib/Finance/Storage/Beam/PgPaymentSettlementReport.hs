@@ -9,6 +9,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport
 import Tools.Beam.UtilsTH
 
@@ -22,7 +23,7 @@ data PgPaymentSettlementReportT f = PgPaymentSettlementReportT
     chargebackReasonCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     chargebackStatus :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    createdBy :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    createdBy :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Core.Types.Actor)),
     currency :: (B.C f Kernel.Types.Common.Currency),
     disputeId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     disputeType :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.DisputeType)),
@@ -62,6 +63,7 @@ data PgPaymentSettlementReportT f = PgPaymentSettlementReportT
     txnType :: (B.C f Lib.Finance.Domain.Types.PgPaymentSettlementReport.TxnType),
     uniqueSplitId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedBy :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Core.Types.Actor)),
     utr :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     vendorId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text))
   }

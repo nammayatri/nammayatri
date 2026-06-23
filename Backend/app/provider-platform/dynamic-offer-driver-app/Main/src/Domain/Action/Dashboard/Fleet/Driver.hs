@@ -184,6 +184,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
 import qualified Lib.Finance.Domain.Types.Account as FinanceAccount
 import qualified Lib.Finance.Storage.Queries.Account as QFinanceAccount
@@ -4903,7 +4904,8 @@ postDriverFleetScheduledBookingReassign merchantShortId _opCity fleetOwnerId Com
             distanceUnit = oldBooking.distanceUnit,
             merchantOperatingCityId = Just oldBooking.merchantOperatingCityId
           }
-  RideCancelInternal.cancelRideTransaction oldBooking oldRide bookingCReason merchant DRide.FleetOwner Nothing Nothing Nothing Nothing Nothing transporterConfig oldDriver
+  let actor = Finance.Person fleetOwnerId -- TODO apiTokenInfo.personId.getId for dashboard handler
+  RideCancelInternal.cancelRideTransaction oldBooking oldRide bookingCReason merchant DRide.FleetOwner Nothing Nothing Nothing Nothing Nothing transporterConfig oldDriver actor
 
   -- 6. Create new booking and quote (similar to performStaticOfferReallocation)
   newBookingId <- generateGUID

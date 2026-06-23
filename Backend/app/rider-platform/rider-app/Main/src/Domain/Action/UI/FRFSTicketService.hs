@@ -74,6 +74,7 @@ import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common hiding (mkPrice)
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Lib.Finance.Core.Types (Actor (..))
 import qualified Lib.JourneyModule.RouteServiceability as JMRouteServiceability
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JMU
@@ -789,7 +790,8 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId) quoteId mbIsMockPayment req = do
       select merchant merchantOperatingCity bapConfig quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer
       getFrfsBookingStatus (Just personId, merchantId) booking.id
     _ -> do
-      postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer mbIsMockPayment integratedBppConfig req.tripId
+      let actor = Person personId.getId
+      postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer mbIsMockPayment integratedBppConfig req.tripId actor
   where
     rateLimitKey :: Text -> Text -> Text
     rateLimitKey personId' tripId' = "BAP:FRFS_CONFIRM_RATE_LIMIT:" <> personId' <> ":" <> tripId'
@@ -819,8 +821,9 @@ frfsOrderStatusHandler ::
   Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
   DPayment.PaymentStatusResp ->
   (DJL.JourneyLeg -> Id DFRFSQuote.FRFSQuote -> m ()) ->
+  Actor ->
   m (DPayment.PaymentFulfillmentStatus, Maybe Text, Maybe Text)
-frfsOrderStatusHandler merchantId paymentStatusResponse switchFRFSQuoteTier = do
+frfsOrderStatusHandler merchantId paymentStatusResponse switchFRFSQuoteTier actor = do
   orderShortId <- DPayment.getOrderShortId paymentStatusResponse
   logDebug $ "frfs ticket order bap webhookc call" <> orderShortId.getShortId
   order <- QPaymentOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound orderShortId.getShortId)
@@ -833,7 +836,7 @@ frfsOrderStatusHandler merchantId paymentStatusResponse switchFRFSQuoteTier = do
           paymentOrder <- QPaymentOrder.findById bookingPayment.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found")
           integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
           journeyId <- getJourneyIdFromBooking booking
-          bookingStatus <- frfsBookingStatus (booking.riderId, merchantId) (integratedBppConfig.platformType == DIBC.MULTIMODAL) (withPaymentStatusResponseHandler bookingPayment paymentOrder) booking person switchFRFSQuoteTier
+          bookingStatus <- frfsBookingStatus (booking.riderId, merchantId) (integratedBppConfig.platformType == DIBC.MULTIMODAL) (withPaymentStatusResponseHandler bookingPayment paymentOrder) booking person switchFRFSQuoteTier actor
 
           return (bookingStatus, booking, journeyId)
       )
@@ -898,7 +901,8 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
   booking <- B.runInReplica $ QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  frfsBookingStatus (personId, merchantId_) (integratedBppConfig.platformType == DIBC.MULTIMODAL) (withPaymentStatusResponseHandler integratedBppConfig booking person) booking person (\_ _ -> pure ())
+  let actor = Person personId.getId -- TODO apiTokenInfo.personId.getId for dashboard handler
+  frfsBookingStatus (personId, merchantId_) (integratedBppConfig.platformType == DIBC.MULTIMODAL) (withPaymentStatusResponseHandler integratedBppConfig booking person) booking person (\_ _ -> pure ()) actor
   where
     withPaymentStatusResponseHandler ::
       ( EncFlow m r,

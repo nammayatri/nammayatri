@@ -14,6 +14,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import Lib.Finance.Core.Types (Actor (..))
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FRFSCancel as FRFSCancel
 import SharedLogic.FRFSUtils as FRFSUtils
@@ -53,7 +54,8 @@ onCancelCore merchant booking' dOnCancel = do
       void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just cancellationCharges) (Just True) booking.id
       return Nothing
     Spec.CANCELLED -> do
-      sideEffectData <- FRFSCancel.handleCancelledStatus merchant booking refundAmount cancellationCharges dOnCancel.messageId False
+      let actor = System -- using System for beckn request handlers
+      sideEffectData <- FRFSCancel.handleCancelledStatus merchant booking refundAmount cancellationCharges dOnCancel.messageId False actor
       return (Just sideEffectData)
     Spec.CANCEL_INITIATED -> do
       void $ QTBooking.updateStatusById FTBooking.CANCEL_INITIATED booking.id

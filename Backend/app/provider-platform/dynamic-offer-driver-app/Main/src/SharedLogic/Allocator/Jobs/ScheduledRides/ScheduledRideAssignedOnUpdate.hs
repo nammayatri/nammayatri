@@ -34,6 +34,7 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
@@ -309,13 +310,14 @@ cancelOrReallocate ::
   RideCancel.RequestorId ->
   m ()
 cancelOrReallocate ride cReason isForceReallocation req = do
-  let cancelReq =
+  let actor = Finance.System -- using System for job handlers
+      cancelReq =
         RideCancel.CancelRideReq
           { reasonCode = DCR.CancellationReasonCode cReason,
             additionalInfo = Nothing,
             doCancellationRateBasedBlocking = Nothing
           }
-  (_cancellationCnt, _isGoToDisabled) <- RideCancel.cancelRideImpl RideCancel.cancelRideHandle req ride.id cancelReq isForceReallocation
+  (_cancellationCnt, _isGoToDisabled) <- RideCancel.cancelRideImpl RideCancel.cancelRideHandle req ride.id cancelReq isForceReallocation actor
   pure ()
 
 data Result a b = APIFailed | DistanceResp (GetDistanceResp a b)

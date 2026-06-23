@@ -17,7 +17,8 @@ instance FromTType' Beam.SubscriptionPurchase Domain.Types.SubscriptionPurchase.
     pure $
       Just
         Domain.Types.SubscriptionPurchase.SubscriptionPurchase
-          { enableServiceUsageCharge = enableServiceUsageCharge,
+          { createdBy = createdBy,
+            enableServiceUsageCharge = enableServiceUsageCharge,
             expiryDate = expiryDate,
             financeInvoiceId = Kernel.Types.Id.Id <$> financeInvoiceId,
             id = Kernel.Types.Id.Id id,
@@ -35,6 +36,7 @@ instance FromTType' Beam.SubscriptionPurchase Domain.Types.SubscriptionPurchase.
             serviceName = serviceName,
             startDate = startDate,
             status = status,
+            updatedBy = updatedBy,
             vehicleCategory = vehicleCategory,
             waiveOfMode = waiveOfMode,
             waiveOffEnabledOn = waiveOffEnabledOn,
@@ -47,7 +49,8 @@ instance FromTType' Beam.SubscriptionPurchase Domain.Types.SubscriptionPurchase.
 instance ToTType' Beam.SubscriptionPurchase Domain.Types.SubscriptionPurchase.SubscriptionPurchase where
   toTType' (Domain.Types.SubscriptionPurchase.SubscriptionPurchase {..}) = do
     Beam.SubscriptionPurchaseT
-      { Beam.enableServiceUsageCharge = enableServiceUsageCharge,
+      { Beam.createdBy = createdBy,
+        Beam.enableServiceUsageCharge = enableServiceUsageCharge,
         Beam.expiryDate = expiryDate,
         Beam.financeInvoiceId = Kernel.Types.Id.getId <$> financeInvoiceId,
         Beam.id = Kernel.Types.Id.getId id,
@@ -65,6 +68,7 @@ instance ToTType' Beam.SubscriptionPurchase Domain.Types.SubscriptionPurchase.Su
         Beam.serviceName = serviceName,
         Beam.startDate = startDate,
         Beam.status = status,
+        Beam.updatedBy = updatedBy,
         Beam.vehicleCategory = vehicleCategory,
         Beam.waiveOfMode = waiveOfMode,
         Beam.waiveOffEnabledOn = waiveOffEnabledOn,

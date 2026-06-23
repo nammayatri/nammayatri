@@ -95,6 +95,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, runFinance, transfer, transferWithoutAttribution, transfer_)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -311,7 +312,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
       if DCommon.checkFleetOwnerRole person.role
         then pure (DSP.FLEET_OWNER, person.id.getId)
         else pure (DSP.DRIVER, person.id.getId)
-  mbPrepaidPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
+  mbPrepaidPurchase <- QSPE.findLatestActiveByOwnerAndServiceName (\p -> handleSubscriptionExpiry p actor) ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
   let serviceName = if isJust mbPrepaidPurchase then PREPAID_SUBSCRIPTION else YATRI_SUBSCRIPTION
 
   -- 1. Subscription Flow — route by serviceName
@@ -326,8 +327,11 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
 
   -- 3. Airport entry fee deduction (two ledger entries: GST then airport portion)
   when (fromMaybe False thresholdConfig.airportEntryFeeEnabled && driverInfo.enableForAirport == DI.ENABLED) $
-    AirportEntryFee.deductAirportEntryFeeAtEndRide ride booking
+    AirportEntryFee.deductAirportEntryFeeAtEndRide ride booking actor
   where
+    actor :: Finance.Actor
+    actor = Finance.Person driverId.getId
+
     processEndRidePrepaidSubscription fare mbVC = do
       case ride.fleetOwnerId of
         Just fleetOwnerId -> do
@@ -345,12 +349,13 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
                 booking.id.getId
                 Nothing
                 mbVC
+                actor
                 >>= fromEitherM (\err -> InternalError ("Failed to debit prepaid balance: " <> show err))
-            (contributingPurchaseIds, anyExhausted) <- checkAndMarkExhaustedSubscriptions counterpartyFleetOwner fleetOwnerId.getId DSP.FLEET_OWNER mbVC
+            (contributingPurchaseIds, anyExhausted) <- checkAndMarkExhaustedSubscriptions counterpartyFleetOwner fleetOwnerId.getId DSP.FLEET_OWNER mbVC actor
             unless (null contributingPurchaseIds) $
               QRide.updateSubscriptionPurchaseIds (Just contributingPurchaseIds) ride.id
             when anyExhausted $ do
-              mbActivated <- activateNextQueuedPurchaseExpiry fleetOwnerId.getId DSP.FLEET_OWNER mbVC
+              mbActivated <- activateNextQueuedPurchaseExpiry fleetOwnerId.getId DSP.FLEET_OWNER mbVC actor
               whenJust mbActivated $ \(nextPurchaseId, expiry) -> do
                 now <- getCurrentTime
                 let delay = diffUTCTime expiry now
@@ -377,16 +382,17 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
                 booking.id.getId
                 Nothing
                 mbVC
+                actor
                 >>= fromEitherM (\err -> InternalError ("Failed to debit prepaid balance: " <> show err))
             driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
             let balanceUpdateMessage = "Thank you for taking the ride. Your updated subscription balance is Rs." <> show newBalance
                 balanceUpdatedTitle = "Subscription balance updated!"
             sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_BALANCE_UPDATE balanceUpdatedTitle balanceUpdateMessage driver driver.deviceToken
-            (contributingPurchaseIds, anyExhausted) <- checkAndMarkExhaustedSubscriptions counterpartyDriver ride.driverId.getId DSP.DRIVER mbVC
+            (contributingPurchaseIds, anyExhausted) <- checkAndMarkExhaustedSubscriptions counterpartyDriver ride.driverId.getId DSP.DRIVER mbVC actor
             unless (null contributingPurchaseIds) $
               QRide.updateSubscriptionPurchaseIds (Just contributingPurchaseIds) ride.id
             when anyExhausted $ do
-              mbActivated <- activateNextQueuedPurchaseExpiry ride.driverId.getId DSP.DRIVER mbVC
+              mbActivated <- activateNextQueuedPurchaseExpiry ride.driverId.getId DSP.DRIVER mbVC actor
               whenJust mbActivated $ \(nextPurchaseId, expiry) -> do
                 now' <- getCurrentTime
                 let delay = diffUTCTime expiry now'
@@ -413,7 +419,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
           if DCommon.checkFleetOwnerRole person.role
             then pure (DSP.FLEET_OWNER, person.id.getId)
             else pure (DSP.DRIVER, person.id.getId)
-      mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId' ownerType' PREPAID_SUBSCRIPTION mbVC
+      mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName (\p -> handleSubscriptionExpiry p actor) ownerId' ownerType' PREPAID_SUBSCRIPTION mbVC
       let mbSyntheticPlan = Plan.mkSyntheticDriverPlanFromPurchase <$> mbPurchase
       plan <- getPlan mbSyntheticPlan PREPAID_SUBSCRIPTION booking.merchantOperatingCityId Nothing Nothing
       case plan of
@@ -550,7 +556,8 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
             _ -> HighPrecMoney 0.0
 
     merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
-    ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig isOnline
+    let actor = Finance.Person ride.driverId.getId
+    ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig isOnline actor
     let tollWithVat = tollAmount + tollVatAmount
     let parkingWithVat = parkingAmount + parkingVatAmount
     let mkRideLineItems clubVatInclusive issuedToType =

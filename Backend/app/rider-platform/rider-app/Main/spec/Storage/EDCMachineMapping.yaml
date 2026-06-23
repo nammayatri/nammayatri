@@ -2,6 +2,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Person: Domain.Types.Person
+  Actor: Lib.Finance.Core.Types
 
 EDCMachineMapping:
   tableName: edc_machine_mapping

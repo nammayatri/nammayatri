@@ -236,8 +236,9 @@ buildRiderFinanceCtx ::
   Maybe Text -> -- merchantName
   Maybe Text -> -- merchantShortId
   Maybe Text -> -- fromLocationAddress
+  Actor ->
   FinanceCtx
-buildRiderFinanceCtx merchantId merchantOpCityId currency isOnline riderId referenceId merchantName merchantShortId fromLocationAddress =
+buildRiderFinanceCtx merchantId merchantOpCityId currency isOnline riderId referenceId merchantName merchantShortId fromLocationAddress actor =
   FinanceCtx
     { merchantId = merchantId,
       merchantOpCityId = merchantOpCityId,
@@ -262,7 +263,8 @@ buildRiderFinanceCtx merchantId merchantOpCityId currency isOnline riderId refer
       tdsRateReason = Nothing,
       emitLedgerEntries = True,
       fromLocationAddress = fromLocationAddress,
-      issuedToName = Nothing
+      issuedToName = Nothing,
+      actor
     }
 
 applyBookingProviderFieldsToCtx :: DRB.Booking -> FinanceCtx -> FinanceCtx
@@ -783,8 +785,9 @@ voidRidePaymentLedger entryIds = do
   let uniqueInvoiceIds = List.nub [inv.id | Just inv <- mbInvoices]
   forM_ entryIds $ \entryId ->
     voidEntry entryId "PaymentIntentCancelled"
+  let actor = System -- FIXME add proper actor
   forM_ uniqueInvoiceIds $ \invId ->
-    QInvoice.updateStatus FInvoice.Voided invId
+    QInvoice.updateStatus FInvoice.Voided (Just actor) invId
   logInfo $
     "Voided " <> show (length entryIds) <> " ride payment ledger entries and "
       <> show (length uniqueInvoiceIds)
@@ -1052,8 +1055,9 @@ regenerateRideTipInvoice ::
   (BeamFlow.BeamFlow m r, MonadFlow m) =>
   Text -> -- rideId
   HighPrecMoney -> -- tipAmount
+  Actor ->
   m ()
-regenerateRideTipInvoice rideId tipAmount = do
+regenerateRideTipInvoice rideId tipAmount actor = do
   rideEntries <- findRidePaymentEntries rideId
   let rideFareEntries = List.filter (\e -> e.referenceType == ridePaymentRefRideFare) rideEntries
   -- Find the RideFare entry linked to an active (Paid/Issued/Draft) invoice.
@@ -1135,7 +1139,8 @@ regenerateRideTipInvoice rideId tipAmount = do
                   issuedByTaxNo = Nothing,
                   paymentMode = priorInv.paymentMode,
                   periodStart = priorInv.periodStart,
-                  periodEnd = priorInv.periodEnd
+                  periodEnd = priorInv.periodEnd,
+                  actor
                 }
               (priorEntryIds <> tipEntryIds)
           case createRes of

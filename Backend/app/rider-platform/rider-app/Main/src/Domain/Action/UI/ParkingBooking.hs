@@ -15,6 +15,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Finance.Core.Types (Actor (..))
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
@@ -104,7 +105,8 @@ postMultimodalParkingBook mbApiKey req = do
       createOrderCall = TPayment.createOrder person.merchantId merchantOpCityId Nothing TPayment.ParkingBooking (Just req.customerId.getId) person.clientSdkVersion Nothing
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let createWalletCall = TWallet.createWallet person.merchantId merchantOpCityId
-  orderResp <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast merchantOpCityId) commonPersonId Nothing Nothing TPayment.ParkingBooking isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False Nothing >>= fromMaybeM (InternalError "Failed to create payment order")
+  let actor = Person person.id.getId
+  orderResp <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast merchantOpCityId) commonPersonId Nothing Nothing TPayment.ParkingBooking isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False Nothing actor >>= fromMaybeM (InternalError "Failed to create payment order")
 
   paymentLink <- case orderResp.payment_links of
     Just links -> fromMaybeM (InternalError "Payment link not found") links.web

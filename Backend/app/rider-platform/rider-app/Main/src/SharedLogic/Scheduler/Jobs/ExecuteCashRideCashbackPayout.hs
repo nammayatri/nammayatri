@@ -14,6 +14,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.Finance.Core.Types (Actor (..))
 import qualified Lib.Finance.Domain.Types.Account as DA
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
@@ -50,7 +51,8 @@ executeCashRideCashbackPayoutJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.
       lockKey = "CashRideCashbackPayoutJob:" <> personId.getId
   -- Single in-flight job per person; if a parallel job is already
   -- executing we silently skip — its outcome will cover this run too.
-  Redis.whenWithLockRedis lockKey 120 $ runPayoutForPerson personId
+  let actor = System -- always use System for scheduler job
+  Redis.whenWithLockRedis lockKey 120 $ (runPayoutForPerson actor) personId
   pure Complete
 
 runPayoutForPerson ::
@@ -65,9 +67,10 @@ runPayoutForPerson ::
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     FinanceBeamFlow.BeamFlow m r
   ) =>
+  Actor ->
   Id Person ->
   m ()
-runPayoutForPerson personId = do
+runPayoutForPerson actor personId = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   case person.payoutVpa of
     Nothing -> logError $ "Skipping cashback payout — missing payout VPA for person: " <> person.id.getId
@@ -92,7 +95,7 @@ runPayoutForPerson personId = do
                 Nothing ->
                   logError $ "PayoutConfig not found for city=" <> person.merchantOperatingCityId.getId <> " — skipping payout for person=" <> personId.getId
                 Just payoutConfig ->
-                  submitCashbackPayout person payoutVpa payoutConfig (map fst cashbackEntries) totalAmount
+                  submitCashbackPayout person payoutVpa payoutConfig (map fst cashbackEntries) totalAmount actor
 
 submitCashbackPayout ::
   ( EncFlow m r,
@@ -110,8 +113,9 @@ submitCashbackPayout ::
   PayoutConfig ->
   [LE.LedgerEntry] ->
   HighPrecMoney ->
+  Actor ->
   m ()
-submitCashbackPayout person payoutVpa payoutConfig cashbackEntries totalAmount = do
+submitCashbackPayout person payoutVpa payoutConfig cashbackEntries totalAmount actor = do
   merchantOperatingCity <-
     CQMOC.findById person.merchantOperatingCityId
       >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
@@ -143,7 +147,8 @@ submitCashbackPayout person payoutVpa payoutConfig cashbackEntries totalAmount =
             coverageFrom = Nothing,
             coverageTo = Nothing,
             ledgerEntryIds = map (.getId) originalEntryIds,
-            payoutServiceFlow = Payout.JuspayFlow -- StripeFlow not supported currently in rider-app
+            payoutServiceFlow = Payout.JuspayFlow, -- StripeFlow not supported currently in rider-app
+            actor
           }
   -- DB-level reservation: flip entries UNSETTLED → PROCESSING BEFORE
   -- submitting so a parallel job (or a delayed webhook) can't re-pick

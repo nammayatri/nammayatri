@@ -20,6 +20,7 @@ where
 import Domain.Types.Invoice (InvoiceType, IssuedToType)
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
+import Lib.Finance.Core.Types (Actor)
 import Lib.Finance.Domain.Types.DirectTaxTransaction (TdsRateReason)
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import Lib.Finance.Domain.Types.IndirectTaxTransaction (GstCreditType)
@@ -116,7 +117,10 @@ data InvoiceInput = InvoiceInput
     isVat :: Bool,
     issuedToTaxNo :: Maybe Text,
     issuedByTaxNo :: Maybe Text,
-    paymentMode :: Maybe Text
+    paymentMode :: Maybe Text,
+    -- Audit
+    actor :: Actor
+    -- updatedBy: Actor -- do we need separate field?
   }
   deriving (Eq, Show, Generic)
 
@@ -148,7 +152,8 @@ data IndirectTaxInput = IndirectTaxInput
     -- VAT integration fields
     isVat :: Bool,
     issuedToTaxNo :: Maybe Text,
-    issuedByTaxNo :: Maybe Text
+    issuedByTaxNo :: Maybe Text,
+    actor :: Actor
   }
   deriving (Eq, Show, Generic)
 

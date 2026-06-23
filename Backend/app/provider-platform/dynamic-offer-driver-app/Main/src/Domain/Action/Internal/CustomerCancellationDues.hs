@@ -28,6 +28,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.UserCancellationDues as UserCancellationDues
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as QM
@@ -132,8 +133,9 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
   merchantOperatingCity <- CQMM.findByMerchantIdAndCity merchantId merchantCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show merchantCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCity.id Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCity.id.getId)
   mbRide <- QRide.findById (Id req.bppRideId)
+  let actor = Finance.System -- FIXME add proper actor personId
   Kernel.Prelude.whenJust mbRide $ \ride -> do
     mbBooking <- QBooking.findById ride.bookingId
     Kernel.Prelude.whenJust mbBooking $ \booking ->
-      RideCancelInternal.applyCancellationLedgerAction booking ride req.cancellationLedgerAction transporterConfig
+      RideCancelInternal.applyCancellationLedgerAction booking ride req.cancellationLedgerAction transporterConfig actor
   return Success

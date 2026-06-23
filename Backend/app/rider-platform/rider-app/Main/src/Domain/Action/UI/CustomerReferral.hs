@@ -21,6 +21,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.Finance.Core.Types (Actor (..))
 import qualified Lib.Payment.Domain.Action as DP
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -97,8 +98,9 @@ postPayoutVpaUpsert (mbPersonId, _mbMerchantId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   QPerson.updatePayoutVpa (Just req.vpa) personId
-  fork ("processing backlog payout for customer while vpa updation" <> personId.getId) $
-    processBacklogReferralPayout personId req.vpa person.merchantOperatingCityId
+  fork ("processing backlog payout for customer while vpa updation" <> personId.getId) $ do
+    let actor = Person personId.getId
+    processBacklogReferralPayout personId req.vpa person.merchantOperatingCityId actor
   pure Success
 
 processBacklogReferralPayout ::
@@ -112,8 +114,9 @@ processBacklogReferralPayout ::
   Id Person.Person ->
   Text ->
   Id MerchantOpCity.MerchantOperatingCity ->
+  Actor ->
   m ()
-processBacklogReferralPayout personId vpa merchantOpCityId = do
+processBacklogReferralPayout personId vpa merchantOpCityId actor = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just VehicleCategory.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing}) (Just (maybeToList <$> CQPayoutCfg.findByCityIdAndVehicleCategory person.merchantOperatingCityId VehicleCategory.AUTO_CATEGORY (Just [])))
   personStats <- PStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
@@ -141,7 +144,7 @@ processBacklogReferralPayout personId vpa merchantOpCityId = do
           logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
           let createPayoutOrderCall = TPayout.createPayoutOrder person.clientSdkVersion person.merchantId merchantOpCityId (Just person.id.getId)
           merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-          mbPayoutOrderResp <- withTryCatch "createPayoutService:processBacklogReferralPayout" $ Payout.createPayoutService (cast person.merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just []) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
+          mbPayoutOrderResp <- withTryCatch "createPayoutService:processBacklogReferralPayout" $ Payout.createPayoutService (cast person.merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just []) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing actor
           case mbPayoutOrderResp of
             Left err -> logError $ "Error in calling create order for backlog payout for riderId: " <> show person.id.getId <> " and orderId: " <> show uid <> "with error " <> show err
             _ -> pure ()

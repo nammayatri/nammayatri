@@ -31,6 +31,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Lib.Finance.Core.Types (Actor (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
@@ -91,7 +92,8 @@ sendCustomerRefund Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
     else do
       for_ eligibleBookingsList $ \booking -> do
         fork ("processing Payout for riderId : " <> show booking.riderId.getId <> "and bookingId : " <> show booking.id.getId) $ do
-          callPayout merchantId (cast merchantOpCityId) booking payoutConfig statusForRetry
+          let actor = System -- using System for beckn request handlers
+          callPayout merchantId (cast merchantOpCityId) booking payoutConfig statusForRetry actor
 
       ReSchedule <$> getRescheduledTime riderConfig.payoutBatchDelay
 
@@ -114,8 +116,9 @@ callPayout ::
   FRFSTicketBooking ->
   Maybe PayoutConfig ->
   CashbackStatus ->
+  Actor ->
   m ()
-callPayout merchantId merchantOpCityId booking payoutConfig statusForRetry = do
+callPayout merchantId merchantOpCityId booking payoutConfig statusForRetry actor = do
   case payoutConfig of
     Just config -> do
       uid <- generateGUID
@@ -135,7 +138,7 @@ callPayout merchantId merchantOpCityId booking payoutConfig statusForRetry = do
                 createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount currency phoneNo emailId person.id.getId config.remark person.firstName (Just payoutVpa) config.orderType payoutServiceFlow Nothing
             logDebug $ "calling create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show booking.eventDiscountAmount <> " | orderId: " <> show uid
             let createPayoutOrderCall = TP.createPayoutOrder person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just person.id.getId)
-            mbPayoutOrderResp <- withTryCatch "createPayoutService:metroIncentivePayout" $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just [booking.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
+            mbPayoutOrderResp <- withTryCatch "createPayoutService:metroIncentivePayout" $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just [booking.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing actor
             errorCatchAndHandle booking.id person.id.getId uid mbPayoutOrderResp config statusForRetry (\_ -> pure ())
             pure ()
         Nothing -> do

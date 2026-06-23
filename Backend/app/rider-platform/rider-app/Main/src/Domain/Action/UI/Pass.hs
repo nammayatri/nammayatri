@@ -61,6 +61,7 @@ import qualified Kernel.Types.Id as Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import Lib.Finance.Core.Types (Actor (..))
 import qualified Lib.JourneyLeg.Common.FRFSJourneyUtils as FRFSJourneyUtils
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -359,7 +360,8 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         mbPaymentOrderValidity <- TPayment.getPaymentOrderValidity merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
         isMetroTestTransaction <- asks (.isMetroTestTransaction)
         let createWalletCall = TWallet.createWallet merchantId person.merchantOperatingCityId
-        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False (Just purchasedPassId.getId)
+        let actor = Person personId.getId -- TODO apiTokenInfo.personId.getId for dashboard handler
+        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False (Just purchasedPassId.getId) actor
       else return Nothing
   QPurchasedPassPayment.create purchasedPassPayment
   return $

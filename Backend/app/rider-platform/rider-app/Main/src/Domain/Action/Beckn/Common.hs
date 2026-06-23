@@ -84,6 +84,8 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Kernel.Utils.Time as KUT
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Lib.Finance.Core.Types (Actor)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -539,6 +541,7 @@ rideAssignedReqHandler req = do
                   description = "OFFER_DISCOUNT"
                 }
         SFareBreakupInfo.addFareBreakupInfoItems booking.id.getId DFareBreakup.BOOKING [SFareBreakupInfo.fareBreakupToItem offerDiscountFareBreakup] (Just booking.merchantId) (Just booking.merchantOperatingCityId)
+      let actor = Finance.System -- using System for beckn request handlers
       -- Create payment intent for online payments, capture orderId for invoice creation
       _mbPaymentIntentResp <- case req'.onlinePaymentParameters of
         Just OnlinePaymentParameters {driverAccountId = onlineDriverAccountId, ..} -> do
@@ -558,7 +561,7 @@ rideAssignedReqHandler req = do
           mbExistingOrderId <- SPayment.getOrderIdForRide ride.id
           estimatedBreakups <- traverse (buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) (fromMaybe [] req'.fareBreakups)
           -- Online Ride Assigned branch (inside Just OnlinePaymentParameters case) → isOnline=True.
-          let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId merchantOperatingCityId.getId booking.estimatedFare.currency True booking.riderId.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
+          let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId merchantOperatingCityId.getId booking.estimatedFare.currency True booking.riderId.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]) actor
           mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount 0 ledgerCtx
           let ledgerInfo =
                 fromMaybe
@@ -605,7 +608,7 @@ rideAssignedReqHandler req = do
           pure mbPaymentResp
         Nothing -> do
           let pickupAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]
-              ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId booking.estimatedFare.currency False booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress
+              ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId booking.estimatedFare.currency False booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress actor
           estimatedBreakups <- traverse (buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) (fromMaybe [] req'.fareBreakups)
           mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount 0 ledgerCtx
           let ledgerInfo =
@@ -945,6 +948,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           Just distance -> updRide.chargeableDistance >= Just distance && not person.hasTakenValidRide
           Nothing -> True
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
+  let actor = Finance.System -- using System for beckn request handlers
   fork "update first ride info" $ do
     mbPersonFirstRideInfo <- QCP.findByPersonIdAndVehicleCategory booking.riderId $ Just (Utils.mapServiceTierToCategory booking.vehicleServiceTierType)
     case mbPersonFirstRideInfo of
@@ -957,7 +961,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         when (totalCount == 0) $ do
           Notify.notifyFirstRideEvent booking.riderId (Utils.mapServiceTierToCategory booking.vehicleServiceTierType) booking.tripCategory
           fork ("processing referral payouts for ride: " <> ride.id.getId) $ do
-            customerReferralPayout ride totalFare.currency isValidRide riderConfig person booking.merchantId booking.merchantOperatingCityId
+            customerReferralPayout ride totalFare.currency isValidRide riderConfig person booking.merchantId booking.merchantOperatingCityId actor
 
   when (not person.hasTakenValidRide && fromMaybe 0 person.totalRidesCount == 0) $
     fork "event_tracking: first_ride_completed" $
@@ -985,7 +989,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           mbInvCfg = riderConfig.invoiceConfig
           cashLedgerCtx =
             RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
-              (RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency False person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]))
+              (RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency False person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]) actor)
                 { issuedToName = riderName,
                   supplierName = mbInvCfg >>= (.supplierName),
                   supplierAddress = mbInvCfg >>= (.supplierAddress),
@@ -1034,7 +1038,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           mbInvCfgOnline = riderConfig.invoiceConfig
           ledgerCtx =
             RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
-              (RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]))
+              (RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]) actor)
                 { issuedToName = riderNameOnline,
                   supplierName = mbInvCfgOnline >>= (.supplierName),
                   supplierAddress = mbInvCfgOnline >>= (.supplierAddress),
@@ -1300,7 +1304,8 @@ bookingCancelledReqHandler ::
   m ()
 bookingCancelledReqHandler (ValidatedBookingCancelledReq {..}) = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason:-" <> show cancellationSource)
-  cancellationTransaction booking mbRide cancellationSource Nothing Nothing False
+  let actor = Finance.System -- using System for beckn request handlers
+  cancellationTransaction booking mbRide cancellationSource Nothing Nothing False actor
 
 cancellationTransaction ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
@@ -1326,8 +1331,9 @@ cancellationTransaction ::
   Maybe PriceAPIEntity ->
   Maybe PriceAPIEntity ->
   Bool ->
+  Actor ->
   m ()
-cancellationTransaction booking mbRide cancellationSource cancellationFee cancellationFeeTax immediateCharge = do
+cancellationTransaction booking mbRide cancellationSource cancellationFee cancellationFeeTax immediateCharge actor = do
   bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) cancellationSource
   merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQMerchantCfg.findAllByMerchantOperatingCityId booking.merchantOperatingCityId (Just [])))
   fork "incrementing fraud counters" $ do
@@ -1372,7 +1378,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
           -- creating cancellation execution payment intent which charges cancellation fee from users stripe account
           let currentPaymentInstrument = fromMaybe DMPM.Cash booking.paymentInstrument
               pickupAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]
-              ledgerCtx = RidePaymentFinance.applyBookingProviderFieldsToCtx booking $ RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId fee.currency True booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress
+              ledgerCtx = RidePaymentFinance.applyBookingProviderFieldsToCtx booking $ RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId fee.currency True booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress actor
           logDebug $ "[CancellationSettlement] immediateCharge=" <> show immediateCharge <> " paymentInstrument=" <> show currentPaymentInstrument
           mobileNumber <- mapM decrypt personD.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
           let countryCode = fromMaybe "+91" personD.mobileCountryCode
@@ -1393,7 +1399,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
           if immediateCharge
             then case currentPaymentInstrument of
               DMPM.Card _ ->
-                CancellationFee.settleCancellationFeeViaStripe booking ride personD cancellationBase cancellationTax fee.currency syncCancellationLedger
+                CancellationFee.settleCancellationFeeViaStripe booking ride personD cancellationBase cancellationTax fee.currency syncCancellationLedger actor
               _ -> do
                 -- Cash/UPI: void any unsettled ride-fare entries before creating cancellation entries
                 void $ RidePaymentFinance.voidRidePaymentEntriesAndInvoice ride.id.getId
@@ -1737,8 +1743,9 @@ customerReferralPayout ::
   DPerson.Person ->
   Id DMerchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Actor ->
   m ()
-customerReferralPayout ride currency isValidRide riderConfig person_ merchantId merchantOperatingCityId = do
+customerReferralPayout ride currency isValidRide riderConfig person_ merchantId merchantOperatingCityId actor = do
   let vehicleCategory = DV.castVehicleVariantToVehicleCategory ride.vehicleVariant
   logDebug $ "Ride End referral payout : vehicleCategory : " <> show vehicleCategory <> " isValidRide: " <> show isValidRide
   mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing}) (Just (maybeToList <$> CQPayoutCfg.findByCityIdAndVehicleCategory merchantOperatingCityId vehicleCategory (Just [])))
@@ -1789,7 +1796,7 @@ customerReferralPayout ride currency isValidRide riderConfig person_ merchantId 
             logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
             let createPayoutOrderCall = TP.createPayoutOrder person.clientSdkVersion merchantId merchantOperatingCityId (Just person.id.getId)
 
-            mbPayoutOrderResp <- withTryCatch "createPayoutService:handlePayout" $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
+            mbPayoutOrderResp <- withTryCatch "createPayoutService:handlePayout" $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing actor
             case mbPayoutOrderResp of
               Left err -> logError $ "Error in calling create payout rideId: " <> show ride.id.getId <> " and orderId: " <> show uid <> "with error " <> show err
               _ -> pure ()

@@ -54,6 +54,7 @@ import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.DriverCoins.Coins as DC
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.CallBAPInternal
@@ -75,7 +76,7 @@ import TransactionLogs.Types
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     findById :: Id DP.Person -> m (Maybe DP.Person),
-    cancelRide :: Id DRide.Ride -> DRide.RideEndedBy -> DBCR.BookingCancellationReason -> Bool -> Maybe Bool -> m (),
+    cancelRide :: Id DRide.Ride -> DRide.RideEndedBy -> DBCR.BookingCancellationReason -> Bool -> Maybe Bool -> Finance.Actor -> m (),
     findBookingByIdInReplica :: Id SRB.Booking -> m (Maybe SRB.Booking),
     pickUpDistance :: SRB.Booking -> LatLong -> LatLong -> m Meters
   }
@@ -151,8 +152,9 @@ driverCancelRideHandler ::
   CancelRideReq ->
   Flow CancelRideResp
 driverCancelRideHandler shandle personId rideId req =
-  withLogTag ("rideId-" <> rideId.getId) $
-    cancelRideHandler shandle (PersonRequestorId personId) rideId req
+  withLogTag ("rideId-" <> rideId.getId) $ do
+    let actor = Finance.Person personId.getId
+    cancelRideHandler shandle (PersonRequestorId personId) rideId req actor
 
 dashboardCancelRideHandler ::
   ServiceHandle Flow ->
@@ -163,7 +165,8 @@ dashboardCancelRideHandler ::
   Flow APISuccess.APISuccess
 dashboardCancelRideHandler shandle merchantId merchantOpCityId rideId req =
   withLogTag ("merchantId-" <> merchantId.getId) $ do
-    void $ cancelRideImpl shandle (DashboardRequestorId (merchantId, merchantOpCityId)) rideId req False
+    let actor = Finance.System -- TODO apiTokenInfo.personId.getId for dashboard handler
+    void $ cancelRideImpl shandle (DashboardRequestorId (merchantId, merchantOpCityId)) rideId req False actor
     return APISuccess.Success
 
 cancelRideHandler ::
@@ -171,9 +174,10 @@ cancelRideHandler ::
   RequestorId ->
   Id DRide.Ride ->
   CancelRideReq ->
+  Finance.Actor ->
   Flow CancelRideResp
-cancelRideHandler sh requestorId rideId req = withLogTag ("rideId-" <> rideId.getId) do
-  (cancellationCnt, isGoToDisabled) <- cancelRideImpl sh requestorId rideId req False
+cancelRideHandler sh requestorId rideId req actor = withLogTag ("rideId-" <> rideId.getId) do
+  (cancellationCnt, isGoToDisabled) <- cancelRideImpl sh requestorId rideId req False actor
   pure $ buildCancelRideResp cancellationCnt isGoToDisabled
   where
     buildCancelRideResp cancelCnt isGoToDisabled =
@@ -201,8 +205,9 @@ cancelRideImpl ::
   Id DRide.Ride ->
   CancelRideReq ->
   Bool ->
+  Finance.Actor ->
   m (Maybe Int, Maybe Bool)
-cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = do
+cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation actor = do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRide ride) $ throwError $ RideInvalidStatus ("This ride cannot be canceled" <> Text.pack (show ride.status))
   let driverId = ride.driverId
@@ -272,7 +277,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
               CQDGR.deactivateDriverGoHomeRequest booking.merchantOperatingCityId driverId DDGR.SUCCESS driverGoHomeReqInfo (Just False)
         )
         ((,,,) <$> cancellationCnt <*> driverGoHomeRequestId <*> goHomeConfig <*> dghInfo)
-    cancelRide rideId rideEndedBy rideCancelationReason isForceReallocation req.doCancellationRateBasedBlocking
+    cancelRide rideId rideEndedBy rideCancelationReason isForceReallocation req.doCancellationRateBasedBlocking actor
   pure (cancellationCnt, isGoToDisabled)
   where
     isValidRide ride = ride.status `elem` [DRide.NEW, DRide.UPCOMING]

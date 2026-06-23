@@ -18,6 +18,7 @@ import Kernel.Prelude
 import Kernel.Types.Error (GenericError (InternalError, InvalidRequest))
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import Lib.Finance.Core.Types (Actor)
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DCommon
@@ -68,8 +69,9 @@ initiateRegistration ::
   Maybe Text -> -- customerLastName
   Bool -> -- Should be True if SplitEnabled in Juspay Merchant
   Bool -> -- isAutoRefundEnabled (PayoutConfig flag — when True, Juspay auto-refunds the ₹2 after success)
+  Actor ->
   m RegistrationResult
-initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall customerPhone customerEmail customerFirstName customerLastName isSplitEnabled isAutoRefundEnabled = do
+initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall customerPhone customerEmail customerFirstName customerLastName isSplitEnabled isAutoRefundEnabled actor = do
   orderId <- generateGUID
   orderShortId <- generateShortId
 
@@ -140,6 +142,7 @@ initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall cust
       Nothing -- mbCreateWalletCall
       False -- isMockPayment
       Nothing -- mbGroupId
+      actor
   createOrderResp <- case mbCreateOrderResp of
     Just resp -> pure resp
     Nothing -> throwError $ InternalError "Failed to create registration payment order"
@@ -179,8 +182,9 @@ processRegistrationPayment ::
   Text -> -- orderType for payout
   Text -> -- city
   Payout.PayoutServiceFlow ->
+  Actor ->
   m RegistrationStatusResult
-processRegistrationPayment orderId transactionStatus mbPayerVpa autoRefund createPayoutOrderCall remark orderType city payoutServiceFlow = do
+processRegistrationPayment orderId transactionStatus mbPayerVpa autoRefund createPayoutOrderCall remark orderType city payoutServiceFlow actor = do
   logDebug $ "Processing registration payment for order " <> orderId.getId <> " | status: " <> show transactionStatus
 
   case transactionStatus of
@@ -195,7 +199,7 @@ processRegistrationPayment orderId transactionStatus mbPayerVpa autoRefund creat
         if autoRefund
           then do
             logInfo $ "Auto-refunding registration amount for order " <> orderId.getId
-            result <- try @_ @SomeException $ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city payoutServiceFlow
+            result <- try @_ @SomeException $ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city payoutServiceFlow actor
             case result of
               Right (Just (PayoutRequest.PayoutInitiated _ _)) -> pure True
               Right _ -> pure False
@@ -240,8 +244,9 @@ refundRegistrationAmount ::
   Text -> -- orderType
   Text -> -- city
   Payout.PayoutServiceFlow ->
+  Actor ->
   m (Maybe PayoutRequest.PayoutResult)
-refundRegistrationAmount orderId createPayoutOrderCall remark orderType city payoutServiceFlow = do
+refundRegistrationAmount orderId createPayoutOrderCall remark orderType city payoutServiceFlow actor = do
   -- 1. Look up the PaymentOrder
   order <- QOrder.findById orderId >>= maybe (throwError $ InvalidRequest $ "Registration order not found: " <> orderId.getId) pure
 
@@ -290,7 +295,8 @@ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city pay
                 coverageFrom = Nothing,
                 coverageTo = Nothing,
                 ledgerEntryIds = [],
-                payoutServiceFlow
+                payoutServiceFlow,
+                actor
               }
 
       logInfo $ "Initiating registration refund for order " <> orderId.getId <> " | amount: " <> show order.amount <> maybe "" ("| vpa: " <>) vpa

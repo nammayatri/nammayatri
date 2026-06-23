@@ -112,3 +112,12 @@ ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN charg
 ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN created_by text ;
 ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN card_number text ;
 ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN bank_code text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN updated_by text ;
+
+
+------- SQL updates -------
+

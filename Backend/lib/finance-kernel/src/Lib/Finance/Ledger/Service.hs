@@ -63,7 +63,7 @@ import Kernel.Prelude
 import Kernel.Types.Common ()
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
-import Lib.Finance.Core.Types (TimeRange (..))
+import Lib.Finance.Core.Types (Actor (..), TimeRange (..))
 import Lib.Finance.Domain.Types.Account (Account)
 import qualified Lib.Finance.Domain.Types.Account as Account
 import Lib.Finance.Domain.Types.LedgerEntry
@@ -113,6 +113,8 @@ createEntry input = do
             settlementId = Nothing,
             settlementTimestamp = Nothing,
             timestamp = now,
+            createdBy = Just input.actor,
+            updatedBy = Just input.actor,
             merchantId = input.merchantId,
             merchantOperatingCityId = input.merchantOperatingCityId,
             createdAt = now,
@@ -175,6 +177,8 @@ createEntryWithBalanceUpdate input = do
                 settlementId = Nothing,
                 settlementTimestamp = Nothing,
                 timestamp = now,
+                createdBy = Just input.actor,
+                updatedBy = Just input.actor,
                 merchantId = input.merchantId,
                 merchantOperatingCityId = input.merchantOperatingCityId,
                 createdAt = now,
@@ -191,8 +195,9 @@ createReversal ::
   (BeamFlow.BeamFlow m r) =>
   Id LedgerEntry -> -- Entry to reverse
   Text -> -- Reason for reversal
+  Actor ->
   m (Either FinanceError LedgerEntry)
-createReversal originalId reason = do
+createReversal originalId reason actor = do
   mbOriginal <- QLedger.findById originalId
 
   case mbOriginal of
@@ -226,6 +231,8 @@ createReversal originalId reason = do
                 settlementId = Nothing,
                 settlementTimestamp = Nothing,
                 timestamp = now,
+                createdBy = Just actor,
+                updatedBy = Just actor,
                 merchantId = original.merchantId,
                 merchantOperatingCityId = original.merchantOperatingCityId,
                 createdAt = now,
@@ -257,7 +264,8 @@ updateEntryStatus ::
   EntryStatus ->
   m ()
 updateEntryStatus entryId newStatus = do
-  QLedger.updateStatus newStatus entryId
+  let actor = System -- FIXME add proper actor
+  QLedger.updateStatus newStatus (Just actor) entryId
 
 -- | Settle an entry (mark as SETTLED with timestamp).
 -- Idempotently posts balance deltas to from/to accounts the first time an
@@ -337,7 +345,8 @@ voidEntry ::
   Text -> -- Reason for voiding
   m ()
 voidEntry entryId reason = do
-  QLedger.updateVoided VOIDED (Just reason) entryId
+  let actor = System -- FIXME add proper actor
+  QLedger.updateVoided VOIDED (Just reason) (Just actor) entryId
 
 --------------------------------------------------------------------------------
 -- QUERY BY ID/REFERENCE

@@ -115,6 +115,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -1066,7 +1067,8 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                     DRC.docsVerificationStatus =
                       if transporterConfig.enableManualDocumentStatusCheck == Just True
                         then Just DDVS.ADMIN_APPROVED
-                        else Nothing
+                        else Nothing,
+                    DRC.pendingChallanCount = Nothing -- FIXME to make it compiled
                   }
           QRC.create newRC
           -- Create driver RC association so the RC is linked to the driver
@@ -2457,7 +2459,8 @@ getDriverRegistrationPayoutRegistration merchantShortId opCity driverId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
-  res <- ReferralPayout.getPayoutRegistration (Just personId, merchant.id, merchantOpCityId)
+      actor = Finance.System -- TODO apiTokenInfo.personId.getId for dashboard handler
+  res <- ReferralPayout.getPayoutRegistrationWithActor (Just personId, merchant.id, merchantOpCityId) actor
   pure $
     Common.PayoutRegistrationRes
       { orderId = res.orderId.getId,

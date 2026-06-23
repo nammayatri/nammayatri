@@ -28,6 +28,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Payment.API.Payout (VerifyVpaFlow (..))
 import qualified Lib.Payment.API.Payout.Types as PayoutTypes
@@ -89,8 +90,8 @@ verifyVpaForUpdateImpl req = do
       unless (response.status == "VALID") $
         throwError $ InvalidRequest $ "Invalid VPA Updation: " <> show response
 
-refundRegistrationAmount :: (BeamFlow Environment.Flow Environment.AppEnv) => Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> PayoutTypes.RefundRegAmountReq -> Environment.Flow APISuccess
-refundRegistrationAmount merchantShortId opCity req = do
+refundRegistrationAmount :: (BeamFlow Environment.Flow Environment.AppEnv) => Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> PayoutTypes.RefundRegAmountReq -> Finance.Actor -> Environment.Flow APISuccess
+refundRegistrationAmount merchantShortId opCity req actor = do
   let driverId = (Id.Id req.personId) :: Id.Id DP.Person
   driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -119,7 +120,7 @@ refundRegistrationAmount merchantShortId opCity req = do
 
   -- Delegate to lib — it looks up PaymentOrder for amount + VPA, checks idempotency
   logDebug $ "Refunding registration for driverId: " <> driverId.getId <> " | orderId: " <> registrationOrderId.getId
-  mbResult <- Registration.refundRegistrationAmount registrationOrderId createPayoutOrderCall payoutConfig.remark payoutConfig.orderType (show merchantOpCity.city) payoutServiceFlow
+  mbResult <- Registration.refundRegistrationAmount registrationOrderId createPayoutOrderCall payoutConfig.remark payoutConfig.orderType (show merchantOpCity.city) payoutServiceFlow actor
 
   case mbResult of
     Just _ -> do

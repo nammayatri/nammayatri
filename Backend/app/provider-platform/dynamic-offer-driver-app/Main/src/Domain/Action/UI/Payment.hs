@@ -87,6 +87,7 @@ import Lib.Finance
     runFinance,
     transfer,
   )
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.Account ()
 import Lib.Finance.Ledger.Service ()
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
@@ -142,6 +143,7 @@ import qualified Tools.PaymentNudge as PaymentNudge
 -- create order -----------------------------------------------------
 createOrder :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id INV.Invoice -> Flow Payment.CreateOrderResp
 createOrder (driverId, merchantId, opCityId) invoiceId = do
+  let actor = Finance.Person driverId.getId
   invoices <- B.runInReplica $ QIN.findAllByInvoiceId invoiceId
   driverFees <- (B.runInReplica . QDF.findById . (.driverFeeId)) `mapM` invoices
   let mbServiceName = listToMaybe invoices <&> (.serviceName)
@@ -153,7 +155,7 @@ createOrder (driverId, merchantId, opCityId) invoiceId = do
       splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
   vendorFees' <- if splitEnabled then concat <$> mapM (QVF.findAllByDriverFeeId . Domain.Types.DriverFee.id) (catMaybes driverFees) else pure []
   let vendorFees = map SPayment.roundVendorFee vendorFees'
-  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId, opCityId) paymentServiceName (catMaybes driverFees, []) Nothing INV.MANUAL_INVOICE (getIdAndShortId <$> listToMaybe invoices) vendorFees Nothing splitEnabled Nothing
+  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId, opCityId) paymentServiceName (catMaybes driverFees, []) Nothing INV.MANUAL_INVOICE (getIdAndShortId <$> listToMaybe invoices) vendorFees Nothing splitEnabled Nothing actor
   return createOrderResp
   where
     getIdAndShortId inv = (inv.id, inv.invoiceShortId)
@@ -290,15 +292,19 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
             when isPayoutRegistration $ do
               -- Store VPA on PaymentOrder
               QOrder.updateVpa order.id payerVpa
-              when (isJust payerVpa) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa merchantOperatingCityId
+              when (isJust payerVpa) $ do
+                let actor = Finance.Person personId.getId
+                fork ("processing backlog payout for driver " <> order.personId.getId) $
+                  PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa merchantOperatingCityId actor
           -- Auto-refund path: merchants with auto-refund enabled skip CHARGED and surface AUTO_REFUNDED instead.
           when (isPayoutRegistration && status == Payment.AUTO_REFUNDED) do
             whenJust payerVpa $ \vpa -> updatePayoutVpaAndStatusByRole driver.role order.personId vpa
             logDebug $ "Updating Payout (Via getStatus / AUTO_REFUNDED) For Person: " <> show order.personId <> " with Vpa: " <> show payerVpa
             QOrder.updateVpa order.id payerVpa
-            when (isJust payerVpa) $
+            when (isJust payerVpa) $ do
+              let actor = Finance.Person personId.getId
               fork ("processing backlog payout for driver " <> order.personId.getId) $
-                PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa merchantOperatingCityId
+                PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa merchantOperatingCityId actor
             updatePayoutRegAmountRefundedByRole driver.role order.personId Registration.registrationAmount
             -- Polling carries no event_name, so derive driver-fee status from the refund object
             let mbRefundStatus = listToMaybe refunds <&> (.status)
@@ -427,13 +433,16 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
             then do
               driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
               let mbVpa = payerVpa <|> ((.payerVpa) =<< upi)
-              -- Legacy path: pre-auto-refund Juspay merchants emit CHARGED on the registration ₹2.
+                  actor = Finance.System -- using System for webhook handlers
+                  -- Legacy path: pre-auto-refund Juspay merchants emit CHARGED on the registration ₹2.
               when (transactionStatus == Payment.CHARGED) $ do
                 whenJust mbVpa $ \vpa -> updatePayoutVpaAndStatusByRole driver.role order.personId vpa
                 logDebug $ "PAYOUT_REGISTRATION CHARGED for order " <> show order.id <> " | Vpa: " <> show mbVpa
                 -- Store VPA on PaymentOrder
                 QOrder.updateVpa order.id mbVpa
-                when (isJust mbVpa) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) mbVpa merchantOperatingCityId
+                when (isJust mbVpa) $
+                  fork ("processing backlog payout for driver " <> order.personId.getId) $
+                    PayoutA.processPreviousPayoutAmount (cast order.personId) mbVpa merchantOperatingCityId actor
               -- Auto-refund path: post-toggle merchants emit AUTO_REFUND_INITIATED / AUTO_REFUND_SUCCEEDED instead of CHARGED.
               case eventName of
                 Just Juspay.AUTO_REFUND_INITIATED -> do
@@ -442,7 +451,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
                   QOrder.updateVpa order.id mbVpa
                   when (isJust mbVpa) $
                     fork ("processing backlog payout for driver " <> order.personId.getId) $
-                      PayoutA.processPreviousPayoutAmount (cast order.personId) mbVpa merchantOperatingCityId
+                      PayoutA.processPreviousPayoutAmount (cast order.personId) mbVpa merchantOperatingCityId actor
                   mbDriverFee <- QDF.findLatestByFeeTypeAndStatusWithServiceName PAYOUT_REGISTRATION [PAYMENT_PENDING] (cast order.personId) DP.YATRI_SUBSCRIPTION
                   whenJust mbDriverFee $ \df -> QDF.updateStatus REFUND_PENDING df.id now
                   updatePayoutRegAmountRefundedByRole driver.role order.personId Registration.registrationAmount
@@ -542,13 +551,14 @@ processWalletTopupWebhook ::
   Payment.TransactionStatus ->
   m ()
 processWalletTopupWebhook driver order transactionStatus = do
+  let actor = Finance.System -- using System for webhook handlers
   QWalletTransaction.updateStatus (mapWalletStatus transactionStatus) order.id
   when (transactionStatus == Payment.CHARGED) $ do
     let lockKey = "wallet:topup:lock:" <> order.id.getId
     Redis.withLockRedis lockKey 60 $ do
       existing <- getEntriesByReference walletReferenceTopup (order.id.getId)
       when (null existing) $ do
-        ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId)
+        ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId) actor
         let topupInvoiceConfig =
               InvoiceConfig
                 { invoiceType = BecknInvoice.SubscriptionPurchase,
@@ -647,6 +657,7 @@ processSubscriptionPurchasePayment ::
   DSP.SubscriptionPurchase ->
   m ()
 processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
+  let actor = Finance.Person person.id.getId
   when (subscriptionPurchase.status == DSP.PENDING) $
     Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey person.id.getId) 10 10 $ do
       latestPurchase <-
@@ -750,6 +761,7 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
             (Just invoiceParams)
             mbPanCard
             mbVehicleCategory
+            actor
             >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
         let updatedPurchase =
               latestPurchase
@@ -793,6 +805,7 @@ updatePrepaidBalanceAndExpiry ::
   DriverFee ->
   m (HighPrecMoney, Maybe (Id DP.Person))
 updatePrepaidBalanceAndExpiry merchantId person driverFee = do
+  let actor = Finance.Person person.id.getId
   let creditAmount = driverFee.totalEarnings
   let paidAmount = driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst
   let referenceId = fromMaybe driverFee.id.getId ((.getId) <$> driverFee.planId)
@@ -829,6 +842,7 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
           Nothing
           mbPanCard
           mbVehicleCategory
+          actor
           >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
       pure (fst newBalance, Just person.id)
     else do
@@ -848,6 +862,7 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
           Nothing
           mbPanCard
           mbVehicleCategory
+          actor
           >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
       logInfo $ "Prepaid recharge completed " <> show person.id.getId
       let prepaidRechargeMessage =
@@ -872,6 +887,7 @@ updatePaymentStatus ::
   DP.ServiceNames ->
   m ()
 updatePaymentStatus driverId merchantOpCityId serviceName = do
+  let actor = Finance.Person driverId.getId
   dueInvoices <- runInMasterDb $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceName (cast driverId) [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE] [PAYMENT_PENDING, PAYMENT_OVERDUE]
   let totalDue = sum $ calcDueAmount dueInvoices
   when (totalDue <= 0) $ QDI.updatePendingPayment False (cast driverId)
@@ -879,7 +895,7 @@ updatePaymentStatus driverId merchantOpCityId serviceName = do
     DP.PREPAID_SUBSCRIPTION -> do
       person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
-      mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType serviceName Nothing
+      mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName (\p -> handleSubscriptionExpiry p actor) ownerId ownerType serviceName Nothing
       pure $ ADPlan.mkSyntheticDriverPlanFromPurchase <$> mbPurchase
     _ -> findByDriverIdWithServiceName (cast driverId) serviceName -- what if its changed? needed inside lock?
   plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing (mbDriverPlan >>= (.vehicleCategory))
