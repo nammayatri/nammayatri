@@ -411,7 +411,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             enforceTollRoute = mbExistingSpLoc >>= (.enforceTollRoute),
             render = request.render,
             supportNumber = request.supportNumber,
-            paymentModes = (mbExistingSpLoc >>= (.paymentModes)) <|> Just [SL.CASH],
+            paymentModes = request.paymentModes <|> (mbExistingSpLoc >>= (.paymentModes)) <|> Just SL.defaultPaymentModes,
             ..
           }
 
@@ -1481,15 +1481,14 @@ parseGateTags fieldValue =
       let tagList = filter (not . T.null) $ map T.strip $ T.splitOn "," tags
        in if null tagList then Nothing else Just tagList
 
--- | Parse an optional comma-separated list of payment modes (e.g. "CASH,ONLINE").
---   Returns Nothing when the field is empty/absent or any token is not a valid
---   'PaymentMode', so the caller can fall back to the default.
-parsePaymentModes :: Maybe Text -> Maybe [SL.PaymentMode]
-parsePaymentModes mbFieldValue = do
-  raw <- mbFieldValue >>= cleanField
-  let tokens = filter (not . T.null) $ map T.strip $ T.splitOn "," raw
-  modes <- traverse (readMaybe . T.unpack) tokens
-  if null modes then Nothing else Just modes
+-- | Resolve the payment-modes CSV cell, throwing on an invalid token. Returns 'Nothing' when the cell is omitted/blank so the
+--   merge step can distinguish "not provided" (preserve existing / default on create)
+--   from an explicit value. Parsing/normalization live in 'SL.parsePaymentModes'.
+resolvePaymentModes :: Int -> Maybe Text -> Flow (Maybe [SL.PaymentMode])
+resolvePaymentModes idx mbFieldValue =
+  case SL.parsePaymentModes mbFieldValue of
+    Left badToken -> throwError $ InvalidRequest $ "Invalid payment mode: " <> badToken <> " at row: " <> show idx
+    Right mbModes -> pure mbModes
 
 --------------------------------------------------------------------------------------------------------------------
 
@@ -1633,8 +1632,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
           supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
           mbRender :: Maybe DSL.RenderType = readMaybeCSVField idx (fromMaybe "" row.render) "Render"
-          mbPaymentModes :: Maybe [SL.PaymentMode] = parsePaymentModes row.paymentModes
       enabled :: Bool <- readCSVField idx row.enabled "Enabled"
+      resolvedPaymentModes <- resolvePaymentModes idx row.paymentModes
       gateInfoId <- maybe generateGUID (pure . Id) (cleanField =<< row.gateInfoId)
       gateInfoName :: Text <- cleanCSVField idx row.gateInfoName "Gate Info (name)"
       gateInfoLat :: Double <- readCSVField idx row.gateInfoLat "Gate Info (latitude)"
@@ -1676,7 +1675,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 enforceTollRoute = mbEnforceTollRoute,
                 render = mbRender,
                 supportNumber = supportNumber,
-                paymentModes = Just (fromMaybe [SL.CASH] mbPaymentModes)
+                paymentModes = resolvedPaymentModes
               }
           gateInfo =
             DGI.GateInfo
@@ -1765,9 +1764,11 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
       QSL.clearSpecialZoneInMemCache
 
     mergeSpecialLocationWithExisting :: DSL.SpecialLocation -> Maybe DSL.SpecialLocation -> DSL.SpecialLocation
-    mergeSpecialLocationWithExisting new Nothing = new
+    mergeSpecialLocationWithExisting new Nothing =
+      new{DSL.paymentModes = new.paymentModes <|> Just SL.defaultPaymentModes}
     mergeSpecialLocationWithExisting new (Just old) =
-      new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled
+      new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled,
+          DSL.paymentModes = new.paymentModes <|> old.paymentModes
          }
 
     mergeGateInfoWithExisting :: DGI.GateInfo -> Maybe DGI.GateInfo -> DGI.GateInfo

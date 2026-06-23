@@ -48,6 +48,23 @@ data PaymentMode
 
 $(mkBeamInstancesForEnum ''PaymentMode)
 
+-- | The payment mode applied when a special location does not specify any.
+--   Single source of truth for the default used across upsert/CSV paths.
+defaultPaymentModes :: [PaymentMode]
+defaultPaymentModes = [CASH]
+
+parsePaymentModes :: Maybe Text -> Either Text (Maybe [PaymentMode])
+parsePaymentModes mbRaw =
+  case mbRaw >>= cleanCell of
+    Nothing -> Right Nothing
+    Just raw ->
+      case filter (not . T.null) (map (T.toUpper . T.strip) (T.splitOn "," raw)) of
+        [] -> Right Nothing
+        tokens -> Just <$> traverse parseToken tokens
+  where
+    cleanCell t = case T.strip t of "" -> Nothing; s -> Just s
+    parseToken t = maybe (Left t) Right (readMaybe (T.unpack t))
+
 data Merchant
 
 data MerchantOperatingCity

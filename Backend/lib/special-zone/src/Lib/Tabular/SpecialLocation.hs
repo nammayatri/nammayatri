@@ -69,7 +69,7 @@ instance FromTType SpecialLocationT Domain.SpecialLocation where
           gates = unPostgresList gates,
           geom = Nothing,
           linkedLocationsIds = map Id (unPostgresList linkedLocationsIds),
-          paymentModes = unPostgresList <$> paymentModes,
+          paymentModes = Just $ maybe Domain.defaultPaymentModes unPostgresList paymentModes,
           locationType = fromMaybe Domain.Closed locationType,
           merchantId = Id <$> merchantId,
           merchantOperatingCityId = Id <$> merchantOperatingCityId,
