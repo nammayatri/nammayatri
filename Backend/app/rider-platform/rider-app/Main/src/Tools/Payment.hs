@@ -813,7 +813,7 @@ fetchOfferSKUConfig ::
   Id DMOC.MerchantOperatingCity ->
   Maybe (Id TicketPlace) ->
   PaymentServiceType ->
-  m (Maybe Text)
+  m (Maybe Text, Maybe Text) -- (adult SKU, child SKU)
 fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceType = do
   placeBasedConfig <- case mbPlaceId of
     Just id -> CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
@@ -822,16 +822,17 @@ fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceT
     getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (getPaymentServiceByType paymentServiceType)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (getPaymentServiceByType paymentServiceType)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   return $ case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig.serviceConfig of
-    Just (DMSC.PaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
-    Just (DMSC.MetroPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
-    Just (DMSC.BusPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
-    Just (DMSC.BbpsPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
-    Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
-    Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
-    Just (DMSC.ParkingPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
-    Just (DMSC.MembershipPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
-    _ -> Nothing
+    Just (DMSC.PaymentServiceConfig vsc) -> mkSKUPair vsc
+    Just (DMSC.MetroPaymentServiceConfig vsc) -> mkSKUPair vsc
+    Just (DMSC.BusPaymentServiceConfig vsc) -> mkSKUPair vsc
+    Just (DMSC.BbpsPaymentServiceConfig vsc) -> mkSKUPair vsc
+    Just (DMSC.MultiModalPaymentServiceConfig vsc) -> mkSKUPair vsc
+    Just (DMSC.PassPaymentServiceConfig vsc) -> mkSKUPair vsc
+    Just (DMSC.ParkingPaymentServiceConfig vsc) -> mkSKUPair vsc
+    Just (DMSC.MembershipPaymentServiceConfig vsc) -> mkSKUPair vsc
+    _ -> (Nothing, Nothing)
   where
+    mkSKUPair vsc = (Payment.offerSKUConfig vsc, Payment.childOfferSKUConfig vsc)
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
       Wallet -> DMSC.JuspayWalletService Payment.Juspay
@@ -856,7 +857,7 @@ mkOfferBasket ::
   Int ->
   m [Payment.Basket]
 mkOfferBasket merchantId merchantOperatingCityId mbPlaceId paymentServiceType amount quantity = do
-  mbOfferSKUProductId <- fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceType
+  (mbOfferSKUProductId, _mbChildOfferSKUProductId) <- fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceType
   pure $ case mbOfferSKUProductId of
     Just offerSKUProductId -> [Payment.Basket {Payment.id = offerSKUProductId, Payment.unitPrice = amount, Payment.quantity = quantity}]
     Nothing -> [Payment.Basket {Payment.id = "no_basket", Payment.unitPrice = 0, Payment.quantity = quantity}]
