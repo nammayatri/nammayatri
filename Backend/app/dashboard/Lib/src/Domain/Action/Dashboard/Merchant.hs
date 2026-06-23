@@ -243,5 +243,7 @@ buildPersonCreateReq req role = do
         passwordUpdatedAt = Just now,
         approvedBy = Nothing,
         rejectedBy = Nothing,
-        language = Nothing
+        language = Nothing,
+        tokenNo = Nothing,
+        entityId = Nothing
       }

@@ -29,18 +29,21 @@ library
       API.Dashboard
       API.Dashboard.AccessMatrix
       API.Dashboard.EmailVerification
+      API.Dashboard.InternalAuth
       API.Dashboard.Merchant
       API.Dashboard.Person
       API.Dashboard.Registration
       API.Dashboard.Roles
       Domain.Action.Dashboard.AccessMatrix
       Domain.Action.Dashboard.EmailVerification
+      Domain.Action.Dashboard.InternalAuth
       Domain.Action.Dashboard.Merchant
       Domain.Action.Dashboard.Person
       Domain.Action.Dashboard.Registration
       Domain.Action.Dashboard.Roles
       Domain.Action.Dashboard.Transaction
       Domain.Types.AccessMatrix
+      Domain.Types.Entity
       Domain.Types.Merchant
       Domain.Types.MerchantAccess
       Domain.Types.Person
@@ -55,6 +58,7 @@ library
       Storage.Beam.AccessMatrix
       Storage.Beam.BeamFlow
       Storage.Beam.Common
+      Storage.Beam.Entity
       Storage.Beam.Merchant
       Storage.Beam.MerchantAccess
       Storage.Beam.Person
@@ -62,6 +66,7 @@ library
       Storage.Beam.Role
       Storage.Beam.Transaction
       Storage.Queries.AccessMatrix
+      Storage.Queries.Entity
       Storage.Queries.Merchant
       Storage.Queries.MerchantAccess
       Storage.Queries.Person
@@ -134,6 +139,7 @@ library
     , cereal
     , containers
     , cryptonite
+    , memory
     , dashboard-helper-api
     , dynamic-offer-driver-app
     , esqueleto

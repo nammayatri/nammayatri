@@ -400,6 +400,7 @@ instance FromTType' BeamP.Person Person.Person where
             approvedBy = approvedBy <&> Id,
             rejectedBy = rejectedBy <&> Id,
             language = language,
+            entityId = entityId <&> Id,
             ..
           }
 
@@ -416,6 +417,7 @@ instance ToTType' BeamP.Person Person.Person where
         approvedBy = approvedBy <&> getId,
         rejectedBy = rejectedBy <&> getId,
         language = language,
+        entityId = entityId <&> getId,
         ..
       }
 

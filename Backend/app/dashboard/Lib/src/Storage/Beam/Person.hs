@@ -45,7 +45,9 @@ data PersonT f = PersonT
     passwordUpdatedAt :: B.C f (Maybe Time.UTCTime),
     approvedBy :: B.C f (Maybe Text),
     rejectedBy :: B.C f (Maybe Text),
-    language :: B.C f (Maybe KET.Language)
+    language :: B.C f (Maybe KET.Language),
+    tokenNo :: B.C f (Maybe DbHash),
+    entityId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

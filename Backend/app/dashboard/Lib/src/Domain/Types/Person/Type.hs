@@ -16,6 +16,7 @@
 module Domain.Types.Person.Type where
 
 import Data.Aeson
+import qualified Domain.Types.Entity as Entity
 import qualified Domain.Types.Role as DRole
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
@@ -44,7 +45,9 @@ data PersonE e = Person
     passwordUpdatedAt :: Maybe UTCTime,
     approvedBy :: Maybe (Id Person),
     rejectedBy :: Maybe (Id Person),
-    language :: Maybe KET.Language
+    language :: Maybe KET.Language,
+    tokenNo :: Maybe DbHash,
+    entityId :: Maybe (Id Entity.Entity)
   }
   deriving (Generic)
 

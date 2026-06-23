@@ -25,12 +25,13 @@ import qualified Domain.Types.MerchantAccess as DMerchantAccess
 import Domain.Types.Person as DP
 import qualified Domain.Types.Person.Type as PT
 import qualified Domain.Types.RegistrationToken as DR
+import qualified Domain.Types.Entity as Entity
 import Domain.Types.Role as DRole
 import qualified Domain.Types.ServerName as DTServer
 import qualified Domain.Types.Transaction as DTransaction
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt, encrypt)
+import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -51,6 +52,7 @@ import qualified Storage.Queries.MerchantAccess as MA
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
+import qualified Storage.Queries.Entity as QEntity
 import qualified Storage.Queries.Role as QRole
 import qualified Storage.Queries.Transaction as QT
 import Tools.Auth
@@ -62,7 +64,10 @@ import qualified Tools.Utils as Utils
 
 data LoginReq = LoginReq
   { email :: Maybe Text,
-    password :: Text,
+    mobileNumber :: Maybe Text,
+    mobileCountryCode :: Maybe Text,
+    password :: Maybe Text,
+    tokenNo :: Maybe Text,
     otp :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
@@ -115,13 +120,19 @@ data Pending2FASetupData = Pending2FASetupData
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 
+-- The four trailing fields are Maybe so the legacy email+password wire shape
+-- stays additive; tokenNo login populates them for the PT welcome screen.
 data LoginRes = LoginRes
   { authToken :: Text,
     is2faMandatory :: Bool,
     is2faEnabled :: Bool,
     message :: Text,
     city :: City.City,
-    merchantId :: ShortId DMerchant.Merchant
+    merchantId :: ShortId DMerchant.Merchant,
+    role :: Maybe Text,
+    firstName :: Maybe Text,
+    lastName :: Maybe Text,
+    entityName :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -167,12 +178,29 @@ login ::
   ) =>
   LoginReq ->
   m LoginRes
-login LoginReq {..} = do
-  sendEmailRateLimitOptions <- asks (.sendEmailRateLimitOptions)
-  checkSlidingWindowLimitWithOptions (makeEmailHitsCountKey email) sendEmailRateLimitOptions
-  email_ <- email & fromMaybeM (InvalidRequest "Email cannot be empty when login type is email")
-  person <- QP.findByEmailAndPassword email_ password >>= fromMaybeM (PersonDoesNotExist email_)
-  Auth.checkPasswordExpiry person
+login rawReq = do
+  let LoginReq {..} = sanitizeLoginReq rawReq
+  person <-
+    case (mobileNumber, mobileCountryCode, tokenNo, email, password) of
+      -- tokenNo branch keeps the error generic so callers can't tell
+      -- "phone not registered" from "wrong token".
+      (Just mob, Just cc, Just tkn, _, _) -> do
+        rateLimitOpts <- asks (.sendEmailRateLimitOptions)
+        checkSlidingWindowLimitWithOptions (makeMobileHitsCountKey mob) rateLimitOpts
+        tokenDbHash <- getDbHash tkn
+        mbPerson <- QP.findByMobileNumber mob cc
+        case mbPerson of
+          Just p | p.tokenNo == Just tokenDbHash -> pure p
+          _ -> throwError (InvalidRequest "Invalid mobile number or token")
+      (_, _, _, Just em, Just pwd) -> do
+        sendEmailRateLimitOptions <- asks (.sendEmailRateLimitOptions)
+        checkSlidingWindowLimitWithOptions (makeEmailHitsCountKey (Just em)) sendEmailRateLimitOptions
+        p <- QP.findByEmailAndPassword em pwd >>= fromMaybeM (PersonDoesNotExist em)
+        Auth.checkPasswordExpiry p
+        pure p
+      _ ->
+        throwError $
+          InvalidRequest "Provide email+password, or mobileNumber+mobileCountryCode+tokenNo"
   merchantAccessList <- B.runInReplica $ QAccess.findAllMerchantAccessByPersonId person.id
   (merchant', city') <- case merchantAccessList of
     [] -> throwError (InvalidRequest "No access to any merchant")
@@ -197,6 +225,24 @@ login LoginReq {..} = do
 
 makeEmailHitsCountKey :: Maybe Text -> Text
 makeEmailHitsCountKey email = "Email:" <> fromMaybe "" email <> ":hitsCount"
+
+makeMobileHitsCountKey :: Text -> Text
+makeMobileHitsCountKey mobile = "MobileTokenLogin:" <> mobile <> ":hitsCount"
+
+-- Trims every field and collapses Just "" to Nothing so blank submissions
+-- don't slip into the lookup branches with empty credentials.
+sanitizeLoginReq :: LoginReq -> LoginReq
+sanitizeLoginReq r =
+  LoginReq
+    { email = nonBlank r.email,
+      mobileNumber = nonBlank r.mobileNumber,
+      mobileCountryCode = nonBlank r.mobileCountryCode,
+      password = nonBlank r.password,
+      tokenNo = nonBlank r.tokenNo,
+      otp = nonBlank r.otp
+    }
+  where
+    nonBlank = (>>= \v -> let s = T.strip v in if T.null s then Nothing else Just s)
 
 switchMerchant ::
   ( BeamFlow m r,
@@ -251,7 +297,20 @@ generateLoginRes person merchant otp city = do
     if isToken
       then generateToken person.id merchant city
       else pure ""
-  pure $ LoginRes token twoFaRequired _merchantAccess.is2faEnabled msg city merchant.shortId
+  (mbRoleName, mbEntity) <- lookupRoleAndEntity person
+  pure
+    LoginRes
+      { authToken = token,
+        is2faMandatory = twoFaRequired,
+        is2faEnabled = _merchantAccess.is2faEnabled,
+        message = msg,
+        city = city,
+        merchantId = merchant.shortId,
+        role = mbRoleName,
+        firstName = Just person.firstName,
+        lastName = Just person.lastName,
+        entityName = mbEntity <&> (.entityName)
+      }
 
 generateLoginResWithoutOtp ::
   ( BeamFlow m r,
@@ -266,7 +325,29 @@ generateLoginResWithoutOtp ::
 generateLoginResWithoutOtp person merchant city = do
   _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city >>= fromMaybeM AccessDenied
   token <- generateToken person.id merchant city
-  pure $ LoginRes token (is2FARequiredForPerson person merchant) _merchantAccess.is2faEnabled "Logged in successfully" city merchant.shortId
+  (mbRoleName, mbEntity) <- lookupRoleAndEntity person
+  pure
+    LoginRes
+      { authToken = token,
+        is2faMandatory = is2FARequiredForPerson person merchant,
+        is2faEnabled = _merchantAccess.is2faEnabled,
+        message = "Logged in successfully",
+        city = city,
+        merchantId = merchant.shortId,
+        role = mbRoleName,
+        firstName = Just person.firstName,
+        lastName = Just person.lastName,
+        entityName = mbEntity <&> (.entityName)
+      }
+
+-- Best-effort: a missing Role or Entity does not fail the login.
+lookupRoleAndEntity :: BeamFlow m r => DP.Person -> m (Maybe Text, Maybe Entity.Entity)
+lookupRoleAndEntity person = do
+  mbRole <- QRole.findById person.roleId
+  mbEntity <- case person.entityId of
+    Just eId -> QEntity.findById eId
+    Nothing -> pure Nothing
+  pure (mbRole <&> (.name), mbEntity)
 
 is2FARequiredForPerson :: DP.Person -> DMerchant.Merchant -> Bool
 is2FARequiredForPerson person merchant =
@@ -589,7 +670,9 @@ buildFleetOwner req pid roleId dashboardAccessType = do
         passwordUpdatedAt = Just now,
         approvedBy = Nothing,
         rejectedBy = Nothing,
-        language = Nothing
+        language = Nothing,
+        tokenNo = Nothing,
+        entityId = Nothing
       }
 
 validateFleetOwner :: Validate FleetRegisterReq
