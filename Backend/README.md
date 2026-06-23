@@ -107,17 +107,14 @@ To speed up the compilation times, we use 6 parallel jobs by default. If you hav
 
 #### Running backend services
 
-The stack is split into three independent process-compose launchers. The
-default workflow uses three terminals:
+The stack is split into independent process-compose launchers. The default
+workflow uses two terminals:
 
 ```sh
-# Terminal 1 — backend services only (rider/driver/dashboards/db/redis/kafka/…)
+# Terminal 1 — backend services + test-context-api (7082) + mock-server (8080)
 , run-mobility-stack-dev
 
-# Terminal 2 — test infra (mock-server + test-context-api on port 7082)
-, run-test-context-server
-
-# Terminal 3 — dashboard (port 7070) + local-api (port 7083)
+# Terminal 2 — test dashboard (port 7070) + test-local-api (port 7083)
 , run-local-test-dashboard
 # → http://localhost:7070
 ```
@@ -137,7 +134,7 @@ nix run github:nammayatri/nammyatri#run-mobility-stack-nix
 ```
 
 For a deep dive on what each piece does — including the SSH **Remote Stack**
-tab that lets you run `, run-test-context-server` on another host and point
+tab that lets you run `, run-mobility-stack-dev` on another host and point
 the local dashboard at it — see [`dev/test-tool/README.md`](./dev/test-tool/README.md).
 
 ##### External services
@@ -215,9 +212,124 @@ Run the following command in `./Backend` folder after the services are up and ru
 cabal test all
 ```
 
-#### Running integration tests
+#### Integration Testing Framework
 
-See Documentation [README.md](newman-tests/README.md)
+Integration tests exercise full business flows (ride / bus / metro / scheduler /
+loyalty / …) end-to-end against a running backend stack. A flow is a **Postman
+v2.1 collection** under `dev/integration-tests/collections/<Suite>/`; it is run
+either from the browser-based **local test dashboard** or headlessly via
+`run-tests.sh` (newman). The framework keeps the local environment
+*config-identical* to Prod/Master (via config-sync) while letting each flow
+generate its own transactional data and validate it step by step.
+
+##### High-level design
+
+The pieces split across two launchers (see [Running backend
+services](#running-backend-services)). The **dashboard** and **test-local-api**
+run on your local machine (`, run-local-test-dashboard`); the **backend stack**,
+**test-context-api**, **mock-server**, and **emulators** all come up together via
+`, run-mobility-stack-dev` — so when that stack runs on a separate devbox, so do
+test-context-api and the mocks. The local dashboard simply points at the devbox's
+test-context-api (see [Local vs devbox](#local-vs-devbox--dynamic-ports) below).
+
+```text
+ dev/integration-tests/collections/<Suite>/*.json   (Postman flow runners)
+                          │ loaded & executed by
+                          ▼
+   ┌────────────────────────────────────────────────┐
+   │  local machine  —  , run-local-test-dashboard   │
+   │    test-dashboard  7070  — flow runner UI       │
+   │    test-local-api  7083  — host launcher        │
+   │        (RN/app emulators · git refs · Remote)   │
+   └─────────────────────────┬──────────────────────┘
+                             │ HTTP/SSE: collections scan, config-sync,
+                             │ DB reset, log tail — and the API calls
+                             │ under test (→ rider/driver/dashboards)
+                             ▼
+   ┌────────────────────────────────────────────────┐
+   │  backend stack  —  local OR devbox              │
+   │      , run-mobility-stack-dev                   │
+   │    rider-app 8013 · driver-app 8016             │
+   │    dashboards 8017/8018 · postgres 5434 · redis │
+   │    test-context-api 7082  — control plane       │
+   │    mock-server 8080 + emulators                 │
+   │        (mock-registry 8020 · mock-fcm · …)      │
+   │              (ports dynamically resolved)       │
+   └────────────────────────────────────────────────┘
+```
+
+- **test-dashboard (7070)** *(local)* — the flow runner UI: pick a Suite → Env
+  Type → Env → test case and run all collection steps, with mock-only steps
+  auto-skipped on non-`Local` envs.
+- **test-local-api (7083)** *(local)* — host launcher: boots the control-center
+  and the ny-react-native rider/driver apps (emulators/simulators), lists git
+  refs, and drives the SSH **Remote Stack**.
+- **test-context-api (7082)** *(runs with the stack — local or devbox)* — control
+  plane: scans collections, triggers config-sync imports, resets the DB, and runs
+  prerequest scripts over PTY.
+- **mock-server (8080)** *(runs with the stack)* and the per-service mock binaries
+  (`mock-registry`, `mock-fcm`, `mock-sms`, `mock-google`, …) stand in for
+  external integrations (Juspay / Stripe / FCM / SMS / Beckn registry / …) so
+  flows run offline.
+
+##### Config sync — a Prod/Master-identical environment
+
+So flows behave the way they do in production, the local DB must carry the same
+*config* (merchant config, fare policies, service configs, …) as Prod/Master.
+`config-sync` does this in three file-based phases — **export** raw config rows
+from the source DB, **patch** them for local use (sandbox→localhost URL
+rewrites, mock service-config values, passetto re-encryption), then **import**
+the patched SQL into the local `atlas_dev` DB. Only config tables are copied;
+**transactional** data (rides, bookings, payments) is generated locally by the
+test flows.
+
+```bash
+cd dev/config-sync
+python config_transfer.py export --from master
+python config_transfer.py patch  --from master --to local
+python config_transfer.py import --from master --to local
+```
+
+##### Local vs devbox & dynamic ports
+
+The backend stack can run on your laptop or on a separate **devbox**.
+`nix/services/resolve-ports.nix` probes for free ports and writes the resolved
+set to `/data/ports-resolved.nix`, so several stacks can coexist without port
+clashes. To drive a stack running on another host, use the dashboard's **Remote
+Stack** tab to rsync the repo and start `, run-mobility-stack-dev` over SSH, then
+point the dashboard at that host's context-api (stored in
+`localStorage.ny.contextApiBase`).
+
+##### Usage
+
+Bring up the stack and the test infrastructure in two terminals:
+
+```sh
+# Terminal 1 — backend stack + test-context-api (7082) + mock-server (8080)
+, run-mobility-stack-dev
+
+# Terminal 2 — test dashboard (7070) + test-local-api (7083)
+, run-local-test-dashboard
+# → open http://localhost:7070
+```
+
+For a headless / CI run of a flow via newman:
+
+```sh
+cd dev/integration-tests
+./run-tests.sh rides        # also: bus, metro, …
+```
+
+##### Where to read more
+
+- [`dev/test-tool/README.md`](./dev/test-tool/README.md) — dashboard /
+  context-api / local-api architecture, profiles, Remote Stack.
+- [`dev/config-sync/README.md`](./dev/config-sync/README.md) — config-sync
+  export/patch/import reference.
+- [`dev/integration-tests/Rules.md`](./dev/integration-tests/Rules.md) —
+  collection authoring conventions, mock auto-skip, "Adding a New City".
+- [`.cursor/docs/17-testing-framework.md`](./.cursor/docs/17-testing-framework.md)
+  — testing framework deep dive.
 
 ## Usage
 

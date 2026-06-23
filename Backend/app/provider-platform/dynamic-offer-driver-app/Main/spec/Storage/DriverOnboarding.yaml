@@ -276,6 +276,9 @@ VehicleRegistrationCertificate:
     DocsVerificationStatus:
       enum: "ADMIN_PENDING,ADMIN_APPROVED,ADMIN_REJECTED"
       derive: "ToParamSchema"
+    PendingChallanResult:
+      pendingChallanCount: Maybe Int
+      errorMessage: Maybe Text
   fields:
     id: Id VehicleRegistrationCertificate
     documentImageId: Id Image
@@ -314,6 +317,7 @@ VehicleRegistrationCertificate:
     approved: Maybe Bool # Set by the BOT API on approval. (verified/enabled are statusHandler-computed; approved is the BOT gate.)
     verified: Maybe Bool # statusHandler-computed: true iff all isMandatory vehicle docs are VALID (InspectionHub is one of them). Bidirectional.
     docsVerificationStatus: Maybe DocsVerificationStatus
+    pendingChallan: Maybe PendingChallanResult
     vehicleImageId: Maybe (Id MediaFile)
   default:
     approved: "false"
@@ -322,6 +326,14 @@ VehicleRegistrationCertificate:
     certificateNumberHash: "!SecondaryKey" # forcing to be a secondary key
     documentImageId: SecondaryKey
     fleetOwnerId: SecondaryKey # high fan-out (fleet -> many RCs), monitor SET size
+  sqlType:
+    pendingChallan: json
+  beamType:
+    pendingChallan: Maybe Value
+  toTType:
+    pendingChallan: Data.Aeson.toJSON <$> pendingChallan|E
+  fromTType:
+    pendingChallan: Kernel.Utils.JSON.valueToMaybe =<< pendingChallan|E
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -368,6 +380,10 @@ VehicleRegistrationCertificate:
     updateApproved:
       kvFunction: updateOneWithKV
       params: [approved]
+      where: id
+    updatePendingChallan:
+      kvFunction: updateOneWithKV
+      params: [pendingChallan]
       where: id
     updateMerchantIdAndCityIdById:
       kvFunction: updateWithKV
@@ -572,7 +588,7 @@ DocumentVerificationConfig:
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,DriverInspectionForm,TrainingForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer,InspectionHub,DriverInspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLinkage,VoterIdCard,OperatorPartnerCode,MedicalCertificate,Rating,BotApproval,NomineeDetails"
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,DriverInspectionForm,TrainingForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer,InspectionHub,DriverInspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLinkage,VoterIdCard,OperatorPartnerCode,MedicalCertificate,Rating,BotApproval,NomineeDetails,DriverVehicleNOC"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix,Exact"
     DocumentCategory:

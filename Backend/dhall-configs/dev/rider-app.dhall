@@ -508,6 +508,7 @@ in  { esqDBCfg
     , nammayatriRegistryConfig = common.nammayatriRegistryConfig
     , googleSAPrivateKey = sec.googleSAPrivateKey
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
+    , zendeskWebhookToken = sec.zendeskWebhookToken
     , nearByDriverAPIRateLimitOptions
     , seatBookingConfirmAPIRateLimitOptions
     , sosTrackingRateLimitOptions

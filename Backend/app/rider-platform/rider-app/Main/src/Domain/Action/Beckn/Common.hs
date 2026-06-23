@@ -30,6 +30,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as Text
 import Data.Time hiding (getCurrentTime)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import qualified Domain.Action.Rewards.Producer as RewardsProducer
 import Domain.Action.UI.Cancel (makeCustomerBlockingKey)
 import Domain.Action.UI.HotSpot
 import Domain.Action.UI.RidePayment as Reexport
@@ -106,6 +107,7 @@ import SharedLogic.Booking
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CancellationFee as CancellationFee
+import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import qualified SharedLogic.Insurance as SI
@@ -179,7 +181,9 @@ data BookingDetails = BookingDetails
     vehicleColor :: Maybe Text,
     vehicleModel :: Text,
     otp :: Text,
-    isInitiatedByCronJob :: Bool
+    isInitiatedByCronJob :: Bool,
+    isTierUpgrade :: Bool,
+    assignedServiceTierName :: Maybe Text
   }
 
 data RideAssignedReq = RideAssignedReq
@@ -432,6 +436,8 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         commission = booking.commission,
         cloudType = cloudType,
         sosId = Nothing,
+        isTierUpgrade = Just isTierUpgrade,
+        assignedServiceTierName = assignedServiceTierName,
         ..
       }
 
@@ -811,8 +817,8 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
               case sos.ticketId of
                 Just existingTicketId ->
                   void $
-                    withTryCatch "updateSosTicket:autoConvertSos" $
-                      Ticket.updateSosTicket person.merchantId person.merchantOperatingCityId TIT.UpdateTicketReq {comment = "SOS converted from non-ride to ride", ticketId = existingTicketId, status = TIT.Pending, rideDescription = Just rideInfo, issueDetails = Nothing}
+                    withTryCatch "updateTicket:autoConvertSos" $
+                      Ticket.updateSosTicket person.merchantId person.merchantOperatingCityId TIT.UpdateTicketReq {comment = "SOS converted from non-ride to ride", ticketId = existingTicketId, status = TIT.Pending, rideDescription = Just rideInfo, issueDetails = Nothing, requesterId = sos.requesterId, ticketContext = Just TIT.SOSAlert}
                 Nothing -> do
                   let trackLink = case riderConfig.sosTrackingLink of
                         Just sosLink -> Text.replace "{#vp#}" "sosTracking" sosLink <> sos.id.getId
@@ -1120,6 +1126,13 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   when (isJust paymentStatus && booking.paymentStatus /= Just DRB.PAID) $ QRB.updatePaymentStatus booking.id (fromJust paymentStatus)
   whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
   QRide.updateMultiple updRide.id updRide
+  fork "Increment completed count for rider stats" $ do
+    void $ CCR.incrementCompletedCount booking.riderId 1
+  fork "Publish reward eval requested" $ do
+    RewardsProducer.publishRewardEvalRequested
+      booking.riderId
+      booking.merchantOperatingCityId
+      (fromMaybe now rideEndTime)
   offerDiscountBreakup <-
     if rideDiscountAmount > 0
       then do
@@ -1160,6 +1173,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     SafetyCQSos.updateStatusToNotResolvedIfPendingByRideId (cast ride.id)
   unless isInitiatedByCronJob $
     Notify.notifyOnRideCompleted booking updRide otherParties
+  EditLocationThrottle.clearBookingEditAttempts booking.id
   where
     buildFareBreakup :: MonadFlow m => Id DRide.Ride -> DFareBreakup -> m DFareBreakup.FareBreakup
     buildFareBreakup rideId DFareBreakup {..} = do

@@ -1,0 +1,465 @@
+{
+  "info": {
+    "name": "Court Record Check (CRC) \u2014 Idfy Webhook Receive Path",
+    "description": "Exercises the CRC receive path end-to-end against the running driver-app: an Idfy 'ind_court_record' webhook is delivered, parsed, routed to the CRC branch (driverId via group_id, row-less), and stored as JSON on driver_identity_info.court_record.\n\nSELF-CONTAINED: step 00 seeds the throwaway driver_identity_info row via the mock SQL endpoint \u2014 no manual psql needed. The webhook secret (crc_webhook_secret) must match the running app's Verification_Idfy secret; on the standard config-synced local/CI setup that is the env default 'test-secret'.\n\nPREREQUISITES (environment, already set in Local_NY_Bangalore):\n  1. driverAppWebhookBase points at caddy (8016), which proxies the top-level webhook path to the driver-app.\n  2. mockServerUrl reachable (8080) for the SQL seed/select steps.\n\nNOTE: the CRC *submit* (approval -> verifyCRCAsync) needs an all-docs-verified driver + the per-merchant flag (UPDATE atlas_driver_offer_bpp.transporter_config SET enable_court_record_check = true WHERE merchant_operating_city_id = '<opCityId>'); that path is covered by code review and the gridline mock's ind_court_record handler, not by this collection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00a - Seed throwaway driver row (self-contained)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('seed driver row 200', function(){ pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"driver_identity_info\",\"values\":{\"driver_id\":\"{{crc_test_driver}}\",\"merchant_id\":\"{{driver_merchant_id}}\",\"merchant_operating_city_id\":\"{{crc_opcity_id}}\"},\"touch_timestamps\":true,\"on_conflict_do_nothing\":true}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/insert",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "insert"
+          ]
+        }
+      }
+    },
+    {
+      "name": "00 - Reset court_record (clean slate)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('reset 200', function(){ pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"driver_identity_info\",\"set\":{\"court_record\":null},\"where_clause\":[{\"column_name\":\"driver_id\",\"val\":\"{{crc_test_driver}}\",\"op\":\"=\"}],\"touch_updated_at\":true}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "update"
+          ]
+        }
+      }
+    },
+    {
+      "name": "01 - Valid CRC webhook (3 cases) -> 200 ACK",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('webhook returns 200', function(){ pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('ACK status', function(){ pm.expect(JSON.stringify(d)).to.include('ACK'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "{{crc_webhook_secret}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"action\":\"court_record_check\",\"completed_at\":\"2026-06-13T10:00:00Z\",\"created_at\":\"2026-06-13T09:59:00Z\",\"group_id\":\"{{crc_test_driver}}\",\"request_id\":\"crc-newman-1\",\"status\":\"completed\",\"task_id\":\"crc-newman-1-t\",\"type\":\"ind_court_record\",\"result\":{\"source_output\":{\"case_details_link\":\"https://example.com/c\",\"number_of_cases\":3,\"report_download_link\":\"https://example.com/r\",\"risk_summary\":\"3 pending cases\",\"risk_type\":\"high\",\"status\":\"completed\"}}}"
+        },
+        "url": {
+          "raw": "{{driverAppWebhookBase}}/{{dashboard_merchant_id}}/{{city}}/service/idfy/verification",
+          "host": [
+            "{{driverAppWebhookBase}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "service",
+            "idfy",
+            "verification"
+          ]
+        }
+      }
+    },
+    {
+      "name": "02 - court_record stored + json-queryable (poll)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if(!pm.collectionVariables.get('_p2')) pm.collectionVariables.set('_p2','0');",
+              "var a=parseInt(pm.collectionVariables.get('_p2'))||0; var w=a===0?3000:2000; var t=Date.now(); while(Date.now()-t<w){}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('select 200', function(){ pm.response.to.have.status(200); });",
+              "var d = pm.response.json(); var a=parseInt(pm.collectionVariables.get('_p2'))||0;",
+              "var cr = (d.rows && d.rows[0]) ? d.rows[0].court_record : null;",
+              "if (typeof cr === 'string') { try { cr = JSON.parse(cr); } catch(e){} }",
+              "var res = (cr && cr.result) ? cr.result : null;",
+              "if (res) {",
+              "  pm.collectionVariables.set('_p2','0');",
+              "  pm.test('court_record result present', function(){ pm.expect(res).to.not.be.null; });",
+              "  pm.test('json field risk_type=high', function(){ pm.expect(res.risk_type).to.eql('high'); });",
+              "  pm.test('json field number_of_cases=3', function(){ pm.expect(String(res.number_of_cases)).to.eql('3'); });",
+              "  pm.test('json field status=completed', function(){ pm.expect(res.status).to.eql('completed'); });",
+              "  pm.test('no errorMessage on success', function(){ pm.expect(cr.errorMessage == null).to.be.true; });",
+              "} else if (a < 8) {",
+              "  pm.collectionVariables.set('_p2', String(a+1)); postman.setNextRequest(pm.info.requestName);",
+              "} else {",
+              "  pm.collectionVariables.set('_p2','0');",
+              "  pm.test('court_record result stored within retries', function(){ pm.expect(res).to.not.be.null; });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"driver_identity_info\",\"select\":[\"driver_id\",\"court_record\"],\"where_clause\":[{\"column_name\":\"driver_id\",\"val\":\"{{crc_test_driver}}\",\"op\":\"=\"}],\"limit\":1}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      }
+    },
+    {
+      "name": "03 - Wrong secret -> 400 (auth enforced)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('wrong Authorization rejected (400)', function(){ pm.response.to.have.status(400); });",
+              "pm.test('INVALID_AUTHORIZATION_HEADER', function(){ pm.expect(pm.response.text()).to.include('INVALID_AUTHORIZATION_HEADER'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "WRONG-secret"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"action\":\"a\",\"completed_at\":\"2026-06-13T10:00:00Z\",\"created_at\":\"2026-06-13T09:59:00Z\",\"group_id\":\"{{crc_test_driver}}\",\"request_id\":\"crc-newman-3\",\"status\":\"completed\",\"task_id\":\"crc-newman-3-t\",\"type\":\"ind_court_record\",\"result\":{\"source_output\":{\"number_of_cases\":0,\"status\":\"completed\"}}}"
+        },
+        "url": {
+          "raw": "{{driverAppWebhookBase}}/{{dashboard_merchant_id}}/{{city}}/service/idfy/verification",
+          "host": [
+            "{{driverAppWebhookBase}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "service",
+            "idfy",
+            "verification"
+          ]
+        }
+      }
+    },
+    {
+      "name": "04 - Overwrite (high -> low) -> 200",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('overwrite webhook 200', function(){ pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "{{crc_webhook_secret}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"action\":\"a\",\"completed_at\":\"2026-06-13T10:00:00Z\",\"created_at\":\"2026-06-13T09:59:00Z\",\"group_id\":\"{{crc_test_driver}}\",\"request_id\":\"crc-newman-4\",\"status\":\"completed\",\"task_id\":\"crc-newman-4-t\",\"type\":\"ind_court_record\",\"result\":{\"source_output\":{\"number_of_cases\":0,\"risk_type\":\"low\",\"risk_summary\":\"no cases\",\"status\":\"clear\"}}}"
+        },
+        "url": {
+          "raw": "{{driverAppWebhookBase}}/{{dashboard_merchant_id}}/{{city}}/service/idfy/verification",
+          "host": [
+            "{{driverAppWebhookBase}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "service",
+            "idfy",
+            "verification"
+          ]
+        }
+      }
+    },
+    {
+      "name": "05 - court_record overwritten (risk_type=low) (poll)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if(!pm.collectionVariables.get('_p5')) pm.collectionVariables.set('_p5','0');",
+              "var a=parseInt(pm.collectionVariables.get('_p5'))||0; var w=a===0?3000:2000; var t=Date.now(); while(Date.now()-t<w){}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json(); var a=parseInt(pm.collectionVariables.get('_p5'))||0;",
+              "var cr=(d.rows&&d.rows[0])?d.rows[0].court_record:null; if(typeof cr==='string'){try{cr=JSON.parse(cr);}catch(e){}}",
+              "var res=(cr&&cr.result)?cr.result:null;",
+              "if (res && res.risk_type==='low') { pm.collectionVariables.set('_p5','0'); pm.test('court_record overwritten high->low', function(){ pm.expect(res.risk_type).to.eql('low'); }); }",
+              "else if (a<8) { pm.collectionVariables.set('_p5',String(a+1)); postman.setNextRequest(pm.info.requestName); }",
+              "else { pm.collectionVariables.set('_p5','0'); pm.test('court_record overwritten within retries', function(){ pm.expect(res && res.risk_type).to.eql('low'); }); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"driver_identity_info\",\"select\":[\"court_record\"],\"where_clause\":[{\"column_name\":\"driver_id\",\"val\":\"{{crc_test_driver}}\",\"op\":\"=\"}],\"limit\":1}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      }
+    },
+    {
+      "name": "06 - Unknown driver (no row) -> 200 graceful",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('unknown driver webhook 200 (no crash)', function(){ pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "{{crc_webhook_secret}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"action\":\"a\",\"completed_at\":\"2026-06-13T10:00:00Z\",\"created_at\":\"2026-06-13T09:59:00Z\",\"group_id\":\"bbbbbbbb-0000-0000-0000-0000000crc02\",\"request_id\":\"crc-newman-6\",\"status\":\"completed\",\"task_id\":\"crc-newman-6-t\",\"type\":\"ind_court_record\",\"result\":{\"source_output\":{\"number_of_cases\":1,\"status\":\"x\"}}}"
+        },
+        "url": {
+          "raw": "{{driverAppWebhookBase}}/{{dashboard_merchant_id}}/{{city}}/service/idfy/verification",
+          "host": [
+            "{{driverAppWebhookBase}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "service",
+            "idfy",
+            "verification"
+          ]
+        }
+      }
+    },
+    {
+      "name": "07 - No phantom row for unknown driver",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('updateOneWithKV did not create a row', function(){ pm.expect(d.count).to.eql(0); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"driver_identity_info\",\"select\":[\"driver_id\"],\"where_clause\":[{\"column_name\":\"driver_id\",\"val\":\"bbbbbbbb-0000-0000-0000-0000000crc02\",\"op\":\"=\"}],\"limit\":1}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      }
+    },
+    {
+      "name": "08 - Malformed payload -> 200 ACK (lenient, no crash)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('unparseable body -> 200 ACK (does not reach auth/handler)', function(){ pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "{{crc_webhook_secret}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"type\":\"ind_court_record\",\"garbage\":true}"
+        },
+        "url": {
+          "raw": "{{driverAppWebhookBase}}/{{dashboard_merchant_id}}/{{city}}/service/idfy/verification",
+          "host": [
+            "{{driverAppWebhookBase}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{city}}",
+            "service",
+            "idfy",
+            "verification"
+          ]
+        }
+      }
+    }
+  ]
+}

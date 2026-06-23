@@ -1,0 +1,328 @@
+{
+	"info": {
+		"name": "Review Queue Fetch — CRC (driver) + pendingChallan (vehicle) surfaced to BOT",
+		"description": "Single collection that clubs the BOT review-queue READ path for both entity types:\n  - DRIVER  -> entityDetails.courtRecord.result populated (CRC), pendingChallan null\n  - VEHICLE -> entityDetails.pendingChallan.pendingChallanCount populated, courtRecord null\n\nDRIVER is fully self-contained (seed person + driver_information + driver_identity_info via mock SQL, then populate court_record through the real Idfy CRC webhook).\n\nVEHICLE cannot be raw-inserted (vehicle_registration_certificate has a NOT-NULL bytea column the mock insert can't supply), so it picks one pristine seed RC (verified IS NULL, pending_challan IS NULL), promotes it to a qualifying state (pending_challan is now a json column holding {pendingChallanCount, errorMessage}), asserts the queue, then restores it to defaults. Run serially.\n\nIMPORTANT on the `approved` query param (it is overloaded per entity type): DRIVER pending-review uses approved=false because the handler feeds this param into the ENABLED filter (not the approved column) — a genuinely pending driver is verified=true, enabled=false, approved=null (enabled requires approved==Just True, so an enabled driver is already past BOT approval). VEHICLE pending-review also uses approved=false, but there it filters the literal approved column (matches approved=Just False OR NULL), the state after BOT-flow inspection approval. So both pending sets use approved=false, via different columns.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"if (!pm.collectionVariables.get('_rqf_driver_id')) {",
+					"  function uuidv4(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16);});}",
+					"  pm.collectionVariables.set('_rqf_driver_id', uuidv4());",
+					"}"
+				]
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "00 - [DRIVER] Seed person (mobile NULL -> no decrypt)",
+			"event": [
+				{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('seed person 200', function(){ pm.response.to.have.status(200); });" ] } }
+			],
+			"request": {
+				"method": "POST",
+				"header": [ { "key": "Content-Type", "value": "application/json" } ],
+				"body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"person\",\"values\":{\"id\":\"{{_rqf_driver_id}}\",\"first_name\":\"RQFDriver\",\"gender\":\"UNKNOWN\",\"identifier_type\":\"MOBILENUMBER\",\"is_new\":false,\"merchant_id\":\"{{driver_merchant_id}}\",\"onboarded_from_dashboard\":false,\"role\":\"DRIVER\",\"total_earned_coins\":0,\"used_coins\":0},\"touch_timestamps\":true,\"on_conflict_do_nothing\":true}" },
+				"url": { "raw": "{{mockServerUrl}}/mock/sql/insert", "host": [ "{{mockServerUrl}}" ], "path": [ "mock", "sql", "insert" ] }
+			}
+		},
+		{
+			"name": "01 - [DRIVER] Seed driver_information (realistic pending: verified=true, enabled=false, approved=null)",
+			"event": [
+				{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('seed driver_information 200', function(){ pm.response.to.have.status(200); });" ] } }
+			],
+			"request": {
+				"method": "POST",
+				"header": [ { "key": "Content-Type", "value": "application/json" } ],
+				"body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"driver_information\",\"values\":{\"driver_id\":\"{{_rqf_driver_id}}\",\"merchant_operating_city_id\":\"{{crc_opcity_id}}\",\"verified\":true,\"enabled\":false,\"active\":false,\"blocked\":false,\"aadhaar_verified\":false,\"can_downgrade_to_hatchback\":false,\"can_downgrade_to_sedan\":false,\"can_downgrade_to_taxi\":false,\"num_of_locks\":0,\"on_ride\":false,\"payment_pending\":false,\"subscribed\":false,\"ac_restriction_lift_count\":0},\"touch_timestamps\":true,\"on_conflict_do_nothing\":true}" },
+				"url": { "raw": "{{mockServerUrl}}/mock/sql/insert", "host": [ "{{mockServerUrl}}" ], "path": [ "mock", "sql", "insert" ] }
+			}
+		},
+		{
+			"name": "02 - [DRIVER] Seed driver_identity_info (court_record populated by webhook)",
+			"event": [
+				{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('seed identity row 200', function(){ pm.response.to.have.status(200); });" ] } }
+			],
+			"request": {
+				"method": "POST",
+				"header": [ { "key": "Content-Type", "value": "application/json" } ],
+				"body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"driver_identity_info\",\"values\":{\"driver_id\":\"{{_rqf_driver_id}}\",\"merchant_id\":\"{{driver_merchant_id}}\",\"merchant_operating_city_id\":\"{{crc_opcity_id}}\"},\"touch_timestamps\":true,\"on_conflict_do_nothing\":true}" },
+				"url": { "raw": "{{mockServerUrl}}/mock/sql/insert", "host": [ "{{mockServerUrl}}" ], "path": [ "mock", "sql", "insert" ] }
+			}
+		},
+		{
+			"name": "03 - [DRIVER] CRC webhook populates court_record (real Idfy path)",
+			"event": [
+				{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('webhook 200', function(){ pm.response.to.have.status(200); });", "pm.test('ACK', function(){ pm.expect(pm.response.text()).to.include('ACK'); });" ] } }
+			],
+			"request": {
+				"method": "POST",
+				"header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "{{crc_webhook_secret}}" } ],
+				"body": { "mode": "raw", "raw": "{\"action\":\"court_record_check\",\"completed_at\":\"2026-06-13T10:00:00Z\",\"created_at\":\"2026-06-13T09:59:00Z\",\"group_id\":\"{{_rqf_driver_id}}\",\"request_id\":\"rqf-crc-1\",\"status\":\"completed\",\"task_id\":\"rqf-crc-1-t\",\"type\":\"ind_court_record\",\"result\":{\"source_output\":{\"case_details_link\":\"https://example.com/c\",\"number_of_cases\":3,\"report_download_link\":\"https://example.com/r\",\"risk_summary\":\"3 pending cases\",\"risk_type\":\"high\",\"status\":\"completed\"}}}" },
+				"url": { "raw": "{{driverAppWebhookBase}}/{{dashboard_merchant_id}}/{{city}}/service/idfy/verification", "host": [ "{{driverAppWebhookBase}}" ], "path": [ "{{dashboard_merchant_id}}", "{{city}}", "service", "idfy", "verification" ] }
+			}
+		},
+		{
+			"name": "04 - [DRIVER] Pending-review queue (approved=false) shows courtRecord (poll)",
+			"event": [
+				{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": [ "if(!pm.collectionVariables.get('_rqf4')) pm.collectionVariables.set('_rqf4','0');", "var a=parseInt(pm.collectionVariables.get('_rqf4'))||0; var w=a===0?3000:2000; var t=Date.now(); while(Date.now()-t<w){}" ] } },
+				{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+					"pm.test('queue 200', function(){ pm.response.to.have.status(200); });",
+					"var d = pm.response.json(); var a = parseInt(pm.collectionVariables.get('_rqf4'))||0;",
+					"var id = pm.collectionVariables.get('_rqf_driver_id');",
+					"var list = (d && d.reviewQueue) ? d.reviewQueue : [];",
+					"var mine = list.find(function(x){ return x.entityDetails && x.entityDetails.entityId === id; });",
+					"var cr = mine && mine.entityDetails && mine.entityDetails.courtRecord ? mine.entityDetails.courtRecord.result : null;",
+					"console.log('driver attempt', a+1, 'size', list.length, 'mine?', !!mine, 'crc?', !!cr);",
+					"if (mine && cr) {",
+					"  pm.collectionVariables.set('_rqf4','0');",
+					"  pm.test('entityType DRIVER', function(){ pm.expect(mine.entityDetails.entityType).to.eql('DRIVER'); });",
+					"  pm.test('courtRecord.result populated', function(){ pm.expect(cr).to.not.be.null; });",
+					"  pm.test('courtRecord.errorMessage null on success', function(){ pm.expect(mine.entityDetails.courtRecord.errorMessage == null).to.be.true; });",
+					"  pm.test('pendingChallan null for driver', function(){ pm.expect(mine.entityDetails.pendingChallan == null).to.be.true; });",
+					"} else if (a < 8) {",
+					"  pm.collectionVariables.set('_rqf4', String(a+1)); postman.setNextRequest(pm.info.requestName);",
+					"} else {",
+					"  pm.collectionVariables.set('_rqf4','0'); pm.test('driver courtRecord surfaced within retries', function(){ pm.expect(mine && cr).to.not.be.null; });",
+					"}"
+				] } }
+			],
+			"request": {
+				"method": "GET",
+				"header": [ { "key": "token", "value": "{{bpp_dashboard_token}}" } ],
+				"url": {
+					"raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/review/queue/DRIVER/request/BOT_REVIEW?approved=false&mbPersonId={{_rqf_driver_id}}",
+					"host": [ "{{baseURL_BPP_Driver_Direct}}" ],
+					"path": [ "{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "review", "queue", "DRIVER", "request", "BOT_REVIEW" ],
+					"query": [ { "key": "approved", "value": "false" }, { "key": "mbPersonId", "value": "{{_rqf_driver_id}}" } ]
+				}
+			}
+		},
+		{
+			"name": "05 - [DRIVER] Teardown (verified=false so seed does not pollute listings)",
+			"event": [
+				{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('driver teardown 200', function(){ pm.response.to.have.status(200); });" ] } }
+			],
+			"request": {
+				"method": "POST",
+				"header": [ { "key": "Content-Type", "value": "application/json" } ],
+				"body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"driver_information\",\"set\":{\"verified\":false,\"enabled\":false},\"where_clause\":[{\"column_name\":\"driver_id\",\"val\":\"{{_rqf_driver_id}}\",\"op\":\"=\"}],\"touch_updated_at\":true}" },
+				"url": { "raw": "{{mockServerUrl}}/mock/sql/update", "host": [ "{{mockServerUrl}}" ], "path": [ "mock", "sql", "update" ] }
+			}
+		},
+		{
+			"name": "06 - [VEHICLE] Pick a pristine seed RC (verified IS NULL, challan IS NULL)",
+			"event": [
+				{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+					"pm.test('select RC 200', function(){ pm.response.to.have.status(200); });",
+					"var d = pm.response.json(); var rows = (d && d.rows) ? d.rows : [];",
+					"pm.test('a pristine seed RC exists', function(){ pm.expect(rows.length).to.be.above(0); });",
+					"if (rows.length > 0) {",
+					"  pm.collectionVariables.set('_rqf_rc_id', rows[0].id);",
+					"  console.log('Using seed RC', rows[0].id);",
+					"}"
+				] } }
+			],
+			"request": {
+				"method": "POST",
+				"header": [ { "key": "Content-Type", "value": "application/json" } ],
+				"body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"vehicle_registration_certificate\",\"select\":[\"id\"],\"where_clause\":[{\"column_name\":\"verified\",\"op\":\"IS NULL\"},{\"column_name\":\"pending_challan\",\"op\":\"IS NULL\"}],\"limit\":1}" },
+				"url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": [ "{{mockServerUrl}}" ], "path": [ "mock", "sql", "select" ] }
+			}
+		},
+		{
+			"name": "07 - [VEHICLE] Promote RC to qualifying state (verified, in-city, challan=7)",
+			"event": [
+				{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('promote RC 200', function(){ pm.response.to.have.status(200); });" ] } }
+			],
+			"request": {
+				"method": "POST",
+				"header": [ { "key": "Content-Type", "value": "application/json" } ],
+				"body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"vehicle_registration_certificate\",\"set\":{\"verified\":true,\"approved\":false,\"merchant_operating_city_id\":\"{{crc_opcity_id}}\",\"pending_challan\":\"{\\\"pendingChallanCount\\\": 7, \\\"errorMessage\\\": null}\",\"unencrypted_certificate_number\":\"KA01RQFCLUB\"},\"where_clause\":[{\"column_name\":\"id\",\"val\":\"{{_rqf_rc_id}}\",\"op\":\"=\"}],\"touch_updated_at\":true}" },
+				"url": { "raw": "{{mockServerUrl}}/mock/sql/update", "host": [ "{{mockServerUrl}}" ], "path": [ "mock", "sql", "update" ] }
+			}
+		},
+		{
+			"name": "08 - [VEHICLE] Review queue shows pendingChallanCount (poll)",
+			"event": [
+				{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": [ "if(!pm.collectionVariables.get('_rqf8')) pm.collectionVariables.set('_rqf8','0');", "var a=parseInt(pm.collectionVariables.get('_rqf8'))||0; var t=Date.now(); while(Date.now()-t<2000){}" ] } },
+				{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+					"pm.test('queue 200', function(){ pm.response.to.have.status(200); });",
+					"var d = pm.response.json(); var a = parseInt(pm.collectionVariables.get('_rqf8'))||0;",
+					"var rcId = pm.collectionVariables.get('_rqf_rc_id');",
+					"var list = (d && d.reviewQueue) ? d.reviewQueue : [];",
+					"var mine = list.find(function(x){ return x.entityDetails && x.entityDetails.entityId === rcId; });",
+					"var cnt = mine && mine.entityDetails && mine.entityDetails.pendingChallan ? mine.entityDetails.pendingChallan.pendingChallanCount : null;",
+					"console.log('vehicle attempt', a+1, 'size', list.length, 'mine?', !!mine, 'challan', cnt);",
+					"if (mine && cnt !== null && cnt !== undefined) {",
+					"  pm.collectionVariables.set('_rqf8','0');",
+					"  pm.test('entityType VEHICLE', function(){ pm.expect(mine.entityDetails.entityType).to.eql('VEHICLE'); });",
+					"  pm.test('pendingChallan.pendingChallanCount equals 7', function(){ pm.expect(cnt).to.eql(7); });",
+					"  pm.test('pendingChallan.errorMessage null on success', function(){ pm.expect(mine.entityDetails.pendingChallan.errorMessage == null).to.be.true; });",
+					"  pm.test('courtRecord null for vehicle', function(){ pm.expect(mine.entityDetails.courtRecord == null).to.be.true; });",
+					"} else if (a < 8) {",
+					"  pm.collectionVariables.set('_rqf8', String(a+1)); postman.setNextRequest(pm.info.requestName);",
+					"} else {",
+					"  pm.collectionVariables.set('_rqf8','0'); pm.test('vehicle pendingChallan surfaced within retries', function(){ pm.expect(mine && cnt).to.not.be.null; });",
+					"}"
+				] } }
+			],
+			"request": {
+				"method": "GET",
+				"header": [ { "key": "token", "value": "{{bpp_dashboard_token}}" } ],
+				"url": {
+					"raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/review/queue/VEHICLE/request/BOT_REVIEW?approved=false&mbRcId={{_rqf_rc_id}}",
+					"host": [ "{{baseURL_BPP_Driver_Direct}}" ],
+					"path": [ "{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "review", "queue", "VEHICLE", "request", "BOT_REVIEW" ],
+					"query": [ { "key": "approved", "value": "false" }, { "key": "mbRcId", "value": "{{_rqf_rc_id}}" } ]
+				}
+			}
+		},
+		{
+			"name": "09 - [VEHICLE] Restore RC to seed defaults",
+			"event": [
+				{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('restore RC 200', function(){ pm.response.to.have.status(200); });" ] } }
+			],
+			"request": {
+				"method": "POST",
+				"header": [ { "key": "Content-Type", "value": "application/json" } ],
+				"body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"vehicle_registration_certificate\",\"set\":{\"verified\":null,\"approved\":false,\"merchant_operating_city_id\":null,\"pending_challan\":null,\"unencrypted_certificate_number\":null},\"where_clause\":[{\"column_name\":\"id\",\"val\":\"{{_rqf_rc_id}}\",\"op\":\"=\"}],\"touch_updated_at\":true}" },
+				"url": { "raw": "{{mockServerUrl}}/mock/sql/update", "host": [ "{{mockServerUrl}}" ], "path": [ "mock", "sql", "update" ] }
+			}
+		},
+		{
+			"name": "10 - [DRIVER-ERR] Seed court_record as a FAILURE wrapper",
+			"event": [
+				{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('seed crc error 200', function(){ pm.response.to.have.status(200); });" ] } }
+			],
+			"request": {
+				"method": "POST",
+				"header": [ { "key": "Content-Type", "value": "application/json" } ],
+				"body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"driver_identity_info\",\"set\":{\"court_record\":\"{\\\"result\\\": null, \\\"errorMessage\\\": \\\"CRC provider timeout\\\"}\"},\"where_clause\":[{\"column_name\":\"driver_id\",\"val\":\"{{_rqf_driver_id}}\",\"op\":\"=\"}],\"touch_updated_at\":true}" },
+				"url": { "raw": "{{mockServerUrl}}/mock/sql/update", "host": [ "{{mockServerUrl}}" ], "path": [ "mock", "sql", "update" ] }
+			}
+		},
+		{
+			"name": "11 - [DRIVER-ERR] Re-enable driver to pending (verified=true, enabled=false)",
+			"event": [
+				{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('re-enable driver 200', function(){ pm.response.to.have.status(200); });" ] } }
+			],
+			"request": {
+				"method": "POST",
+				"header": [ { "key": "Content-Type", "value": "application/json" } ],
+				"body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"driver_information\",\"set\":{\"verified\":true,\"enabled\":false},\"where_clause\":[{\"column_name\":\"driver_id\",\"val\":\"{{_rqf_driver_id}}\",\"op\":\"=\"}],\"touch_updated_at\":true}" },
+				"url": { "raw": "{{mockServerUrl}}/mock/sql/update", "host": [ "{{mockServerUrl}}" ], "path": [ "mock", "sql", "update" ] }
+			}
+		},
+		{
+			"name": "12 - [DRIVER-ERR] Queue surfaces courtRecord.errorMessage (poll)",
+			"event": [
+				{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": [ "if(!pm.collectionVariables.get('_rqfe1')) pm.collectionVariables.set('_rqfe1','0');", "var a=parseInt(pm.collectionVariables.get('_rqfe1'))||0; var w=a===0?3000:2000; var t=Date.now(); while(Date.now()-t<w){}" ] } },
+				{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+					"pm.test('queue 200', function(){ pm.response.to.have.status(200); });",
+					"var d = pm.response.json(); var a = parseInt(pm.collectionVariables.get('_rqfe1'))||0;",
+					"var id = pm.collectionVariables.get('_rqf_driver_id');",
+					"var list = (d && d.reviewQueue) ? d.reviewQueue : [];",
+					"var mine = list.find(function(x){ return x.entityDetails && x.entityDetails.entityId === id; });",
+					"var err = mine && mine.entityDetails && mine.entityDetails.courtRecord ? mine.entityDetails.courtRecord.errorMessage : null;",
+					"console.log('driver-err attempt', a+1, 'mine?', !!mine, 'err', err);",
+					"if (mine && err) {",
+					"  pm.collectionVariables.set('_rqfe1','0');",
+					"  pm.test('courtRecord.errorMessage surfaced', function(){ pm.expect(err).to.eql('CRC provider timeout'); });",
+					"  pm.test('courtRecord.result null on failure', function(){ pm.expect(mine.entityDetails.courtRecord.result == null).to.be.true; });",
+					"} else if (a < 8) {",
+					"  pm.collectionVariables.set('_rqfe1', String(a+1)); postman.setNextRequest(pm.info.requestName);",
+					"} else {",
+					"  pm.collectionVariables.set('_rqfe1','0'); pm.test('driver courtRecord error surfaced within retries', function(){ pm.expect(mine && err).to.not.be.null; });",
+					"}"
+				] } }
+			],
+			"request": {
+				"method": "GET",
+				"header": [ { "key": "token", "value": "{{bpp_dashboard_token}}" } ],
+				"url": {
+					"raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/review/queue/DRIVER/request/BOT_REVIEW?approved=false&mbPersonId={{_rqf_driver_id}}",
+					"host": [ "{{baseURL_BPP_Driver_Direct}}" ],
+					"path": [ "{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "review", "queue", "DRIVER", "request", "BOT_REVIEW" ],
+					"query": [ { "key": "approved", "value": "false" }, { "key": "mbPersonId", "value": "{{_rqf_driver_id}}" } ]
+				}
+			}
+		},
+		{
+			"name": "13 - [DRIVER-ERR] Teardown driver (verified=false, enabled=false)",
+			"event": [
+				{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('driver-err teardown 200', function(){ pm.response.to.have.status(200); });" ] } }
+			],
+			"request": {
+				"method": "POST",
+				"header": [ { "key": "Content-Type", "value": "application/json" } ],
+				"body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"driver_information\",\"set\":{\"verified\":false,\"enabled\":false},\"where_clause\":[{\"column_name\":\"driver_id\",\"val\":\"{{_rqf_driver_id}}\",\"op\":\"=\"}],\"touch_updated_at\":true}" },
+				"url": { "raw": "{{mockServerUrl}}/mock/sql/update", "host": [ "{{mockServerUrl}}" ], "path": [ "mock", "sql", "update" ] }
+			}
+		},
+		{
+			"name": "14 - [VEHICLE-ERR] Promote RC with pending_challan FAILURE wrapper",
+			"event": [
+				{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('seed challan error 200', function(){ pm.response.to.have.status(200); });" ] } }
+			],
+			"request": {
+				"method": "POST",
+				"header": [ { "key": "Content-Type", "value": "application/json" } ],
+				"body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"vehicle_registration_certificate\",\"set\":{\"verified\":true,\"approved\":false,\"merchant_operating_city_id\":\"{{crc_opcity_id}}\",\"pending_challan\":\"{\\\"pendingChallanCount\\\": null, \\\"errorMessage\\\": \\\"no provider configured\\\"}\",\"unencrypted_certificate_number\":\"KA01RQFERR\"},\"where_clause\":[{\"column_name\":\"id\",\"val\":\"{{_rqf_rc_id}}\",\"op\":\"=\"}],\"touch_updated_at\":true}" },
+				"url": { "raw": "{{mockServerUrl}}/mock/sql/update", "host": [ "{{mockServerUrl}}" ], "path": [ "mock", "sql", "update" ] }
+			}
+		},
+		{
+			"name": "15 - [VEHICLE-ERR] Queue surfaces pendingChallan.errorMessage (poll)",
+			"event": [
+				{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": [ "if(!pm.collectionVariables.get('_rqfe2')) pm.collectionVariables.set('_rqfe2','0');", "var a=parseInt(pm.collectionVariables.get('_rqfe2'))||0; var t=Date.now(); while(Date.now()-t<2000){}" ] } },
+				{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+					"pm.test('queue 200', function(){ pm.response.to.have.status(200); });",
+					"var d = pm.response.json(); var a = parseInt(pm.collectionVariables.get('_rqfe2'))||0;",
+					"var rcId = pm.collectionVariables.get('_rqf_rc_id');",
+					"var list = (d && d.reviewQueue) ? d.reviewQueue : [];",
+					"var mine = list.find(function(x){ return x.entityDetails && x.entityDetails.entityId === rcId; });",
+					"var err = mine && mine.entityDetails && mine.entityDetails.pendingChallan ? mine.entityDetails.pendingChallan.errorMessage : null;",
+					"console.log('vehicle-err attempt', a+1, 'mine?', !!mine, 'err', err);",
+					"if (mine && err) {",
+					"  pm.collectionVariables.set('_rqfe2','0');",
+					"  pm.test('pendingChallan.errorMessage surfaced', function(){ pm.expect(err).to.eql('no provider configured'); });",
+					"  pm.test('pendingChallan.pendingChallanCount null on failure', function(){ pm.expect(mine.entityDetails.pendingChallan.pendingChallanCount == null).to.be.true; });",
+					"} else if (a < 8) {",
+					"  pm.collectionVariables.set('_rqfe2', String(a+1)); postman.setNextRequest(pm.info.requestName);",
+					"} else {",
+					"  pm.collectionVariables.set('_rqfe2','0'); pm.test('vehicle challan error surfaced within retries', function(){ pm.expect(mine && err).to.not.be.null; });",
+					"}"
+				] } }
+			],
+			"request": {
+				"method": "GET",
+				"header": [ { "key": "token", "value": "{{bpp_dashboard_token}}" } ],
+				"url": {
+					"raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/review/queue/VEHICLE/request/BOT_REVIEW?approved=false&mbRcId={{_rqf_rc_id}}",
+					"host": [ "{{baseURL_BPP_Driver_Direct}}" ],
+					"path": [ "{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "review", "queue", "VEHICLE", "request", "BOT_REVIEW" ],
+					"query": [ { "key": "approved", "value": "false" }, { "key": "mbRcId", "value": "{{_rqf_rc_id}}" } ]
+				}
+			}
+		},
+		{
+			"name": "16 - [VEHICLE-ERR] Restore RC to seed defaults",
+			"event": [
+				{ "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('restore RC 200', function(){ pm.response.to.have.status(200); });" ] } }
+			],
+			"request": {
+				"method": "POST",
+				"header": [ { "key": "Content-Type", "value": "application/json" } ],
+				"body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"vehicle_registration_certificate\",\"set\":{\"verified\":null,\"approved\":false,\"merchant_operating_city_id\":null,\"pending_challan\":null,\"unencrypted_certificate_number\":null},\"where_clause\":[{\"column_name\":\"id\",\"val\":\"{{_rqf_rc_id}}\",\"op\":\"=\"}],\"touch_updated_at\":true}" },
+				"url": { "raw": "{{mockServerUrl}}/mock/sql/update", "host": [ "{{mockServerUrl}}" ], "path": [ "mock", "sql", "update" ] }
+			}
+		}
+	],
+	"variable": []
+}

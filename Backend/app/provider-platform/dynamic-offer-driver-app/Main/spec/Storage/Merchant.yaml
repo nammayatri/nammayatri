@@ -56,6 +56,7 @@ imports:
   Role: Domain.Types.Person
   Base64: Kernel.Types.Base64
   Map: Data.Map.Strict
+  ChallanSearchService: Kernel.External.ChallanSearch.Types
   OnboardingAs: Domain.Types.DriverInformation
 
 Merchant:
@@ -642,6 +643,7 @@ MerchantServiceUsageConfig:
     sdkVerificationService: VerificationService
     llmChatCompletion: LLMChatCompletionService
     totoVerificationPriorityList: "Maybe [VerificationService]"
+    challanProvidersPriorityList: "Maybe [ChallanSearchService]"
 
   beamType:
     llmChatCompletion: Maybe LLMChatCompletionService
@@ -705,6 +707,7 @@ MerchantServiceUsageConfig:
     backgroundVerification: text
     llmChatCompletion: character varying(30)
     totoVerificationPriorityList: "text[]"
+    challanProvidersPriorityList: "text[]"
   default:
     getPickupRoutes: "'Google'"
     getTripRoutes: "'Google'"
@@ -1033,7 +1036,8 @@ TransporterConfig:
       derive': Generic, Show, ToJSON, FromJSON, ToSchema, Eq
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff",
-      "automatic_r_c_activation_cut_off")]
+      "automatic_r_c_activation_cut_off"), ("individualPANCheck",
+      "individual_pan_check")]
     - Custom Domain.Types.UtilsTH.mkCacParseInstance
   fields:
     merchantId: Id Merchant
@@ -1110,6 +1114,7 @@ TransporterConfig:
     canDowngradeToSedan: Bool
     canDowngradeToHatchback: Bool
     canDowngradeToTaxi: Bool
+    enableTierUpgradeFeature: Maybe Bool
     canSuvDowngradeToTaxi: Bool
     canSuvDowngradeToHatchback: Bool
     canSwitchToRental: Bool
@@ -1269,6 +1274,7 @@ TransporterConfig:
     allowDuplicateAadhaar: Maybe Bool
     allowDuplicateUdyam: Maybe Bool
     allowPanAadhaarLinkage: Maybe Bool
+    individualPANCheck: Maybe Bool
     cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
     distanceWeightage: Maybe Int
     driverCallingOption: "Maybe CallingOption"
@@ -1323,8 +1329,10 @@ TransporterConfig:
     allowAadhaarReupload: Maybe Bool
     allowDlReupload: Maybe Bool
     allowGstReupload: Maybe Bool
+    isGstPanLinkCheckRequired: Maybe Bool
     invoiceConfig: Maybe InvoiceConfig
     enableManualDocumentStatusCheck: Maybe Bool
+    enableCourtRecordCheck: Maybe Bool # Gates the Idfy Court Record Check (CRC) on driver-inspection approval. Enabled per-merchant (e.g. MSIL).
     sendMembershipIdInProfile: Maybe Bool
     stclConfig: Maybe StclConfig # STCL membership tunables. Any field left as Nothing falls back to defaults in Domain.Action.UI.StclMembership.
     useCategoryBasedVerificationPriorityList: Maybe Bool
@@ -1872,6 +1880,7 @@ TransporterConfig:
     allowAadhaarReupload: "false"
     allowDlReupload: "false"
     allowGstReupload: "false"
+    isGstPanLinkCheckRequired: "false"
     useCategoryBasedVerificationPriorityList: "true"
   excludedDefaultQueries:
     - findByPrimaryKey

@@ -45,6 +45,7 @@ let outputPath =
           outputPrefixDashboardReadOnly ++ "API/Client/RiderPlatform"
       , _sql = [ { _1 = migrationPath, _2 = "atlas_bap_dashboard" } ]
       , _purescriptFrontend = ""
+      , _configPilot = outputPrefixDashboard ++ "Storage/ConfigPilot/Config"
       }
 
 let GeneratorType =
@@ -63,6 +64,7 @@ let GeneratorType =
       | DOMAIN_TYPE
       | SQL
       | PURE_SCRIPT_FRONTEND
+      | CONFIG_PILOT
       >
 
 let ImportType = < SIMPLE | QUALIFIED >

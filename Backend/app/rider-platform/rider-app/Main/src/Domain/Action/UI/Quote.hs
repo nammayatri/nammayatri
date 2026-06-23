@@ -51,6 +51,7 @@ import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Location as DL
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Quote as SQuote
 import qualified Domain.Types.QuoteBreakup as DQB
 import qualified Domain.Types.RideStatus as DRide
@@ -62,9 +63,10 @@ import qualified Domain.Types.SearchRequest as SSR
 import Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.Trip as DTrip
 import Environment
-import EulerHS.Prelude hiding (find, group, id, length, map, maximumBy, sum)
+import EulerHS.Prelude hiding (find, group, id, length, map, maximumBy, null, sum)
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
+import qualified Kernel.External.Types as Lang
 import Kernel.Prelude hiding (whenJust)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -87,6 +89,7 @@ import SharedLogic.Quote
 import qualified SharedLogic.Search as SLS
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
@@ -187,6 +190,13 @@ safeToLower [] = []
 estimateBuildLockKey :: Text -> Text
 estimateBuildLockKey searchReqid = "Customer:Estimate:Build:" <> searchReqid
 
+translateServiceTierText :: Id DMOC.MerchantOperatingCity -> Lang.Language -> Maybe Text -> Flow (Maybe Text)
+translateServiceTierText mocId language mbText = case mbText of
+  Just text ->
+    CQTranslations.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache mocId text language
+      <&> Just . maybe text (.message)
+  Nothing -> pure Nothing
+
 getQuotes :: Id SSR.SearchRequest -> Maybe Bool -> Flow GetQuotesRes
 getQuotes searchRequestId mbAllowMultiple = do
   searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
@@ -228,12 +238,14 @@ buildGetQuotesRes searchRequest estimateList quoteList mbRiderConfig = do
   let mostFrequentVehicleCategory = SLS.mostFrequent person.lastUsedVehicleServiceTiers
       isReferredRide = isJust searchRequest.driverIdentifier
       enableRideHailingOffers = maybe False (.enableRideHailingOffers) mbRiderConfig
+      language = fromMaybe Lang.ENGLISH person.language
   providerLookup <- buildProviderLookup estimateList quoteList
-  offers <- getOffers searchRequest enableRideHailingOffers providerLookup quoteList
-  estimates' <- getEstimates searchRequest enableRideHailingOffers isReferredRide providerLookup estimateList
+  offers <- getOffers searchRequest enableRideHailingOffers providerLookup quoteList language
+  estimates' <- getEstimates searchRequest enableRideHailingOffers isReferredRide providerLookup estimateList language
   let vehicleServiceTierOrderConfig = maybe [] (.userServiceTierOrderConfig) mbRiderConfig
       defaultServiceTierOrderConfig = maybe [] (.defaultServiceTierOrderConfig) mbRiderConfig
-      mbUserConfig = mostFrequentVehicleCategoryConfig mostFrequentVehicleCategory vehicleServiceTierOrderConfig
+      specialLocationTierOrderConfig = getSpecialLocationTierOrder searchRequest.discoveredSpecialLocationId mbRiderConfig
+      mbUserConfig = if null specialLocationTierOrderConfig then mostFrequentVehicleCategoryConfig mostFrequentVehicleCategory vehicleServiceTierOrderConfig else specialLocationTierOrderConfig
       estimates = estimatesSorting estimates' mbUserConfig defaultServiceTierOrderConfig
       sortedQuotes = quotesSorting offers mbUserConfig defaultServiceTierOrderConfig
   return $
@@ -306,15 +318,15 @@ lookupProvider providerLookup bppId =
     Just v -> pure v
     Nothing -> throwError $ InternalError $ "BPP details not found for providerId:-" <> bppId
 
-getOffers :: SSR.SearchRequest -> Bool -> HM.HashMap Text (BppDetails, Bool) -> [SQuote.Quote] -> Flow [OfferRes]
-getOffers searchRequest enableRideHailingOffers providerLookup quoteList0 = do
+getOffers :: SSR.SearchRequest -> Bool -> HM.HashMap Text (BppDetails, Bool) -> [SQuote.Quote] -> Lang.Language -> Flow [OfferRes]
+getOffers searchRequest enableRideHailingOffers providerLookup quoteList0 language = do
   logDebug $ "search Request is : " <> show searchRequest
   let quoteList = case searchRequest.toLocation of
         Just _ -> sortByNearestDriverDistance quoteList0
         Nothing -> sortByEstimatedFare quoteList0
   logDebug $ "quotes are :-" <> show quoteList
   (bppDetailList, isValueAddNPList) <- unzip <$> forM quoteList (\q -> lookupProvider providerLookup q.providerId)
-  quoteEntities <- mkQuoteAPIEntitiesWithOffers searchRequest enableRideHailingOffers quoteList bppDetailList isValueAddNPList
+  quoteEntities <- mkQuoteAPIEntitiesWithOffers searchRequest enableRideHailingOffers quoteList bppDetailList isValueAddNPList language
   let quotes = case searchRequest.toLocation of
         Just _ ->
           case searchRequest.riderPreferredOption of
@@ -332,8 +344,9 @@ mkQuoteAPIEntitiesWithOffers ::
   [SQuote.Quote] ->
   [BppDetails] ->
   [Bool] ->
+  Lang.Language ->
   Flow [QuoteAPIEntity]
-mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDetailList isValueAddNPList = do
+mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDetailList isValueAddNPList language = do
   let quoteEntitiesWithCtx =
         zip
           (mkQAPIEntityList quoteList bppDetailList isValueAddNPList)
@@ -361,7 +374,9 @@ mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDeta
     mbOffer <- case Map.lookup productId offerMap of
       Nothing -> pure Nothing
       Just resp -> SOffer.mkCumulativeOfferResp searchReq.merchantOperatingCityId resp [] mbBreakup
-    pure quoteEntity {customerOffers = mbOffer}
+    serviceTierName <- translateServiceTierText searchReq.merchantOperatingCityId language quoteEntity.serviceTierName
+    serviceTierShortDesc <- translateServiceTierText searchReq.merchantOperatingCityId language quoteEntity.serviceTierShortDesc
+    pure quoteEntity {customerOffers = mbOffer, SharedLogic.Quote.serviceTierName = serviceTierName, SharedLogic.Quote.serviceTierShortDesc = serviceTierShortDesc}
 
 quoteBreakupToFareTuple :: DQB.QuoteBreakup -> (Text, HighPrecMoney)
 quoteBreakupToFareTuple qb = (qb.title, qb.price.amount)
@@ -387,8 +402,8 @@ offerCreationTime (OnRentalCab QuoteAPIEntity {createdAt}) = createdAt
 offerCreationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
 offerCreationTime (OnMeterRide QuoteAPIEntity {createdAt}) = createdAt
 
-getEstimates :: SSR.SearchRequest -> Bool -> Bool -> HM.HashMap Text (BppDetails, Bool) -> [DEstimate.Estimate] -> Flow [UEstimate.EstimateAPIEntity]
-getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLookup estimateList = do
+getEstimates :: SSR.SearchRequest -> Bool -> Bool -> HM.HashMap Text (BppDetails, Bool) -> [DEstimate.Estimate] -> Lang.Language -> Flow [UEstimate.EstimateAPIEntity]
+getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLookup estimateList language = do
   let sortedEstimates = sortByEstimatedFare estimateList
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId searchRequest.merchantOperatingCityId))
   let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
@@ -423,7 +438,10 @@ getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLooku
       -- reflects VAT redistribution via applyRideDiscount.
       Just resp -> SOffer.mkCumulativeOfferResp searchRequest.merchantOperatingCityId resp [] mbBreakup
     (bppDetails, valueAddNP) <- lookupProvider providerLookup estimate.providerId
-    UEstimate.mkEstimateAPIEntity isReferredRide mbOffer bppDetails valueAddNP estimate
+    apiEntity <- UEstimate.mkEstimateAPIEntity isReferredRide mbOffer bppDetails valueAddNP estimate
+    serviceTierName <- translateServiceTierText searchRequest.merchantOperatingCityId language apiEntity.serviceTierName
+    serviceTierShortDesc <- translateServiceTierText searchRequest.merchantOperatingCityId language apiEntity.serviceTierShortDesc
+    pure apiEntity {UEstimate.serviceTierName = serviceTierName, UEstimate.serviceTierShortDesc = serviceTierShortDesc}
   return . sortBy (compare `on` (.createdAt)) $ estimates
 
 sortByEstimatedFare :: (HasField "estimatedFare" r Price) => [r] -> [r]
@@ -506,26 +524,34 @@ getJourneys searchRequest hasMultimodalSearch = do
           toStationPlatformCode = routeDetail.toStopPlatformCode
         }
 
-mostFrequentVehicleCategoryConfig :: Maybe DVST.ServiceTierType -> [VehicleServiceTierOrderConfig] -> Maybe VehicleServiceTierOrderConfig
-mostFrequentVehicleCategoryConfig Nothing _ = Nothing
-mostFrequentVehicleCategoryConfig (Just vehicleServiceTier) orderArray =
-  find (\v -> v.vehicle == vehicleServiceTier) orderArray
+getSpecialLocationTierOrder :: Maybe Text -> Maybe DRC.RiderConfig -> [DVST.ServiceTierType]
+getSpecialLocationTierOrder Nothing _ = []
+getSpecialLocationTierOrder (Just specialLocId) mbRiderConfig = fromMaybe [] $ do
+  riderConfig <- mbRiderConfig
+  configs <- riderConfig.specialLocationTierOrderConfig
+  config <- find (\c -> c.specialLocationId == specialLocId) configs
+  return config.orderArray
+
+mostFrequentVehicleCategoryConfig :: Maybe DVST.ServiceTierType -> [VehicleServiceTierOrderConfig] -> [DVST.ServiceTierType]
+mostFrequentVehicleCategoryConfig Nothing _ = []
+mostFrequentVehicleCategoryConfig (Just vehicleServiceTier) configs =
+  maybe [] (.orderArray) $ find (\v -> v.vehicle == vehicleServiceTier) configs
 
 -- Sorting function
-estimatesSorting :: [UEstimate.EstimateAPIEntity] -> Maybe VehicleServiceTierOrderConfig -> [DVST.ServiceTierType] -> [UEstimate.EstimateAPIEntity]
-estimatesSorting list Nothing order = sortBy (comparing (\estimate -> vehicleOrderIndex order estimate.serviceTierType)) list
-estimatesSorting list (Just config) _ =
-  sortBy (comparing (\estimate -> vehicleOrderIndex config.orderArray estimate.serviceTierType)) list
+estimatesSorting :: [UEstimate.EstimateAPIEntity] -> [DVST.ServiceTierType] -> [DVST.ServiceTierType] -> [UEstimate.EstimateAPIEntity]
+estimatesSorting list userOrder defaultOrder =
+  let order = if null userOrder then defaultOrder else userOrder
+   in sortBy (comparing (\estimate -> vehicleOrderIndex order estimate.serviceTierType)) list
 
-quotesSorting :: [OfferRes] -> Maybe VehicleServiceTierOrderConfig -> [DVST.ServiceTierType] -> [OfferRes]
-quotesSorting list mbConfig defaultOrder =
-  let order = maybe defaultOrder (.orderArray) mbConfig
+quotesSorting :: [OfferRes] -> [DVST.ServiceTierType] -> [DVST.ServiceTierType] -> [OfferRes]
+quotesSorting list userOrder defaultOrder =
+  let order = if null userOrder then defaultOrder else userOrder
    in sortBy (comparing (offerVehicleOrderIndex order)) list
   where
-    offerVehicleOrderIndex order = \case
-      OnDemandCab q -> vehicleOrderIndex order q.vehicleVariant
-      OnRentalCab q -> vehicleOrderIndex order q.vehicleVariant
-      OnMeterRide q -> vehicleOrderIndex order q.vehicleVariant
+    offerVehicleOrderIndex o = \case
+      OnDemandCab q -> vehicleOrderIndex o q.vehicleVariant
+      OnRentalCab q -> vehicleOrderIndex o q.vehicleVariant
+      OnMeterRide q -> vehicleOrderIndex o q.vehicleVariant
       Metro _ -> maxBound
       PublicTransport _ -> maxBound
 

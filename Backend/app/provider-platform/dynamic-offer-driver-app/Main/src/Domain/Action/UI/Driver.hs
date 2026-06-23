@@ -983,19 +983,22 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
             unless driverBankAccount.chargesEnabled $ throwError (DriverChargesDisabled driverId.getId)
           unless (driverInfo.enabled) $ throwError DriverAccountDisabled
           unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
-          -- BOT-flow go-online gates: an active vehicle is required; a fleet driver additionally
-          -- requires their fleet to be enabled with an active fleet subscription.
+          -- BOT-flow go-online checks (separate): active vehicle required; a fleet driver needs their fleet
+          -- enabled with an active fleet subscription; an individual (non-fleet) driver needs their own subscription.
           when (transporterConfig.enableBotFlow == Just True) $ do
             unless (isJust mbVehicle) $
               throwError $ InvalidRequest "Cannot go online: no active vehicle linked"
             mbFleetAssoc <- QFDA.findByDriverId driverId True
-            whenJust mbFleetAssoc $ \fda -> do
-              fleetOwnerInfo <- QFOI.findByPrimaryKey (Id fda.fleetOwnerId) >>= fromMaybeM (PersonNotFound fda.fleetOwnerId)
-              unless fleetOwnerInfo.enabled $
-                throwError $ InvalidRequest "Cannot go online: fleet is not enabled"
-              mbFleetSub <- QSPE.findLatestActiveByOwnerAndServiceName (\_ -> pure ()) fda.fleetOwnerId DSP.FLEET_OWNER Plan.PREPAID_SUBSCRIPTION Nothing
-              unless (isJust mbFleetSub) $
-                throwError $ InvalidRequest "Cannot go online: fleet subscription is not active"
+            case mbFleetAssoc of
+              Just fda -> do
+                fleetOwnerInfo <- QFOI.findByPrimaryKey (Id fda.fleetOwnerId) >>= fromMaybeM (PersonNotFound fda.fleetOwnerId)
+                unless fleetOwnerInfo.enabled $
+                  throwError $ InvalidRequest "Cannot go online: fleet is not enabled"
+                mbFleetSub <- QSPE.findLatestActiveByOwnerAndServiceName (\_ -> pure ()) fda.fleetOwnerId DSP.FLEET_OWNER Plan.PREPAID_SUBSCRIPTION Nothing
+                unless (isJust mbFleetSub) $
+                  throwError $ InvalidRequest "Cannot go online: fleet subscription is not active"
+              Nothing ->
+                unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
           when driverInfo.blocked $ do
             case driverInfo.blockExpiryTime of
               Just expiryTime -> do
@@ -1214,19 +1217,8 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId, identit
       Nothing -> return (False, Nothing, False)
       Just vehicle -> do
         cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing Nothing
-        let allVehicleSupportedDefaultServiceTiers = sortOn (fmap Down . (.airConditionedThreshold)) $ filter (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant && vst.serviceTierType `elem` supportedServiceTiers) cityServiceTiers
-        let isVehicleSupported = not $ null allVehicleSupportedDefaultServiceTiers
-        let mbDefaultServiceTierItem =
-              if null allVehicleSupportedDefaultServiceTiers
-                then find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
-                else listToMaybe allVehicleSupportedDefaultServiceTiers
-        let checIfACWorking' =
-              case mbDefaultServiceTierItem >>= (.airConditionedThreshold) of
-                Nothing -> False
-                Just acThreshold -> do
-                  (fromMaybe 0 driverInfo.airConditionScore) <= acThreshold
-                    && maybe True (\lastCheckedAt -> fromInteger (diffDays (utctDay now) (utctDay lastCheckedAt)) >= transporterConfig.acStatusCheckGap) driverInfo.lastACStatusCheckedAt
-        return (checIfACWorking', (.serviceTierType) <$> mbDefaultServiceTierItem, isVehicleSupported)
+        let (ac, mbTier, supported) = getDriverDefaultServiceTier vehicle driverInfo transporterConfig supportedServiceTiers cityServiceTiers now
+        return (ac, (.serviceTierType) <$> mbTier, supported)
   onRideFlag <-
     if driverInfo.onRide && driverInfo.onboardingVehicleCategory /= Just DVC.BUS
       then
@@ -2289,7 +2281,9 @@ createMediaEntry driverId Common.AddLinkAsMedia {..} filePath imageType mbRc = d
             url = fileUrl,
             s3FilePath = Just filePath,
             status = Just Domain.COMPLETED,
-            createdAt = now
+            fileHash = Nothing,
+            createdAt = now,
+            updatedAt = now
           }
 
 makeAlternatePhoneNumberKey :: Id SP.Person -> Text

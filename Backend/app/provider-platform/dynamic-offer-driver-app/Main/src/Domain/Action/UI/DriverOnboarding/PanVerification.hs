@@ -35,6 +35,7 @@ import Data.Time (defaultTimeLocale, formatTime)
 import Data.Tuple.Extra (both)
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DFR
+import qualified Domain.Action.UI.DriverOnboarding.GstVerification as GstVerification
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DVRC
 import Domain.Types.DocumentVerificationConfig (DocumentVerificationConfig)
@@ -119,6 +120,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
   (blocked, driverDocument) <- DVRC.getDriverDocumentInfo person
   when blocked $ throwError AccountBlocked
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  DVRC.validateIndividualPANCheck transporterConfig person req.panNumber
   case transporterConfig.allowDuplicatePan of
     Just False -> do
       panHash <- getDbHash req.panNumber
@@ -140,7 +142,10 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
         (if isDashboard then merchantServiceUsageConfig.dashboardPanVerificationService else merchantServiceUsageConfig.panVerificationService)
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
+  let gstPanLinkCheckRequired = DCommon.checkFleetOwnerRole person.role && fromMaybe False transporterConfig.isGstPanLinkCheckRequired
   let runBody = do
+        when gstPanLinkCheckRequired $
+          GstVerification.assertUploadedPanLinkedToExistingGst person req.panNumber (Id req.imageId)
         mdriverPanInformation <- DPQuery.findByDriverId person.id
         case mbPanVerificationService of
           Just VI.HyperVerge -> do
@@ -162,7 +167,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
             DIQuery.updatePanNumber (Just encryptedPanNumber) person.id
           _ -> pure ()
 
-  if DVRC.isNameCompareRequired transporterConfig verifyBy
+  if DVRC.isNameCompareRequired transporterConfig verifyBy || gstPanLinkCheckRequired
     then Redis.withWaitOnLockRedisWithExpiry (DVRC.makeDocumentVerificationLockKey personId.getId) 10 10 runBody
     else runBody
   mdriverPanCard <- DPQuery.findByDriverId person.id

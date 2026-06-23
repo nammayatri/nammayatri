@@ -21,3 +21,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_identity_info ADD COLUMN address_state
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_identity_info ADD COLUMN court_record json ;

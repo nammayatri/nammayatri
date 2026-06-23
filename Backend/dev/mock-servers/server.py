@@ -33,7 +33,7 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 
 import status_store
-from services import juspay, stripe, paytm, exotel, acko, sos, kapture, whatsapp, mmi, nextbillion, gridline, transit, hyperverge, gullak, openai, cmrl, cris, ebix, mlpricing, ondc, cac, fcm, sms, idfy, google, sandbox_proxy
+from services import juspay, stripe, paytm, exotel, acko, sos, kapture, whatsapp, mmi, nextbillion, gridline, transit, hyperverge, gullak, openai, cmrl, cris, ebix, mlpricing, ondc, cac, fcm, sms, idfy, google, signzy, sandbox_proxy
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("mock-server")
@@ -121,6 +121,7 @@ ROUTES = [
     ("/sms",         sms,         "sms"),
     ("/idfy",        idfy,        "idfy"),
     ("/maps",        google,      "google"),
+    ("/signzy",      signzy,      "signzy"),
 ]
 
 

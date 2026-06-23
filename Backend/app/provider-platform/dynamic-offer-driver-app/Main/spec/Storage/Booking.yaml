@@ -105,6 +105,7 @@ Booking:
     insuredAmount: Maybe Text
     exotelDeclinedCallStatusReceivingTime: Maybe UTCTime
     numberOfLuggages: Maybe Int
+    isPickupOrDestinationEdited: Maybe Bool
     paymentInstrument: Maybe PaymentInstrument
     paymentMode: Maybe PaymentMode
     commission: Maybe HighPrecMoney
@@ -258,6 +259,10 @@ Booking:
     updateEstimatedDistanceAndFare:
       kvFunction: updateOneWithKV
       params: [estimatedFare, estimatedDistance]
+      where: id
+    updateIsPickupOrDestinationEdited:
+      kvFunction: updateOneWithKV
+      params: [isPickupOrDestinationEdited]
       where: id
 
   constraints:

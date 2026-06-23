@@ -184,6 +184,19 @@ updateGstImage gstNumber gstImageId fleetOwnerPersonId = do
     ]
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
+updateFleetName ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe Text ->
+  Kernel.Types.Id.Id DP.Person ->
+  m ()
+updateFleetName fleetName fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.fleetName fleetName,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
 updatePanImage ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe (EncryptedHashed Text) ->

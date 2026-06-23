@@ -191,7 +191,6 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                   void $ markJourneyPaymentSuccess updatedBooking paymentOrder paymentBooking
                   buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
                 else do
-                  (mbJourneyId, _) <- getAllJourneyFrfsBookings booking
                   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
                   let fareCachingAllowed = case integratedBppConfig.providerConfig of
                         DIBC.ONDC ondcCfg -> fromMaybe False ondcCfg.fareCachingAllowed
@@ -200,7 +199,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                         if fareCachingAllowed
                           then fromMaybe False booking.ondcOnInitReceived
                           else True
-                  if paymentBookingStatus == FRFSTicketService.SUCCESS && (not isMultiModalBooking || isJust mbJourneyId) && shouldProceedWithConfirm
+                  if paymentBookingStatus == FRFSTicketService.SUCCESS && shouldProceedWithConfirm
                     then do
                       -- Add default TTL of 1 min or the value provided in the config
                       let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
@@ -380,6 +379,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
       splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled isSingleMode
       staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
       nwAddress <- asks (.nwAddress)
+      udf1 <- SLUtils.getPersonUdf1 person
       let createOrderReq =
             Payment.CreateOrderReq
               { orderId = paymentOrder.id.getId,
@@ -403,7 +403,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                 basket = Nothing,
                 paymentRules = Nothing,
                 autoRefundPostSuccess = Nothing,
-                paymentFilter = Nothing
+                paymentFilter = Nothing,
+                udf1 = udf1
               }
       mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
       isMetroTestTransaction <- asks (.isMetroTestTransaction)

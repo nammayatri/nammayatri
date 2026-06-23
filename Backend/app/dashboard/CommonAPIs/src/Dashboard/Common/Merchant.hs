@@ -204,7 +204,9 @@ data GoogleCfgUpdateReq = GoogleCfgUpdateReq
     googlePlaceNewUrl :: BaseUrl,
     useNewPlaces :: Bool,
     googleAutocompleteParams :: Maybe [Text],
-    mobilityBillingUrl :: Maybe BaseUrl
+    mobilityBillingUrl :: Maybe BaseUrl,
+    useRouteMatrix :: Maybe Bool,
+    googleRouteMatrixCfg :: Maybe Maps.GoogleRouteMatrixCfg
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -492,13 +494,15 @@ data IdfyCfgUpdateReq = IdfyCfgUpdateReq
   { accountId :: Text,
     apiKey :: Text,
     secret :: Text,
-    url :: BaseUrl
+    url :: BaseUrl,
+    faceCompareRetryLimit :: Maybe Int
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-newtype IdfyCfgUpdateTReq = IdfyCfgUpdateTReq
-  { url :: BaseUrl
+data IdfyCfgUpdateTReq = IdfyCfgUpdateTReq
+  { url :: BaseUrl,
+    faceCompareRetryLimit :: Maybe Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON)
@@ -1104,4 +1108,19 @@ data WhiteListOperatingCityRes = WhiteListOperatingCityRes
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets WhiteListOperatingCityReq where
+  hideSecrets = identity
+
+-- Airport-ops: enable/disable a vehicle for a special location (all gates/areas, trip categories,
+-- search sources) across ALL time bounds. String lists are parsed to domain types in the handler.
+data SetFareProductEnabledReq = SetFareProductEnabledReq
+  { enabled :: Bool,
+    areas :: [Text],
+    vehicleServiceTiers :: [Text],
+    tripCategories :: Maybe [Text],
+    searchSources :: Maybe [Text]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets SetFareProductEnabledReq where
   hideSecrets = identity

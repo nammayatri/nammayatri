@@ -13,6 +13,9 @@ imports:
   PurchasedPass: Domain.Types.PurchasedPass
   PurchasedPassPayment: Domain.Types.PurchasedPassPayment
   Day: Data.Time
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+  IssueMediaUploadReq: IssueManagement.Common.UI.Issue
+  IssueMediaUploadRes: IssueManagement.Common.UI.Issue
 
 importPackageOverrides:
   Domain.Types.Person: "rider-app"
@@ -22,6 +25,8 @@ importPackageOverrides:
   Lib.Payment.Domain.Types.PaymentOrder: "payment"
   Domain.Types.Pass: "rider-app"
   API.Types.UI.Pass: "rider-app"
+  IssueManagement.Domain.Types.MediaFile: "shared-services"
+  IssueManagement.Common.UI.Issue: "shared-services"
 
 module: Pass
 
@@ -29,10 +34,6 @@ types:
   PurchasedPassSelectReq:
     - startDay: Maybe Day
     - profilePicture: Maybe Text
-    - derive: "'HideSecrets"
-
-  UpdateProfilePictureReq:
-    - profilePicture: Text
     - derive: "'HideSecrets"
 
 apis:
@@ -115,10 +116,19 @@ apis:
       params:
         customerId: Id Person
         purchasedPassId: Id PurchasedPass
-      request:
-        type: UpdateProfilePictureReq
+      multipart:
+        type: IssueMediaUploadReq
       response:
-        type: APISuccess
+        type: IssueMediaUploadRes
+
+  - GET:
+      endpoint: /customer/{customerId}/pass/photo/{mediaId}
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        mediaId: Id MediaFile
+      response:
+        type: Text
 
   - POST:
       endpoint: /customer/{customerId}/pass/restore

@@ -10,3 +10,9 @@ ALTER TABLE atlas_driver_offer_bpp.entity_info ADD COLUMN question text NOT NULL
 ALTER TABLE atlas_driver_offer_bpp.entity_info ADD COLUMN question_id text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.entity_info ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.entity_info ADD PRIMARY KEY ( entity_id, entity_type, question_id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.entity_info ADD COLUMN media_file_id text ;

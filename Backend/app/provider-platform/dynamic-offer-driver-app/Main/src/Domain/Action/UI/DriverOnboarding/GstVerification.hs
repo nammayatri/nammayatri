@@ -17,6 +17,8 @@ module Domain.Action.UI.DriverOnboarding.GstVerification
     DriverGstinRes,
     verifyGstin,
     onVerifyGst,
+    assertUploadedGstLinkedToExistingPan,
+    assertUploadedPanLinkedToExistingGst,
   )
 where
 
@@ -63,11 +65,13 @@ import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsa
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverGstin as DGQuery
 import qualified Storage.Queries.DriverGstinExtra as DGQueryExtra
+import qualified Storage.Queries.DriverPanCard as DPQuery
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
 import Tools.Error
+import qualified Tools.Utils as Utils
 import qualified Tools.Verification as Verification
 
 data DriverGstinReq = DriverGstinReq
@@ -136,7 +140,12 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let mbGstVerificationService =
         (if isDashboard then merchantServiceUsageConfig.dashboardGstVerificationService else merchantServiceUsageConfig.gstVerificationService)
+  let gstPanLinkCheckRequired = DCommon.checkFleetOwnerRole person.role && fromMaybe False transporterConfig.isGstPanLinkCheckRequired
   let runBody = do
+        -- Inside the lock so the read of the existing PAN and the create of this GST
+        -- are atomic w.r.t. a concurrent PAN upload for the same person (TOCTOU).
+        when gstPanLinkCheckRequired $
+          assertUploadedGstLinkedToExistingPan person req.gstin (Id req.imageId)
         case mbGstVerificationService of
           Just VI.Idfy -> do
             mdriverGstInformation <- DGQuery.findByDriverId person.id
@@ -150,7 +159,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
             gstin <- encrypt req.gstin
             QFOI.updateGstImage (Just gstin) (Just req.imageId) person.id
           _ -> pure ()
-  if DVRC.isNameCompareRequired transporterConfig verifyBy
+  if DVRC.isNameCompareRequired transporterConfig verifyBy || gstPanLinkCheckRequired
     then Redis.withWaitOnLockRedisWithExpiry (DVRC.makeDocumentVerificationLockKey personId.getId) 10 10 runBody
     else runBody
   res <- case person.role of
@@ -303,15 +312,53 @@ onVerifyGstHandler :: Person.Person -> Id Image.Image -> Maybe (Id Image.Image) 
 onVerifyGstHandler person imageId1 imageId2 output = do
   logDebug $ "onVerifyGstHandler: " <> show output
   mEncryptedGstinNumber <- encrypt `mapM` output.gstin
-  let isValidGst = output.gstinStatus == Just "Active"
-      verificationStatus = if isValidGst then Documents.VALID else Documents.INVALID
+  let isActive = output.gstinStatus == Just "Active"
+      isFleet = DCommon.checkFleetOwnerRole person.role
+      mbLegalName = (\t -> if T.strip t == "" then Nothing else Just t) =<< output.legalName
+      legalNameMissing = isFleet && isNothing mbLegalName
+      verificationStatus = if isActive && not legalNameMissing then Documents.VALID else Documents.INVALID
       mbPrincipalAddr = output.principalPlaceOfBusinessFields
   DGQueryExtra.updateVerificationStatusWithPlaceDetails verificationStatus (mbPrincipalAddr >>= (.pincode)) (mbPrincipalAddr >>= (.stateName)) person.id
-  when (DCommon.checkFleetOwnerRole person.role) $ do
+  when isFleet $ do
     QFOI.updateGstImage mEncryptedGstinNumber (Just imageId1.getId) person.id
+    when (verificationStatus == Documents.VALID) $ QFOI.updateFleetName mbLegalName person.id
   (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
-  when (((image1 >>= (.verificationStatus)) /= Just Documents.VALID) && ((image2 >>= (.verificationStatus)) /= Just Documents.VALID)) $
-    mapM_ (maybe (return ()) (ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard."))) [Just imageId1, imageId2]
+  let rejectForMissingLegalName = ImageQuery.updateVerificationStatusAndFailureReason Documents.INVALID GstLegalNameNotFound imageId1
+      markImagesValidIfNeeded =
+        when (((image1 >>= (.verificationStatus)) /= Just Documents.VALID) && ((image2 >>= (.verificationStatus)) /= Just Documents.VALID)) $
+          mapM_ (maybe (return ()) (ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard."))) [Just imageId1, imageId2]
+  if legalNameMissing then rejectForMissingLegalName else markImagesValidIfNeeded
+
+assertUploadedGstLinkedToExistingPan :: Person.Person -> Text -> Id Image.Image -> Flow ()
+assertUploadedGstLinkedToExistingPan person gstin imageId = do
+  mPanCard <- DPQuery.findValidByDriverId person.id
+  whenJust mPanCard $ \panCard -> do
+    panNumber <- decrypt panCard.panCardNumber
+    rejectIfPanGstUnlinked person panNumber gstin imageId
+
+assertUploadedPanLinkedToExistingGst :: Person.Person -> Text -> Id Image.Image -> Flow ()
+assertUploadedPanLinkedToExistingGst person panNumber imageId = do
+  mDriverGstin <- DGQuery.findValidByDriverId person.id
+  whenJust mDriverGstin $ \driverGstin -> do
+    gstin <- decrypt driverGstin.gstin
+    rejectIfPanGstUnlinked person panNumber gstin imageId
+
+rejectIfPanGstUnlinked :: Person.Person -> Text -> Text -> Id Image.Image -> Flow ()
+rejectIfPanGstUnlinked person panNumber gstin imageId = do
+  let normalizedPan = T.toUpper (removeSpaceAndDash panNumber)
+      normalizedGstin = T.toUpper (removeSpaceAndDash gstin)
+      -- A GSTIN embeds the holder's PAN at characters 3-12, so the PAN must sit at that exact slice
+      panInGstin = T.take 10 (T.drop 2 normalizedGstin)
+  unless (panInGstin == normalizedPan) $ do
+    logWarning $
+      "rejectIfPanGstUnlinked: PAN not linked to GST, rejecting upload. driverId="
+        <> person.id.getId
+        <> " pan="
+        <> maskText panNumber
+        <> " gstin="
+        <> maskText gstin
+    Utils.cleanupUploadedImages [imageId] person.id
+    throwError PanGstNumberMismatch
 
 mkIdfyVerificationEntityGst :: MonadFlow m => Person.Person -> Id Image.Image -> Text -> UTCTime -> DIdfy.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> m DIdfy.IdfyVerification
 mkIdfyVerificationEntityGst person imageId1 requestId now imageExtractionValidation encryptedGst = do

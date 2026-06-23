@@ -75,6 +75,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Coins.CoinHistory as CHistory
+import qualified Storage.Queries.Coins.CoinsConfig as SQCC
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetConfig as QFC
@@ -201,11 +202,11 @@ driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityI
       coinConfiguration <- do
         result <- case mbServiceTierType of
           Just stt -> do
-            res <- getConfig (baseDims {serviceTierType = Just stt}) Nothing
+            res <- getConfig (baseDims {serviceTierType = Just stt}) (Just (SQCC.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId (Just vehCategory) (Just stt) tripCatType))
             if null res then pure [] else pure res
           Nothing -> pure []
         if null result
-          then getConfig baseDims Nothing
+          then getConfig baseDims (Just (SQCC.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId (Just vehCategory) Nothing tripCatType))
           else return result
       let applicableCoinConfiguration =
             if null incentiveCohortFunctions

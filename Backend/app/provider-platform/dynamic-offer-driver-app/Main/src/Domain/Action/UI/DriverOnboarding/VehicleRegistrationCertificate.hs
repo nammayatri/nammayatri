@@ -46,6 +46,7 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     isNameCompareRequired,
     inferPanTypeFromNumber,
     isBusinessPan,
+    validateIndividualPANCheck,
     getDriverDocumentInfo,
     getDocumentImage,
     isNameComparePercentageValid,
@@ -69,6 +70,7 @@ import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as ODC
+import qualified Domain.Types.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.HyperVergeVerification as Domain
@@ -731,7 +733,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             approved = Just False,
             updatedAt = now,
             vehicleImageId = Nothing,
-            verified = Nothing
+            verified = Nothing,
+            pendingChallan = Nothing
           }
     initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures = do
       case mVehicleRC of
@@ -895,6 +898,8 @@ deactivateRC isTaxiBoothRequest transporterConfig rc driverId = do
     throwError (InvalidRequest "Driver can't deactivate RC which is not active with them")
   removeVehicle isTaxiBoothRequest driverId
   DAQuery.deactivateRCForDriver False driverId rc.id
+  now <- getCurrentTime
+  DIQuery.updateActivityWithDriverFlowStatus False (Just DCommon.OFFLINE) (Just DDFS.OFFLINE) Nothing (Just now) (cast driverId)
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverId
   return ()
 
@@ -964,7 +969,7 @@ validateRCActivation isTaxiBoothRequest driverId transporterConfig rc = do
 
 activateRC :: DI.DriverInformation -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTC.TransporterConfig -> UTCTime -> Domain.VehicleRegistrationCertificate -> Flow ()
 activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
-  when (transporterConfig.requiresOnboardingInspection == Just True) $ do
+  when (transporterConfig.requiresOnboardingInspection == Just True || transporterConfig.enableBotFlow == Just True) $ do
     unless driverInfo.enabled $ do
       DAQuery.updateRcErrorMessage driverInfo.driverId rc.id "Driver is not enabled"
       throwError (InvalidRequest "Driver is not enabled")
@@ -1209,3 +1214,14 @@ inferPanTypeFromNumber panNumber =
 
 isBusinessPan :: Maybe Text -> Bool
 isBusinessPan = maybe False ((== Just DPan.BUSINESS) . inferPanTypeFromNumber)
+
+-- | When a merchant enables individualPANCheck, reject business PANs (4th char ≠ 'P')
+-- for individual drivers (incl. fleet drivers) and individual fleet owners.
+-- Business fleet owners and other roles are exempt, as they may hold a business PAN.
+validateIndividualPANCheck :: DTC.TransporterConfig -> Person.Person -> Text -> Flow ()
+validateIndividualPANCheck transporterConfig person panNumber =
+  when (transporterConfig.individualPANCheck == Just True && isIndividualRole person.role) $
+    when (inferPanTypeFromNumber (removeSpaceAndDash panNumber) /= Just DPan.INDIVIDUAL) $
+      throwError (InvalidRequest "Business PAN card not be accepted please upload individual PAN")
+  where
+    isIndividualRole role = role == Person.DRIVER || role == Person.FLEET_OWNER

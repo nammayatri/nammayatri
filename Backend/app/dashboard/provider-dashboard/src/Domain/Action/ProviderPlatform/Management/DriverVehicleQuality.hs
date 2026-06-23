@@ -23,10 +23,10 @@ import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 
-getDriverVehicleQualityList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Int -> Kernel.Prelude.Double -> Dashboard.Common.VehicleVariant -> Environment.Flow API.Types.ProviderPlatform.Management.DriverVehicleQuality.DriverVehicleQualityListRes)
-getDriverVehicleQualityList merchantShortId opCity apiTokenInfo limit maxVehicleRating offset maxVehicleAge minDriverRating vehicleVariant = do
+getDriverVehicleQualityList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Dashboard.Common.VehicleVariant -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe [Dashboard.Common.VehicleVariant] -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Int -> Kernel.Prelude.Double -> Environment.Flow API.Types.ProviderPlatform.Management.DriverVehicleQuality.DriverVehicleQualityListRes)
+getDriverVehicleQualityList merchantShortId opCity apiTokenInfo vehicleVariant limit maxVehicleRating minVehicleRating vehicleVariants offset maxVehicleAge minDriverRating = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.driverVehicleQualityDSL.getDriverVehicleQualityList) limit maxVehicleRating offset maxVehicleAge minDriverRating vehicleVariant
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.driverVehicleQualityDSL.getDriverVehicleQualityList) vehicleVariant limit maxVehicleRating minVehicleRating vehicleVariants offset maxVehicleAge minDriverRating
 
 getDriverVehicleQualitySearch :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow [API.Types.ProviderPlatform.Management.DriverVehicleQuality.DriverVehicleQualityResp])
 getDriverVehicleQualitySearch merchantShortId opCity apiTokenInfo phoneNumber vehicleNumber = do

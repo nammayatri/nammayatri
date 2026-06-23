@@ -9,7 +9,7 @@ imports:
   DriverMode: API.Types.ProviderPlatform.Fleet.Endpoints.Driver
   DocumentType: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
   Image: Dashboard.Common
-  Value: Data.Aeson
+  CRCVerificationResponse: Kernel.External.Verification.Types
 
 module: Driver
 
@@ -257,12 +257,20 @@ types:
     requestType: RequestType
     requestStatus: RequestStatus
     requestTime: UTCTime
+    remarks: Maybe Text
+    inspectionResponse: Maybe [InspectionResponseItem]
   RespondHubRequest:
     status: RequestStatus
     operationHubRequestId: Text
     operatorId: Text
     remarks: Text
+    responses: Maybe [InspectionResponseItem]
     derive: "'HideSecrets"
+  InspectionResponseItem:
+    questionId: Text
+    question: Text
+    answer: Text
+    mediaFileId: Maybe Text
   DriverInfo:
     - driverId: Id Driver
     - firstName: Text
@@ -310,6 +318,16 @@ types:
     - name: Maybe Text
     - mobileNumber: Maybe Text
     - rcNo: Maybe Text
+    - courtRecord: Maybe CourtRecordResult
+    - pendingChallan: Maybe PendingChallanResult
+
+  CourtRecordResult:
+    - result: Maybe CRCVerificationResponse
+    - errorMessage: Maybe Text
+
+  PendingChallanResult:
+    - pendingChallanCount: Maybe Int
+    - errorMessage: Maybe Text
 
   ReviewQueueResp:
     - reviewQueue : [ReviewQueue]

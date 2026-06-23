@@ -13,10 +13,12 @@ apis:
       mandatoryQuery:
         maxVehicleAge: Int
         minDriverRating: Double
-        vehicleVariant: VehicleVariant
       query:
+        - vehicleVariant: VehicleVariant # deprecated
         - limit: Int
-        - maxVehicleRating: Double
+        - maxVehicleRating: Double # deprecated
+        - minVehicleRating: Double
+        - vehicleVariants: [VehicleVariant]
         - offset: Int
       response:
         type: DriverVehicleQualityListRes

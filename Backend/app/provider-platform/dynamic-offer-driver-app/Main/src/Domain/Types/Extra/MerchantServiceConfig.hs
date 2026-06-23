@@ -11,6 +11,8 @@ import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.External.BackgroundVerification.Types as BackgroundVerification
 import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Interface.Types
+import qualified Kernel.External.ChallanSearch.Interface.Types as ChallanSearchInterface
+import qualified Kernel.External.ChallanSearch.Types as ChallanSearch
 import Kernel.External.Encryption
 import qualified Kernel.External.GSTEInvoice.Interface.Types as GSTEInvoice
 import qualified Kernel.External.GSTEInvoice.Types as GSTEInvoice
@@ -89,6 +91,7 @@ data ServiceName
   | SettlementService Settlement.SettlementService
   | GSTEInvoiceService GSTEInvoice.GSTEInvoiceService
   | AirportReachargeService Payment.PaymentService
+  | ChallanSearchService ChallanSearch.ChallanSearchService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -123,6 +126,7 @@ instance Show ServiceName where
   show (SettlementService s) = "Settlement_" <> show s
   show (GSTEInvoiceService s) = "GSTEInvoice_" <> show s
   show (AirportReachargeService s) = "AirportReacharge_" <> show s
+  show (ChallanSearchService s) = "ChallanSearch_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -241,6 +245,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "AirportReacharge_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (ChallanSearchService v1, r2)
+                 | r1 <- stripPrefix "ChallanSearch_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -275,6 +283,7 @@ data ServiceConfigD (s :: UsageSafety)
   | SettlementServiceConfig !Settlement.SettlementServiceConfig
   | GSTEInvoiceServiceConfig !GSTEInvoice.GSTEInvoiceConfig
   | AirportReachargeServiceConfig !PaymentServiceConfig
+  | ChallanSearchServiceConfig !ChallanSearchInterface.ChallanSearchServiceConfig
   deriving (Generic, Eq, Show)
 
 type ServiceConfig = ServiceConfigD 'Safe

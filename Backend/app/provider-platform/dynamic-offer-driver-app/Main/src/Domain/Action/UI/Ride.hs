@@ -20,6 +20,7 @@ module Domain.Action.UI.Ride
     DeliveryImageUploadReq (..),
     StopAction (..),
     listDriverRides,
+    getDriverRideById,
     arrivedAtPickup,
     arrivedAtDestination,
     otpRideCreate,
@@ -44,6 +45,7 @@ import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Action.UI.RideDetails as RD
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -209,19 +211,7 @@ listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay 
     (False, Just True) -> return []
     _ -> QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDays
 
-  driverRideLis <- forM rides $ \(ride, booking) -> do
-    rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
-    rideRating <- runInReplica $ QR.findRatingForRide ride.id
-    driverNumber <- RD.getDriverNumber rideDetail
-    mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
-    bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
-    riderCallingNumber <- case transporterConfig >>= DTC.driverCallingOption of
-      Just option | ride.status `notElem` [DRide.COMPLETED, DRide.CANCELLED] -> getRiderMobileNumber booking option
-      _ -> pure Nothing
-    isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-    stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
-    let goHomeReqId = ride.driverGoHomeRequestId
-    RideCommon.mkDriverRideRes driverLanguage mbEarningsLabels rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP stopsInfo riderCallingNumber
+  driverRideLis <- forM rides $ buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels transporterConfig
   filteredRides <- case mbFleetOwnerId of
     Just fleetOwnerId -> do
       isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId True
@@ -229,6 +219,50 @@ listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay 
       return $ filter (\ride -> ride.fleetOwnerId == (Just fleetOwnerId)) driverRideLis
     Nothing -> return driverRideLis
   pure . DriverRideListRes $ sortOn (Down . (.bookingType)) filteredRides
+
+getDriverRideById ::
+  (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r) =>
+  Id DP.Person ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
+  Id DRide.Ride ->
+  Maybe Bool ->
+  m RideCommon.DriverRideRes
+getDriverRideById driverId mocId rideId mbFinanceData = do
+  driverInfo <- runInReplica $ QDI.findById driverId >>= fromMaybeM (DriverNotFound driverId.getId)
+  driverPerson <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  let driverLanguage = fromMaybe L.ENGLISH driverPerson.language
+      rideEarningsEnabled = mbFinanceData == Just True
+  transporterConfig <- case mocId of
+    Just id -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = id.getId}) (Just (SCTC.findByMerchantOpCityId id Nothing))
+    Nothing -> pure Nothing
+  mbEarningsLabels <- if rideEarningsEnabled then Just <$> RideCommon.fetchEarningsLabels driverLanguage else pure Nothing
+  ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  unless (ride.driverId == driverId) $ throwError (RideDoesNotExist rideId.getId)
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels transporterConfig (ride, booking)
+
+buildDriverRideResItem ::
+  (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r) =>
+  Id DP.Person ->
+  DDI.DriverInformation ->
+  L.Language ->
+  Maybe RideCommon.EarningsLabels ->
+  Maybe DTC.TransporterConfig ->
+  (DRide.Ride, DRB.Booking) ->
+  m RideCommon.DriverRideRes
+buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels transporterConfig (ride, booking) = do
+  rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
+  rideRating <- runInReplica $ QR.findRatingForRide ride.id
+  driverNumber <- RD.getDriverNumber rideDetail
+  mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
+  bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
+  riderCallingNumber <- case transporterConfig >>= DTC.driverCallingOption of
+    Just option | ride.status `notElem` [DRide.COMPLETED, DRide.CANCELLED] -> getRiderMobileNumber booking option
+    _ -> pure Nothing
+  isValueAddNP <- CQVAN.isValueAddNP booking.bapId
+  stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
+  let goHomeReqId = ride.driverGoHomeRequestId
+  RideCommon.mkDriverRideRes driverLanguage mbEarningsLabels rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP stopsInfo riderCallingNumber
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig], Hedis.HedisLTSFlowEnv r) => Id DRide.Ride -> LatLong -> m APISuccess
 arrivedAtPickup rideId req = do
@@ -424,7 +458,9 @@ uploadOdometerReading merchantOpCityId rideId UploadOdometerReq {..} = do
             url = url,
             s3FilePath = Just fp,
             status = Just MediaFile.PENDING,
-            createdAt = now
+            fileHash = Nothing,
+            createdAt = now,
+            updatedAt = now
           }
 
 uploadDeliveryImage ::
@@ -478,7 +514,9 @@ uploadDeliveryImage merchantOpCityId rideId DeliveryImageUploadReq {..} = do
             url = url,
             s3FilePath = Just fp,
             status = Just MediaFile.PENDING,
-            createdAt = now
+            fileHash = Nothing,
+            createdAt = now,
+            updatedAt = now
           }
 
 arrivedAtDestination :: Id DRide.Ride -> LatLong -> Flow APISuccess

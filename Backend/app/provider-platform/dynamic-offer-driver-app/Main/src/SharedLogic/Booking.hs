@@ -104,7 +104,7 @@ cancelBooking booking mbDriver transporter = do
         Nothing -> throwError (PersonNotFound ride.driverId.getId)
         Just driver -> do
           fork "cancelRide - Notify driver" $ do
-            Notify.notifyOnCancel booking.merchantOperatingCityId booking driver bookingCancellationReason.source
+            Notify.notifyOnCancel booking.merchantOperatingCityId ride.id booking driver bookingCancellationReason.source
   where
     buildBookingCancellationReason driverId ride merchantId = do
       return $

@@ -196,10 +196,7 @@ updateDocsVerificationStatusByCertificateNumberHash docsVerificationStatus certi
     ]
     [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certificateHash]
 
--- | Set the RC's `verified` flag (ops/onboarding) by certificate-number hash.
---   Used under enableBotFlow, where statusHandler' writes verified once all mandatory
---   vehicle docs are VALID; `approved`/activation remain BOT-owned.
---   Only writes when `verified` actually changes; skips redundant true->true / false->false updates (and their KV/cache churn).
+-- | Set RC `verified` by cert-number hash; skips no-op writes (the `IS NULL` OR keeps the first write null-safe).
 updateVerifiedByCertificateNumberHash ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe Bool ->
@@ -213,7 +210,10 @@ updateVerifiedByCertificateNumberHash verified certificateHash = do
     ]
     [ Se.And
         [ Se.Is BeamVRC.certificateNumberHash $ Se.Eq certificateHash,
-          Se.Is BeamVRC.verified $ Se.Not $ Se.Eq verified
+          Se.Or
+            [ Se.Is BeamVRC.verified $ Se.Eq Nothing, -- first write (NULL) — cover it; NULL <> x is NULL
+              Se.Is BeamVRC.verified $ Se.Not (Se.Eq verified)
+            ]
         ]
     ]
 

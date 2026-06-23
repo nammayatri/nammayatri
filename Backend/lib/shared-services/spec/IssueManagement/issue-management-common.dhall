@@ -5,6 +5,7 @@ let outputPath =
       , _extraCachedQueries = ""
       , _beamTable = ""
       , _purescriptFrontend = ""
+      , _configPilot = ""
       }
 
 let GeneratorType =
@@ -23,6 +24,7 @@ let GeneratorType =
       | DOMAIN_TYPE
       | SQL
       | PURE_SCRIPT_FRONTEND
+      | CONFIG_PILOT
       >
 
 let ImportType = < SIMPLE | QUALIFIED >

@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.VehicleRegistrationCertificate where
 
+import qualified Data.Aeson
 import qualified Domain.Types.VehicleRegistrationCertificate
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -10,6 +11,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.VehicleRegistrationCertificate as Beam
 
 instance FromTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate where
@@ -32,6 +34,7 @@ instance FromTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegi
             mYManufacturing = mYManufacturing,
             manufacturerModel = manufacturerModel,
             oxygen = oxygen,
+            pendingChallan = Kernel.Utils.JSON.valueToMaybe =<< pendingChallan,
             permitExpiry = permitExpiry,
             pucExpiry = pucExpiry,
             rejectReason = rejectReason,
@@ -80,6 +83,7 @@ instance ToTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegist
         Beam.mYManufacturing = mYManufacturing,
         Beam.manufacturerModel = manufacturerModel,
         Beam.oxygen = oxygen,
+        Beam.pendingChallan = Data.Aeson.toJSON <$> pendingChallan,
         Beam.permitExpiry = permitExpiry,
         Beam.pucExpiry = pucExpiry,
         Beam.rejectReason = rejectReason,

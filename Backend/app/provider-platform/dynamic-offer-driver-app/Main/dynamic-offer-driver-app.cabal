@@ -278,6 +278,7 @@ library
       Domain.Action.UI.DriverHomeLocation
       Domain.Action.UI.DriverOnboarding.AadhaarVerification
       Domain.Action.UI.DriverOnboarding.BankAccountVerification
+      Domain.Action.UI.DriverOnboarding.CourtRecordCheck
       Domain.Action.UI.DriverOnboarding.DigiLockerCallback
       Domain.Action.UI.DriverOnboarding.DocumentRegistration
       Domain.Action.UI.DriverOnboarding.DriverLicense
@@ -911,6 +912,7 @@ library
       Tools.BackgroundVerification
       Tools.Beam.UtilsTH
       Tools.Call
+      Tools.ChallanSearch
       Tools.ChatCompletion
       Tools.ConfigPilot
       Tools.Constants
@@ -1646,7 +1648,6 @@ library
       Storage.Queries.OrphanInstances.DriverGoHomeRequest
       Storage.Queries.OrphanInstances.DriverGstin
       Storage.Queries.OrphanInstances.DriverHomeLocation
-      Storage.Queries.OrphanInstances.DriverIdentityInfo
       Storage.Queries.OrphanInstances.DriverInformation
       Storage.Queries.OrphanInstances.DriverLicense
       Storage.Queries.OrphanInstances.DriverOperatorAssociation

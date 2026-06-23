@@ -920,14 +920,14 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN default_onboard
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN use_category_based_verification_priority_list boolean  default true;
 
+------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_court_record_check boolean ;
 
 
 ------- SQL updates -------
 
-
-
-
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_tier_upgrade_feature boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_mobility_billing boolean ;
@@ -936,3 +936,14 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_mobility
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_bot_flow boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN individual_pan_check boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_gst_pan_link_check_required boolean  default false;

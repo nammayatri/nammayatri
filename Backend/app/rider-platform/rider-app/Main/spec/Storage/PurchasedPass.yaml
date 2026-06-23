@@ -9,6 +9,7 @@ imports:
   ServiceTierType: BecknV2.FRFS.Enums
   BenefitType: Domain.Types.PurchasedPass
   PassEnum: Domain.Types.PassType
+  MediaFile: IssueManagement.Domain.Types.MediaFile
 
 PurchasedPass:
   tableName: purchased_pass
@@ -54,6 +55,7 @@ PurchasedPass:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     profilePicture: Maybe Text
+    passPhotoMediaId: Maybe (Id MediaFile)
     preferredSource: Maybe Text
     preferredDestination: Maybe Text
 
@@ -101,6 +103,11 @@ PurchasedPass:
       params: [preferredSource, preferredDestination]
       where: id
 
+    updatePassPhotoMediaIdById:
+      kvFunction: updateWithKV
+      params: [passPhotoMediaId]
+      where: id
+
     findAllByPersonIdsAndStatus:
       kvFunction: findAllWithKV
       where:
@@ -129,6 +136,7 @@ PurchasedPassPayment:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     profilePicture: Maybe Text
+    passPhotoMediaId: Maybe (Id MediaFile)
     passEnum: Maybe PassEnum
 
   beamType:
@@ -223,6 +231,15 @@ PurchasedPassPayment:
     updateProfilePictureByPurchasedPassIdAndStatus:
       kvFunction: updateWithKV
       params: [profilePicture]
+      where:
+        and:
+          - purchasedPassId
+          - in:
+            - status
+
+    updatePassPhotoMediaIdByPurchasedPassIdAndStatus:
+      kvFunction: updateWithKV
+      params: [passPhotoMediaId]
       where:
         and:
           - purchasedPassId

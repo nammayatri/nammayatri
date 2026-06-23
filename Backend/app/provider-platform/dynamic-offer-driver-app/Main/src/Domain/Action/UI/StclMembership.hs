@@ -139,7 +139,8 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
             basket = Nothing,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing
+            paymentFilter = Nothing,
+            udf1 = Nothing
           }
 
   -- PaymentServiceType for createOrderService (STCL)
@@ -330,7 +331,8 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
                   basket = Nothing,
                   paymentRules = Nothing,
                   autoRefundPostSuccess = Nothing,
-                  paymentFilter = Nothing
+                  paymentFilter = Nothing,
+                  udf1 = Nothing
                 }
         SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) resumeReq (Just paymentServiceType)
       Nothing -> do
@@ -379,7 +381,8 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
                   basket = Nothing,
                   paymentRules = Nothing,
                   autoRefundPostSuccess = Nothing,
-                  paymentFilter = Nothing
+                  paymentFilter = Nothing,
+                  udf1 = Nothing
                 }
 
         createOrderResp <- SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) createOrderReq (Just paymentServiceType)

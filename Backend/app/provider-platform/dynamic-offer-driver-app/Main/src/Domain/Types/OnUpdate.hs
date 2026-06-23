@@ -97,7 +97,7 @@ data DSafetyAlertReq = DSafetyAlertReq
   }
 
 data DEditDestinationUpdateReq = DEditDestinationUpdateReq
-  { bookingDetails :: BookingDetails,
+  { bookingDetails :: Maybe BookingDetails,
     bookingUpdateReqDetails :: DBUR.BookingUpdateRequest,
     newDestination :: Maybe DL.Location,
     currentLocation :: Maybe Maps.LatLong,

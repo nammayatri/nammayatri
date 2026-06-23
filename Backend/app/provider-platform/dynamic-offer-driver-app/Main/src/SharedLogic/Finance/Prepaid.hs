@@ -10,6 +10,7 @@ module SharedLogic.Finance.Prepaid
     expiryRevenueRecognitionReferenceType,
     expiryCreditTransferReferenceType,
     prepaidSubLedger,
+    resolvePrepaidScope,
     getPrepaidAccountByOwner,
     getPrepaidBalanceByOwner,
     getPrepaidPendingHoldByOwner,
@@ -30,6 +31,7 @@ import qualified Data.List as DL
 import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.Extra.Plan (ServiceNames (..))
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType)
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.External.Encryption (EncFlow, decrypt)
@@ -115,6 +117,16 @@ encodePrepaidSubLedger = \case
 -- RideCredit account. Nothing produces the pooled (non-isolated) account.
 prepaidSubLedger :: Maybe DVC.VehicleCategory -> Maybe Text
 prepaidSubLedger = fmap encodePrepaidSubLedger
+
+resolvePrepaidScope ::
+  (BeamFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Maybe DVC.VehicleCategory ->
+  m (Maybe DVC.VehicleCategory)
+resolvePrepaidScope merchantOpCityId mbVehicleCategory = do
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
+  let scopedEnabled = maybe False (fromMaybe False . (.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled)) mbTransporterConfig
+  pure $ if scopedEnabled then mbVehicleCategory else Nothing
 
 getPrepaidAccountByOwner ::
   (BeamFlow m r) =>
@@ -784,13 +796,15 @@ handleSubscriptionExpiry purchase = do
         merchantOperatingCityId = purchase.merchantOperatingCityId.getId
         referenceId = purchase.id.getId
 
-    -- Fetch all other ACTIVE subscriptions in the same category scope (excluding the one being expired)
-    allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId purchase.ownerType PREPAID_SUBSCRIPTION purchase.vehicleCategory
+    prepaidScope <- resolvePrepaidScope purchase.merchantOperatingCityId purchase.vehicleCategory
+
+    -- Fetch all other ACTIVE subscriptions in the same scope (excluding the one being expired)
+    allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId purchase.ownerType PREPAID_SUBSCRIPTION prepaidScope
     let otherActive = filter (\p -> p.id /= purchase.id) allActive
         otherActiveCredits = sum $ map (.planRideCredit) otherActive
 
     -- Get current balance scoped to the same sub-ledger as the expiring purchase
-    mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId purchase.vehicleCategory
+    mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId prepaidScope
     let currentBalance = fromMaybe 0 mbBalance
         -- Credits attributable to the expiring subscription
         expiredCredits = max 0 (currentBalance - otherActiveCredits)
@@ -803,7 +817,7 @@ handleSubscriptionExpiry purchase = do
               then (expiredCredits / totalPlanCredit) * purchase.planFee
               else 0
 
-      mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId purchase.vehicleCategory
+      mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId prepaidScope
       mbSellerLiability <- getOrCreateSellerLiabilityAccount currency merchantId merchantOperatingCityId
       mbSellerRevenue <- getOrCreateSellerRevenueAccount currency merchantId merchantOperatingCityId
       mbSellerRideCredit <- getOrCreateSellerRideCreditAccount currency merchantId merchantOperatingCityId

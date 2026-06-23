@@ -42,7 +42,7 @@ seatHoldReaperImpl ::
   ) =>
   m ()
 seatHoldReaperImpl = do
-  holds <- Hedis.sMembers "active-seat-holds"
+  holds <- Hedis.runInMasterCloudRedisCell $ Hedis.sMembers "active-seat-holds"
   forM_ holds $ \(ActiveSeatHold tripId holdId) ->
     processHold tripId holdId
 
@@ -53,7 +53,7 @@ processHold ::
   m ()
 processHold tripId holdId = do
   let tKey = timerKey tripId holdId
-  timerTtl <- Hedis.ttl tKey
+  timerTtl <- Hedis.runInMasterCloudRedisCell $ Hedis.ttl tKey
   -- TTL == -2 → timer key does not exist (expired)
   when (timerTtl <= -1) $ do
     logInfo $ "SeatHoldReaper:processHold expired holdId=" <> holdId <> " tripId=" <> tripId

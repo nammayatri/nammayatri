@@ -1261,6 +1261,8 @@ data DriverOnboardingError
   | ImageLowQuality
   | ImageInvalidType Text Text
   | ImageDocumentNumberMismatch Text Text
+  | PanGstNumberMismatch
+  | GstLegalNameNotFound
   | ImageExtractionFailed
   | ImageNotFound Text
   | ImageAccessDenied Text
@@ -1347,6 +1349,8 @@ instance IsBaseError DriverOnboardingError where
         then Just $ "We couldn't detect a valid " <> provided <> " in the uploaded image. Please ensure the document is clearly visible and try again."
         else Just $ "The uploaded image appears to be a " <> actual <> " instead of a " <> provided <> ". Please upload a clear photo of your " <> provided <> "."
     ImageDocumentNumberMismatch a b -> Just $ "Document number \"" <> a <> "\" in image is not matching with input \"" <> b <> "\"."
+    PanGstNumberMismatch -> Just "PAN and GST do not belong to the same entity. Please re-upload the document."
+    GstLegalNameNotFound -> Just "Legal name not found in the GSTIN verification response."
     ImageExtractionFailed -> Just "Image extraction failed"
     ImageNotFound id_ -> Just $ "Image with imageId \"" <> id_ <> "\" not found."
     ImageAccessDenied id_ -> Just $ "Access denied for image with imageId \"" <> id_ <> "\"."
@@ -1429,6 +1433,8 @@ instance IsHTTPError DriverOnboardingError where
     ImageLowQuality -> "IMAGE_LOW_QUALITY"
     ImageInvalidType _ _ -> "IMAGE_INVALID_TYPE"
     ImageDocumentNumberMismatch _ _ -> "IMAGE_DOCUMENT_NUMBER_MISMATCH"
+    PanGstNumberMismatch -> "PAN_GST_NUMBER_MISMATCH"
+    GstLegalNameNotFound -> "GST_LEGAL_NAME_NOT_FOUND"
     ImageExtractionFailed -> "IMAGE_EXTRACTION_FAILED"
     ImageNotFound _ -> "IMAGE_NOT_FOUND"
     ImageAccessDenied _ -> "IMAGE_ACCESS_DENIED"
@@ -1509,6 +1515,8 @@ instance IsHTTPError DriverOnboardingError where
     ImageLowQuality -> E400
     ImageInvalidType _ _ -> E400
     ImageDocumentNumberMismatch _ _ -> E400
+    PanGstNumberMismatch -> E400
+    GstLegalNameNotFound -> E400
     ImageExtractionFailed -> E400
     ImageNotFound _ -> E400
     ImageAccessDenied _ -> E403

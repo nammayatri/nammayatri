@@ -91,6 +91,7 @@ import qualified Storage.Queries.NotificationSoundsConfig as SQNSC
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchReq
+import qualified Storage.Queries.Transformers.Booking as TBooking
 import Tools.Error
 import qualified Tools.SMS as Sms
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
@@ -439,6 +440,31 @@ newtype RideStartedParam = RideStartedParam
   { driverName :: Text
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+newtype ServiceTierChangedParam = ServiceTierChangedParam
+  { serviceTierName :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+notifyOnServiceTierChange ::
+  ServiceFlow m r =>
+  SRB.Booking ->
+  Text ->
+  m ()
+notifyOnServiceTierChange booking newServiceTierName = do
+  let personId = booking.riderId
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let entity = Notification.Entity Notification.Product booking.id.getId (ServiceTierChangedParam newServiceTierName)
+      dynamicParams = ServiceTierChangedParam newServiceTierName
+  dynamicNotifyPerson
+    person
+    (createNotificationReq "SERVICE_TIER_CHANGED" identity)
+    dynamicParams
+    entity
+    booking.tripCategory
+    [("serviceTierName", newServiceTierName)]
+    (Just booking.configInExperimentVersions)
+    Nothing
 
 newtype TripAssignedData = TripAssignedData
   { tripCategory :: Maybe TripCategory
@@ -1540,12 +1566,12 @@ notifyToAllBookingParties persons tripCategory notikey =
 notifyOnTripUpdate ::
   ServiceFlow m r =>
   SRB.Booking ->
-  SRide.Ride ->
+  Maybe SRide.Ride ->
   Maybe (Text, Text) ->
   m ()
-notifyOnTripUpdate booking ride err = do
+notifyOnTripUpdate booking mbRide err = do
   let personId = booking.riderId
-      rideId = ride.id
+      entityId = maybe booking.id.getId (.id.getId) mbRide
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
   (title, body) <- case err of
@@ -1561,7 +1587,7 @@ notifyOnTripUpdate booking ride err = do
             subCategory = Nothing,
             showNotification = Notification.SHOW,
             messagePriority = Nothing,
-            entity = Notification.Entity Notification.Product rideId.getId (),
+            entity = Notification.Entity Notification.Product entityId (),
             body,
             title,
             dynamicParams = EmptyDynamicParam,
@@ -1570,7 +1596,7 @@ notifyOnTripUpdate booking ride err = do
             sound = notificationSound
           }
       toLocationDestination = do
-        loc <- ride.toLocation
+        loc <- maybe (TBooking.getToLocation booking.bookingDetails) (.toLocation) mbRide
         let addr = loc.address
         addr.building <|> addr.title <|> addr.area <|> addr.street <|> addr.city
       liveActivityReq =
@@ -1588,10 +1614,10 @@ notifyOnTripUpdate booking ride err = do
                           bookingInfo =
                             Just $
                               FCMType.BookingInfo
-                                { vehicleColor = ride.vehicleColor,
-                                  vehicleName = Just ride.vehicleModel,
-                                  vehicleNumber = Just ride.vehicleNumber,
-                                  vehicleVariant = Just (show ride.vehicleVariant),
+                                { vehicleColor = mbRide >>= (.vehicleColor),
+                                  vehicleName = (.vehicleModel) <$> mbRide,
+                                  vehicleNumber = (.vehicleNumber) <$> mbRide,
+                                  vehicleVariant = Just (show (maybe (VehicleVariant.castServiceTierToVariant booking.vehicleServiceTierType) (.vehicleVariant) mbRide)),
                                   source = Nothing,
                                   destination = toLocationDestination,
                                   estimatedFare = Just (show booking.estimatedFare)

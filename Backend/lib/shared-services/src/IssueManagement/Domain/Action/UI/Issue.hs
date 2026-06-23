@@ -298,7 +298,9 @@ createMediaEntry url fileType filePath = do
             url = fileUrl,
             s3FilePath = Just filePath,
             status = Just D.PENDING,
-            createdAt = now
+            fileHash = Nothing,
+            createdAt = now,
+            updatedAt = now
           }
 
 issueMediaUpload' ::
@@ -314,16 +316,37 @@ issueMediaUpload' ::
   Text ->
   Text ->
   m Common.IssueMediaUploadRes
-issueMediaUpload' (personId, merchantId, merchantOperatingCityId) issueHandle Common.IssueMediaUploadReq {..} domain identifier = do
-  contentType <- validateContentType
+issueMediaUpload' (personId, merchantId, merchantOperatingCityId) issueHandle req domain identifier = do
   config <- issueHandle.findMerchantConfig merchantId merchantOperatingCityId (Just personId)
+  mediaUploadToS3 config.mediaFileSizeUpperLimit config.mediaFileUrlPattern req domain identifier
+
+-- | Core S3 media upload extracted from 'issueMediaUpload''. Parameterized by
+-- the media size limit and URL pattern, so callers can reuse the exact upload
+-- flow without constructing a full 'ServiceHandle' / 'MerchantConfig'.
+-- @domain@ scopes the S3 location (and the @<DOMAIN>@ url segment) and
+-- @identifier@ is appended into the path (e.g. a person id or pass id), so
+-- callers can keep their media in a separate, reusable namespace.
+mediaUploadToS3 ::
+  ( BeamFlow m r,
+    MonadTime m,
+    MonadReader r m,
+    HasField "s3Env" r (S3.S3Env m)
+  ) =>
+  Int ->
+  Text ->
+  Common.IssueMediaUploadReq ->
+  Text ->
+  Text ->
+  m Common.IssueMediaUploadRes
+mediaUploadToS3 mediaFileSizeUpperLimit mediaFileUrlPattern Common.IssueMediaUploadReq {..} domain identifier = do
+  contentType <- validateContentType
   fileSize <- L.runIO $ withFile file ReadMode hFileSize
-  when (fileSize > fromIntegral config.mediaFileSizeUpperLimit) $
+  when (fileSize > fromIntegral mediaFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
   filePath <- S3.createFilePath (domain <> "/") identifier fileType contentType
   let fileUrl =
-        config.mediaFileUrlPattern
+        mediaFileUrlPattern
           & T.replace "<DOMAIN>" domain
           & T.replace "<FILE_PATH>" filePath
   uploadRes <- createMediaEntry fileUrl fileType filePath
@@ -872,7 +895,7 @@ updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHa
       ticketResponse <-
         withTryCatch
           "updateTicket:updateIssue"
-          (issueHandle.updateTicket merchantId merchantOperatingCityId TIT.UpdateTicketReq {comment = comment, ticketId = ticketId, status = status, rideDescription = Nothing, issueDetails = Nothing})
+          (issueHandle.updateTicket merchantId merchantOperatingCityId TIT.UpdateTicketReq {comment = comment, ticketId = ticketId, status = status, rideDescription = Nothing, issueDetails = Nothing, requesterId = Nothing, ticketContext = Nothing})
       case ticketResponse of
         Left err -> logTagInfo "Update Ticket API failed - " $ show err
         Right _ -> return ()

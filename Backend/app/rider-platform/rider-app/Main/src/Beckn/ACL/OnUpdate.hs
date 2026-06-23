@@ -203,7 +203,7 @@ parseStopArrivedEvent transactionId order = do
 
 parseEditDestinationSoftUpdate :: (MonadFlow m, CacheFlow m r) => Text -> Spec.Order -> Text -> m DOnUpdate.OnUpdateReq
 parseEditDestinationSoftUpdate transactionId order messageId = do
-  bookingDetails <- Common.parseBookingDetails order messageId
+  bppBookingId <- Id <$> (order.orderId & fromMaybeM (InvalidRequest "order_id is not present in Soft Update Event."))
   let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
       personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
       currentPoint = Common.getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
@@ -215,7 +215,8 @@ parseEditDestinationSoftUpdate transactionId order messageId = do
   return $
     DOnUpdate.OUEditDestSoftUpdateReq $
       DOnUpdate.EditDestSoftUpdateReq
-        { bookingUpdateRequestId = Id messageId,
+        { bppBookingId,
+          bookingUpdateRequestId = Id messageId,
           newEstimatedDistance,
           fareBreakups,
           fare = Utils.decimalValueToPrice currency fare,
@@ -224,11 +225,12 @@ parseEditDestinationSoftUpdate transactionId order messageId = do
 
 parseEditDestinationConfirmUpdate :: (MonadFlow m, CacheFlow m r) => Text -> Spec.Order -> Text -> m DOnUpdate.OnUpdateReq
 parseEditDestinationConfirmUpdate transactionId order messageId = do
-  bookingDetails <- Common.parseBookingDetails order messageId
+  bppBookingId <- Id <$> (order.orderId & fromMaybeM (InvalidRequest "order_id is not present in Confirm Update Event."))
   return $
     DOnUpdate.OUEditDestConfirmUpdateReq $
       DOnUpdate.EditDestConfirmUpdateReq
-        { bookingUpdateRequestId = Id messageId,
+        { bppBookingId,
+          bookingUpdateRequestId = Id messageId,
           transactionId,
           ..
         }

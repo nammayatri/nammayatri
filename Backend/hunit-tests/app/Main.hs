@@ -15,6 +15,9 @@
 module Main where
 
 import qualified Dashboard (dashboardUnitTests)
+import qualified RewardsCouponPoolTests
+import qualified RewardsCouponTemplatedTests
+import qualified RewardsEvaluatorTests
 import Test.Tasty (defaultMain, testGroup)
 import Prelude
 
@@ -27,14 +30,12 @@ main = do
       "Unit Tests"
       [ testGroup
           "Dashboard Unit Tests"
-          [ Dashboard.dashboardUnitTests -- This is the main test suite for all dashboard unit tests
+          [ Dashboard.dashboardUnitTests
+          ],
+        testGroup
+          "Rewards Unit Tests"
+          [ RewardsEvaluatorTests.tests,
+            RewardsCouponTemplatedTests.tests,
+            RewardsCouponPoolTests.tests
           ]
-          -- testGroup
-          --   "Integration Tests (Requires Services)"
-          --   [ Dashboard.registrationTests,
-          --     Dashboard.profileTests,
-          --     Dashboard.fleetOwnerInfoTests,
-          --     Dashboard.fleetDriverOnboardingTests,
-          --     Dashboard.documentTests
-          --   ]
       ]

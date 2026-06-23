@@ -16,6 +16,7 @@ import qualified IssueManagement.Domain.Types.Issue.IssueCategory
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage
 import qualified IssueManagement.Domain.Types.Issue.IssueOption
 import qualified IssueManagement.Domain.Types.Issue.IssueReport
+import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
@@ -24,7 +25,7 @@ import qualified Kernel.Types.Id
 import Servant hiding (Summary)
 import Servant.Client
 
-type API = ("issue" :> (GetIssueCategoryList :<|> GetIssueList :<|> GetIssueInfo :<|> GetIssueInfoV2 :<|> PutIssueUpdateHelper :<|> PostIssueCommentHelper :<|> GetIssueMedia :<|> PostIssueTicketStatusCallBack :<|> PostIssueCategoryCreate :<|> PostIssueCategoryUpdate :<|> PostIssueOptionCreate :<|> PostIssueOptionUpdate :<|> PostIssueMessageUpsert :<|> PostIssueChatMessageHelper :<|> GetIssueChatMessages :<|> PostIssueChatRead))
+type API = ("issue" :> (GetIssueCategoryList :<|> GetIssueList :<|> GetIssueInfo :<|> GetIssueInfoV2 :<|> PutIssueUpdateHelper :<|> PostIssueCommentHelper :<|> GetIssueMedia :<|> PostIssueTicketStatusCallBack :<|> PostIssueCategoryCreate :<|> PostIssueCategoryUpdate :<|> PostIssueOptionCreate :<|> PostIssueOptionUpdate :<|> PostIssueMessageUpsert :<|> GetIssueCategoryDetail :<|> GetIssueOptionDetail :<|> GetIssueMessageDetail :<|> GetIssueMessageList :<|> GetIssueOptionList :<|> DeleteIssueCategory :<|> DeleteIssueOption :<|> DeleteIssueMessage :<|> GetIssueCategoryFlowPreview :<|> GetIssueTranslations :<|> PostIssueBulkUpsertTranslations :<|> GetIssueConfig :<|> PostIssueConfigUpdate :<|> PostIssueCategoryReorder :<|> PostIssueOptionReorder :<|> PostIssueMessageReorder :<|> PostIssueCategoryCopy :<|> PostIssueCategoryDefaultCopy :<|> PostIssueCategoryAllCopy :<|> PostIssueChatMessageHelper :<|> GetIssueChatMessages :<|> PostIssueChatRead))
 
 type GetIssueCategoryList = ("category" :> Get '[JSON] IssueManagement.Common.Dashboard.Issue.IssueCategoryListRes)
 
@@ -158,6 +159,126 @@ type PostIssueMessageUpsert =
            IssueManagement.Common.Dashboard.Issue.UpsertIssueMessageRes
   )
 
+type GetIssueCategoryDetail =
+  ( "category" :> Capture "categoryId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) :> "detail"
+      :> QueryParam
+           "language"
+           Kernel.External.Types.Language
+      :> Get '[JSON] IssueManagement.Common.Dashboard.Issue.IssueCategoryDetailRes
+  )
+
+type GetIssueOptionDetail =
+  ( "option" :> Capture "optionId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption) :> "detail"
+      :> QueryParam
+           "language"
+           Kernel.External.Types.Language
+      :> Get '[JSON] IssueManagement.Common.Dashboard.Issue.IssueOptionDetailRes
+  )
+
+type GetIssueMessageDetail =
+  ( "message" :> Capture "messageId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage) :> "detail"
+      :> QueryParam
+           "language"
+           Kernel.External.Types.Language
+      :> Get '[JSON] IssueManagement.Common.Dashboard.Issue.IssueMessageDetailRes
+  )
+
+type GetIssueMessageList =
+  ( "message" :> "list" :> QueryParam "categoryId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory)
+      :> QueryParam
+           "optionId"
+           (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption)
+      :> QueryParam
+           "isActive"
+           Kernel.Prelude.Bool
+      :> QueryParam
+           "language"
+           Kernel.External.Types.Language
+      :> Get
+           '[JSON]
+           IssueManagement.Common.Dashboard.Issue.IssueMessageListRes
+  )
+
+type GetIssueOptionList =
+  ( "option" :> "list" :> QueryParam "categoryId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory)
+      :> QueryParam
+           "messageId"
+           (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage)
+      :> QueryParam
+           "isActive"
+           Kernel.Prelude.Bool
+      :> QueryParam
+           "language"
+           Kernel.External.Types.Language
+      :> Get
+           '[JSON]
+           IssueManagement.Common.Dashboard.Issue.IssueOptionListDRes
+  )
+
+type DeleteIssueCategory =
+  ( "category" :> Capture "categoryId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) :> "delete"
+      :> Delete
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
+type DeleteIssueOption =
+  ( "option" :> Capture "optionId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption) :> "delete"
+      :> Delete
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
+type DeleteIssueMessage =
+  ( "message" :> Capture "messageId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage) :> "delete"
+      :> Delete
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
+type GetIssueCategoryFlowPreview =
+  ( "category" :> Capture "categoryId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) :> "preview"
+      :> QueryParam
+           "language"
+           Kernel.External.Types.Language
+      :> Get '[JSON] IssueManagement.Common.Dashboard.Issue.IssueCategoryFlowPreviewRes
+  )
+
+type GetIssueTranslations = ("translation" :> "list" :> MandatoryQueryParam "sentence" Kernel.Prelude.Text :> Get '[JSON] IssueManagement.Common.Dashboard.Issue.IssueTranslationListRes)
+
+type PostIssueBulkUpsertTranslations =
+  ( "translation" :> "bulk" :> ReqBody '[JSON] IssueManagement.Common.Dashboard.Issue.BulkUpsertTranslationsReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
+type GetIssueConfig = ("config" :> Get '[JSON] IssueManagement.Common.Dashboard.Issue.IssueConfigRes)
+
+type PostIssueConfigUpdate = ("config" :> "update" :> ReqBody '[JSON] IssueManagement.Common.Dashboard.Issue.UpdateIssueConfigReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PostIssueCategoryReorder = ("category" :> "reorder" :> ReqBody '[JSON] IssueManagement.Common.Dashboard.Issue.ReorderIssueCategoryReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PostIssueOptionReorder = ("option" :> "reorder" :> ReqBody '[JSON] IssueManagement.Common.Dashboard.Issue.ReorderIssueOptionReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PostIssueMessageReorder = ("message" :> "reorder" :> ReqBody '[JSON] IssueManagement.Common.Dashboard.Issue.ReorderIssueMessageReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PostIssueCategoryCopy =
+  ( "category" :> "copy" :> ReqBody '[JSON] IssueManagement.Common.Dashboard.Issue.CopyIssueCategoryReq
+      :> Post
+           '[JSON]
+           IssueManagement.Common.Dashboard.Issue.CopyIssueCategoryRes
+  )
+
+type PostIssueCategoryDefaultCopy = ("category" :> "copyAllDefault" :> Post '[JSON] IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryRes)
+
+type PostIssueCategoryAllCopy =
+  ( "category" :> "copyAll" :> ReqBody '[JSON] IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryReq
+      :> Post
+           '[JSON]
+           IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryRes
+  )
+
 type PostIssueChatMessage =
   ( Capture "issueId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) :> "chat" :> "message"
       :> ReqBody
@@ -209,6 +330,25 @@ data IssueAPIs = IssueAPIs
         IssueManagement.Common.Dashboard.Issue.UpsertIssueMessageReq
       ) ->
       EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.UpsertIssueMessageRes,
+    getIssueCategoryDetail :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueCategoryDetailRes,
+    getIssueOptionDetail :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueOptionDetailRes,
+    getIssueMessageDetail :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueMessageDetailRes,
+    getIssueMessageList :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueMessageListRes,
+    getIssueOptionList :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueOptionListDRes,
+    deleteIssueCategory :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    deleteIssueOption :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    deleteIssueMessage :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getIssueCategoryFlowPreview :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueCategoryFlowPreviewRes,
+    getIssueTranslations :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueTranslationListRes,
+    postIssueBulkUpsertTranslations :: IssueManagement.Common.Dashboard.Issue.BulkUpsertTranslationsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getIssueConfig :: EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueConfigRes,
+    postIssueConfigUpdate :: IssueManagement.Common.Dashboard.Issue.UpdateIssueConfigReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postIssueCategoryReorder :: IssueManagement.Common.Dashboard.Issue.ReorderIssueCategoryReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postIssueOptionReorder :: IssueManagement.Common.Dashboard.Issue.ReorderIssueOptionReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postIssueMessageReorder :: IssueManagement.Common.Dashboard.Issue.ReorderIssueMessageReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postIssueCategoryCopy :: IssueManagement.Common.Dashboard.Issue.CopyIssueCategoryReq -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.CopyIssueCategoryRes,
+    postIssueCategoryDefaultCopy :: EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryRes,
+    postIssueCategoryAllCopy :: IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryReq -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryRes,
     postIssueChatMessage :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.SendChatMessageByUserReq -> EulerHS.Types.EulerClient IssueManagement.Common.UI.Issue.ChatMessageItem,
     getIssueChatMessages :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient [IssueManagement.Common.UI.Issue.ChatMessageItem],
     postIssueChatRead :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.MarkChatReadByUserReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
@@ -217,7 +357,7 @@ data IssueAPIs = IssueAPIs
 mkIssueAPIs :: (Client EulerHS.Types.EulerClient API -> IssueAPIs)
 mkIssueAPIs issueClient = (IssueAPIs {..})
   where
-    getIssueCategoryList :<|> getIssueList :<|> getIssueInfo :<|> getIssueInfoV2 :<|> putIssueUpdate :<|> postIssueComment :<|> getIssueMedia :<|> postIssueTicketStatusCallBack :<|> postIssueCategoryCreate :<|> postIssueCategoryUpdate :<|> postIssueOptionCreate :<|> postIssueOptionUpdate :<|> postIssueMessageUpsert :<|> postIssueChatMessage :<|> getIssueChatMessages :<|> postIssueChatRead = issueClient
+    getIssueCategoryList :<|> getIssueList :<|> getIssueInfo :<|> getIssueInfoV2 :<|> putIssueUpdate :<|> postIssueComment :<|> getIssueMedia :<|> postIssueTicketStatusCallBack :<|> postIssueCategoryCreate :<|> postIssueCategoryUpdate :<|> postIssueOptionCreate :<|> postIssueOptionUpdate :<|> postIssueMessageUpsert :<|> getIssueCategoryDetail :<|> getIssueOptionDetail :<|> getIssueMessageDetail :<|> getIssueMessageList :<|> getIssueOptionList :<|> deleteIssueCategory :<|> deleteIssueOption :<|> deleteIssueMessage :<|> getIssueCategoryFlowPreview :<|> getIssueTranslations :<|> postIssueBulkUpsertTranslations :<|> getIssueConfig :<|> postIssueConfigUpdate :<|> postIssueCategoryReorder :<|> postIssueOptionReorder :<|> postIssueMessageReorder :<|> postIssueCategoryCopy :<|> postIssueCategoryDefaultCopy :<|> postIssueCategoryAllCopy :<|> postIssueChatMessage :<|> getIssueChatMessages :<|> postIssueChatRead = issueClient
 
 data IssueUserActionType
   = GET_ISSUE_CATEGORY_LIST
@@ -233,6 +373,25 @@ data IssueUserActionType
   | POST_ISSUE_OPTION_CREATE
   | POST_ISSUE_OPTION_UPDATE
   | POST_ISSUE_MESSAGE_UPSERT
+  | GET_ISSUE_CATEGORY_DETAIL
+  | GET_ISSUE_OPTION_DETAIL
+  | GET_ISSUE_MESSAGE_DETAIL
+  | GET_ISSUE_MESSAGE_LIST
+  | GET_ISSUE_OPTION_LIST
+  | DELETE_ISSUE_CATEGORY
+  | DELETE_ISSUE_OPTION
+  | DELETE_ISSUE_MESSAGE
+  | GET_ISSUE_CATEGORY_FLOW_PREVIEW
+  | GET_ISSUE_TRANSLATIONS
+  | POST_ISSUE_BULK_UPSERT_TRANSLATIONS
+  | GET_ISSUE_CONFIG
+  | POST_ISSUE_CONFIG_UPDATE
+  | POST_ISSUE_CATEGORY_REORDER
+  | POST_ISSUE_OPTION_REORDER
+  | POST_ISSUE_MESSAGE_REORDER
+  | POST_ISSUE_CATEGORY_COPY
+  | POST_ISSUE_CATEGORY_DEFAULT_COPY
+  | POST_ISSUE_CATEGORY_ALL_COPY
   | POST_ISSUE_CHAT_MESSAGE
   | GET_ISSUE_CHAT_MESSAGES
   | POST_ISSUE_CHAT_READ

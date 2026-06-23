@@ -1777,11 +1777,11 @@
     "json-logic-hs": {
       "flake": false,
       "locked": {
-        "lastModified": 1780415936,
-        "narHash": "sha256-I5UaWmMOdMAjyDv1Tr1wIIi+SwF5FsnrJAoqVIddkgA=",
+        "lastModified": 1781617079,
+        "narHash": "sha256-NXtj+dgXi4KRO13Sa51HL7eWjWGFeNWZ0egDjuxvCH8=",
         "owner": "nammayatri",
         "repo": "json-logic-hs",
-        "rev": "90393a4a87dc252f4f245c3c215acd6e4c4abe90",
+        "rev": "dcdd6a603faf7f8b140728fb3511d7498d6ab03f",
         "type": "github"
       },
       "original": {
@@ -1971,11 +1971,11 @@
         "common": "common_2"
       },
       "locked": {
-        "lastModified": 1779895662,
-        "narHash": "sha256-LSmf0hcPNmeUnrgDtX6rvWe0X5Yp/iSGi37CBSUb7ys=",
+        "lastModified": 1781607306,
+        "narHash": "sha256-R7Z8lUTKu/UsJKQxasVFsLjJeZt8DBOpeRTH4k1NtSQ=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
-        "rev": "ef5eea60f19cf6a2babd85cbd9436720e949850c",
+        "rev": "20813317ecf6ba7d57df5a0a5a476c74fb545a88",
         "type": "github"
       },
       "original": {
@@ -4004,11 +4004,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1781606504,
-        "narHash": "sha256-RIQlgZ29+5itzbkNnYA9592luYbW1mtQLyVQpN2Q36s=",
+        "lastModified": 1782133899,
+        "narHash": "sha256-SZX32BN2GmVDnLHgT+21D6TV6+qe1+g4hiWQO8aZrUs=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "38e376f94b4ca11774ae32896af1a364a33cf03c",
+        "rev": "de762eec4f9f99e71bdeaa2484915bd76e730871",
         "type": "github"
       },
       "original": {

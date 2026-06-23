@@ -38,6 +38,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
@@ -84,7 +85,7 @@ resolveAndCallTicketService selectService func merchantId merchantOperatingCityI
   let service = selectService merchantConfig
   logDebug $ "resolveAndCallTicketService: service=" <> show service <> " mocId=" <> merchantOperatingCityId.getId
   merchantIssueTicketServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.IssueTicketService service)}) Nothing
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.IssueTicketService service)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.IssueTicketService service)))
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   logDebug $ "resolveAndCallTicketService: serviceConfig resolved, calling provider"
   case merchantIssueTicketServiceConfig.serviceConfig of

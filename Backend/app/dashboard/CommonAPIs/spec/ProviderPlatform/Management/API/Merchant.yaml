@@ -22,6 +22,7 @@ imports:
   UpsertSpecialLocationCsvReq: Dashboard.Common.Merchant
   UpsertDriverPoolConfigCsvReq: Dashboard.Common.Merchant
   APISuccessWithUnprocessedEntities: Dashboard.Common.Merchant
+  SetFareProductEnabledReq: Dashboard.Common.Merchant
   SpecialLocation: Lib.Types.SpecialLocation
   SpecialLocationFull: Lib.Queries.SpecialLocation
   UpsertSpecialLocationReq: Dashboard.Common.Merchant
@@ -370,6 +371,13 @@ apis:
         enabled: Bool
       response:
         type: FareProductListRes
+  - POST: # FareProductSetEnabledAPI
+      endpoint: /config/fareProduct/setEnabled
+      auth: ApiAuthV2
+      request:
+        type: SetFareProductEnabledReq
+      response:
+        type: APISuccess
   - POST: # CreateMerchantOperatingCityAPI
       endpoint: /config/operatingCity/create
       auth: ApiAuthV2
@@ -973,7 +981,7 @@ types:
   VehicleClassCheckType:
     - enum: "Infix, Prefix, Suffix, Exact"
   DocumentType:
-    - enum: "RC, DL, Permissions, SubscriptionPlan, ProfilePhoto, AadhaarCard, PanCard, VehiclePermit, VehicleFitnessCertificate, VehicleInsurance, VehiclePUC, ProfileDetails, SocialSecurityNumber, VehicleInspectionForm, DriverInspectionForm, TrainingForm, UploadProfile, GSTCertificate, BackgroundVerification, VehicleFront, VehicleBack, VehicleRight, VehicleLeft, VehicleFrontInterior, VehicleBackInterior, VehicleNOC, BusinessLicense, Odometer, InspectionHub, DriverInspectionHub, KIWADriverCard, KIWATaxiPermit, KvKChamberOfCommerceRegistration, TAXDetails, BankingDetails, VehicleDetails, SchipolAirportAgreement, SchipolSmartcardProof, TXQualityMark, TaxiDriverPermit, TaxiTransportLicense, FinnishIDResidencePermit, BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLink,VoterIdCard,OperatorPartnerCode,MedicalCertificate,Rating,BotApproval,NomineeDetails"
+    - enum: "RC, DL, Permissions, SubscriptionPlan, ProfilePhoto, AadhaarCard, PanCard, VehiclePermit, VehicleFitnessCertificate, VehicleInsurance, VehiclePUC, ProfileDetails, SocialSecurityNumber, VehicleInspectionForm, DriverInspectionForm, TrainingForm, UploadProfile, GSTCertificate, BackgroundVerification, VehicleFront, VehicleBack, VehicleRight, VehicleLeft, VehicleFrontInterior, VehicleBackInterior, VehicleNOC, BusinessLicense, Odometer, InspectionHub, DriverInspectionHub, KIWADriverCard, KIWATaxiPermit, KvKChamberOfCommerceRegistration, TAXDetails, BankingDetails, VehicleDetails, SchipolAirportAgreement, SchipolSmartcardProof, TXQualityMark, TaxiDriverPermit, TaxiTransportLicense, FinnishIDResidencePermit, BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLink,VoterIdCard,OperatorPartnerCode,MedicalCertificate,Rating,BotApproval,NomineeDetails,DriverVehicleNOC"
     - derive: "HttpInstance"
   DocumentFlowGrouping:
     - enum: "COMMON, STANDARD"

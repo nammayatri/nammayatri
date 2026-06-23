@@ -34,6 +34,11 @@ library
       Dashboard.Common.FinanceManagement
       Dashboard.Common.MediaFileDocument
       Dashboard.Common.Merchant
+      Dashboard.Common.Rewards.CampaignStatus
+      Dashboard.Common.Rewards.ClaimMode
+      Dashboard.Common.Rewards.CouponSourceType
+      Dashboard.Common.Rewards.RedemptionTargetType
+      Dashboard.Common.Rewards.SponsorType
       Dashboard.Common.Ride
       Dashboard.Common.SpecialZone
       Dashboard.ProviderPlatform.CacAuth
@@ -55,6 +60,7 @@ library
       Dashboard.ProviderPlatform.Operator.Registration
       Dashboard.RiderPlatform.Management.FRFSTicket
       Dashboard.RiderPlatform.Management.Merchant
+      Dashboard.RiderPlatform.Management.Rewards
       Dashboard.RiderPlatform.Management.Ride
       Dashboard.SafetyPlatform
       API.Types.ProviderPlatform.Fleet
@@ -150,6 +156,7 @@ library
       API.Types.RiderPlatform.Management.Endpoints.Merchant
       API.Types.RiderPlatform.Management.Endpoints.NammaTag
       API.Types.RiderPlatform.Management.Endpoints.Offer
+      API.Types.RiderPlatform.Management.Endpoints.Rewards
       API.Types.RiderPlatform.Management.Endpoints.Ride
       API.Types.RiderPlatform.Management.Endpoints.Sos
       API.Types.RiderPlatform.Management.Endpoints.SosMedia
@@ -161,6 +168,7 @@ library
       API.Types.RiderPlatform.Management.Merchant
       API.Types.RiderPlatform.Management.NammaTag
       API.Types.RiderPlatform.Management.Offer
+      API.Types.RiderPlatform.Management.Rewards
       API.Types.RiderPlatform.Management.Ride
       API.Types.RiderPlatform.Management.Sos
       API.Types.RiderPlatform.Management.SosMedia

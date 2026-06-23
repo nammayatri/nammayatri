@@ -373,7 +373,9 @@ buildMediaEntry url fileType filePath = do
         url = url,
         s3FilePath = Just filePath,
         status = Just DMF.PENDING,
-        createdAt = now
+        fileHash = Nothing,
+        createdAt = now,
+        updatedAt = now
       }
 
 merchantOnboardingGetFile :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Environment.Flow Domain.Types.MerchantOnboarding.GetFileResponse)
