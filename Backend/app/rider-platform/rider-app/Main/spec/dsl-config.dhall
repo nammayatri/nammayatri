@@ -24,6 +24,7 @@ let outputPath =
       , _servantApiClient = ""
       , _sql = [ { _1 = migrationPath, _2 = "atlas_app" } ]
       , _purescriptFrontend = ""
+      , _configPilot = outputPrefix ++ "Storage/ConfigPilot/Config"
       }
 
 let GeneratorType =
@@ -42,6 +43,7 @@ let GeneratorType =
       | DOMAIN_TYPE
       | SQL
       | PURE_SCRIPT_FRONTEND
+      | CONFIG_PILOT
       >
 
 let ImportType = < SIMPLE | QUALIFIED >
@@ -189,6 +191,19 @@ let defaultImports =
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.CACHED_QUERIES
         }
+      , { _simpleImports =
+          [ "Kernel.Prelude"
+          , "Kernel.Types.Id"
+          , "Lib.ConfigPilot.Interface.Types"
+          , "Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))"
+          ]
+        , _qualifiedImports =
+          [ "Lib.ConfigPilot.Interface.Getter as CR"
+          , "Lib.Yudhishthira.Types as LYT"
+          ]
+        , _packageImports = [] : List PackageImport
+        , _generationType = GeneratorType.CONFIG_PILOT
+        }
       ]
 
 let ApiKind = < UI | DASHBOARD >
@@ -213,6 +228,7 @@ in  { _output = outputPath
       , GeneratorType.API_TYPES
       , GeneratorType.SQL
       , GeneratorType.CACHED_QUERIES
+      , GeneratorType.CONFIG_PILOT
       ]
     , _packageMapping = [] : List { _1 : GeneratorType, _2 : Text }
     , _apiKind = ApiKind.UI
