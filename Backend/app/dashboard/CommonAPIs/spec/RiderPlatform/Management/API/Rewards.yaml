@@ -1,0 +1,199 @@
+imports:
+  Value: Data.Aeson
+  Integer: Kernel.Prelude
+  Double: Kernel.Prelude
+  UploadCodesReq: Dashboard.RiderPlatform.Management.Rewards
+  Person: Dashboard.Common
+  Merchant: Dashboard.Common
+  MerchantOperatingCity: Dashboard.Common
+  SponsorType: Dashboard.Common.Rewards.SponsorType
+  CouponSourceType: Dashboard.Common.Rewards.CouponSourceType
+  RedemptionTargetType: Dashboard.Common.Rewards.RedemptionTargetType
+  ClaimMode: Dashboard.Common.Rewards.ClaimMode
+  CampaignStatus: Dashboard.Common.Rewards.CampaignStatus
+  APISuccess: Kernel.Types.APISuccess
+
+module: Rewards
+
+types:
+  CreateCampaignReq:
+    - name: Text
+    - description: Maybe Text
+    - sponsorType: SponsorType
+    - sponsorName: Text
+    - sponsorLogoUrl: Maybe Text
+    - couponSourceType: CouponSourceType
+    - couponTemplate: Maybe Text
+    - redemptionTargetType: RedemptionTargetType
+    - redemptionTargetUrl: Maybe Text
+    - claimMode: ClaimMode
+    - startsAt: UTCTime
+    - endsAt: Maybe UTCTime
+    - displayOrder: Int
+    - derive: "'HideSecrets"
+
+  CreateCampaignResp:
+    - campaignId: Id RewardCampaign
+
+  EditCampaignReq:
+    - description: Maybe Text
+    - displayOrder: Maybe Int
+    - endsAt: Maybe UTCTime
+    - derive: "'HideSecrets"
+
+  CreateCohortReq:
+    - name: Text
+    - description: Maybe Text
+    - displayOrder: Int
+    - eligibilityJsonLogic: Value
+    - rewardTitle: Text
+    - rewardImageUrl: Maybe Text
+    - couponValidityDays: Maybe Int
+    - presentation: Maybe Value
+    - derive: "'HideSecrets"
+
+  CreateCohortResp:
+    - cohortId: Id RewardCohort
+
+  UploadCodesResp:
+    - uploadBatchId: Text
+
+  SetStatusReq:
+    - newStatus: CampaignStatus
+    - derive: "'HideSecrets"
+
+  CohortCount:
+    - cohortId: Id RewardCohort
+    - count: Int
+
+  CohortPoolRemaining:
+    - cohortId: Id RewardCohort
+    - remaining: Integer
+
+  RewardCampaign:
+    - id: Id RewardCampaign
+    - merchantId: Id Merchant
+    - merchantOperatingCityId: Id MerchantOperatingCity
+    - name: Text
+    - description: Maybe Text
+    - sponsorType: SponsorType
+    - sponsorName: Text
+    - sponsorLogoUrl: Maybe Text
+    - couponSourceType: CouponSourceType
+    - couponTemplate: Maybe Text
+    - redemptionTargetType: RedemptionTargetType
+    - redemptionTargetUrl: Maybe Text
+    - claimMode: ClaimMode
+    - reclaimPolicy: Maybe Value
+    - startsAt: UTCTime
+    - endsAt: Maybe UTCTime
+    - status: CampaignStatus
+    - displayOrder: Int
+    - createdBy: Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  RewardCohort:
+    - id: Id RewardCohort
+    - campaignId: Id RewardCampaign
+    - name: Text
+    - description: Maybe Text
+    - displayOrder: Int
+    - eligibilityJsonLogic: Value
+    - rewardTitle: Text
+    - rewardImageUrl: Maybe Text
+    - couponValidityDays: Maybe Int
+    - presentation: Maybe Value
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  CampaignDetails:
+    - campaign: RewardCampaign
+    - cohorts: "[RewardCohort]"
+
+  CampaignStats:
+    - totalUnlocks: Int
+    - unlocksByCohort: "[CohortCount]"
+    - poolRemainingByCohort: "[CohortPoolRemaining]"
+    - claimRate: Double
+    - expiredUnredeemedCount: Int
+
+apis:
+  - POST:
+      endpoint: /campaign
+      auth: ApiAuthV2
+      request:
+        type: CreateCampaignReq
+      response:
+        type: CreateCampaignResp
+
+  - PUT:
+      endpoint: /campaign/{campaignId}
+      auth: ApiAuthV2
+      params:
+        campaignId: Id RewardCampaign
+      request:
+        type: EditCampaignReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /campaign/{campaignId}/cohort
+      auth: ApiAuthV2
+      params:
+        campaignId: Id RewardCampaign
+      request:
+        type: CreateCohortReq
+      response:
+        type: CreateCohortResp
+
+  - POST:
+      endpoint: /campaign/{campaignId}/cohort/{cohortId}/codes
+      auth: ApiAuthV2
+      params:
+        campaignId: Id RewardCampaign
+        cohortId: Id RewardCohort
+      multipart:
+        type: UploadCodesReq
+      response:
+        type: UploadCodesResp
+
+  - POST:
+      endpoint: /campaign/{campaignId}/status
+      auth: ApiAuthV2
+      params:
+        campaignId: Id RewardCampaign
+      request:
+        type: SetStatusReq
+      response:
+        type: APISuccess
+
+  - GET:
+      endpoint: /campaign/{campaignId}
+      auth: ApiAuthV2
+      params:
+        campaignId: Id RewardCampaign
+      response:
+        type: CampaignDetails
+
+  - GET:
+      endpoint: /campaigns
+      auth: ApiAuthV2
+      response:
+        type: "[CampaignDetails]"
+
+  - GET:
+      endpoint: /campaign/{campaignId}/stats
+      auth: ApiAuthV2
+      params:
+        campaignId: Id RewardCampaign
+      response:
+        type: CampaignStats
+
+  - POST:
+      endpoint: /triggerEval/{personId}
+      auth: ApiAuthV2
+      params:
+        personId: Id Person
+      response:
+        type: APISuccess

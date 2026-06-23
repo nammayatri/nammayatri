@@ -210,6 +210,7 @@ library
       Domain.Action.Dashboard.Merchant
       Domain.Action.Dashboard.NammaTag
       Domain.Action.Dashboard.Offer
+      Domain.Action.Dashboard.Rewards
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.RideBooking.AddBaggage
       Domain.Action.Dashboard.RideBooking.Booking
@@ -248,6 +249,10 @@ library
       Domain.Action.Internal.UpdateCancellationFeeStatus
       Domain.Action.Internal.VerifyEmailUpdate
       Domain.Action.Internal.ViolationDetection
+      Domain.Action.Rewards.Consumer
+      Domain.Action.Rewards.Coupon
+      Domain.Action.Rewards.Evaluator
+      Domain.Action.Rewards.Producer
       Domain.Action.UI.AadhaarVerification
       Domain.Action.UI.AddBaggage
       Domain.Action.UI.AlertWebhook
@@ -324,6 +329,7 @@ library
       Domain.Action.UI.Registration
       Domain.Action.UI.RentalDetails
       Domain.Action.UI.RentalsIntercityCache
+      Domain.Action.UI.Rewards
       Domain.Action.UI.Ride
       Domain.Action.UI.RidePayment
       Domain.Action.UI.RiderLocation
@@ -552,6 +558,7 @@ library
       SharedLogic.Scheduler.Jobs.PaymentOrderStatusCheck
       SharedLogic.Scheduler.Jobs.Payout.MetroIncentivePayout
       SharedLogic.Scheduler.Jobs.PostRideSafetyNotification
+      SharedLogic.Scheduler.Jobs.ReconcileRewardInflight
       SharedLogic.Scheduler.Jobs.SafetyCSAlert
       SharedLogic.Scheduler.Jobs.SafetyIVR
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
@@ -725,6 +732,10 @@ library
       Storage.Queries.RecentLocationExtra
       Storage.Queries.RefundRequestExtra
       Storage.Queries.RegistrationTokenExtra
+      Storage.Queries.RewardCampaignExtra
+      Storage.Queries.RewardCohortExtra
+      Storage.Queries.RewardCouponUploadBatchExtra
+      Storage.Queries.RewardUnlockExtra
       Storage.Queries.RideExtra
       Storage.Queries.RiderPreferencesExtra
       Storage.Queries.RouteDetailsExtra
@@ -792,6 +803,8 @@ library
       Tools.Notifications
       Tools.Payment
       Tools.Payout
+      Tools.Rewards.RedisPool
+      Tools.Rewards.RiderContextReader
       Tools.Schema
       Tools.SignatureAuth
       Tools.SignatureResponseBody
@@ -829,6 +842,7 @@ library
       API.Action.Dashboard.Management.Merchant
       API.Action.Dashboard.Management.NammaTag
       API.Action.Dashboard.Management.Offer
+      API.Action.Dashboard.Management.Rewards
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.Sos
       API.Action.Dashboard.Management.SosMedia
@@ -885,6 +899,7 @@ library
       API.Action.UI.PickupInstructions
       API.Action.UI.Places
       API.Action.UI.PriceBreakup
+      API.Action.UI.Rewards
       API.Action.UI.RidePayment
       API.Action.UI.RiderLocation
       API.Action.UI.RiderPreferences
@@ -991,6 +1006,7 @@ library
       API.Types.UI.PickupInstructions
       API.Types.UI.Places
       API.Types.UI.PriceBreakup
+      API.Types.UI.Rewards
       API.Types.UI.RidePayment
       API.Types.UI.RiderLocation
       API.Types.UI.RiderPreferences
@@ -1133,6 +1149,10 @@ library
       Domain.Types.RefundRequest
       Domain.Types.RegistrationToken
       Domain.Types.RentalDetails
+      Domain.Types.RewardCampaign
+      Domain.Types.RewardCohort
+      Domain.Types.RewardCouponUploadBatch
+      Domain.Types.RewardUnlock
       Domain.Types.Ride
       Domain.Types.RiderConfig
       Domain.Types.RideRelatedNotificationConfig
@@ -1297,6 +1317,10 @@ library
       Storage.Beam.RefundRequest
       Storage.Beam.RegistrationToken
       Storage.Beam.RentalDetails
+      Storage.Beam.RewardCampaign
+      Storage.Beam.RewardCohort
+      Storage.Beam.RewardCouponUploadBatch
+      Storage.Beam.RewardUnlock
       Storage.Beam.Ride
       Storage.Beam.RiderConfig
       Storage.Beam.RideRelatedNotificationConfig
@@ -1486,6 +1510,10 @@ library
       Storage.Queries.OrphanInstances.RecentLocation
       Storage.Queries.OrphanInstances.RefundRequest
       Storage.Queries.OrphanInstances.RegistrationToken
+      Storage.Queries.OrphanInstances.RewardCampaign
+      Storage.Queries.OrphanInstances.RewardCohort
+      Storage.Queries.OrphanInstances.RewardCouponUploadBatch
+      Storage.Queries.OrphanInstances.RewardUnlock
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.RiderPreferences
       Storage.Queries.OrphanInstances.RouteDetails
@@ -1537,6 +1565,10 @@ library
       Storage.Queries.RefundRequest
       Storage.Queries.RegistrationToken
       Storage.Queries.RentalDetails
+      Storage.Queries.RewardCampaign
+      Storage.Queries.RewardCohort
+      Storage.Queries.RewardCouponUploadBatch
+      Storage.Queries.RewardUnlock
       Storage.Queries.Ride
       Storage.Queries.RiderConfig
       Storage.Queries.RideRelatedNotificationConfig

@@ -56,6 +56,7 @@ TOLL_CONFIG_DIR="$SCRIPT_DIR/collections/TollConfigFlow"
 TOLL_RIDE_DIR="$SCRIPT_DIR/collections/TollRideFlow"
 DRIVER_IMAGE_DIR="$SCRIPT_DIR/collections/DriverImageFlow"
 PAN_HARD_CHECK_DIR="$SCRIPT_DIR/collections/PanHardCheckFlow"
+REWARDS_DIR="$SCRIPT_DIR/collections/RewardsFlow"
 PANGST_DIR="$SCRIPT_DIR/collections/PanGstCrossCheckFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
@@ -125,6 +126,8 @@ seed_ophub() {
         fi
     done
 }
+REWARDS_SETUP_SQL="$SCRIPT_DIR/../local-testing-data/rewards-dashboard-setup.sql"
+RIDER_DASHBOARD_SEED_SQL="$SCRIPT_DIR/../local-testing-data/rider-dashboard.sql"
 
 # Toll dashboard: access_matrix + optional local-testing-data (person, token, merchant_access).
 seed_toll_dashboard_access() {
@@ -151,10 +154,36 @@ seed_toll_dashboard_access() {
     fi
 }
 
+seed_rewards_dashboard_access() {
+    if [ "${NY_TEST_SKIP_REWARDS_SEED:-}" = "1" ]; then
+        echo "Skipping rewards dashboard seed (NY_TEST_SKIP_REWARDS_SEED=1)"
+        return 0
+    fi
+    if [ ! -f "$REWARDS_SETUP_SQL" ]; then
+        echo "WARNING: Rewards setup SQL not found: $REWARDS_SETUP_SQL"
+        return 0
+    fi
+    echo "Seeding rewards dashboard access + enable_rewards_management..."
+    if ! psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" \
+        -v ON_ERROR_STOP=1 -f "$REWARDS_SETUP_SQL" > /dev/null 2>&1; then
+        echo "WARNING: rewards-dashboard-setup.sql failed (postgres on $DB_HOST:$DB_PORT?)"
+        echo "  Manual: psql -h $DB_HOST -p $DB_PORT -U $DB_USER_SUPER -d $DB_NAME -f $REWARDS_SETUP_SQL"
+        return 0
+    fi
+    if [ -f "$RIDER_DASHBOARD_SEED_SQL" ]; then
+        echo "Seeding rider-dashboard local-testing-data (token, merchant_access)..."
+        psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" \
+            -f "$RIDER_DASHBOARD_SEED_SQL" > /dev/null 2>&1 || \
+            echo "WARNING: rider-dashboard.sql seed failed — run manually if rewards tests get 403"
+    fi
+}
+
 setup() {
     echo "=== Integration test setup ==="
     seed_toll_dashboard_access
+    seed_rewards_dashboard_access
     echo "Done. Run: ./run-tests.sh toll-config NY_Bangalore"
+    echo "       or: ./run-tests.sh rewards NY_Bangalore"
 }
 
 # ── List ──
@@ -171,7 +200,7 @@ list_suites() {
             done
         fi
     done
-    for label_dir in "Toll Config:$TOLL_CONFIG_DIR" "Toll Ride:$TOLL_RIDE_DIR" "Online Ride:$ONLINE_DIR" "Bus:$BUS_DIR" "Metro:$METRO_DIR" "Subway:$SUBWAY_DIR" "Scheduler:$SCHEDULER_DIR" "Fleet Management:$FLEET_DIR"; do
+    for label_dir in "Toll Config:$TOLL_CONFIG_DIR" "Toll Ride:$TOLL_RIDE_DIR" "Rewards:$REWARDS_DIR" "Online Ride:$ONLINE_DIR" "Bus:$BUS_DIR" "Metro:$METRO_DIR" "Subway:$SUBWAY_DIR" "Scheduler:$SCHEDULER_DIR" "Fleet Management:$FLEET_DIR"; do
         local label="${label_dir%%:*}"
         local dir="${label_dir#*:}"
         echo ""
@@ -551,6 +580,10 @@ run_toll_ride() {
 run_toll() {
     run_toll_config "${1:-}" "${2:-}" && run_toll_ride "${1:-}" "${2:-}"
 }
+run_rewards() {
+    seed_rewards_dashboard_access
+    run_frfs "$REWARDS_DIR" "REWARDS" "${1:-}" "${2:-}"
+}
 
 run_pangst() {
     run_frfs "$PANGST_DIR" "PAN-GST CROSS CHECK" "${1:-}" "${2:-}"
@@ -584,8 +617,11 @@ show_help() {
     echo "  toll-config         Run toll dashboard API suites (CRUD, CSV, polygon gates)"
     echo "  toll-ride           Run toll + auto ride flow (estimate tollChargesInfo)"
     echo "  toll                Run toll-config then toll-ride"
+    echo "  rewards             Run rewards dashboard + rider unlock suites (NY + BT)"
     echo "  ./run-tests.sh toll-config NY_Bangalore       # Toll dashboard APIs (Bangalore)"
     echo "  ./run-tests.sh toll-config BT_Delhi           # Toll dashboard APIs (Delhi)"
+    echo "  ./run-tests.sh rewards NY_Bangalore           # Rewards APIs (Namma Yatri)"
+    echo "  ./run-tests.sh rewards BT_Delhi               # Rewards APIs (Bharat Taxi)"
     echo "  ./run-tests.sh toll-ride NY_Bangalore           # Toll on estimate + auto ride (Bangalore)"
     echo "  ./run-tests.sh toll-ride BT_Delhi             # Toll on estimate + auto ride (Delhi)"
     echo "  --setup             Seed toll dashboard access_matrix + provider-dashboard.sql"
@@ -705,6 +741,9 @@ case "${1:-}" in
         ;;
     toll)
         run_toll "${2:-}" "${3:-}"
+        ;;
+    rewards)
+        run_rewards "${2:-}" "${3:-}"
         ;;
     driver-image)
         run_driver_image "${2:-}" "${3:-}"

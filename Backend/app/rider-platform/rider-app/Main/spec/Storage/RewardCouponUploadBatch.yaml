@@ -1,0 +1,29 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  RewardCampaign: Domain.Types.RewardCampaign
+  RewardCohort: Domain.Types.RewardCohort
+
+RewardCouponUploadBatch:
+  tableName: reward_coupon_upload_batch
+  derives: "Generic, Show, Eq"
+  excludedFields: [merchantId, merchantOperatingCityId]
+  fields:
+    id: Id RewardCouponUploadBatch
+    campaignId: Id RewardCampaign
+    cohortId: Id RewardCohort
+    uploadBatchId: Text
+    s3Key: Text
+    totalCodesUploaded: Int
+    uploadedBy: Text
+    uploadedAt: UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  constraints:
+    id: PrimaryKey
+    campaignId: "!SecondaryKey"
+    cohortId: "!SecondaryKey"
+  queries:
+    findByCampaign:
+      kvFunction: findAllWithKV
+      where: campaignId

@@ -705,6 +705,7 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN student_pass_verify_config json ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_rewards_management boolean ;
 
 
 

@@ -64,6 +64,7 @@ import "rider-app" SharedLogic.Scheduler.Jobs.PassExpiryReminderMaster
 import "rider-app" SharedLogic.Scheduler.Jobs.PaymentOrderStatusCheck
 import "rider-app" SharedLogic.Scheduler.Jobs.Payout.MetroIncentivePayout
 import "rider-app" SharedLogic.Scheduler.Jobs.PostRideSafetyNotification
+import "rider-app" SharedLogic.Scheduler.Jobs.ReconcileRewardInflight
 import "rider-app" SharedLogic.Scheduler.Jobs.SafetyCSAlert
 import "rider-app" SharedLogic.Scheduler.Jobs.SafetyIVR
 import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
@@ -131,6 +132,7 @@ schedulerHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . partnerInvoiceDataExportJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . dailyPassStatusUpdate)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runSettlementReportIngestionJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . reconcileRewardInflight)
     }
 
 runRiderAppScheduler ::

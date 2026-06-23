@@ -119,3 +119,4 @@ getConfigNameFromConsumertype = \case
   LOCATION_UPDATE -> pure "location-update"
   FLEET_COMMUNICATION_DISPATCH -> pure "fleet-communication-dispatch"
   RIDE_EVENTS_CONSUMER -> pure "ride-events-consumer"
+  REWARDS_EVAL_CONSUMER -> pure "rewards-eval-consumer"

@@ -1,0 +1,306 @@
+{
+  "info": {
+    "name": "Rewards Rider Unlock Flow",
+    "description": "End-to-end: dashboard creates active Pool campaign → rider registers → triggerEval → poll GET /rewards for unlock with coupon code.\n\nRequires kafka-consumers with REWARDS_EVAL_CONSUMER running. See RewardsFlow/Rules.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') pm.execution.skipRequest();",
+          "  }",
+          "})();",
+          "if (!pm.collectionVariables.get('_test_rider_number')) {",
+          "  var rNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+          "  pm.collectionVariables.set('_test_rider_number', rNum);",
+          "  console.log('Test rider:', rNum);",
+          "}",
+          "if (!pm.collectionVariables.get('_test_rewards_suffix')) {",
+          "  var suffix = String(Math.floor(100000 + Math.random() * 899999));",
+          "  pm.collectionVariables.set('_test_rewards_suffix', suffix);",
+          "  var now = new Date();",
+          "  var ends = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);",
+          "  pm.collectionVariables.set('_test_starts_at', now.toISOString());",
+          "  pm.collectionVariables.set('_test_ends_at', ends.toISOString());",
+          "  pm.collectionVariables.set('_test_campaign_name', 'INT_TEST_RIDER_REWARDS_' + suffix);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Switch City for BAP (Rider Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{bap_dashboard_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{\"merchantId\": \"{{bap_short_id}}\", \"city\": \"{{city}}\"}" },
+        "url": "{{bap_dashboard_url}}/user/switchMerchantAndCity"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('bap_dashboard_token', d.authToken);",
+              "pm.test('BAP switch OK', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Active Campaign (setup)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{bap_dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{_test_campaign_name}}\",\n  \"description\": \"Rider unlock integration test\",\n  \"sponsorType\": \"Internal\",\n  \"sponsorName\": \"{{bap_short_id}}\",\n  \"sponsorLogoUrl\": null,\n  \"couponSourceType\": \"Pool\",\n  \"couponTemplate\": null,\n  \"redemptionTargetType\": \"Internal\",\n  \"redemptionTargetUrl\": null,\n  \"claimMode\": \"AutoClaim\",\n  \"startsAt\": \"{{_test_starts_at}}\",\n  \"endsAt\": \"{{_test_ends_at}}\",\n  \"displayOrder\": 1\n}"
+        },
+        "url": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rewards/campaign"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rewards_campaign_id', d.campaignId);",
+              "pm.test('Create campaign 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Add Cohort (setup)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{bap_dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Rider flow cohort\",\n  \"description\": null,\n  \"displayOrder\": 1,\n  \"eligibilityJsonLogic\": true,\n  \"rewardTitle\": \"Unlock reward\",\n  \"rewardImageUrl\": null,\n  \"couponValidityDays\": 30,\n  \"presentation\": null\n}"
+        },
+        "url": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rewards/campaign/{{rewards_campaign_id}}/cohort"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rewards_cohort_id', d.cohortId);",
+              "pm.test('Create cohort 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Upload Coupon Codes (setup)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "token", "value": "{{bap_dashboard_token}}" }],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "codesCsv",
+              "type": "text",
+              "value": "code\nRIDER_{{_test_rewards_suffix}}_1\nRIDER_{{_test_rewards_suffix}}_2"
+            }
+          ]
+        },
+        "url": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rewards/campaign/{{rewards_campaign_id}}/cohort/{{rewards_cohort_id}}/codes"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Upload codes 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Activate Campaign (setup)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{bap_dashboard_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{\"newStatus\": \"Active\"}" },
+        "url": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rewards/campaign/{{rewards_campaign_id}}/status"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Activate 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider Auth",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_rider_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{bap_short_id}}\"}"
+        },
+        "url": "{{baseUrl_app}}/auth"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_authId', d.authId);",
+              "pm.test('Rider auth 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider OTP Verify",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-rewards-rider\"}" },
+        "url": "{{baseUrl_app}}/auth/{{rider_authId}}/verify"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_token', d.token);",
+              "pm.environment.set('rider_person_id', d.person.id);",
+              "pm.test('Rider verify 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Trigger Rewards Eval (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "token", "value": "{{bap_dashboard_token}}" }],
+        "url": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rewards/triggerEval/{{rider_person_id}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Trigger eval 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Poll GET /rewards (unlock)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "token", "value": "{{rider_token}}" }],
+        "url": "{{baseUrl_app}}/rewards"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var waitMs = parseInt(pm.environment.get('rewards_eval_wait_ms') || '15000', 10);",
+              "var start = Date.now();",
+              "while (Date.now() - start < waitMs) { /* busy wait for Kafka consumer */ }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var MAX_ATTEMPTS = 10;",
+              "var POLL_MS = 2000;",
+              "var attempt = 0;",
+              "var token = pm.environment.get('rider_token');",
+              "var url = pm.environment.get('baseUrl_app') + '/rewards';",
+              "var campaignName = pm.collectionVariables.get('_test_campaign_name');",
+              "function done() {}",
+              "function poll() {",
+              "  pm.sendRequest({",
+              "    url: url,",
+              "    method: 'GET',",
+              "    header: { token: token }",
+              "  }, function (err, res) {",
+              "    attempt++;",
+              "    if (!err && res.code === 200) {",
+              "      var unlocks = res.json();",
+              "      var hit = unlocks.find(function (u) { return u.campaignName === campaignName; });",
+              "      if (hit) {",
+              "        pm.test('Unlock for test campaign', function () { pm.expect(hit).to.not.be.undefined; });",
+              "        pm.test('AutoClaim reveals couponCode', function () {",
+              "          pm.expect(hit.couponCode).to.be.a('string').and.not.empty;",
+              "        });",
+              "        pm.test('Reward title present', function () { pm.expect(hit.rewardTitle).to.eql('Unlock reward'); });",
+              "        return;",
+              "      }",
+              "    }",
+              "    if (attempt >= MAX_ATTEMPTS) {",
+              "      pm.test('Unlock appeared (is rewards-eval Kafka consumer running?)', function () {",
+              "        pm.expect.fail('No unlock after ' + MAX_ATTEMPTS + ' polls — start kafka-consumers with REWARDS_EVAL_CONSUMER');",
+              "      });",
+              "      return;",
+              "    }",
+              "    setTimeout(poll, POLL_MS);",
+              "  });",
+              "}",
+              "poll();"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
