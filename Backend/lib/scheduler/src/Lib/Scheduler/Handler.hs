@@ -24,6 +24,7 @@ import Control.Monad.Catch
 import qualified Control.Monad.Catch as C
 import qualified Data.ByteString as BS
 import Data.List (partition)
+import qualified Data.Map as M
 import Data.Singletons (fromSing)
 import qualified Data.Time as T hiding (getCurrentTime)
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
@@ -66,11 +67,20 @@ handler hnd = do
     runTask anyJob@(AnyJob Job {..}) = mask $ \restore -> do
       let jobType' = show (fromSing $ jobType jobInfo)
       expirationTime <- asks (.expirationTime)
-      withDynamicLogLevel jobType' . Hedis.withCrossAppRedis . Hedis.whenWithLockRedis (mkRunningJobKey parentJobId.getId) (fromIntegral expirationTime) $
-        withLogTag ("JobId = " <> id.getId <> " and " <> "parentJobId = " <> parentJobId.getId <> "jobType = " <> jobType') $ do
-          res <- measuringDuration (registerDuration jobType') $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
-          registerExecutionResult hnd anyJob res
-          releaseLock parentJobId
+      withDynamicLogLevel jobType' . Hedis.withCrossAppRedis $ do
+        jobInfoMap <- asks (.jobInfoMap)
+        let isLongRunningJob = fromMaybe False (M.lookup jobType' jobInfoMap)
+            lockFn runFn =
+              if isLongRunningJob
+                then do
+                  gotLock <- Hedis.tryLockRedis (mkRunningJobKey id.getId) 1800
+                  when gotLock $ runFn
+                else Hedis.whenWithLockRedis (mkRunningJobKey parentJobId.getId) (fromIntegral expirationTime) runFn
+        lockFn $
+          withLogTag ("JobId = " <> id.getId <> " and parentJobId = " <> parentJobId.getId <> " jobType = " <> jobType' <> " isLongRunningJob = " <> show isLongRunningJob) $ do
+            res <- measuringDuration (registerDuration jobType') $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
+            registerExecutionResult hnd anyJob res
+            releaseLock parentJobId
 
     mkRunningJobKey jobId = "RunnningJob:" <> jobId
 
