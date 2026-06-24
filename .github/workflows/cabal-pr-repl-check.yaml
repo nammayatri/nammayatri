@@ -24,12 +24,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Find merge base commit
         id: merge-base
         run: |
           git fetch origin main
-          BASE_SHA=$(git merge-base origin/main HEAD)
+          BASE_SHA=$(git merge-base origin/main ${{ github.event.pull_request.head.sha }})
           echo "sha=$BASE_SHA" >> $GITHUB_OUTPUT
           echo "Merge base: $BASE_SHA"
 
