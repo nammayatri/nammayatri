@@ -13,3 +13,18 @@ UPDATE atlas_driver_offer_bpp.geometry
 SET geom_geo_json = ST_AsGeoJSON(geom)
 WHERE geom IS NOT NULL
   AND geom_geo_json IS NULL;
+
+-- Backfill geom_geo_json for special_location tables too.
+-- The special zone detection code (Lib/Queries/SpecialLocation.hs) uses
+-- geom_geo_json for point-in-polygon checks. Without this, special zones
+-- like T1: IGI Airport are not detected → wrong fare products used.
+
+UPDATE atlas_app.special_location
+SET geom_geo_json = ST_AsGeoJSON(geom)
+WHERE geom IS NOT NULL
+  AND geom_geo_json IS NULL;
+
+UPDATE atlas_driver_offer_bpp.special_location
+SET geom_geo_json = ST_AsGeoJSON(geom)
+WHERE geom IS NOT NULL
+  AND geom_geo_json IS NULL;
