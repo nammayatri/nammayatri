@@ -621,6 +621,9 @@ apis:
       auth: ApiAuthV2
       params:
         driverId: Id Driver
+      query:
+        - fromDate: Day
+        - toDate: Day
       response:
         type: DriverSearchRequestStatsRes
 

@@ -717,7 +717,13 @@ type PostDriverAirportPreference =
            Kernel.Types.APISuccess.APISuccess
   )
 
-type GetDriverSearchRequestStats = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "searchRequestStats" :> Get '[JSON] DriverSearchRequestStatsRes)
+type GetDriverSearchRequestStats =
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "searchRequestStats" :> QueryParam "fromDate" Data.Time.Day
+      :> QueryParam
+           "toDate"
+           Data.Time.Day
+      :> Get '[JSON] DriverSearchRequestStatsRes
+  )
 
 data DriverAPIs = DriverAPIs
   { getDriverDocumentsInfo :: EulerHS.Types.EulerClient Dashboard.Common.Driver.DriverDocumentsInfoRes,
@@ -773,7 +779,7 @@ data DriverAPIs = DriverAPIs
     postDriverUpdateMerchant :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateDriverMerchantReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverAirportPreference :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient AirportPreferenceRes,
     postDriverAirportPreference :: Kernel.Types.Id.Id Dashboard.Common.Driver -> AirportPreferenceReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverSearchRequestStats :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient DriverSearchRequestStatsRes
+    getDriverSearchRequestStats :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Data.Time.Day -> Kernel.Prelude.Maybe Data.Time.Day -> EulerHS.Types.EulerClient DriverSearchRequestStatsRes
   }
 
 mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)

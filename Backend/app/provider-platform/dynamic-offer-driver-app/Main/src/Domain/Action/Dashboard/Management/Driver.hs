@@ -1554,8 +1554,8 @@ postDriverAirportPreference merchantShortId opCity driverId req = do
     castAirportRestrictionToDomain Common.BLOCKED = DrInfo.BLOCKED
 
 ---------------------------------------------------------------------
-getDriverSearchRequestStats :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.DriverSearchRequestStatsRes
-getDriverSearchRequestStats merchantShortId opCity driverId = do
+getDriverSearchRequestStats :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Day -> Maybe Day -> Flow Common.DriverSearchRequestStatsRes
+getDriverSearchRequestStats merchantShortId opCity driverId mbFromDate mbToDate = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
@@ -1563,8 +1563,18 @@ getDriverSearchRequestStats merchantShortId opCity driverId = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $
     throwError (PersonDoesNotExist personId.getId)
   now <- getCurrentTime
-  let from = addUTCTime (negate $ 30 * 86400) now
-  rows <- CHSearchRequestForDriver.findSearchRequestStatsByDay personId from now
+  let today = utctDay now
+      maxWindowDays = 30
+      defaultFromDay = addDays (negate maxWindowDays) today
+      fromDay = fromMaybe defaultFromDay mbFromDate
+      toDay = fromMaybe today mbToDate
+  when (toDay < fromDay) $
+    throwError $ InvalidRequest "toDate must be >= fromDate"
+  when (diffDays toDay fromDay > maxWindowDays) $
+    throwError $ InvalidRequest ("Date range cannot exceed " <> show maxWindowDays <> " days")
+  let from = UTCTime fromDay 0
+      to = UTCTime (addDays 1 toDay) 0
+  rows <- CHSearchRequestForDriver.findSearchRequestStatsByDay personId from to
   pure $ Common.DriverSearchRequestStatsRes {stats = map toStats rows}
   where
     toStats (day, mbResp, cnt) =
