@@ -172,7 +172,10 @@ jobs:
 
           CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}
           EXCLUDES=$(cd "$CACHE_ROOT" && find dist-newstyle/build -mindepth 4 -maxdepth 4 -name "x" | sed 's|^|--exclude=|')
-          tar -I 'zstd -T0 -3' -cf dist-newstyle.tar.zst -C "$CACHE_ROOT" $EXCLUDES dist-newstyle/ hie/
+          # Include .cabal-dir/ so devbox incremental builds see the exact
+          # same cabal state as CI (config, package DB, package index).
+          # Exclude logs/ to save space.
+          tar -I 'zstd -T0 -3' -cf dist-newstyle.tar.zst -C "$CACHE_ROOT" $EXCLUDES --exclude='.cabal-dir/logs' dist-newstyle/ hie/ .cabal-dir/
           echo "$GITHUB_WORKSPACE" > build-path.txt
           mc cp dist-newstyle.tar.zst "minio/haskell-cache/cabal-build/${{ github.sha }}/dist-newstyle.tar.zst"
           mc cp build-path.txt "minio/haskell-cache/cabal-build/${{ github.sha }}/build-path.txt"
