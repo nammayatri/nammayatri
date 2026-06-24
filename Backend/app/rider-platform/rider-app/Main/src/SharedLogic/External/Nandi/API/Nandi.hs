@@ -442,6 +442,89 @@ getOperatorWaybills = ET.client operatorWaybillsAPI
 postOperatorQueryRows :: Text -> Text -> QueryBody -> ET.EulerClient [Value]
 postOperatorQueryRows = ET.client operatorQueryRowsAPI
 
+-- ===== Stop & route management (clubber / editor) =====
+
+type OperatorStopSearchAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "stops" :> "search"
+    :> QueryParam "q" Text
+    :> QueryParam "limit" Int
+    :> QueryParam "withRoutes" Bool
+    :> Get '[JSON] [EnrichedStop]
+
+type OperatorStopNearbyAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "stops" :> "nearby"
+    :> QueryParam "lat" Double
+    :> QueryParam "lon" Double
+    :> QueryParam "radius" Double
+    :> QueryParam "limit" Int
+    :> QueryParam "withRoutes" Bool
+    :> Get '[JSON] [EnrichedStop]
+
+type OperatorStopBulkReplaceAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "stops" :> "bulk-replace"
+    :> ReqBody '[JSON] BulkReplaceReq
+    :> Post '[JSON] BulkReplaceResult
+
+type OperatorRouteStopsAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "routes" :> Capture "route_id" Text :> "stops"
+    :> Get '[JSON] RouteStopsResponse
+
+type OperatorInsertRouteStopAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "routes" :> Capture "route_id" Text :> "stops" :> "insert"
+    :> ReqBody '[JSON] InsertRouteStopReq
+    :> Post '[JSON] InsertRouteStopResp
+
+type OperatorReprocessRoutesAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "routes" :> "reprocess"
+    :> ReqBody '[JSON] ReprocessReq
+    :> Post '[JSON] [ReprocessResult]
+
+type OperatorExportRouteStopMappingAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "export" :> "route-stop-mapping"
+    :> Get '[JSON] [RouteStopMappingExport]
+
+operatorStopSearchAPI :: Proxy OperatorStopSearchAPI
+operatorStopSearchAPI = Proxy
+
+operatorStopNearbyAPI :: Proxy OperatorStopNearbyAPI
+operatorStopNearbyAPI = Proxy
+
+operatorStopBulkReplaceAPI :: Proxy OperatorStopBulkReplaceAPI
+operatorStopBulkReplaceAPI = Proxy
+
+operatorRouteStopsAPI :: Proxy OperatorRouteStopsAPI
+operatorRouteStopsAPI = Proxy
+
+operatorInsertRouteStopAPI :: Proxy OperatorInsertRouteStopAPI
+operatorInsertRouteStopAPI = Proxy
+
+operatorReprocessRoutesAPI :: Proxy OperatorReprocessRoutesAPI
+operatorReprocessRoutesAPI = Proxy
+
+operatorExportRouteStopMappingAPI :: Proxy OperatorExportRouteStopMappingAPI
+operatorExportRouteStopMappingAPI = Proxy
+
+getOperatorStopSearch :: Text -> Maybe Text -> Maybe Int -> Maybe Bool -> ET.EulerClient [EnrichedStop]
+getOperatorStopSearch = ET.client operatorStopSearchAPI
+
+getOperatorStopNearby :: Text -> Maybe Double -> Maybe Double -> Maybe Double -> Maybe Int -> Maybe Bool -> ET.EulerClient [EnrichedStop]
+getOperatorStopNearby = ET.client operatorStopNearbyAPI
+
+postOperatorStopBulkReplace :: Text -> BulkReplaceReq -> ET.EulerClient BulkReplaceResult
+postOperatorStopBulkReplace = ET.client operatorStopBulkReplaceAPI
+
+getOperatorRouteStops :: Text -> Text -> ET.EulerClient RouteStopsResponse
+getOperatorRouteStops = ET.client operatorRouteStopsAPI
+
+postOperatorInsertRouteStop :: Text -> Text -> InsertRouteStopReq -> ET.EulerClient InsertRouteStopResp
+postOperatorInsertRouteStop = ET.client operatorInsertRouteStopAPI
+
+postOperatorReprocessRoutes :: Text -> ReprocessReq -> ET.EulerClient [ReprocessResult]
+postOperatorReprocessRoutes = ET.client operatorReprocessRoutesAPI
+
+getOperatorExportRouteStopMapping :: Text -> ET.EulerClient [RouteStopMappingExport]
+getOperatorExportRouteStopMapping = ET.client operatorExportRouteStopMappingAPI
+
 type OperatorCurrentOperationAPI =
   "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "currentOperation"
     :> ReqBody '[JSON] GimsOperationAnchor
