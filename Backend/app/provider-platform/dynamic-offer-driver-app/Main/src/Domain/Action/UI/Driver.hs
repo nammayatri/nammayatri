@@ -942,23 +942,23 @@ checkPrepaidGoOnlineEligibility ::
   (MonadFlow m, BeamFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   Id SP.Person ->
   TransporterConfig ->
+  Maybe FDA.FleetDriverAssociation ->
   Maybe DVC.VehicleCategory ->
   m ()
-checkPrepaidGoOnlineEligibility personId transporterConfig mbCurrentVehicleCategory = do
+checkPrepaidGoOnlineEligibility personId transporterConfig mbFleetDriverAssociation mbCurrentVehicleCategory = do
   let isolationEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
       mbVehicleCategory = if isolationEnabled then mbCurrentVehicleCategory else Nothing
-  (ownerType, ownerId, counterparty) <-
-    QFDA.findByDriverId (cast personId) True >>= \case
-      Just fleetDriverAssociation -> pure (DSP.FLEET_OWNER, fleetDriverAssociation.fleetOwnerId, counterpartyFleetOwner)
-      Nothing -> pure (DSP.DRIVER, personId.getId, counterpartyDriver)
+      (ownerType, ownerId, counterparty) = case mbFleetDriverAssociation of
+        Just fleetDriverAssociation -> (DSP.FLEET_OWNER, fleetDriverAssociation.fleetOwnerId, counterpartyFleetOwner)
+        Nothing -> (DSP.DRIVER, personId.getId, counterpartyDriver)
   -- Minimum-balance threshold, mirroring the ride-accept check in initializeRide
   let prepaidThreshold =
         fromMaybe 0 $ case ownerType of
           DSP.FLEET_OWNER -> transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold
           DSP.DRIVER -> transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold
-  activePurchases <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType Plan.PREPAID_SUBSCRIPTION mbVehicleCategory
+  mbActivePurchase <- QSPE.findLatestActiveByOwnerAndServiceName (\_ -> pure ()) ownerId ownerType Plan.PREPAID_SUBSCRIPTION mbVehicleCategory
   availableBalance <- fromMaybe 0 <$> getPrepaidAvailableBalanceByOwner counterparty ownerId mbVehicleCategory
-  when (null activePurchases || availableBalance <= prepaidThreshold) $
+  when (isNothing mbActivePurchase || availableBalance <= prepaidThreshold) $
     throwError (NoActivePrepaidPlan personId.getId)
 
 setActivity ::
@@ -986,9 +986,10 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
         when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
           merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
           mbVehicle <- QVehicle.findById personId
+          mbFleetAssoc <- QFDA.findByDriverId driverId True
           -- Eligibility check for prepaid drivers:
           if Plan.PREPAID_SUBSCRIPTION `elem` driverInfo.servicesEnabledForSubscription
-            then checkPrepaidGoOnlineEligibility personId transporterConfig (mbVehicle >>= (.category))
+            then checkPrepaidGoOnlineEligibility personId transporterConfig mbFleetAssoc (mbVehicle >>= (.category))
             else do
               DriverSpecificSubscriptionData {..} <- getDriverSpecificSubscriptionDataWithSubsConfig (personId, merchantId, merchantOpCityId) transporterConfig driverInfo mbVehicle Plan.YATRI_SUBSCRIPTION
               let commonSubscriptionChecks = not isOnFreeTrial && not transporterConfig.allowDefaultPlanAllocation
@@ -1007,7 +1008,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
               when ((planBasedChecks || changeBasedChecks) && not isVehicleVariantDisabledForSubscription) $ throwError (NoPlanSelected personId.getId)
           when merchant.onlinePayment $ do
             driverBankAccount <-
-              QFDA.findByDriverId driverId True >>= \case
+              case mbFleetAssoc of
                 Just fleetDriverAssociation -> QDBA.findByPrimaryKey (Id @SP.Person fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (DriverBankAccountNotFound driverId.getId)
                 Nothing -> QDBA.findByPrimaryKey driverId >>= fromMaybeM (DriverBankAccountNotFound driverId.getId)
             unless driverBankAccount.chargesEnabled $ throwError (DriverChargesDisabled driverId.getId)
@@ -1018,7 +1019,6 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
           when (transporterConfig.enableBotFlow == Just True) $ do
             unless (isJust mbVehicle) $
               throwError $ InvalidRequest "Cannot go online: no active vehicle linked"
-            mbFleetAssoc <- QFDA.findByDriverId driverId True
             case mbFleetAssoc of
               Just fda -> do
                 fleetOwnerInfo <- QFOI.findByPrimaryKey (Id fda.fleetOwnerId) >>= fromMaybeM (PersonNotFound fda.fleetOwnerId)
