@@ -105,9 +105,11 @@ jobs:
 
           unshare --user --mount --map-root-user bash -c "
             set -e
+            mkdir -p /tmp/ny-pr-src
+            mount --bind $LOCAL_ROOT /tmp/ny-pr-src
             mount -t tmpfs tmpfs /home
             mkdir -p $CI_PROJECT_ROOT
-            mount --bind $LOCAL_ROOT $CI_PROJECT_ROOT
+            mount --bind /tmp/ny-pr-src $CI_PROJECT_ROOT
             mkdir -p $CI_CABAL_DIR/store/ghc-$GHC_VER
             ghc-pkg init $CI_CABAL_DIR/store/ghc-$GHC_VER/package.db 2>/dev/null || true
             export CABAL_DIR=$CI_CABAL_DIR
@@ -129,9 +131,11 @@ jobs:
 
           unshare --user --mount --map-root-user bash -c "
             set -e
+            mkdir -p /tmp/ny-pr-src
+            mount --bind $LOCAL_ROOT /tmp/ny-pr-src
             mount -t tmpfs tmpfs /home
             mkdir -p $CI_PROJECT_ROOT
-            mount --bind $LOCAL_ROOT $CI_PROJECT_ROOT
+            mount --bind /tmp/ny-pr-src $CI_PROJECT_ROOT
             mkdir -p $CI_CABAL_DIR/store/ghc-$GHC_VER
             ghc-pkg init $CI_CABAL_DIR/store/ghc-$GHC_VER/package.db 2>/dev/null || true
             export CABAL_DIR=$CI_CABAL_DIR
