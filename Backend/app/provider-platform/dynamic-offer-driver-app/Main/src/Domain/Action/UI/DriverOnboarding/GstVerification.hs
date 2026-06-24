@@ -33,6 +33,7 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverGstin as DGst
 import qualified Domain.Types.DriverPanCard as DPan
+import qualified Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.IdfyVerification as DIdfy
 import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Image as Image
@@ -158,6 +159,10 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
           role | DCommon.checkFleetOwnerRole role -> do
             gstin <- encrypt req.gstin
             QFOI.updateGstImage (Just gstin) (Just req.imageId) person.id
+            -- GST upload is the first business-fleet signal; promote so later role-gated checks are correct (register API resets if individual).
+            when (person.role == Person.FLEET_OWNER) $ do
+              Person.updatePersonRole person.id Person.FLEET_BUSINESS
+              QFOI.updateFleetType FOI.BUSINESS_FLEET person.id
           _ -> pure ()
   if DVRC.isNameCompareRequired transporterConfig verifyBy || gstPanLinkCheckRequired
     then Redis.withWaitOnLockRedisWithExpiry (DVRC.makeDocumentVerificationLockKey personId.getId) 10 10 runBody
