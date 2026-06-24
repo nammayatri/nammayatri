@@ -97,6 +97,15 @@ evaluateRewardsForRider ::
 evaluateRewardsForRider riderId moCityId completedAt = do
   context <- Ctx.readRiderContext riderId
   activeCampaigns <- QRCmpE.findAllActiveInCityAtTime moCityId completedAt
+  logInfo $
+    "rewards.eval.start riderId="
+      <> riderId.getId
+      <> " moCityId="
+      <> moCityId.getId
+      <> " activeCampaignCount="
+      <> show (length activeCampaigns)
+      <> " context="
+      <> encodeToText context
   foldM_
     ( \pushesSoFar campaign -> do
         cohorts <- QRC.findAllByCampaign campaign.id
@@ -104,6 +113,16 @@ evaluateRewardsForRider riderId moCityId completedAt = do
         let existingNonReclaimed = [u.cohortId | u <- existing, u.status /= DRU.Reclaimed]
         matched <- Eval.evaluateCohorts context cohorts
         let toUnlock = filter (`notElem` existingNonReclaimed) matched
+        when (not (null cohorts)) $
+          logInfo $
+            "rewards.eval.campaign riderId="
+              <> riderId.getId
+              <> " campaignId="
+              <> campaign.id.getId
+              <> " matchedCohortIds="
+              <> show (map (.getId) matched)
+              <> " toUnlockCohortIds="
+              <> show (map (.getId) toUnlock)
         foldM
           ( \sentSoFar cohortId -> do
               cohort <-
@@ -112,7 +131,17 @@ evaluateRewardsForRider riderId moCityId completedAt = do
                   _ -> throwError $ InternalError "Consumer: matched cohort not in cohorts list"
               mCode <- Coupon.claimCoupon campaign cohort riderId
               case mCode of
-                Nothing -> pure sentSoFar
+                Nothing -> do
+                  logInfo $
+                    "rewards.claim.empty riderId="
+                      <> riderId.getId
+                      <> " campaignId="
+                      <> campaign.id.getId
+                      <> " cohortId="
+                      <> cohortId.getId
+                      <> " couponSource="
+                      <> show campaign.couponSourceType
+                  pure sentSoFar
                 Just code -> do
                   now <- getCurrentTime
                   uid <- generateGUID
@@ -149,6 +178,13 @@ evaluateRewardsForRider riderId moCityId completedAt = do
                           pure (sentSoFar + 1)
                         else pure sentSoFar
                     else do
+                      logInfo $
+                        "rewards.unlock.skipped.duplicate riderId="
+                          <> riderId.getId
+                          <> " campaignId="
+                          <> campaign.id.getId
+                          <> " cohortId="
+                          <> cohortId.getId
                       when (campaign.couponSourceType == DRCmp.Pool) $ do
                         Pool.pushBackToPool campaign.id cohort.id code
                         Pool.removeFromInflight campaign.id cohort.id code
