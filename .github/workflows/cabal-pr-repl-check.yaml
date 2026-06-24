@@ -84,15 +84,6 @@ jobs:
           ln -sfn "$PR_CACHE_ROOT/dist-newrepl-driver" Backend/dist-newrepl-driver
           ln -sfn "$PR_CACHE_ROOT/dist-newrepl-rider"  Backend/dist-newrepl-rider
 
-          HIE_CACHE="$PR_CACHE_ROOT/hie"
-          cd "$GITHUB_WORKSPACE/Backend"
-          grep -E '^[[:space:]]+(app|lib|test)' cabal.project | awk '{print $1}' | while read -r pkg; do
-            [ -d "$pkg" ] || continue
-            mkdir -p "$HIE_CACHE/$pkg"
-            rm -rf "$pkg/.hie"
-            ln -sfn "$HIE_CACHE/$pkg" "$pkg/.hie"
-          done
-
           rm -f /tmp/ny-pr-artifacts/*.tar.zst
 
       - name: Repl check — dynamic-offer-driver-app
@@ -117,6 +108,7 @@ jobs:
               cd $CI_PROJECT_ROOT/Backend
               cabal repl dynamic-offer-driver-app \
                 --repl-options='-fno-code -fwrite-interface' \
+                --ghc-options='-fno-write-ide-info' \
                 --builddir=dist-newrepl-driver <<< ':quit'
             "
 
@@ -142,6 +134,7 @@ jobs:
               cd $CI_PROJECT_ROOT/Backend
               cabal repl rider-app \
                 --repl-options='-fno-code -fwrite-interface' \
+                --ghc-options='-fno-write-ide-info' \
                 --builddir=dist-newrepl-rider <<< ':quit'
             "
 
