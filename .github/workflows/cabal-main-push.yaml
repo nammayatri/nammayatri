@@ -36,7 +36,7 @@ jobs:
       matrix:
         include:
           - system: x86_64-linux
-            host: x86_64_main_push
+            host: x86_64_main_branch_push
             arch: amd64
             name: Cabal Unoptimized Master Release Build
             continue-on-error: false
@@ -223,7 +223,7 @@ jobs:
     name: Analyze Cabal Build Times
     needs: [cabal-build, check-conditions]
     if: needs.check-conditions.outputs.should-proceed == 'true'
-    runs-on: x86_64_main_push
+    runs-on: x86_64_main_branch_push
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
