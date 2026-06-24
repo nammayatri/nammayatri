@@ -234,6 +234,7 @@ data DocumentType
   | BotApproval
   | NomineeDetails
   | DriverVehicleNOC
+  | FleetRegistration
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
@@ -259,9 +260,9 @@ data DocumentsListResponse = DocumentsListResponse
     vehicleLeft :: [Kernel.Prelude.Text],
     vehicleFrontInterior :: [Kernel.Prelude.Text],
     vehicleBackInterior :: [Kernel.Prelude.Text],
-    driverVehicleNOC :: [Kernel.Prelude.Text],
     pan :: [Kernel.Prelude.Text],
     vehicleNOC :: [Kernel.Prelude.Text],
+    driverVehicleNOC :: [Kernel.Prelude.Text],
     businessLicense :: [Kernel.Prelude.Text],
     odometer :: [Kernel.Prelude.Text],
     aadhaar :: [Kernel.Prelude.Text],

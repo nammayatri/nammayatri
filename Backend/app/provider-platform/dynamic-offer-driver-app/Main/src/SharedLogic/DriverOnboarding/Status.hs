@@ -22,6 +22,7 @@ module SharedLogic.DriverOnboarding.Status
     hasActiveFleetAssociation,
     recomputeFleetVerifiedAndEnabled,
     recomputeDriverVerifiedAndEnabled,
+    refreshDocsVerificationStatusesWithStatus,
     botApproveAndReconcile,
     forkRecomputeVehicleVerified,
     activateRCAutomatically,
@@ -1348,6 +1349,9 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
       mbIdentityInfo <- QDII.findByDriverId driverId
       let hasNominee = maybe False (\info -> isJust info.nomineeName && isJust info.nomineeRelationship && isJust info.nomineeDob) mbIdentityInfo
       return (if hasNominee then Just VALID else Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing)
+    DVC.FleetRegistration -> do
+      mbInfo <- if isFleetRole role then QFOI.findByPrimaryKey driverId else pure Nothing
+      return (if isJust (mbInfo >>= (.registeredAt)) then Just VALID else Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
     _ -> commonDocStatus docType
 
 callGetDLGetStatus :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()

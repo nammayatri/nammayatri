@@ -822,3 +822,4 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.Rating -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.Rating
   Domain.Types.DocumentVerificationConfig.BotApproval -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BotApproval
   Domain.Types.DocumentVerificationConfig.NomineeDetails -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.NomineeDetails
+  Domain.Types.DocumentVerificationConfig.FleetRegistration -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.FleetRegistration

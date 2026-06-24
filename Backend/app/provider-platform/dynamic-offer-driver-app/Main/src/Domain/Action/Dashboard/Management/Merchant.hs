@@ -1085,6 +1085,7 @@ castDDocumentType = \case
   DVC.Rating -> Common.Rating
   DVC.BotApproval -> Common.BotApproval
   DVC.NomineeDetails -> Common.NomineeDetails
+  DVC.FleetRegistration -> Common.FleetRegistration
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentUpdate ::
@@ -1195,6 +1196,7 @@ castDocumentType = \case
   Common.Rating -> DVC.Rating
   Common.BotApproval -> DVC.BotApproval
   Common.NomineeDetails -> DVC.NomineeDetails
+  Common.FleetRegistration -> DVC.FleetRegistration
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentCreate ::

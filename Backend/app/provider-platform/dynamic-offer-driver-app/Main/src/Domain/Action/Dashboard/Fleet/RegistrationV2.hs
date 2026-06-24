@@ -58,6 +58,7 @@ import qualified SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MobileNumberValidation as MobileValidation
 import qualified SharedLogic.PersonBankAccount as SPBA
@@ -173,6 +174,8 @@ fleetOwnerRegister merchantShortId opCity mbRequestorId req = do
   void $ QP.updateByPrimaryKey updPerson
   void $ updateFleetOwnerInfo fleetOwnerInfo req
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  -- Registration is now a mandatory (verified-only) doc; recompute so `verified` flips once registeredAt is set.
+  void $ SStatus.refreshDocsVerificationStatusesWithStatus (Just updPerson) (Just transporterConfig) fleetOwnerId
 
   mbReferredOperatorId <- getOperatorIdFromReferralCode req.operatorReferralCode
   whenJust (mbReferredOperatorId <|> mbRequestedOperatorId) $ \referredOperatorId -> do
