@@ -28,7 +28,7 @@ jobs:
       - name: Find merge base commit
         id: merge-base
         run: |
-          git fetch origin main --depth=200
+          git fetch origin main
           BASE_SHA=$(git merge-base origin/main HEAD)
           echo "sha=$BASE_SHA" >> $GITHUB_OUTPUT
           echo "Merge base: $BASE_SHA"
