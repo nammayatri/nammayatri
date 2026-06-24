@@ -2605,6 +2605,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC _ (ChooseVe
           selectedServices = updatedServices
         , hasTollCharges =  DA.any (\chooseVehicleConfg -> chooseVehicleConfg.hasTollCharges) $ filterSelectedServiceConfigs state.data.specialZoneQuoteList updatedServices
         , hasParkingCharges =  DA.any (\chooseVehicleConfg -> chooseVehicleConfg.hasParkingCharges) $ filterSelectedServiceConfigs state.data.specialZoneQuoteList updatedServices
+        , hasPetCharges =  DA.any (\chooseVehicleConfg -> chooseVehicleConfg.hasPetCharges) $ filterSelectedServiceConfigs state.data.specialZoneQuoteList updatedServices
         }
       else item
     ) state.data.specialZoneQuoteList
@@ -2776,6 +2777,7 @@ eval (QuoteListModelActionController (QuoteListModelController.BoostSearchAction
           selectedServices = updatedServices
         , hasTollCharges =  DA.any (\chooseVehicleConfg -> chooseVehicleConfg.hasTollCharges) $ filterSelectedServiceConfigs state.data.specialZoneQuoteList updatedServices
         , hasParkingCharges =  DA.any (\chooseVehicleConfg -> chooseVehicleConfg.hasParkingCharges) $ filterSelectedServiceConfigs state.data.specialZoneQuoteList updatedServices
+        , hasPetCharges =  DA.any (\chooseVehicleConfg -> chooseVehicleConfg.hasPetCharges) $ filterSelectedServiceConfigs state.data.specialZoneQuoteList updatedServices
         , activeIndex = activeIndex
         }
       else item{activeIndex = activeIndex}

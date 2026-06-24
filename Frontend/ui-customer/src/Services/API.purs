@@ -1372,7 +1372,8 @@ newtype DEstimateSelect = DEstimateSelect
     autoAssignEnabledV2 :: Boolean,
     otherSelectedEstimates :: Array String,
     isAdvancedBookingEnabled :: Boolean,
-    deliveryDetails :: Maybe DeliveryDetails
+    deliveryDetails :: Maybe DeliveryDetails,
+    isPetRide :: Maybe Boolean
   }
 
 data DeliveryDetails = DeliveryDetails
