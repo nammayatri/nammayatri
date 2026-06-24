@@ -36,8 +36,6 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding (VerificationReqRecord)
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
-import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverUdyam as DUQuery
 import qualified Storage.Queries.DriverUdyamExtra as DUQueryExtra
@@ -78,9 +76,7 @@ verifyUdyam (personId, merchantOpCityId) req = do
         otherPersonDetails <- PersonQuery.getDriversByIdIn otherDriverIds
         when (person.role `elem` map (.role) otherPersonDetails) $ throwError UdyamAlreadyLinked
     _ -> pure ()
-  cfg <-
-    getOneConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just ODC.UDYAMCertificate}) (Just (maybeToList <$> CQFODVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.UDYAMCertificate Nothing))
-      >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.UDYAMCertificate))
+  cfg <- SStatus.getFleetDocVerificationConfig merchantOpCityId ODC.UDYAMCertificate person.role
   if cfg.doStrictVerifcation
     then verifyUdyamFlow person merchantOpCityId req.uamNumber req.imageId1
     else upsertManualUdyamRecord person req.uamNumber
