@@ -44,7 +44,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Tools.Logging
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
-import Kernel.Types.Id (Id)
+import Kernel.Types.Id (Id, cast)
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
