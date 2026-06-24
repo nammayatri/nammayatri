@@ -305,6 +305,36 @@ operatorQueryRows baseUrl gtfsId table body = do
   vals <- withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorQueryRows gtfsId (nandiTableToText table) body) "operatorQueryRows" NandiAPI.operatorQueryRowsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_QUERY_ROWS_API") baseUrl)
   either (throwError . InternalError . T.pack) pure (mapM (decodeNandiRow table) vals)
 
+-- ===== Stop & route management (clubber / editor) =====
+
+operatorSearchStops :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> Maybe Int -> Maybe Bool -> m [EnrichedStop]
+operatorSearchStops baseUrl gtfsId q limit withRoutes =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorStopSearch gtfsId (Just q) limit withRoutes) "operatorSearchStops" NandiAPI.operatorStopSearchAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_STOP_SEARCH_API") baseUrl)
+
+operatorNearbyStops :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Double -> Double -> Maybe Double -> Maybe Int -> Maybe Bool -> m [EnrichedStop]
+operatorNearbyStops baseUrl gtfsId lat lon radius limit withRoutes =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorStopNearby gtfsId (Just lat) (Just lon) radius limit withRoutes) "operatorNearbyStops" NandiAPI.operatorStopNearbyAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_STOP_NEARBY_API") baseUrl)
+
+operatorBulkReplaceStops :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> BulkReplaceReq -> m BulkReplaceResult
+operatorBulkReplaceStops baseUrl gtfsId req =
+  withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorStopBulkReplace gtfsId req) "operatorBulkReplaceStops" NandiAPI.operatorStopBulkReplaceAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_STOP_BULK_REPLACE_API") baseUrl)
+
+operatorRouteStops :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> m RouteStopsResponse
+operatorRouteStops baseUrl gtfsId routeId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorRouteStops gtfsId routeId) "operatorRouteStops" NandiAPI.operatorRouteStopsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_ROUTE_STOPS_API") baseUrl)
+
+operatorInsertRouteStop :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasRequestId r) => BaseUrl -> Text -> Text -> InsertRouteStopReq -> m InsertRouteStopResp
+operatorInsertRouteStop baseUrl gtfsId routeId req =
+  callAPI baseUrl (NandiAPI.postOperatorInsertRouteStop gtfsId routeId req) "operatorInsertRouteStop" NandiAPI.operatorInsertRouteStopAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_INSERT_ROUTE_STOP_API") baseUrl)
+
+operatorReprocessRoutes :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> ReprocessReq -> m [ReprocessResult]
+operatorReprocessRoutes baseUrl gtfsId req =
+  withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorReprocessRoutes gtfsId req) "operatorReprocessRoutes" NandiAPI.operatorReprocessRoutesAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_REPROCESS_ROUTES_API") baseUrl)
+
+operatorExportRouteStopMapping :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m [RouteStopMappingExport]
+operatorExportRouteStopMapping baseUrl gtfsId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorExportRouteStopMapping gtfsId) "operatorExportRouteStopMapping" NandiAPI.operatorExportRouteStopMappingAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_EXPORT_ROUTE_STOP_MAPPING_API") baseUrl)
+
 getRoutesServedToday :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> m [RoutesServedTodayItem]
 getRoutesServedToday baseUrl =
   withShortRetry $ callAPI baseUrl NandiAPI.getNandiRoutesServedToday "getRoutesServedToday" NandiAPI.nandiRoutesServedTodayAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ROUTES_SERVED_TODAY_API") baseUrl)
