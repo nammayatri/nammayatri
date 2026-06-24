@@ -144,6 +144,7 @@ Ride:
     sosId: Maybe (Id Sos)
     isTierUpgrade: Maybe Bool
     assignedServiceTierName: Maybe Text
+    enableOtpLessRide: Maybe Bool
 
   sqlType:
     allowedEditLocationAttempts: int
