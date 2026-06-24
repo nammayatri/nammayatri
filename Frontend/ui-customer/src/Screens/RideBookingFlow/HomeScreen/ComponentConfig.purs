@@ -1877,6 +1877,7 @@ chooseVehicleConfig state = let
     , validTill = selectedEstimates.validTill
     , hasTollCharges = selectedEstimates.hasTollCharges
     , hasParkingCharges = selectedEstimates.hasParkingCharges
+    , hasPetCharges = selectedEstimates.hasPetCharges
     }
   in chooseVehicleConfig'
 

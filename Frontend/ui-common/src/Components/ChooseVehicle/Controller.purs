@@ -75,6 +75,7 @@ type Config
     , showStroke :: Boolean
     , hasTollCharges :: Boolean
     , hasParkingCharges :: Boolean
+    , hasPetCharges :: Boolean
     , smartTipSuggestion :: Maybe Int
     , specialLocationTag :: Maybe String
     , smartTipReason :: Maybe String
@@ -154,6 +155,7 @@ config =
   , showStroke : true
   , hasTollCharges : false 
   , hasParkingCharges : false
+  , hasPetCharges : false
   , specialLocationTag : Nothing
   , smartTipSuggestion: Nothing
   , smartTipReason : Nothing
