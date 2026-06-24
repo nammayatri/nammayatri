@@ -207,9 +207,9 @@ getQuotes searchRequestId mbAllowMultiple = do
   let lockKey = estimateBuildLockKey searchRequestId.getId
       language = fromMaybe Lang.ENGLISH person.language
   Redis.withLockRedisAndReturnValue lockKey 5 $ do
-    offers <- getOffers searchRequest
+    offers <- getOffers searchRequest language
     estimates' <- getEstimates searchRequest.merchantId person.id searchRequest.merchantOperatingCityId searchRequestId (isJust searchRequest.driverIdentifier) language
-    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) language
+    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
 
     let vehicleServiceTierOrderConfig = maybe [] (.userServiceTierOrderConfig) riderConfig
         defaultServiceTierOrderConfig = maybe [] (.defaultServiceTierOrderConfig) riderConfig
@@ -276,7 +276,7 @@ getOffers searchRequest language = do
       logDebug $ "quotes are :-" <> show quoteList
       bppDetailList <- forM ((.providerId) <$> quoteList) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
       isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
-      quoteEntities <- mkQuoteAPIEntitiesWithOffers searchRequest enableRideHailingOffers quoteList bppDetailList isValueAddNPList language
+      quoteEntities <- mkQuoteAPIEntitiesWithOffers searchRequest enableRideHailingOffers quoteList bppDetailList isValueAddNPList
       let quotes = case searchRequest.riderPreferredOption of
             DRPO.Rental -> OnRentalCab <$> quoteEntities
             _ -> OnDemandCab <$> quoteEntities
@@ -286,7 +286,7 @@ getOffers searchRequest language = do
       logDebug $ "quotes are :-" <> show quoteList
       bppDetailList <- forM ((.providerId) <$> quoteList) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
       isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
-      quoteEntities <- mkQuoteAPIEntitiesWithOffers searchRequest enableRideHailingOffers quoteList bppDetailList isValueAddNPList language
+      quoteEntities <- mkQuoteAPIEntitiesWithOffers searchRequest enableRideHailingOffers quoteList bppDetailList isValueAddNPList
       let quotes = case searchRequest.isMeterRideSearch of
             Just True -> OnMeterRide <$> quoteEntities
             _ -> OnRentalCab <$> quoteEntities
@@ -298,9 +298,8 @@ getOffers searchRequest language = do
       [SQuote.Quote] ->
       [BppDetails] ->
       [Bool] ->
-      Lang.Language ->
       Flow [QuoteAPIEntity]
-    mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDetailList isValueAddNPList language = do
+    mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDetailList isValueAddNPList = do
       let quoteEntitiesWithCtx =
             zip
               (mkQAPIEntityList quoteList bppDetailList isValueAddNPList)
@@ -393,8 +392,8 @@ getEstimates merchantId personId mocId searchRequestId isReferredRide language =
       -- reflects VAT redistribution via applyRideDiscount.
       Just resp -> SOffer.mkCumulativeOfferResp mocId resp [] mbBreakup
     apiEntity <- UEstimate.mkEstimateAPIEntity isReferredRide mbOffer estimate
-    serviceTierName <- translateServiceTierText searchRequest.merchantOperatingCityId language apiEntity.serviceTierName
-    serviceTierShortDesc <- translateServiceTierText searchRequest.merchantOperatingCityId language apiEntity.serviceTierShortDesc
+    serviceTierName <- translateServiceTierText mocId language apiEntity.serviceTierName
+    serviceTierShortDesc <- translateServiceTierText mocId language apiEntity.serviceTierShortDesc
     pure apiEntity {UEstimate.serviceTierName = serviceTierName, UEstimate.serviceTierShortDesc = serviceTierShortDesc}
   return . sortBy (compare `on` (.createdAt)) $ estimates
 
