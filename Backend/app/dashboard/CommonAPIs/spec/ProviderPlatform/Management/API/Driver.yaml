@@ -34,6 +34,7 @@ imports:
   MerchantOperatingCity: Dashboard.Common
   ServiceTierType: Dashboard.Common
   UpsertDriverServiceTiersCsvReq: Dashboard.Common.Driver
+  Day: Data.Time.Calendar
 
 module: Driver
 
