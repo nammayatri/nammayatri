@@ -1,0 +1,240 @@
+{
+  "info": {
+    "name": "FleetRegistrationGate - Verified gated on registration",
+    "description": "Self-seeding gate proof for the FleetRegistration change. Seeds the FleetRegistration fleet-doc-config for NAMMA_YATRI/Bangalore, creates a fleet owner via OTP, mints a /ui token, and asserts via the real onboarding-status API that FleetRegistration is a recognized mandatory fleet doc that is NOT valid before registration (so it gates `verified`). The post-registration flip (FleetRegistration->VALID, verified->true) is verified manually (see Rules.md) because fleet_owner_information is KV-backed and the only KV-correct way to set registered_at is the real /fleet/v2/register API (which requires the full PAN/Aadhaar onboarding chain).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// One-time per run: random mobile + unique token id + registration timestamp.",
+          "if (!pm.collectionVariables.get('_fr_init')) {",
+          "  const r = Math.floor(Math.random() * 900000000) + 100000000;",
+          "  pm.environment.set('fleet_owner_mobile', '9' + String(r).slice(0, 8));",
+          "  const stamp = Date.now();",
+          "  pm.environment.set('fleet_ui_token', 'freg-uitok-' + stamp);",
+          "  pm.environment.set('fleet_tok_id', 'freg-tokid-' + stamp);",
+          "  pm.environment.set('now_iso', new Date().toISOString());",
+          "  pm.collectionVariables.set('_fr_init', '1');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "_fr_init",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Switch Dashboard to NAMMA/Bangalore",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
+        },
+        "url": "{{dashboard_base_url}}/user/switchMerchantAndCity"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('switch dashboard 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Seed FleetRegistration fleet-doc-config (FLEET_OWNER)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"fleet_owner_document_verification_config\",\"touch_timestamps\":true,\"on_conflict_do_nothing\":true,\"values\":{\"document_type\":\"FleetRegistration\",\"merchant_id\":\"{{driver_merchant_id}}\",\"merchant_operating_city_id\":\"{{moc_id}}\",\"role\":\"FLEET_OWNER\",\"title\":\"Fleet Registration\",\"is_mandatory\":true,\"is_disabled\":false,\"is_hidden\":true,\"dependency_document_type\":[],\"check_extraction\":false,\"check_expiry\":false,\"is_default_enabled_on_manual_verification\":false,\"is_image_validation_required\":true,\"do_strict_verifcation\":false,\"order\":100,\"max_retry_count\":3}}"
+        },
+        "url": "{{mockServerUrl}}/mock/sql/insert"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('seed config ok', () => pm.expect(pm.response.json().ok).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Fleet Owner Login OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{fleet_owner_mobile}}\", \"mobileCountryCode\": \"{{country_code}}\"}"
+        },
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('login otp 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Fleet Owner Verify OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{fleet_owner_mobile}}\", \"mobileCountryCode\": \"{{country_code}}\", \"otp\": \"{{login_otp}}\"}"
+        },
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/verify/otp"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('verify otp 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Resolve fleet_owner_id (latest FLEET_OWNER)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"person\",\"select\":[\"id\",\"role\",\"created_at\"],\"where_clause\":[{\"column_name\":\"role\",\"val\":\"FLEET_OWNER\",\"op\":\"=\"}],\"limit\":50}"
+        },
+        "url": "{{mockServerUrl}}/mock/sql/select"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const rows = (pm.response.json().rows) || [];",
+              "pm.test('found a fleet owner', () => pm.expect(rows.length).to.be.above(0));",
+              "rows.sort((a,b) => String(b.created_at).localeCompare(String(a.created_at)));",
+              "pm.environment.set('fleet_owner_id', rows[0].id);",
+              "console.log('fleet_owner_id =', rows[0].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Mint /ui registration token for fleet owner",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"registration_token\",\"touch_timestamps\":true,\"on_conflict_do_nothing\":true,\"values\":{\"id\":\"{{fleet_tok_id}}\",\"token\":\"{{fleet_ui_token}}\",\"entity_id\":\"{{fleet_owner_id}}\",\"entity_type\":\"USER\",\"verified\":true,\"auth_value_hash\":\"7891\",\"auth_type\":\"OTP\",\"auth_medium\":\"SMS\",\"attempts\":3,\"alternate_number_attempts\":5,\"auth_expiry\":3,\"token_expiry\":365,\"merchant_id\":\"{{driver_merchant_id}}\",\"merchant_operating_city_id\":\"{{moc_id}}\"}}"
+        },
+        "url": "{{mockServerUrl}}/mock/sql/insert"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('token minted', () => pm.expect(pm.response.json().ok).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Gate proof: FleetRegistration present & NOT valid before registration",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{fleet_ui_token}}"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/driver/register/status?onlyMandatoryDocs=true"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const docs = (pm.response.json().driverDocuments) || [];",
+              "const fr = docs.find(d => d.documentType === 'FleetRegistration');",
+              "pm.test('FleetRegistration is a fleet onboarding doc (config picked up)', () => pm.expect(fr, 'docTypes='+JSON.stringify(docs.map(d=>d.documentType))).to.be.an('object'));",
+              "pm.test('FleetRegistration NOT valid before registration (gates verified)', () => pm.expect(fr.verificationStatus).to.not.eql('VALID'));",
+              "console.log('FleetRegistration status before registration =', fr && fr.verificationStatus);"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -539,6 +539,7 @@ mapDocumentType Common.MedicalCertificate = DVC.MedicalCertificate
 mapDocumentType Common.Rating = DVC.Rating
 mapDocumentType Common.BotApproval = DVC.BotApproval
 mapDocumentType Common.NomineeDetails = DVC.NomineeDetails
+mapDocumentType Common.FleetRegistration = DVC.FleetRegistration
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
