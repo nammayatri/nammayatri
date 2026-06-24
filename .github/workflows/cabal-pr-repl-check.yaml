@@ -18,7 +18,7 @@ permissions:
 jobs:
   repl-check:
     name: Incremental Repl Check
-    runs-on: x86_64_main_push
+    runs-on: x86_64_main_pull
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
