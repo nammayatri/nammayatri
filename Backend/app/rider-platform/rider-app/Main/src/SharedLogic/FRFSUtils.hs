@@ -1105,10 +1105,11 @@ createBasketFromBookings ::
   m [Payment.Basket]
 createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId paymentServiceType mbEnableOffer = do
   logDebug $ "mbEnableOffer: " <> show mbEnableOffer
-  let dummyBasket =
+  let totalAmount = sum $ map (\booking -> booking.totalPrice.amount) allJourneyBookings
+      dummyBasket =
         [ Payment.Basket
             { Payment.id = "no_basket",
-              Payment.unitPrice = 0,
+              Payment.unitPrice = totalAmount,
               Payment.quantity = 1
             }
         ]
@@ -1121,25 +1122,28 @@ createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId p
           -- offer valid only for single mode booking (not handled for multimodal right now)
           quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
           quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
-          mbOfferSKUProductId <- Payment.fetchOfferSKUConfig merchantId merchantOperatingCityId Nothing paymentServiceType
+          (mbAdultOfferSKUProductId, mbChildOfferSKUProductId) <- Payment.fetchOfferSKUConfig merchantId merchantOperatingCityId Nothing paymentServiceType
           let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
               adultQuantity = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)
               childQuantity = find (\category -> category.categoryType == CHILD) fareParameters.priceItems <&> (.quantity)
               adultUnitPrice = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice.amount)
               childUnitPrice = find (\category -> category.categoryType == CHILD) fareParameters.priceItems <&> (.unitPrice.amount)
-          case (mbOfferSKUProductId, adultQuantity, childQuantity, adultUnitPrice, childUnitPrice) of
-            (Just offerSKUProductId, Just adultQuantity', childQuantity', Just adultUnitPrice', _) -> do
-              if adultQuantity' == 1 && fromMaybe 0 childQuantity' == 0
-                then
-                  return $
-                    [ Payment.Basket
-                        { Payment.id = offerSKUProductId,
-                          Payment.unitPrice = adultUnitPrice',
-                          Payment.quantity = adultQuantity'
-                        }
-                    ]
-                else return dummyBasket
-            _ -> return dummyBasket
+              -- separate basket line per category, each keyed by its own offer SKU id
+              mkBasket mbOfferSKUProductId mbQuantity mbUnitPrice =
+                case (mbQuantity, mbUnitPrice) of
+                  (Just quantity', Just unitPrice')
+                    | quantity' > 0 ->
+                      [ Payment.Basket
+                          { Payment.id = fromMaybe "no_basket" mbOfferSKUProductId,
+                            Payment.unitPrice = unitPrice',
+                            Payment.quantity = quantity'
+                          }
+                      ]
+                  _ -> []
+              adultBasket = mkBasket mbAdultOfferSKUProductId adultQuantity adultUnitPrice
+              childBasket = mkBasket mbChildOfferSKUProductId childQuantity childUnitPrice
+              baskets = adultBasket <> childBasket
+          return $ if null baskets then dummyBasket else baskets
         _ -> return dummyBasket
 
 -- TODO :: To be deprecated, and unified with SharedLogic.PaymentVendorSplits.createVendorSplit

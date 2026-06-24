@@ -52,7 +52,8 @@ data RouteInfoNandi = RouteInfoNandi
     startPoint :: LatLong,
     endPoint :: LatLong,
     stopCount :: Maybe Int,
-    serviceTierType :: Maybe BecknV2.FRFS.Enums.ServiceTierType
+    serviceTierType :: Maybe BecknV2.FRFS.Enums.ServiceTierType,
+    encodedPolyline :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 

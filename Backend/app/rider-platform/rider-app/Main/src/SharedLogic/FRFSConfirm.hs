@@ -727,7 +727,7 @@ buildJourneyAndLeg booking fareParameters = do
           effectiveDriverName = mbWaybillMeta >>= (.driverName)
           effectiveDriverMobileNumber = mbWaybillMeta >>= (.driverMobileNumber)
 
-      QFRFSTicketBooking.updateFRFSTicketBookingVehicleDataBySearchId
+      QFRFSTicketBooking.updateFRFSTicketBookingVehicleDataById
         journeyLeg.finalBoardedBusNumber
         journeyLeg.finalBoardedBusNumberSource
         journeyLeg.finalBoardedWaybillId
@@ -738,7 +738,7 @@ buildJourneyAndLeg booking fareParameters = do
         effectiveDriverId
         effectiveDriverName
         effectiveDriverMobileNumber
-        booking.searchId.getId
+        booking.id
   where
     mkBookingJourneyCreateKey = "booking:journey:create:bookingId-" <> booking.id.getId
 
