@@ -278,10 +278,23 @@ mockDelete baseDirectory bucketName path =
 getFullPathMock :: String -> Text -> String -> String
 getFullPathMock baseDirectory bucketName path = baseDirectory <> "/" <> cs bucketName <> "/" <> path
 
+mkAwsEnv ::
+  ( MonadFlow m
+  ) =>
+  Text ->
+  m Amazonka.Env
+mkAwsEnv region = do
+  env <- Amazonka.newEnv Amazonka.discover
+  pure $
+    if T.null region
+      then env
+      else env {Amazonka.region = Amazonka.Region' region}
+
 -- | Generate a pre-signed URL for uploading a video
 generateUploadUrl' ::
   ( MonadFlow m
   ) =>
+  Text ->
   Text ->
   String ->
   Seconds ->
@@ -292,6 +305,7 @@ generateUploadUrl' = generateUrl' PUT
 generateDownloadUrl' ::
   ( MonadFlow m
   ) =>
+  Text ->
   Text ->
   String ->
   Seconds ->
@@ -305,11 +319,12 @@ generateUrl' ::
   ) =>
   Method ->
   Text ->
+  Text ->
   String ->
   Seconds ->
   m Text
-generateUrl' method bucketName path expires = withLogTag "S3" $ do
-  env <- Amazonka.newEnv Amazonka.discover
+generateUrl' method region bucketName path expires = withLogTag "S3" $ do
+  env <- mkAwsEnv region
   now <- getCurrentTime
   let bucketName' = Amazonka.BucketName bucketName
       path' = Amazonka.ObjectKey $ T.pack path
@@ -345,10 +360,11 @@ headRequest' ::
   ( MonadFlow m
   ) =>
   Text ->
+  Text ->
   String ->
   m ObjectStatus
-headRequest' bucketName path = withLogTag "S3" $ do
-  env <- Amazonka.newEnv Amazonka.discover
+headRequest' region bucketName path = withLogTag "S3" $ do
+  env <- mkAwsEnv region
   let bucketName' = Amazonka.BucketName bucketName
       path' = Amazonka.ObjectKey $ T.pack path
   res <- liftIO . Amazonka.runResourceT $ Amazonka.send env (Amazonka.newHeadObject bucketName' path')
