@@ -3,11 +3,11 @@
 
 module Storage.Queries.OrphanInstances.RewardCohort where
 
-import qualified Domain.Types.RewardCampaign
 import qualified Domain.Types.RewardCohort
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -23,10 +23,10 @@ instance FromTType' Beam.RewardCohort Domain.Types.RewardCohort.RewardCohort whe
             createdAt = createdAt,
             description = description,
             displayOrder = displayOrder,
-            eligibilityJsonLogic = eligibilityJsonLogic,
+            eligibilityJsonLogic = Kernel.Prelude.identity eligibilityJsonLogic,
             id = Kernel.Types.Id.Id id,
             name = name,
-            presentation = Kernel.Prelude.identity <$> presentation,
+            presentation = Kernel.Prelude.identity presentation,
             rewardImageUrl = rewardImageUrl,
             rewardTitle = rewardTitle,
             updatedAt = updatedAt,
@@ -42,10 +42,10 @@ instance ToTType' Beam.RewardCohort Domain.Types.RewardCohort.RewardCohort where
         Beam.createdAt = createdAt,
         Beam.description = description,
         Beam.displayOrder = displayOrder,
-        Beam.eligibilityJsonLogic = eligibilityJsonLogic,
+        Beam.eligibilityJsonLogic = Kernel.Prelude.identity eligibilityJsonLogic,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.name = name,
-        Beam.presentation = Kernel.Prelude.identity <$> presentation,
+        Beam.presentation = Kernel.Prelude.identity presentation,
         Beam.rewardImageUrl = rewardImageUrl,
         Beam.rewardTitle = rewardTitle,
         Beam.updatedAt = updatedAt,

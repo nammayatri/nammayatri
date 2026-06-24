@@ -55,6 +55,17 @@ types:
   CreateCohortResp:
     - cohortId: Id RewardCohort
 
+  EditCohortReq:
+    - name: Maybe Text
+    - description: Maybe Text
+    - displayOrder: Maybe Int
+    - eligibilityJsonLogic: Maybe Value
+    - rewardTitle: Maybe Text
+    - rewardImageUrl: Maybe Text
+    - couponValidityDays: Maybe Int
+    - presentation: Maybe Value
+    - derive: "'HideSecrets"
+
   UploadCodesResp:
     - uploadBatchId: Text
 
@@ -146,6 +157,17 @@ apis:
         type: CreateCohortReq
       response:
         type: CreateCohortResp
+
+  - PUT:
+      endpoint: /campaign/{campaignId}/cohort/{cohortId}
+      auth: ApiAuthV2
+      params:
+        campaignId: Id RewardCampaign
+        cohortId: Id RewardCohort
+      request:
+        type: EditCohortReq
+      response:
+        type: APISuccess
 
   - POST:
       endpoint: /campaign/{campaignId}/cohort/{cohortId}/codes
