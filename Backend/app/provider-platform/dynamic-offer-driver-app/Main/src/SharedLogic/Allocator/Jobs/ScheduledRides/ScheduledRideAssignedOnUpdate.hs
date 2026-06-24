@@ -129,9 +129,10 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                   merchantId = booking.providerId
                   merchantOperatingCityId = booking.merchantOperatingCityId
               mbCurrentDriverLocation <- do
-                driverLocations <- withTryCatch "driversLocation:callPayout" $ LTF.driversLocationByCloudType [driverId] driver.cloudType
+                driverLocations <- withTryCatch "driversLocation:callPayout" $ LTF.driversLocation [driverId]
                 case driverLocations of
-                  Left _err -> do
+                  Left err -> do
+                    logError $ "driversLocation:callPayout failed: " <> show err
                     return Nothing
                   Right locations -> return $ listToMaybe locations
               case mbCurrentDriverLocation of
@@ -199,9 +200,10 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
               return $ Terminate "Job is Terminated and Ride is Reallocated because any one of the above values are Nothing"
             Just (dropLoc, merchantId, scheduledPickup, transporterConfig, _vehicle, scheduledPickupTime) -> do
               mbCurrentDriverLocation <- do
-                driverLocations <- withTryCatch "driversLocation:sendScheduledRideAssignedOnUpdate" $ LTF.driversLocationByCloudType [driverId] (mbActiveRide >>= (.cloudType))
+                driverLocations <- withTryCatch "driversLocation:sendScheduledRideAssignedOnUpdate" $ LTF.driversLocation [driverId]
                 case driverLocations of
-                  Left _err -> do
+                  Left err -> do
+                    logError $ "driversLocation:sendScheduledRideAssignedOnUpdate failed: " <> show err
                     return Nothing
                   Right locations -> return $ listToMaybe locations
               case mbCurrentDriverLocation of
