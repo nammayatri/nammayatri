@@ -1,0 +1,147 @@
+name: Cabal PR Repl Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - "main"
+  workflow_dispatch:
+
+concurrency:
+  group: cabal-pr-repl-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  repl-check:
+    name: Incremental Repl Check
+    runs-on: x86_64_main_push
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Find merge base commit
+        id: merge-base
+        run: |
+          git fetch origin main --depth=200
+          BASE_SHA=$(git merge-base origin/main HEAD)
+          echo "sha=$BASE_SHA" >> $GITHUB_OUTPUT
+          echo "Merge base: $BASE_SHA"
+
+      - name: Setup MinIO client
+        run: |
+          MINIO_ENDPOINT=$(jq -r '.minio_endpoint' /etc/service_discovery.json)
+          MINIO_ACCESS_KEY=$(jq -r '.minio_access_key' /etc/service_discovery.json)
+          MINIO_SECRET_KEY=$(jq -r '.minio_secret_key' /etc/service_discovery.json)
+          mc alias set minio "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+
+      - name: Check repl artifacts exist for merge base
+        id: artifact-check
+        run: |
+          BASE_SHA="${{ steps.merge-base.outputs.sha }}"
+          if mc stat "minio/haskell-cache/cabal-repl/$BASE_SHA/dynamic-offer-driver-app.tar.zst" > /dev/null 2>&1 && \
+             mc stat "minio/haskell-cache/cabal-repl/$BASE_SHA/rider-app.tar.zst" > /dev/null 2>&1 && \
+             mc stat "minio/haskell-cache/cabal-build/$BASE_SHA/build-path.txt" > /dev/null 2>&1; then
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "Artifacts found for $BASE_SHA"
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+            echo "::warning::No repl artifacts found for merge base $BASE_SHA — skipping incremental repl check"
+          fi
+
+      - name: Download repl artifacts from MinIO
+        if: steps.artifact-check.outputs.found == 'true'
+        run: |
+          BASE_SHA="${{ steps.merge-base.outputs.sha }}"
+          mkdir -p /tmp/ny-pr-artifacts
+
+          mc cp "minio/haskell-cache/cabal-build/$BASE_SHA/build-path.txt"                    /tmp/ny-pr-artifacts/build-path.txt
+          mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/dynamic-offer-driver-app.tar.zst"   /tmp/ny-pr-artifacts/driver.tar.zst
+          mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/rider-app.tar.zst"                  /tmp/ny-pr-artifacts/rider.tar.zst
+
+          ORIGINAL_PATH=$(cat /tmp/ny-pr-artifacts/build-path.txt)
+          echo "Original build path: $ORIGINAL_PATH"
+          echo "original_path=$ORIGINAL_PATH" >> $GITHUB_ENV
+
+      - name: Restore repl artifacts
+        if: steps.artifact-check.outputs.found == 'true'
+        run: |
+          # /tmp stays visible inside the unshare namespace; $HOME does not
+          # (namespace mounts tmpfs over /home)
+          PR_CACHE_ROOT=/tmp/ny-pr-cache-${{ github.run_id }}
+          mkdir -p "$PR_CACHE_ROOT"
+          echo "PR_CACHE_ROOT=$PR_CACHE_ROOT" >> $GITHUB_ENV
+
+          tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/driver.tar.zst -C "$PR_CACHE_ROOT"
+          tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/rider.tar.zst  -C "$PR_CACHE_ROOT"
+
+          ln -sfn "$PR_CACHE_ROOT/dist-newrepl-driver" Backend/dist-newrepl-driver
+          ln -sfn "$PR_CACHE_ROOT/dist-newrepl-rider"  Backend/dist-newrepl-rider
+
+          HIE_CACHE="$PR_CACHE_ROOT/hie"
+          cd "$GITHUB_WORKSPACE/Backend"
+          grep -E '^[[:space:]]+(app|lib|test)' cabal.project | awk '{print $1}' | while read -r pkg; do
+            [ -d "$pkg" ] || continue
+            mkdir -p "$HIE_CACHE/$pkg"
+            rm -rf "$pkg/.hie"
+            ln -sfn "$HIE_CACHE/$pkg" "$pkg/.hie"
+          done
+
+          rm -f /tmp/ny-pr-artifacts/*.tar.zst
+
+      - name: Repl check — dynamic-offer-driver-app
+        if: steps.artifact-check.outputs.found == 'true'
+        run: |
+          CI_PROJECT_ROOT="$original_path"
+          LOCAL_ROOT="$GITHUB_WORKSPACE"
+          GHC_VER=$(nix develop .#backend --command ghc --numeric-version)
+          CI_CABAL_DIR="$PR_CACHE_ROOT/.cabal-dir"
+
+          unshare --user --mount --map-root-user bash -c "
+            set -e
+            mount -t tmpfs tmpfs /home
+            mkdir -p $CI_PROJECT_ROOT
+            mount --bind $LOCAL_ROOT $CI_PROJECT_ROOT
+            mkdir -p $CI_CABAL_DIR/store/ghc-$GHC_VER
+            ghc-pkg init $CI_CABAL_DIR/store/ghc-$GHC_VER/package.db 2>/dev/null || true
+            export CABAL_DIR=$CI_CABAL_DIR
+            cd $CI_PROJECT_ROOT/Backend
+            nix develop $CI_PROJECT_ROOT/.#backend --command bash -c \"
+              cabal repl dynamic-offer-driver-app \
+                --repl-options='-fno-code -fwrite-interface' \
+                --builddir=dist-newrepl-driver <<< ':quit'
+            \"
+          "
+
+      - name: Repl check — rider-app
+        if: steps.artifact-check.outputs.found == 'true'
+        run: |
+          CI_PROJECT_ROOT="$original_path"
+          LOCAL_ROOT="$GITHUB_WORKSPACE"
+          GHC_VER=$(nix develop .#backend --command ghc --numeric-version)
+          CI_CABAL_DIR="$PR_CACHE_ROOT/.cabal-dir"
+
+          unshare --user --mount --map-root-user bash -c "
+            set -e
+            mount -t tmpfs tmpfs /home
+            mkdir -p $CI_PROJECT_ROOT
+            mount --bind $LOCAL_ROOT $CI_PROJECT_ROOT
+            mkdir -p $CI_CABAL_DIR/store/ghc-$GHC_VER
+            ghc-pkg init $CI_CABAL_DIR/store/ghc-$GHC_VER/package.db 2>/dev/null || true
+            export CABAL_DIR=$CI_CABAL_DIR
+            cd $CI_PROJECT_ROOT/Backend
+            nix develop $CI_PROJECT_ROOT/.#backend --command bash -c \"
+              cabal repl rider-app \
+                --repl-options='-fno-code -fwrite-interface' \
+                --builddir=dist-newrepl-rider <<< ':quit'
+            \"
+          "
+
+      - name: Cleanup
+        if: always()
+        run: rm -rf "$PR_CACHE_ROOT" /tmp/ny-pr-artifacts
