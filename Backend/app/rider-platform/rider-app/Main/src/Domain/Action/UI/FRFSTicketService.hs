@@ -1510,21 +1510,27 @@ postFrfsFleetOperatorTripAction (mbPersonId, merchantId) req = do
             driver_token = req.driverToken,
             vehicle_number = req.vehicleNumber
           }
+  -- currentOperation returns the waybill + the ordered real (non-dead, non-inactive) trip_numbers
+  -- directly. Cheaper than currentTripDetails, which also resolves route names per trip that we'd
+  -- discard here. We drive tripAction off these real numbers, not a contiguous 1-based sequence.
   gimsOps <- NandiFlow.gimsCurrentOperation baseUrl gtfsId anchor
-  let redisKey = gimsOps.waybill_no <> ":tripnumber"
+  let waybillNo = gimsOps.waybill_no
+      allTripNumbers = fromMaybe [1 .. gimsOps.number_of_trips] gimsOps.trip_numbers
+      redisKey = waybillNo <> ":tripnumber"
   mbPrevTrip <- Hedis.get redisKey
   let prevTrip = fromMaybe 0 (mbPrevTrip :: Maybe Int)
   case req.action of
     FOTripAction.TripStart -> do
-      when (prevTrip >= gimsOps.number_of_trips) $
-        throwError $ InvalidRequest "No more trips available for this waybill"
-      let nextTrip = prevTrip + 1
+      -- Next real (non-dead) trip number after the last one started. GIMS sends the actual
+      -- trip_numbers (e.g. [2,3] when trip 1 is a dead-trip), so advance through those rather
+      -- than assuming a contiguous 1-based sequence.
+      nextTrip <- listToMaybe (filter (> prevTrip) allTripNumbers) & fromMaybeM (InvalidRequest "No more trips available for this waybill")
       now <- getCurrentTime
       let epochNow = round (utcTimeToPOSIXSeconds now * 1000) :: Int64
       void $ NandiFlow.gimsTripAction baseUrl gtfsId GimsTripActionReq {action = GimsTripActionStart, trip_number = Just nextTrip, timestamp = Just epochNow, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
       Hedis.setExp redisKey nextTrip 172800 -- 2 days TTL for the trip number in Redis
       fork "NotifyTripStart" $ do
-        let tripId = JMU.makeTripIdFromWaybillNoAndTripNo gimsOps.waybill_no nextTrip
+        let tripId = JMU.makeTripIdFromWaybillNoAndTripNo waybillNo nextTrip
         -- Fetch all confirmed bookings for this trip
         bookings <- QFRFSTicketBooking.findAllConfirmedByTripId tripId
         unless (null bookings) $ do
@@ -1547,7 +1553,7 @@ postFrfsFleetOperatorTripAction (mbPersonId, merchantId) req = do
       pure
         FRFSTicketService.FleetOperatorTripActionResp
           { currentTripNumber = nextTrip,
-            hasUpcomingTrips = nextTrip < gimsOps.number_of_trips
+            hasUpcomingTrips = not (null (filter (> nextTrip) allTripNumbers))
           }
     FOTripAction.TripEnd -> do
       when (prevTrip == 0) $
@@ -1558,7 +1564,7 @@ postFrfsFleetOperatorTripAction (mbPersonId, merchantId) req = do
       pure
         FRFSTicketService.FleetOperatorTripActionResp
           { currentTripNumber = prevTrip,
-            hasUpcomingTrips = prevTrip < gimsOps.number_of_trips
+            hasUpcomingTrips = not (null (filter (> prevTrip) allTripNumbers))
           }
     FOTripAction.TripReset -> do
       void $ NandiFlow.gimsTripAction baseUrl gtfsId GimsTripActionReq {action = GimsTripActionReset, trip_number = Nothing, timestamp = Nothing, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
@@ -1566,20 +1572,23 @@ postFrfsFleetOperatorTripAction (mbPersonId, merchantId) req = do
       pure
         FRFSTicketService.FleetOperatorTripActionResp
           { currentTripNumber = 0,
-            hasUpcomingTrips = gimsOps.number_of_trips > 0
+            hasUpcomingTrips = not (null allTripNumbers)
           }
     FOTripAction.TripRollback -> do
-      when (prevTrip <= 1) $
-        throwError $ InvalidRequest "No trip to rollback"
-      let rolledBackTrip = prevTrip - 1
+      -- Undo the last forward step: revert the "frontier" trip (the active one, or the
+      -- highest completed — which is always the Redis cursor `prevTrip`) back to UPCOMING,
+      -- leaving NO trip active, and step the cursor back to the previous real trip so the
+      -- next "Start Next" re-starts the rolled-back trip.
+      when (prevTrip <= 0) $ throwError $ InvalidRequest "No trip to rollback"
       now <- getCurrentTime
       let epochNow = round (utcTimeToPOSIXSeconds now * 1000) :: Int64
-      void $ NandiFlow.gimsTripAction baseUrl gtfsId GimsTripActionReq {action = GimsTripActionStart, trip_number = Just rolledBackTrip, timestamp = Just epochNow, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
-      Hedis.setExp redisKey rolledBackTrip 172800 -- 2 days TTL for the trip number in Redis
+      void $ NandiFlow.gimsTripAction baseUrl gtfsId GimsTripActionReq {action = GimsTripActionRollback, trip_number = Just prevTrip, timestamp = Just epochNow, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
+      let newCursor = fromMaybe 0 (listToMaybe (reverse (filter (< prevTrip) allTripNumbers)))
+      if newCursor <= 0 then void (Hedis.del redisKey) else Hedis.setExp redisKey newCursor 172800 -- 2 days TTL
       pure
         FRFSTicketService.FleetOperatorTripActionResp
-          { currentTripNumber = rolledBackTrip,
-            hasUpcomingTrips = rolledBackTrip < gimsOps.number_of_trips
+          { currentTripNumber = 0, -- no active trip after a rollback
+            hasUpcomingTrips = not (null (filter (> newCursor) allTripNumbers))
           }
 
 postFrfsFleetOperatorCurrentOperation ::
@@ -1612,7 +1621,7 @@ postFrfsFleetOperatorCurrentOperation (mbPersonId, merchantId) req = do
           { tripNumber = t.trip_number,
             routeId = t.route_id,
             routeNumber = t.route_number,
-            routeName = t.route_name,
+            routeName = fromMaybe t.route_number t.route_name,
             isActiveTrip = t.is_active_trip,
             dutyDate = t.duty_date,
             startTime = t.start_time,
