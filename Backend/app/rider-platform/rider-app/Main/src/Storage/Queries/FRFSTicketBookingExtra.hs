@@ -15,7 +15,7 @@ import Storage.Queries.OrphanInstances.FRFSTicketBooking ()
 
 -- Extra code goes here --
 
-updateFRFSTicketBookingVehicleDataBySearchId ::
+updateFRFSTicketBookingVehicleDataById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe Text ->
   Maybe DJL.BusBoardingMethod ->
@@ -27,9 +27,9 @@ updateFRFSTicketBookingVehicleDataBySearchId ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
-  Text ->
+  Id FRFSTicketBooking ->
   m ()
-updateFRFSTicketBookingVehicleDataBySearchId
+updateFRFSTicketBookingVehicleDataById
   finalBoardedVehicleNumber
   finalBoardedVehicleNumberSource
   finalBoardedWaybillId
@@ -40,9 +40,9 @@ updateFRFSTicketBookingVehicleDataBySearchId
   driverId
   driverName
   driverMobileNumber
-  searchId = do
+  bookingId = do
     now <- getCurrentTime
-    updateOneWithKV
+    updateWithKV
       [ Se.Set Beam.finalBoardedVehicleNumber finalBoardedVehicleNumber,
         Se.Set Beam.finalBoardedVehicleNumberSource finalBoardedVehicleNumberSource,
         Se.Set Beam.finalBoardedWaybillId finalBoardedWaybillId,
@@ -55,7 +55,7 @@ updateFRFSTicketBookingVehicleDataBySearchId
         Se.Set Beam.driverMobileNumber driverMobileNumber,
         Se.Set Beam.updatedAt now
       ]
-      [Se.Is Beam.searchId $ Se.Eq searchId]
+      [Se.Is Beam.id $ Se.Eq bookingId.getId]
 
 updateBookingAuthCodeById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Text -> Id FRFSTicketBooking -> m ()
 updateBookingAuthCodeById bookingAuthCode id = do
