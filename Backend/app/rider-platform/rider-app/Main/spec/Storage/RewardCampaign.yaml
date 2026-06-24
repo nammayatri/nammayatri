@@ -61,6 +61,8 @@ RewardCampaign:
     claimMode: "'AutoClaim'"
     status: "'Draft'"
     displayOrder: "0"
+  sqlType:
+    reclaimPolicy: jsonb
   fromTType:
     reclaimPolicy: Kernel.Prelude.identity|I
   toTType:

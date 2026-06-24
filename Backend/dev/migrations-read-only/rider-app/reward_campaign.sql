@@ -28,6 +28,15 @@ ALTER TABLE atlas_app.reward_campaign ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.reward_campaign ALTER COLUMN status SET DEFAULT 'Draft';
-ALTER TABLE atlas_app.reward_campaign ALTER COLUMN reclaim_policy TYPE text;
 ALTER TABLE atlas_app.reward_campaign ALTER COLUMN display_order SET DEFAULT 0;
 ALTER TABLE atlas_app.reward_campaign ALTER COLUMN claim_mode SET DEFAULT 'AutoClaim';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.reward_campaign ALTER COLUMN reclaim_policy TYPE jsonb USING CASE WHEN reclaim_policy IS NULL OR reclaim_policy = '' THEN NULL ELSE reclaim_policy::jsonb END;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.reward_campaign ALTER COLUMN reclaim_policy TYPE jsonb;

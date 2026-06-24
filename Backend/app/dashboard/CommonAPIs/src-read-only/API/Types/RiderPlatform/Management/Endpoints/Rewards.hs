@@ -99,6 +99,22 @@ data EditCampaignReq = EditCampaignReq {description :: Kernel.Prelude.Maybe Kern
 instance Kernel.Types.HideSecrets.HideSecrets EditCampaignReq where
   hideSecrets = Kernel.Prelude.identity
 
+data EditCohortReq = EditCohortReq
+  { name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    displayOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    eligibilityJsonLogic :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    rewardTitle :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    rewardImageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    couponValidityDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    presentation :: Kernel.Prelude.Maybe Data.Aeson.Value
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets EditCohortReq where
+  hideSecrets = Kernel.Prelude.identity
+
 data RewardCampaign = RewardCampaign
   { id :: Kernel.Types.Id.Id RewardCampaign,
     merchantId :: Kernel.Types.Id.Id Dashboard.Common.Merchant,
@@ -153,13 +169,21 @@ data UploadCodesResp = UploadCodesResp {uploadBatchId :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("rewards" :> (PostRewardsCampaign :<|> PutRewardsCampaign :<|> PostRewardsCampaignCohort :<|> PostRewardsCampaignCohortCodes :<|> PostRewardsCampaignStatus :<|> GetRewardsCampaign :<|> GetRewardsCampaigns :<|> GetRewardsCampaignStats :<|> PostRewardsTriggerEval))
+type API = ("rewards" :> (PostRewardsCampaign :<|> PutRewardsCampaign :<|> PostRewardsCampaignCohort :<|> PutRewardsCampaignCohort :<|> PostRewardsCampaignCohortCodes :<|> PostRewardsCampaignStatus :<|> GetRewardsCampaign :<|> GetRewardsCampaigns :<|> GetRewardsCampaignStats :<|> PostRewardsTriggerEval))
 
 type PostRewardsCampaign = ("campaign" :> ReqBody ('[JSON]) CreateCampaignReq :> Post ('[JSON]) CreateCampaignResp)
 
 type PutRewardsCampaign = ("campaign" :> Capture "campaignId" (Kernel.Types.Id.Id RewardCampaign) :> ReqBody ('[JSON]) EditCampaignReq :> Put ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
 type PostRewardsCampaignCohort = ("campaign" :> Capture "campaignId" (Kernel.Types.Id.Id RewardCampaign) :> "cohort" :> ReqBody ('[JSON]) CreateCohortReq :> Post ('[JSON]) CreateCohortResp)
+
+type PutRewardsCampaignCohort =
+  ( "campaign" :> Capture "campaignId" (Kernel.Types.Id.Id RewardCampaign) :> "cohort" :> Capture "cohortId" (Kernel.Types.Id.Id RewardCohort)
+      :> ReqBody
+           ('[JSON])
+           EditCohortReq
+      :> Put ('[JSON]) Kernel.Types.APISuccess.APISuccess
+  )
 
 type PostRewardsCampaignCohortCodes =
   ( "campaign" :> Capture "campaignId" (Kernel.Types.Id.Id RewardCampaign) :> "cohort"
@@ -194,6 +218,7 @@ data RewardsAPIs = RewardsAPIs
   { postRewardsCampaign :: (CreateCampaignReq -> EulerHS.Types.EulerClient CreateCampaignResp),
     putRewardsCampaign :: (Kernel.Types.Id.Id RewardCampaign -> EditCampaignReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postRewardsCampaignCohort :: (Kernel.Types.Id.Id RewardCampaign -> CreateCohortReq -> EulerHS.Types.EulerClient CreateCohortResp),
+    putRewardsCampaignCohort :: (Kernel.Types.Id.Id RewardCampaign -> Kernel.Types.Id.Id RewardCohort -> EditCohortReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postRewardsCampaignCohortCodes ::
       ( Kernel.Types.Id.Id RewardCampaign ->
         Kernel.Types.Id.Id RewardCohort ->
@@ -212,12 +237,13 @@ data RewardsAPIs = RewardsAPIs
 mkRewardsAPIs :: (Client EulerHS.Types.EulerClient API -> RewardsAPIs)
 mkRewardsAPIs rewardsClient = (RewardsAPIs {..})
   where
-    postRewardsCampaign :<|> putRewardsCampaign :<|> postRewardsCampaignCohort :<|> postRewardsCampaignCohortCodes :<|> postRewardsCampaignStatus :<|> getRewardsCampaign :<|> getRewardsCampaigns :<|> getRewardsCampaignStats :<|> postRewardsTriggerEval = rewardsClient
+    postRewardsCampaign :<|> putRewardsCampaign :<|> postRewardsCampaignCohort :<|> putRewardsCampaignCohort :<|> postRewardsCampaignCohortCodes :<|> postRewardsCampaignStatus :<|> getRewardsCampaign :<|> getRewardsCampaigns :<|> getRewardsCampaignStats :<|> postRewardsTriggerEval = rewardsClient
 
 data RewardsUserActionType
   = POST_REWARDS_CAMPAIGN
   | PUT_REWARDS_CAMPAIGN
   | POST_REWARDS_CAMPAIGN_COHORT
+  | PUT_REWARDS_CAMPAIGN_COHORT
   | POST_REWARDS_CAMPAIGN_COHORT_CODES
   | POST_REWARDS_CAMPAIGN_STATUS
   | GET_REWARDS_CAMPAIGN

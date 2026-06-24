@@ -4,6 +4,7 @@ module Domain.Action.RiderPlatform.Management.Rewards
   ( postRewardsCampaign,
     putRewardsCampaign,
     postRewardsCampaignCohort,
+    putRewardsCampaignCohort,
     postRewardsCampaignCohortCodes,
     postRewardsCampaignStatus,
     getRewardsCampaign,
@@ -52,6 +53,13 @@ postRewardsCampaignCohort merchantShortId opCity apiTokenInfo campaignId req = d
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $
     API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rewardsDSL.postRewardsCampaignCohort) campaignId req
+
+putRewardsCampaignCohort :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCohort -> API.Types.RiderPlatform.Management.Rewards.EditCohortReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+putRewardsCampaignCohort merchantShortId opCity apiTokenInfo campaignId cohortId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $
+    API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rewardsDSL.putRewardsCampaignCohort) campaignId cohortId req
 
 postRewardsCampaignCohortCodes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCohort -> Dashboard.RiderPlatform.Management.Rewards.UploadCodesReq -> Environment.Flow API.Types.RiderPlatform.Management.Rewards.UploadCodesResp)
 postRewardsCampaignCohortCodes merchantShortId opCity apiTokenInfo campaignId cohortId req = do
