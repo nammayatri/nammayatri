@@ -100,6 +100,7 @@ import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified Safety.Domain.Action.UI.Sos as SafetySos
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
+import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import qualified SharedLogic.BehaviourManagement.CustomerCancellationRate as CCR
 import SharedLogic.Booking
@@ -367,6 +368,11 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
           <$> bookingDetails.driverImage
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   cloudType <- asks (.cloudType)
+  mbSafetySettings <- QSafetySettings.findByPersonId (cast booking.riderId)
+  let isMeterRide = case booking.bookingDetails of
+        DRB.MeterRideDetails _ -> True
+        _ -> False
+      enableOtpLessRide = Just $ isMeterRide || fromMaybe False (mbSafetySettings >>= (.enableOtpLessRide))
   return
     DRide.Ride
       { id = guid,
