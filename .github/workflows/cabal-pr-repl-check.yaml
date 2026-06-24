@@ -61,9 +61,9 @@ jobs:
           BASE_SHA="${{ steps.merge-base.outputs.sha }}"
           mkdir -p /tmp/ny-pr-artifacts
 
-          mc cp "minio/haskell-cache/cabal-build/$BASE_SHA/build-path.txt"                    /tmp/ny-pr-artifacts/build-path.txt
-          mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/dynamic-offer-driver-app.tar.zst"   /tmp/ny-pr-artifacts/driver.tar.zst
-          mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/rider-app.tar.zst"                  /tmp/ny-pr-artifacts/rider.tar.zst
+          mc cp "minio/haskell-cache/cabal-build/$BASE_SHA/build-path.txt"                   /tmp/ny-pr-artifacts/build-path.txt
+          mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/dynamic-offer-driver-app.tar.zst"  /tmp/ny-pr-artifacts/driver.tar.zst
+          mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/rider-app.tar.zst"                 /tmp/ny-pr-artifacts/rider.tar.zst
 
           ORIGINAL_PATH=$(cat /tmp/ny-pr-artifacts/build-path.txt)
           echo "Original build path: $ORIGINAL_PATH"
@@ -100,53 +100,51 @@ jobs:
         run: |
           CI_PROJECT_ROOT="$original_path"
           LOCAL_ROOT="$GITHUB_WORKSPACE"
-          GHC_VER=$(nix develop .#backend --command ghc --numeric-version)
           CI_CABAL_DIR="$PR_CACHE_ROOT/.cabal-dir"
 
-          unshare --user --mount --map-root-user bash -c "
-            set -e
-            mkdir -p /tmp/ny-pr-src
-            mount --bind $LOCAL_ROOT /tmp/ny-pr-src
-            mount -t tmpfs tmpfs /home
-            mkdir -p $CI_PROJECT_ROOT
-            mount --bind /tmp/ny-pr-src $CI_PROJECT_ROOT
-            mkdir -p $CI_CABAL_DIR/store/ghc-$GHC_VER
-            ghc-pkg init $CI_CABAL_DIR/store/ghc-$GHC_VER/package.db 2>/dev/null || true
-            export CABAL_DIR=$CI_CABAL_DIR
-            cd $CI_PROJECT_ROOT/Backend
-            nix develop $CI_PROJECT_ROOT/.#backend --command bash -c \"
+          nix develop .#backend --command \
+            unshare --user --mount --map-root-user bash -c "
+              set -e
+              GHC_VER=\$(ghc --numeric-version)
+              mkdir -p /tmp/ny-pr-src
+              mount --bind $LOCAL_ROOT /tmp/ny-pr-src
+              mount -t tmpfs tmpfs /home
+              mkdir -p $CI_PROJECT_ROOT
+              mount --bind /tmp/ny-pr-src $CI_PROJECT_ROOT
+              mkdir -p $CI_CABAL_DIR/store/ghc-\$GHC_VER
+              ghc-pkg init $CI_CABAL_DIR/store/ghc-\$GHC_VER/package.db 2>/dev/null || true
+              export CABAL_DIR=$CI_CABAL_DIR
+              cd $CI_PROJECT_ROOT/Backend
               cabal repl dynamic-offer-driver-app \
                 --repl-options='-fno-code -fwrite-interface' \
                 --builddir=dist-newrepl-driver <<< ':quit'
-            \"
-          "
+            "
 
       - name: Repl check — rider-app
         if: steps.artifact-check.outputs.found == 'true'
         run: |
           CI_PROJECT_ROOT="$original_path"
           LOCAL_ROOT="$GITHUB_WORKSPACE"
-          GHC_VER=$(nix develop .#backend --command ghc --numeric-version)
           CI_CABAL_DIR="$PR_CACHE_ROOT/.cabal-dir"
 
-          unshare --user --mount --map-root-user bash -c "
-            set -e
-            mkdir -p /tmp/ny-pr-src
-            mount --bind $LOCAL_ROOT /tmp/ny-pr-src
-            mount -t tmpfs tmpfs /home
-            mkdir -p $CI_PROJECT_ROOT
-            mount --bind /tmp/ny-pr-src $CI_PROJECT_ROOT
-            mkdir -p $CI_CABAL_DIR/store/ghc-$GHC_VER
-            ghc-pkg init $CI_CABAL_DIR/store/ghc-$GHC_VER/package.db 2>/dev/null || true
-            export CABAL_DIR=$CI_CABAL_DIR
-            cd $CI_PROJECT_ROOT/Backend
-            nix develop $CI_PROJECT_ROOT/.#backend --command bash -c \"
+          nix develop .#backend --command \
+            unshare --user --mount --map-root-user bash -c "
+              set -e
+              GHC_VER=\$(ghc --numeric-version)
+              mkdir -p /tmp/ny-pr-src
+              mount --bind $LOCAL_ROOT /tmp/ny-pr-src
+              mount -t tmpfs tmpfs /home
+              mkdir -p $CI_PROJECT_ROOT
+              mount --bind /tmp/ny-pr-src $CI_PROJECT_ROOT
+              mkdir -p $CI_CABAL_DIR/store/ghc-\$GHC_VER
+              ghc-pkg init $CI_CABAL_DIR/store/ghc-\$GHC_VER/package.db 2>/dev/null || true
+              export CABAL_DIR=$CI_CABAL_DIR
+              cd $CI_PROJECT_ROOT/Backend
               cabal repl rider-app \
                 --repl-options='-fno-code -fwrite-interface' \
                 --builddir=dist-newrepl-rider <<< ':quit'
-            \"
-          "
+            "
 
       - name: Cleanup
         if: always()
-        run: rm -rf "$PR_CACHE_ROOT" /tmp/ny-pr-artifacts
+        run: rm -rf "$PR_CACHE_ROOT" /tmp/ny-pr-artifacts /tmp/ny-pr-src
