@@ -694,6 +694,7 @@ getEstimates  state (EstimateAPIEntity estimate) estimates variant index activeI
       , validTill = estimate.validTill
       , hasTollCharges = if estimate.serviceTierName == Just "Book Any" then checkSelectedServicesHasFareKey estimates selectedServices "TOLL_CHARGES" else checkFareBreakupHasKey (EstimateAPIEntity estimate) "TOLL_CHARGES"
       , hasParkingCharges = if estimate.serviceTierName == Just "Book Any" then checkSelectedServicesHasFareKey estimates selectedServices "PARKING_CHARGE" else checkFareBreakupHasKey (EstimateAPIEntity estimate) "PARKING_CHARGE"
+      , hasPetCharges = if estimate.serviceTierName == Just "Book Any" then checkSelectedServicesHasFareKey estimates selectedServices "PET_CHARGES" else checkFareBreakupHasKey (EstimateAPIEntity estimate) "PET_CHARGES"
       , specialLocationTag = estimate.specialLocationTag
       , smartTipReason = estimate.smartTipReason
       , smartTipSuggestion = estimate.smartTipSuggestion
