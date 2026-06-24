@@ -1525,9 +1525,10 @@ postFrfsFleetOperatorTripAction (mbPersonId, merchantId) req = do
   let prevTrip = fromMaybe 0 (mbPrevTrip :: Maybe Int)
   case req.action of
     FOTripAction.TripStart -> do
-      when (prevTrip >= gimsOps.number_of_trips) $
-        throwError $ InvalidRequest "No more trips available for this waybill"
-      let nextTrip = prevTrip + 1
+      -- Next real (non-dead) trip number after the last one started. GIMS sends the actual
+      -- trip_numbers (e.g. [2,3] when trip 1 is a dead-trip), so advance through those rather
+      -- than assuming a contiguous 1-based sequence.
+      nextTrip <- listToMaybe (filter (> prevTrip) gimsOps.trip_numbers) & fromMaybeM (InvalidRequest "No more trips available for this waybill")
       now <- getCurrentTime
       let epochNow = round (utcTimeToPOSIXSeconds now * 1000) :: Int64
       void $ NandiFlow.gimsTripAction baseUrl gtfsId GimsTripActionReq {action = GimsTripActionStart, trip_number = Just nextTrip, timestamp = Just epochNow, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
@@ -1556,7 +1557,7 @@ postFrfsFleetOperatorTripAction (mbPersonId, merchantId) req = do
       pure
         FRFSTicketService.FleetOperatorTripActionResp
           { currentTripNumber = nextTrip,
-            hasUpcomingTrips = nextTrip < gimsOps.number_of_trips
+            hasUpcomingTrips = not (null (filter (> nextTrip) gimsOps.trip_numbers))
           }
     FOTripAction.TripEnd -> do
       when (prevTrip == 0) $
@@ -1567,7 +1568,7 @@ postFrfsFleetOperatorTripAction (mbPersonId, merchantId) req = do
       pure
         FRFSTicketService.FleetOperatorTripActionResp
           { currentTripNumber = prevTrip,
-            hasUpcomingTrips = prevTrip < gimsOps.number_of_trips
+            hasUpcomingTrips = not (null (filter (> prevTrip) gimsOps.trip_numbers))
           }
     FOTripAction.TripReset -> do
       void $ NandiFlow.gimsTripAction baseUrl gtfsId GimsTripActionReq {action = GimsTripActionReset, trip_number = Nothing, timestamp = Nothing, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
@@ -1575,12 +1576,11 @@ postFrfsFleetOperatorTripAction (mbPersonId, merchantId) req = do
       pure
         FRFSTicketService.FleetOperatorTripActionResp
           { currentTripNumber = 0,
-            hasUpcomingTrips = gimsOps.number_of_trips > 0
+            hasUpcomingTrips = not (null gimsOps.trip_numbers)
           }
     FOTripAction.TripRollback -> do
-      when (prevTrip <= 1) $
-        throwError $ InvalidRequest "No trip to rollback"
-      let rolledBackTrip = prevTrip - 1
+      -- Roll back to the previous real (non-dead) trip number before the current one.
+      rolledBackTrip <- listToMaybe (reverse (filter (< prevTrip) gimsOps.trip_numbers)) & fromMaybeM (InvalidRequest "No trip to rollback")
       now <- getCurrentTime
       let epochNow = round (utcTimeToPOSIXSeconds now * 1000) :: Int64
       void $ NandiFlow.gimsTripAction baseUrl gtfsId GimsTripActionReq {action = GimsTripActionStart, trip_number = Just rolledBackTrip, timestamp = Just epochNow, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
@@ -1588,7 +1588,7 @@ postFrfsFleetOperatorTripAction (mbPersonId, merchantId) req = do
       pure
         FRFSTicketService.FleetOperatorTripActionResp
           { currentTripNumber = rolledBackTrip,
-            hasUpcomingTrips = rolledBackTrip < gimsOps.number_of_trips
+            hasUpcomingTrips = not (null (filter (> rolledBackTrip) gimsOps.trip_numbers))
           }
 
 postFrfsFleetOperatorCurrentOperation ::
@@ -1621,7 +1621,7 @@ postFrfsFleetOperatorCurrentOperation (mbPersonId, merchantId) req = do
           { tripNumber = t.trip_number,
             routeId = t.route_id,
             routeNumber = t.route_number,
-            routeName = t.route_name,
+            routeName = fromMaybe t.route_number t.route_name,
             isActiveTrip = t.is_active_trip,
             dutyDate = t.duty_date,
             startTime = t.start_time,
