@@ -2627,7 +2627,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
       }
   -- Sync journey leg data to frfs_ticket_booking for analytics
   fork "FRFS Analytics: sync vehicle data to ticket booking" $
-    QFRFSTicketBooking.updateFRFSTicketBookingVehicleDataBySearchId
+    QFRFSTicketBooking.updateFRFSTicketBookingVehicleDataById
       (Just vehicleNumber)
       (Just DJourneyLeg.UserActivated)
       vehicleLiveRouteInfo.waybillId
@@ -2638,7 +2638,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
       (maybe journeyLeg.busDriverId (\driverId -> if T.null driverId then journeyLeg.busDriverId else Just driverId) booking.driverId)
       booking.driverName
       booking.driverMobileNumber
-      legSearchId
+      booking.id
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs
   where
