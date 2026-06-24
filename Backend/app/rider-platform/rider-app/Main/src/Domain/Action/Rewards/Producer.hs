@@ -57,32 +57,42 @@ publishRewardEvalRequested ::
 publishRewardEvalRequested rid moCityId completedAt = do
   mConfig <- CQRC.findByMerchantOperatingCityId moCityId
   let enabled = maybe False (.enableRewardsManagement) mConfig
-  when enabled $ do
-    eventId <- generateGUID
-    let event =
-          RewardEvalRequested
-            { eventId,
-              riderId = rid,
-              merchantOperatingCityId = moCityId,
-              completedAt
-            }
-    result <-
-      try @_ @SomeException $
-        produceMessage (rewardEvalTopic, Just (TE.encodeUtf8 rid.getId)) event
-    case result of
-      Right _ ->
-        logInfo $
-          "rewards.publish.success eventId="
-            <> eventId.getId
-            <> " riderId="
-            <> rid.getId
-      Left e ->
-        logError $
-          "rewards.publish.failed eventId="
-            <> eventId.getId
-            <> " riderId="
-            <> rid.getId
-            <> " moCityId="
-            <> moCityId.getId
-            <> " err="
-            <> show e
+  if enabled
+    then do
+      eventId <- generateGUID
+      let event =
+            RewardEvalRequested
+              { eventId,
+                riderId = rid,
+                merchantOperatingCityId = moCityId,
+                completedAt
+              }
+      result <-
+        try @_ @SomeException $
+          produceMessage (rewardEvalTopic, Just (TE.encodeUtf8 rid.getId)) event
+      case result of
+        Right _ ->
+          logInfo $
+            "rewards.publish.success eventId="
+              <> eventId.getId
+              <> " riderId="
+              <> rid.getId
+              <> " moCityId="
+              <> moCityId.getId
+        Left e ->
+          logError $
+            "rewards.publish.failed eventId="
+              <> eventId.getId
+              <> " riderId="
+              <> rid.getId
+              <> " moCityId="
+              <> moCityId.getId
+              <> " err="
+              <> show e
+    else
+      logInfo $
+        "rewards.publish.skipped riderId="
+          <> rid.getId
+          <> " moCityId="
+          <> moCityId.getId
+          <> " reason=enable_rewards_management_false"
