@@ -174,3 +174,40 @@ transitOperatorQueryRowsUtil :: ShortId Merchant -> Context.City -> BecknSpec.Ve
 transitOperatorQueryRowsUtil merchantShortId city vehicleCategory table body = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorQueryRows baseUrl gtfsId table body
+
+-- ===== Stop & route management (clubber / editor) =====
+
+transitOperatorSearchStopsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Text -> Maybe Int -> Maybe Bool -> Flow [EnrichedStop]
+transitOperatorSearchStopsUtil merchantShortId city vehicleCategory q limit withRoutes = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorSearchStops baseUrl gtfsId q limit withRoutes
+
+transitOperatorNearbyStopsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Double -> Double -> Maybe Double -> Maybe Int -> Maybe Bool -> Flow [EnrichedStop]
+transitOperatorNearbyStopsUtil merchantShortId city vehicleCategory lat lon radius limit withRoutes = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorNearbyStops baseUrl gtfsId lat lon radius limit withRoutes
+
+transitOperatorBulkReplaceStopsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> BulkReplaceReq -> Flow BulkReplaceResult
+transitOperatorBulkReplaceStopsUtil merchantShortId city vehicleCategory req = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorBulkReplaceStops baseUrl gtfsId req
+
+transitOperatorRouteStopsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Text -> Flow RouteStopsResponse
+transitOperatorRouteStopsUtil merchantShortId city vehicleCategory routeId = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorRouteStops baseUrl gtfsId routeId
+
+transitOperatorInsertRouteStopUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Text -> InsertRouteStopReq -> Flow InsertRouteStopResp
+transitOperatorInsertRouteStopUtil merchantShortId city vehicleCategory routeId req = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorInsertRouteStop baseUrl gtfsId routeId req
+
+transitOperatorReprocessRoutesUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> ReprocessReq -> Flow [ReprocessResult]
+transitOperatorReprocessRoutesUtil merchantShortId city vehicleCategory req = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorReprocessRoutes baseUrl gtfsId req
+
+transitOperatorExportRouteStopMappingUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Flow [RouteStopMappingExport]
+transitOperatorExportRouteStopMappingUtil merchantShortId city vehicleCategory = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorExportRouteStopMapping baseUrl gtfsId

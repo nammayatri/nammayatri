@@ -296,7 +296,7 @@ data NandiRouteRow = NandiRouteRow
     route_name :: Maybe Text,
     route_number :: Maybe Text,
     route_string :: Maybe Text,
-    route_type_id :: Maybe Int,
+    route_type_id :: Value,
     status :: Maybe Text,
     updated_at :: Maybe UTCTime,
     via :: Maybe Text,
@@ -317,7 +317,7 @@ data NandiRoutePointRow = NandiRoutePointRow
     route_order :: Int,
     stage_no :: Maybe Int,
     sub_stage :: Maybe Text,
-    travel_distance :: Int,
+    travel_distance :: Maybe Int,
     travel_time :: Maybe Text,
     updated_at :: Maybe UTCTime,
     bus_stop_id :: Value,
@@ -390,6 +390,7 @@ data NandiBusScheduleTripDetailRow = NandiBusScheduleTripDetailRow
     trip_start_time :: Maybe Int,
     sync_end_time :: Maybe Int,
     sync_start_time :: Maybe Int,
+    status :: Maybe Text,
     gtfs_id :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
@@ -453,6 +454,7 @@ data NandiStopRow = NandiStopRow
     latitude_current :: Double,
     longitude_current :: Double,
     route_status :: Maybe Text,
+    source :: Maybe Text,
     status :: Maybe Text,
     stop_direction :: Maybe Text,
     stop_group_id :: Maybe Value,
@@ -619,10 +621,10 @@ data NandiWaybillRow = NandiWaybillRow
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiShiftTypeRow = NandiShiftTypeRow
-  { shift_type_id :: Text,
+  { shift_type_id :: Value,
     shift_type_code :: Maybe Text,
     description :: Maybe Text,
-    gtfs_id :: Maybe Text,
+    gtfs_id :: Text,
     deleted :: Maybe Bool,
     created_at :: Maybe UTCTime,
     updated_at :: Maybe UTCTime
@@ -630,9 +632,10 @@ data NandiShiftTypeRow = NandiShiftTypeRow
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiScheduleTypeRow = NandiScheduleTypeRow
-  { schedule_type_id :: Text,
+  { schedule_type_id :: Value,
     schedule_type_code :: Maybe Text,
     schedule_type_name :: Maybe Text,
+    gtfs_id :: Text,
     deleted :: Maybe Bool,
     created_at :: Maybe UTCTime,
     updated_at :: Maybe UTCTime
@@ -641,7 +644,7 @@ data NandiScheduleTypeRow = NandiScheduleTypeRow
 
 -- ─── NandiRow sum type ────────────────────────────────────────────────────────
 
--- | One row from any of the 17 operator DB tables.
+-- | One row from any of the 18 operator DB tables.
 -- The constructor identifies which table it came from.
 data NandiRow
   = RowRoute NandiRouteRow
@@ -1231,18 +1234,21 @@ data GimsTripAction
   = GimsTripActionStart
   | GimsTripActionEnd
   | GimsTripActionReset
+  | GimsTripActionRollback
   deriving (Show, Read, Eq, Ord, Generic, ToSchema)
 
 instance ToJSON GimsTripAction where
   toJSON GimsTripActionStart = toJSON ("start" :: Text)
   toJSON GimsTripActionEnd = toJSON ("end" :: Text)
   toJSON GimsTripActionReset = toJSON ("reset" :: Text)
+  toJSON GimsTripActionRollback = toJSON ("rollback" :: Text)
 
 instance FromJSON GimsTripAction where
   parseJSON = withText "GimsTripAction" $ \case
     "start" -> pure GimsTripActionStart
     "end" -> pure GimsTripActionEnd
     "reset" -> pure GimsTripActionReset
+    "rollback" -> pure GimsTripActionRollback
     v -> fail $ "Unknown GimsTripAction: " <> T.unpack v
 
 data GimsTripActionReq = GimsTripActionReq
@@ -1257,7 +1263,9 @@ data GimsTripActionReq = GimsTripActionReq
 
 data GimsCurrentOperationResp = GimsCurrentOperationResp
   { waybill_no :: Text,
-    number_of_trips :: Int
+    number_of_trips :: Int,
+    -- Absent on old GTFS builds; present once PR 134 ships. Fall back to [1..number_of_trips].
+    trip_numbers :: Maybe [Int]
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
@@ -1273,7 +1281,7 @@ data GimsTripInfo = GimsTripInfo
   { trip_number :: Int,
     route_id :: Text,
     route_number :: Text,
-    route_name :: Text,
+    route_name :: Maybe Text,
     is_active_trip :: Bool,
     duty_date :: Maybe Text,
     start_time :: Maybe Text,
@@ -1387,3 +1395,118 @@ data QueryBody = QueryBody
 
 instance HideSecrets QueryBody where
   hideSecrets = identity
+
+-- ===== Stop & route management (clubber / editor) =====
+
+data StopRouteRef = StopRouteRef
+  { route_id :: Text,
+    route_number :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data EnrichedStop = EnrichedStop
+  { stop_id :: Text,
+    code :: Maybe Text,
+    name :: Maybe Text,
+    lat :: Double,
+    lon :: Double,
+    source :: Maybe Text,
+    status :: Maybe Text,
+    route_count :: Int,
+    routes :: Maybe [StopRouteRef],
+    distance_m :: Maybe Double
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data RouteStopDetail = RouteStopDetail
+  { route_point_id :: Text,
+    bus_stop_id :: Text,
+    stop_name :: Maybe Text,
+    lat :: Double,
+    lon :: Double,
+    route_order :: Int,
+    stage_no :: Maybe Int,
+    stage_name :: Maybe Text,
+    stop_type :: Maybe Text,
+    is_visible :: Maybe Bool,
+    travel_distance :: Maybe Int,
+    travel_time :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data RouteStopsResponse = RouteStopsResponse
+  { route_id :: Text,
+    route_number :: Maybe Text,
+    route_name :: Maybe Text,
+    encoded_polyline :: Maybe Text,
+    stops :: [RouteStopDetail]
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data BulkReplaceReq = BulkReplaceReq
+  { from :: [Text],
+    to :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+instance HideSecrets BulkReplaceReq where
+  hideSecrets = identity
+
+data BulkReplaceResult = BulkReplaceResult
+  { rows_affected :: Int,
+    affected_route_ids :: [Text]
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data InsertRouteStopReq = InsertRouteStopReq
+  { position :: Int,
+    bus_stop_id :: Text,
+    travel_distance :: Maybe Int,
+    stop_type :: Maybe Text,
+    stage_no :: Maybe Int,
+    stage_name :: Maybe Text,
+    is_visible :: Maybe Bool
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+instance HideSecrets InsertRouteStopReq where
+  hideSecrets = identity
+
+data InsertRouteStopResp = InsertRouteStopResp
+  { route_points_id :: Text,
+    route_order :: Int
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data ReprocessReq = ReprocessReq
+  { routeIds :: [Text],
+    recomputePolyline :: Bool
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+instance HideSecrets ReprocessReq where
+  hideSecrets = identity
+
+data ReprocessResult = ReprocessResult
+  { route_id :: Text,
+    stops_renumbered :: Int,
+    stages :: Int,
+    route_name :: Maybe Text,
+    polyline :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data RouteStopMappingExport = RouteStopMappingExport
+  { routeId :: Text,
+    routeNumber :: Maybe Text,
+    stopId :: Text,
+    stopName :: Maybe Text,
+    latitude :: Maybe Double,
+    longitude :: Maybe Double,
+    stopType :: Maybe Text,
+    stageNo :: Maybe Int,
+    stopSequence :: Maybe Int,
+    stageName :: Maybe Text,
+    providerId :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
