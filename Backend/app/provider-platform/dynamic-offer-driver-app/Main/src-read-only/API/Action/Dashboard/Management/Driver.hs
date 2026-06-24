@@ -173,8 +173,8 @@ getDriverAirportPreference a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Ac
 postDriverAirportPreference :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.Driver.AirportPreferenceReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverAirportPreference a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Driver.postDriverAirportPreference a4 a3 a2 a1
 
-getDriverSearchRequestStats :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Driver.DriverSearchRequestStatsRes)
-getDriverSearchRequestStats a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Driver.getDriverSearchRequestStats a3 a2 a1
+getDriverSearchRequestStats :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Data.Time.Day -> Kernel.Prelude.Maybe Data.Time.Day -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Driver.DriverSearchRequestStatsRes)
+getDriverSearchRequestStats a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Driver.getDriverSearchRequestStats a5 a4 a3 a2 a1
 
 getDriverIdentityInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Driver.DriverIdentityInfoRes)
 getDriverIdentityInfo a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Driver.getDriverIdentityInfo a4 a3 a2 a1

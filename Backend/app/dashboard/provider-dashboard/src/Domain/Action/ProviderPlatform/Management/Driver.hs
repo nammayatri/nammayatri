@@ -418,10 +418,10 @@ postDriverAirportPreference merchantShortId opCity apiTokenInfo driverId req = d
   transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) (Just driverId) Nothing (Just req)
   T.withTransactionStoring transaction $ (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverAirportPreference) driverId req)
 
-getDriverSearchRequestStats :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Environment.Flow Common.DriverSearchRequestStatsRes)
-getDriverSearchRequestStats merchantShortId opCity apiTokenInfo driverId = do
+getDriverSearchRequestStats :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Day -> Maybe Day -> Environment.Flow Common.DriverSearchRequestStatsRes)
+getDriverSearchRequestStats merchantShortId opCity apiTokenInfo driverId mbFromDate mbToDate = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverSearchRequestStats) driverId
+  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverSearchRequestStats) driverId mbFromDate mbToDate
 
 getDriverIdentityInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Environment.Flow Common.DriverIdentityInfoRes
 getDriverIdentityInfo merchantShortId opCity apiTokenInfo driverId = do

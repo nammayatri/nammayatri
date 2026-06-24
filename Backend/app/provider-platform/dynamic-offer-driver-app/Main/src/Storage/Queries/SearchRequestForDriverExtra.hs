@@ -62,7 +62,7 @@ setInactiveBySTId mbSrfds searchTryId = do
       Just srfds -> pure srfds
       Nothing -> findAllWithKVAndConditionalDB [Se.And [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId), Se.Is BeamSRFD.status (Se.Eq Domain.Active)]] Nothing
   now <- getCurrentTime
-  fork "updating SRFD cache in BG" $ 
+  fork "updating SRFD cache in BG" $
     mapM_
       ( \s -> do
           (personOS, merchantOpCityId) <- getDriverMobileType (Domain.driverId s)
