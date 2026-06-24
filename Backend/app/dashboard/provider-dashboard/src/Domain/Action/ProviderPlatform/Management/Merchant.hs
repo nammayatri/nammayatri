@@ -67,6 +67,9 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     postMerchantMerchantDocumentCreate,
     postMerchantMerchantDocumentUpdate,
     postMerchantMerchantDocumentDelete,
+    postMerchantMerchantMessageUpsert,
+    postMerchantMerchantMessageDelete,
+    getMerchantMerchantMessageCatalog,
     getMerchantCityList,
   )
 where
@@ -671,3 +674,50 @@ getMerchantCityList ::
 getMerchantCityList merchantShortId opCity = do
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantCityList)
+
+postMerchantConfigTollUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertTollCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
+postMerchantConfigTollUpsert merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $
+    Client.callManagementAPI checkedMerchantId opCity (Dashboard.Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigTollUpsert)) req
+
+getMerchantConfigTollList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Flow Common.TollListResp
+getMerchantConfigTollList merchantShortId opCity apiTokenInfo limit offset = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigTollList) limit offset
+
+postMerchantTollUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Id Toll.Toll) -> Common.UpsertTollReq -> Flow APISuccess
+postMerchantTollUpsert merchantShortId opCity apiTokenInfo tollId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantTollUpsert) tollId req
+
+deleteMerchantTollDelete :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Toll.Toll -> Flow APISuccess
+deleteMerchantTollDelete merchantShortId opCity apiTokenInfo tollId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo T.emptyRequest
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.deleteMerchantTollDelete) tollId
+
+postMerchantConfigFareProductSetEnabled :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Dashboard.Common.Merchant.SetFareProductEnabledReq -> Flow APISuccess
+postMerchantConfigFareProductSetEnabled merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigFareProductSetEnabled) req
+
+postMerchantMerchantMessageDelete :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.DeleteMerchantMessageReq -> Environment.Flow APISuccess
+postMerchantMerchantMessageDelete merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantMerchantMessageDelete) req
+
+getMerchantMerchantMessageCatalog :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.MerchantMessageCatalogType -> Environment.Flow Common.MerchantMessageCatalogResp
+getMerchantMerchantMessageCatalog merchantShortId opCity apiTokenInfo catalogType = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantMerchantMessageCatalog) catalogType
+
+postMerchantMerchantMessageUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertMerchantMessageReq -> Environment.Flow APISuccess
+postMerchantMerchantMessageUpsert merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantMerchantMessageUpsert) req

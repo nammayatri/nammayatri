@@ -4,6 +4,7 @@ imports:
   MapsServiceConfigUpdateReq: Dashboard.Common.Merchant
   MandatoryValue: Kernel.Types.Value
   OptionalValue: Kernel.Types.Value
+  Value: Data.Aeson
   NominalDiffTime: Kernel.Prelude
   VehicleVariant: Dashboard.Common
   VehicleCategory: Dashboard.Common
@@ -651,6 +652,30 @@ apis:
         type: DeleteMerchantDocumentReq
       response:
         type: APISuccess
+  - GET: # MerchantMessageCatalogAPI
+      endpoint: /merchantMessage/catalog
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - catalogType: MerchantMessageCatalogType
+      response:
+        type: MerchantMessageCatalogResp
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT GET_MERCHANT_MESSAGE_CATALOG
+  - POST: # MerchantMessageUpsertAPI
+      endpoint: /merchantMessage/upsert
+      auth: ApiAuthV2
+      request:
+        type: UpsertMerchantMessageReq
+      response:
+        type: APISuccess
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_MERCHANT_MESSAGE
+  - POST: # MerchantMessageDeleteAPI
+      endpoint: /merchantMessage/delete
+      auth: ApiAuthV2
+      request:
+        type: DeleteMerchantMessageReq
+      response:
+        type: APISuccess
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DELETE_MERCHANT_MESSAGE
   - GET:
       endpoint: /cityList
       auth: NoAuth
@@ -1260,6 +1285,28 @@ types:
     - derive: "'HideSecrets"
   DeleteMerchantDocumentReq:
     - id: Text
+    - derive: "'HideSecrets"
+  MerchantMessageCatalogType:
+    - enum: "KEY,CHANNEL,DOMAIN"
+    - derive: "HttpInstance"
+  MerchantMessageCatalogResp:
+    - values: "[Text]"
+  UpsertMerchantMessageReq:
+    - messageKey: Text
+    - message: Text
+    - templateId: Text
+    - containsUrlButton: Bool
+    - channel: Maybe Text
+    - domain: Maybe Text
+    - jsonData: Maybe Value
+    - messageType: Maybe Text
+    - senderHeader: Maybe Text
+    - templateName: Maybe Text
+    - vehicleCategory: Maybe VehicleCategory
+    - derive: "'HideSecrets"
+  DeleteMerchantMessageReq:
+    - messageKey: Text
+    - vehicleCategory: Maybe VehicleCategory
     - derive: "'HideSecrets"
   CityListResp:
     - supportedCities: [City]

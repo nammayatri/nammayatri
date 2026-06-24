@@ -34,9 +34,9 @@ data MerchantMessageD (s :: UsageSafety) = MerchantMessage
   }
   deriving (Generic, Show, Eq)
 
-data MediaChannel = SMS | WHATSAPP | OVERLAY | ALERT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data MediaChannel = SMS | WHATSAPP | OVERLAY | ALERT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
 
-data MessageDomain = FLEET | RIDE_HAILING | GENERAL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data MessageDomain = FLEET | RIDE_HAILING | GENERAL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
 
 data MessageKey
   = SEND_OTP
@@ -90,7 +90,7 @@ data MessageKey
   | FLEET_COMMUNICATION_SMS
   | FLEET_COMMUNICATION_WHATSAPP
   | SEND_TOTP
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
 
 type MerchantMessage = MerchantMessageD 'Safe
 

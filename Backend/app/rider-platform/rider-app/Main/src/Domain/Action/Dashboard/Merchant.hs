@@ -39,6 +39,9 @@ module Domain.Action.Dashboard.Merchant
     postMerchantRiderConfigEstimatesOrderUpdate,
     postMerchantConfigMerchantCreate,
     postMerchantConfigDebugLogUpdate,
+    getMerchantMerchantMessageCatalog,
+    postMerchantMerchantMessageUpsert,
+    postMerchantMerchantMessageDelete,
   )
 where
 
@@ -46,9 +49,11 @@ import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Merch
 import qualified BecknV2.FRFS.Enums as FRFS
 import Control.Applicative
 import qualified Data.Aeson as JSON
+import qualified Data.Aeson.Types as DAT
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
+import Data.Default.Class
 import qualified Data.List as DL
 import Data.List.Extra (notNull)
 import qualified Data.Map.Strict as Map
@@ -140,6 +145,7 @@ import qualified Storage.Queries.BusinessHourExtra as SQBHE
 import qualified Storage.Queries.Geometry as QGeo
 import qualified Storage.Queries.GeometryGeom as QGEO
 import qualified Storage.Queries.Merchant as QM
+import qualified Storage.Queries.MerchantMessage as QMM
 import qualified Storage.Queries.MerchantPushNotification as SQMPN
 import qualified Storage.Queries.MerchantServiceConfig as SQMSC
 import qualified Storage.Queries.ServiceCategory as SQSC
@@ -1980,4 +1986,78 @@ postMerchantConfigDebugLogUpdate merchantShortId city req = do
   _merchant <- findMerchantByShortId merchantShortId
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
   DebugLog.setJsonLogicDebugFlags (cast merchantOperatingCity.id) req
+  pure Success
+
+getMerchantMerchantMessageCatalog ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.RiderMerchantMessageCatalogType ->
+  Flow Common.RiderMerchantMessageCatalogResp
+getMerchantMerchantMessageCatalog _merchantShortId _city _catalogType = do
+  let values = map show [minBound .. maxBound :: DMM.MessageKey]
+  pure $ Common.RiderMerchantMessageCatalogResp {values}
+
+postMerchantMerchantMessageUpsert ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.UpsertRiderMerchantMessageReq ->
+  Flow APISuccess
+postMerchantMerchantMessageUpsert merchantShortId city req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+  messageKey <- readMaybe (T.unpack req.messageKey) & fromMaybeM (InvalidRequest $ "Invalid messageKey: " <> req.messageKey)
+  mbExisting <- CQMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCity.id messageKey Nothing
+  now <- getCurrentTime
+  case mbExisting of
+    Nothing -> do
+      parsedJsonData <-
+        case req.jsonData of
+          Nothing -> pure def
+          Just v -> DAT.parseMaybe JSON.parseJSON v & fromMaybeM (InvalidRequest "Invalid jsonData payload")
+      let merchantMessage =
+            DMM.MerchantMessage
+              { merchantId = merchant.id,
+                merchantOperatingCityId = merchantOpCity.id,
+                messageKey = messageKey,
+                message = req.message,
+                templateId = req.templateId,
+                containsUrlButton = req.containsUrlButton,
+                jsonData = parsedJsonData,
+                messageType = req.messageType,
+                senderHeader = req.senderHeader,
+                createdAt = now,
+                updatedAt = now
+              }
+      QMM.create merchantMessage
+      CQMM.clearCache merchantOpCity.id messageKey
+    Just existing -> do
+      parsedJsonData <-
+        case req.jsonData of
+          Nothing -> pure existing.jsonData
+          Just v -> DAT.parseMaybe JSON.parseJSON v & fromMaybeM (InvalidRequest "Invalid jsonData payload")
+      let updated =
+            existing
+              { DMM.message = req.message,
+                DMM.templateId = req.templateId,
+                DMM.containsUrlButton = req.containsUrlButton,
+                DMM.jsonData = parsedJsonData,
+                DMM.messageType = req.messageType,
+                DMM.senderHeader = req.senderHeader,
+                DMM.updatedAt = now
+              }
+      QMM.updateByPrimaryKey updated
+      CQMM.clearCache merchantOpCity.id messageKey
+  pure Success
+
+postMerchantMerchantMessageDelete ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.DeleteRiderMerchantMessageReq ->
+  Flow APISuccess
+postMerchantMerchantMessageDelete merchantShortId city req = do
+  merchantOpCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+  messageKey <- readMaybe (T.unpack req.messageKey) & fromMaybeM (InvalidRequest $ "Invalid messageKey: " <> req.messageKey)
+  _ <- CQMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCity.id messageKey Nothing >>= fromMaybeM (InvalidRequest $ "MerchantMessage not found for messageKey: " <> show messageKey)
+  QMM.deleteByMerchantOperatingCityIdAndMessageKey merchantOpCity.id messageKey
+  CQMM.clearCache merchantOpCity.id messageKey
   pure Success

@@ -67,6 +67,9 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantMerchantDocumentCreate,
     postMerchantMerchantDocumentUpdate,
     postMerchantMerchantDocumentDelete,
+    getMerchantMerchantMessageCatalog,
+    postMerchantMerchantMessageUpsert,
+    postMerchantMerchantMessageDelete,
     filterUnboundedFareProducts,
     filterBoundedFareProductsFromSnapshot,
     buildFarePolicyUsageCount,
@@ -83,6 +86,7 @@ import qualified Data.Aeson.Types as DAT
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
+import Data.Default.Class (def)
 import qualified Data.List as DL
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
@@ -217,6 +221,7 @@ import qualified Storage.Queries.FareProduct as SQF
 import qualified Storage.Queries.Geometry as QGeo
 import qualified Storage.Queries.GeometryGeom as QGEO
 import qualified Storage.Queries.Merchant as QM
+import qualified Storage.Queries.MerchantMessage as QMM
 import qualified Storage.Queries.PayoutConfig as QPC
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.PlanExtra as QPlanE
@@ -4586,6 +4591,96 @@ postMerchantMerchantDocumentDelete ::
 postMerchantMerchantDocumentDelete merchantShortId _opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   SMD.deleteMerchantDocument (cast merchant.id) (Id req.id)
+  pure Success
+
+getMerchantMerchantMessageCatalog ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.MerchantMessageCatalogType ->
+  Flow Common.MerchantMessageCatalogResp
+getMerchantMerchantMessageCatalog _merchantShortId _opCity catalogType = do
+  let values = case catalogType of
+        Common.KEY -> map show [minBound .. maxBound :: DMM.MessageKey]
+        Common.CHANNEL -> map show [minBound .. maxBound :: DMM.MediaChannel]
+        Common.DOMAIN -> map show [minBound .. maxBound :: DMM.MessageDomain]
+  pure $ Common.MerchantMessageCatalogResp {values}
+
+postMerchantMerchantMessageUpsert ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.UpsertMerchantMessageReq ->
+  Flow APISuccess
+postMerchantMerchantMessageUpsert merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  messageKey <- readMaybe (T.unpack req.messageKey) & fromMaybeM (InvalidRequest $ "Invalid messageKey: " <> req.messageKey)
+  channel <- traverse (\c -> readMaybe (T.unpack c) & fromMaybeM (InvalidRequest $ "Invalid channel: " <> c)) req.channel
+  domain <- traverse (\d -> readMaybe (T.unpack d) & fromMaybeM (InvalidRequest $ "Invalid domain: " <> d)) req.domain
+  mbExisting <- QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCity.id messageKey req.vehicleCategory
+  now <- getCurrentTime
+  case mbExisting of
+    Nothing -> do
+      parsedJsonData <-
+        case req.jsonData of
+          Nothing -> pure def
+          Just v -> DAT.parseMaybe A.parseJSON v & fromMaybeM (InvalidRequest "Invalid jsonData payload")
+      let merchantMessage =
+            DMM.MerchantMessage
+              { merchantId = merchant.id,
+                merchantOperatingCityId = merchantOpCity.id,
+                messageKey = messageKey,
+                message = req.message,
+                templateId = req.templateId,
+                containsUrlButton = req.containsUrlButton,
+                channel = channel,
+                domain = domain,
+                jsonData = parsedJsonData,
+                messageType = req.messageType,
+                senderHeader = req.senderHeader,
+                templateName = req.templateName,
+                vehicleCategory = req.vehicleCategory,
+                createdAt = now,
+                updatedAt = now
+              }
+      QMM.create merchantMessage
+      CQMM.clearCache merchantOpCity.id messageKey req.vehicleCategory
+    Just existing -> do
+      parsedJsonData <-
+        case req.jsonData of
+          Nothing -> pure existing.jsonData
+          Just v -> DAT.parseMaybe A.parseJSON v & fromMaybeM (InvalidRequest "Invalid jsonData payload")
+      let updated =
+            existing
+              { DMM.message = req.message,
+                DMM.templateId = req.templateId,
+                DMM.containsUrlButton = req.containsUrlButton,
+                DMM.channel = channel,
+                DMM.domain = domain,
+                DMM.jsonData = parsedJsonData,
+                DMM.messageType = req.messageType,
+                DMM.senderHeader = req.senderHeader,
+                DMM.templateName = req.templateName,
+                DMM.vehicleCategory = req.vehicleCategory,
+                DMM.updatedAt = now
+              }
+      QMM.updateByPrimaryKey updated
+      CQMM.clearCache merchantOpCity.id messageKey existing.vehicleCategory
+      when (req.vehicleCategory /= existing.vehicleCategory) $
+        CQMM.clearCache merchantOpCity.id messageKey req.vehicleCategory
+  pure Success
+
+postMerchantMerchantMessageDelete ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.DeleteMerchantMessageReq ->
+  Flow APISuccess
+postMerchantMerchantMessageDelete merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  messageKey <- readMaybe (T.unpack req.messageKey) & fromMaybeM (InvalidRequest $ "Invalid messageKey: " <> req.messageKey)
+  _ <- CQMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCity.id messageKey req.vehicleCategory Nothing >>= fromMaybeM (InvalidRequest $ "MerchantMessage not found for messageKey: " <> show messageKey)
+  QMM.deleteByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCity.id messageKey req.vehicleCategory
+  CQMM.clearCache merchantOpCity.id messageKey req.vehicleCategory
   pure Success
 
 getMerchantCityList ::
