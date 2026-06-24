@@ -79,6 +79,7 @@ data RideAPIEntity = RideAPIEntity
     paymentStatus :: Domain.Types.Ride.PaymentStatus,
     refundRequestStatus :: Maybe Domain.Types.RefundRequest.RefundRequestStatus,
     cancellationFeeStatus :: Maybe Domain.Types.Ride.CancellationFeeStatus,
-    selectedOffers :: Kernel.Prelude.Maybe SharedLogic.Offer.OffersRespAPIEntity
+    selectedOffers :: Kernel.Prelude.Maybe SharedLogic.Offer.OffersRespAPIEntity,
+    enableOtpLessRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

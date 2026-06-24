@@ -48,6 +48,7 @@ import Kernel.Types.Id (Id)
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
+import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
 import SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QB
@@ -280,7 +281,7 @@ validateRequest req@DOnStatusReq {..} = do
       let validatedRideDetails = ValidatedBookingReallocationDetails request
       return ValidatedOnStatusReq {..}
 
-buildNewRide :: (MonadFlow m, EncFlow m r, HasFlowEnv m r '["cloudType" ::: Maybe CloudType]) => Maybe DM.Merchant -> DB.Booking -> DCommon.BookingDetails -> m DRide.Ride
+buildNewRide :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["cloudType" ::: Maybe CloudType]) => Maybe DM.Merchant -> DB.Booking -> DCommon.BookingDetails -> m DRide.Ride
 buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
   id <- generateGUID
   shortId <- generateShortId
@@ -365,7 +366,12 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       sosId = Nothing
       offersFraudCheckFailureReason = booking.offersFraudCheckFailureReason
       driverArrivalStatus = Nothing
-  pure $ DRide.Ride {cloudType = cloudType, ..}
+  mbSafetySettings <- QSafetySettings.findByPersonId (cast booking.riderId)
+  let isMeterRide = case booking.bookingDetails of
+        DB.MeterRideDetails _ -> True
+        _ -> False
+      enableOtpLessRide = Just $ isMeterRide || fromMaybe False (mbSafetySettings >>= (.enableOtpLessRide))
+  pure $ DRide.Ride {cloudType = cloudType, enableOtpLessRide = enableOtpLessRide, ..}
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>
