@@ -1350,8 +1350,11 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
       let hasNominee = maybe False (\info -> isJust info.nomineeName && isJust info.nomineeRelationship && isJust info.nomineeDob) mbIdentityInfo
       return (if hasNominee then Just VALID else Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing)
     DVC.FleetRegistration -> do
-      mbInfo <- if isFleetRole role then QFOI.findByPrimaryKey driverId else pure Nothing
-      return (if isJust (mbInfo >>= (.registeredAt)) then Just VALID else Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+      mbRegisteredAt <-
+        if isFleetRole role
+          then (.registeredAt) <$> (QFOI.findByPrimaryKey driverId >>= fromMaybeM (PersonNotFound driverId.getId))
+          else pure Nothing
+      return (VALID <$ mbRegisteredAt, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
     _ -> commonDocStatus docType
 
 callGetDLGetStatus :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()
