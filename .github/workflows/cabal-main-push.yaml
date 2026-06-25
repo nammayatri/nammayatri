@@ -191,7 +191,7 @@ jobs:
               if [ -f "$dep" ]; then
                 rel="${dep#/}"  # strip leading /
                 mkdir -p ".nix-deps/$(dirname "$rel")"
-                cp "$dep" ".nix-deps/$rel"
+                cp --no-preserve=mode,ownership "$dep" ".nix-deps/$rel"
                 echo "Cached nix dep: $dep"
               fi
             done
