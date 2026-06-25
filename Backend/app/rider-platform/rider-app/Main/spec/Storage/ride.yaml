@@ -142,6 +142,7 @@ Ride:
     pickupEtaLogicVersion: Maybe Int
     commission: Maybe HighPrecMoney
     sosId: Maybe (Id Sos)
+    enableOtpLessRide: Maybe Bool
 
   sqlType:
     allowedEditLocationAttempts: int

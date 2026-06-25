@@ -61,6 +61,7 @@ data RideE e = Ride
     driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     driverRegisteredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driversPreviousRideDropLoc :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
+    enableOtpLessRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     endOdometerReading :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     endOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     estimatedEndTimeRange :: Kernel.Prelude.Maybe Domain.Types.Ride.EstimatedEndTimeRange,
@@ -115,9 +116,9 @@ data RideE e = Ride
   }
   deriving (Generic)
 
-type Ride = RideE ('AsEncrypted)
+type Ride = RideE 'AsEncrypted
 
-type DecryptedRide = RideE ('AsUnencrypted)
+type DecryptedRide = RideE 'AsUnencrypted
 
 instance EncryptedItem Ride where
   type Unencrypted Ride = (DecryptedRide, HashSalt)
@@ -159,6 +160,7 @@ instance EncryptedItem Ride where
           driverRating = driverRating entity,
           driverRegisteredAt = driverRegisteredAt entity,
           driversPreviousRideDropLoc = driversPreviousRideDropLoc entity,
+          enableOtpLessRide = enableOtpLessRide entity,
           endOdometerReading = endOdometerReading entity,
           endOtp = endOtp entity,
           estimatedEndTimeRange = estimatedEndTimeRange entity,
@@ -249,6 +251,7 @@ instance EncryptedItem Ride where
             driverRating = driverRating entity,
             driverRegisteredAt = driverRegisteredAt entity,
             driversPreviousRideDropLoc = driversPreviousRideDropLoc entity,
+            enableOtpLessRide = enableOtpLessRide entity,
             endOdometerReading = endOdometerReading entity,
             endOtp = endOtp entity,
             estimatedEndTimeRange = estimatedEndTimeRange entity,
@@ -329,16 +332,16 @@ data SosJourneyStatus
 
 data UnexpectedConditionStage = DriverDeviated | UnusualStop | UnsafeArea deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CancellationFeeStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancellationFeeStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverArrivalStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverArrivalStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SosJourneyStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosJourneyStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''UnexpectedConditionStage))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''UnexpectedConditionStage)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''PaymentStatus))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PaymentStatus)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''DriverArrivalStatus))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''DriverArrivalStatus)

@@ -556,9 +556,10 @@ updateDriverInformation ::
   Maybe DriverInfo.AddressDocumentType ->
   Maybe Text ->
   Maybe Text ->
+  Maybe DriverInfo.MapProvider ->
   Id Person.Person ->
   m ()
-updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled rideRequestVolumeEnabled onboardingAs address addressDocumentType nomineeName nomineeRelationship driverId = do
+updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled rideRequestVolumeEnabled onboardingAs address addressDocumentType nomineeName nomineeRelationship preferredMapProvider driverId = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamDI.canDowngradeToSedan canDowngradeToSedan,
@@ -582,6 +583,7 @@ updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngrade
       Se.Set BeamDI.addressDocumentType addressDocumentType,
       Se.Set BeamDI.nomineeName nomineeName,
       Se.Set BeamDI.nomineeRelationship nomineeRelationship,
+      Se.Set BeamDI.preferredMapProvider preferredMapProvider,
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]

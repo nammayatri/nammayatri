@@ -286,6 +286,7 @@ data TransporterConfigT f = TransporterConfigT
     subscription :: B.C f Kernel.Prelude.Bool,
     subscriptionConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     subscriptionStartTime :: B.C f Kernel.Prelude.UTCTime,
+    supportedMapProviders :: B.C f (Kernel.Prelude.Maybe [Domain.Types.DriverInformation.MapProvider]),
     taxConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     tdsFromEmail :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     thresholdCancellationPercentageToUnlist :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

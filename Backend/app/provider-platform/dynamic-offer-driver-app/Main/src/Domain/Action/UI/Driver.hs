@@ -473,7 +473,8 @@ data DriverInformationRes = DriverInformationRes
     membershipId :: Maybe (Id DStclMembership.StclMembership),
     createdAt :: UTCTime,
     role :: SP.Role,
-    operatorBadgeToken :: Maybe Text
+    operatorBadgeToken :: Maybe Text,
+    preferredMapProvider :: Maybe DriverInfo.MapProvider
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -598,7 +599,8 @@ data UpdateDriverReq = UpdateDriverReq
     address :: Maybe Text,
     addressDocumentType :: Maybe DriverInfo.AddressDocumentType,
     nomineeName :: Maybe Text,
-    nomineeRelationship :: Maybe Text
+    nomineeRelationship :: Maybe Text,
+    preferredMapProvider :: Maybe DriverInfo.MapProvider
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -1404,6 +1406,11 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
       addressDocumentType = req.addressDocumentType <|> driverInfo.addressDocumentType
       nomineeName = req.nomineeName <|> driverInfo.nomineeName
       nomineeRelationship = req.nomineeRelationship <|> driverInfo.nomineeRelationship
+      preferredMapProvider = req.preferredMapProvider <|> driverInfo.preferredMapProvider
+  whenJust req.preferredMapProvider $ \mp -> do
+    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    whenJust transporterConfig.supportedMapProviders $ \supported ->
+      unless (mp `elem` supported) $ throwError $ InvalidRequest "Map provider not supported by merchant"
   -- Compute vehicle-related fields (use existing values if no vehicle or no request)
   (canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, canSwitchToRental, canSwitchToInterCity, canSwitchToIntraCity, availableUpiApps) <-
     case mVehicle of
@@ -1462,8 +1469,8 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.PINK_AUTO -> [DVST.PINK_AUTO]
       QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
   -- Update driver information (works for both cases: with or without vehicle)
-  when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.availableUpiApps || isJust req.isPetModeEnabled || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold || isJust req.maxPickupRadius || isJust req.isSilentModeEnabled || isJust req.rideRequestVolume || isJust req.isTTSEnabled || isJust req.isHighAccuracyLocationEnabled || isJust req.rideRequestVolumeEnabled || isJust req.onboardingAs || isJust req.address || isJust req.addressDocumentType || isJust req.nomineeName || isJust req.nomineeRelationship) $ do
-    QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled rideRequestVolumeEnabled onboardingAs address addressDocumentType nomineeName nomineeRelationship person.id
+  when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.availableUpiApps || isJust req.isPetModeEnabled || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold || isJust req.maxPickupRadius || isJust req.isSilentModeEnabled || isJust req.rideRequestVolume || isJust req.isTTSEnabled || isJust req.isHighAccuracyLocationEnabled || isJust req.rideRequestVolumeEnabled || isJust req.onboardingAs || isJust req.address || isJust req.addressDocumentType || isJust req.nomineeName || isJust req.nomineeRelationship || isJust req.preferredMapProvider) $ do
+    QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled rideRequestVolumeEnabled onboardingAs address addressDocumentType nomineeName nomineeRelationship preferredMapProvider person.id
 
   let petTag = Yudhishthira.TagNameValue "PetDriver#\"true\""
   when (isPetModeEnabled && maybe False (Yudhishthira.elemTagNameValue petTag) person.driverTag) $
@@ -1708,6 +1715,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           bankVerificationStatus = bankVerificationStatus',
           upiId = payoutVpa,
           createdAt = registeredAt,
+          preferredMapProvider = driverInfo.preferredMapProvider,
           ..
         }
 
