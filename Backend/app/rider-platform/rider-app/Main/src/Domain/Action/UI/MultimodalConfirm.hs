@@ -526,10 +526,11 @@ postMultimodalRiderLocation (_, merchantId) journeyId mbFleetNo req = do
   -- Check if there's an ongoing bus leg but no live vehicle position or no ETA data
   case busLeg of
     Just leg -> do
-      let hasVehiclePosition = any (\vp -> isJust vp.position) leg.vehiclePositions
-      let hasETA = any (\vp -> not (null vp.upcomingStops)) leg.vehiclePositions
-      when (not hasVehiclePosition || not hasETA) $ do
-        logDebug "postMultimodalRiderLocation: Ongoing bus leg has no position or no ETA, incrementing empty vehicles counter"
+      let noVehicles = null leg.vehiclePositions
+      let allHaveVehiclePosition = all (\vp -> isJust vp.position) leg.vehiclePositions
+      let allHaveETA = all (\vp -> not (null vp.upcomingStops)) leg.vehiclePositions
+      when (noVehicles || not allHaveVehiclePosition || not allHaveETA) $ do
+        logDebug "postMultimodalRiderLocation: Ongoing bus leg has no suggested vehicles or at least one is missing position/ETA, incrementing empty vehicles counter"
         forM_ leg.serviceTierType $ \tierType ->
           BAPMetrics.incrementEmptyVehiclesCounter (merchantId.getId) leg.merchantOperatingCityId.getId (show tierType)
     Nothing -> pure ()
