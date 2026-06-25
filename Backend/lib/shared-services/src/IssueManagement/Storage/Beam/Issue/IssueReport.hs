@@ -41,7 +41,8 @@ data IssueReportT f = IssueReportT
     chats :: B.C f [Domain.Chat],
     merchantId :: B.C f (Maybe Text),
     becknIssueId :: B.C f (Maybe Text),
-    reopenedCount :: B.C f (Maybe Int)
+    reopenedCount :: B.C f (Maybe Int),
+    customerResponse :: B.C f (Maybe Domain.CustomerResponse)
   }
   deriving (Generic, B.Beamable)
 

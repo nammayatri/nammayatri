@@ -24,6 +24,7 @@ updateByPrimaryKey IssueConfig {..} =
       Set BeamIC.onAutoMarkIssueClsMsgs (getId <$> onAutoMarkIssueClsMsgs),
       Set BeamIC.onIssueReopenMsgs (getId <$> onIssueReopenMsgs),
       Set BeamIC.onKaptMarkIssueResMsgs (getId <$> onKaptMarkIssueResMsgs),
+      Set BeamIC.onCustomerNotSatisfiedMsgs (getId <$> onCustomerNotSatisfiedMsgs),
       Set BeamIC.onIssueCloseMsgs (getId <$> onIssueCloseMsgs),
       Set BeamIC.reopenCount reopenCount,
       Set BeamIC.messageTransformationConfig messageTransformationConfig,
@@ -42,6 +43,7 @@ instance FromTType' BeamIC.IssueConfig IssueConfig where
             onAutoMarkIssueClsMsgs = Id <$> onAutoMarkIssueClsMsgs,
             onIssueReopenMsgs = Id <$> onIssueReopenMsgs,
             onKaptMarkIssueResMsgs = Id <$> onKaptMarkIssueResMsgs,
+            onCustomerNotSatisfiedMsgs = Id <$> onCustomerNotSatisfiedMsgs,
             merchantId = Id merchantId,
             onIssueCloseMsgs = Id <$> onIssueCloseMsgs,
             ..
@@ -56,6 +58,7 @@ instance ToTType' BeamIC.IssueConfig IssueConfig where
         BeamIC.onAutoMarkIssueClsMsgs = getId <$> onAutoMarkIssueClsMsgs,
         BeamIC.onIssueReopenMsgs = getId <$> onIssueReopenMsgs,
         BeamIC.onKaptMarkIssueResMsgs = getId <$> onKaptMarkIssueResMsgs,
+        BeamIC.onCustomerNotSatisfiedMsgs = getId <$> onCustomerNotSatisfiedMsgs,
         BeamIC.merchantId = getId merchantId,
         BeamIC.onIssueCloseMsgs = getId <$> onIssueCloseMsgs,
         ..
