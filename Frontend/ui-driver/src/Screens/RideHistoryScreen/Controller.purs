@@ -158,7 +158,7 @@ eval (ScrollStateChanged scrollState) state = do
                pure unit
   continue state
 
-eval (SelectTab tab) state = updateAndExit state $ SelectedTab state{currentTab = tab, datePickerState { activeIndex = tripDatesCount - 1 , selectedItem {date = 0, month = "", year = 0}}} 
+eval (SelectTab tab) state = updateAndExit state $ SelectedTab state{currentTab = tab, datePickerState { activeIndex = tripDatesCount - 1 , selectedItem {date = 0, month = "", year = 0, utcDate = ""}}}
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
   case screen of
