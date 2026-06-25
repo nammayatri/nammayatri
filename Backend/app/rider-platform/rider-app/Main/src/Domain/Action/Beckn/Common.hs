@@ -632,7 +632,7 @@ rideAssignedReqHandler req = do
             Just _ -> "specialLocation"
             Nothing -> "normal"
       incrementRideCreatedRequestCount booking.merchantId.getId booking.merchantOperatingCityId.getId category
-      QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
+      QRB.updateStatus booking.riderId booking.id DRB.TRIP_ASSIGNED
       QRide.createRide ride
       QPFS.clearCache booking.riderId
       fork "Increment assigned count for customer cancellation rate" $ do
@@ -1100,7 +1100,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   unless (booking.status == DRB.COMPLETED) $
     void $ do
       sendRideEndMessage booking
-      QRB.updateStatus booking.id DRB.COMPLETED
+      QRB.updateStatus booking.riderId booking.id DRB.COMPLETED
       QBPL.makeAllInactiveByBookingId booking.id
   now <- getCurrentTime
   rideRelatedNotificationConfigList <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, timeDiffEvent = Just DRN.END_TIME})
@@ -1344,7 +1344,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
   otherParties <- Notify.getAllOtherRelatedPartyPersons booking
   unless (booking.status == DRB.CANCELLED) $
     void $ do
-      QRB.updateStatus booking.id DRB.CANCELLED
+      QRB.updateStatus booking.riderId booking.id DRB.CANCELLED
       QBPL.makeAllInactiveByBookingId booking.id
       checkAndUpdateJourneyTerminalStatusForNormalRide booking DJourney.CANCELLED
   whenJust mbRide $ \ride -> void $ do

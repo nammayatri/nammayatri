@@ -71,9 +71,6 @@ createInitialDriverStats currency distanceUnit driverId = do
           }
   createWithKV dStats
 
-getTopDriversByIdleTime :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Int -> [Id Driver] -> m [Id Driver]
-getTopDriversByIdleTime count_ ids = findAllWithOptionsDb [Se.Is BeamDS.driverId $ Se.In (getId <$> ids)] (Se.Asc BeamDS.idleSince) (Just count_) Nothing <&> (Domain.driverId <$>)
-
 updateIdleTime :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m ()
 updateIdleTime (Id driverId) = do
   now <- getCurrentTime
@@ -81,9 +78,6 @@ updateIdleTime (Id driverId) = do
     [ Se.Set BeamDS.idleSince now
     ]
     [Se.Is BeamDS.driverId (Se.Eq driverId)]
-
-fetchAll :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [DriverStats]
-fetchAll = findAllWithKV [Se.Is BeamDS.driverId $ Se.Not $ Se.Eq $ getId ""]
 
 findAllByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Driver] -> m [DriverStats]
 findAllByDriverIds person = findAllWithKV [Se.Is BeamDS.driverId $ Se.In (getId <$> (person <&> (.id)))]

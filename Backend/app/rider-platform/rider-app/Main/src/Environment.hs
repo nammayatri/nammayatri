@@ -206,7 +206,8 @@ data AppCfg = AppCfg
     blackListedJobs :: [Text],
     sftpConfig :: SFTPConfig,
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
-    bapHostRedirectMap :: BapHostRedirectMap
+    bapHostRedirectMap :: BapHostRedirectMap,
+    useCachedActiveRidesList :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -330,7 +331,8 @@ data AppEnv = AppEnv
     cloudType :: Maybe CloudType,
     sftpConfig :: SFTPConfig,
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
-    bapHostRedirectMap :: BapHostRedirectMap
+    bapHostRedirectMap :: BapHostRedirectMap,
+    useCachedActiveRidesList :: Bool
   }
   deriving (Generic)
 
