@@ -112,6 +112,12 @@ jobs:
           nix develop .#backend --command bash -c "
             export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir
             cd Backend
+            # Clear cabal store to prevent stale package registrations that
+            # reference runner-local nix paths. Does not affect CI incrementality
+            # (all packages come from GHC/nix, store is redundant).
+            rm -rf \$CABAL_DIR/store
+            mkdir -p \$CABAL_DIR/store/ghc-\$(ghc --numeric-version)
+            ghc-pkg init \$CABAL_DIR/store/ghc-\$(ghc --numeric-version)/package.db 2>/dev/null || true
             echo \"GHC libdir: \$(ghc --print-libdir)\"
             echo '--- cabal dry-run (what it plans to rebuild) ---'
             cabal build all --dry-run 2>&1 | tail -20
@@ -197,7 +203,10 @@ jobs:
           # same cabal state as CI (config, package DB, package index).
           # Include .nix-deps/ for non-reproducible .a files.
           # Exclude logs/ to save space.
-          tar -I 'zstd -T0 -3' -cf dist-newstyle.tar.zst -C "$CACHE_ROOT" $EXCLUDES --exclude='.cabal-dir/logs' dist-newstyle/ hie/ .cabal-dir/ .nix-deps/
+          # Exclude .cabal-dir/store — it may contain stale package registrations
+          # referencing nix store paths that don't exist on devbox, causing
+          # ghc-pkg dump to fail. GHC-provided packages are sufficient.
+          tar -I 'zstd -T0 -3' -cf dist-newstyle.tar.zst -C "$CACHE_ROOT" $EXCLUDES --exclude='.cabal-dir/logs' --exclude='.cabal-dir/store' dist-newstyle/ hie/ .cabal-dir/ .nix-deps/
           echo "$GITHUB_WORKSPACE" > build-path.txt
           mc cp dist-newstyle.tar.zst "minio/haskell-cache/cabal-build/${{ github.sha }}/dist-newstyle.tar.zst"
           mc cp build-path.txt "minio/haskell-cache/cabal-build/${{ github.sha }}/build-path.txt"
