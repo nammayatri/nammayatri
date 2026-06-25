@@ -4,6 +4,7 @@ module RewardsEvaluatorTests (tests) where
 
 import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as KM
+import qualified Data.Vector as V
 import qualified Domain.Action.Rewards.Evaluator as Eval
 import qualified Domain.Types.RewardCohort as DRC
 import Kernel.Prelude
@@ -41,7 +42,7 @@ gteRule :: Text -> Int -> A.Value
 gteRule field n =
   A.Object $
     KM.fromList
-      [ (">=", A.Array $ fromList [A.Object $ KM.fromList [("var", A.String field)], A.toJSON n])
+      [ (">=", A.Array $ V.fromList [A.Object $ KM.fromList [("var", A.String field)], A.toJSON n])
       ]
 
 mkCohort :: Text -> A.Value -> DRC.RewardCohort
