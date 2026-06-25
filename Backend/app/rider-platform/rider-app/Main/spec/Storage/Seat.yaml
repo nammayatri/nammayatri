@@ -44,6 +44,12 @@ Seat:
       kvFunction: findAllWithKV
       where:
          in: [id]
+    deleteBySeatLayoutId:
+      kvFunction: deleteWithKV
+      where: seatLayoutId
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
 
 SeatLayout:
   tableName: seat_layout
@@ -64,6 +70,15 @@ SeatLayout:
   queries:
     findById:
       kvFunction: findOneWithKV
+      where: id
+    findAllByMerchantIdAndMerchantOperatingCityId:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [merchantId, merchantOperatingCityId]
+      limit: limit
+      offset: offset
+    deleteById:
+      kvFunction: deleteWithKV
       where: id
 
 VehicleSeatLayoutMapping:

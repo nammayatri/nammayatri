@@ -11,6 +11,7 @@ import qualified API.Types.Dashboard.AppManagement.Pass
 import qualified API.Types.Dashboard.AppManagement.PassOrganization
 import qualified API.Types.Dashboard.AppManagement.Passetto
 import qualified API.Types.Dashboard.AppManagement.Payment
+import qualified API.Types.Dashboard.AppManagement.SeatLayout
 import qualified API.Types.Dashboard.AppManagement.TicketDashboard
 import qualified API.Types.Dashboard.AppManagement.Tickets
 import qualified API.Types.Dashboard.AppManagement.TransitOperator
@@ -31,6 +32,7 @@ data AppManagementUserActionType
   | PASS_ORGANIZATION API.Types.Dashboard.AppManagement.PassOrganization.PassOrganizationUserActionType
   | PASSETTO API.Types.Dashboard.AppManagement.Passetto.PassettoUserActionType
   | PAYMENT API.Types.Dashboard.AppManagement.Payment.PaymentUserActionType
+  | SEAT_LAYOUT API.Types.Dashboard.AppManagement.SeatLayout.SeatLayoutUserActionType
   | TICKET_DASHBOARD API.Types.Dashboard.AppManagement.TicketDashboard.TicketDashboardUserActionType
   | TICKETS API.Types.Dashboard.AppManagement.Tickets.TicketsUserActionType
   | TRANSIT_OPERATOR API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorUserActionType
@@ -48,6 +50,7 @@ instance Text.Show.Show AppManagementUserActionType where
     PASS_ORGANIZATION e -> "PASS_ORGANIZATION/" <> show e
     PASSETTO e -> "PASSETTO/" <> show e
     PAYMENT e -> "PAYMENT/" <> show e
+    SEAT_LAYOUT e -> "SEAT_LAYOUT/" <> show e
     TICKET_DASHBOARD e -> "TICKET_DASHBOARD/" <> show e
     TICKETS e -> "TICKETS/" <> show e
     TRANSIT_OPERATOR e -> "TRANSIT_OPERATOR/" <> show e
@@ -114,6 +117,15 @@ instance Text.Read.Read AppManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "PAYMENT/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( SEAT_LAYOUT v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "SEAT_LAYOUT/" r,
                    ( v1,
                      r2
                      ) <-
