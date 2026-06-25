@@ -21,6 +21,7 @@ import qualified Data.Text.Encoding as TE
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.ConditionalCharges as DAC
 import Domain.Types.DriverPoolConfig
 import qualified Domain.Types.FarePolicy as DFP
@@ -201,7 +202,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
           let estimateOrQuoteServiceTierNames = tripQuoteDetails <&> (.vehicleServiceTierName)
           searchTry <- case mbLastSearchTry of
             Nothing -> do
-              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory billingCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory billingCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference ((.paymentInstrument) <$> paymentMethodInfo)
               _ <- QST.create searchTry
               return searchTry
             Just oldSearchTry -> do
@@ -212,7 +213,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
               -- TODO : Fix this
               -- unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
               --   throwError SearchTryEstimatedFareChanged
-              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory billingCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory billingCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference ((.paymentInstrument) <$> paymentMethodInfo)
               when (oldSearchTry.status == DST.ACTIVE) $ do
                 QST.updateStatus DST.CANCELLED oldSearchTry.id
                 void $ QDQ.setInactiveBySTId oldSearchTry.id
@@ -250,8 +251,9 @@ buildSearchTry ::
   Maybe Text ->
   Maybe Text ->
   Maybe [Text] ->
+  Maybe DMPM.PaymentInstrument ->
   m DST.SearchTry
-buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory billingCategory customerExtraFee petCharges messageId estimateOrQuoteServTierNames serviceTier emailDomain businessEmailDomain driverPreference = do
+buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory billingCategory customerExtraFee petCharges messageId estimateOrQuoteServTierNames serviceTier emailDomain businessEmailDomain driverPreference mbPaymentInstrument = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow serviceTier searchReq.merchantOperatingCityId searchReq.configInExperimentVersions (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTier))
@@ -289,6 +291,7 @@ buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare sea
         preferSafetyPlus = searchReq.preferSafetyPlus,
         driverPreference = driverPreference,
         businessEmailDomain = businessEmailDomain,
+        paymentInstrument = mbPaymentInstrument,
         ..
       }
 

@@ -6,6 +6,7 @@ module Storage.Beam.SearchTry where
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.SearchTry
 import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
@@ -34,6 +35,7 @@ data SearchTryT f = SearchTryT
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     messageId :: B.C f Kernel.Prelude.Text,
+    paymentInstrument :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument),
     petCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
     petChargesAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     preferSafetyPlus :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

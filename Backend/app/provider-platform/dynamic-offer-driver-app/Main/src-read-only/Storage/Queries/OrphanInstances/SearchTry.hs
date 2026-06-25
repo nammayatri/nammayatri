@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.SearchTry where
 
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.SearchTry
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -39,6 +40,7 @@ instance FromTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = merchantOperatingCityId',
             messageId = messageId,
+            paymentInstrument = paymentInstrument,
             petCharges = Kernel.Types.Common.mkAmountWithDefault petChargesAmount <$> petCharges,
             preferSafetyPlus = fromMaybe False preferSafetyPlus,
             requestId = Kernel.Types.Id.Id requestId,
@@ -76,6 +78,7 @@ instance ToTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Prelude.Just $ Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.messageId = messageId,
+        Beam.paymentInstrument = paymentInstrument,
         Beam.petCharges = Kernel.Prelude.roundToIntegral <$> petCharges,
         Beam.petChargesAmount = petCharges,
         Beam.preferSafetyPlus = Kernel.Prelude.Just preferSafetyPlus,
