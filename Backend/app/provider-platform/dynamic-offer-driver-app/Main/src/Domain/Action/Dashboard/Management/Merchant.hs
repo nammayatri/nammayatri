@@ -70,6 +70,7 @@ module Domain.Action.Dashboard.Management.Merchant
     filterUnboundedFareProducts,
     filterBoundedFareProductsFromSnapshot,
     buildFarePolicyUsageCount,
+    getMerchantCityList,
   )
 where
 
@@ -4593,3 +4594,133 @@ postMerchantConfigDebugLogUpdate merchantShortId city req = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
   DebugLog.setJsonLogicDebugFlags (cast merchantOpCityId) req
   pure Success
+
+---------------------------------------------------------------------
+
+toDomainMerchantDocRole :: Common.MerchantDocumentRoleT -> DMD.Role
+toDomainMerchantDocRole = \case
+  Common.Driver -> DMD.Driver
+  Common.FleetOwner -> DMD.FleetOwner
+  Common.Operator -> DMD.Operator
+  Common.Rider -> DMD.Rider
+  Common.Admin -> DMD.Admin
+
+toApiMerchantDocRole :: DMD.Role -> Common.MerchantDocumentRoleT
+toApiMerchantDocRole = \case
+  DMD.Driver -> Common.Driver
+  DMD.FleetOwner -> Common.FleetOwner
+  DMD.Operator -> Common.Operator
+  DMD.Rider -> Common.Rider
+  DMD.Admin -> Common.Admin
+
+toDomainMerchantDocPlatformType :: Common.MerchantDocumentPlatformTypeT -> DMD.PlatformType
+toDomainMerchantDocPlatformType = \case
+  Common.WEB -> DMD.WEB
+  Common.ANDROID -> DMD.ANDROID
+  Common.IOS -> DMD.IOS
+
+toApiMerchantDocumentItem :: DMD.MerchantDocument -> Common.MerchantDocumentItem
+toApiMerchantDocumentItem doc =
+  Common.MerchantDocumentItem
+    { Common.id = doc.id.getId,
+      Common.documentType = doc.documentType,
+      Common.role = toApiMerchantDocRole doc.role,
+      Common.language = doc.language,
+      Common.url = doc.url,
+      Common.title = doc.title,
+      Common.merchantId = doc.merchantId.getId,
+      Common.merchantOperatingCityId = (.getId) <$> doc.merchantOperatingCityId
+    }
+
+dashboardMerchantDocGetHitsCountKey :: Text -> Text
+dashboardMerchantDocGetHitsCountKey merchantIdText =
+  "BPP:Dashboard:MerchantDocument:get:" <> merchantIdText <> ":hitsCount"
+
+getMerchantMerchantDocument ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Maybe Language ->
+  Common.MerchantDocumentRoleT ->
+  Flow Common.MerchantDocumentItem
+getMerchantMerchantDocument merchantShortId opCity documentType mbLanguage role = do
+  merchant <- findMerchantByShortId merchantShortId
+  checkSlidingWindowLimit (dashboardMerchantDocGetHitsCountKey merchant.id.getId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let language = fromMaybe ENGLISH mbLanguage
+  doc <-
+    SMD.getMerchantDocument
+      (cast merchant.id)
+      (Just $ cast merchantOpCityId)
+      documentType
+      (toDomainMerchantDocRole role)
+      language
+  pure $ toApiMerchantDocumentItem doc
+
+getMerchantMerchantDocumentList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Language ->
+  Common.MerchantDocumentRoleT ->
+  Flow Common.MerchantDocumentListResp
+getMerchantMerchantDocumentList merchantShortId opCity mbLanguage role = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  docs <-
+    SMD.listMerchantDocuments
+      (cast merchant.id)
+      (Just $ cast merchantOpCityId)
+      (toDomainMerchantDocRole role)
+      Nothing
+      mbLanguage
+  pure $ Common.MerchantDocumentListResp {Common.documents = map toApiMerchantDocumentItem docs}
+
+postMerchantMerchantDocumentCreate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.CreateMerchantDocumentReq ->
+  Flow Common.MerchantDocumentItem
+postMerchantMerchantDocumentCreate merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  let cityToUse = fromMaybe opCity req.city
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just cityToUse)
+  doc <-
+    SMD.createMerchantDocument
+      (cast merchant.id)
+      (Just $ cast merchantOpCityId)
+      req.documentType
+      (toDomainMerchantDocRole req.role)
+      req.language
+      req.url
+      req.title
+      (toDomainMerchantDocPlatformType <$> req.platformType)
+  pure $ toApiMerchantDocumentItem doc
+
+postMerchantMerchantDocumentUpdate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.UpdateMerchantDocumentReq ->
+  Flow Common.MerchantDocumentItem
+postMerchantMerchantDocumentUpdate merchantShortId _opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  doc <- SMD.updateMerchantDocument (cast merchant.id) (Id req.id) req.url req.title
+  pure $ toApiMerchantDocumentItem doc
+
+postMerchantMerchantDocumentDelete ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.DeleteMerchantDocumentReq ->
+  Flow APISuccess
+postMerchantMerchantDocumentDelete merchantShortId _opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  SMD.deleteMerchantDocument (cast merchant.id) (Id req.id)
+  pure Success
+
+getMerchantCityList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Flow Common.CityListResp
+getMerchantCityList merchantShortId _opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  operatingCities <- CQMOC.findAllByMerchantId merchant.id
+  pure $ Common.CityListResp {Common.supportedCities = map (.city) operatingCities}

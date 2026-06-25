@@ -656,7 +656,52 @@ apis:
         type: SetJsonLogicDebugReq
       response:
         type: APISuccess
-
+  - GET: # MerchantDocumentListAPI
+      endpoint: /merchantDocument/list
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - role: MerchantDocumentRoleT
+      query:
+        - language: Language
+      response:
+        type: MerchantDocumentListResp
+  - GET: # MerchantDocumentGetAPI (public, rate-limited)
+      endpoint: /merchantDocument/{documentType}
+      auth: NoAuth
+      params:
+        documentType: Text
+      mandatoryQuery:
+        - role: MerchantDocumentRoleT
+      query:
+        - language: Language
+      response:
+        type: MerchantDocumentItem
+  - POST: # MerchantDocumentCreateAPI
+      endpoint: /merchantDocument/create
+      auth: ApiAuthV2
+      request:
+        type: CreateMerchantDocumentReq
+      response:
+        type: MerchantDocumentItem
+  - POST: # MerchantDocumentUpdateAPI
+      endpoint: /merchantDocument/update
+      auth: ApiAuthV2
+      request:
+        type: UpdateMerchantDocumentReq
+      response:
+        type: MerchantDocumentItem
+  - POST: # MerchantDocumentDeleteAPI
+      endpoint: /merchantDocument/delete
+      auth: ApiAuthV2
+      request:
+        type: DeleteMerchantDocumentReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /cityList
+      auth: NoAuth
+      response:
+        type: CityListResp
 
 types:
   MerchantUpdateReq:
@@ -1232,6 +1277,42 @@ types:
     - state: IndianState
     - city: City
     - geom: Maybe Text
+  MerchantDocumentRoleT:
+    - enum: "Driver,FleetOwner,Operator,Rider,Admin"
+    - derive: "HttpInstance"
+  MerchantDocumentItem:
+    - id: Text
+    - documentType: Text
+    - role: MerchantDocumentRoleT
+    - language: Language
+    - url: Text
+    - title: Text
+    - merchantId: Text
+    - merchantOperatingCityId: Maybe Text
+  MerchantDocumentListResp:
+    - documents: "[MerchantDocumentItem]"
+  CreateMerchantDocumentReq:
+    - documentType: Text
+    - role: MerchantDocumentRoleT
+    - language: Language
+    - url: Text
+    - title: Text
+    - city: Maybe City
+    - platformType: Maybe MerchantDocumentPlatformTypeT
+    - derive: "'HideSecrets"
+  MerchantDocumentPlatformTypeT:
+    - enum: "WEB,ANDROID,IOS"
+    - derive: "HttpInstance"
+  UpdateMerchantDocumentReq:
+    - id: Text
+    - url: Text
+    - title: Text
+    - derive: "'HideSecrets"
+  DeleteMerchantDocumentReq:
+    - id: Text
+    - derive: "'HideSecrets"
+  CityListResp:
+    - supportedCities: [City]
 extraOperations:
   - EXTRA_API_TYPES_FILE
   - EXTRA_API_COMMON_TYPES_FILE
