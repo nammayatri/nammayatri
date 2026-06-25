@@ -250,9 +250,13 @@ jobs:
           mc cp rider.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/rider-app.tar.zst"
           rm -f rider.tar.zst
 
-          tar -I 'zstd -T0 -3' -cf repl-support.tar.zst -C "$CACHE_ROOT" --exclude='.cabal-dir/logs' hie/ .cabal-dir/
+          tar -I 'zstd -T0 -3' -cf repl-support.tar.zst -C "$CACHE_ROOT" --exclude='.cabal-dir/logs' hie/ .cabal-dir/ .nix-deps/
           mc cp repl-support.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/repl-support.tar.zst"
           rm -f repl-support.tar.zst
+
+          echo "$CACHE_ROOT" > cache-root.txt
+          mc cp cache-root.txt "minio/haskell-cache/cabal-repl/${{ github.sha }}/cache-root.txt"
+          rm -f cache-root.txt
 
       - name: Cleanup staging dir
         if: always()
