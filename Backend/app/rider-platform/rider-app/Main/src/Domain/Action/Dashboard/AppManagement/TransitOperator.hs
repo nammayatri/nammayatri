@@ -27,6 +27,7 @@ module Domain.Action.Dashboard.AppManagement.TransitOperator
     transitOperatorGetWaybills,
     transitOperatorGetDeviceVehicleMappingList,
     transitOperatorUpsertDeviceVehicleMapping,
+    transitOperatorUnblockBus,
   )
 where
 
@@ -44,6 +45,7 @@ import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -55,6 +57,10 @@ import qualified Storage.Queries.DeviceVehicleMapping as QDvm
 transitOperatorGetRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow SharedLogic.External.Nandi.Types.NandiRow)
 transitOperatorGetRow merchantShortId opCity column table vehicleCategory =
   DTOp.transitOperatorGetRowUtil merchantShortId opCity vehicleCategory table column
+
+transitOperatorUnblockBus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+transitOperatorUnblockBus merchantShortId opCity vehicleNumber =
+  DTOp.transitOperatorUnblockBusUtil merchantShortId opCity vehicleNumber
 
 transitOperatorGetAllRows :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.NandiRow])
 transitOperatorGetAllRows merchantShortId opCity limit offset table vehicleCategory =
