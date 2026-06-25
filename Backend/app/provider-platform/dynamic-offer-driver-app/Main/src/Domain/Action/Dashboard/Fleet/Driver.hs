@@ -936,86 +936,92 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
   requestorId <- case req.requestorId of
     Nothing -> throwError $ FleetOwnerOrOperatorIdRequired
     Just id -> pure id
-  requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
+  mbRequestedPerson <- QPerson.findById (Id requestorId)
   rcReq <-
     Csv.readCsv @VehicleDetailsCSVRow @(Common.RegisterRCReq, DbHash, [DRoute.Route], Maybe Text, Maybe Text, Maybe Text) req.file $
       parseVehicleInfo merchantOpCity
   when (length rcReq > 100) $ throwError $ MaxVehiclesLimitExceeded 100 -- TODO: Configure the limit
-  case requestedPerson.role of
-    role | DCommon.checkFleetOwnerRole role -> do
-      fleetOwnerId <- maybe (pure requestorId) (\val -> if requestorId == val then pure requestorId else throwError AccessDenied) req.fleetOwnerId
-      DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
-      unprocessedVehicleRouteMappingEntities <- case transporterConfig.requireRouteMappingInVehicle of
-        False -> do
-          pure []
-        True -> do
-          foldlM
-            ( \unprocessedEntities (registerRcReq, vehicleNumberHash, routes, _, _, _) -> do
-                unprocessedVehicleRouteMapping <-
-                  mapM
-                    ( \route -> do
-                        VRM.findOneMapping vehicleNumberHash route.code
-                          >>= \case
-                            Just vehicleRouteMapping ->
-                              if not vehicleRouteMapping.blocked && vehicleRouteMapping.fleetOwnerId.getId /= fleetOwnerId
-                                then pure $ Just ("Vehicle Route Mapping for Vehicle: " <> registerRcReq.vehicleRegistrationCertNumber <> ", Route: " <> route.code <> "is linked to another fleet, please delink and try again.")
-                                else do
-                                  withTryCatch
-                                    "buildVehicleRouteMapping"
-                                    (buildVehicleRouteMapping (Id fleetOwnerId) merchant.id merchantOpCity.id registerRcReq.vehicleRegistrationCertNumber route)
-                                    >>= \case
-                                      Left err -> return $ Just ("Failed to Add Vehicle Route Mapping for Vehicle: " <> registerRcReq.vehicleRegistrationCertNumber <> ", Route: " <> route.code <> ", Error: " <> (T.pack $ displayException err))
-                                      Right _ -> pure Nothing
-                            Nothing -> do
-                              withTryCatch
-                                "buildVehicleRouteMapping"
-                                (buildVehicleRouteMapping (Id fleetOwnerId) merchant.id merchantOpCity.id registerRcReq.vehicleRegistrationCertNumber route)
-                                >>= \case
-                                  Left err -> return $ Just ("Failed to Add Vehicle Route Mapping for Vehicle: " <> registerRcReq.vehicleRegistrationCertNumber <> ", Route: " <> route.code <> ", Error: " <> (T.pack $ displayException err))
-                                  Right _ -> pure Nothing
-                    )
-                    routes
-                return $ unprocessedEntities <> catMaybes unprocessedVehicleRouteMapping
-            )
-            []
-            rcReq
-
-      unprocessedRCAdditionEntities <-
+  let processVehicle func =
         foldlM
           ( \unprocessedEntities (registerRcReq, _, _, mbCountryCode, mbFleetNo, mbDriverNo) -> do
-              decryptedMobileNumber <- mapM decrypt requestedPerson.mobileNumber
-              case decryptedMobileNumber of
-                Just mobileNumber -> do
-                  currProcessEntity <- case (mbFleetNo, mbDriverNo) of
-                    (Nothing, Nothing) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq mobileNumber Nothing (Just Common.FLEET) merchantOpCity -- Add vehicles under requested Fleet
-                    (Nothing, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo (Just mobileNumber) (Just DCommonRole.DRIVER) merchantOpCity -- Map driver <-> vehicle under requested fleet
-                    (_, _) -> pure $ Left $ "Unable to add Vehicle (" <> registerRcReq.vehicleRegistrationCertNumber <> "): Invalid request"
-                  case currProcessEntity of
-                    Left err -> return $ unprocessedEntities <> [err]
-                    Right _ -> return unprocessedEntities
-                Nothing -> return $ unprocessedEntities <> ["Person do not have a mobile number " <> requestedPerson.id.getId]
-          )
-          []
-          rcReq
-      pure Common.APISuccessWithUnprocessedEntities {unprocessedEntities = unprocessedVehicleRouteMappingEntities <> unprocessedRCAdditionEntities}
-    DP.OPERATOR -> do
-      unprocessedRCAdditionEntities <-
-        foldlM
-          ( \unprocessedEntities (registerRcReq, _, _, mbCountryCode, mbFleetNo, mbDriverNo) -> do
-              currProcessEntity <- case (mbFleetNo, mbDriverNo) of
-                (Nothing, Nothing) -> pure $ Left $ "Unable to add Vehicle (" <> registerRcReq.vehicleRegistrationCertNumber <> "): Neither fleet nor driver phone number provided"
-                (Just fleetNo, Nothing) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq fleetNo (Just fleetNo) (Just Common.FLEET) merchantOpCity -- Add vehicles under Fleet
-                (Nothing, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo Nothing (Just DCommonRole.DRIVER) merchantOpCity -- Add vehicles under DCO
-                (Just fleetNo, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo (Just fleetNo) (Just DCommonRole.DRIVER) merchantOpCity -- Map driver <-> vehicle under fleer
+              currProcessEntity <- func (registerRcReq, mbCountryCode, mbFleetNo, mbDriverNo)
               case currProcessEntity of
                 Left err -> return $ unprocessedEntities <> [err]
                 Right _ -> return unprocessedEntities
           )
           []
           rcReq
+  case mbRequestedPerson of
+    Nothing -> do
+      unprocessedRCAdditionEntities <- processVehicle (processVehicleByOperatorOrAdmin merchant transporterConfig merchantOpCity requestorId)
       pure Common.APISuccessWithUnprocessedEntities {unprocessedEntities = unprocessedRCAdditionEntities}
-    _ -> throwError $ InvalidRequest "Invalid Data"
+    Just requestedPerson ->
+      case requestedPerson.role of
+        role | DCommon.checkFleetOwnerRole role -> do
+          fleetOwnerId <- maybe (pure requestorId) (\val -> if requestorId == val then pure requestorId else throwError AccessDenied) req.fleetOwnerId
+          DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
+          unprocessedVehicleRouteMappingEntities <-
+            if transporterConfig.requireRouteMappingInVehicle
+              then processVehicleRouteMappings merchant merchantOpCity fleetOwnerId rcReq
+              else pure []
+          unprocessedRCAdditionEntities <- processVehicle (processVehicleByFleetOwner merchant transporterConfig merchantOpCity requestorId requestedPerson)
+          pure Common.APISuccessWithUnprocessedEntities {unprocessedEntities = unprocessedVehicleRouteMappingEntities <> unprocessedRCAdditionEntities}
+        DP.OPERATOR -> do
+          unprocessedRCAdditionEntities <- processVehicle (processVehicleByOperatorOrAdmin merchant transporterConfig merchantOpCity requestorId)
+          pure Common.APISuccessWithUnprocessedEntities {unprocessedEntities = unprocessedRCAdditionEntities}
+        _ -> throwError $ InvalidRequest "Invalid Data"
   where
+    processVehicleRouteMappings :: DM.Merchant -> DMOC.MerchantOperatingCity -> Text -> [(Common.RegisterRCReq, DbHash, [DRoute.Route], Maybe Text, Maybe Text, Maybe Text)] -> Flow [Text]
+    processVehicleRouteMappings merchant merchantOpCity fleetOwnerId rows =
+      foldlM
+        ( \unprocessedEntities (registerRcReq, vehicleNumberHash, routes, _, _, _) -> do
+            unprocessedVehicleRouteMapping <-
+              mapM
+                ( \route -> do
+                    VRM.findOneMapping vehicleNumberHash route.code
+                      >>= \case
+                        Just vehicleRouteMapping ->
+                          if not vehicleRouteMapping.blocked && vehicleRouteMapping.fleetOwnerId.getId /= fleetOwnerId
+                            then pure $ Just ("Vehicle Route Mapping for Vehicle: " <> registerRcReq.vehicleRegistrationCertNumber <> ", Route: " <> route.code <> "is linked to another fleet, please delink and try again.")
+                            else
+                              withTryCatch
+                                "buildVehicleRouteMapping"
+                                (buildVehicleRouteMapping (Id fleetOwnerId) merchant.id merchantOpCity.id registerRcReq.vehicleRegistrationCertNumber route)
+                                >>= \case
+                                  Left err -> return $ Just ("Failed to Add Vehicle Route Mapping for Vehicle: " <> registerRcReq.vehicleRegistrationCertNumber <> ", Route: " <> route.code <> ", Error: " <> (T.pack $ displayException err))
+                                  Right _ -> pure Nothing
+                        Nothing ->
+                          withTryCatch
+                            "buildVehicleRouteMapping"
+                            (buildVehicleRouteMapping (Id fleetOwnerId) merchant.id merchantOpCity.id registerRcReq.vehicleRegistrationCertNumber route)
+                            >>= \case
+                              Left err -> return $ Just ("Failed to Add Vehicle Route Mapping for Vehicle: " <> registerRcReq.vehicleRegistrationCertNumber <> ", Route: " <> route.code <> ", Error: " <> (T.pack $ displayException err))
+                              Right _ -> pure Nothing
+                )
+                routes
+            return $ unprocessedEntities <> catMaybes unprocessedVehicleRouteMapping
+        )
+        []
+        rows
+
+    processVehicleByFleetOwner :: DM.Merchant -> DTCConfig.TransporterConfig -> DMOC.MerchantOperatingCity -> Text -> DP.Person -> (Common.RegisterRCReq, Maybe Text, Maybe Text, Maybe Text) -> Flow (Either Text ())
+    processVehicleByFleetOwner merchant transporterConfig merchantOpCity requestorId requestedPerson (registerRcReq, mbCountryCode, mbFleetNo, mbDriverNo) = do
+      decryptedMobileNumber <- mapM decrypt requestedPerson.mobileNumber
+      case decryptedMobileNumber of
+        Nothing -> pure $ Left $ "Person do not have a mobile number " <> requestedPerson.id.getId
+        Just mobileNumber ->
+          case (mbFleetNo, mbDriverNo) of
+            (Nothing, Nothing) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq mobileNumber Nothing (Just Common.FLEET) merchantOpCity -- Add vehicles under requested fleet
+            (Nothing, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo (Just mobileNumber) (Just DCommonRole.DRIVER) merchantOpCity -- Map driver <-> vehicle under requested fleet
+            (_, _) -> pure $ Left $ "Unable to add Vehicle (" <> registerRcReq.vehicleRegistrationCertNumber <> "): Invalid request"
+
+    processVehicleByOperatorOrAdmin :: DM.Merchant -> DTCConfig.TransporterConfig -> DMOC.MerchantOperatingCity -> Text -> (Common.RegisterRCReq, Maybe Text, Maybe Text, Maybe Text) -> Flow (Either Text ())
+    processVehicleByOperatorOrAdmin merchant transporterConfig merchantOpCity requestorId (registerRcReq, mbCountryCode, mbFleetNo, mbDriverNo) =
+      case (mbFleetNo, mbDriverNo) of
+        (Nothing, Nothing) -> pure $ Left $ "Unable to add Vehicle (" <> registerRcReq.vehicleRegistrationCertNumber <> "): Neither fleet nor driver phone number provided"
+        (Just fleetNo, Nothing) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq fleetNo (Just fleetNo) (Just Common.FLEET) merchantOpCity -- Add vehicles under fleet
+        (Nothing, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo Nothing (Just DCommonRole.DRIVER) merchantOpCity -- Add vehicles under DCO
+        (Just fleetNo, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo (Just fleetNo) (Just DCommonRole.DRIVER) merchantOpCity -- Map driver <-> vehicle under fleet
     handleAddVehicleWithTry ::
       DM.Merchant ->
       DTCConfig.TransporterConfig ->
@@ -3503,18 +3509,22 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
         throwError (InvalidRequest "Invalid fleet owner")
       process (processDriverByFleetOwner merchant merchantOpCity transporterConfig fleetOwner)
     Just requestorId -> do
-      requestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
-      case requestor.role of
-        role | DCommon.checkFleetOwnerRole role -> do
-          -- fleetOwner is in req, should be the same as requestor
-          whenJust req.fleetOwnerId \id -> do
-            unless (id == requestorId) $ throwError AccessDenied
-            DCommon.checkFleetOwnerVerification id merchant.fleetOwnerEnabledCheck
-          process (processDriverByFleetOwner merchant merchantOpCity transporterConfig requestor)
-        DP.OPERATOR ->
-          -- fleetOwner is in csv row
-          process (processDriverByOperator merchant merchantOpCity transporterConfig requestor)
-        _ -> throwError AccessDenied
+      mbRequestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person)
+      case mbRequestor of
+        Nothing ->
+          process (processDriverByAdmin merchant merchantOpCity transporterConfig)
+        Just requestor ->
+          case requestor.role of
+            role | DCommon.checkFleetOwnerRole role -> do
+              -- fleetOwner is in req, should be the same as requestor
+              whenJust req.fleetOwnerId \id -> do
+                unless (id == requestorId) $ throwError AccessDenied
+                DCommon.checkFleetOwnerVerification id merchant.fleetOwnerEnabledCheck
+              process (processDriverByFleetOwner merchant merchantOpCity transporterConfig requestor)
+            DP.OPERATOR ->
+              -- fleetOwner is in csv row
+              process (processDriverByOperator merchant merchantOpCity transporterConfig requestor)
+            _ -> throwError AccessDenied
 
   pure $ Common.APISuccessWithUnprocessedEntities unprocessedEntities
   where
@@ -3558,6 +3568,24 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
             when (now > associatedTill) $
               throwError (InvalidRequest "FleetOperatorAssociation expired")
           linkDriverToFleetOwner merchant moc fleetOwner (Just operator.id) req_
+
+    processDriverByAdmin :: DM.Merchant -> DMOC.MerchantOperatingCity -> DTCConfig.TransporterConfig -> DriverDetails -> Flow ()
+    processDriverByAdmin merchant moc transporterConfig req_ = do
+      validateDriverName req_.driverName transporterConfig.isDriverNameMandatoryInBulkUpload
+      let mobileCountryCode = P.getCountryMobileCode moc.country
+      MobileValidation.validateMobileNumber transporterConfig req_.driverPhoneNumber mobileCountryCode moc.country
+      whenJust req_.fleetPhoneNo $ \fleetPhoneNo -> MobileValidation.validateMobileNumber transporterConfig fleetPhoneNo mobileCountryCode moc.country
+      case req_.fleetPhoneNo of
+        Nothing ->
+          throwError $ InvalidRequest "Fleet phone number is required for admin bulk driver addition"
+        Just fleetPhoneNo -> do
+          mobileNumberHash <- getDbHash fleetPhoneNo
+          fleetOwner <-
+            B.runInReplica $
+              QP.findByMobileNumberAndMerchantAndRoles mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS]
+                >>= fromMaybeM (FleetOwnerNotFound fleetPhoneNo)
+          DCommon.checkFleetOwnerVerification fleetOwner.id.getId merchant.fleetOwnerEnabledCheck
+          linkDriverToFleetOwner merchant moc fleetOwner Nothing req_
 
     linkDriverToFleetOwner :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> Maybe (Id DP.Person) -> DriverDetails -> Flow () -- TODO: create single query to update all later
     linkDriverToFleetOwner merchant moc fleetOwner mbOperatorId req_ = do
