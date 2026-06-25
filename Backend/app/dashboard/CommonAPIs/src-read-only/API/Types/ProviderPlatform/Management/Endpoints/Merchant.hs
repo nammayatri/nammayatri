@@ -1076,9 +1076,9 @@ type GetMerchantConfigFareProductList =
   )
 
 type PostMerchantConfigFareProductSetEnabled =
-  ( "config" :> "fareProduct" :> "setEnabled" :> ReqBody ('[JSON]) Dashboard.Common.Merchant.SetFareProductEnabledReq
+  ( "config" :> "fareProduct" :> "setEnabled" :> ReqBody '[JSON] Dashboard.Common.Merchant.SetFareProductEnabledReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
@@ -1315,7 +1315,7 @@ data MerchantAPIs = MerchantAPIs
     getMerchantConfigFarePolicyExport :: EulerHS.Types.EulerClient Kernel.Prelude.Text,
     getMerchantConfigFarePolicyDetails :: Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> EulerHS.Types.EulerClient FarePolicyDetailsResp,
     getMerchantConfigFareProductList :: Lib.Types.SpecialLocation.Area -> Kernel.Prelude.Bool -> Dashboard.Common.TripCategory -> EulerHS.Types.EulerClient FareProductListRes,
-    postMerchantConfigFareProductSetEnabled :: (Dashboard.Common.Merchant.SetFareProductEnabledReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postMerchantConfigFareProductSetEnabled :: Dashboard.Common.Merchant.SetFareProductEnabledReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantConfigOperatingCityCreate :: Dashboard.Common.Merchant.CreateMerchantOperatingCityReqT -> EulerHS.Types.EulerClient Dashboard.Common.Merchant.CreateMerchantOperatingCityRes,
     postMerchantSchedulerTrigger :: SchedulerTriggerReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantUpdateOnboardingVehicleVariantMapping :: (Data.ByteString.Lazy.ByteString, UpdateOnboardingVehicleVariantMappingReq) -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
