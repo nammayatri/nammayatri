@@ -90,9 +90,9 @@ readRiderStatCount riderId day event = do
   let key = mkRiderStatsKey riderId day
       fieldKey = mkRiderStatsFieldKey riderId day event
       field = eventField event
-  mbAtomicVal <- Redis.get @Text fieldKey
+  mbAtomicVal <- Redis.get @Integer fieldKey
   case mbAtomicVal of
-    Just val -> pure $ parseTextCount (Just val)
+    Just val -> pure val
     Nothing -> Redis.hGet @Text key field <&> parseTextCount
   where
     parseTextCount = maybe 0 (fromMaybe 0 . readMaybe . T.unpack)
