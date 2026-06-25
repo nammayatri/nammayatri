@@ -252,7 +252,6 @@ library
       Domain.Action.Rewards.Consumer
       Domain.Action.Rewards.Coupon
       Domain.Action.Rewards.Evaluator
-      Domain.Action.Rewards.Producer
       Domain.Action.UI.AadhaarVerification
       Domain.Action.UI.AddBaggage
       Domain.Action.UI.AlertWebhook
