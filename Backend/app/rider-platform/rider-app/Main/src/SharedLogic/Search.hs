@@ -94,6 +94,7 @@ data OneWaySearchReq = OneWaySearchReq
   { origin :: SearchReqLocation,
     destination :: Maybe SearchReqLocation,
     stops :: Maybe [SearchReqLocation],
+    city :: Maybe City,
     isSourceManuallyMoved :: Maybe Bool,
     isDestinationManuallyMoved :: Maybe Bool,
     isSpecialLocation :: Maybe Bool,
@@ -221,7 +222,8 @@ data SearchDetails = SearchDetails
     busLocationData :: [RL.BusLocation],
     fromSpecialLocationId :: Maybe Text, -- Fixed route: origin area ID
     toSpecialLocationId :: Maybe Text, -- Fixed route: destination area ID
-    enforceTollRoute :: Maybe Bool -- echoed from serviceability response; drives toll-aware route filtering
+    enforceTollRoute :: Maybe Bool, -- echoed from serviceability response; drives toll-aware route filtering
+    city :: Maybe City
   }
   deriving (Generic, Show)
 

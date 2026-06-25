@@ -34,6 +34,15 @@ import qualified Sequelize as Se
 
 -- Extra code goes here --
 
+-- | Point-level caching for individual gates: gate paired with its parsed
+--   pickup-zone polygon(s). Uses key "GateInfo:gateId" (1h TTL).
+--   Preferred over getAllGatesCached when you have a specific gate ID.
+getGateByIdCached :: (BeamFlow m r) => Id D.GateInfo -> m (Maybe (D.GateInfo, [[[LatLong]]]))
+getGateByIdCached gateId =
+  IM.withInMemCache ["GateInfo:" <> getId gateId] 3600 $ do
+    mGate <- findOneWithKV [Se.Is Beam.id $ Se.Eq (getId gateId)]
+    pure $ mGate <&> \g -> (g, maybe [] (fromMaybe [] . parseGatePolygons) g.geomGeoJson)
+
 -- | Single source of truth for gate reads: every gate paired with its parsed
 --   pickup-zone polygon(s) (empty when the gate has no geom), held in an in-memory
 --   cache (1h TTL). Gate rows are admin-edited and rarely change, and the table is
@@ -48,13 +57,30 @@ getAllGatesCached =
     pure $ map (\g -> (g, maybe [] (fromMaybe [] . parseGatePolygons) g.geomGeoJson)) gates
 
 gatesAtSpecialLocation :: (BeamFlow m r) => Id SL.SpecialLocation -> m [(D.GateInfo, [[[LatLong]]])]
-gatesAtSpecialLocation slId = filter (\(g, _) -> g.specialLocationId == slId) <$> getAllGatesCached
+gatesAtSpecialLocation = getGatesBySpecialLocationIdCached
+
+-- | Get a single gate by ID using point-level caching (more efficient than loading all gates).
+getGateById :: (BeamFlow m r) => Id D.GateInfo -> m (Maybe D.GateInfo)
+getGateById gateId = getGateByIdCached gateId <&> fmap fst
+
+-- | Get a single gate by ID with parsed polygons using point-level caching.
+getGateByIdWithPolygons :: (BeamFlow m r) => Id D.GateInfo -> m (Maybe (D.GateInfo, [[[LatLong]]]))
+getGateByIdWithPolygons = getGateByIdCached
+
+-- | Gates at a special location with parsed polygons, using point-level caching
+--   at the special-location level. Uses key "GateInfo:SpecialLocation:slId" (1h TTL).
+--   More efficient than filtering from getAllGatesCached when you have a specific location.
+getGatesBySpecialLocationIdCached :: (BeamFlow m r) => Id SL.SpecialLocation -> m [(D.GateInfo, [[[LatLong]]])]
+getGatesBySpecialLocationIdCached slId =
+  IM.withInMemCache ["GateInfo:SpecialLocation:" <> getId slId] 3600 $ do
+    gates <- findAllWithKV [Se.Is Beam.specialLocationId $ Se.Eq (getId slId)]
+    pure $ map (\g -> (g, maybe [] (fromMaybe [] . parseGatePolygons) g.geomGeoJson)) gates
 
 -- | All gates of a special location, paired with their GeoJSON polygon text. Kept
 --   tuple-shaped for backward compatibility with callers that used the old PostGIS
---   @ST_AsGeoJSON@ projection. Served from the in-memory cache.
+--   @ST_AsGeoJSON@ projection. Uses point-level caching at the special-location level.
 findAllGatesBySpecialLocationId :: (BeamFlow m r) => Id SL.SpecialLocation -> m [(D.GateInfo, Maybe Text)]
-findAllGatesBySpecialLocationId slId = map (\(g, _) -> (g, g.geomGeoJson)) <$> gatesAtSpecialLocation slId
+findAllGatesBySpecialLocationId slId = map (\(g, _) -> (g, g.geomGeoJson)) <$> getGatesBySpecialLocationIdCached slId
 
 findAllGatesBySpecialLocationIdWithoutGeoJson :: (BeamFlow m r) => Id SL.SpecialLocation -> m [D.GateInfo]
 findAllGatesBySpecialLocationIdWithoutGeoJson slId = map fst <$> gatesAtSpecialLocation slId

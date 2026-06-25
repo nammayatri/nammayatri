@@ -425,7 +425,7 @@ buildRideDetails ::
 buildRideDetails booking ride driver vehicle = do
   now <- getCurrentTime
   vehicleRegCert <- QVRC.findLastVehicleRCWrapper vehicle.registrationNo
-  cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow ride.merchantOperatingCityId booking.configInExperimentVersions (booking.area >>= SL.pickupSpecialZoneIdFromArea)
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow ride.merchantOperatingCityId (booking.area >>= SL.pickupSpecialZoneIdFromArea)
   let defaultServiceTierName = (.name) <$> find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
   return $
     SRD.RideDetails

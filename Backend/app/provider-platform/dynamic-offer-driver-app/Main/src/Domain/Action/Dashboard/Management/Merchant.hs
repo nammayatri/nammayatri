@@ -2076,7 +2076,7 @@ getMerchantConfigFareProductList merchantShortId opCity area enabled tripCategor
   pure $ Common.FareProductListRes {fareProducts = items}
   where
     mkItem merchantOpCityId mbSpecialLocationId fp = do
-      mbVst <- CQVST.findByServiceTierTypeAndCityId fp.vehicleServiceTier merchantOpCityId Nothing mbSpecialLocationId
+      mbVst <- CQVST.findByServiceTierTypeAndCityId fp.vehicleServiceTier merchantOpCityId mbSpecialLocationId
       pure
         Common.FareProductListItem
           { farePolicyId = fp.farePolicyId.getId,
@@ -2897,7 +2897,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
 
               return (newErrors, newBoundedAlreadyDeletedMap, newFarePolicyUsageCount)
 
-    checkIfvehicleServiceTierExists vehicleServiceTier merchanOperatingCityId = CQVST.findByServiceTierTypeAndCityId vehicleServiceTier merchanOperatingCityId (Just []) Nothing >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
+    checkIfvehicleServiceTierExists vehicleServiceTier merchanOperatingCityId = CQVST.findByServiceTierTypeAndCityId vehicleServiceTier merchanOperatingCityId Nothing >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
 
     makeFarePolicy :: Id DM.Merchant -> Id MerchantOperatingCity -> DistanceUnit -> Int -> FarePolicyCSVRow -> Flow (Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)
     makeFarePolicy merchantId merchantOpCity distanceUnit idx row = do
@@ -3506,9 +3506,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- vehicle service tier
   mbVehicleServiceTier <-
-    CQVST.findAllByMerchantOpCityId newMerchantOperatingCityId (Just []) Nothing >>= \case
+    CQVST.findAllByMerchantOpCityId newMerchantOperatingCityId Nothing >>= \case
       [] -> do
-        vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId baseOperatingCityId (Just []) Nothing
+        vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId baseOperatingCityId Nothing
         newVehicleServiceTiers <- mapM (buildVehicleServiceTier newMerchantId newMerchantOperatingCityId) vehicleServiceTiers
         return $ Just newVehicleServiceTiers
       _ -> return Nothing
@@ -4364,9 +4364,9 @@ getMerchantConfigVehicleServiceTier merchantShortId opCity mbServiceTierType = d
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   configs <- case mbServiceTierType of
-    Nothing -> CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing Nothing
+    Nothing -> CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
     Just serviceTierType ->
-      maybeToList <$> CQVST.findByServiceTierTypeAndCityId serviceTierType merchantOpCityId Nothing Nothing
+      maybeToList <$> CQVST.findByServiceTierTypeAndCityId serviceTierType merchantOpCityId Nothing
   pure $ mkVehicleServiceTierItem <$> configs
 
 mkVehicleServiceTierItem :: DVST.VehicleServiceTier -> Common.VehicleServiceTierItem
@@ -4452,7 +4452,6 @@ validateVehicleServiceTierUpdate merchantOpCityId existing req = do
         CQVST.findBaseServiceTierTypeByCategoryAndCityId
           (req.vehicleCategory <|> existing.vehicleCategory)
           merchantOpCityId
-          Nothing
           Nothing
       case existingBaseTier of
         Just base
@@ -4551,7 +4550,7 @@ postMerchantConfigVehicleServiceTierCreate merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
-  existingConfig <- CQVST.findByServiceTierTypeAndCityId req.serviceTierType merchantOpCityId Nothing Nothing
+  existingConfig <- CQVST.findByServiceTierTypeAndCityId req.serviceTierType merchantOpCityId Nothing
   whenJust existingConfig $ \_ ->
     throwError (InvalidRequest $ "Vehicle service tier already exists: " <> show req.serviceTierType)
 

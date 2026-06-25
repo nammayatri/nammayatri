@@ -21,6 +21,7 @@ import qualified Kernel.Storage.Clickhouse.Config as CHConfig
 import qualified Kernel.Storage.Clickhouse.Queries as CHQueries
 import Kernel.Storage.Clickhouse.Types (ClickhouseExpr (..))
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.HideSecrets (HideSecrets (..))
 import Kernel.Types.Id
@@ -101,7 +102,7 @@ checkDebugLogFlags ::
   m Bool
 checkDebugLogFlags mocId identifier' = do
   let enabledKey = mkDebugEnabledKey mocId identifier'
-  mbEnabled :: Maybe Text <- Hedis.runInMultiCloudRedisMaybeResult $ Hedis.get enabledKey
+  mbEnabled :: Maybe Text <- IM.withInMemCache [enabledKey] 3600 $ Hedis.runInMultiCloudRedisMaybeResult $ Hedis.get enabledKey
   logInfo $ "JsonLogicDebug: checkFlags key=" <> enabledKey <> " enabled=" <> show mbEnabled
   case mbEnabled of
     Just "1" -> do

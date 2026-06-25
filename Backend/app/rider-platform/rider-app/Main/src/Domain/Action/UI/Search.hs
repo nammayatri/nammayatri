@@ -85,7 +85,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Toll.SharedLogic.TollsDetector as TollsDetector
-import Tools.DynamicLogic (getConfigVersionMapForStickiness)
+-- import Tools.DynamicLogic (getConfigVersionMapForStickiness)
 import Tools.Error
 import qualified Tools.EventTracking as ET
 import qualified Tools.Maps as Maps
@@ -159,6 +159,7 @@ extractSearchDetails now = \case
         numberOfLuggages = numberOfLuggages,
         fromSpecialLocationId = Nothing,
         toSpecialLocationId = Nothing,
+        city = Nothing,
         ..
       }
   RentalSearch RentalSearchReq {..} ->
@@ -180,6 +181,7 @@ extractSearchDetails now = \case
         fromSpecialLocationId = Nothing,
         toSpecialLocationId = Nothing,
         enforceTollRoute = Nothing,
+        city = Nothing,
         ..
       }
   InterCitySearch InterCitySearchReq {..} ->
@@ -198,6 +200,7 @@ extractSearchDetails now = \case
         fromSpecialLocationId = Nothing,
         toSpecialLocationId = Nothing,
         enforceTollRoute = Nothing,
+        city = Nothing,
         ..
       }
   AmbulanceSearch OneWaySearchReq {..} ->
@@ -219,6 +222,7 @@ extractSearchDetails now = \case
         numberOfLuggages = numberOfLuggages,
         fromSpecialLocationId = Nothing,
         toSpecialLocationId = Nothing,
+        city = Nothing,
         ..
       }
   DeliverySearch OneWaySearchReq {..} ->
@@ -240,6 +244,7 @@ extractSearchDetails now = \case
         numberOfLuggages = numberOfLuggages,
         fromSpecialLocationId = Nothing,
         toSpecialLocationId = Nothing,
+        city = Nothing,
         ..
       }
   PTSearch PublicTransportSearchReq {..} ->
@@ -264,6 +269,7 @@ extractSearchDetails now = \case
         fromSpecialLocationId = Nothing,
         toSpecialLocationId = Nothing,
         enforceTollRoute = Nothing,
+        city = Nothing,
         ..
       }
   FixedRouteSearch FixedRouteSearchReq {..} ->
@@ -293,6 +299,7 @@ extractSearchDetails now = \case
         recentLocationId = Nothing,
         fromSpecialLocationId = Just fromSpecialLocationId,
         toSpecialLocationId = Just toSpecialLocationId,
+        city = Nothing,
         enforceTollRoute = Nothing
       }
 
@@ -350,7 +357,9 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
 
   let sourceLatLong = origin.gps
   let stopsLatLong = if isJust fromSpecialLocationId then [] else map (.gps) stops
-  originCity <- Serviceability.validateServiceability sourceLatLong stopsLatLong person
+  originCity <- case city of
+    Just c -> return c
+    Nothing -> Serviceability.validateServiceability sourceLatLong stopsLatLong person
 
   unless (justMultimodalSearch || null stopsLatLong) $ updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation
 
@@ -366,7 +375,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   searchRequestId <- generateGUID
   when (isMeterRide == Just True && person.role /= Person.METER_RIDE_DUMMY) $
     throwError (InvalidRequest $ "Only meter dummy guy is allowed to do this")
-  configVersionMap <- getConfigVersionMapForStickiness (cast merchantOperatingCityId)
+  configVersionMap <- pure [] -- getConfigVersionMapForStickiness (cast merchantOperatingCityId) -- TODO: we aren't using it as such for now, will put proper values later
   riderCfg <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
   whenJust numberOfLuggages $ \n ->
     when (n < 0) $ throwError (InvalidRequest "Number of luggages must be non-negative")
