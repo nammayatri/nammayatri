@@ -99,6 +99,22 @@
       });
     };
 
+    lts-sync-lint = {
+      enable = true;
+      name = "lts-sync-lint";
+      description = "Ensure every DB update to a DriverPoolData-relevant field has a matching LTSSync field sync";
+      types = [ "file" ];
+      pass_filenames = false;
+      files = "Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/Storage/Queries/.*Extra\\.hs$";
+      entry = lib.getExe (pkgs.writeShellApplication {
+        name = "lts-sync-lint";
+        runtimeInputs = [ pkgs.gawk ];
+        text = ''
+          exec bash Backend/dev/lts-sync-lint.sh
+        '';
+      });
+    };
+
     yaml-constraint-tags = {
       enable = true;
       name = "yaml-constraint-tags";
