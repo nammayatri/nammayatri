@@ -273,12 +273,29 @@ export const getCurrentUTC = function (str) {
   return new Date().toISOString();
 };
 
-export const getDateFromObj = function (obj) {
-  const date = new Date(`${obj.month} ${obj.date}, ${obj.year}`);
+function toYYYYMMDD(date) {
   const dd = String(date.getDate()).padStart(2, "0");
-  const mm = String(date.getMonth() + 1).padStart(2, "0"); //January is 0!
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
   const yyyy = date.getFullYear();
   return yyyy + "-" + mm + "-" + dd;
+}
+
+function isValidDate(date) {
+  return date instanceof Date && !isNaN(date.getTime());
+}
+
+export const getDateFromObj = function (obj) {
+  if (obj.utcDate) {
+    const utcDate = new Date(obj.utcDate);
+    if (isValidDate(utcDate)) {
+      return toYYYYMMDD(utcDate);
+    }
+  }
+  const date = new Date(`${obj.month} ${obj.date}, ${obj.year}`);
+  if (!isValidDate(date)) {
+    return "";
+  }
+  return toYYYYMMDD(date);
 }
 
 function getFormattedLanguage(language) {
@@ -405,6 +422,9 @@ export const convertTo2DArray = function (arr) {
 // ---------------------------------- moment ---------------------------------------------
 
 function formatDates(date, format, language) {
+  if (!isValidDate(date)) {
+    return "";
+  }
   const mappings = {
     "h": () => {
       let hours = date.getHours();
@@ -534,10 +554,15 @@ export const camelCaseToSentenceCase = function (string) {
 
 export const convertUTCtoISC = function (str) {
   return function (format) {
-    let localTime = new Date(str);
+    if (!str) {
+      return "";
+    }
+    const localTime = new Date(str);
+    if (!isValidDate(localTime)) {
+      return "";
+    }
     const language = getLanguageLocale();
-    localTime = formatDates(localTime, format, getFormattedLanguage(language));
-    return localTime;
+    return formatDates(localTime, format, getFormattedLanguage(language));
   };
 };
 
@@ -548,9 +573,12 @@ export const convertUTCTimeToISTTimeinHHMMSS = function (utcTime) {
 };
 
 export const getFormattedDate = function (str) {
+  if (!str) {
+    return "";
+  }
   const date = new Date(str);
   const language = getLanguageLocale();
-  return formatDates(new Date(date), "MMMM Do, YYYY", getFormattedLanguage(language));
+  return formatDates(date, "MMMM Do, YYYY", getFormattedLanguage(language));
 }
 
 export const getVideoID = function (url) {
