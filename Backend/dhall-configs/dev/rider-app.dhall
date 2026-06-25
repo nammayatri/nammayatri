@@ -429,6 +429,7 @@ in  { esqDBCfg
     , signatureExpiry = common.signatureExpiry
     , s3Config = common.s3Config
     , s3PublicConfig = common.s3PublicConfig
+    , s3RewardsConfig = common.s3RewardsConfig
     , searchRequestExpiry = Some +600
     , migrationPath =
       [ "dev/migrations-read-only/rider-app"

@@ -93,6 +93,9 @@ library:
     - AddVehicleUnitTests
     - DriverOperationHubUnitTests
     - CreateRequestUnitTests
+    - RewardsEvaluatorTests
+    - RewardsCouponTemplatedTests
+    - RewardsCouponPoolTests
 
 executables:
   hunit-tests:

@@ -239,6 +239,7 @@ RiderConfig:
     updateTicketValidityInSecondsPostSetOnboarding: Maybe Seconds
     enableRideEndOffers: Bool
     enableRideHailingOffers: Bool
+    enableRewardsManagement: Bool
     metricsBlacklistPatterns: "Maybe [Text]"
     dashboardMediaFileUrlPattern : Maybe Text
     maxNearbyBuses: Maybe Int
@@ -318,6 +319,7 @@ RiderConfig:
     sourceOfServiceTier: Maybe ServiceTierSource
     enableRideEndOffers: Maybe Bool
     enableRideHailingOffers: Maybe Bool
+    enableRewardsManagement: Maybe Bool
     kafkaTopicName: Maybe Text
     staticCustomerIdThresholdDay: Maybe Day
     duesExcludedPaymentPurposes: "Maybe [Text]"
@@ -387,6 +389,7 @@ RiderConfig:
     sourceOfServiceTier: fromMaybe (Domain.Types.RiderConfig.NANDI) sourceOfServiceTier|E
     enableRideEndOffers: fromMaybe False enableRideEndOffers|E
     enableRideHailingOffers: fromMaybe False enableRideHailingOffers|E
+    enableRewardsManagement: fromMaybe False enableRewardsManagement|E
     kafkaTopicName: fromMaybe "gps-data" kafkaTopicName|E
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
     externalSOSConfig: externalSOSConfig >>= Kernel.Utils.JSON.valueToMaybe|E
@@ -447,6 +450,7 @@ RiderConfig:
     sourceOfServiceTier: Just sourceOfServiceTier|E
     enableRideEndOffers: Just enableRideEndOffers|E
     enableRideHailingOffers: Just enableRideHailingOffers|E
+    enableRewardsManagement: Just enableRewardsManagement|E
     kafkaTopicName: Just kafkaTopicName|E
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
     externalSOSConfig: (externalSOSConfig >>= Just . Data.Aeson.toJSON)|E
