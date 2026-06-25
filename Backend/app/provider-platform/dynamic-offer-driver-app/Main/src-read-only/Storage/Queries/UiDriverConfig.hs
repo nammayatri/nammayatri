@@ -4,6 +4,7 @@
 
 module Storage.Queries.UiDriverConfig (module Storage.Queries.UiDriverConfig, module ReExport) where
 
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.UiDriverConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -20,6 +21,11 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.UiDriverConfig.UiDriverConfig] -> m ())
 createMany = traverse_ create
+
+findAllByMerchantOpCityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.UiDriverConfig.UiDriverConfig])
+findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.UiDriverConfig.UiDriverConfig -> m (Maybe Domain.Types.UiDriverConfig.UiDriverConfig))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

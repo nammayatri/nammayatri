@@ -27,7 +27,7 @@ import qualified Data.Aeson.Types as A
 import qualified Data.ByteString.Lazy as LBS
 import Data.Functor ((<&>))
 import qualified Data.HashMap.Strict as HM
-import Data.List (find, nub, partition, sort)
+import Data.List (find, nub, partition)
 import Data.Maybe (catMaybes, fromMaybe, listToMaybe, mapMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Data.Scientific as Sci
@@ -58,12 +58,12 @@ import Kernel.Beam.Functions (runInReplica)
 import qualified Kernel.External.Types as KET
 import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Esqueleto as Esq
-import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
 import Kernel.Types.Confidence (Confidence)
 import Kernel.Types.Id
 import Kernel.Types.Price
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as LYBF
@@ -73,6 +73,7 @@ import SharedLogic.FareCalculator (fareSum)
 import qualified SharedLogic.RideFootnotes as RFN
 import SharedLogic.Type (BillingCategory)
 import Storage.Beam.SpecialZone ()
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.FareParameters as SQFP
 import qualified Storage.Queries.Location as QLoc
@@ -334,10 +335,10 @@ buildFootnotes lang booking ride estimatedFareParams finalFareParams = do
                   Just (UiTrByKey k _) -> [k]
                   Nothing -> [raw.title]
                   _ -> []
-          rows <-
-            IM.withInMemCache (["FNT", pack (show lang)] <> sort allKeys) 3600 $
-              QTranslations.findAllByMessageKeysAndLanguage allKeys lang
-          let (preferred, fallbacks) = partition (\t -> t.language == lang) rows
+          preferredRows <- catMaybes <$> mapM (\key -> getConfig (TranslationDimensions {merchantOperatingCityId = Just ride.merchantOperatingCityId.getId, messageKey = key, language = Just lang}) (Just (QTranslations.findByErrorAndLanguage key lang))) allKeys
+          fallbackRows <- if lang == KET.ENGLISH then pure [] else catMaybes <$> mapM (\key -> getConfig (TranslationDimensions {merchantOperatingCityId = Just ride.merchantOperatingCityId.getId, messageKey = key, language = Just KET.ENGLISH}) (Just (QTranslations.findByErrorAndLanguage key KET.ENGLISH))) allKeys
+          let rows = preferredRows <> fallbackRows
+              (preferred, fallbacks) = partition (\t -> t.language == lang) rows
               txMap =
                 HM.union
                   (HM.fromList [(t.messageKey, t.message) | t <- preferred])
@@ -384,7 +385,7 @@ resolveLabel ::
   KET.Language ->
   Text ->
   m (Maybe Text)
-resolveLabel lang key = fmap (fmap (.message)) $ QTranslations.findByErrorAndLanguage key lang
+resolveLabel lang key = fmap (fmap (.message)) $ getConfig (TranslationDimensions {merchantOperatingCityId = Nothing, messageKey = key, language = Just lang}) (Just (QTranslations.findByErrorAndLanguage key lang))
 
 data EarningsLabels = EarningsLabels
   { lblAmountPaid :: Maybe Text,

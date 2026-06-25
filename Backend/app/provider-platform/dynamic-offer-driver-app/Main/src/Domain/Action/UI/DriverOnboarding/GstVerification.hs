@@ -217,7 +217,9 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
       checkExtraction <-
         if DCommon.checkFleetOwnerRole person.role
           then do
-            fodvc <- SStatus.getFleetDocVerificationConfig merchantOpCityId ODC.GSTCertificate person.role
+            fodvc <-
+              getOneConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just ODC.GSTCertificate, role = Nothing}) (Just (maybeToList <$> CQFODVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.GSTCertificate Nothing))
+                >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate))
             pure fodvc.checkExtraction
           else do
             dvc <-

@@ -25,9 +25,9 @@ data MerchantPaymentMethodD (s :: UsageSafety) = MerchantPaymentMethod
     priority :: Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
-type MerchantPaymentMethod = MerchantPaymentMethodD ('Safe)
+type MerchantPaymentMethod = MerchantPaymentMethodD 'Safe
 
 instance FromJSON (MerchantPaymentMethodD 'Unsafe)
 

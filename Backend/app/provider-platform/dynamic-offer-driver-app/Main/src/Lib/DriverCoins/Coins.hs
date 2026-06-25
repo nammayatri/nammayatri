@@ -71,6 +71,7 @@ import qualified SharedLogic.Finance.Wallet as SLFW
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.MonetaryRewardConfig as CWCQ
 import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Coins.CoinHistory as CHistory
@@ -496,7 +497,7 @@ sendCoinsNotificationV3 merchantOpCityId driverId coinsValue (DCT.MetroRideCompl
   B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver ->
     let language = fromMaybe L.ENGLISH driver.language
         entityData = Notify.CoinsNotificationData {coins = coinsValue, event = DCT.MetroRideCompleted metroRideType Nothing}
-     in MTQuery.findByErrorAndLanguage (T.pack (show metroRideType)) language >>= processMessage driver entityData
+     in getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = T.pack (show metroRideType), language = Just language}) (Just (MTQuery.findByErrorAndLanguage (T.pack (show metroRideType)) language)) >>= processMessage driver entityData
   where
     processMessage driver entityData mbCoinsMessage =
       case mbCoinsMessage of
@@ -513,7 +514,7 @@ sendCoinsNotificationV2 :: (EventFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFl
 sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue (DCT.BulkUploadFunctionV2 messageKey) = do
   B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver ->
     let language = fromMaybe L.ENGLISH driver.language
-     in MTQuery.findByErrorAndLanguage (T.pack (show messageKey)) language >>= processMessage driver amount
+     in getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = T.pack (show messageKey), language = Just language}) (Just (MTQuery.findByErrorAndLanguage (T.pack (show messageKey)) language)) >>= processMessage driver amount
   where
     processMessage driver amount' mbCoinsMessage =
       case mbCoinsMessage of
@@ -534,7 +535,7 @@ sendCoinsNotification merchantOpCityId driverId coinsValue eventFunction =
     let language = fromMaybe L.ENGLISH driver.language
         queryType = if coinsValue > 0 then CoinAdded else CoinSubtracted
         entityData = Notify.CoinsNotificationData {coins = coinsValue, event = eventFunction}
-     in MTQuery.findByErrorAndLanguage (T.pack (show queryType)) language >>= processMessage driver entityData
+     in getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = T.pack (show queryType), language = Just language}) (Just (MTQuery.findByErrorAndLanguage (T.pack (show queryType)) language)) >>= processMessage driver entityData
   where
     processMessage driver entityData mbCoinsMessage =
       case mbCoinsMessage of

@@ -55,6 +55,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import qualified Storage.Queries.BookingExtra as QBooking
 import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.Person as QPerson
@@ -525,7 +526,7 @@ translateOffer merchantOperatingCityId language Payment.OfferResp {..} = do
   pure Payment.OfferResp {offerDescription = translatedDescription, ..}
   where
     getTranslation field =
-      CQTranslations.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache merchantOperatingCityId (mkOfferMessageKey offerId field) language
+      getConfig (TranslationDimensions {merchantOperatingCityId = Just (getId merchantOperatingCityId), messageKey = mkOfferMessageKey offerId field, language = Just language}) (Just (CQTranslations.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache merchantOperatingCityId (mkOfferMessageKey offerId field) language))
 
 mkOfferMessageKey :: Text -> Text -> Text
 mkOfferMessageKey offerId field = "OFFER_" <> offerId <> "_" <> field

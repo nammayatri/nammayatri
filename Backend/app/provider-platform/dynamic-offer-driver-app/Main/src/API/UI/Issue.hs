@@ -18,6 +18,7 @@ import qualified IssueManagement.Domain.Types.Issue.IssueCategory as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueOption as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as Domain
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
+import qualified IssueManagement.Storage.CachedQueries.Issue.IssueConfig as CQIssueConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Ticket.Interface.Types as TIT
@@ -28,12 +29,13 @@ import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Servant hiding (throwError)
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.IssueConfig (IssueConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Merchant as QM
@@ -130,7 +132,9 @@ driverIssueHandle =
       -- service. Driver-app doesn't use XyneSpaces today; enable this by
       -- returning a check against MerchantServiceUsageConfig if that changes.
       mbShouldForwardChatToTicketService = Nothing,
-      mbFetchMediaBase64 = Just fetchMediaBase64FromS3
+      mbFetchMediaBase64 = Just fetchMediaBase64FromS3,
+      findIssueConfig = \mocId issueIdentifier ->
+        getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId.getId, identifier = show issueIdentifier}) (Just (CQIssueConfig.findByMerchantOpCityId mocId Common.DRIVER))
     }
 
 -- | Fetch a MediaFile's bytes directly from S3 (returning the base64 payload

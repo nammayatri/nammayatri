@@ -17,6 +17,9 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Translations as Beam
 import Storage.Queries.OrphanInstances.Translations
 
+findAllByMessageKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [Domain.Types.Translations.Translations]
+findAllByMessageKey messageKey = findAllWithKV [Se.Is Beam.messageKey $ Se.Eq messageKey]
+
 findByMerchantOpCityIdMessageKeyLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMerchantOperatingCity.MerchantOperatingCity -> Text -> Lang.Language -> m (Maybe Domain.Types.Translations.Translations)
 findByMerchantOpCityIdMessageKeyLanguage moid messageKey language = do
   -- Level 1: Try city-specific translation with requested language

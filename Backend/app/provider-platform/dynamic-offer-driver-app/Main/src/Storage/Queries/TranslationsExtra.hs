@@ -24,6 +24,9 @@ isTranslationExist :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Ker
 isTranslationExist messageKey language = do
   isJust <$> findOneWithKV [Se.And [Se.Is BeamEMT.messageKey $ Se.Eq messageKey, Se.Is BeamEMT.language $ Se.Eq language]]
 
+findAllByMessageKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [Domain.Types.Translations.Translations]
+findAllByMessageKey messageKey = findAllWithKV [Se.Is BeamEMT.messageKey $ Se.Eq messageKey]
+
 findAllByMessageKeysAndLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> Kernel.External.Types.Language -> m [Domain.Types.Translations.Translations]
 findAllByMessageKeysAndLanguage [] _ = pure []
 findAllByMessageKeysAndLanguage keys language =

@@ -24,6 +24,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import Lib.Finance.Invoice.Interface (InvoiceLineItem, LineItemDescription (..))
@@ -31,6 +32,7 @@ import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import qualified Storage.Queries.DriverGstin as QDriverGstin
 
 -- | Attempt B2B e-invoice generation for a created invoice.
@@ -70,9 +72,9 @@ generateEInvoiceForInvoice invoice = do
     Just dg -> do
       logInfo $ "GSTEInvoice: found DriverGstin record gstinId=" <> dg.id.getId <> ctx
       mbServiceConfig <-
-        CQMSC.findByServiceAndCity
-          (DMSC.GSTEInvoiceService GSTEInvoiceTypes.CharteredInfo)
-          (Id invoice.merchantOperatingCityId)
+        getOneConfig
+          (MerchantServiceConfigDimensions {merchantOperatingCityId = invoice.merchantOperatingCityId, merchantId = Nothing, serviceName = Just (DMSC.GSTEInvoiceService GSTEInvoiceTypes.CharteredInfo)})
+          (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.GSTEInvoiceService GSTEInvoiceTypes.CharteredInfo) (Id invoice.merchantOperatingCityId)))
       let mbCfg = do
             sc <- mbServiceConfig
             case sc.serviceConfig of

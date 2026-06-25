@@ -751,7 +751,7 @@ postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity req = do
       cfgs <- getConfig (MerchantPushNotificationDimensions {merchantOperatingCityId = mocId}) (Just (SQMerchantPN.findAllByMerchantOpCityId (Id mocId) (Just [])))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.ExophoneRider -> do
-      cfgs <- getConfig (ExophoneDimensions {merchantOperatingCityId = mocId, callService = dimLookup "callService" dims}) (Just (SQExophone.findAllByMerchantOperatingCityId (Id mocId)))
+      cfgs <- getConfig (ExophoneDimensions {merchantOperatingCityId = mocId, phoneNumber = Nothing, callService = dimLookup "callService" dims}) (Just (SQExophone.findAllByMerchantOperatingCityId (Id mocId)))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.FRFSConfig -> do
       cfg <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = mocId}) (Just (SQFRFSConfig.findByMerchantOperatingCityId (Id mocId) (Just [])))

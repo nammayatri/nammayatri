@@ -32,7 +32,7 @@ instance ConfigDimensions MerchantServiceUsageConfigDimensions where
     listToMaybe
       <$> LCP.resolveConfigList
         a
-        (LYT.RIDER_CONFIG MerchantServiceUsageConfigRider)
+        (LYT.RIDER_CONFIG MerchantServiceUsageConfig)
         (Id a.merchantOperatingCityId)
         (maybeToList <$> SQ.findByMerchantOperatingCityId (Id a.merchantOperatingCityId))
         (([] :: [LCP.DimMatcher MerchantServiceUsageConfigDimensions DT.MerchantServiceUsageConfig]))

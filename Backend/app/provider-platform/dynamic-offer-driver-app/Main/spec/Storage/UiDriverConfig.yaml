@@ -31,5 +31,19 @@ UiDriverConfig:
 
   excludedFields: [merchantId, merchantOperatingCityId]
 
+  queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
   extraOperations:
     - EXTRA_QUERY_FILE
+
+  configPilot:
+    configType: UiDriverConfig
+    fetchQuery: findAllByMerchantOpCityId
+    returnType: List
+    queryModule: Storage.Queries.UiDriverConfig
+    filterDimensions:
+      - os
+      - platform

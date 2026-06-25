@@ -378,7 +378,6 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
   merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport (Just person) issueHandle
   mkIssueInfoRes person issueReport merchantOpCity.id
   where
-    mkIssueInfoRes :: (Esq.EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Person -> DIR.IssueReport -> Id MerchantOperatingCity -> m Common.IssueInfoDRes
     mkIssueInfoRes person issueReport merchantOpCityId = do
       personDetail <- Just <$> mkPersonDetail person
       mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReport.id identifier
@@ -390,7 +389,7 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
           pure $ Just fetchedCategory.category
       option <- mapM (\optionId -> CQIO.findById optionId identifier >>= fromMaybeM (IssueOptionNotFound optionId.getId)) issueReport.optionId
       issueConfig <-
-        CQI.findByMerchantOpCityId merchantOpCityId identifier
+        issueHandle.findIssueConfig merchantOpCityId identifier
           >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
       issueChats <- case identifier of
         DRIVER -> return Nothing
@@ -536,7 +535,7 @@ appendAgentResolvedChats ::
   Identifier ->
   m IssueStatus
 appendAgentResolvedChats issueReport targetStatus merchantOpCityId identifier = do
-  issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
+  issueConfig <- issueHandle.findIssueConfig merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
   let shouldUseCloseMsgs =
         targetStatus == CLOSED
           || (targetStatus == RESOLVED && issueReport.reopenedCount >= issueConfig.reopenCount)
@@ -1630,7 +1629,7 @@ getIssueConfig merchantShortId city issueHandle identifier = do
   merchantOperatingCity <-
     issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
-  issueConfig <- CQI.findByMerchantOpCityId merchantOperatingCity.id identifier >>= fromMaybeM (IssueConfigNotFound merchantOperatingCity.id.getId)
+  issueConfig <- issueHandle.findIssueConfig merchantOperatingCity.id identifier >>= fromMaybeM (IssueConfigNotFound merchantOperatingCity.id.getId)
   pure $
     Common.IssueConfigRes
       { issueConfigId = cast issueConfig.id,
@@ -1658,7 +1657,7 @@ updateIssueConfig merchantShortId city req issueHandle identifier = do
   merchantOperatingCity <-
     issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
-  issueConfig <- CQI.findByMerchantOpCityId merchantOperatingCity.id identifier >>= fromMaybeM (IssueConfigNotFound merchantOperatingCity.id.getId)
+  issueConfig <- issueHandle.findIssueConfig merchantOperatingCity.id identifier >>= fromMaybeM (IssueConfigNotFound merchantOperatingCity.id.getId)
   now <- getCurrentTime
   let updatedMessageTransformationConfig =
         case (req.merchantName, req.supportEmail) of

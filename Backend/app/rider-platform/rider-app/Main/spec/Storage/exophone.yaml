@@ -44,11 +44,3 @@ Exophone:
   extraOperations:
     - EXTRA_QUERY_FILE
 
-  configPilot:
-    configType: Exophone
-    fetchQuery: findAllByMerchantOperatingCityId
-    returnType: List
-    queryModule: Storage.CachedQueries.Exophone
-    filterDimensions:
-      - callService
-

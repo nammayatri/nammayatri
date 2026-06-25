@@ -86,7 +86,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.DriverOnboarding
@@ -97,6 +97,7 @@ import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as DIQuery
 import Storage.Queries.DriverRCAssociation (buildRcHM)
@@ -720,7 +721,7 @@ validateRCResponse rc rule language = do
 
 resolveTranslations :: forall r m. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Language -> Text -> Text -> m Text
 resolveTranslations language messageKey value = do
-  mbTranslation <- QTranslation.findByErrorAndLanguage messageKey language
+  mbTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Nothing, messageKey = messageKey, language = Just language}) (Just (QTranslation.findByErrorAndLanguage messageKey language))
   let translatedMessage = maybe messageKey (.message) mbTranslation
       placeholder = failureValuePlaceholder messageKey
       renderedMessage = maybe translatedMessage (\ph -> T.replace ph value translatedMessage) placeholder

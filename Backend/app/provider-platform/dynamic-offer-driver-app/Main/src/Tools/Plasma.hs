@@ -24,7 +24,9 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 
 getLMSModules ::
   ServiceFlow m r =>
@@ -32,7 +34,7 @@ getLMSModules ::
   Text ->
   m (Maybe KernelPlasma.LMSModulesResp)
 getLMSModules merchantOpCityId driverIdText = do
-  mbServiceConfig <- CQMSC.findByServiceAndCity (DMSC.PlasmaService KernelPlasma.LMS) merchantOpCityId
+  mbServiceConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.PlasmaService KernelPlasma.LMS)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.PlasmaService KernelPlasma.LMS) merchantOpCityId))
   case mbServiceConfig of
     Nothing -> return Nothing
     Just sc -> case sc.serviceConfig of

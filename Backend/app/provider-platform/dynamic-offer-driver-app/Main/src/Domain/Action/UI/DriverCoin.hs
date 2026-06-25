@@ -56,6 +56,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPC
 import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.Coins.CoinHistory as CHistory
 import qualified Storage.Queries.Coins.CoinsConfig as SQCC
@@ -482,7 +483,7 @@ getCoinsInfo (driverId, merchantId, merchantOpCityId) = do
     mapM
       ( \activeConfg -> do
           let id = Text.strip (activeConfg.eventName <> "_" <> (show activeConfg.eventFunction))
-          translation <- SQT.findByErrorAndLanguage id language >>= fromMaybeM (CoinInfoTranslationNotFound id (show language))
+          translation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = id, language = Just language}) (Just (SQT.findByErrorAndLanguage id language)) >>= fromMaybeM (CoinInfoTranslationNotFound id (show language))
           case Text.splitOn " | " translation.message of
             [title, description] ->
               pure $

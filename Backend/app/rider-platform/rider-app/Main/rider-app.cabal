@@ -663,16 +663,23 @@ library
       Storage.Clickhouse.Ride
       Storage.Clickhouse.Sos
       Storage.ConfigPilot.Config.BecknConfig
+      Storage.ConfigPilot.Config.CancellationReason
       Storage.ConfigPilot.Config.Exophone
       Storage.ConfigPilot.Config.FRFSConfig
+      Storage.ConfigPilot.Config.HotSpotConfig
       Storage.ConfigPilot.Config.InsuranceConfig
+      Storage.ConfigPilot.Config.IntegratedBPPConfig
+      Storage.ConfigPilot.Config.IssueConfig
       Storage.ConfigPilot.Config.MerchantConfig
+      Storage.ConfigPilot.Config.MerchantPaymentMethod
       Storage.ConfigPilot.Config.MerchantPushNotification
       Storage.ConfigPilot.Config.MerchantServiceConfig
       Storage.ConfigPilot.Config.MerchantServiceUsageConfig
+      Storage.ConfigPilot.Config.PassCategory
       Storage.ConfigPilot.Config.PayoutConfig
       Storage.ConfigPilot.Config.RiderConfig
       Storage.ConfigPilot.Config.RideRelatedNotificationConfig
+      Storage.ConfigPilot.Config.Translation
       Storage.ConfigPilot.Config.VehicleConfig
       Storage.GraphqlQueries.Client
       Storage.GraphqlQueries.RouteStopTimeTable
