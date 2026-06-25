@@ -29,10 +29,10 @@ jobs:
       - name: Find merge base commit
         id: merge-base
         run: |
-          git fetch origin main
-          BASE_SHA=$(git merge-base origin/main ${{ github.event.pull_request.head.sha }})
+          # Hardcoded for testing — use biriyani build that has .cabal-dir in MinIO
+          BASE_SHA="1af8020700089ac94d896d64cd9b194fc9ed07b9"
           echo "sha=$BASE_SHA" >> $GITHUB_OUTPUT
-          echo "Merge base: $BASE_SHA"
+          echo "Merge base (hardcoded for test): $BASE_SHA"
 
       - name: Setup MinIO client
         run: |
@@ -47,6 +47,7 @@ jobs:
           BASE_SHA="${{ steps.merge-base.outputs.sha }}"
           if mc stat "minio/haskell-cache/cabal-repl/$BASE_SHA/dynamic-offer-driver-app.tar.zst" > /dev/null 2>&1 && \
              mc stat "minio/haskell-cache/cabal-repl/$BASE_SHA/rider-app.tar.zst" > /dev/null 2>&1 && \
+             mc stat "minio/haskell-cache/cabal-repl/$BASE_SHA/repl-support.tar.zst" > /dev/null 2>&1 && \
              mc stat "minio/haskell-cache/cabal-build/$BASE_SHA/build-path.txt" > /dev/null 2>&1; then
             echo "found=true" >> $GITHUB_OUTPUT
             echo "Artifacts found for $BASE_SHA"
@@ -64,7 +65,7 @@ jobs:
           mc cp "minio/haskell-cache/cabal-build/$BASE_SHA/build-path.txt"                   /tmp/ny-pr-artifacts/build-path.txt
           mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/dynamic-offer-driver-app.tar.zst"  /tmp/ny-pr-artifacts/driver.tar.zst
           mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/rider-app.tar.zst"                 /tmp/ny-pr-artifacts/rider.tar.zst
-          mc cp "minio/haskell-cache/cabal-build/$BASE_SHA/dist-newstyle.tar.zst"            /tmp/ny-pr-artifacts/dist-newstyle.tar.zst
+          mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/repl-support.tar.zst"              /tmp/ny-pr-artifacts/repl-support.tar.zst
 
           ORIGINAL_PATH=$(cat /tmp/ny-pr-artifacts/build-path.txt)
           echo "Original build path: $ORIGINAL_PATH"
@@ -73,17 +74,13 @@ jobs:
       - name: Restore repl artifacts
         if: steps.artifact-check.outputs.found == 'true'
         run: |
-          # /tmp stays visible inside the unshare namespace; $HOME does not
-          # (namespace mounts tmpfs over /home)
           PR_CACHE_ROOT=/tmp/ny-pr-cache-${{ github.run_id }}
           mkdir -p "$PR_CACHE_ROOT"
           echo "PR_CACHE_ROOT=$PR_CACHE_ROOT" >> $GITHUB_ENV
 
-          tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/driver.tar.zst -C "$PR_CACHE_ROOT"
-          tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/rider.tar.zst  -C "$PR_CACHE_ROOT"
-          # Extract hie/ and .cabal-dir/ from the full build tar (repl-support.tar.zst not yet available)
-          tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/dist-newstyle.tar.zst -C "$PR_CACHE_ROOT" hie/ .cabal-dir/
-          rm -f /tmp/ny-pr-artifacts/dist-newstyle.tar.zst
+          tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/driver.tar.zst       -C "$PR_CACHE_ROOT"
+          tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/rider.tar.zst        -C "$PR_CACHE_ROOT"
+          tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/repl-support.tar.zst -C "$PR_CACHE_ROOT"
 
           ln -sfn "$PR_CACHE_ROOT/dist-newrepl-driver" Backend/dist-newrepl-driver
           ln -sfn "$PR_CACHE_ROOT/dist-newrepl-rider"  Backend/dist-newrepl-rider
@@ -103,8 +100,8 @@ jobs:
         run: |
           CI_PROJECT_ROOT="$original_path"
           LOCAL_ROOT="$GITHUB_WORKSPACE"
-          # Hardcoded original cabal dir path baked into dist-newrepl-driver setup-config files
-          ORIGINAL_CABAL_DIR=/home/mdvenkatesh/ny-cabal-unoptimized-cache/ec2-nix-runner-pasta-1/main/.cabal-dir
+          # Hardcoded biriyani cabal dir path baked into setup-config files for test commit
+          ORIGINAL_CABAL_DIR=/home/khuzema/ny-cabal-unoptimized-cache/ec2-nix-runner-biryani-1/main/.cabal-dir
 
           nix develop .#backend --command \
             unshare --user --mount --map-root-user bash -c "
@@ -128,8 +125,7 @@ jobs:
         run: |
           CI_PROJECT_ROOT="$original_path"
           LOCAL_ROOT="$GITHUB_WORKSPACE"
-          # Hardcoded original cabal dir path baked into dist-newrepl-driver setup-config files
-          ORIGINAL_CABAL_DIR=/home/mdvenkatesh/ny-cabal-unoptimized-cache/ec2-nix-runner-pasta-1/main/.cabal-dir
+          ORIGINAL_CABAL_DIR=/home/khuzema/ny-cabal-unoptimized-cache/ec2-nix-runner-biryani-1/main/.cabal-dir
 
           nix develop .#backend --command \
             unshare --user --mount --map-root-user bash -c "
