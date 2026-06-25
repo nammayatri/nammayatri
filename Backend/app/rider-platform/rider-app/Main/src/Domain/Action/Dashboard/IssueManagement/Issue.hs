@@ -38,6 +38,7 @@ module Domain.Action.Dashboard.IssueManagement.Issue
     postIssueChatMessage,
     getIssueChatMessages,
     postIssueChatRead,
+    postIssueChatUpload,
   )
 where
 
@@ -154,6 +155,14 @@ getIssueMedia ::
   Kernel.Prelude.Text ->
   Environment.Flow Kernel.Prelude.Text
 getIssueMedia (Kernel.Types.Id.ShortId merchantShortId) _ = DIssue.issueFetchMedia (Kernel.Types.Id.ShortId merchantShortId)
+
+postIssueChatUpload ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  IssueManagement.Common.UI.Issue.IssueMediaUploadReq ->
+  Environment.Flow IssueManagement.Common.UI.Issue.IssueMediaUploadRes
+postIssueChatUpload (Kernel.Types.Id.ShortId merchantShortId) city req =
+  DIssue.issueChatUpload (Kernel.Types.Id.ShortId merchantShortId) city dashboardIssueHandle req Common.CUSTOMER
 
 postIssueTicketStatusCallBack ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

@@ -21,6 +21,7 @@ import IssueManagement.Domain.Types.MediaFile
 import Kernel.External.Types (Language)
 import Kernel.ServantMultipart
 import Kernel.Types.APISuccess
+import Kernel.Types.HideSecrets
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -138,6 +139,12 @@ newtype IssueMediaUploadRes = IssueMediaUploadRes
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- Required by the dashboard variant of /upload (the auto-generated dashboard
+-- helper API expects every request type to implement HideSecrets). The multipart
+-- request has no sensitive fields, so identity is correct.
+instance HideSecrets IssueMediaUploadReq where
+  hideSecrets = identity
 
 -------------------------------------------------------------------------
 

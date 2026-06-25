@@ -20,9 +20,9 @@ import qualified Data.Map as M
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
-import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.ConditionalCharges as DAC
 import Domain.Types.DriverPoolConfig
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR

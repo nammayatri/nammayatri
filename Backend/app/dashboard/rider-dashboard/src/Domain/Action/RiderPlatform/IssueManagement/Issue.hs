@@ -37,6 +37,7 @@ module Domain.Action.RiderPlatform.IssueManagement.Issue
     postIssueChatMessage,
     getIssueChatMessages,
     postIssueChatRead,
+    postIssueChatUpload,
   )
 where
 
@@ -210,6 +211,20 @@ getIssueMedia ::
 getIssueMedia merchantShortId opCity apiTokenInfo filePath = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueMedia) filePath
+
+postIssueChatUpload ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  IssueManagement.Common.UI.Issue.IssueMediaUploadReq ->
+  Environment.Flow IssueManagement.Common.UI.Issue.IssueMediaUploadRes
+postIssueChatUpload merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI
+    checkedMerchantId
+    opCity
+    (Dashboard.Common.addMultipartBoundary "XXX00XXX" . (.issueDSL.postIssueChatUpload))
+    req
 
 postIssueTicketStatusCallBack ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
