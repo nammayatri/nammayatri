@@ -8,6 +8,7 @@ import Data.List (sortOn)
 import Data.String.Conversions (cs)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.UiRiderConfig as DTU
+import qualified IssueManagement.Storage.Queries.Issue.IssueConfig as SQIC
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import qualified Kernel.Types.Beckn.Context
@@ -34,17 +35,31 @@ import qualified Storage.CachedQueries.MerchantConfig as CQMC
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CQRRN
 import qualified Storage.CachedQueries.UiRiderConfig as SCU
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
+import Storage.ConfigPilot.Config.CancellationReason (CancellationReasonDimensions (..))
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
+import Storage.ConfigPilot.Config.HotSpotConfig (HotSpotConfigDimensions (..))
+import Storage.ConfigPilot.Config.IntegratedBPPConfig (IntegratedBPPConfigDimensions (..))
+import Storage.ConfigPilot.Config.IssueConfig (IssueConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantPaymentMethod (MerchantPaymentMethodDimensions (..))
 import Storage.ConfigPilot.Config.MerchantPushNotification (MerchantPushNotificationDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.PassCategory (PassCategoryDimensions (..))
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import qualified Storage.Queries.BecknConfig as SQBC
+import qualified Storage.Queries.CancellationReason as SQCR
+import qualified Storage.Queries.HotSpotConfig as SQHSC
+import qualified Storage.Queries.IntegratedBPPConfig as SQIBC
+import qualified Storage.Queries.MerchantPaymentMethod as SQMPM
 import qualified Storage.Queries.MerchantServiceConfig as SQMSC
+import qualified Storage.Queries.PassCategory as SQPC
+import qualified Storage.Queries.StopFare as SQSF
+import qualified Storage.Queries.Translations as SQTL
 import qualified Storage.Queries.UiRiderConfig as SQU
 import Storage.Queries.UiRiderConfigExtra ()
 import qualified Tools.DynamicLogic as DynamicLogic
@@ -82,6 +97,27 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
     LYTU.RIDER_CONFIG LYTU.FRFSConfig -> do
       frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CQFRFS.findByMerchantOperatingCityId (cast merchantOpCityId) (Just [])))
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList frfsConfig)}
+    LYTU.RIDER_CONFIG LYTU.HotSpotConfig -> do
+      hsCfgs <- getConfigList (HotSpotConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      return LYTU.TableDataResp {configs = map A.toJSON hsCfgs}
+    LYTU.RIDER_CONFIG LYTU.MerchantPaymentMethod -> do
+      mpmCfgs <- getConfigList (MerchantPaymentMethodDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      return LYTU.TableDataResp {configs = map A.toJSON mpmCfgs}
+    LYTU.RIDER_CONFIG LYTU.CancellationReason -> do
+      crCfgs <- getConfigList (CancellationReasonDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      return LYTU.TableDataResp {configs = map A.toJSON crCfgs}
+    LYTU.RIDER_CONFIG LYTU.Translation -> do
+      tlCfgs <- getConfigList (TranslationDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      return LYTU.TableDataResp {configs = map A.toJSON tlCfgs}
+    LYTU.RIDER_CONFIG LYTU.IntegratedBPPConfig -> do
+      ibcCfgs <- getConfigList (IntegratedBPPConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      return LYTU.TableDataResp {configs = map A.toJSON ibcCfgs}
+    LYTU.RIDER_CONFIG LYTU.IssueConfig -> do
+      icCfgs <- getConfigList (IssueConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      return LYTU.TableDataResp {configs = map A.toJSON icCfgs}
+    LYTU.RIDER_CONFIG LYTU.PassCategory -> do
+      pcCfgs <- getConfigList (PassCategoryDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      return LYTU.TableDataResp {configs = map A.toJSON pcCfgs}
     LYTU.UI_RIDER dt pt -> do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
       mbUiConfigInfo <- SCU.findUiConfig uiConfigReq (cast merchantOpCityId) True
@@ -111,6 +147,20 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       handleConfigUpdateViaJson (SQBC.findAllByMerchantOperatingCityId . Just) (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.BecknConfig) >> invalidateConfigInMem LYTU.BecknConfig) CQBC.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.RIDER_CONFIG LYTU.ExophoneRider -> do
       handleConfigUpdateViaJson CQExo.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.ExophoneRider) >> invalidateConfigInMem LYTU.ExophoneRider) CQExo.updateByPrimaryKey (cast merchantOpCityId)
+    LYTU.RIDER_CONFIG LYTU.HotSpotConfig -> do
+      handleConfigUpdateViaJson SQHSC.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.HotSpotConfig) >> invalidateConfigInMem LYTU.HotSpotConfig) SQHSC.updateByPrimaryKey (cast merchantOpCityId)
+    LYTU.RIDER_CONFIG LYTU.MerchantPaymentMethod -> do
+      handleConfigUpdateViaJson SQMPM.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.MerchantPaymentMethod) >> invalidateConfigInMem LYTU.MerchantPaymentMethod) SQMPM.updateByPrimaryKey (cast merchantOpCityId)
+    LYTU.RIDER_CONFIG LYTU.CancellationReason -> do
+      handleConfigUpdateViaJson SQCR.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.CancellationReason) >> invalidateConfigInMem LYTU.CancellationReason) SQCR.updateByPrimaryKey (cast merchantOpCityId)
+    LYTU.RIDER_CONFIG LYTU.Translation -> do
+      handleConfigUpdateViaJson SQTL.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.Translation) >> invalidateConfigInMem LYTU.Translation) SQTL.updateByPrimaryKey (cast merchantOpCityId)
+    LYTU.RIDER_CONFIG LYTU.IntegratedBPPConfig -> do
+      handleConfigUpdateViaJson SQIBC.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.IntegratedBPPConfig) >> invalidateConfigInMem LYTU.IntegratedBPPConfig) SQIBC.updateByPrimaryKey (cast merchantOpCityId)
+    LYTU.RIDER_CONFIG LYTU.IssueConfig -> do
+      handleConfigUpdateViaJson SQIC.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.IssueConfig) >> invalidateConfigInMem LYTU.IssueConfig) SQIC.updateByPrimaryKey (cast merchantOpCityId)
+    LYTU.RIDER_CONFIG LYTU.PassCategory -> do
+      handleConfigUpdateViaJson SQPC.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.PassCategory) >> invalidateConfigInMem LYTU.PassCategory) SQPC.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.UI_RIDER dt pt -> do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = maybe "" getId mbMerchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
       handleConfigUpdateWithExtraDimensionsUi SQU.getUiConfig (SCU.clearCache (cast merchantOpCityId) dt pt) SCU.updateByPrimaryKey (cast merchantOpCityId) uiConfigReq
