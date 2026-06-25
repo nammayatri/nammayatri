@@ -103,8 +103,6 @@ const URL_VAR_TO_SERVICE: Record<string, { service: ParsedStep['service']; strip
   'baseUrl_dashboard': { service: 'rider' },
   'mockServerUrl': { service: 'mock-server' },
   'mock_server_url': { service: 'juspay-payment' },
-  // MerchantDocumentFlow uses bpp_url (http://localhost:8016/ui) and dashboard_url (http://localhost:8018)
-  'bpp_url': { service: 'driver' },
   'dashboard_url': { service: 'provider-dashboard' },
 };
 

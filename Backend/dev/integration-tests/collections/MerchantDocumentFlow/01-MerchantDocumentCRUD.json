@@ -83,8 +83,8 @@
           "raw": "{\n    \"mobileNumber\": \"{{_test_driver_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{merchantId}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
         },
         "url": {
-          "raw": "{{bpp_url}}/auth",
-          "host": ["{{bpp_url}}"],
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": ["{{baseURL_namma_P}}"],
           "path": ["auth"]
         }
       },
@@ -114,8 +114,8 @@
           "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"merchant-doc-test-device\"\n}"
         },
         "url": {
-          "raw": "{{bpp_url}}/auth/{{driver_authId}}/verify",
-          "host": ["{{bpp_url}}"],
+          "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+          "host": ["{{baseURL_namma_P}}"],
           "path": ["auth", "{{driver_authId}}", "verify"]
         }
       },
@@ -244,8 +244,8 @@
           { "key": "token", "value": "{{driver_token}}" }
         ],
         "url": {
-          "raw": "{{bpp_url}}/merchant/document/list?role=\"Driver\"&language=en",
-          "host": ["{{bpp_url}}"],
+          "raw": "{{baseURL_namma_P}}/merchant/document/list?role=\"Driver\"&language=en",
+          "host": ["{{baseURL_namma_P}}"],
           "path": ["merchant", "document", "list"],
           "query": [
             { "key": "role", "value": "\"Driver\"" },
@@ -274,8 +274,8 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{bpp_url}}/merchant/document/TermsAndConditions?merchantId={{merchantId}}&language=en&merchantCity={{city}}",
-          "host": ["{{bpp_url}}"],
+          "raw": "{{baseURL_namma_P}}/merchant/document/TermsAndConditions?merchantId={{merchantId}}&language=en&merchantCity={{city}}",
+          "host": ["{{baseURL_namma_P}}"],
           "path": ["merchant", "document", "TermsAndConditions"],
           "query": [
             { "key": "merchantId", "value": "{{merchantId}}" },
