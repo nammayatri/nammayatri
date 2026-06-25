@@ -22,6 +22,7 @@ import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Common
@@ -29,6 +30,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.Queries.AccessMatrix as QMatrix
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth
 import Tools.Error (RoleError (..))
@@ -64,6 +66,7 @@ createRole _ req = do
   whenJust mbExistingRole $ \_ -> throwError (RoleNameExists req.name)
   role <- buildRole req
   QRole.create role
+  QRole.appendToAccessibleRolesForAdmins role.id
   pure $ DRole.mkRoleAPIEntity role
 
 -- Validate input fields
@@ -87,6 +90,7 @@ buildRole req = do
         name = req.name,
         dashboardAccessType = fromMaybe DRole.DASHBOARD_USER req.dashboardAccessType,
         description = req.description,
+        accessibleRoles = [],
         createdAt = now,
         updatedAt = now
       }
@@ -142,3 +146,14 @@ listRoles _ mbSearchString mbLimit mbOffset = do
   let count = length res
   let summary = Summary {totalCount = 10000, count}
   pure $ ListRoleRes {list = res, summary = summary}
+
+-- v2 filters roles by the viewer's `accessibleRoles` column. Default is [],
+-- so a freshly-created role sees nothing until ops seeds the column.
+listRolesV2 :: BeamFlow m r => TokenInfo -> m ListRoleRes
+listRolesV2 tokenInfo = do
+  person <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonDoesNotExist tokenInfo.personId.getId)
+  viewer <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
+  visible <- B.runInReplica $ QRole.findAllByIds viewer.accessibleRoles
+  let res = map mkRoleAPIEntity visible
+      count = length res
+  pure $ ListRoleRes {list = res, summary = Summary {totalCount = count, count}}

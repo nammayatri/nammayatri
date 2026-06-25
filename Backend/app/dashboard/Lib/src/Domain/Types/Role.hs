@@ -39,6 +39,7 @@ data Role = Role
     name :: Text,
     dashboardAccessType :: DashboardAccessType,
     description :: Text,
+    accessibleRoles :: [Id Role],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

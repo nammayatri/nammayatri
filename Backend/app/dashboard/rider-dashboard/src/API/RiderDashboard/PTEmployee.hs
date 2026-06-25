@@ -11,7 +11,7 @@ import "lib-dashboard" Tools.Auth
 type API =
   "ptEmployee"
     :> "bulkCreate"
-    :> DashboardAuth 'DASHBOARD_ADMIN
+    :> DashboardAuth 'DASHBOARD_USER
     :> ReqBody '[JSON] DPTEmployee.BulkCreatePersonReq
     :> Post '[JSON] DPTEmployee.BulkCreatePersonResp
 
