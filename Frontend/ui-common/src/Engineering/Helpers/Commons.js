@@ -285,11 +285,8 @@ function isValidDate(date) {
 }
 
 export const getDateFromObj = function (obj) {
-  if (obj.utcDate) {
-    const utcDate = new Date(obj.utcDate);
-    if (isValidDate(utcDate)) {
-      return toYYYYMMDD(utcDate);
-    }
+  if (obj.utcDate && obj.utcDate.length >= 10) {
+    return obj.utcDate.slice(0, 10);
   }
   const date = new Date(`${obj.month} ${obj.date}, ${obj.year}`);
   if (!isValidDate(date)) {
@@ -556,6 +553,9 @@ export const convertUTCtoISC = function (str) {
   return function (format) {
     if (!str) {
       return "";
+    }
+    if (format === "YYYY-MM-DD" && str.length >= 10 && str.includes("T")) {
+      return str.slice(0, 10);
     }
     const localTime = new Date(str);
     if (!isValidDate(localTime)) {
