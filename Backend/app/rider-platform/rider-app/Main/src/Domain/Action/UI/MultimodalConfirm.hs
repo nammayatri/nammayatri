@@ -23,6 +23,8 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalOrderSwitchFRFSTier,
     getPublicTransportData,
     getPublicTransportVehicleData,
+    postPublicTransportVehicleDataBlock,
+    getPublicTransportBlockedVehicles,
     getMultimodalOrderGetLegTierOptions,
     postMultimodalPaymentUpdateOrder,
     postMultimodalOrderSublegSetStatus,
@@ -149,6 +151,7 @@ import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicl
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.DepotManager as QDepotManager
 import qualified Storage.Queries.DeviceVehicleMapping as QDeviceVehicleMapping
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
@@ -808,6 +811,123 @@ getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber
     BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True mbNewServiceTiers
     _ -> throwError (InvalidRequest $ "Invalid vehicle type: " <> show vehicleType)
 
+-- Bus block/unblock helpers (Redis-backed, TTL'd). Bus-only, so kept local to this module.
+
+defaultBusBlockExpiry :: Seconds
+defaultBusBlockExpiry = Seconds 600
+
+getBusBlockExpiry :: DIBC.ProviderConfig -> Seconds
+getBusBlockExpiry = \case
+  DIBC.DIRECT c -> fromMaybe defaultBusBlockExpiry c.busBlockExpiryTime
+  DIBC.ONDC c -> fromMaybe defaultBusBlockExpiry c.busBlockExpiryTime
+  _ -> defaultBusBlockExpiry
+
+-- Max number of buses a single checker may have blocked at once.
+defaultBusBlockMaxLimit :: Int
+defaultBusBlockMaxLimit = 1
+
+getBusBlockMaxLimit :: DIBC.ProviderConfig -> Int
+getBusBlockMaxLimit = \case
+  DIBC.DIRECT c -> fromMaybe defaultBusBlockMaxLimit c.busBlockMaxLimit
+  DIBC.ONDC c -> fromMaybe defaultBusBlockMaxLimit c.busBlockMaxLimit
+  _ -> defaultBusBlockMaxLimit
+
+mkBusBlockKey :: Kernel.Types.Id.Id DIBC.IntegratedBPPConfig -> Text -> Text
+mkBusBlockKey cfgId vehicleNumber = cfgId.getId <> ":blocked:" <> vehicleNumber
+
+mkCheckerBlockedListKey :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Text
+mkCheckerBlockedListKey personId = "blocked:checker:" <> personId.getId
+
+blockVehicle :: (CacheFlow m r, MonadFlow m) => Kernel.Types.Id.Id Domain.Types.Person.Person -> [DIBC.IntegratedBPPConfig] -> Text -> m ()
+blockVehicle personId configs vehicleNumber = do
+  mapM_ (\cfg -> Hedis.setExp (mkBusBlockKey cfg.id vehicleNumber) personId.getId (getBusBlockExpiry cfg.providerConfig).getSeconds) configs
+  addToCheckerBlockedList personId vehicleNumber
+
+unblockVehicle :: (CacheFlow m r, MonadFlow m) => Kernel.Types.Id.Id Domain.Types.Person.Person -> [DIBC.IntegratedBPPConfig] -> Text -> m ()
+unblockVehicle personId configs vehicleNumber = do
+  mapM_ (\cfg -> Hedis.del (mkBusBlockKey cfg.id vehicleNumber)) configs
+  removeFromCheckerBlockedList personId vehicleNumber
+
+isVehicleBlocked :: (CacheFlow m r, MonadFlow m) => [DIBC.IntegratedBPPConfig] -> Text -> m Bool
+isVehicleBlocked configs vehicleNumber = do
+  flags <-
+    mapM
+      ( \cfg -> do
+          mbVal <- Hedis.safeGet (mkBusBlockKey cfg.id vehicleNumber)
+          pure (isJust (mbVal :: Maybe Text))
+      )
+      configs
+  pure (Kernel.Prelude.or flags)
+
+addToCheckerBlockedList :: (CacheFlow m r, MonadFlow m) => Kernel.Types.Id.Id Domain.Types.Person.Person -> Text -> m ()
+addToCheckerBlockedList personId vehicleNumber = do
+  let key = mkCheckerBlockedListKey personId
+  existing <- fromMaybe [] <$> Hedis.safeGet key
+  unless (vehicleNumber `elem` existing) $ Hedis.set key (vehicleNumber : existing)
+
+removeFromCheckerBlockedList :: (CacheFlow m r, MonadFlow m) => Kernel.Types.Id.Id Domain.Types.Person.Person -> Text -> m ()
+removeFromCheckerBlockedList personId vehicleNumber = do
+  let key = mkCheckerBlockedListKey personId
+  existing <- fromMaybe [] <$> Hedis.safeGet key
+  Hedis.set key (filter (/= vehicleNumber) existing)
+
+reconcileCheckerBlockedList :: (CacheFlow m r, MonadFlow m) => Kernel.Types.Id.Id Domain.Types.Person.Person -> [DIBC.IntegratedBPPConfig] -> m [Text]
+reconcileCheckerBlockedList personId configs = do
+  let key = mkCheckerBlockedListKey personId
+  vehicles <- fromMaybe [] <$> Hedis.safeGet key
+  flagged <-
+    mapM
+      ( \vn -> do
+          blocked <- isVehicleBlocked configs vn
+          pure (vn, blocked)
+      )
+      vehicles
+  let stillBlocked = map fst (filter snd flagged)
+  when (stillBlocked /= vehicles) $ Hedis.set key stillBlocked
+  pure stillBlocked
+
+postPublicTransportVehicleDataBlock ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Text ->
+    Kernel.Prelude.Bool ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.BlockedVehiclesResp
+  )
+postPublicTransportVehicleDataBlock (mbPersonId, _merchantId) vehicleNumber isBlock = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- Authorization: only depot managers explicitly allowed may block/unblock buses
+  depotManager <- QDepotManager.findByPersonId personId >>= fromMaybeM (BusBlockNotAllowed personId.getId)
+  unless (depotManager.isBlockAllowed == Just True) $ throwError (BusBlockNotAllowed personId.getId)
+  configs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+  blockedVehicleNumbers <-
+    if isBlock
+      then do
+        currentlyBlocked <- reconcileCheckerBlockedList personId configs
+        let maxLimit = maybe defaultBusBlockMaxLimit (\cfg -> getBusBlockMaxLimit cfg.providerConfig) (listToMaybe configs)
+        when (not (vehicleNumber `elem` currentlyBlocked) && length currentlyBlocked >= maxLimit) $
+          throwError (BusBlockLimitExceeded maxLimit)
+        blockVehicle personId configs vehicleNumber
+        reconcileCheckerBlockedList personId configs
+      else do
+        unblockVehicle personId configs vehicleNumber
+        reconcileCheckerBlockedList personId configs
+  pure $ API.Types.UI.MultimodalConfirm.BlockedVehiclesResp blockedVehicleNumbers
+
+getPublicTransportBlockedVehicles ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.BlockedVehiclesResp
+  )
+getPublicTransportBlockedVehicles (mbPersonId, _merchantId) = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  configs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+  blockedVehicleNumbers <- reconcileCheckerBlockedList personId configs
+  pure $ API.Types.UI.MultimodalConfirm.BlockedVehiclesResp blockedVehicleNumbers
+
 type CacheKey = (Text, Maybe Text, Maybe Bool, Maybe Text, Maybe Text, Bool, Maybe [ServiceTierType])
 
 -- ServiceTierType enum has no Hashable instance, so derive via Show.
@@ -958,6 +1078,9 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
           SIBC.findAllIntegratedBPPConfig merchantOperatingCityId vType DIBC.MULTIMODAL
       )
       vehicleTypes
+  whenJust mbVehicleNumber $ \vehicleNumber -> do
+    blocked <- isVehicleBlocked integratedBPPConfigs vehicleNumber
+    when blocked $ throwError (BusBlocked vehicleNumber)
   mbVehicleLiveRouteInfo <-
     case mbVehicleNumber of
       Just vehicleNumber -> do
