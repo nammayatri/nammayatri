@@ -11,14 +11,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data DepotManagerT f = DepotManagerT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    depotCode :: (B.C f Kernel.Prelude.Text),
-    enabled :: (B.C f Kernel.Prelude.Bool),
-    isAdmin :: (B.C f Kernel.Prelude.Bool),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    personId :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    depotCode :: B.C f Kernel.Prelude.Text,
+    enabled :: B.C f Kernel.Prelude.Bool,
+    isAdmin :: B.C f Kernel.Prelude.Bool,
+    isBlockAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    personId :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -28,6 +29,6 @@ instance B.Table DepotManagerT where
 
 type DepotManager = DepotManagerT Identity
 
-$(enableKVPG (''DepotManagerT) [('depotCode), ('personId)] [])
+$(enableKVPG ''DepotManagerT ['depotCode, 'personId] [])
 
-$(mkTableInstances (''DepotManagerT) "depot_manager")
+$(mkTableInstances ''DepotManagerT "depot_manager")
