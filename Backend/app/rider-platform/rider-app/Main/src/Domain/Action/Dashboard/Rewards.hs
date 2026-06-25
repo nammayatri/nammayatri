@@ -4,6 +4,7 @@ module Domain.Action.Dashboard.Rewards
   ( postRewardsCampaign,
     putRewardsCampaign,
     postRewardsCampaignCohort,
+    putRewardsCampaignCohort,
     postRewardsCampaignCohortCodes,
     postRewardsCampaignStatus,
     getRewardsCampaign,
@@ -49,6 +50,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RewardCampaign as QRCmp
 import qualified Storage.Queries.RewardCampaignExtra as QRCmpE
 import qualified Storage.Queries.RewardCohort as QRC
+import qualified Storage.Queries.RewardCohortExtra as QRCE
 import qualified Storage.Queries.RewardCouponUploadBatch as QRUB
 import qualified Storage.Queries.RewardUnlockExtra as QRUE
 import qualified Tools.Rewards.RedisPool as Pool
@@ -145,6 +147,51 @@ postRewardsCampaignCohort merchantShortId opCity campaignId req = do
   QRC.create cohort
   pure $ API.CreateCohortResp (castId cohortId)
 
+putRewardsCampaignCohort ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id API.RewardCampaign ->
+  Id API.RewardCohort ->
+  API.EditCohortReq ->
+  Flow APISuccess
+putRewardsCampaignCohort merchantShortId opCity campaignId cohortId req = do
+  let domainCampaignId = castId campaignId
+      domainCohortId = castId cohortId
+  campaign <- loadAuthorizedCampaign merchantShortId opCity domainCampaignId
+  when (campaign.status == DRCmp.Ended) $
+    throwError (InvalidRequest "Cannot edit cohorts on an Ended campaign")
+  cohort <- QRC.findById domainCohortId >>= fromMaybeM (InvalidRequest "Cohort not found")
+  unless (cohort.campaignId == domainCampaignId) $
+    throwError (InvalidRequest "Cohort does not belong to this campaign")
+  whenJust req.presentation validatePresentation
+  case campaign.status of
+    DRCmp.Draft -> pure ()
+    _ -> do
+      when (isJust req.eligibilityJsonLogic) $
+        throwError (InvalidRequest "eligibilityJsonLogic cannot be changed after campaign is activated")
+      when (hasNonPresentationEdits req) $
+        throwError (InvalidRequest "Only presentation can be edited on Active or Paused campaigns")
+  QRCE.updateEditableFields
+    domainCohortId
+    req.name
+    req.description
+    req.displayOrder
+    req.eligibilityJsonLogic
+    req.rewardTitle
+    req.rewardImageUrl
+    req.couponValidityDays
+    req.presentation
+  pure Success
+
+hasNonPresentationEdits :: API.EditCohortReq -> Bool
+hasNonPresentationEdits req =
+  isJust req.name
+    || isJust req.description
+    || isJust req.displayOrder
+    || isJust req.rewardTitle
+    || isJust req.rewardImageUrl
+    || isJust req.couponValidityDays
+
 postRewardsCampaignCohortCodes ::
   ShortId DM.Merchant ->
   Context.City ->
@@ -168,8 +215,8 @@ postRewardsCampaignCohortCodes merchantShortId opCity campaignId cohortId req = 
     [] -> throwError (InvalidRequest "CSV contains no codes")
     parsed -> pure parsed
   uploadBatchId <- generateGUIDText
-  let s3Key = "rewards/" <> campaignId.getId <> "/" <> cohortId.getId <> "/" <> uploadBatchId <> ".csv"
-  s3env <- asks (.s3Env)
+  let s3Key = campaignId.getId <> "/" <> cohortId.getId <> "/" <> uploadBatchId <> ".csv"
+  s3env <- asks (.s3RewardsEnv)
   s3env.putRawH (T.unpack s3Key) rawBytes "text/csv"
   Pool.bulkSeedPool domainCampaignId domainCohortId codes
   now <- getCurrentTime

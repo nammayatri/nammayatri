@@ -16,6 +16,7 @@ in  { smsUserName = "xxxxxxx"
     , smsPassword = "yyyyyyy"
     , s3Config = mockS3Config
     , s3PublicConfig = mockS3Config
+    , s3RewardsConfig = mockS3Config
     , googleKey = topSecret.googleKey
     , googleTranslateKey = topSecret.googleTranslateKey
     , slackToken = "xxxxxxx"

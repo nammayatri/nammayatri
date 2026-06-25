@@ -23,6 +23,9 @@ RewardCohort:
   constraints:
     id: PrimaryKey
     campaignId: "!SecondaryKey"
+  sqlType:
+    eligibilityJsonLogic: jsonb
+    presentation: jsonb
   fromTType:
     eligibilityJsonLogic: Kernel.Prelude.identity|I
     presentation: Kernel.Prelude.identity|I
@@ -36,3 +39,5 @@ RewardCohort:
     findAllByCampaign:
       kvFunction: findAllWithKV
       where: campaignId
+  extraOperations:
+    - EXTRA_QUERY_FILE
