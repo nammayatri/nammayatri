@@ -60,7 +60,7 @@ dailyPassStatusUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
   when autoSchedule $
     if expiredCount + activatedCount < batchSize
       then scheduleTomorrow merchantId' merchantOpCityId timeDiffFromUtc istTime
-      else createJobIn @_ @'DailyPassStatusUpdate (Just merchantId') (Just merchantOpCityId) 0 jobData
+      else createJobIn @_ @'DailyPassStatusUpdate (Just merchantId') (Just merchantOpCityId) 60 jobData
 
   pure Complete
 

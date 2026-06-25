@@ -83,7 +83,13 @@ runReviver producerType = do
   let secondsTillNow = T.diffTimeToPicoseconds todaysDiffTime `div` 1000000000000
       minutesTillNow = secondsTillNow `div` 60
       shouldRunReviver = minutesTillNow `mod` (fromIntegral reviverInterval.getMinutes) == 0
-  when shouldRunReviver $ Hedis.whenWithLockRedis reviverLockKey 300 (runReviver' producerType)
+  when shouldRunReviver $ do
+    someErr <-
+      withTryCatch "runReviver:cycleFailure" $
+        Hedis.whenWithLockRedis reviverLockKey 300 (runReviver' producerType)
+    case someErr of
+      Left err -> logError $ "Reviver iteration failed, will retry next cycle: " <> show err
+      Right _ -> pure ()
   threadDelayMilliSec 60000
 
 mkRunningJobKey :: Text -> Text
