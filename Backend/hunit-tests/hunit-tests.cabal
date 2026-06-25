@@ -34,6 +34,9 @@ library
       AddVehicleUnitTests
       DriverOperationHubUnitTests
       CreateRequestUnitTests
+      RewardsEvaluatorTests
+      RewardsCouponTemplatedTests
+      RewardsCouponPoolTests
   hs-source-dirs:
       src
   default-extensions:

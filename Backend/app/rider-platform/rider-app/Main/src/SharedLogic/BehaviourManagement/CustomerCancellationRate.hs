@@ -14,6 +14,8 @@
 
 module SharedLogic.BehaviourManagement.CustomerCancellationRate where
 
+import qualified Data.Text as T
+import qualified Data.Time as Time
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -58,6 +60,99 @@ mkRideAssignedKey customerId = "customer-offer:CR:assigned-cId:" <> customerId
 mkRideCancelledKey :: Text -> Text
 mkRideCancelledKey customerId = "customer-offer:CR:cancelled-cId:" <> customerId
 
+mkRiderStatsKey :: Text -> Time.Day -> Text
+mkRiderStatsKey riderId day =
+  "customer-stats:" <> riderId <> ":" <> T.pack (Time.showGregorian day)
+
+mkRiderStatsFieldKey :: Text -> Time.Day -> RiderStatEvent -> Text
+mkRiderStatsFieldKey riderId day event =
+  mkRiderStatsKey riderId day <> ":" <> eventField event
+
+retentionDays :: Int
+retentionDays = 90
+
+data RiderStatEvent = Assigned | Completed | Cancelled
+  deriving (Eq, Show)
+
+eventField :: RiderStatEvent -> Text
+eventField Assigned = "assigned"
+eventField Completed = "completed"
+eventField Cancelled = "cancelled"
+
+readRiderStatCount ::
+  (Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Text ->
+  Time.Day ->
+  RiderStatEvent ->
+  m Integer
+readRiderStatCount riderId day event = do
+  let key = mkRiderStatsKey riderId day
+      fieldKey = mkRiderStatsFieldKey riderId day event
+      field = eventField event
+  mbAtomicVal <- Redis.get @Integer fieldKey
+  case mbAtomicVal of
+    Just val -> pure val
+    Nothing -> Redis.hGet @Text key field <&> parseTextCount
+  where
+    parseTextCount = maybe 0 (fromMaybe 0 . readMaybe . T.unpack)
+
+readLegacySlidingWindowCount ::
+  (Redis.HedisFlow m r, MonadFlow m) =>
+  Text ->
+  RiderStatEvent ->
+  Integer ->
+  m Integer
+readLegacySlidingWindowCount riderId event windowDays = do
+  let opts = SWC.SlidingWindowOptions windowDays SWC.Days
+  case event of
+    Assigned -> SWC.getCurrentWindowCount (mkRideAssignedKey riderId) opts
+    Cancelled -> SWC.getCurrentWindowCount (mkRideCancelledKey riderId) opts
+    Completed -> pure 0
+
+incrementRiderStatToday ::
+  (Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r, MonadFlow m) =>
+  Id DP.Person ->
+  RiderStatEvent ->
+  Integer ->
+  m ()
+incrementRiderStatToday personId event count = Redis.withCrossAppRedis $ do
+  today <- Time.utctDay <$> getCurrentTime
+  let key = mkRiderStatsFieldKey personId.getId today event
+      ttl = retentionDays * 86400
+  newCount <- Redis.incrby key count
+  when (newCount == count) $
+    Redis.expire key ttl
+
+sumRiderStatOverWindow ::
+  (Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r, MonadFlow m) =>
+  Id DP.Person ->
+  RiderStatEvent ->
+  Integer ->
+  m Integer
+sumRiderStatOverWindow personId event windowDays = Redis.withCrossAppRedis $ do
+  today <- Time.utctDay <$> getCurrentTime
+  let keys =
+        [ Time.addDays (- i) today
+          | i <- [0 .. windowDays - 1]
+        ]
+  results <- forM keys $ \day -> readRiderStatCount personId.getId day event
+  let total = sum results
+  if total > 0 || event == Completed
+    then pure total
+    else readLegacySlidingWindowCount personId.getId event windowDays
+
+getRiderStatPerDayOverWindow ::
+  (Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r, MonadFlow m) =>
+  Id DP.Person ->
+  RiderStatEvent ->
+  Integer ->
+  m [Integer]
+getRiderStatPerDayOverWindow personId event windowDays = Redis.withCrossAppRedis $ do
+  today <- Time.utctDay <$> getCurrentTime
+  forM [0 .. windowDays - 1] $ \i -> do
+    let day = Time.addDays (- i) today
+    readRiderStatCount personId.getId day event
+
 getWindowSize :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m Integer
 getWindowSize mocId = do
   riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = mocId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist mocId.getId)
@@ -66,42 +161,71 @@ getWindowSize mocId = do
 incrementCancelledCount ::
   ( Redis.HedisFlow m r,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    MonadFlow m
   ) =>
   Id DP.Person ->
   Integer ->
   m ()
-incrementCancelledCount customerId windowSize = Redis.withCrossAppRedis $ SWC.incrementWindowCount (mkRideCancelledKey customerId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
+incrementCancelledCount customerId _windowSize =
+  incrementRiderStatToday customerId Cancelled 1
 
 incrementAssignedCount ::
   ( Redis.HedisFlow m r,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    MonadFlow m
   ) =>
   Id DP.Person ->
   Integer ->
   m ()
-incrementAssignedCount customerId windowSize = Redis.withCrossAppRedis $ SWC.incrementWindowCount (mkRideAssignedKey customerId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
+incrementAssignedCount customerId _windowSize =
+  incrementRiderStatToday customerId Assigned 1
+
+incrementCompletedCount ::
+  ( Redis.HedisFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    MonadFlow m
+  ) =>
+  Id DP.Person ->
+  Integer ->
+  m ()
+incrementCompletedCount customerId count =
+  incrementRiderStatToday customerId Completed count
 
 getCancellationCount ::
   ( Redis.HedisFlow m r,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    MonadFlow m
   ) =>
   Integer ->
   Id DP.Person ->
   m Integer
-getCancellationCount windowSize customerId = Redis.withCrossAppRedis $ SWC.getCurrentWindowCount (mkRideCancelledKey customerId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
+getCancellationCount windowSize customerId = sumRiderStatOverWindow customerId Cancelled windowSize
 
 getAssignedCount ::
   ( Redis.HedisFlow m r,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    MonadFlow m
   ) =>
   Integer ->
   Id DP.Person ->
   m Integer
-getAssignedCount windowSize customerId = Redis.withCrossAppRedis $ SWC.getCurrentWindowCount (mkRideAssignedKey customerId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
+getAssignedCount windowSize customerId = sumRiderStatOverWindow customerId Assigned windowSize
+
+getCompletedCount ::
+  ( Redis.HedisFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    MonadFlow m
+  ) =>
+  Integer ->
+  Id DP.Person ->
+  m Integer
+getCompletedCount windowSize customerId = sumRiderStatOverWindow customerId Completed windowSize
 
 getCancellationRateData ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -146,10 +270,10 @@ getCancellationRateOfDaysStandalone ::
   Integer ->
   Integer ->
   m (Integer, Integer)
-getCancellationRateOfDaysStandalone customerId period windowSize = do
-  cancelledCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideCancelledKey customerId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
-  assignedCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideAssignedKey customerId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
-  return (cancelledCount, assignedCount)
+getCancellationRateOfDaysStandalone customerId period _windowSize = do
+  cancelledCounts <- getRiderStatPerDayOverWindow customerId Cancelled period
+  assignedCounts <- getRiderStatPerDayOverWindow customerId Assigned period
+  return (sum cancelledCounts, sum assignedCounts)
 
 data CancellationRateBasedNudgingAndBlockingConfig = CancellationRateBasedNudgingAndBlockingConfig
   { cancellationRateThresholdDaily :: Int,
@@ -238,12 +362,13 @@ nudgeOrBlockCustomer riderConfig customer = do
     isCustomerBlockable cancellationRateThreshold rideAssignedThreshold cancellationRate assignedCount =
       (cancellationRate >= cancellationRateThreshold) && (assignedCount >= rideAssignedThreshold)
 
-    getCancellationRateOfDays period windowSize = do
-      let windowInt = toInteger windowSize
-      cancelledCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideCancelledKey customer.id.getId) (SWC.SlidingWindowOptions windowInt SWC.Days)
-      assignedCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideAssignedKey customer.id.getId) (SWC.SlidingWindowOptions windowInt SWC.Days)
-      let cancellationRate = ((cancelledCount) * 100) `div` max 1 (assignedCount)
-      return (cancellationRate, assignedCount)
+    getCancellationRateOfDays period _windowSize = do
+      cancelledCounts <- getRiderStatPerDayOverWindow customer.id Cancelled period
+      assignedCounts <- getRiderStatPerDayOverWindow customer.id Assigned period
+      let cancelledCount = sum cancelledCounts
+          assignedCount = sum assignedCounts
+          cancellationRate = (cancelledCount * 100) `div` max 1 assignedCount
+      return (fromIntegral cancellationRate, fromIntegral assignedCount)
 
     buildConfig :: RC.RiderConfig -> Maybe CancellationRateBasedNudgingAndBlockingConfig
     buildConfig config = do

@@ -75,6 +75,7 @@ data RiderJobType
   | DailyPassStatusUpdate
   | PassExpiryReminderMaster
   | SettlementReportIngestion
+  | ReconcileRewardInflight
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -121,6 +122,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SDailyPassStatusUpdate jobData = AnyJobInfo <$> restoreJobInfo SDailyPassStatusUpdate jobData
   restoreAnyJobInfo SPassExpiryReminderMaster jobData = AnyJobInfo <$> restoreJobInfo SPassExpiryReminderMaster jobData
   restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
+  restoreAnyJobInfo SReconcileRewardInflight jobData = AnyJobInfo <$> restoreJobInfo SReconcileRewardInflight jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -467,3 +469,13 @@ data SettlementReportIngestionJobData = SettlementReportIngestionJobData
 instance JobInfoProcessor 'SettlementReportIngestion
 
 type instance JobContent 'SettlementReportIngestion = SettlementReportIngestionJobData
+
+data ReconcileRewardInflightJobData = ReconcileRewardInflightJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'ReconcileRewardInflight
+
+type instance JobContent 'ReconcileRewardInflight = ReconcileRewardInflightJobData

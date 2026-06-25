@@ -35,6 +35,7 @@ import qualified API.Action.UI.PassDetails as PassDetails
 import qualified API.Action.UI.PickupInstructions as PickupInstructions
 import qualified API.Action.UI.Places as Places
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
+import qualified API.Action.UI.Rewards as Rewards
 import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.RiderLocation as RiderLocation
 import qualified API.Action.UI.SVP as SVP
@@ -45,6 +46,7 @@ import qualified API.Action.UI.TicketService as TicketService
 import qualified API.Action.UI.TrackRoute as TrackRoute
 import qualified API.Action.UI.TriggerFCM as TriggerFCM
 import qualified API.UI.AadhaarVerification as AadhaarVerification
+import qualified API.UI.AddBaggage as AddBaggage
 import qualified API.UI.AppInstalls as AppInstalls
 import qualified API.UI.Booking as Booking
 import qualified API.UI.Call as Call
@@ -52,7 +54,6 @@ import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.Cancel as Cancel
 import qualified API.UI.CancelSearch as CancelSearch
 import qualified API.UI.CancellationReason as CancellationReason
-import qualified API.UI.AddBaggage as AddBaggage
 import qualified API.UI.ChangeServiceTier as ChangeServiceTier
 import qualified API.UI.Confirm as Confirm
 import qualified API.UI.Disability as Disability
@@ -163,6 +164,7 @@ type API =
            :<|> Metrics.API
            :<|> PickupInstructions.API
            :<|> NYRegular.API
+           :<|> Rewards.API
            :<|> AttractionRecommend.API
            :<|> RiderLocation.API
            :<|> Pass.API
@@ -245,6 +247,7 @@ handler =
     :<|> Metrics.handler
     :<|> PickupInstructions.handler
     :<|> NYRegular.handler
+    :<|> Rewards.handler
     :<|> AttractionRecommend.handler
     :<|> RiderLocation.handler
     :<|> Pass.handler

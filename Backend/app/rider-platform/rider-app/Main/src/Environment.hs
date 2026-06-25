@@ -141,6 +141,7 @@ data AppCfg = AppCfg
     searchLimitExceedNotificationTemplate :: Text,
     s3Config :: S3Config,
     s3PublicConfig :: S3Config,
+    s3RewardsConfig :: S3Config,
     httpClientOptions :: HttpClientOptions,
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
@@ -246,8 +247,10 @@ data AppEnv = AppEnv
     signatureExpiry :: Seconds,
     s3Config :: S3Config,
     s3PublicConfig :: S3Config,
+    s3RewardsConfig :: S3Config,
     s3Env :: S3Env Flow,
     s3EnvPublic :: S3Env Flow,
+    s3RewardsEnv :: S3Env Flow,
     disableSignatureAuth :: Bool,
     encTools :: EncTools,
     nwAddress :: BaseUrl,
@@ -381,6 +384,7 @@ buildAppEnv cfg@AppCfg {..} = do
       Right env -> pure (Just env)
   let s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
+      s3RewardsEnv = buildS3Env cfg.s3RewardsConfig
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   serviceClickhouseEnv <- createConn riderClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg

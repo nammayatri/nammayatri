@@ -64,6 +64,7 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , kafkaCompression = globalCommon.kafkaCompression
     , s3Config = sec.s3Config
     , s3PublicConfig = sec.s3PublicConfig
+    , s3RewardsConfig = sec.s3RewardsConfig
     , slackToken = sec.slackToken
     , signatureExpiry = globalCommon.signatureExpiry
     , httpClientOptions = globalCommon.httpClientOptions
