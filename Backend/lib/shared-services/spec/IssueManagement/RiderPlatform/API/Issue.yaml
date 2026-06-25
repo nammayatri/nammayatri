@@ -70,6 +70,10 @@ imports:
   SendChatMessageByUserReq: IssueManagement.Common.Dashboard.Issue
   MarkChatReadByUserReq: IssueManagement.Common.Dashboard.Issue
   ChatMessageItem: IssueManagement.Common.UI.Issue
+  # Operator-side chat upload — request/response shapes are reused from the
+  # consumer-side /v2/issue/upload contract (same fields, identical multipart parser).
+  IssueMediaUploadReq: IssueManagement.Common.UI.Issue
+  IssueMediaUploadRes: IssueManagement.Common.UI.Issue
 
 module: Issue
 apiPrefix: issueV2
@@ -145,6 +149,17 @@ apis:
       migrate:
         endpoint: IssueAPI IssueUpdateEndpoint
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE ISSUE_UPDATE
+  # Operator-side media upload for live chat. POST a multipart file, get back a
+  # MediaFile id, then send that id in the next /chat/message body. Mirrors the
+  # rider-side /v2/issue/upload but goes through dashboard auth.
+  - POST: # IssueChatUploadAPI
+      endpoint: /upload
+      name: PostIssueChatUpload
+      auth: ApiAuthV2
+      multipart:
+        type: IssueMediaUploadReq
+      response:
+        type: IssueMediaUploadRes
   - POST:  # IssueAddCommentAPI
       endpoint: /{issueId}/comment
       auth: ApiAuthV2

@@ -333,7 +333,7 @@ otpRideCreate driver otpCode booking clientId = do
       | otherwise = throwM exc
 
     isNotAllowedVehicleVariant driverVehicleVariant bookingServiceTier = do
-      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow bookingServiceTier booking.merchantOperatingCityId booking.configInExperimentVersions (booking.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show bookingServiceTier))
+      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow bookingServiceTier booking.merchantOperatingCityId (booking.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show bookingServiceTier))
       return $ driverVehicleVariant `notElem` vehicleServiceTierItem.allowedVehicleVariant
 
 arrivedAtStop :: Id DRide.Ride -> LatLong -> Flow APISuccess

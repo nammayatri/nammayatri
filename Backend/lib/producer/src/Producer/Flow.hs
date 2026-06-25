@@ -96,7 +96,7 @@ runReviver' producerType = do
     Driver -> do
       pendingJobs :: [AnyJob AllocatorJobType] <- getFirst100PendingStuckJobs
       let jobsIds = map @_ @(Id AnyJob, Id AnyJob) (\(AnyJob Job {..}) -> (id, parentJobId)) pendingJobs
-      filteredPendingJobs <- filterM (\(AnyJob Job {..}) -> Hedis.withCrossAppRedis $ Hedis.tryLockRedis (mkRunningJobKey id.getId) 1800) pendingJobs
+      filteredPendingJobs <- filterM (\(AnyJob Job {..}) -> Hedis.withCrossAppRedis $ Hedis.tryLockRedis (mkRunningJobKey id.getId) 65) pendingJobs
       logDebug $ "Total number of pendingJobs in DB : " <> show (length filteredPendingJobs) <> " Pending (JobsIDs, ParentJobIds) : " <> show jobsIds
       newJobsToExecute <-
         forM filteredPendingJobs $ \(AnyJob x) -> do
@@ -132,7 +132,7 @@ runReviver' producerType = do
     Rider -> do
       pendingJobs :: [AnyJob RiderJobType] <- getFirst100PendingStuckJobs
       let jobsIds = map @_ @(Id AnyJob, Id AnyJob) (\(AnyJob Job {..}) -> (id, parentJobId)) pendingJobs
-      filteredPendingJobs <- filterM (\(AnyJob Job {..}) -> Hedis.withCrossAppRedis $ Hedis.tryLockRedis (mkRunningJobKey id.getId) 1800) pendingJobs
+      filteredPendingJobs <- filterM (\(AnyJob Job {..}) -> Hedis.withCrossAppRedis $ Hedis.tryLockRedis (mkRunningJobKey id.getId) 65) pendingJobs
       logDebug $ "Total number of pendingJobs in DB : " <> show (length filteredPendingJobs) <> " Pending (JobsIDs, ParentJobIds) : " <> show jobsIds
       newJobsToExecute <-
         forM filteredPendingJobs $ \(AnyJob x) -> do

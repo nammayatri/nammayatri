@@ -33,6 +33,10 @@ data IssueReport = IssueReport
     chats :: [Chat],
     merchantId :: Maybe (Id Merchant),
     becknIssueId :: Maybe Text,
-    reopenedCount :: Int
+    reopenedCount :: Int,
+    -- | Last response the customer gave to a post-resolution satisfaction prompt.
+    -- ACCEPT  : customer marked the resolution satisfactory (issue moved to CLOSED).
+    -- ESCALATE: customer was not satisfied (drove the reopen-prompt branch).
+    customerResponse :: Maybe CustomerResponse
   }
   deriving (Show, Generic, Read, Eq, Ord, ToJSON, FromJSON, BP.ToSchema)

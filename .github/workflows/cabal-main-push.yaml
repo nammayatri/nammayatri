@@ -172,10 +172,32 @@ jobs:
 
           CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}
           EXCLUDES=$(cd "$CACHE_ROOT" && find dist-newstyle/build -mindepth 4 -maxdepth 4 -name "x" | sed 's|^|--exclude=|')
+
+          # Copy non-reproducible .a files referenced by addDependentFile in .hi files.
+          # record-dot-preprocessor is a GHC plugin whose .a is recorded as a
+          # compile-time dependency. Different CI runners produce different binary
+          # content for the same nix derivation. Without shipping the exact .a from
+          # this build, devbox incremental builds see [.a changed] on every module.
+          mkdir -p "$CACHE_ROOT/.nix-deps"
+          cd "$CACHE_ROOT"
+          for hi in $(find dist-newstyle/build -name "*.hi" -print -quit 2>/dev/null); do
+            strings "$hi" | grep -oE '/nix/store/[^ ]+\.a$' | sort -u | while read -r dep; do
+              if [ -f "$dep" ]; then
+                rel="${dep#/}"  # strip leading /
+                mkdir -p ".nix-deps/$(dirname "$rel")"
+                cp "$dep" ".nix-deps/$rel"
+                echo "Cached nix dep: $dep"
+              fi
+            done
+            break  # only need one .hi file
+          done
+          cd -
+
           # Include .cabal-dir/ so devbox incremental builds see the exact
           # same cabal state as CI (config, package DB, package index).
+          # Include .nix-deps/ for non-reproducible .a files.
           # Exclude logs/ to save space.
-          tar -I 'zstd -T0 -3' -cf dist-newstyle.tar.zst -C "$CACHE_ROOT" $EXCLUDES --exclude='.cabal-dir/logs' dist-newstyle/ hie/ .cabal-dir/
+          tar -I 'zstd -T0 -3' -cf dist-newstyle.tar.zst -C "$CACHE_ROOT" $EXCLUDES --exclude='.cabal-dir/logs' dist-newstyle/ hie/ .cabal-dir/ .nix-deps/
           echo "$GITHUB_WORKSPACE" > build-path.txt
           mc cp dist-newstyle.tar.zst "minio/haskell-cache/cabal-build/${{ github.sha }}/dist-newstyle.tar.zst"
           mc cp build-path.txt "minio/haskell-cache/cabal-build/${{ github.sha }}/build-path.txt"
@@ -217,6 +239,10 @@ jobs:
           tar -I 'zstd -T0 -3' -cf rider.tar.zst -C "$CACHE_ROOT" dist-newrepl-rider/
           mc cp rider.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/rider-app.tar.zst"
           rm -f rider.tar.zst
+
+          tar -I 'zstd -T0 -3' -cf repl-support.tar.zst -C "$CACHE_ROOT" --exclude='.cabal-dir/logs' hie/ .cabal-dir/
+          mc cp repl-support.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/repl-support.tar.zst"
+          rm -f repl-support.tar.zst
 
       - name: Cleanup staging dir
         if: always()

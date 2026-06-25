@@ -19,7 +19,14 @@ data IssueConfig = IssueConfig
     onAutoMarkIssueClsMsgs :: [Id IssueMessage],
     onCreateIssueMsgs :: [Id IssueMessage],
     onIssueReopenMsgs :: [Id IssueMessage],
+    -- | Messages posted to chat when the support agent / TSP marks the ticket resolved.
+    -- Name carries a legacy TSP prefix; field is TSP-agnostic — any ticketing service
+    -- triggers this via the resolved status callback.
     onKaptMarkIssueResMsgs :: [Id IssueMessage],
+    -- | Messages posted to chat when the customer answers "Not satisfied" to the
+    -- post-resolution satisfaction prompt. Typically contains a single message with
+    -- label "REOPEN_PROMPT" carrying the "Do you want to reopen this issue?" copy.
+    onCustomerNotSatisfiedMsgs :: [Id IssueMessage],
     merchantId :: Id Common.Merchant,
     messageTransformationConfig :: Maybe MessageTransformationConfig,
     reopenCount :: Int,

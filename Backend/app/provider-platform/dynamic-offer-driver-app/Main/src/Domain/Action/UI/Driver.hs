@@ -942,23 +942,34 @@ checkPrepaidGoOnlineEligibility ::
   (MonadFlow m, BeamFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   Id SP.Person ->
   TransporterConfig ->
+  DSP.SubscriptionOwnerType ->
+  Text ->
   Maybe DVC.VehicleCategory ->
   m ()
-checkPrepaidGoOnlineEligibility personId transporterConfig mbCurrentVehicleCategory = do
+checkPrepaidGoOnlineEligibility personId transporterConfig ownerType ownerId mbCurrentVehicleCategory = do
   let isolationEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
       mbVehicleCategory = if isolationEnabled then mbCurrentVehicleCategory else Nothing
-  (ownerType, ownerId, counterparty) <-
-    QFDA.findByDriverId (cast personId) True >>= \case
-      Just fleetDriverAssociation -> pure (DSP.FLEET_OWNER, fleetDriverAssociation.fleetOwnerId, counterpartyFleetOwner)
-      Nothing -> pure (DSP.DRIVER, personId.getId, counterpartyDriver)
-  -- Minimum-balance threshold, mirroring the ride-accept check in initializeRide
-  let prepaidThreshold =
+      counterparty = case ownerType of
+        DSP.FLEET_OWNER -> counterpartyFleetOwner
+        DSP.DRIVER -> counterpartyDriver
+      -- Minimum-balance threshold, mirroring the ride-accept check in initializeRide.
+      prepaidThreshold =
         fromMaybe 0 $ case ownerType of
           DSP.FLEET_OWNER -> transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold
           DSP.DRIVER -> transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold
-  activePurchases <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType Plan.PREPAID_SUBSCRIPTION mbVehicleCategory
+  mbActivePurchase <- QSPE.findLatestActiveByOwnerAndServiceName (\_ -> pure ()) ownerId ownerType Plan.PREPAID_SUBSCRIPTION mbVehicleCategory
   availableBalance <- fromMaybe 0 <$> getPrepaidAvailableBalanceByOwner counterparty ownerId mbVehicleCategory
-  when (null activePurchases || availableBalance <= prepaidThreshold) $
+  logInfo $
+    "checkPrepaidGoOnlineEligibility driverId=" <> personId.getId
+      <> " vehicleCategory="
+      <> show mbVehicleCategory
+      <> " hasActivePlan="
+      <> show (isJust mbActivePurchase)
+      <> " availableBalance="
+      <> show availableBalance
+      <> " threshold="
+      <> show prepaidThreshold
+  when (isNothing mbActivePurchase || availableBalance <= prepaidThreshold) $
     throwError (NoActivePrepaidPlan personId.getId)
 
 setActivity ::
@@ -986,9 +997,13 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
         when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
           merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
           mbVehicle <- QVehicle.findById personId
+          mbFleetAssociation <- QFDA.findByDriverId driverId True
+          let (ownerType, ownerId) = case mbFleetAssociation of
+                Just fda -> (DSP.FLEET_OWNER, fda.fleetOwnerId)
+                Nothing -> (DSP.DRIVER, personId.getId)
           -- Eligibility check for prepaid drivers:
           if Plan.PREPAID_SUBSCRIPTION `elem` driverInfo.servicesEnabledForSubscription
-            then checkPrepaidGoOnlineEligibility personId transporterConfig (mbVehicle >>= (.category))
+            then checkPrepaidGoOnlineEligibility personId transporterConfig ownerType ownerId (mbVehicle >>= (.category))
             else do
               DriverSpecificSubscriptionData {..} <- getDriverSpecificSubscriptionDataWithSubsConfig (personId, merchantId, merchantOpCityId) transporterConfig driverInfo mbVehicle Plan.YATRI_SUBSCRIPTION
               let commonSubscriptionChecks = not isOnFreeTrial && not transporterConfig.allowDefaultPlanAllocation
@@ -1007,7 +1022,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
               when ((planBasedChecks || changeBasedChecks) && not isVehicleVariantDisabledForSubscription) $ throwError (NoPlanSelected personId.getId)
           when merchant.onlinePayment $ do
             driverBankAccount <-
-              QFDA.findByDriverId driverId True >>= \case
+              case mbFleetAssociation of
                 Just fleetDriverAssociation -> QDBA.findByPrimaryKey (Id @SP.Person fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (DriverBankAccountNotFound driverId.getId)
                 Nothing -> QDBA.findByPrimaryKey driverId >>= fromMaybeM (DriverBankAccountNotFound driverId.getId)
             unless driverBankAccount.chargesEnabled $ throwError (DriverChargesDisabled driverId.getId)
@@ -1018,8 +1033,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
           when (transporterConfig.enableBotFlow == Just True) $ do
             unless (isJust mbVehicle) $
               throwError $ InvalidRequest "Cannot go online: no active vehicle linked"
-            mbFleetAssoc <- QFDA.findByDriverId driverId True
-            case mbFleetAssoc of
+            case mbFleetAssociation of
               Just fda -> do
                 fleetOwnerInfo <- QFOI.findByPrimaryKey (Id fda.fleetOwnerId) >>= fromMaybeM (PersonNotFound fda.fleetOwnerId)
                 unless fleetOwnerInfo.enabled $
@@ -1246,7 +1260,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId, identit
     case vehicleMB of
       Nothing -> return (False, Nothing, False)
       Just vehicle -> do
-        cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing Nothing
+        cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
         let (ac, mbTier, supported) = getDriverDefaultServiceTier vehicle driverInfo transporterConfig supportedServiceTiers cityServiceTiers now
         return (ac, (.serviceTierType) <$> mbTier, supported)
   onRideFlag <-
@@ -1525,7 +1539,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
           then (Nothing, Nothing, Nothing, Nothing)
           else (driverInfo.address, driverInfo.addressDocumentType, driverInfo.nomineeName, driverInfo.nomineeRelationship)
   -- Update driver information (works for both cases: with or without vehicle)
-  when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.availableUpiApps || isJust req.isPetModeEnabled || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold || isJust req.maxPickupRadius || isJust req.isSilentModeEnabled || isJust req.rideRequestVolume || isJust req.isTTSEnabled || isJust req.isHighAccuracyLocationEnabled || isJust req.rideRequestVolumeEnabled || isJust req.onboardingAs || isJust req.address || isJust req.addressDocumentType || isJust req.nomineeName || isJust req.nomineeRelationship) $ do
+  when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.availableUpiApps || isJust req.isPetModeEnabled || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold || isJust req.maxPickupRadius || isJust req.isSilentModeEnabled || isJust req.rideRequestVolume || isJust req.isTTSEnabled || isJust req.isHighAccuracyLocationEnabled || isJust req.rideRequestVolumeEnabled || isJust req.onboardingAs || isJust req.address || isJust req.addressDocumentType || isJust req.nomineeName || isJust req.nomineeRelationship || isJust req.preferredMapProvider) $ do
     QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled rideRequestVolumeEnabled onboardingAs legacyAddress legacyAddressDocumentType legacyNomineeName legacyNomineeRelationship preferredMapProvider person.id
 
   let petTag = Yudhishthira.TagNameValue "PetDriver#\"true\""

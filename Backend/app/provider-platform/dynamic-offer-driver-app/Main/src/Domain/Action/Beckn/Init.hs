@@ -240,7 +240,7 @@ handler merchantId req validatedReq = do
           stops = searchRequest.stops
           isTollApplicable = isTollApplicableForTrip driverQuote.vehicleServiceTier tripCategory
       exophone <- findRandomExophone searchRequest.merchantOperatingCityId searchRequest DExophone.CALL_RIDE
-      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId configInExperimentVersions (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
+      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
       mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback quoteId
       commission <- FC.calculateCommission driverQuote.fareParams mbFarePolicy
       let bapUri = showBaseUrl searchRequest.bapUri

@@ -21,6 +21,7 @@ import IssueManagement.Domain.Types.MediaFile
 import Kernel.External.Types (Language)
 import Kernel.ServantMultipart
 import Kernel.Types.APISuccess
+import Kernel.Types.HideSecrets
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -139,6 +140,12 @@ newtype IssueMediaUploadRes = IssueMediaUploadRes
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+-- Required by the dashboard variant of /upload (the auto-generated dashboard
+-- helper API expects every request type to implement HideSecrets). The multipart
+-- request has no sensitive fields, so identity is correct.
+instance HideSecrets IssueMediaUploadReq where
+  hideSecrets = identity
+
 -------------------------------------------------------------------------
 
 type IssueFetchMediaAPI =
@@ -249,19 +256,9 @@ type IgmStatusAPI =
 
 -------------------------------------------------------------------------
 
-data CustomerResponse
-  = ACCEPT
-  | ESCALATE
-  deriving (Eq, Show, Ord, Read, Generic, ToJSON, FromJSON, ToParamSchema, ToSchema)
-
-instance FromHttpApiData CustomerResponse where
-  parseUrlPiece "accept" = pure ACCEPT
-  parseUrlPiece "escalate" = pure ESCALATE
-  parseUrlPiece _ = Left "Unable to parse customer response"
-
-instance ToHttpApiData CustomerResponse where
-  toUrlPiece ACCEPT = "accept"
-  toUrlPiece ESCALATE = "escalate"
+-- 'CustomerResponse' type, HTTP instances, and Beam instances live in
+-- IssueManagement.Common (re-exported here) so the persisted IssueReport
+-- domain type can reference them without an import cycle.
 
 -------------------------------------------------------------------------
 -- Live chat API (rider <-> dashboard operator, scoped to an IssueReport)
@@ -301,6 +298,12 @@ data ChatMessageItem = ChatMessageItem
     chatContentType :: DCM.ChatContentType,
     text :: Text,
     mediaFiles :: [MediaFile],
+    -- | Bare media-file ids, mirrors 'mediaFiles[].id'. Retained for back-compat with
+    -- older clients pinned to the pre-3d5370e7 contract (the field was renamed from
+    -- mediaFileIds → mediaFiles at the time but some shipped builds still decode the
+    -- old shape strictly and panic if it's missing). New clients should consume
+    -- 'mediaFiles' for the embedded URL / type.
+    mediaFileIds :: [Id MediaFile],
     deliveredAt :: Maybe UTCTime,
     readAt :: Maybe UTCTime,
     createdAt :: UTCTime

@@ -97,6 +97,20 @@ updateIssueReopenedCount ticketId reopenedCount = do
     [Set BeamIR.reopenedCount (Just reopenedCount), Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
     [Is BeamIR.id (Eq $ getId ticketId)]
 
+updateCustomerResponse :: BeamFlow m r => Id IssueReport -> CustomerResponse -> m ()
+updateCustomerResponse issueReportId response = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Set BeamIR.customerResponse (Just response), Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
+    [Is BeamIR.id (Eq $ getId issueReportId)]
+
+clearCustomerResponse :: BeamFlow m r => Id IssueReport -> m ()
+clearCustomerResponse issueReportId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Set BeamIR.customerResponse Nothing, Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
+    [Is BeamIR.id (Eq $ getId issueReportId)]
+
 updateTicketId :: BeamFlow m r => Id IssueReport -> Text -> m ()
 updateTicketId issueId ticketId = do
   now <- getCurrentTime
@@ -137,6 +151,7 @@ instance FromTType' BeamIR.IssueReport IssueReport where
             merchantId = Id <$> merchantId,
             becknIssueId = becknIssueId,
             reopenedCount = fromMaybe 0 reopenedCount,
+            customerResponse = customerResponse,
             ..
           }
 
@@ -163,5 +178,6 @@ instance ToTType' BeamIR.IssueReport IssueReport where
         BeamIR.chats = chats,
         BeamIR.merchantId = getId <$> merchantId,
         BeamIR.becknIssueId = becknIssueId,
-        BeamIR.reopenedCount = Just reopenedCount
+        BeamIR.reopenedCount = Just reopenedCount,
+        BeamIR.customerResponse = customerResponse
       }

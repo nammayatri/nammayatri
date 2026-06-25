@@ -279,22 +279,23 @@ findSearchRequestStatsByDay driverId from to = do
             let cnt = CH.count_ (CH.distinct srfdId)
             (dayAgg, responseAgg, cnt)
       )
-      $ CH.emptyFilter $
-        CH.subSelect_ $
-          CH.select_
-            ( \srfd -> do
-                CH.groupBy srfd.id $ \idAgg -> do
-                  let dayAgg = flip CH.argMax srfd.createdAt $ CH.toDate srfd.createdAt
-                      responseAgg = flip CH.argMax srfd.createdAt srfd.response
-                  (idAgg, dayAgg, responseAgg)
-            )
-            $ CH.filter_
-              ( \srfd ->
-                  srfd.driverId CH.==. driverId
-                    CH.&&. srfd.createdAt >=. CH.DateTime from
-                    CH.&&. srfd.createdAt <=. CH.DateTime to
+      $ CH.selectModifierOverride CH.NO_SELECT_MODIFIER $
+        CH.emptyFilter $
+          CH.subSelect_ $
+            CH.select_
+              ( \srfd -> do
+                  CH.groupBy srfd.id $ \idAgg -> do
+                    let dayAgg = flip CH.argMax srfd.createdAt $ CH.toDate srfd.createdAt
+                        responseAgg = flip CH.argMax srfd.createdAt srfd.response
+                    (idAgg, dayAgg, responseAgg)
               )
-              (CH.all_ @CH.APP_SERVICE_CLICKHOUSE searchRequestForDriverTTable)
+              $ CH.filter_
+                ( \srfd ->
+                    srfd.driverId CH.==. driverId
+                      CH.&&. srfd.createdAt >=. CH.DateTime from
+                      CH.&&. srfd.createdAt <=. CH.DateTime to
+                )
+                (CH.all_ @CH.APP_SERVICE_CLICKHOUSE searchRequestForDriverTTable)
 
 findByDriverIdForInfo ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
