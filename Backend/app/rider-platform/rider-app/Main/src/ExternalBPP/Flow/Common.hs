@@ -332,14 +332,18 @@ calculateCancellationCharges merchantOpCityId vehicleCategory baseFare departure
   let minutesBefore = floor (diffUTCTime departureTime now / 60) :: Int
       sortedConfigs = sortOn (Down . (.minMinutesBeforeDeparture)) configs
       mbMatchingTier = find (matchesTier minutesBefore) sortedConfigs
-  case mbMatchingTier of
-    Nothing -> return (0, baseFare) -- no config → full refund
-    Just tier -> do
+  case (configs, mbMatchingTier) of
+    -- No cancellation config for this city/vehicle: feature not opted-in here, keep legacy full-refund behaviour.
+    ([], _) -> return (0, baseFare)
+    -- Inside a configured (allowed) window: apply that tier's charge and refund the remainder.
+    (_, Just tier) -> do
       let charges = case tier.cancellationChargeType of
             DFRFSCancellationConfig.PERCENTAGE -> baseFare * tier.cancellationChargeValue / 100
             DFRFSCancellationConfig.FLAT -> tier.cancellationChargeValue
           refund = max 0 (baseFare - charges)
       return (charges, refund)
+    -- Configured, but the current time is outside every allowed window: cancellation is not permitted.
+    (_, Nothing) -> throwError CancellationNotSupported
   where
     matchesTier mins tier =
       mins >= tier.minMinutesBeforeDeparture
