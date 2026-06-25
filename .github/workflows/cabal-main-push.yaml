@@ -184,6 +184,7 @@ jobs:
           # compile-time dependency. Different CI runners produce different binary
           # content for the same nix derivation. Without shipping the exact .a from
           # this build, devbox incremental builds see [.a changed] on every module.
+          rm -rf "$CACHE_ROOT/.nix-deps"
           mkdir -p "$CACHE_ROOT/.nix-deps"
           cd "$CACHE_ROOT"
           for hi in $(find dist-newstyle/build -name "*.hi" -print -quit 2>/dev/null); do
