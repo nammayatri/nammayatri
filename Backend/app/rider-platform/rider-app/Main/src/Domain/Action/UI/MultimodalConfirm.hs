@@ -95,6 +95,7 @@ import qualified Domain.Types.RouteStopMapping as DRSM
 import Domain.Types.RouteStopTimeTable (SourceType (..))
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Station as DStation
+import qualified Domain.Types.VehicleActionHistory
 import Domain.Utils (castTravelModeToVehicleCategory, mapConcurrently)
 import Environment
 import qualified EulerHS.Language as L
@@ -169,6 +170,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RouteDetails as QRouteDetails
 import Storage.Queries.SearchRequest as QSearchRequest
+import qualified Storage.Queries.VehicleActionHistory as QVAH
 import System.Environment (lookupEnv)
 import System.IO.Unsafe (unsafePerformIO)
 import Tools.Error
@@ -913,6 +915,26 @@ postPublicTransportVehicleDataBlock (mbPersonId, _merchantId) vehicleNumber isBl
       else do
         unblockVehicle personId configs vehicleNumber
         reconcileCheckerBlockedList personId configs
+  historyId <- generateGUID
+  now <- getCurrentTime
+  QVAH.create
+    Domain.Types.VehicleActionHistory.VehicleActionHistory
+      { id = historyId,
+        dispatcherId = personId,
+        action = Domain.Types.VehicleActionHistory.BLOCKER,
+        currentVehicle = vehicleNumber,
+        replacedVehicle = Kernel.Prelude.Nothing,
+        driverCode = Kernel.Prelude.Nothing,
+        conductorCode = Kernel.Prelude.Nothing,
+        merchantId = person.merchantId,
+        merchantOperatingCityId = person.merchantOperatingCityId,
+        depotId = Kernel.Prelude.Nothing,
+        reasonTag = if isBlock then "BLOCK" else "UNBLOCK",
+        reasonContent = Kernel.Prelude.Nothing,
+        createdAt = now,
+        updatedAt = now,
+        waybillNo = Kernel.Prelude.Nothing
+      }
   pure $ API.Types.UI.MultimodalConfirm.BlockedVehiclesResp blockedVehicleNumbers
 
 getPublicTransportBlockedVehicles ::
@@ -924,6 +946,9 @@ getPublicTransportBlockedVehicles ::
 getPublicTransportBlockedVehicles (mbPersonId, _merchantId) = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- Authorization: only depot managers explicitly allowed may view blocked buses
+  depotManager <- QDepotManager.findByPersonId personId >>= fromMaybeM (BusBlockNotAllowed personId.getId)
+  unless (depotManager.isBlockAllowed == Just True) $ throwError (BusBlockNotAllowed personId.getId)
   configs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
   blockedVehicleNumbers <- reconcileCheckerBlockedList personId configs
   pure $ API.Types.UI.MultimodalConfirm.BlockedVehiclesResp blockedVehicleNumbers
