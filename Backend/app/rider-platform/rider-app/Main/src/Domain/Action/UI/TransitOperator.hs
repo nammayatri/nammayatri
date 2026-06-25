@@ -8,6 +8,8 @@ import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant (Merchant)
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id (ShortId (..))
 import Kernel.Utils.Common
@@ -34,6 +36,15 @@ resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory = do
 
   baseUrl <- MM.getOTPRestServiceReq bppConfig.merchantId opCityId
   pure (baseUrl, bppConfig.feedKey)
+
+transitOperatorUnblockBusUtil :: ShortId Merchant -> Context.City -> Text -> Flow Kernel.Types.APISuccess.APISuccess
+transitOperatorUnblockBusUtil merchantShortId city vehicleNumber = do
+  merchantOpCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+  configs <- SIBC.findAllIntegratedBPPConfig merchantOpCity.id BecknSpec.BUS DIBC.MULTIMODAL
+  forM_ configs $ \cfg -> Hedis.del (cfg.id.getId <> ":blocked:" <> vehicleNumber)
+  pure Kernel.Types.APISuccess.Success
 
 transitOperatorGetRowUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> NandiTable -> Maybe Text -> Flow NandiRow
 transitOperatorGetRowUtil merchantShortId city vehicleCategory table column = do

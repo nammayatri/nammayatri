@@ -2,10 +2,10 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.DispatcherHistory where
+module Storage.Queries.VehicleActionHistory where
 
-import qualified Domain.Types.DispatcherHistory
 import qualified Domain.Types.Person
+import qualified Domain.Types.VehicleActionHistory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -13,28 +13,44 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
-import qualified Storage.Beam.DispatcherHistory as Beam
+import qualified Storage.Beam.VehicleActionHistory as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DispatcherHistory.DispatcherHistory -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VehicleActionHistory.VehicleActionHistory -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DispatcherHistory.DispatcherHistory] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VehicleActionHistory.VehicleActionHistory] -> m ())
 createMany = traverse_ create
 
-findByDispatcherId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.DispatcherHistory.DispatcherHistory]))
-findByDispatcherId limit offset dispatcherId = do findAllWithOptionsDb [Se.And [Se.Is Beam.dispatcherId $ Se.Eq (Kernel.Types.Id.getId dispatcherId)]] (Se.Desc Beam.createdAt) limit offset
+findAllByDispatcherIdAndAction ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.VehicleActionHistory.VehicleActionType -> m ([Domain.Types.VehicleActionHistory.VehicleActionHistory]))
+findAllByDispatcherIdAndAction limit offset dispatcherId action = do
+  findAllWithOptionsDb
+    [ Se.And
+        [ Se.Is Beam.dispatcherId $ Se.Eq (Kernel.Types.Id.getId dispatcherId),
+          Se.Is Beam.action $ Se.Eq action
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    limit
+    offset
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DispatcherHistory.DispatcherHistory -> m (Maybe Domain.Types.DispatcherHistory.DispatcherHistory))
+findById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.VehicleActionHistory.VehicleActionHistory -> m (Maybe Domain.Types.VehicleActionHistory.VehicleActionHistory))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DispatcherHistory.DispatcherHistory -> m (Maybe Domain.Types.DispatcherHistory.DispatcherHistory))
+findByPrimaryKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.VehicleActionHistory.VehicleActionHistory -> m (Maybe Domain.Types.VehicleActionHistory.VehicleActionHistory))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DispatcherHistory.DispatcherHistory -> m ())
-updateByPrimaryKey (Domain.Types.DispatcherHistory.DispatcherHistory {..}) = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VehicleActionHistory.VehicleActionHistory -> m ())
+updateByPrimaryKey (Domain.Types.VehicleActionHistory.VehicleActionHistory {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.conductorCode conductorCode,
+    [ Se.Set Beam.action action,
+      Se.Set Beam.conductorCode conductorCode,
       Se.Set Beam.currentVehicle currentVehicle,
       Se.Set Beam.depotId depotId,
       Se.Set Beam.dispatcherId (Kernel.Types.Id.getId dispatcherId),
@@ -49,12 +65,13 @@ updateByPrimaryKey (Domain.Types.DispatcherHistory.DispatcherHistory {..}) = do
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-instance FromTType' Beam.DispatcherHistory Domain.Types.DispatcherHistory.DispatcherHistory where
-  fromTType' (Beam.DispatcherHistoryT {..}) = do
+instance FromTType' Beam.VehicleActionHistory Domain.Types.VehicleActionHistory.VehicleActionHistory where
+  fromTType' (Beam.VehicleActionHistoryT {..}) = do
     pure $
       Just
-        Domain.Types.DispatcherHistory.DispatcherHistory
-          { conductorCode = conductorCode,
+        Domain.Types.VehicleActionHistory.VehicleActionHistory
+          { action = action,
+            conductorCode = conductorCode,
             createdAt = createdAt,
             currentVehicle = currentVehicle,
             depotId = depotId,
@@ -70,10 +87,11 @@ instance FromTType' Beam.DispatcherHistory Domain.Types.DispatcherHistory.Dispat
             waybillNo = waybillNo
           }
 
-instance ToTType' Beam.DispatcherHistory Domain.Types.DispatcherHistory.DispatcherHistory where
-  toTType' (Domain.Types.DispatcherHistory.DispatcherHistory {..}) = do
-    Beam.DispatcherHistoryT
-      { Beam.conductorCode = conductorCode,
+instance ToTType' Beam.VehicleActionHistory Domain.Types.VehicleActionHistory.VehicleActionHistory where
+  toTType' (Domain.Types.VehicleActionHistory.VehicleActionHistory {..}) = do
+    Beam.VehicleActionHistoryT
+      { Beam.action = action,
+        Beam.conductorCode = conductorCode,
         Beam.createdAt = createdAt,
         Beam.currentVehicle = currentVehicle,
         Beam.depotId = depotId,

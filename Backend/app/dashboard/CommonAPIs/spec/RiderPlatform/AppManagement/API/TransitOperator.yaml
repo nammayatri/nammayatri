@@ -23,6 +23,7 @@ imports:
   QueryBody: SharedLogic.External.Nandi.Types
   Value: Data.Aeson
   FilePath: EulerHS.Prelude
+  APISuccess: Kernel.Types.APISuccess
 
 importPackageOverrides:
   BecknV2.OnDemand.Enums: "beckn-spec"
@@ -294,6 +295,15 @@ apis:
         type: UpsertDeviceVehicleMappingReq
       response:
         type: UpsertDeviceVehicleMappingResp
+
+  - POST:
+      endpoint: /bus/{vehicleNumber}/unblock
+      name: TransitOperatorUnblockBus
+      auth: ApiAuthV2
+      params:
+        vehicleNumber: Text
+      response:
+        type: APISuccess
 
 types:
   DeviceVehicleMappingListRes:
