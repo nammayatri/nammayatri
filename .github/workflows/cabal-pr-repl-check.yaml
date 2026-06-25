@@ -71,7 +71,7 @@ jobs:
           echo "Original build path: $ORIGINAL_PATH"
           echo "original_path=$ORIGINAL_PATH" >> $GITHUB_ENV
 
-      - name: Restore repl artifacts
+      - name: Extract repl artifacts
         if: steps.artifact-check.outputs.found == 'true'
         run: |
           PR_CACHE_ROOT=/tmp/ny-pr-cache-${{ github.run_id }}
@@ -82,17 +82,6 @@ jobs:
           tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/rider.tar.zst        -C "$PR_CACHE_ROOT"
           tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/repl-support.tar.zst -C "$PR_CACHE_ROOT"
 
-          ln -sfn "$PR_CACHE_ROOT/dist-newrepl-driver" Backend/dist-newrepl-driver
-          ln -sfn "$PR_CACHE_ROOT/dist-newrepl-rider"  Backend/dist-newrepl-rider
-
-          HIE_CACHE="$PR_CACHE_ROOT/hie"
-          cd "$GITHUB_WORKSPACE/Backend"
-          grep -E '^[[:space:]]+(app|lib|test)' cabal.project | awk '{print $1}' | while read -r pkg; do
-            [ -d "$pkg" ] || continue
-            rm -rf "$pkg/.hie"
-            ln -sfn "$HIE_CACHE/$pkg" "$pkg/.hie"
-          done
-
           rm -f /tmp/ny-pr-artifacts/*.tar.zst
 
       - name: Repl check — dynamic-offer-driver-app
@@ -100,8 +89,9 @@ jobs:
         run: |
           CI_PROJECT_ROOT="$original_path"
           LOCAL_ROOT="$GITHUB_WORKSPACE"
-          # Hardcoded biriyani cabal dir path baked into setup-config files for test commit
+          # Paths baked into setup-config for the hardcoded test commit (biriyani runner-1)
           ORIGINAL_CABAL_DIR=/home/khuzema/ny-cabal-unoptimized-cache/ec2-nix-runner-biryani-1/main/.cabal-dir
+          ORIGINAL_DIST_DRIVER=/home/khuzema/ny-cabal-unoptimized-cache/ec2-nix-runner-biryani-1/main/dist-newrepl-driver
 
           nix develop .#backend --command \
             unshare --user --mount --map-root-user bash -c "
@@ -113,11 +103,18 @@ jobs:
               mount --bind /tmp/ny-pr-src $CI_PROJECT_ROOT
               mkdir -p $ORIGINAL_CABAL_DIR
               mount --bind $PR_CACHE_ROOT/.cabal-dir $ORIGINAL_CABAL_DIR
-              export CABAL_DIR=$ORIGINAL_CABAL_DIR
+              mkdir -p $ORIGINAL_DIST_DRIVER
+              mount --bind $PR_CACHE_ROOT/dist-newrepl-driver $ORIGINAL_DIST_DRIVER
               cd $CI_PROJECT_ROOT/Backend
+              grep -E '^[[:space:]]+(app|lib|test)' cabal.project | awk '{print \$1}' | while read -r pkg; do
+                [ -d \"\$pkg\" ] || continue
+                rm -rf \"\$pkg/.hie\"
+                ln -sfn \"$PR_CACHE_ROOT/hie/\$pkg\" \"\$pkg/.hie\"
+              done
+              export CABAL_DIR=$ORIGINAL_CABAL_DIR
               cabal repl dynamic-offer-driver-app \
                 --repl-options='-fno-code -fwrite-interface' \
-                --builddir=dist-newrepl-driver <<< ':quit'
+                --builddir=$ORIGINAL_DIST_DRIVER <<< ':quit'
             "
 
       - name: Repl check — rider-app
@@ -126,6 +123,7 @@ jobs:
           CI_PROJECT_ROOT="$original_path"
           LOCAL_ROOT="$GITHUB_WORKSPACE"
           ORIGINAL_CABAL_DIR=/home/khuzema/ny-cabal-unoptimized-cache/ec2-nix-runner-biryani-1/main/.cabal-dir
+          ORIGINAL_DIST_RIDER=/home/khuzema/ny-cabal-unoptimized-cache/ec2-nix-runner-biryani-1/main/dist-newrepl-rider
 
           nix develop .#backend --command \
             unshare --user --mount --map-root-user bash -c "
@@ -137,11 +135,18 @@ jobs:
               mount --bind /tmp/ny-pr-src $CI_PROJECT_ROOT
               mkdir -p $ORIGINAL_CABAL_DIR
               mount --bind $PR_CACHE_ROOT/.cabal-dir $ORIGINAL_CABAL_DIR
-              export CABAL_DIR=$ORIGINAL_CABAL_DIR
+              mkdir -p $ORIGINAL_DIST_RIDER
+              mount --bind $PR_CACHE_ROOT/dist-newrepl-rider $ORIGINAL_DIST_RIDER
               cd $CI_PROJECT_ROOT/Backend
+              grep -E '^[[:space:]]+(app|lib|test)' cabal.project | awk '{print \$1}' | while read -r pkg; do
+                [ -d \"\$pkg\" ] || continue
+                rm -rf \"\$pkg/.hie\"
+                ln -sfn \"$PR_CACHE_ROOT/hie/\$pkg\" \"\$pkg/.hie\"
+              done
+              export CABAL_DIR=$ORIGINAL_CABAL_DIR
               cabal repl rider-app \
                 --repl-options='-fno-code -fwrite-interface' \
-                --builddir=dist-newrepl-rider <<< ':quit'
+                --builddir=$ORIGINAL_DIST_RIDER <<< ':quit'
             "
 
       - name: Cleanup
