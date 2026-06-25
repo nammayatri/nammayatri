@@ -203,7 +203,7 @@ handler (UChangeServiceTierReq ChangeServiceTierReq {..}) = do
   let newFareParams = quote.fareParams
 
   -- Look up VehicleServiceTier config for AC/seating info
-  mbVehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow newVehicleServiceTier booking.merchantOperatingCityId booking.configInExperimentVersions (booking.area >>= SL.pickupSpecialZoneIdFromArea)
+  mbVehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow newVehicleServiceTier booking.merchantOperatingCityId (booking.area >>= SL.pickupSpecialZoneIdFromArea)
 
   -- Persist new fare params and update booking
   QFP.create newFareParams

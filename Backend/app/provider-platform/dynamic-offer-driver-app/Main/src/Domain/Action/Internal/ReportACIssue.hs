@@ -36,6 +36,6 @@ reportACIssue rideId apiKey = do
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
 
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId ride.merchantOperatingCityId Nothing Nothing
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId ride.merchantOperatingCityId Nothing
   incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers ride.merchantOperatingCityId ride.driverId
   return Success

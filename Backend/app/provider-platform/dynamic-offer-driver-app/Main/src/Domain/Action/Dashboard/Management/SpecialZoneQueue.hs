@@ -178,7 +178,7 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
   now <- getCurrentTime
   let queueRequestCutoff = addUTCTime (negate (2 * 60 * 60)) now
   -- Fetch VST configs for callout variant mapping.
-  cityServiceTiers <- CQVST.findAllByMerchantOpCityId _merchantOpCity.id Nothing (Just specialLocationId)
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityId _merchantOpCity.id (Just specialLocationId)
   let -- Build callout variants per VST, fallback to castServiceTierToVariant
       getCalloutVars vst =
         if null vst.specialZoneQueueCalloutVariants

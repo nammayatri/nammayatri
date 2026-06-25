@@ -153,7 +153,7 @@ buildMapDriverInfo country (mbRideId, position, driverInformation) = do
       pure $ Kernel.Prelude.listToMaybe profilePhotos >>= \photo -> Just photo.id.getId
 
     vehicleIconURL <- do
-      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId Nothing Nothing
+      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId Nothing
       let mbServiceTier = find (\vst -> vehicle.variant `elem` vst.allowedVehicleVariant) cityVehicleServiceTiers
       pure $ mbServiceTier >>= (.vehicleIconUrl) >>= \url -> Just $ show url
 

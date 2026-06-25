@@ -186,7 +186,7 @@ computeAirportPerKmFare ::
   [DV.VehicleVariant] -> -- callout variants
   m (Maybe HighPrecMoney)
 computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId calloutVariants = do
-  cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing Nothing
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
   let eligibleServiceTiers =
         [ vst.serviceTierType
           | vst <- cityServiceTiers,
@@ -728,7 +728,7 @@ getCalloutVariantsForTier ::
 getCalloutVariantsForTier merchantOpCityId mbSlId mbServiceTier variantFallback =
   case mbServiceTier of
     Just st -> do
-      mbVst <- CQVST.findByServiceTierTypeAndCityId st merchantOpCityId Nothing mbSlId
+      mbVst <- CQVST.findByServiceTierTypeAndCityId st merchantOpCityId mbSlId
       let calloutVars = maybe [] (.specialZoneQueueCalloutVariants) mbVst
       if null calloutVars
         then pure [DV.castServiceTierToVariant st]

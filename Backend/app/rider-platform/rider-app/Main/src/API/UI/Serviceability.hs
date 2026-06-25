@@ -15,7 +15,8 @@
 module API.UI.Serviceability
   ( API,
     handler,
-    ServiceabilityReq (..),
+    OriginServiceabilityReq (..),
+    DestinationServiceabilityReq (..),
     DServiceability.ServiceabilityRes (..),
   )
 where
@@ -26,6 +27,7 @@ import Domain.Types.Person as Person
 import Environment
 import Kernel.External.Maps.Types
 import Kernel.Prelude
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
@@ -42,18 +44,26 @@ type API =
   "serviceability"
     :> TokenAuth
     :> ( "origin"
-           :> ReqBody '[JSON] ServiceabilityReq
+           :> ReqBody '[JSON] OriginServiceabilityReq
            :> Post '[JSON] DServiceability.ServiceabilityRes
            :<|> "destination"
-             :> ReqBody '[JSON] ServiceabilityReq
+             :> ReqBody '[JSON] DestinationServiceabilityReq
              :> Post '[JSON] DServiceability.ServiceabilityRes
            :<|> "isInterCity"
              :> ReqBody '[JSON] BPPInternal.IsIntercityReq
              :> Post '[JSON] BPPInternal.IsIntercityResp
        )
 
-newtype ServiceabilityReq = ServiceabilityReq
+newtype OriginServiceabilityReq = OriginServiceabilityReq
   { location :: LatLong
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data DestinationServiceabilityReq = DestinationServiceabilityReq
+  { location :: LatLong,
+    originLocation :: Maybe LatLong,
+    originCity :: Maybe Context.City,
+    originState :: Maybe Context.IndianState
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -66,18 +76,18 @@ handler regToken =
 checkOrignServiceability ::
   (GeofencingConfig -> GeoRestriction) ->
   (Id Person.Person, Id Merchant.Merchant) ->
-  ServiceabilityReq ->
+  OriginServiceabilityReq ->
   FlowHandler DServiceability.ServiceabilityRes
-checkOrignServiceability settingAccessor (personId, merchantId) ServiceabilityReq {..} = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
+checkOrignServiceability settingAccessor (personId, merchantId) OriginServiceabilityReq {..} = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
   DServiceability.checkServiceability settingAccessor (personId, merchantId) location True True
 
 checkDestinationServiceability ::
   (GeofencingConfig -> GeoRestriction) ->
   (Id Person.Person, Id Merchant.Merchant) ->
-  ServiceabilityReq ->
+  DestinationServiceabilityReq ->
   FlowHandler DServiceability.ServiceabilityRes
-checkDestinationServiceability settingAccessor (personId, merchantId) ServiceabilityReq {..} = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
-  DServiceability.checkServiceability settingAccessor (personId, merchantId) location True False
+checkDestinationServiceability settingAccessor (personId, merchantId) DestinationServiceabilityReq {..} = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
+  DServiceability.checkDestinationServiceability settingAccessor (personId, merchantId) location originLocation originCity originState True
 
 checkForIsInterCity ::
   (Id Person.Person, Id Merchant.Merchant) ->

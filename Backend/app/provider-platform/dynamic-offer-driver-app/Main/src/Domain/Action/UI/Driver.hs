@@ -1246,7 +1246,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId, identit
     case vehicleMB of
       Nothing -> return (False, Nothing, False)
       Just vehicle -> do
-        cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing Nothing
+        cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
         let (ac, mbTier, supported) = getDriverDefaultServiceTier vehicle driverInfo transporterConfig supportedServiceTiers cityServiceTiers now
         return (ac, (.serviceTierType) <$> mbTier, supported)
   onRideFlag <-

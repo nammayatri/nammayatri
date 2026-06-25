@@ -88,7 +88,7 @@ fetchVehicleTierForDriverWithUsageRestriction onlyAutoSelected mbDriverInfo mbVe
   driverInfo <- maybe (QDI.findById personId >>= fromMaybeM DriverInfoNotFound) pure mbDriverInfo
   vehicle <- maybe (QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)) pure mbVehicle
   rating <- maybe ((>>= (.rating)) <$> QDriverStats.findById vehicle.driverId) pure mbRating
-  cityServiceTiers <- maybe (CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing Nothing) pure mbCityServiceTiers
+  cityServiceTiers <- maybe (CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing) pure mbCityServiceTiers
   now <- getCurrentTime
   pure $ selectVehicleTierForDriverWithUsageRestriction onlyAutoSelected driverInfo vehicle cityServiceTiers rating now
 

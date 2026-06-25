@@ -407,7 +407,7 @@ rideAssignedCommon booking ride driver veh = do
     case (isTierUpgradeFeatureEnabled, mbTransporterConfig) of
       (True, Just transporterConfig) -> do
         let bookedTier = booking.vehicleServiceTier
-        cityTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow booking.merchantOperatingCityId [] Nothing
+        cityTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow booking.merchantOperatingCityId Nothing
         supportedServiceTiers <- CQFP.findSupportedServiceTiersByMerchantOpCityId booking.merchantOperatingCityId
         now <- getCurrentTime
         let mbBookedCfg = DL.find (\t -> t.serviceTierType == bookedTier) cityTiers
@@ -769,7 +769,7 @@ sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
   isValueAddNP <- CValueAddNP.isValueAddNP searchReq.bapId
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show transporter.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier))
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback driverQuote.id.getId
-  vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchTry.merchantOperatingCityId searchReq.configInExperimentVersions (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound $ show driverQuote.vehicleServiceTier)
+  vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchTry.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound $ show driverQuote.vehicleServiceTier)
   callOnSelectV2 transporter searchReq srfd searchTry =<< (buildOnSelectReq transporter vehicleServiceTierItem searchReq driverQuote isValueAddNP <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter farePolicy)
   where
     buildOnSelectReq ::

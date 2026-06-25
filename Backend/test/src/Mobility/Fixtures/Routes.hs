@@ -45,7 +45,8 @@ defaultSearchReq =
         isReserveRide = Nothing,
         verifyBeforeCancellingOldBooking = Just True,
         numberOfLuggages = Nothing,
-        doMultimodalSearch = Nothing
+        doMultimodalSearch = Nothing,
+        city = Nothing
       }
 
 defaultSearchReqAddress :: LocationAddress
@@ -121,7 +122,8 @@ searchReqFromUpdatesList updList =
               isReserveRide = Nothing,
               verifyBeforeCancellingOldBooking = Just True,
               numberOfLuggages = Nothing,
-              doMultimodalSearch = Nothing
+              doMultimodalSearch = Nothing,
+              city = Nothing
             }
    in (origin, destination, req)
 
@@ -151,7 +153,8 @@ mkSearchReqFromLocations origin destination =
               isReserveRide = Nothing,
               verifyBeforeCancellingOldBooking = Just True,
               numberOfLuggages = Nothing,
-              doMultimodalSearch = Nothing
+              doMultimodalSearch = Nothing,
+              city = Nothing
             }
    in (origin, destination, req)
 
