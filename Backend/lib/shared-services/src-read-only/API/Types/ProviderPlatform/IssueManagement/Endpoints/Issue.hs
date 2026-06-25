@@ -24,7 +24,7 @@ import qualified Kernel.Types.Id
 import Servant hiding (Summary)
 import Servant.Client
 
-type API = ("issue" :> (GetIssueCategoryList :<|> GetIssueList :<|> GetIssueInfo :<|> GetIssueInfoV2 :<|> PutIssueUpdateHelper :<|> PostIssueCommentHelper :<|> GetIssueMedia :<|> PostIssueTicketStatusCallBack :<|> PostIssueCategoryCreate :<|> PostIssueCategoryUpdate :<|> PostIssueOptionCreate :<|> PostIssueOptionUpdate :<|> PostIssueMessageUpsert :<|> PostIssueChatMessageHelper :<|> GetIssueChatMessages :<|> PostIssueChatRead))
+type API = ("issue" :> (GetIssueCategoryList :<|> GetIssueList :<|> GetIssueInfo :<|> GetIssueInfoV2 :<|> PutIssueUpdateHelper :<|> PostIssueChatUpload :<|> PostIssueCommentHelper :<|> GetIssueMedia :<|> PostIssueTicketStatusCallBack :<|> PostIssueCategoryCreate :<|> PostIssueCategoryUpdate :<|> PostIssueOptionCreate :<|> PostIssueOptionUpdate :<|> PostIssueMessageUpsert :<|> PostIssueChatMessageHelper :<|> GetIssueChatMessages :<|> PostIssueChatRead))
 
 type GetIssueCategoryList = ("category" :> Get '[JSON] IssueManagement.Common.Dashboard.Issue.IssueCategoryListRes)
 
@@ -88,6 +88,13 @@ type PutIssueUpdateHelper =
            '[JSON]
            IssueManagement.Common.Dashboard.Issue.IssueUpdateByUserReq
       :> Put '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
+
+type PostIssueChatUpload =
+  ( "upload" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp IssueManagement.Common.UI.Issue.IssueMediaUploadReq
+      :> Post
+           '[JSON]
+           IssueManagement.Common.UI.Issue.IssueMediaUploadRes
   )
 
 type PostIssueComment =
@@ -197,6 +204,7 @@ data IssueAPIs = IssueAPIs
     getIssueInfo :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueInfoDRes,
     getIssueInfoV2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueInfoDRes,
     putIssueUpdate :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.IssueUpdateByUserReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postIssueChatUpload :: (Data.ByteString.Lazy.ByteString, IssueManagement.Common.UI.Issue.IssueMediaUploadReq) -> EulerHS.Types.EulerClient IssueManagement.Common.UI.Issue.IssueMediaUploadRes,
     postIssueComment :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.IssueAddCommentByUserReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getIssueMedia :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Prelude.Text,
     postIssueTicketStatusCallBack :: Data.Aeson.Value -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
@@ -217,7 +225,7 @@ data IssueAPIs = IssueAPIs
 mkIssueAPIs :: (Client EulerHS.Types.EulerClient API -> IssueAPIs)
 mkIssueAPIs issueClient = (IssueAPIs {..})
   where
-    getIssueCategoryList :<|> getIssueList :<|> getIssueInfo :<|> getIssueInfoV2 :<|> putIssueUpdate :<|> postIssueComment :<|> getIssueMedia :<|> postIssueTicketStatusCallBack :<|> postIssueCategoryCreate :<|> postIssueCategoryUpdate :<|> postIssueOptionCreate :<|> postIssueOptionUpdate :<|> postIssueMessageUpsert :<|> postIssueChatMessage :<|> getIssueChatMessages :<|> postIssueChatRead = issueClient
+    getIssueCategoryList :<|> getIssueList :<|> getIssueInfo :<|> getIssueInfoV2 :<|> putIssueUpdate :<|> postIssueChatUpload :<|> postIssueComment :<|> getIssueMedia :<|> postIssueTicketStatusCallBack :<|> postIssueCategoryCreate :<|> postIssueCategoryUpdate :<|> postIssueOptionCreate :<|> postIssueOptionUpdate :<|> postIssueMessageUpsert :<|> postIssueChatMessage :<|> getIssueChatMessages :<|> postIssueChatRead = issueClient
 
 data IssueUserActionType
   = GET_ISSUE_CATEGORY_LIST
@@ -225,6 +233,7 @@ data IssueUserActionType
   | GET_ISSUE_INFO
   | GET_ISSUE_INFO_V2
   | PUT_ISSUE_UPDATE
+  | POST_ISSUE_CHAT_UPLOAD
   | POST_ISSUE_COMMENT
   | GET_ISSUE_MEDIA
   | POST_ISSUE_TICKET_STATUS_CALL_BACK

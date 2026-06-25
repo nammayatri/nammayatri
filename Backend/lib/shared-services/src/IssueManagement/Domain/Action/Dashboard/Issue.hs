@@ -567,6 +567,33 @@ issueFetchMedia :: (HasField "s3Env" r (S3.S3Env m), MonadReader r m, BeamFlow m
 issueFetchMedia _ filePath =
   S3.get $ T.unpack filePath
 
+-- | Operator-side chat media upload. Mirrors the customer-facing 'issueMediaUpload''
+-- flow but skips the per-person identifier lookup: the file is stored under an
+-- "operator" namespace so dashboard-originated attachments are distinguishable
+-- from rider/driver uploads in S3. Returns the new MediaFile id which the caller
+-- threads into 'SendChatMessageByUserReq.mediaFileIds'.
+issueChatUpload ::
+  ( BeamFlow m r,
+    MonadTime m,
+    MonadReader r m,
+    HasField "s3Env" r (S3.S3Env m)
+  ) =>
+  ShortId Merchant ->
+  Context.City ->
+  ServiceHandle m ->
+  CommonUI.IssueMediaUploadReq ->
+  Identifier ->
+  m CommonUI.IssueMediaUploadRes
+issueChatUpload merchantShortId opCity issueHandle req identifier = do
+  merchantOpCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show opCity)
+  config <- issueHandle.findMerchantConfig merchantOpCity.merchantId merchantOpCity.id Nothing
+  let identifierPath = case identifier of
+        CUSTOMER -> "operator-customer"
+        DRIVER -> "operator-driver"
+  UIR.mediaUploadToS3 config.mediaFileSizeUpperLimit config.mediaFileUrlPattern req "issue-media" identifierPath
+
 ticketStatusCallBack ::
   ( Esq.EsqDBReplicaFlow m r,
     BeamFlow m r

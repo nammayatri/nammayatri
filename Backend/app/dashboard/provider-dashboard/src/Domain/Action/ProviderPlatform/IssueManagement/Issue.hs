@@ -17,6 +17,7 @@ module Domain.Action.ProviderPlatform.IssueManagement.Issue
     getIssueChatMessages,
     postIssueChatRead,
     postIssueChatMessage,
+    postIssueChatUpload,
   )
 where
 
@@ -175,6 +176,15 @@ getIssueMedia :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kern
 getIssueMedia merchantShortId opCity apiTokenInfo filePath = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueMedia) filePath
+
+postIssueChatUpload :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.UI.Issue.IssueMediaUploadReq -> Environment.Flow IssueManagement.Common.UI.Issue.IssueMediaUploadRes)
+postIssueChatUpload merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.IssueManagement.callIssueManagementAPI
+    checkedMerchantId
+    opCity
+    (Dashboard.Common.addMultipartBoundary "XXX00XXX" . (.issueDSL.postIssueChatUpload))
+    req
 
 postIssueTicketStatusCallBack :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Data.Aeson.Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postIssueTicketStatusCallBack merchantShortId opCity apiTokenInfo req = do
