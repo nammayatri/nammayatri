@@ -31,7 +31,8 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RewardCampaignExtra as QRCmpE
 import qualified Storage.Queries.RewardCohort as QRC
@@ -61,7 +62,7 @@ evaluateRewardsIfEnabled ::
   UTCTime ->
   m ()
 evaluateRewardsIfEnabled riderId moCityId completedAt = do
-  enabled <- maybe False (.enableRewardsManagement) <$> CQRC.findByMerchantOperatingCityId moCityId
+  enabled <- maybe False (.enableRewardsManagement) <$> getConfig (RiderDimensions {merchantOperatingCityId = moCityId.getId})
   when enabled $ evaluateRewardsForRider riderId moCityId completedAt
 
 evaluateRewardsForRider ::
