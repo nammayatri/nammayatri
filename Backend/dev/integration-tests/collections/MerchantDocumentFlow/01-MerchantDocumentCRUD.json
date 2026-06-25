@@ -13,8 +13,8 @@
           { "key": "token", "value": "{{dashboard_token}}" }
         ],
         "url": {
-          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/list?role=\"Driver\"&language=en",
-          "host": ["{{dashboard_url}}"],
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/list?role=\"Driver\"&language=en",
+          "host": ["{{dashboard_base_url}}"],
           "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "list"],
           "query": [
             { "key": "role", "value": "\"Driver\"" },
@@ -51,8 +51,8 @@
           "raw": "{\"id\": \"{{existing_doc_id}}\"}"
         },
         "url": {
-          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/delete",
-          "host": ["{{dashboard_url}}"],
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/delete",
+          "host": ["{{dashboard_base_url}}"],
           "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "delete"]
         }
       },
@@ -146,8 +146,8 @@
           "raw": "{\n    \"documentType\": \"TermsAndConditions\",\n    \"role\": \"Driver\",\n    \"language\": \"ENGLISH\",\n    \"url\": \"https://example.com/tos-integration-test.html\",\n    \"title\": \"Integration Test TOS\",\n    \"city\": null\n}"
         },
         "url": {
-          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/create",
-          "host": ["{{dashboard_url}}"],
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/create",
+          "host": ["{{dashboard_base_url}}"],
           "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "create"]
         }
       },
@@ -178,8 +178,8 @@
           { "key": "token", "value": "{{dashboard_token}}" }
         ],
         "url": {
-          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/list?role=\"Driver\"&language=en",
-          "host": ["{{dashboard_url}}"],
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/list?role=\"Driver\"&language=en",
+          "host": ["{{dashboard_base_url}}"],
           "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "list"],
           "query": [
             { "key": "role", "value": "\"Driver\"" },
@@ -212,8 +212,8 @@
           { "key": "token", "value": "{{dashboard_token}}" }
         ],
         "url": {
-          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/TermsAndConditions?role=\"Driver\"&language=en",
-          "host": ["{{dashboard_url}}"],
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/TermsAndConditions?role=\"Driver\"&language=en",
+          "host": ["{{dashboard_base_url}}"],
           "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "TermsAndConditions"],
           "query": [
             { "key": "role", "value": "\"Driver\"" },
@@ -311,8 +311,8 @@
           "raw": "{\n    \"id\": \"{{created_doc_id}}\",\n    \"url\": \"https://example.com/tos-updated.html\",\n    \"title\": \"Integration Test TOS (Updated)\"\n}"
         },
         "url": {
-          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/update",
-          "host": ["{{dashboard_url}}"],
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/update",
+          "host": ["{{dashboard_base_url}}"],
           "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "update"]
         }
       },
@@ -339,8 +339,8 @@
           { "key": "token", "value": "{{dashboard_token}}" }
         ],
         "url": {
-          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/TermsAndConditions?role=\"Driver\"&language=en",
-          "host": ["{{dashboard_url}}"],
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/TermsAndConditions?role=\"Driver\"&language=en",
+          "host": ["{{dashboard_base_url}}"],
           "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "TermsAndConditions"],
           "query": [
             { "key": "role", "value": "\"Driver\"" },
@@ -376,8 +376,8 @@
           "raw": "{\n    \"id\": \"{{created_doc_id}}\"\n}"
         },
         "url": {
-          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/delete",
-          "host": ["{{dashboard_url}}"],
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/delete",
+          "host": ["{{dashboard_base_url}}"],
           "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "delete"]
         }
       },
@@ -402,8 +402,8 @@
           { "key": "token", "value": "{{dashboard_token}}" }
         ],
         "url": {
-          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/list?role=\"Driver\"&language=en",
-          "host": ["{{dashboard_url}}"],
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/list?role=\"Driver\"&language=en",
+          "host": ["{{dashboard_base_url}}"],
           "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "list"],
           "query": [
             { "key": "role", "value": "\"Driver\"" },

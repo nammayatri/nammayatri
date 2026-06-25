@@ -103,7 +103,6 @@ const URL_VAR_TO_SERVICE: Record<string, { service: ParsedStep['service']; strip
   'baseUrl_dashboard': { service: 'rider' },
   'mockServerUrl': { service: 'mock-server' },
   'mock_server_url': { service: 'juspay-payment' },
-  'dashboard_url': { service: 'provider-dashboard' },
 };
 
 // ── Parser ──
