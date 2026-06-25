@@ -39,6 +39,7 @@ library
       Domain.Action.RiderPlatform.AppManagement.Passetto
       Domain.Action.RiderPlatform.AppManagement.PassOrganization
       Domain.Action.RiderPlatform.AppManagement.Payment
+      Domain.Action.RiderPlatform.AppManagement.SeatLayout
       Domain.Action.RiderPlatform.AppManagement.StopRouteDetails
       Domain.Action.RiderPlatform.AppManagement.TicketDashboard
       Domain.Action.RiderPlatform.AppManagement.Tickets
@@ -86,6 +87,7 @@ library
       API.Action.RiderPlatform.AppManagement.Passetto
       API.Action.RiderPlatform.AppManagement.PassOrganization
       API.Action.RiderPlatform.AppManagement.Payment
+      API.Action.RiderPlatform.AppManagement.SeatLayout
       API.Action.RiderPlatform.AppManagement.StopRouteDetails
       API.Action.RiderPlatform.AppManagement.TicketDashboard
       API.Action.RiderPlatform.AppManagement.Tickets

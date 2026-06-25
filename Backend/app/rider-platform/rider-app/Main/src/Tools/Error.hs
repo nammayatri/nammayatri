@@ -14,6 +14,7 @@
 
 module Tools.Error (module Tools.Error, SearchCancelErrors (..)) where
 
+import qualified Data.Text as T
 import EulerHS.Prelude
 import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Error as Tools.Error
@@ -1326,3 +1327,53 @@ instance IsHTTPError AddBaggageError where
     AddBaggageNegativeCount -> E400
 
 instance IsAPIError AddBaggageError
+
+data SeatLayoutError
+  = SeatLayoutNotFound
+  | SeatNotFound [Text]
+  | SeatLayoutAlreadyExists
+  | SeatLayoutInUseCannotModify
+  | InvalidSeatPosition [(Int, Int)]
+  | DuplicateSeatPosition [(Int, Int)]
+  | DuplicateSeatLabel [Text]
+  | InvalidSeatLayoutDimensions
+  | InvalidSleeperSeatPosition [(Int, Int)]
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''SeatLayoutError
+
+instance IsBaseError SeatLayoutError where
+  toMessage = \case
+    SeatLayoutNotFound -> Just "Seat layout not found."
+    SeatNotFound ids -> Just $ "Seats not found in this layout: " <> T.intercalate ", " ids
+    SeatLayoutAlreadyExists -> Just "A seat layout with the given ID already exists."
+    SeatLayoutInUseCannotModify -> Just "Seat layout is currently assigned to vehicles and cannot be modified or deleted."
+    InvalidSeatPosition positions -> Just $ "Seats out of bounds: " <> T.intercalate ", " (map show positions)
+    DuplicateSeatPosition positions -> Just $ "Duplicate seat positions: " <> T.intercalate ", " (map show positions)
+    DuplicateSeatLabel labels -> Just $ "Duplicate seat labels: " <> T.intercalate ", " labels
+    InvalidSeatLayoutDimensions -> Just "Seat layout dimensions must be at least 1x1."
+    InvalidSleeperSeatPosition positions -> Just $ "Sleeper seat overlaps/out-of-bounds at: " <> T.intercalate ", " (map show positions)
+
+instance IsHTTPError SeatLayoutError where
+  toErrorCode = \case
+    SeatLayoutNotFound -> "SEAT_LAYOUT_NOT_FOUND"
+    SeatNotFound _ -> "SEAT_NOT_FOUND"
+    SeatLayoutAlreadyExists -> "SEAT_LAYOUT_ALREADY_EXISTS"
+    SeatLayoutInUseCannotModify -> "SEAT_LAYOUT_IN_USE_CANNOT_MODIFY"
+    InvalidSeatPosition _ -> "INVALID_SEAT_POSITION"
+    DuplicateSeatPosition _ -> "DUPLICATE_SEAT_POSITION"
+    DuplicateSeatLabel _ -> "DUPLICATE_SEAT_LABEL"
+    InvalidSeatLayoutDimensions -> "INVALID_SEAT_LAYOUT_DIMENSIONS"
+    InvalidSleeperSeatPosition _ -> "INVALID_SLEEPER_SEAT_POSITION"
+  toHttpCode = \case
+    SeatLayoutNotFound -> E400
+    SeatNotFound _ -> E400
+    SeatLayoutAlreadyExists -> E409
+    SeatLayoutInUseCannotModify -> E409
+    InvalidSeatPosition _ -> E400
+    DuplicateSeatPosition _ -> E400
+    DuplicateSeatLabel _ -> E400
+    InvalidSeatLayoutDimensions -> E400
+    InvalidSleeperSeatPosition _ -> E400
+
+instance IsAPIError SeatLayoutError
