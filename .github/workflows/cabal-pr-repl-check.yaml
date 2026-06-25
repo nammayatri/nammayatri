@@ -81,8 +81,8 @@ jobs:
 
           tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/driver.tar.zst -C "$PR_CACHE_ROOT"
           tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/rider.tar.zst  -C "$PR_CACHE_ROOT"
-          # Extract only hie/ from the full build tar (repl-support.tar.zst not yet available)
-          tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/dist-newstyle.tar.zst -C "$PR_CACHE_ROOT" hie/
+          # Extract hie/ and .cabal-dir/ from the full build tar (repl-support.tar.zst not yet available)
+          tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/dist-newstyle.tar.zst -C "$PR_CACHE_ROOT" hie/ .cabal-dir/
           rm -f /tmp/ny-pr-artifacts/dist-newstyle.tar.zst
 
           ln -sfn "$PR_CACHE_ROOT/dist-newrepl-driver" Backend/dist-newrepl-driver
@@ -103,20 +103,20 @@ jobs:
         run: |
           CI_PROJECT_ROOT="$original_path"
           LOCAL_ROOT="$GITHUB_WORKSPACE"
-          CI_CABAL_DIR="$PR_CACHE_ROOT/.cabal-dir"
+          # Hardcoded original cabal dir path baked into dist-newrepl-driver setup-config files
+          ORIGINAL_CABAL_DIR=/home/mdvenkatesh/ny-cabal-unoptimized-cache/ec2-nix-runner-pasta-1/main/.cabal-dir
 
           nix develop .#backend --command \
             unshare --user --mount --map-root-user bash -c "
               set -e
-              GHC_VER=\$(ghc --numeric-version)
               mkdir -p /tmp/ny-pr-src
               mount --bind $LOCAL_ROOT /tmp/ny-pr-src
               mount -t tmpfs tmpfs /home
               mkdir -p $CI_PROJECT_ROOT
               mount --bind /tmp/ny-pr-src $CI_PROJECT_ROOT
-              mkdir -p $CI_CABAL_DIR/store/ghc-\$GHC_VER
-              ghc-pkg init $CI_CABAL_DIR/store/ghc-\$GHC_VER/package.db 2>/dev/null || true
-              export CABAL_DIR=$CI_CABAL_DIR
+              mkdir -p $ORIGINAL_CABAL_DIR
+              mount --bind $PR_CACHE_ROOT/.cabal-dir $ORIGINAL_CABAL_DIR
+              export CABAL_DIR=$ORIGINAL_CABAL_DIR
               cd $CI_PROJECT_ROOT/Backend
               cabal repl dynamic-offer-driver-app \
                 --repl-options='-fno-code -fwrite-interface' \
@@ -128,20 +128,20 @@ jobs:
         run: |
           CI_PROJECT_ROOT="$original_path"
           LOCAL_ROOT="$GITHUB_WORKSPACE"
-          CI_CABAL_DIR="$PR_CACHE_ROOT/.cabal-dir"
+          # Hardcoded original cabal dir path baked into dist-newrepl-driver setup-config files
+          ORIGINAL_CABAL_DIR=/home/mdvenkatesh/ny-cabal-unoptimized-cache/ec2-nix-runner-pasta-1/main/.cabal-dir
 
           nix develop .#backend --command \
             unshare --user --mount --map-root-user bash -c "
               set -e
-              GHC_VER=\$(ghc --numeric-version)
               mkdir -p /tmp/ny-pr-src
               mount --bind $LOCAL_ROOT /tmp/ny-pr-src
               mount -t tmpfs tmpfs /home
               mkdir -p $CI_PROJECT_ROOT
               mount --bind /tmp/ny-pr-src $CI_PROJECT_ROOT
-              mkdir -p $CI_CABAL_DIR/store/ghc-\$GHC_VER
-              ghc-pkg init $CI_CABAL_DIR/store/ghc-\$GHC_VER/package.db 2>/dev/null || true
-              export CABAL_DIR=$CI_CABAL_DIR
+              mkdir -p $ORIGINAL_CABAL_DIR
+              mount --bind $PR_CACHE_ROOT/.cabal-dir $ORIGINAL_CABAL_DIR
+              export CABAL_DIR=$ORIGINAL_CABAL_DIR
               cd $CI_PROJECT_ROOT/Backend
               cabal repl rider-app \
                 --repl-options='-fno-code -fwrite-interface' \
