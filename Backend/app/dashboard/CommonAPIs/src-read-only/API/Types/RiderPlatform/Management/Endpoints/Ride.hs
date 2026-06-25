@@ -323,6 +323,9 @@ type GetRideList =
       :> QueryParam
            "to"
            Kernel.Prelude.UTCTime
+      :> QueryParam
+           "tripCategory"
+           Domain.Types.TripCategory
       :> Get
            '[JSON]
            RideListRes
@@ -383,7 +386,7 @@ type GetRideFlowDebugBap =
   )
 
 data RideAPIs = RideAPIs
-  { getRideList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe BookingStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient RideListRes,
+  { getRideList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe BookingStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Domain.Types.TripCategory -> EulerHS.Types.EulerClient RideListRes,
     getRideInfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideInfoRes,
     cancellationChargesWaiveOff :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient CancellationChargesWaiveOffRes,
     getShareRideInfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient ShareRideInfoRes,

@@ -33,6 +33,7 @@ where
 
 import qualified API.Client.ProviderPlatform.Management as Client
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
+import qualified Domain.Types as DTrip
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -80,11 +81,12 @@ getRideList ::
   Maybe (ShortId Common.Ride) ->
   Maybe UTCTime ->
   Maybe HighPrecMoney ->
+  Maybe DTrip.TripCategory ->
   Flow Common.RideListRes
-getRideList merchantShortId opCity apiTokenInfo bookingStatus currency customerCountryCode customerPhoneNo driverCountryCode driverId driverPhoneNo fleetOwnerId from fromAmount limit offset paymentMode rideId rideShortId to toAmount = do
+getRideList merchantShortId opCity apiTokenInfo bookingStatus currency customerCountryCode customerPhoneNo driverCountryCode driverId driverPhoneNo fleetOwnerId from fromAmount limit offset paymentMode rideId rideShortId to toAmount mbTripCategory = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let requestorId = apiTokenInfo.personId.getId
-  Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideList) requestorId bookingStatus currency customerCountryCode customerPhoneNo driverCountryCode driverId driverPhoneNo fleetOwnerId from fromAmount limit offset paymentMode rideId rideShortId to toAmount
+  Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideList) requestorId bookingStatus currency customerCountryCode customerPhoneNo driverCountryCode driverId driverPhoneNo fleetOwnerId from fromAmount limit offset paymentMode rideId rideShortId to toAmount mbTripCategory
 
 postRideEndMultiple :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.MultipleRideEndReq -> Flow Common.MultipleRideEndResp
 postRideEndMultiple merchantShortId opCity apiTokenInfo req = do

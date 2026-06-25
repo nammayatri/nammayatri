@@ -39,6 +39,7 @@ import qualified Domain.Action.Dashboard.Ride as DRide
 import qualified Domain.Action.Dashboard.RideFlowDebug as RideFlowDebug
 import qualified Domain.Action.UI.Ride.CancelRide as CHandler
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
+import qualified Domain.Types as DTC
 import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.Merchant as DM
@@ -80,12 +81,13 @@ getRideList ::
   Maybe (ShortId Common.Ride) ->
   Maybe UTCTime ->
   Maybe HighPrecMoney ->
+  Maybe DTC.TripCategory ->
   Flow Common.RideListRes
-getRideList merchantShortId opCity requestorId mbBookingStatus mbCurrency mbCustomerCountryCode mbCustomerPhone mbDriverCountryCode mbDriverId mbDriverPhone mbFleetOwnerId mbfrom mbFromAmount mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbToAmount = do
+getRideList merchantShortId opCity requestorId mbBookingStatus mbCurrency mbCustomerCountryCode mbCustomerPhone mbDriverCountryCode mbDriverId mbDriverPhone mbFleetOwnerId mbfrom mbFromAmount mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbToAmount mbTripCategory = do
   logInfo $ "Ride list requested by: " <> requestorId
   let customerCountryCode = DCommon.appendPlusInMobileCountryCode mbCustomerCountryCode
       driverCountryCode = DCommon.appendPlusInMobileCountryCode mbDriverCountryCode
-  DRide.getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount (getId <$> mbDriverId) customerCountryCode driverCountryCode requestorId
+  DRide.getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount (getId <$> mbDriverId) customerCountryCode driverCountryCode mbTripCategory requestorId
 
 getRideAgentList ::
   ShortId DM.Merchant ->
