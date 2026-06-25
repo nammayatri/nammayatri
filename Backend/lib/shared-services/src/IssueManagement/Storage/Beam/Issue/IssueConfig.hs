@@ -29,6 +29,7 @@ data IssueConfigT f = IssueConfigT
     onCreateIssueMsgs :: B.C f [Text],
     onIssueReopenMsgs :: B.C f [Text],
     onKaptMarkIssueResMsgs :: B.C f [Text],
+    onCustomerNotSatisfiedMsgs :: B.C f [Text],
     merchantId :: B.C f Text,
     messageTransformationConfig :: B.C f (Maybe DIC.MessageTransformationConfig),
     reopenCount :: B.C f Int,

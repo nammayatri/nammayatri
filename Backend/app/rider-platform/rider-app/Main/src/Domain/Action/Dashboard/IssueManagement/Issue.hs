@@ -132,7 +132,7 @@ putIssueUpdate ::
   IssueManagement.Common.Dashboard.Issue.IssueUpdateByUserReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 putIssueUpdate (Kernel.Types.Id.ShortId merchantShortId) city issueReportId req =
-  DIssue.issueUpdate (Kernel.Types.Id.ShortId merchantShortId) city (Kernel.Types.Id.cast issueReportId) dashboardIssueHandle req
+  DIssue.issueUpdate (Kernel.Types.Id.ShortId merchantShortId) city (Kernel.Types.Id.cast issueReportId) dashboardIssueHandle Common.CUSTOMER req
 
 postIssueComment ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

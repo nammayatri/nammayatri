@@ -208,6 +208,23 @@ data RideInfoRes = RideInfoRes
 data IssueStatus = OPEN | PENDING_INTERNAL | PENDING_EXTERNAL | RESOLVED | CLOSED | REOPENED | NOT_APPLICABLE
   deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON, ToParamSchema)
 
+-- | The customer's reaction to a post-resolution satisfaction prompt.
+-- ACCEPT  : customer confirms the issue is resolved (drives transition to CLOSED).
+-- ESCALATE: customer is not satisfied (drives the reopen-prompt branch / REOPENED).
+data CustomerResponse
+  = ACCEPT
+  | ESCALATE
+  deriving (Eq, Show, Ord, Read, Generic, ToSchema, FromJSON, ToJSON, ToParamSchema)
+
+instance FromHttpApiData CustomerResponse where
+  parseUrlPiece "accept" = pure ACCEPT
+  parseUrlPiece "escalate" = pure ESCALATE
+  parseUrlPiece _ = Left "Unable to parse customer response"
+
+instance ToHttpApiData CustomerResponse where
+  toUrlPiece ACCEPT = "accept"
+  toUrlPiece ESCALATE = "escalate"
+
 data FareBreakup = FareBreakup
   { amount :: Price,
     description :: Text,
@@ -222,6 +239,7 @@ data FareBreakupEntityType = BOOKING_UPDATE_REQUEST | BOOKING | RIDE | INITIAL_B
 $(mkBeamInstancesForEnumAndList ''VehicleVariant)
 $(mkBeamInstancesForEnum ''IssueStatus)
 $(mkHttpInstancesForEnum ''IssueStatus)
+$(mkBeamInstancesForEnum ''CustomerResponse)
 
 data ChatType = IssueMessage | IssueOption | MediaFile | IssueDescription
   deriving (Generic, FromJSON, ToSchema, ToJSON, Show, Read, Eq, Ord)

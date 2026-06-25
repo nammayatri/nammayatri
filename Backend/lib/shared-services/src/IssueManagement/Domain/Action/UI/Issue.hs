@@ -468,7 +468,8 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             chats = updatedChats,
             merchantId = Just merchantId,
             reopenedCount = 0,
-            becknIssueId
+            becknIssueId,
+            customerResponse = Nothing
           }
     createJsonMessage :: Text -> T.Text
     createJsonMessage descriptionText =
@@ -811,31 +812,51 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
     language <- getLanguage personId mbLanguage issueHandle
     issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
     mbRideInfoRes <- mapM (issueHandle.getRideInfo merchantId merchantOpCityId) issueReport.rideId
-    if issueReport.status /= NOT_APPLICABLE && issueReport.status /= status
-      then do
-        case status of
-          CLOSED -> do
-            QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
-            pure $
-              Common.IssueStatusUpdateRes
-                { messages = []
-                }
-          REOPENED -> do
-            QIR.updateIssueReopenedCount issueReportId (issueReport.reopenedCount + 1)
-            QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
-            updateTicketStatus issueReport TIT.Reopened merchantId merchantOpCityId issueHandle "Ticket reopened"
-            issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
-            issueMessageTranslation <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) issueConfig.onIssueReopenMsgs
-            let issueMessages = mkIssueMessageList (sequence issueMessageTranslation) language issueConfig mbRideInfoRes
-            now <- getCurrentTime
-            let updatedChats = issueReport.chats ++ map (\message -> mkIssueChat IssueMessage message.id.getId now) issueMessages
-            QIR.updateChats issueReportId updatedChats
-            pure $
-              Common.IssueStatusUpdateRes
-                { messages = issueMessages
-                }
-          _ -> throwError $ InternalError "Cannot Update Issue : Incorrect Status Provided"
-      else pure Common.IssueStatusUpdateRes {messages = []}
+    if issueReport.status == NOT_APPLICABLE
+      then pure Common.IssueStatusUpdateRes {messages = []}
+      else case (status, customerResponse) of
+        -- Customer answered "Not satisfied" to the post-resolution satisfaction prompt.
+        -- Keep status as RESOLVED and append the configured reopen-prompt messages so the
+        -- frontend can render "Do you want to reopen?" Yes/No. Idempotent: re-issuing the
+        -- same answer just re-fetches the same messages without growing the chat.
+        (RESOLVED, Just Common.ESCALATE) -> do
+          QIR.updateCustomerResponse issueReportId Common.ESCALATE
+          issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
+          issueMessageTranslation <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) issueConfig.onCustomerNotSatisfiedMsgs
+          let issueMessages = mkIssueMessageList (sequence issueMessageTranslation) language issueConfig mbRideInfoRes
+          now <- getCurrentTime
+          let newChatIds = map ((.getId) . (.id)) issueMessages
+              alreadyAppended = not (null newChatIds) && all (\cid -> any (\c -> c.chatId == cid) issueReport.chats) newChatIds
+              updatedChats =
+                if alreadyAppended
+                  then issueReport.chats
+                  else issueReport.chats ++ map (\message -> mkIssueChat IssueMessage message.id.getId now) issueMessages
+          unless alreadyAppended $ QIR.updateChats issueReportId updatedChats
+          pure $ Common.IssueStatusUpdateRes {messages = issueMessages}
+        _ | issueReport.status == status -> pure Common.IssueStatusUpdateRes {messages = []}
+        (CLOSED, _) -> do
+          QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
+          whenJust customerResponse $ QIR.updateCustomerResponse issueReportId
+          pure $
+            Common.IssueStatusUpdateRes
+              { messages = []
+              }
+        (REOPENED, _) -> do
+          QIR.updateIssueReopenedCount issueReportId (issueReport.reopenedCount + 1)
+          QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
+          whenJust customerResponse $ QIR.updateCustomerResponse issueReportId
+          updateTicketStatus issueReport TIT.Reopened merchantId merchantOpCityId issueHandle "Ticket reopened"
+          issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
+          issueMessageTranslation <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) issueConfig.onIssueReopenMsgs
+          let issueMessages = mkIssueMessageList (sequence issueMessageTranslation) language issueConfig mbRideInfoRes
+          now <- getCurrentTime
+          let updatedChats = issueReport.chats ++ map (\message -> mkIssueChat IssueMessage message.id.getId now) issueMessages
+          QIR.updateChats issueReportId updatedChats
+          pure $
+            Common.IssueStatusUpdateRes
+              { messages = issueMessages
+              }
+        _ -> throwError $ InternalError "Cannot Update Issue : Incorrect Status Provided"
 
 updateTicketStatus ::
   ( EncFlow m r,
@@ -1248,6 +1269,7 @@ toChatMessageItem identifier c = do
         chatContentType = c.chatContentType,
         text = c.message,
         mediaFiles = mediaFiles,
+        mediaFileIds = (.id) <$> mediaFiles,
         deliveredAt = Nothing,
         readAt = c.readAt,
         createdAt = c.createdAt

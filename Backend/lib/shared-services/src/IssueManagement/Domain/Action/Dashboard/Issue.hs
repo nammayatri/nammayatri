@@ -271,6 +271,7 @@ createIssueReportV2 _merchantShortId _city Common.IssueReportReqV2 {..} issueHan
             merchantId = Just (person.merchantId),
             reopenedCount = 0,
             becknIssueId = Nothing,
+            customerResponse = Nothing,
             ..
           }
 
@@ -446,16 +447,34 @@ issueUpdate ::
   Context.City ->
   Id DIR.IssueReport ->
   ServiceHandle m ->
+  Identifier ->
   Common.IssueUpdateByUserReq ->
   m APISuccess
-issueUpdate merchantShortId opCity issueReportId issueHandle req = do
+issueUpdate merchantShortId opCity issueReportId issueHandle identifier req = do
   unless (isJust req.status || isJust req.assignee) $
     throwError $ InvalidRequest "Empty request, no fields to update."
-  issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
-  merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
-  QIR.updateStatusAssignee issueReportId req.status req.assignee
-  whenJust req.assignee $ \assignee -> mkIssueAssigneeUpdateComment assignee merchantOpCity
-  pure Success
+  -- Take the same per-issue lock the customer-facing updateIssueStatus holds, so the
+  -- agent's status flip and the customer's prompt-response cannot interleave reads of
+  -- issue.chats and overwrite each other's appends.
+  Redis.withLockRedisAndReturnValue (UIR.makeIssueReportKey issueReportId) 60 $ do
+    issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+    merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
+    -- When the agent flips the issue to RESOLVED (or CLOSED) we must mirror what the
+    -- external TSP webhook path does: append the configured agent-resolved chat messages
+    -- so the customer's app sees the satisfaction prompt. Without this the prompt was
+    -- only ever surfaced when the legacy Kapture webhook fired.
+    effectiveStatus <- case req.status of
+      Just newStatus
+        | newStatus `elem` [RESOLVED, CLOSED] && issueReport.status /= newStatus -> do
+          -- Re-resolution starts a fresh satisfaction round: clear any stale
+          -- customerResponse so the agent UI doesn't keep showing a previous
+          -- ESCALATE/ACCEPT badge against the new prompt.
+          QIR.clearCustomerResponse issueReportId
+          Just <$> appendAgentResolvedChats issueReport newStatus merchantOpCity.id identifier
+      _ -> pure req.status
+    QIR.updateStatusAssignee issueReportId effectiveStatus req.assignee
+    whenJust req.assignee $ \assignee -> mkIssueAssigneeUpdateComment assignee merchantOpCity
+    pure Success
   where
     mkIssueAssigneeUpdateComment assignee merchantOpCity = do
       id <- generateGUID
@@ -470,6 +489,50 @@ issueUpdate merchantShortId opCity issueReportId issueHandle req = do
               createdAt = now,
               merchantId = Just merchantOpCity.merchantId
             }
+
+-- | Append the configured agent-resolved chat messages to an issue and return the
+-- effective status. If the customer has already hit the reopen cap we post the
+-- close messages and force CLOSED instead of RESOLVED — matching the cap behaviour
+-- in 'ticketStatusCallBack'. Shared between the dashboard agent-resolve path and
+-- the legacy external-TSP webhook path so both produce identical chat state.
+--
+-- Idempotent: if every selected message is already the tail of issue.chats we skip
+-- the write, so an accidental double-click from the agent dashboard or a webhook
+-- retry doesn't pollute the conversation with duplicate prompts.
+appendAgentResolvedChats ::
+  BeamFlow m r =>
+  DIR.IssueReport ->
+  IssueStatus ->
+  Id MerchantOperatingCity ->
+  Identifier ->
+  m IssueStatus
+appendAgentResolvedChats issueReport targetStatus merchantOpCityId identifier = do
+  issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
+  let shouldUseCloseMsgs =
+        targetStatus == CLOSED
+          || (targetStatus == RESOLVED && issueReport.reopenedCount >= issueConfig.reopenCount)
+      selectedMsgs = if shouldUseCloseMsgs then issueConfig.onIssueCloseMsgs else issueConfig.onKaptMarkIssueResMsgs
+      effectiveStatus = if shouldUseCloseMsgs then CLOSED else targetStatus
+  mbIssueMessages <- mapM (`CQIM.findById` identifier) selectedMsgs
+  let issueMessageIds = mapMaybe ((.id) <$>) mbIssueMessages
+      newChatIds = map (.getId) issueMessageIds
+      existingChatIds = map (.chatId) issueReport.chats
+      alreadyAppended = not (null newChatIds) && newChatIds `DL.isSuffixOf` existingChatIds
+  unless alreadyAppended $ do
+    now <- getCurrentTime
+    let updatedChats =
+          issueReport.chats
+            ++ map
+              ( \msgId ->
+                  Chat
+                    { chatType = IssueMessage,
+                      chatId = msgId.getId,
+                      timestamp = now
+                    }
+              )
+              issueMessageIds
+    QIR.updateChats issueReport.id updatedChats
+  pure effectiveStatus
 
 issueAddComment ::
   ( Esq.EsqDBReplicaFlow m r,
@@ -527,24 +590,9 @@ ticketStatusCallBack reqJson issueHandle identifier = do
             (return person.merchantOperatingCityId)
             return
             issueReport.merchantOperatingCityId
-        issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
-        let shouldUseCloseMsgs = issueReport.reopenedCount >= issueConfig.reopenCount
-            selectedMsgs = if shouldUseCloseMsgs then issueConfig.onIssueCloseMsgs else issueConfig.onKaptMarkIssueResMsgs
-        mbIssueMessages <- mapM (`CQIM.findById` identifier) selectedMsgs
-        let issueMessageIds = mapMaybe ((.id) <$>) mbIssueMessages
-        now <- getCurrentTime
-        let updatedChats =
-              issueReport.chats
-                ++ map
-                  ( \id ->
-                      Chat
-                        { chatType = IssueMessage,
-                          chatId = id.getId,
-                          timestamp = now
-                        }
-                  )
-                  issueMessageIds
-        -- Get ticket details and update issueChat
+        effectiveStatus <- appendAgentResolvedChats issueReport RESOLVED merchantOpCityId identifier
+        -- Pull the external ticket conversation snapshot and persist it onto the issue
+        -- chat (legacy webhook only — agent-internal flow already has chat in our DB).
         merchantId <- maybe (return person.merchantId) (const $ return person.merchantId) issueReport.merchantId
         kaptureData <- case issueHandle.kaptureGetTicket of
           Just getTicketFunc -> do
@@ -553,10 +601,8 @@ ticketStatusCallBack reqJson issueHandle identifier = do
               (firstTicket : _) -> Just firstTicket.conversationType.chat
               [] -> Nothing
           Nothing -> return Nothing
-        -- Use safe function to handle issue chat creation/update
         safeCreateOrUpdateIssueChatWithKapture req.ticketId issueReport.rideId issueReport.personId kaptureData (Just issueReport.id)
-        QIR.updateChats issueReport.id updatedChats
-        QIR.updateIssueStatus req.ticketId (if shouldUseCloseMsgs then CLOSED else transformedStatus)
+        QIR.updateIssueStatus req.ticketId effectiveStatus
       PENDING_EXTERNAL -> case (req.subStatus, req.queue, issueHandle.mbSendUnattendedTicketAlert) of
         (Just "Unattended", Just "SOS", Just sendUnattendedTicketAlert) -> sendUnattendedTicketAlert req.ticketId
         _ -> do
@@ -1536,6 +1582,7 @@ getIssueConfig merchantShortId city issueHandle identifier = do
         onIssueReopenMsgs = cast <$> issueConfig.onIssueReopenMsgs,
         onAutoMarkIssueClsMsgs = cast <$> issueConfig.onAutoMarkIssueClsMsgs,
         onKaptMarkIssueResMsgs = cast <$> issueConfig.onKaptMarkIssueResMsgs,
+        onCustomerNotSatisfiedMsgs = cast <$> issueConfig.onCustomerNotSatisfiedMsgs,
         onIssueCloseMsgs = cast <$> issueConfig.onIssueCloseMsgs,
         reopenCount = issueConfig.reopenCount,
         merchantName = issueConfig.messageTransformationConfig >>= (.merchantName),
@@ -1563,6 +1610,7 @@ updateIssueConfig merchantShortId city req issueHandle identifier = do
             DICFG.onIssueReopenMsgs = maybe issueConfig.onIssueReopenMsgs (map cast) req.onIssueReopenMsgs,
             DICFG.onAutoMarkIssueClsMsgs = maybe issueConfig.onAutoMarkIssueClsMsgs (map cast) req.onAutoMarkIssueClsMsgs,
             DICFG.onKaptMarkIssueResMsgs = maybe issueConfig.onKaptMarkIssueResMsgs (map cast) req.onKaptMarkIssueResMsgs,
+            DICFG.onCustomerNotSatisfiedMsgs = maybe issueConfig.onCustomerNotSatisfiedMsgs (map cast) req.onCustomerNotSatisfiedMsgs,
             DICFG.onIssueCloseMsgs = maybe issueConfig.onIssueCloseMsgs (map cast) req.onIssueCloseMsgs,
             DICFG.reopenCount = fromMaybe issueConfig.reopenCount req.reopenCount,
             DICFG.updatedAt = now
