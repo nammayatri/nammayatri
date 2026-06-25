@@ -30,7 +30,7 @@ import Data.Csv (HasHeader (..), decode)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Vector as V
-import qualified Domain.Action.Rewards.Producer as RewardsProducer
+import qualified Domain.Action.Rewards.Consumer as RewardsConsumer
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.RewardCampaign as DRCmp
@@ -316,7 +316,8 @@ postRewardsTriggerEval merchantShortId opCity personId = do
   unless (person.merchantId == merchant.id && person.merchantOperatingCityId == merchantOpCity.id) $
     throwError (PersonDoesNotExist personId.getId)
   now <- getCurrentTime
-  RewardsProducer.publishRewardEvalRequested (castId personId) merchantOpCity.id now
+  fork "Trigger rewards eval" $
+    RewardsConsumer.evaluateRewardsIfEnabled (castId personId) merchantOpCity.id now
   pure Success
 
 loadMerchantContext ::

@@ -15,13 +15,12 @@
 
 module Domain.Action.Rewards.Consumer
   ( evaluateRewardsForRider,
-    handleMessage,
+    evaluateRewardsIfEnabled,
   )
 where
 
 import qualified Domain.Action.Rewards.Coupon as Coupon
 import qualified Domain.Action.Rewards.Evaluator as Eval
-import qualified Domain.Action.Rewards.Producer as Producer
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RewardCampaign as DRCmp
@@ -32,6 +31,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RewardCampaignExtra as QRCmpE
 import qualified Storage.Queries.RewardCohort as QRC
@@ -45,13 +45,10 @@ import qualified Tools.Rewards.RiderContextReader as Ctx
 maxPushesPerMessage :: Int
 maxPushesPerMessage = 5
 
-dedupTtlSeconds :: Int
-dedupTtlSeconds = 3600
-
-dedupKey :: Id Producer.RewardEvent -> Text
-dedupKey eid = "rewards:event-dedup:" <> eid.getId
-
-handleMessage ::
+-- | Gated entry point: evaluate rewards for a rider iff the city has rewards
+-- management enabled. Mirrors the old producer's gate so it is a drop-in for both
+-- the ride-completion and triggerEval call sites. Callers should run it in a fork.
+evaluateRewardsIfEnabled ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
@@ -59,33 +56,13 @@ handleMessage ::
     ServiceFlow m r,
     EncFlow m r
   ) =>
-  Producer.RewardEvalRequested ->
+  Id DP.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
   m ()
-handleMessage Producer.RewardEvalRequested {eventId, riderId, merchantOperatingCityId, completedAt} = do
-  firstTime <- Hedis.setNxExpire (dedupKey eventId) dedupTtlSeconds ("1" :: Text)
-  if not firstTime
-    then
-      logInfo $
-        "rewards.consume.duplicate eventId="
-          <> eventId.getId
-          <> " riderId="
-          <> riderId.getId
-    else do
-      result <-
-        try @_ @SomeException $
-          evaluateRewardsForRider riderId merchantOperatingCityId completedAt
-      case result of
-        Right _ -> pure ()
-        Left e -> do
-          void $ Hedis.del (dedupKey eventId)
-          logError $
-            "rewards.consume.failed eventId="
-              <> eventId.getId
-              <> " riderId="
-              <> riderId.getId
-              <> " err="
-              <> show e
-          throwM e
+evaluateRewardsIfEnabled riderId moCityId completedAt = do
+  enabled <- maybe False (.enableRewardsManagement) <$> CQRC.findByMerchantOperatingCityId moCityId
+  when enabled $ evaluateRewardsForRider riderId moCityId completedAt
 
 evaluateRewardsForRider ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Hedis.HedisFlow m r, ServiceFlow m r, EncFlow m r) =>
