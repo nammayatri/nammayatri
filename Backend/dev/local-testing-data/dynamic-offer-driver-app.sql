@@ -341,4 +341,3 @@ WHERE m.short_id IN ('BRIDGE_FINLAND_PARTNER', 'BRIDGE_CABS_PARTNER')
     SELECT 1 FROM atlas_driver_offer_bpp.driver_bank_account dba
     WHERE dba.driver_id = md5(m.id || ':seed-driver-person')::uuid::text
   );
-
