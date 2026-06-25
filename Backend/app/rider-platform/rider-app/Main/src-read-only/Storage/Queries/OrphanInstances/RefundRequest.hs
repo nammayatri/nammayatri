@@ -19,6 +19,7 @@ instance FromTType' Beam.RefundRequest Domain.Types.RefundRequest.RefundRequest 
         Domain.Types.RefundRequest.RefundRequest
           { code = code,
             currency = currency,
+            deductFromDriver = deductFromDriver,
             description = description,
             evidenceS3Path = evidenceS3Path,
             id = Kernel.Types.Id.Id id,
@@ -44,6 +45,7 @@ instance ToTType' Beam.RefundRequest Domain.Types.RefundRequest.RefundRequest wh
     Beam.RefundRequestT
       { Beam.code = code,
         Beam.currency = currency,
+        Beam.deductFromDriver = deductFromDriver,
         Beam.description = description,
         Beam.evidenceS3Path = evidenceS3Path,
         Beam.id = Kernel.Types.Id.getId id,

@@ -243,6 +243,10 @@ class MockHandler(BaseHTTPRequestHandler):
         if path == "/mock/scheduler/clear" and self.command == "POST":
             return self._mock_scheduler_clear(body)
 
+        # ── RefundsFlow targeted reset (analogue of /mock/scheduler/clear) ──
+        if path == "/mock/refunds/clear" and self.command == "POST":
+            return self._mock_refunds_clear(body)
+
         # ── Route to service handler with middleware override check ──
         for prefix, module, svc_name in ROUTES:
             if prefix in path:
@@ -349,6 +353,11 @@ class MockHandler(BaseHTTPRequestHandler):
                 data = json.loads(body) if body else {}
             except json.JSONDecodeError:
                 return self._json({"error": "invalid JSON"}, status=400)
+
+            # Bodyless DELETE → clear ALL overrides (test reset); a body of {service,extract,value} removes just that one.
+            if not data:
+                status_store.clear_overrides()
+                return self._json({"ok": True, "cleared": "all"})
 
             service = data.get("service")
             extract = data.get("extract")
@@ -1052,6 +1061,106 @@ class MockHandler(BaseHTTPRequestHandler):
 
         return self._json({"removedJobs": removed_jobs, "removedLocks": removed_locks})
 
+    def _mock_refunds_clear(self, body):
+        """POST /mock/refunds/clear — reset the refund-flow rows for ONE ride so a RefundsFlow
+        scenario starts clean (the refund analogue of /mock/scheduler/clear; call it as the
+        first step of each 01-07). Mirrors task-docs/refunds-task/REFUNDS_RESET.sql: deletes
+        refund_request / refunds / Refund-type finance_invoice / refund finance_ledger_entry on
+        BOTH schemas, and flushes the refund/finance KV (the refund flow writes Redis-first, so a
+        Postgres-only delete would be resurrected on the next API read). KEEPS finance_account
+        (persistent, cached account ids) and the 'Ride' fare invoice (the BAP refund clones it).
+
+        Body: {"rideId": "...", "orderId": "...", "orderShortId": "...", "bppBookingId": "...",
+               "db_name": "atlas_dev" (opt), "redisPorts": [6379,30001,30002,30003] (opt)}
+        Returns: {"ok": true, "deleted": {"schema.table": rowcount, ...}, "kvDeleted": N}
+        """
+        from psycopg2 import sql as psql
+        import subprocess
+        try:
+            data = json.loads(body) if body else {}
+        except json.JSONDecodeError:
+            return self._json({"error": "invalid JSON"}, status=400)
+
+        ride_id = data.get("rideId")
+        order_id = data.get("orderId")
+        order_short_id = data.get("orderShortId")
+        bpp_booking_id = data.get("bppBookingId")
+        db_name = data.get("db_name", "atlas_dev")
+        if not (ride_id and order_id and order_short_id and bpp_booking_id):
+            return self._json({"error": "rideId, orderId, orderShortId, bppBookingId are required"}, status=400)
+
+        # ── 1. Postgres: delete refund rows on both schemas. KEEP finance_account + the 'Ride' invoice. ──
+        # (schema, table, where-col, value, optional extra (col, val) AND-condition)
+        deletes = [
+            ("atlas_app", "finance_ledger_entry", "reference_id", ride_id, None),
+            ("atlas_app", "finance_invoice", "reference_id", ride_id, ("invoice_type", "Refund")),
+            ("atlas_app", "refund_request", "order_id", order_id, None),
+            ("atlas_app", "refunds", "order_id", order_short_id, None),
+            ("atlas_driver_offer_bpp", "finance_ledger_entry", "reference_id", bpp_booking_id, None),
+            ("atlas_driver_offer_bpp", "finance_invoice", "reference_id", bpp_booking_id, None),
+        ]
+        deleted = {}
+        try:
+            conn = self._pg_connect(db_name)
+            try:
+                conn.autocommit = True
+                cur = conn.cursor()
+                for schema, table, col, val, extra in deletes:
+                    if extra is None:
+                        q = psql.SQL("DELETE FROM {s}.{t} WHERE {c} = %s").format(
+                            s=psql.Identifier(schema), t=psql.Identifier(table), c=psql.Identifier(col))
+                        cur.execute(q, (val,))
+                    else:
+                        q = psql.SQL("DELETE FROM {s}.{t} WHERE {c} = %s AND {c2} = %s").format(
+                            s=psql.Identifier(schema), t=psql.Identifier(table),
+                            c=psql.Identifier(col), c2=psql.Identifier(extra[0]))
+                        cur.execute(q, (val, extra[1]))
+                    deleted[f"{schema}.{table}"] = cur.rowcount
+                cur.close()
+            finally:
+                conn.close()
+        except Exception:
+            log.exception("refunds-clear: postgres error")
+            return self._json({"error": "internal server error (postgres)"}, status=500)
+
+        # ── 2. Redis: flush stale refund/finance KV (refund flow writes Redis-first; reads are KV-first, so a
+        # stale copy resurrects deleted rows AND carries the cumulative-refund total across runs). NOT finance_account*.
+        # KEY NAMING (verified live — the entity/KV prefix, NOT the snake_case table name):
+        #   refund_request -> refundRequest_* ; refunds -> refunds_* ;
+        #   finance_invoice -> invoice_*  (NOT finance_invoice! — invoice_id_/invoice_invoiceNumber_/invoice_referenceId_) ;
+        #   finance_ledger_entry -> ledgerEntry_*  (NOT finance_ledger_entry!).
+        # Those two prefix mismatches (invoice_, ledgerEntry_) are why the cumulative-refund total + ledger KV
+        # survived old resets. Lowercase *invoice_* deliberately does NOT match the CamelCase FinanceInvoiceSequence
+        # counter, so invoice numbers keep incrementing. NOT finance_account* (its balance is intentionally cumulative).
+        patterns = ["*refundRequest*", "*refunds_*", "*invoice_*", "*ledgerEntry*", "*refundLedger*"]
+        redis_ports = data.get("redisPorts") or [6379, 30001, 30002, 30003]
+        kv_deleted = 0
+        for port in redis_ports:
+            for pattern in patterns:
+                try:
+                    scan = subprocess.run(
+                        ["redis-cli", "-c", "-p", str(port), "--scan", "--pattern", pattern],
+                        capture_output=True, text=True, timeout=5,
+                    )
+                except (subprocess.TimeoutExpired, OSError):
+                    continue
+                if scan.returncode != 0:
+                    continue
+                for key in scan.stdout.splitlines():
+                    if not key.strip():
+                        continue
+                    try:
+                        rm = subprocess.run(
+                            ["redis-cli", "-c", "-p", str(port), "DEL", key],
+                            capture_output=True, text=True, timeout=5,
+                        )
+                        if rm.returncode == 0 and (rm.stdout.strip() or "0") != "0":
+                            kv_deleted += 1
+                    except (subprocess.TimeoutExpired, OSError):
+                        pass
+
+        return self._json({"ok": True, "deleted": deleted, "kvDeleted": kv_deleted})
+
     # ── Helpers ──
 
     def _read_body(self):
@@ -1123,7 +1232,7 @@ def main():
 
     server = _QuietThreadingHTTPServer(("0.0.0.0", args.port), MockHandler)
     log.info(f"Mock server running on :{args.port}")
-    log.info("APIs: POST/GET/DELETE /mock/override, POST /mock/sql/select, POST /mock/sql/update, POST /mock/sql/insert, POST /mock/scheduler/trigger, POST /mock/scheduler/peek, POST /mock/scheduler/clear")
+    log.info("APIs: POST/GET/DELETE /mock/override, POST /mock/sql/select, POST /mock/sql/update, POST /mock/sql/insert, POST /mock/scheduler/trigger, POST /mock/scheduler/peek, POST /mock/scheduler/clear, POST /mock/refunds/clear")
     log.info(f"Services: {', '.join(r[0].strip('/') for r in ROUTES)}")
     try:
         server.serve_forever()

@@ -794,6 +794,15 @@ getOrderIdForRide rideId = do
   mbOrder <- QPaymentOrder.findByDomainEntityId rideId.getId
   pure $ (.id) <$> mbOrder
 
+-- | Inverse of getOrderIdForRide: a refund_request's orderId is a payment_order id, NOT a ride id.
+--   payment_order.id is an independently generated GUID; the rideId is stored on the order's
+--   domainEntityId at creation. Resolve the ride via domainEntityId instead of casting the order
+--   GUID to a ride GUID (the two are never equal on real rides — only coincided on synthetic seeds).
+getRideIdForOrder :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DOrder.PaymentOrder -> m (Maybe (Id Ride.Ride))
+getRideIdForOrder orderId = do
+  mbOrder <- QPaymentOrder.findById orderId
+  pure $ Id <$> ((.domainEntityId) =<< mbOrder)
+
 -- | Retrieve ALL payment orders for a ride (ride PI + tip PI).
 --   Useful for capture, refund, and status operations that need to act on all orders.
 getAllOrdersForRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Ride.Ride -> m [DOrder.PaymentOrder]
@@ -1008,7 +1017,7 @@ makeRefundPayment merchantId merchantOpCityId paymentMode refundReq = do
   let refundCall = TPayment.refundPayment merchantId merchantOpCityId paymentMode Nothing
   DPayment.refundPaymentService refundReq refundCall
 
--- | Unified refund status check. Replaces refreshStripeRefund.
+-- | Refresh status for the given Refunds row. Nothing in mbRefundsId = no attempt yet → no refresh.
 getRefundStatusForOrder ::
   ( MonadFlow m,
     EncFlow m r,
@@ -1021,11 +1030,12 @@ getRefundStatusForOrder ::
   Id DMOC.MerchantOperatingCity ->
   Maybe DMPM.PaymentMode ->
   Id DOrder.PaymentOrder ->
+  Maybe (Id DRefunds.Refunds) ->
   m (Maybe Payment.RefundPaymentResp)
-getRefundStatusForOrder merchantId merchantOpCityId paymentMode orderId = do
+getRefundStatusForOrder merchantId merchantOpCityId paymentMode orderId mbRefundsId = do
   let getRefundStatusCall = TPayment.getRefundStatus merchantId merchantOpCityId paymentMode
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
-  DPayment.getRefundStatusService orderId commonMerchantOperatingCityId getRefundStatusCall
+  DPayment.getRefundStatusService orderId mbRefundsId commonMerchantOperatingCityId getRefundStatusCall
 
 paymentErrorHandler ::
   ( EncFlow m r,

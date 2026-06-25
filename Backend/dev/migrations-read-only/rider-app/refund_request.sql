@@ -21,3 +21,15 @@ ALTER TABLE atlas_app.refund_request ADD COLUMN transaction_id character varying
 ALTER TABLE atlas_app.refund_request ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.refund_request ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.refund_request ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.refund_request ADD COLUMN deduct_from_driver boolean ;
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY refund_request_idx_order_id ON atlas_app.refund_request USING btree (order_id);
+CREATE INDEX CONCURRENTLY refund_request_idx_refunds_id ON atlas_app.refund_request USING btree (refunds_id);
