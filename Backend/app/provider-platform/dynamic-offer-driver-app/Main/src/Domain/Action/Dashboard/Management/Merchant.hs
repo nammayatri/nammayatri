@@ -218,7 +218,6 @@ import qualified Storage.CachedQueries.PlanTranslation as SCQPT
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
-import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
 import Storage.ConfigPilot.Config.LeaderBoardConfigs (LeaderBoardConfigsDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
@@ -3507,12 +3506,12 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- go home config
   mbGoHomeConfig <-
-    getConfig (GoHomeConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) (Just (Just <$> CGHC.findByMerchantOpCityId newMerchantOperatingCityId Nothing)) >>= \case
-      Just _ -> return Nothing
-      Nothing -> do
-        goHomeConfig <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) (Just (Just <$> CGHC.findByMerchantOpCityId baseOperatingCityId Nothing)) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> baseOperatingCityId.getId)
+    withTryCatch "GoHomeConfig:findByMerchantOpCityId:postMerchantConfigOperatingCityCreate" (CGHC.findByMerchantOpCityId newMerchantOperatingCityId Nothing) >>= \case
+      Left _ -> do
+        goHomeConfig <- CGHC.findByMerchantOpCityId baseOperatingCityId Nothing
         let newGoHomeConfig = buildGoHomeConfig newMerchantId newMerchantOperatingCityId now goHomeConfig
         return $ Just newGoHomeConfig
+      Right _ -> return Nothing
 
   -- leader board configs
   mbLeaderBoardConfig <-
@@ -4330,9 +4329,15 @@ postMerchantConfigOperatingCityWhiteList _ _ req = do
   let whiteListOrgReq = WLO.WhiteListOrg {domain = bppDomain, id = whiteListOrgId, merchantId = Id merchantId, merchantOperatingCityId = Id merchantOperatingCityId, subscriberId = bapSubId, createdAt = now, updatedAt = now}
       valueAddNpReq = VNP.ValueAddNP {enabled = True, subscriberId = bapSubId.getShortId, createdAt = now, updatedAt = now}
       registryMapFallbackReq = RMF.RegistryMapFallback {registryUrl = nyRegistryBaseUrl, subscriberId = bapSubId.getShortId, uniqueId = bapUniqueKeyId}
-  QWLO.create whiteListOrgReq
-  SQVNP.create valueAddNpReq
-  QRMF.create registryMapFallbackReq
+  existingWhiteListOrg <- QWLO.findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId bapSubId bppDomain (Id merchantId) (Id merchantOperatingCityId)
+  when (isNothing existingWhiteListOrg) $ QWLO.create whiteListOrgReq
+  SQVNP.findByPrimaryKey bapSubId.getShortId >>= \case
+    Just existing ->
+      unless existing.enabled $
+        SQVNP.updateByPrimaryKey existing {VNP.enabled = True, VNP.updatedAt = now}
+    Nothing -> SQVNP.create valueAddNpReq
+  existingRegistryMapFallback <- QRMF.findByPrimaryKey bapSubId.getShortId bapUniqueKeyId
+  when (isNothing existingRegistryMapFallback) $ QRMF.create registryMapFallbackReq
   pure $
     Common.WhiteListOperatingCityRes
       { whiteListSuccess = True,
