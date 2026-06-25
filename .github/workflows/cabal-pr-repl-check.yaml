@@ -116,6 +116,7 @@ jobs:
               export CABAL_DIR=$CI_CABAL_DIR
               cd $CI_PROJECT_ROOT/Backend
               cabal repl dynamic-offer-driver-app \
+                --verbose=3 \
                 --repl-options='-fno-code -fwrite-interface' \
                 --builddir=dist-newrepl-driver <<< ':quit'
             "
@@ -141,6 +142,7 @@ jobs:
               export CABAL_DIR=$CI_CABAL_DIR
               cd $CI_PROJECT_ROOT/Backend
               cabal repl rider-app \
+                --verbose=3 \
                 --repl-options='-fno-code -fwrite-interface' \
                 --builddir=dist-newrepl-rider <<< ':quit'
             "
