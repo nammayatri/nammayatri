@@ -200,8 +200,17 @@ createPerson ::
   TokenInfo ->
   CreatePersonReq ->
   m CreatePersonRes
-createPerson _ personEntity = do
+createPerson tokenInfo personEntity = do
   runRequestValidation validateCreatePerson personEntity
+  callerPerson <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
+  callerRole <- QRole.findById callerPerson.roleId >>= fromMaybeM (RoleNotFound callerPerson.roleId.getId)
+  let roleId = personEntity.roleId
+  role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  unless (callerRole.dashboardAccessType == DRole.DASHBOARD_ADMIN || callerRole.name == "CITY_HEAD") $
+    throwError AccessDenied
+  when (callerRole.name == "CITY_HEAD") $
+    unless (role.name `elem` ["ASSOCIATE", "EXECUTIVE"]) $
+      throwError (InvalidRequest "CITY_HEAD can only create ASSOCIATE or EXECUTIVE users")
   enforceStrongPasswordPolicy <- asks (.enforceStrongPasswordPolicy)
   when enforceStrongPasswordPolicy $
     validateStrongPassword personEntity.password
@@ -217,8 +226,6 @@ createPerson _ personEntity = do
           (\(_ :: Proxy t) -> QP.findByMobileNumberWithType @t personEntity.mobileNumber personEntity.mobileCountryCode)
     )
     $ throwError (InvalidRequest "Phone already registered")
-  let roleId = personEntity.roleId
-  role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
   person <- buildPerson personEntity (role.dashboardAccessType)
   decPerson <- decrypt person
   let personAPIEntity = AP.makePersonAPIEntity decPerson role [] Nothing

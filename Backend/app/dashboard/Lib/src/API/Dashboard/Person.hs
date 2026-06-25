@@ -37,7 +37,7 @@ type API =
   "admin"
     :> "person"
     :> ( "list"
-           :> DashboardAuth 'DASHBOARD_ADMIN
+           :> DashboardAuth 'DASHBOARD_USER
            :> QueryParam "searchString" Text
            :> QueryParam "limit" Integer
            :> QueryParam "offset" Integer
@@ -71,7 +71,7 @@ type API =
              :> ReqBody '[JSON] DPerson.MerchantCityAccessReq
              :> Post '[JSON] APISuccess
            :<|> "create"
-             :> DashboardAuth 'DASHBOARD_ADMIN
+             :> DashboardAuth 'DASHBOARD_USER
              :> ReqBody '[JSON] DPerson.CreatePersonReq
              :> Post '[JSON] DPerson.CreatePersonRes
            :<|> "delete"
