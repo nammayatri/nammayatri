@@ -330,11 +330,26 @@ issueMediaUpload' (personId, merchantId, merchantOperatingCityId) issueHandle Co
   where
     validateContentType = do
       case fileType of
+        -- Audio: native mobile recorders (Android mp3, iOS m4a) plus browser
+        -- MediaRecorder outputs (webm on Chrome/Firefox, ogg on FF fallback).
         S3.Audio | reqContentType == "audio/wave" -> pure "wav"
+        S3.Audio | reqContentType == "audio/wav" -> pure "wav"
         S3.Audio | reqContentType == "audio/mpeg" -> pure "mp3"
-        S3.Audio | reqContentType == "audio/mp4" -> pure "mp4"
+        S3.Audio | reqContentType == "audio/mp3" -> pure "mp3"
+        S3.Audio | reqContentType == "audio/mp4" -> pure "m4a"
+        S3.Audio | reqContentType == "audio/aac" -> pure "aac"
+        S3.Audio | reqContentType == "audio/webm" -> pure "webm"
+        S3.Audio | "audio/webm;" `T.isPrefixOf` reqContentType -> pure "webm"
+        S3.Audio | reqContentType == "audio/ogg" -> pure "ogg"
+        S3.Audio | "audio/ogg;" `T.isPrefixOf` reqContentType -> pure "ogg"
+        -- Image: common camera/picker outputs.
         S3.Image | reqContentType == "image/png" -> pure "png"
         S3.Image | reqContentType == "image/jpeg" -> pure "jpg"
+        S3.Image | reqContentType == "image/jpg" -> pure "jpg"
+        S3.Image | reqContentType == "image/gif" -> pure "gif"
+        S3.Image | reqContentType == "image/webp" -> pure "webp"
+        S3.Image | reqContentType == "image/heic" -> pure "heic"
+        S3.Image | reqContentType == "image/heif" -> pure "heif"
         _ -> throwError $ FileFormatNotSupported reqContentType
 
 issueMediaUpload ::
@@ -366,11 +381,26 @@ issueMediaUpload (personId, merchantId) issueHandle Common.IssueMediaUploadReq {
   where
     validateContentType = do
       case fileType of
+        -- Audio: native mobile recorders (Android mp3, iOS m4a) plus browser
+        -- MediaRecorder outputs (webm on Chrome/Firefox, ogg on FF fallback).
         S3.Audio | reqContentType == "audio/wave" -> pure "wav"
+        S3.Audio | reqContentType == "audio/wav" -> pure "wav"
         S3.Audio | reqContentType == "audio/mpeg" -> pure "mp3"
-        S3.Audio | reqContentType == "audio/mp4" -> pure "mp4"
+        S3.Audio | reqContentType == "audio/mp3" -> pure "mp3"
+        S3.Audio | reqContentType == "audio/mp4" -> pure "m4a"
+        S3.Audio | reqContentType == "audio/aac" -> pure "aac"
+        S3.Audio | reqContentType == "audio/webm" -> pure "webm"
+        S3.Audio | "audio/webm;" `T.isPrefixOf` reqContentType -> pure "webm"
+        S3.Audio | reqContentType == "audio/ogg" -> pure "ogg"
+        S3.Audio | "audio/ogg;" `T.isPrefixOf` reqContentType -> pure "ogg"
+        -- Image: common camera/picker outputs.
         S3.Image | reqContentType == "image/png" -> pure "png"
         S3.Image | reqContentType == "image/jpeg" -> pure "jpg"
+        S3.Image | reqContentType == "image/jpg" -> pure "jpg"
+        S3.Image | reqContentType == "image/gif" -> pure "gif"
+        S3.Image | reqContentType == "image/webp" -> pure "webp"
+        S3.Image | reqContentType == "image/heic" -> pure "heic"
+        S3.Image | reqContentType == "image/heif" -> pure "heif"
         _ -> throwError $ FileFormatNotSupported reqContentType
 
 fetchMedia :: (HasField "s3Env" r (S3.S3Env m), MonadReader r m, BeamFlow m r) => (Id Person, Id Merchant) -> Text -> m Text
