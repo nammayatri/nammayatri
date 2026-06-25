@@ -341,3 +341,107 @@ WHERE m.short_id IN ('BRIDGE_FINLAND_PARTNER', 'BRIDGE_CABS_PARTNER')
     SELECT 1 FROM atlas_driver_offer_bpp.driver_bank_account dba
     WHERE dba.driver_id = md5(m.id || ':seed-driver-person')::uuid::text
   );
+
+-- ────────────────────────────────────────────────────────────────────────
+-- 8. Seed fleet owner, fleet-driver association, and test images
+--    (for driver-image integration tests)
+-- ────────────────────────────────────────────────────────────────────────
+
+-- 8a. Fleet-owner Person (one per merchant)
+INSERT INTO atlas_driver_offer_bpp.person
+  ( id
+  , first_name
+  , gender
+  , identifier_type
+  , is_new
+  , merchant_id
+  , onboarded_from_dashboard
+  , role
+  , total_earned_coins
+  , used_coins
+  , created_at
+  , updated_at
+  )
+SELECT
+    md5(m.id || ':seed-fleet-owner')::uuid::text
+  , 'seed_fleet_owner'
+  , 'UNKNOWN'
+  , 'MOBILENUMBER'
+  , false
+  , m.id
+  , true
+  , 'FLEET_OWNER'
+  , 0
+  , 0
+  , now()
+  , now()
+FROM atlas_driver_offer_bpp.merchant m
+WHERE NOT EXISTS (
+  SELECT 1 FROM atlas_driver_offer_bpp.person p
+  WHERE p.id = md5(m.id || ':seed-fleet-owner')::uuid::text
+);
+
+-- 8b. Fleet-owner RegistrationToken (one per merchant)
+INSERT INTO atlas_driver_offer_bpp.registration_token
+  ( id
+  , attempts
+  , auth_expiry
+  , auth_medium
+  , auth_type
+  , auth_value_hash
+  , entity_id
+  , entity_type
+  , merchant_id
+  , token
+  , token_expiry
+  , verified
+  , created_at
+  , updated_at
+  )
+SELECT
+    md5(m.id || ':seed-fleet-owner-token')::uuid::text
+  , 0
+  , 365
+  , 'SMS'
+  , 'OTP'
+  , '7891'
+  , md5(m.id || ':seed-fleet-owner')::uuid::text
+  , 'USER                              '
+  , m.id
+  , 'seed-fleet-owner-token-' || m.short_id
+  , 365
+  , true
+  , now()
+  , now()
+FROM atlas_driver_offer_bpp.merchant m
+WHERE NOT EXISTS (
+  SELECT 1 FROM atlas_driver_offer_bpp.registration_token rt
+  WHERE rt.id = md5(m.id || ':seed-fleet-owner-token')::uuid::text
+);
+
+-- 8c. FleetDriverAssociation (seed driver ↔ seed fleet owner, per merchant)
+INSERT INTO atlas_driver_offer_bpp.fleet_driver_association
+  ( id
+  , driver_id
+  , fleet_owner_id
+  , is_active
+  , associated_on
+  , associated_till
+  , created_at
+  , updated_at
+  )
+SELECT
+    md5(m.id || ':seed-fleet-driver-assoc')::uuid::text
+  , md5(m.id || ':seed-driver-person')::uuid::text
+  , md5(m.id || ':seed-fleet-owner')::uuid::text
+  , true
+  , now()
+  , '2099-12-31T00:00:00Z'
+  , now()
+  , now()
+FROM atlas_driver_offer_bpp.merchant m
+WHERE NOT EXISTS (
+  SELECT 1 FROM atlas_driver_offer_bpp.fleet_driver_association fda
+  WHERE fda.id = md5(m.id || ':seed-fleet-driver-assoc')::uuid::text
+);
+
