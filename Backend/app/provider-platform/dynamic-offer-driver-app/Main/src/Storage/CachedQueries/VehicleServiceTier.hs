@@ -98,19 +98,19 @@ findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOpCityId mbSp
   where
     cacheKey = makeVehicleCategoryAndCityIdKey vehicleCategory merchantOpCityId
 
-clearCacheByServiceTier :: (CacheFlow m r) => Id DMOC.MerchantOperatingCity -> ServiceTierType -> m ()
+clearCacheByServiceTier :: (CacheFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> ServiceTierType -> m ()
 clearCacheByServiceTier merchantOpCityId serviceTier = do
   let key = makeServiceTierTypeAndCityIdKey merchantOpCityId serviceTier
   Hedis.runInMultiCloudRedisWrite $ Hedis.del key
   IM.refreshInMem key
 
-clearCacheByVehicleCategory :: (CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe VehicleCategory -> m ()
+clearCacheByVehicleCategory :: (CacheFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Maybe VehicleCategory -> m ()
 clearCacheByVehicleCategory merchantOpCityId vehicleCategory = do
   let key = makeVehicleCategoryAndCityIdKey vehicleCategory merchantOpCityId
   Hedis.runInMultiCloudRedisWrite $ Hedis.del key
   IM.refreshInMem key
 
-clearCache :: (CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m ()
+clearCache :: (CacheFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> m ()
 clearCache merchantOperatingCityId = do
   let key = makeMerchantOpCityIdKey merchantOperatingCityId
   Hedis.runInMultiCloudRedisWrite $ Hedis.del key
