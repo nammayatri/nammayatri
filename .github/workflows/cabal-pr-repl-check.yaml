@@ -64,6 +64,7 @@ jobs:
           mc cp "minio/haskell-cache/cabal-build/$BASE_SHA/build-path.txt"                   /tmp/ny-pr-artifacts/build-path.txt
           mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/dynamic-offer-driver-app.tar.zst"  /tmp/ny-pr-artifacts/driver.tar.zst
           mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/rider-app.tar.zst"                 /tmp/ny-pr-artifacts/rider.tar.zst
+          mc cp "minio/haskell-cache/cabal-build/$BASE_SHA/dist-newstyle.tar.zst"            /tmp/ny-pr-artifacts/dist-newstyle.tar.zst
 
           ORIGINAL_PATH=$(cat /tmp/ny-pr-artifacts/build-path.txt)
           echo "Original build path: $ORIGINAL_PATH"
@@ -80,6 +81,9 @@ jobs:
 
           tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/driver.tar.zst -C "$PR_CACHE_ROOT"
           tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/rider.tar.zst  -C "$PR_CACHE_ROOT"
+          # Extract only hie/ from the full build tar (repl-support.tar.zst not yet available)
+          tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/dist-newstyle.tar.zst -C "$PR_CACHE_ROOT" hie/
+          rm -f /tmp/ny-pr-artifacts/dist-newstyle.tar.zst
 
           ln -sfn "$PR_CACHE_ROOT/dist-newrepl-driver" Backend/dist-newrepl-driver
           ln -sfn "$PR_CACHE_ROOT/dist-newrepl-rider"  Backend/dist-newrepl-rider
@@ -88,7 +92,6 @@ jobs:
           cd "$GITHUB_WORKSPACE/Backend"
           grep -E '^[[:space:]]+(app|lib|test)' cabal.project | awk '{print $1}' | while read -r pkg; do
             [ -d "$pkg" ] || continue
-            mkdir -p "$HIE_CACHE/$pkg"
             rm -rf "$pkg/.hie"
             ln -sfn "$HIE_CACHE/$pkg" "$pkg/.hie"
           done
