@@ -17,6 +17,7 @@ data DepotManager = DepotManager
     depotCode :: Kernel.Types.Id.Id Domain.Types.Depot.Depot,
     enabled :: Kernel.Prelude.Bool,
     isAdmin :: Kernel.Prelude.Bool,
+    isBlockAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,

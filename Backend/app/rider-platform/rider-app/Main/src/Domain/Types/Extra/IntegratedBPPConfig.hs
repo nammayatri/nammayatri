@@ -31,7 +31,9 @@ instance Show EBIXConfig where
 data DIRECTConfig = DIRECTConfig
   { cipherKey :: Base64,
     qrRefreshTtl :: Maybe Seconds,
-    redisPrefix :: Maybe Text
+    redisPrefix :: Maybe Text,
+    busBlockExpiryTime :: Maybe Seconds,
+    busBlockMaxLimit :: Maybe Int
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
@@ -78,7 +80,9 @@ data ONDCBecknConfig = ONDCBecknConfig
     providerInfo :: Maybe ProviderLevelInfo,
     routeBasedVehicleTracking :: Maybe Bool,
     overrideCity :: Maybe Context.City,
-    redisPrefix :: Maybe Text
+    redisPrefix :: Maybe Text,
+    busBlockExpiryTime :: Maybe Seconds,
+    busBlockMaxLimit :: Maybe Int
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
