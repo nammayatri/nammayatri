@@ -306,7 +306,8 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
             revenueRecognized = Just revenueRecognized,
             linkedRides = linkedRides,
             createdAt = Just subscription.createdAt,
-            updatedAt = Just subscription.updatedAt
+            updatedAt = Just subscription.updatedAt,
+            orderId = Just subscription.paymentOrderId.getId
           }
 
     -- Calculate utilized value from RideSubscriptionDebit ledger entries

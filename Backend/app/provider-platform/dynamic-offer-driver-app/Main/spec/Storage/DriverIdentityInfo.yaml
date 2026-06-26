@@ -57,5 +57,8 @@ DriverIdentityInfo:
       kvFunction: updateOneWithKV
       params: [courtRecord]
       where: driverId
+    deleteByDriverId:
+      kvFunction: deleteWithKV
+      where: driverId
 
   excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]
