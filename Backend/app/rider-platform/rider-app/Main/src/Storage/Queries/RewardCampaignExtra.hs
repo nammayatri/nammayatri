@@ -24,20 +24,54 @@ updateEditableFields ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DRCmp.RewardCampaign ->
   Maybe Text ->
-  Maybe Int ->
+  Maybe Text ->
+  Maybe DRCmp.SponsorType ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe DRCmp.CouponSourceType ->
+  Maybe Text ->
+  Maybe DRCmp.RedemptionTargetType ->
+  Maybe Text ->
+  Maybe DRCmp.ClaimMode ->
   Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Int ->
   m ()
-updateEditableFields campaignId mDesc mOrder mEndsAt = do
-  now <- getCurrentTime
-  let updates =
-        catMaybes
-          [ mDesc >>= \d -> Just (Se.Set Beam.description (Just d)),
-            mOrder >>= \o -> Just (Se.Set Beam.displayOrder o),
-            mEndsAt >>= \t -> Just (Se.Set Beam.endsAt (Just t)),
-            Just (Se.Set Beam.updatedAt now)
-          ]
-  unless (null updates) $
-    updateOneWithKV updates [Se.Is Beam.id (Se.Eq campaignId.getId)]
+updateEditableFields
+  campaignId
+  mName
+  mDesc
+  mSponsorType
+  mSponsorName
+  mSponsorLogoUrl
+  mCouponSourceType
+  mCouponTemplate
+  mRedemptionTargetType
+  mRedemptionTargetUrl
+  mClaimMode
+  mStartsAt
+  mEndsAt
+  mDisplayOrder = do
+    now <- getCurrentTime
+    let updates =
+          catMaybes
+            [ mName >>= \n -> Just (Se.Set Beam.name n),
+              mDesc >>= \d -> Just (Se.Set Beam.description (Just d)),
+              mSponsorType >>= \s -> Just (Se.Set Beam.sponsorType s),
+              mSponsorName >>= \s -> Just (Se.Set Beam.sponsorName s),
+              mSponsorLogoUrl >>= \u -> Just (Se.Set Beam.sponsorLogoUrl (Just u)),
+              mCouponSourceType >>= \c -> Just (Se.Set Beam.couponSourceType c),
+              mCouponTemplate >>= \t -> Just (Se.Set Beam.couponTemplate (Just t)),
+              mRedemptionTargetType >>= \r -> Just (Se.Set Beam.redemptionTargetType r),
+              mRedemptionTargetUrl >>= \u -> Just (Se.Set Beam.redemptionTargetUrl (Just u)),
+              mClaimMode >>= \c -> Just (Se.Set Beam.claimMode c),
+              mStartsAt >>= \t -> Just (Se.Set Beam.startsAt t),
+              mEndsAt >>= \t -> Just (Se.Set Beam.endsAt (Just t)),
+              mDisplayOrder >>= \o -> Just (Se.Set Beam.displayOrder o),
+              Just (Se.Set Beam.updatedAt now)
+            ]
+    unless (null updates) $
+      updateOneWithKV updates [Se.Is Beam.id (Se.Eq campaignId.getId)]
 
 updateStatus ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

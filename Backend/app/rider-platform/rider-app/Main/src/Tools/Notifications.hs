@@ -29,6 +29,7 @@ import Domain.Types.Estimate (Estimate)
 import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.Journey
 import Domain.Types.Merchant
+import qualified Domain.Types.MerchantMessage as DMM
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
@@ -75,6 +76,7 @@ import SharedLogic.Quote
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.FollowRide as CQFollowRide
+import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
@@ -95,6 +97,7 @@ import qualified Storage.Queries.Transformers.Booking as TBooking
 import Tools.Error
 import qualified Tools.SMS as Sms
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
+import qualified Tools.Whatsapp as Whatsapp
 import qualified UrlShortner.Common as UrlShortner
 
 templateText :: Text -> Text
@@ -1803,6 +1806,105 @@ notifyRefunds' notificationType DRefundRequest.RefundRequest {..} = do
     ]
     Nothing
     Nothing
+
+notifyRewardUnlock ::
+  (ServiceFlow m r, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
+  Person.Person ->
+  Text ->
+  Text ->
+  Text ->
+  m ()
+notifyRewardUnlock person rewardTitle sponsorName couponCode = do
+  let (fcmKey, whatsappMessageKey, templateParams, whatsappVariables) =
+        rewardUnlockNotificationConfig rewardTitle sponsorName couponCode
+      entity = Notification.Entity Notification.Person person.id.getId EmptyDynamicParam
+  dynamicNotifyPerson
+    person
+    (createNotificationReq fcmKey identity)
+    EmptyDynamicParam
+    entity
+    Nothing
+    templateParams
+    Nothing
+    Nothing
+  when (person.whatsappNotificationEnrollStatus == Just Whatsapp.OPT_IN) $ do
+    mbMobileNumber <- mapM decrypt person.mobileNumber
+    let mbPhoneNumber = (<>) <$> person.mobileCountryCode <*> mbMobileNumber
+    case mbPhoneNumber of
+      Nothing ->
+        logInfo $
+          "rewards.unlock.whatsapp.skipped riderId="
+            <> person.id.getId
+            <> " reason=noPhone"
+      Just phoneNumber -> do
+        mbMerchantMessage <-
+          CMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId whatsappMessageKey Nothing
+        case mbMerchantMessage of
+          Nothing ->
+            logInfo $
+              "rewards.unlock.whatsapp.skipped riderId="
+                <> person.id.getId
+                <> " reason=noTemplate key="
+                <> show whatsappMessageKey
+          Just merchantMessage
+            | T.null merchantMessage.templateId ->
+              logInfo $
+                "rewards.unlock.whatsapp.skipped riderId="
+                  <> person.id.getId
+                  <> " reason=emptyTemplateId key="
+                  <> show whatsappMessageKey
+          Just merchantMessage -> do
+            result <-
+              try @_ @SomeException $
+                Whatsapp.whatsAppSendMessageWithTemplateIdAPI
+                  person.merchantId
+                  person.merchantOperatingCityId
+                  ( Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq
+                      phoneNumber
+                      merchantMessage.templateId
+                      whatsappVariables
+                      Nothing
+                      Nothing
+                  )
+            case result of
+              Right resp
+                | resp._response.status == "success" ->
+                  logInfo $
+                    "rewards.unlock.whatsapp.sent riderId="
+                      <> person.id.getId
+                      <> " key="
+                      <> show whatsappMessageKey
+              Right resp ->
+                logError $
+                  "rewards.unlock.whatsapp.failed riderId="
+                    <> person.id.getId
+                    <> " key="
+                    <> show whatsappMessageKey
+                    <> " status="
+                    <> resp._response.status
+              Left e ->
+                logError $
+                  "rewards.unlock.whatsapp.failed riderId="
+                    <> person.id.getId
+                    <> " key="
+                    <> show whatsappMessageKey
+                    <> " err="
+                    <> show e
+
+rewardUnlockNotificationConfig ::
+  Text ->
+  Text ->
+  Text ->
+  (Text, DMM.MessageKey, [(Text, Text)], [Maybe Text])
+rewardUnlockNotificationConfig rewardTitle sponsorName couponCode =
+  ( "REWARD_UNLOCK",
+    DMM.WHATSAPP_REWARD_UNLOCK,
+    [ ("rewardTitle", rewardTitle),
+      ("sponsorName", sponsorName),
+      ("couponCode", couponCode)
+    ],
+    [Just rewardTitle, Just sponsorName, Just couponCode]
+  )
 
 notifyRiderOnEKDLiveCallFeedback ::
   ServiceFlow m r =>

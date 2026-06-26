@@ -474,8 +474,37 @@ issueUpdate merchantShortId opCity issueReportId issueHandle identifier req = do
       _ -> pure req.status
     QIR.updateStatusAssignee issueReportId effectiveStatus req.assignee
     whenJust req.assignee $ \assignee -> mkIssueAssigneeUpdateComment assignee merchantOpCity
+    -- Push an FCM to the rider/driver if the status actually changed. Reuses the
+    -- existing chat-notification hook (CHAT_MESSAGE FCM category) so merchants
+    -- don't need to configure a new template — the body carries a status-update
+    -- snippet and senderType is "STATUS_UPDATE" so the frontend can distinguish.
+    whenJust effectiveStatus $ \newStatus ->
+      when (issueReport.status /= newStatus) $
+        notifyStatusChange issueReport newStatus
     pure Success
   where
+    notifyStatusChange issueReport newStatus = whenJust issueHandle.mbSendChatNotification $ \send -> do
+      now <- getCurrentTime
+      notifId <- generateGUID
+      let snippet = case newStatus of
+            RESOLVED -> "Your issue has been marked resolved"
+            CLOSED -> "Your issue has been closed"
+            REOPENED -> "Your issue has been reopened"
+            OPEN -> "Your issue is now open"
+            PENDING_INTERNAL -> "Your issue is being reviewed"
+            PENDING_EXTERNAL -> "Your issue is awaiting an external update"
+            NOT_APPLICABLE -> "Your issue status was updated"
+          payload =
+            ChatNotifPayload
+              { issueReportId = issueReportId.getId,
+                messageId = notifId,
+                senderType = "STATUS_UPDATE",
+                snippet = snippet,
+                hasMedia = False,
+                timestamp = now
+              }
+      void $ withTryCatch "notifyOnIssueStatusChange" (send issueReport.personId payload)
+
     mkIssueAssigneeUpdateComment assignee merchantOpCity = do
       id <- generateGUID
       now <- getCurrentTime

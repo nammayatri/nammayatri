@@ -156,6 +156,10 @@ FleetOwnerInformation:
       kvFunction: updateOneWithKV
       params: [tdsRate]
       where: fleetOwnerPersonId
+    updateFleetType:
+      kvFunction: updateOneWithKV
+      params: [fleetType]
+      where: fleetOwnerPersonId
     deleteByFleetOwnerPersonId:
       kvFunction: deleteWithKV
       where: fleetOwnerPersonId
