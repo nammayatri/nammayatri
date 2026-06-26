@@ -618,6 +618,17 @@ public class MobilityAppBridge extends HyperBridge {
     }
 
     @JavascriptInterface
+    public void translateString(String callback, String toTranslate) {
+        ExecutorManager.runOnBackgroundThread(() -> {
+            Context context = bridgeComponents.getContext();
+            SharedPreferences sharedPrefs = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String lang = sharedPrefs.getString("LANGUAGE_KEY", "en");
+            TranslatorMLKit translator = new TranslatorMLKit("en", lang, context);
+            translator.translateStringWithCallback(toTranslate, callback, bridgeComponents);
+        });
+    }
+
+    @JavascriptInterface
     public void storeCallBackOpenChatScreen(final String callback) {
         storeCallBackOpenChatScreen = callback;
     }

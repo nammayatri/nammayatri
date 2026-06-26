@@ -1362,20 +1362,24 @@ export const translateStringWithTimeout = function (cb) {
     return function (delay) {
       return function (value) {
         return function () {
-          // if(window.JBridge.translateString){ TODO:: Need to perform testing and handle edge cases. Pushing the code for the release for now
-          //   var callbackFallback = function (){
-          //     cb(action(value))();
-          //   };
-          //   var timer = setTimeout(callbackFallback, delay);
-          //   var callback = callbackMapper.map(function (value) {
-          //     clearTimeout(timer);
-          //     cb(action(value))();
-          //   });
-          //   window.JBridge.translateString(callback, value);
-          // } else{
-          //   cb(action(value))();
-          // }
-          cb(action(value))();
+          if (window.JBridge && window.JBridge.translateString) {
+            var isSettled = false;
+            var callbackFallback = function () {
+              if (isSettled) return;
+              isSettled = true;
+              cb(action(value))();
+            };
+            var timer = setTimeout(callbackFallback, delay);
+            var callback = callbackMapper.map(function (translatedValue) {
+              if (isSettled) return;
+              isSettled = true;
+              clearTimeout(timer);
+              cb(action(translatedValue))();
+            });
+            window.JBridge.translateString(callback, value);
+          } else {
+            cb(action(value))();
+          }
         }
       }
     }

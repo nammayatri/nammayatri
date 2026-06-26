@@ -255,6 +255,8 @@ data Action = NoAction
   | RideCompletedAC RideCompletedCard.Action
   | RiderRideCompletedAC RiderRideCompletedCard.Action
   | LoadMessages
+  | LoadTranslatedMessages (Array CTP.ChatComponent)
+  | OpenChatWithTranslatedMessages (Array CTP.ChatComponent)
   | KeyboardCallback String
   | NotifyDriverStatusCountDown Int String String
   | UpdateProfileButtonAC PrimaryButtonController.Action
