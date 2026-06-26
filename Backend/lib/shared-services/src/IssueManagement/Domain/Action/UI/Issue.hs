@@ -403,6 +403,25 @@ issueMediaUpload (personId, merchantId) issueHandle Common.IssueMediaUploadReq {
         S3.Image | reqContentType == "image/heif" -> pure "heif"
         _ -> throwError $ FileFormatNotSupported reqContentType
 
+-- TODO: implement real S3 upload for dashboard-originated issue-chat attachments.
+-- Should factor the S3 upload core out of `issueMediaUpload'` (which currently
+-- requires a per-person identifier) into this lower-level helper that takes only
+-- (sizeUpperLimit, urlPattern, req, domain, identifierPath). Throws until then.
+mediaUploadToS3 ::
+  ( BeamFlow m r,
+    MonadTime m,
+    MonadReader r m,
+    HasField "s3Env" r (S3.S3Env m)
+  ) =>
+  Int ->
+  Text ->
+  Common.IssueMediaUploadReq ->
+  Text ->
+  Text ->
+  m Common.IssueMediaUploadRes
+mediaUploadToS3 _ _ _ _ _ =
+  throwError $ InternalError "mediaUploadToS3 not implemented"
+
 fetchMedia :: (HasField "s3Env" r (S3.S3Env m), MonadReader r m, BeamFlow m r) => (Id Person, Id Merchant) -> Text -> m Text
 fetchMedia _personId filePath =
   S3.get $ T.unpack filePath
