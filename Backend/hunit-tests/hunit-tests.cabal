@@ -27,6 +27,9 @@ flag Local
 library
   exposed-modules:
       Dashboard
+      RewardsEvaluatorTests
+      RewardsCouponTemplatedTests
+      RewardsCouponPoolTests
   other-modules:
       RegistrationUnitTests
       VehicleAssociationUnitTests
@@ -34,9 +37,6 @@ library
       AddVehicleUnitTests
       DriverOperationHubUnitTests
       CreateRequestUnitTests
-      RewardsEvaluatorTests
-      RewardsCouponTemplatedTests
-      RewardsCouponPoolTests
   hs-source-dirs:
       src
   default-extensions:
