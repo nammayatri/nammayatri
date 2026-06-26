@@ -575,8 +575,10 @@ getFilteredQuotes :: Array OfferRes -> EstimateAndQuoteConfig -> Array OfferRes
 getFilteredQuotes quotes estimateAndQuoteConfig  =
   let
     filteredArray = quotes
+    cityVariantOrder = RC.getEstimatesOrder $ toLower $ getValueToLocalStore CUSTOMER_LOCATION
+    variantOrder = DA.nub $ cityVariantOrder <> estimateAndQuoteConfig.variantOrder
   in
-    sortQuoteWithVariantOrder filteredArray estimateAndQuoteConfig.variantOrder
+    sortQuoteWithVariantOrder filteredArray variantOrder
   where
   sortQuoteWithVariantOrder :: Array OfferRes -> Array String -> Array OfferRes
   sortQuoteWithVariantOrder quotes orderList =
