@@ -78,7 +78,7 @@ instance FromDhall ConsumerConfig where
         Nothing -> noAutoCommit
         Just v -> autoCommit (Millis $ fromIntegral v)
 
-data ConsumerType = LOCATION_UPDATE | BROADCAST_MESSAGE | FLEET_COMMUNICATION_DISPATCH | RIDE_EVENTS_CONSUMER | REWARDS_EVAL_CONSUMER deriving (Generic, FromDhall, Read, Eq)
+data ConsumerType = LOCATION_UPDATE | BROADCAST_MESSAGE | FLEET_COMMUNICATION_DISPATCH | RIDE_EVENTS_CONSUMER deriving (Generic, FromDhall, Read, Eq)
 
 type ConsumerRecordD = ConsumerRecord (Maybe ByteString) (Maybe ByteString)
 
@@ -87,7 +87,6 @@ instance Show ConsumerType where
   show LOCATION_UPDATE = "location-update"
   show FLEET_COMMUNICATION_DISPATCH = "fleet-communication-dispatch"
   show RIDE_EVENTS_CONSUMER = "ride-events-consumer"
-  show REWARDS_EVAL_CONSUMER = "rewards-eval-consumer"
 
 -- | Which transport a given Dhall deployment uses. Each consumer-type Dhall
 -- file picks one; switching is a config change, not a code change.

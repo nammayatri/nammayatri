@@ -92,7 +92,21 @@ data CreateCohortResp = CreateCohortResp {cohortId :: Kernel.Types.Id.Id RewardC
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data EditCampaignReq = EditCampaignReq {description :: Kernel.Prelude.Maybe Kernel.Prelude.Text, displayOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int, endsAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime}
+data EditCampaignReq = EditCampaignReq
+  { name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    sponsorType :: Kernel.Prelude.Maybe Dashboard.Common.Rewards.SponsorType.SponsorType,
+    sponsorName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    sponsorLogoUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    couponSourceType :: Kernel.Prelude.Maybe Dashboard.Common.Rewards.CouponSourceType.CouponSourceType,
+    couponTemplate :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    redemptionTargetType :: Kernel.Prelude.Maybe Dashboard.Common.Rewards.RedemptionTargetType.RedemptionTargetType,
+    redemptionTargetUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    claimMode :: Kernel.Prelude.Maybe Dashboard.Common.Rewards.ClaimMode.ClaimMode,
+    startsAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    endsAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    displayOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

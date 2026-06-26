@@ -132,7 +132,15 @@ instance ToMultipart Tmp IssueMediaUploadReq where
   toMultipart issueMediaUploadReq =
     MultipartData
       [Input "fileType" (show issueMediaUploadReq.fileType)]
-      [FileData "file" (T.pack issueMediaUploadReq.file) "" (issueMediaUploadReq.file)]
+      -- Forward the file's content-type (extracted by FromMultipart into
+      -- `reqContentType`) when the dashboard-helper proxy re-serializes this
+      -- request to call the rider-app. Hardcoding "" here used to strip the
+      -- MIME at the proxy hop, making every dashboard-originated upload fail
+      -- the rider-app's strict `validateContentType` allowlist with
+      -- FILE_FORMAT_NOT_SUPPORTED. Driver-onboarding's UploadFileRequest has
+      -- the same hardcoded "" but its receiver doesn't validate Content-Type,
+      -- which is why nobody noticed until issueV2/upload landed.
+      [FileData "file" (T.pack issueMediaUploadReq.file) issueMediaUploadReq.reqContentType (issueMediaUploadReq.file)]
 
 newtype IssueMediaUploadRes = IssueMediaUploadRes
   { fileId :: Id MediaFile

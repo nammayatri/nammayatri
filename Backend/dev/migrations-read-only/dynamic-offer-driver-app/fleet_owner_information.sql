@@ -174,3 +174,8 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN vat_number
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN docs_verification_status text ;
+
+
+
+------- SQL updates -------
+

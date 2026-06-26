@@ -71,6 +71,7 @@ import qualified Domain.Types.BecknConfig as DBC
 import Domain.Types.BusinessHour
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Geometry as DGEO
+import qualified Domain.Types.HotSpotConfig as DHSC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -83,6 +84,7 @@ import Domain.Types.ServiceCategory
 import Domain.Types.ServicePeopleCategory
 import Domain.Types.TicketPlace hiding (Fee (..))
 import Domain.Types.TicketService
+import qualified Domain.Types.ValueAddNP as DValueAddNP
 import qualified Domain.Types.WhiteListOrg as WLO
 import Environment
 import qualified EulerHS.Language as L
@@ -136,6 +138,7 @@ import Storage.Beam.IssueManagement ()
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.SpecialZone ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
+import qualified Storage.CachedQueries.HotSpotConfig as HSC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CQMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -151,6 +154,7 @@ import qualified Storage.Queries.BusinessHour as SQBH
 import qualified Storage.Queries.BusinessHourExtra as SQBHE
 import qualified Storage.Queries.Geometry as QGeo
 import qualified Storage.Queries.GeometryGeom as QGEO
+import qualified Storage.Queries.HotSpotConfig as QHSC
 import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.MerchantMessage as QMM
 import qualified Storage.Queries.MerchantPushNotification as SQMPN
@@ -161,6 +165,7 @@ import qualified Storage.Queries.ServicePeopleCategory as SQSPC
 import qualified Storage.Queries.ServicePeopleCategoryExtra as SQSPCE
 import qualified Storage.Queries.TicketPlace as SQTP
 import qualified Storage.Queries.TicketService as SQTS
+import qualified Storage.Queries.ValueAddNP as QValueAddNP
 import qualified Storage.Queries.WhiteListOrg as QWLO
 import qualified Toll.Domain.Types.Toll as Toll
 import qualified Toll.Storage.CachedQueries.Toll as CQToll
@@ -530,6 +535,17 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           _ -> return Nothing
       _ -> return Nothing
 
+  -- hot spot config (only for a new merchant, copied from base merchant; keyed by merchant id)
+  mbHotSpotConfig <-
+    case mbNewMerchant of
+      Just _ ->
+        HSC.findConfigByMerchantId newMerchantId >>= \case
+          Just _ -> return Nothing
+          Nothing -> do
+            baseHotSpotConfig <- HSC.findConfigByMerchantId baseRequestedCityMerchant.id
+            return $ (\cfg -> cfg {DHSC.id = Id newMerchantId.getId}) <$> baseHotSpotConfig
+      Nothing -> return Nothing
+
   cityAlreadyCreated <- CQMOC.findByMerchantIdAndCity newMerchantId req.city
   newMerchantOperatingCityId <-
     case cityAlreadyCreated of
@@ -732,6 +748,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
     ( do
         whenJust mbGeometry $ \geometry -> QGeo.create geometry
         whenJust mbNewMerchant $ \newMerchant -> QM.create newMerchant
+        whenJust mbHotSpotConfig $ \hotSpotConfig -> QHSC.create hotSpotConfig
         whenJust mbNewOperatingCity $ \newOperatingCity -> CQMOC.create newOperatingCity
         whenJust mbMerchantMessages $ \merchantMessages -> mapM_ CQMM.create merchantMessages
         whenJust mbMerchantPaymentMethods $ \mPM -> mapM_ CQMPM.create mPM
@@ -1943,7 +1960,22 @@ postMerchantConfigOperatingCityWhiteList _ _ req = do
             createdAt = now,
             updatedAt = now
           }
-  QWLO.create whiteListOrgReq
+  existingWhiteListOrg <- QWLO.findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId req.bppSubscriberId bppSubDomain (Id merchantId) (Id merchantOperatingCityId)
+  when (isNothing existingWhiteListOrg) $ QWLO.create whiteListOrgReq
+
+  let bppSubscriberId = req.bppSubscriberId.getShortId
+  QValueAddNP.findByPrimaryKey bppSubscriberId >>= \case
+    Just existing ->
+      unless existing.enabled $
+        QValueAddNP.updateByPrimaryKey existing {DValueAddNP.enabled = True, DValueAddNP.updatedAt = now}
+    Nothing ->
+      QValueAddNP.create
+        DValueAddNP.ValueAddNP
+          { enabled = True,
+            subscriberId = bppSubscriberId,
+            createdAt = now,
+            updatedAt = now
+          }
 
   pure $
     Common.WhiteListOperatingCityRes
