@@ -3,6 +3,7 @@
 module RewardsEvaluatorTests (tests) where
 
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Vector as V
 import qualified Domain.Action.Rewards.Evaluator as Eval
@@ -36,7 +37,7 @@ tests =
     ]
 
 mkCtx :: Text -> Int -> A.Value
-mkCtx field n = A.Object $ KM.fromList [(field, A.toJSON n)]
+mkCtx field n = A.Object $ KM.fromList [(AK.fromText field, A.toJSON n)]
 
 gteRule :: Text -> Int -> A.Value
 gteRule field n =
