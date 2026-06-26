@@ -26,6 +26,7 @@ import com.google.mlkit.nl.translate.Translator;
 import com.google.mlkit.nl.translate.TranslatorOptions;
 
 import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -146,22 +147,22 @@ public class TranslatorMLKit {
                     .addOnSuccessListener(
                             translatedText -> {
                                 if (callback != null) {
-                                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                                            callback, translatedText);
+                                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s',%s);",
+                                            callback, JSONObject.quote(translatedText));
                                     bridgeComponents.getJsCallback().addJsToWebView(javascript);
                                 }
                             })
                     .addOnFailureListener(
                             e -> {
                                 if (callback != null) {
-                                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                                            callback, initialAddress);
+                                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s',%s);",
+                                            callback, JSONObject.quote(initialAddress));
                                     bridgeComponents.getJsCallback().addJsToWebView(javascript);
                                 }
                             });
         } else {
-            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                    callback, initialAddress);
+            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s',%s);",
+                    callback, JSONObject.quote(initialAddress));
             bridgeComponents.getJsCallback().addJsToWebView(javascript);
         }
 

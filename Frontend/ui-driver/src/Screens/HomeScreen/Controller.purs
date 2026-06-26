@@ -24,7 +24,7 @@ import Screens.HomeScreen.ComponentConfig
 import Screens.SubscriptionScreen.Controller
 import Common.Resources.Constants (zoomLevel)
 import Common.Styles.Colors as Color
-import Common.Types.App (OptionButtonList, LazyCheck(..), Paths(..), UploadFileConfig(..)) as Common
+import Common.Types.App (OptionButtonList, LazyCheck(..), Paths(..), UploadFileConfig(..), ChatComponent) as Common
 import Components.Banner as Banner
 import Components.BannerCarousel as BannerCarousel
 import Components.BottomNavBar as BottomNavBar
@@ -59,10 +59,11 @@ import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, maybe)
 import Data.Number (fromString) as Number
 import Data.String (Pattern(..), Replacement(..), drop, length, take, trim, replaceAll, toLower, null)
 import Data.String as DS
+import Data.Traversable (traverse)
 import Domain.Payments (APIPaymentStatus(..), PaymentStatus(..)) as PP
 import Data.Functor
 import Effect (Effect)
-import Effect.Aff (launchAff)
+import Effect.Aff (launchAff, makeAff, nonCanceler)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn4, runEffectFn1, runEffectFn5, runEffectFn6)
 import Effect.Unsafe (unsafePerformEffect)
@@ -186,6 +187,7 @@ instance showAction :: Show Action where
   show (RecenterButtonAction) = "RecenterButtonAction"
   show (ChatViewActionController var1) = "ChatViewActionController_" <> show var1
   show (UpdateMessages _ _ _ _) = "UpdateMessages"
+  show (LoadTranslatedMessages _) = "LoadTranslatedMessages"
   show (InitializeChat) = "InitializeChat"
   show (OpenChatScreen) = "OpenChatScreen"
   show (RemoveChat) = "RemoveChat"
@@ -556,6 +558,7 @@ data Action = NoAction
             | RecenterButtonAction
             | ChatViewActionController ChatView.Action
             | UpdateMessages String String String String
+            | LoadTranslatedMessages (Array Common.ChatComponent)
             | InitializeChat
             | OpenChatScreen
             | RemoveChat
@@ -1420,19 +1423,40 @@ eval (UpdateMessages message sender timeStamp size) state = do
       pure $ (RideActionModalAction (RideActionModal.LoadMessages))
     ]
 
+translateChatMessages currentUser suggestionKey targetLanguage messages =
+  traverse (translateChatMessage currentUser suggestionKey targetLanguage) messages
+
+translateChatMessage currentUser suggestionKey targetLanguage message =
+  if message.sentBy == currentUser || targetLanguage == "EN_US" || isKnownChatSuggestion suggestionKey message.message then
+    pure message
+  else do
+    translated <- doAff $ makeAff \cb -> do
+      JB.translateStringWithTimeout (cb <<< Right) (\translatedMessage -> translatedMessage) 700 message.message
+      pure nonCanceler
+    pure $ message { message = translated }
+
+isKnownChatSuggestion suggestionKey message =
+  getMessageFromKey suggestionKey message "EN_US" /= message || not (Array.null (getSuggestionsfromKey suggestionKey message))
+
 eval (RideActionModalAction (RideActionModal.LoadMessages)) state = do
   let allMessages = getChatMessages Common.FunctionCall
-      toChatComponentConfig { message, sentBy, timeStamp, type: type_, delay } =
+  continueWithCmd state [do
+    translatedMessages <- translateChatMessages "Driver" chatSuggestion (getLanguageLocale languageKey) allMessages
+    pure $ LoadTranslatedMessages translatedMessages
+  ]
+
+eval (LoadTranslatedMessages translatedMessages) state = do
+  let toChatComponentConfig { message, sentBy, timeStamp, type: type_, delay } =
         { message, messageTitle: Nothing, messageAction: Nothing, messageLabel: Nothing, sentBy, timeStamp, type: type_, delay}
-  case (Array.last allMessages) of
+  case (Array.last translatedMessages) of
       Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true}} else
-                      if value.sentBy == "Driver" then updateMessagesWithCmd state {data {messages = toChatComponentConfig <$> allMessages, chatSuggestionsList = []}, props {canSendSuggestion = true}}
+                      if value.sentBy == "Driver" then updateMessagesWithCmd state {data {messages = toChatComponentConfig <$> translatedMessages, chatSuggestionsList = []}, props {canSendSuggestion = true}}
                       else do
                         let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
-                        let unReadMessages = (if (readMessages == 0 && state.props.currentStage /= ST.ChatWithCustomer) then true else (if (readMessages < (Array.length allMessages) && state.props.currentStage /= ST.ChatWithCustomer) then true else false))
+                        let unReadMessages = (if (readMessages == 0 && state.props.currentStage /= ST.ChatWithCustomer) then true else (if (readMessages < (Array.length translatedMessages) && state.props.currentStage /= ST.ChatWithCustomer) then true else false))
                         let suggestions = getDriverSuggestions state $ getSuggestionsfromKey chatSuggestion value.message
-                        updateMessagesWithCmd state {data {messages = toChatComponentConfig <$> allMessages, chatSuggestionsList = suggestions }, props {unReadMessages = unReadMessages, canSendSuggestion = true}}
-      Nothing -> continue state {props {canSendSuggestion = true}, data{ messages = toChatComponentConfig <$> allMessages}}
+                        updateMessagesWithCmd state {data {messages = toChatComponentConfig <$> translatedMessages, chatSuggestionsList = suggestions }, props {unReadMessages = unReadMessages, canSendSuggestion = true}}
+      Nothing -> continue state {props {canSendSuggestion = true}, data{ messages = toChatComponentConfig <$> translatedMessages}}
 
 eval ScrollToBottom state = do
   _ <- pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
