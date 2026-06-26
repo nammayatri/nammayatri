@@ -87,31 +87,7 @@ jobs:
           tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/rider.tar.zst        -C "$PR_CACHE_ROOT"
           tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/repl-support.tar.zst -C "$PR_CACHE_ROOT"
 
-          # Drop the cabal package store — all external packages come from the nix global GHC DB.
-          # An empty store (recreated via ghc-pkg init below) ensures package-ids match exactly
-          # what was recorded in the .hi files, preventing [flags changed] full recompilation.
-          rm -rf "$PR_CACHE_ROOT/.cabal-dir/store"
-
           rm -f /tmp/ny-pr-artifacts/*.tar.zst
-
-      - name: Detect CI GHC from repl artifacts
-        if: steps.artifact-check.outputs.found == 'true'
-        run: |
-          # Read the GHC path baked into setup-config so we use the exact same GHC binary
-          # as the original build — mismatched GHC derivation is the main cause of [flags changed]
-          SETUP_CFG=$(find "$PR_CACHE_ROOT/dist-newrepl-driver" -name "setup-config" -type f | head -1)
-          if [ -z "$SETUP_CFG" ]; then
-            echo "::warning::No setup-config found in dist-newrepl-driver — will use default GHC"
-            echo "CI_GHC=" >> $GITHUB_ENV
-            echo "GHC_VER=" >> $GITHUB_ENV
-          else
-            CI_GHC=$(strings "$SETUP_CFG" | grep -m1 -oE '/nix/store/[a-z0-9]+-ghc-[0-9.]+-with-packages/bin/ghc' || true)
-            GHC_VER=$(echo "$CI_GHC" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
-            echo "Detected CI GHC: ${CI_GHC:-(none, will use nix env default)}"
-            echo "Detected GHC version: ${GHC_VER:-(unknown)}"
-            echo "CI_GHC=$CI_GHC" >> $GITHUB_ENV
-            echo "GHC_VER=$GHC_VER" >> $GITHUB_ENV
-          fi
 
       - name: Repl check — dynamic-offer-driver-app
         if: steps.artifact-check.outputs.found == 'true'
@@ -120,14 +96,6 @@ jobs:
           LOCAL_ROOT="$GITHUB_WORKSPACE"
           ORIGINAL_CABAL_DIR="$original_cache_root/.cabal-dir"
           ORIGINAL_DIST_DRIVER="$original_cache_root/dist-newrepl-driver"
-
-          GHC_FLAG=""
-          [ -n "$CI_GHC" ] && GHC_FLAG="-w $CI_GHC"
-
-          INIT_STORE=""
-          if [ -n "$GHC_VER" ]; then
-            INIT_STORE="mkdir -p $ORIGINAL_CABAL_DIR/store/ghc-$GHC_VER && ghc-pkg init $ORIGINAL_CABAL_DIR/store/ghc-$GHC_VER/package.db 2>/dev/null || true &&"
-          fi
 
           NIX_OVERLAY=""
           if [ -d "$PR_CACHE_ROOT/.nix-deps/nix/store" ]; then
@@ -149,20 +117,20 @@ jobs:
               mount --bind /tmp/ns-root $CI_PROJECT_ROOT
               mkdir -p $ORIGINAL_CABAL_DIR
               mount --bind $PR_CACHE_ROOT/.cabal-dir $ORIGINAL_CABAL_DIR
-              $INIT_STORE true
               mkdir -p $ORIGINAL_DIST_DRIVER
               mount --bind $PR_CACHE_ROOT/dist-newrepl-driver $ORIGINAL_DIST_DRIVER
               $NIX_OVERLAY true
               cd $CI_PROJECT_ROOT/Backend
+              ln -sfn $ORIGINAL_DIST_DRIVER dist-newrepl-driver
               grep -E '^[[:space:]]+(app|lib|test)' cabal.project | awk '{print \$1}' | while read -r pkg; do
                 [ -d \"\$pkg\" ] || continue
                 rm -rf \"\$pkg/.hie\"
                 ln -sfn \"$PR_CACHE_ROOT/hie/\$pkg\" \"\$pkg/.hie\"
               done
               export CABAL_DIR=$ORIGINAL_CABAL_DIR
-              cabal repl $GHC_FLAG dynamic-offer-driver-app \
+              cabal repl dynamic-offer-driver-app \
                 --repl-options='-fno-code -fwrite-interface' \
-                --builddir=$ORIGINAL_DIST_DRIVER <<< ':quit'
+                --builddir=dist-newrepl-driver <<< ':quit'
             "
 
       - name: Repl check — rider-app
@@ -173,14 +141,6 @@ jobs:
           ORIGINAL_CABAL_DIR="$original_cache_root/.cabal-dir"
           ORIGINAL_DIST_RIDER="$original_cache_root/dist-newrepl-rider"
 
-          GHC_FLAG=""
-          [ -n "$CI_GHC" ] && GHC_FLAG="-w $CI_GHC"
-
-          INIT_STORE=""
-          if [ -n "$GHC_VER" ]; then
-            INIT_STORE="mkdir -p $ORIGINAL_CABAL_DIR/store/ghc-$GHC_VER && ghc-pkg init $ORIGINAL_CABAL_DIR/store/ghc-$GHC_VER/package.db 2>/dev/null || true &&"
-          fi
-
           NIX_OVERLAY=""
           if [ -d "$PR_CACHE_ROOT/.nix-deps/nix/store" ]; then
             while IFS= read -r dep_file; do
@@ -201,20 +161,20 @@ jobs:
               mount --bind /tmp/ns-root $CI_PROJECT_ROOT
               mkdir -p $ORIGINAL_CABAL_DIR
               mount --bind $PR_CACHE_ROOT/.cabal-dir $ORIGINAL_CABAL_DIR
-              $INIT_STORE true
               mkdir -p $ORIGINAL_DIST_RIDER
               mount --bind $PR_CACHE_ROOT/dist-newrepl-rider $ORIGINAL_DIST_RIDER
               $NIX_OVERLAY true
               cd $CI_PROJECT_ROOT/Backend
+              ln -sfn $ORIGINAL_DIST_RIDER dist-newrepl-rider
               grep -E '^[[:space:]]+(app|lib|test)' cabal.project | awk '{print \$1}' | while read -r pkg; do
                 [ -d \"\$pkg\" ] || continue
                 rm -rf \"\$pkg/.hie\"
                 ln -sfn \"$PR_CACHE_ROOT/hie/\$pkg\" \"\$pkg/.hie\"
               done
               export CABAL_DIR=$ORIGINAL_CABAL_DIR
-              cabal repl $GHC_FLAG rider-app \
+              cabal repl rider-app \
                 --repl-options='-fno-code -fwrite-interface' \
-                --builddir=$ORIGINAL_DIST_RIDER <<< ':quit'
+                --builddir=dist-newrepl-rider <<< ':quit'
             "
 
       - name: Cleanup
