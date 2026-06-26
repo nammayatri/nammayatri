@@ -86,6 +86,9 @@ library:
   source-dirs: src
   exposed-modules:
     - Dashboard
+    - RewardsEvaluatorTests
+    - RewardsCouponTemplatedTests
+    - RewardsCouponPoolTests
   other-modules:
     - RegistrationUnitTests
     - VehicleAssociationUnitTests
@@ -93,9 +96,6 @@ library:
     - AddVehicleUnitTests
     - DriverOperationHubUnitTests
     - CreateRequestUnitTests
-    - RewardsEvaluatorTests
-    - RewardsCouponTemplatedTests
-    - RewardsCouponPoolTests
 
 executables:
   hunit-tests:
