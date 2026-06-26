@@ -130,7 +130,8 @@ jobs:
               export CABAL_DIR=$ORIGINAL_CABAL_DIR
               cabal repl dynamic-offer-driver-app \
                 --repl-options='-fno-code -fwrite-interface' \
-                --builddir=dist-newrepl-driver <<< ':quit'
+                --builddir=dist-newrepl-driver <<< ':quit' 2>&1 | tee /tmp/repl-driver-out.txt
+              grep -qE ': error:' /tmp/repl-driver-out.txt && exit 1 || true
             "
 
       - name: Repl check — rider-app
@@ -174,7 +175,8 @@ jobs:
               export CABAL_DIR=$ORIGINAL_CABAL_DIR
               cabal repl rider-app \
                 --repl-options='-fno-code -fwrite-interface' \
-                --builddir=dist-newrepl-rider <<< ':quit'
+                --builddir=dist-newrepl-rider <<< ':quit' 2>&1 | tee /tmp/repl-rider-out.txt
+              grep -qE ': error:' /tmp/repl-rider-out.txt && exit 1 || true
             "
 
       - name: Cleanup
