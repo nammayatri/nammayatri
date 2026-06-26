@@ -36,9 +36,19 @@ types:
     - campaignId: Id RewardCampaign
 
   EditCampaignReq:
+    - name: Maybe Text
     - description: Maybe Text
-    - displayOrder: Maybe Int
+    - sponsorType: Maybe SponsorType
+    - sponsorName: Maybe Text
+    - sponsorLogoUrl: Maybe Text
+    - couponSourceType: Maybe CouponSourceType
+    - couponTemplate: Maybe Text
+    - redemptionTargetType: Maybe RedemptionTargetType
+    - redemptionTargetUrl: Maybe Text
+    - claimMode: Maybe ClaimMode
+    - startsAt: Maybe UTCTime
     - endsAt: Maybe UTCTime
+    - displayOrder: Maybe Int
     - derive: "'HideSecrets"
 
   CreateCohortReq:

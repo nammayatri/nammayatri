@@ -31,9 +31,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Cac
 import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Error.Throwing
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.GoHomeConfig as Queries
 
@@ -43,20 +41,22 @@ create = Queries.create
 getGoHomeConfigFromDB :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe GoHomeConfig)
 getGoHomeConfigFromDB id = do
   Hedis.safeGet (makeGoHomeKey id) >>= \case
-    Just cfg -> return cfg
+    Just cfg -> return (Just cfg)
     Nothing -> do
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-      cfg <- fromMaybeM (InternalError ("Could not find Go-To config corresponding to the stated merchant id" <> show id)) =<< Queries.findByMerchantOpCityId id
-      Hedis.setExp (makeGoHomeKey id) cfg expTime
-      return (Just cfg)
+      Queries.findByMerchantOpCityId id >>= \case
+        Just cfg -> do
+          Hedis.setExp (makeGoHomeKey id) cfg expTime
+          return (Just cfg)
+        Nothing -> return Nothing
 
 getConfigsFromMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe GoHomeConfig)
 getConfigsFromMemory id = do
   isExpired <- DTC.updateConfig DTC.LastUpdatedGoHomeConfig
   getConfigFromMemoryCommon (DTC.GoHomeConfig id.getId) isExpired CM.isExperimentsRunning
 
-findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> m GoHomeConfig
-findByMerchantOpCityId id = getGoHomeConfigFromDB id <&> fromJust
+findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe GoHomeConfig)
+findByMerchantOpCityId = getGoHomeConfigFromDB
 
 makeGoHomeKey :: Id MerchantOperatingCity -> Text
 makeGoHomeKey id = "driver-offer:CachedQueries:GoHomeConfig:MerchantOpCityId-" <> id.getId

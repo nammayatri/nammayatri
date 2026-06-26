@@ -30,7 +30,7 @@ import Data.Csv (HasHeader (..), decode)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Vector as V
-import qualified Domain.Action.Rewards.Producer as RewardsProducer
+import qualified Domain.Action.Rewards.Consumer as RewardsConsumer
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.RewardCampaign as DRCmp
@@ -102,16 +102,23 @@ putRewardsCampaign ::
   Flow APISuccess
 putRewardsCampaign merchantShortId opCity campaignId req = do
   c <- loadAuthorizedCampaign merchantShortId opCity (castId campaignId)
-  case c.status of
-    DRCmp.Draft -> pure ()
-    _ ->
-      case req.endsAt of
-        Just newEndsAt
-          | Just oldEndsAt <- c.endsAt,
-            newEndsAt < oldEndsAt ->
-            throwError (InvalidRequest "endsAt can only be extended, not shrunk")
-        _ -> pure ()
-  QRCmpE.updateEditableFields c.id req.description req.displayOrder req.endsAt
+  when (c.status == DRCmp.Ended) $
+    throwError (InvalidRequest "Cannot edit an Ended campaign")
+  QRCmpE.updateEditableFields
+    c.id
+    req.name
+    req.description
+    (toDomainSponsorType <$> req.sponsorType)
+    req.sponsorName
+    req.sponsorLogoUrl
+    (toDomainCouponSourceType <$> req.couponSourceType)
+    req.couponTemplate
+    (toDomainRedemptionTargetType <$> req.redemptionTargetType)
+    req.redemptionTargetUrl
+    (toDomainClaimMode <$> req.claimMode)
+    req.startsAt
+    req.endsAt
+    req.displayOrder
   pure Success
 
 postRewardsCampaignCohort ::
@@ -164,13 +171,6 @@ putRewardsCampaignCohort merchantShortId opCity campaignId cohortId req = do
   unless (cohort.campaignId == domainCampaignId) $
     throwError (InvalidRequest "Cohort does not belong to this campaign")
   whenJust req.presentation validatePresentation
-  case campaign.status of
-    DRCmp.Draft -> pure ()
-    _ -> do
-      when (isJust req.eligibilityJsonLogic) $
-        throwError (InvalidRequest "eligibilityJsonLogic cannot be changed after campaign is activated")
-      when (hasNonPresentationEdits req) $
-        throwError (InvalidRequest "Only presentation can be edited on Active or Paused campaigns")
   QRCE.updateEditableFields
     domainCohortId
     req.name
@@ -182,15 +182,6 @@ putRewardsCampaignCohort merchantShortId opCity campaignId cohortId req = do
     req.couponValidityDays
     req.presentation
   pure Success
-
-hasNonPresentationEdits :: API.EditCohortReq -> Bool
-hasNonPresentationEdits req =
-  isJust req.name
-    || isJust req.description
-    || isJust req.displayOrder
-    || isJust req.rewardTitle
-    || isJust req.rewardImageUrl
-    || isJust req.couponValidityDays
 
 postRewardsCampaignCohortCodes ::
   ShortId DM.Merchant ->
@@ -325,7 +316,8 @@ postRewardsTriggerEval merchantShortId opCity personId = do
   unless (person.merchantId == merchant.id && person.merchantOperatingCityId == merchantOpCity.id) $
     throwError (PersonDoesNotExist personId.getId)
   now <- getCurrentTime
-  RewardsProducer.publishRewardEvalRequested (castId personId) merchantOpCity.id now
+  fork "Trigger rewards eval" $
+    RewardsConsumer.evaluateRewardsIfEnabled (castId personId) merchantOpCity.id now
   pure Success
 
 loadMerchantContext ::
