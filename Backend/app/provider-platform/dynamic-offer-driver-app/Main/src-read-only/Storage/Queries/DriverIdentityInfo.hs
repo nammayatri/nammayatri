@@ -24,7 +24,10 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverIdentityInfo.DriverIdentityInfo] -> m ())
 createMany = traverse_ create
 
-findAllByDriverIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id Domain.Types.Person.Person] -> m ([Domain.Types.DriverIdentityInfo.DriverIdentityInfo]))
+deleteByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+deleteByDriverId driverId = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+findAllByDriverIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id Domain.Types.Person.Person] -> m [Domain.Types.DriverIdentityInfo.DriverIdentityInfo])
 findAllByDriverIds driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.In (Kernel.Types.Id.getId <$> driverId)]
 
 findByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverIdentityInfo.DriverIdentityInfo))
