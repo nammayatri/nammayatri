@@ -30,6 +30,7 @@ import qualified Storage.Queries.AadhaarOtpVerify as AadhaarOtp
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverGstin as QDriverGstin
+import qualified Storage.Queries.DriverIdentityInfo as QDriverIdentityInfo
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperatorAssociation
@@ -38,6 +39,7 @@ import qualified Storage.Queries.DriverQuote as QDriverQuote
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverReferral as QDriverReferral
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.DriverUdyam as QDriverUdyam
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriverAssociation
 import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperatorAssociation
 import qualified Storage.Queries.FleetOwnerInformation as QFleetOwnerInformation
@@ -92,6 +94,7 @@ deleteDriver merchantShortId reqDriverId = do
           QAadhaarCard.deleteByPersonId person.id
           QPanCard.deleteByDriverId person.id
           QDriverGstin.deleteByDriverId person.id
+          QDriverUdyam.deleteByDriverId person.id
           QDriverReferral.deleteByDriverId person.id
           QIV.deleteByPersonId person.id
           QImage.deleteByPersonId person.id
@@ -127,6 +130,7 @@ deleteDriver merchantShortId reqDriverId = do
           AadhaarOtp.deleteByPersonId person.id
           QAadhaarCard.deleteByPersonId person.id
           QPanCard.deleteByDriverId person.id
+          QDriverIdentityInfo.deleteByDriverId person.id
           QDBA.deleteById person.id
           QPerson.deleteById person.id
           logTagInfo "deleteDriver : " (show reqDriverId)

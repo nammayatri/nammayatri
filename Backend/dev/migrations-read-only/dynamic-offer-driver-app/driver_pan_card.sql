@@ -52,3 +52,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pan_card ADD COLUMN pan_aadhaar_linkag
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

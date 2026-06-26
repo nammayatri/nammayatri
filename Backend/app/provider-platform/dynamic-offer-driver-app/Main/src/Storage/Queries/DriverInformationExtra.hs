@@ -39,26 +39,41 @@ import Tools.Error
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)
 findById (Id driverInformationId) = findOneWithKV [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
 
-findByVerifiedAndEnabled ::
+findByVerifiedAndApprovedAndEnabled ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   Bool ->
-  Bool ->
+  Maybe Bool ->
+  Maybe Bool ->
   Maybe UTCTime ->
   Maybe UTCTime ->
   Int ->
   Int ->
   Maybe [Text] ->
   m [DriverInformation]
-findByVerifiedAndEnabled merchantOpCityId isVerified isEnabled mbFrom mbTo limit offset finalPersonIds = do
+findByVerifiedAndApprovedAndEnabled merchantOpCityId isVerified mbApproved mbEnabled mbFrom mbTo limit offset finalPersonIds = do
   case finalPersonIds of
     Just [] -> pure []
     _ -> do
+      let approvedClauses = case mbApproved of
+            Nothing -> []
+            Just approvedVal ->
+              [ Se.Is BeamDI.approved (Se.Eq (Just approvedVal))
+              ]
+      let enabledClauses = case mbEnabled of
+            Nothing -> []
+            Just True ->
+              [ Se.Is BeamDI.enabled (Se.Eq True)
+              ]
+            Just False ->
+              [ Se.Is BeamDI.enabled (Se.Not (Se.Eq True))
+              ]
       let clauses =
             [ Se.Is BeamDI.merchantOperatingCityId (Se.Eq (Just $ getId merchantOpCityId)),
-              Se.Is BeamDI.verified (Se.Eq isVerified),
-              Se.Is BeamDI.enabled (if isEnabled then Se.Eq True else Se.Not (Se.Eq True))
+              Se.Is BeamDI.verified (Se.Eq isVerified)
             ]
+              <> approvedClauses
+              <> enabledClauses
               <> maybe [] (\from -> [Se.Is BeamDI.updatedAt (Se.GreaterThanOrEq from)]) mbFrom
               <> maybe [] (\to -> [Se.Is BeamDI.updatedAt (Se.LessThanOrEq to)]) mbTo
               <> maybe [] (\pIds -> [Se.Is BeamDI.driverId (Se.In pIds)]) finalPersonIds

@@ -23,6 +23,9 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverUdyam.DriverUdyam] -> m ())
 createMany = traverse_ create
 
+deleteByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+deleteByDriverId driverId = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 findByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverUdyam.DriverUdyam))
 findByDriverId driverId = do findOneWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
@@ -53,8 +56,8 @@ updateByPrimaryKey (Domain.Types.DriverUdyam.DriverUdyam {..}) = do
       Se.Set Beam.enterpriseType enterpriseType,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.rejectReason rejectReason,
-      Se.Set Beam.udyamNumberEncrypted (((udyamNumber & unEncrypted . encrypted))),
-      Se.Set Beam.udyamNumberHash ((udyamNumber & hash)),
+      Se.Set Beam.udyamNumberEncrypted (udyamNumber & unEncrypted . encrypted),
+      Se.Set Beam.udyamNumberHash (udyamNumber & hash),
       Se.Set Beam.verificationStatus verificationStatus,
       Se.Set Beam.verifiedBy verifiedBy,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
@@ -90,8 +93,8 @@ instance ToTType' Beam.DriverUdyam Domain.Types.DriverUdyam.DriverUdyam where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.rejectReason = rejectReason,
-        Beam.udyamNumberEncrypted = ((udyamNumber & unEncrypted . encrypted)),
-        Beam.udyamNumberHash = (udyamNumber & hash),
+        Beam.udyamNumberEncrypted = udyamNumber & unEncrypted . encrypted,
+        Beam.udyamNumberHash = udyamNumber & hash,
         Beam.verificationStatus = verificationStatus,
         Beam.verifiedBy = verifiedBy,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
