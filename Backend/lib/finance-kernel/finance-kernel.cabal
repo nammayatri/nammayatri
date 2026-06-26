@@ -37,6 +37,7 @@ library
       Lib.Finance.FinanceM
       Lib.Finance.Invoice.Interface
       Lib.Finance.Invoice.InvoiceNumber
+      Lib.Finance.Invoice.LineItems
       Lib.Finance.Invoice.PdfService
       Lib.Finance.Invoice.RenderTemplate
       Lib.Finance.Invoice.Service
