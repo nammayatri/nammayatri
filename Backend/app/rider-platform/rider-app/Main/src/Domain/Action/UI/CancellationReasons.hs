@@ -57,4 +57,4 @@ getRideBookingCancellationReasons _authInfo bookingId mbLang = do
           cap w = case Text.uncons w of
             Nothing -> w
             Just (c, rest) -> Text.cons (Char.toUpper c) rest
-       in Text.strip $ Text.unwords (map cap words')
+       in Text.strip $ Text.unwords (map cap words' "extra")
