@@ -1267,6 +1267,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         isReminderSupported = Nothing,
         onlyImageVerificationStatusLookupRequired = Nothing,
         faceMatchSourceDoc = Nothing,
+        markImageValidOnValidationSkip = Nothing,
         ..
       }
   where

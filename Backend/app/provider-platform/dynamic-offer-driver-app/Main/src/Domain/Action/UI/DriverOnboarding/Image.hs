@@ -232,22 +232,32 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
       Query.create imageEntity
 
       -- skipping validation for rc as validation not available in idfy
-      isImageValidationRequired <-
-        if person.role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS]
-          then do
-            -- Image validation for fleet (separate config table, in-mem cached, role-aware).
-            mbFleetDocConfig <- SStatus.findFleetDocVerificationConfig merchantOpCityId imageType person.role
-            return $ maybe True (.isImageValidationRequired) mbFleetDocConfig
-          else return $ maybe True (.isImageValidationRequired) $ find (\c -> c.vehicleCategory == fromMaybe CAR vehicleCategory) docConfigs
-      if isImageValidationRequired && isNothing validationStatus
-        then do
-          validationOutput <-
-            Verification.validateImage merchantId merchantOpCityId $
-              Verification.ValidateImageReq {image, imageType = castImageType imageType, driverId = person.id.getId}
-          when validationOutput.validationAvailable $ do
-            checkErrors imageEntity.id imageType validationOutput.detectedImage
-          Query.updateVerificationStatusOnlyById Documents.VALID imageEntity.id
-        else when (isNothing validationStatus) $ Query.updateVerificationStatusOnlyById Documents.MANUAL_VERIFICATION_REQUIRED imageEntity.id
+      (isImageValidationRequired, markValidOnSkip) <- case person.role of
+        Person.FLEET_OWNER -> do
+          --------------- Image validation for fleet (different config table than docConfigs)
+          fleetDocConfigs <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing
+          return
+            ( maybe True (.isImageValidationRequired) fleetDocConfigs,
+              fleetDocConfigs >>= (.markImageValidOnValidationSkip)
+            )
+        _ -> do
+          let mbDocCfg = find (\c -> c.vehicleCategory == fromMaybe CAR vehicleCategory) docConfigs
+          return
+            ( maybe True (.isImageValidationRequired) mbDocCfg,
+              mbDocCfg >>= (.markImageValidOnValidationSkip)
+            )
+      case markValidOnSkip of
+        Just True -> Query.updateVerificationStatusOnlyById Documents.VALID imageEntity.id
+        _ -> do
+          if isImageValidationRequired && isNothing validationStatus
+            then do
+              validationOutput <-
+                Verification.validateImage merchantId merchantOpCityId $
+                  Verification.ValidateImageReq {image, imageType = castImageType imageType, driverId = person.id.getId}
+              when validationOutput.validationAvailable $ do
+                checkErrors imageEntity.id imageType validationOutput.detectedImage
+              Query.updateVerificationStatusOnlyById Documents.VALID imageEntity.id
+            else when (isNothing validationStatus) $ Query.updateVerificationStatusOnlyById Documents.MANUAL_VERIFICATION_REQUIRED imageEntity.id
       when (imageType == DVC.ProfilePhoto) $
         fork "deferred face match on selfie upload" $ do
           runDeferredFaceMatchOnSelfie person imageEntity.createdAt

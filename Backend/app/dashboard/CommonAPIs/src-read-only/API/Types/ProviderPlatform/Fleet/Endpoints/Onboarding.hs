@@ -61,6 +61,12 @@ data DocumentMetadata
   | AadhaarMetadata AadhaarDocumentMetadata
   | PanMetadata PanDocumentMetadata
   | LocalAddressProofMetadata LocalAddressProofDocumentMetadata
+  | GSTMetadata GSTDocumentMetadata
+  | RCMetadata RCDocumentMetadata
+  | VehiclePUCMetadata VehiclePUCDocumentMetadata
+  | VehicleFitnessMetadata VehicleFitnessCertificateDocumentMetadata
+  | VehicleInsuranceMetadata VehicleInsuranceDocumentMetadata
+  | VehiclePermitMetadata VehiclePermitDocumentMetadata
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -97,6 +103,7 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     isMandatoryForEnabling :: Kernel.Prelude.Bool,
     isReminderSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rcNumberPrefixList :: [Kernel.Prelude.Text],
+    rolesAllowedToUploadDocument :: Kernel.Prelude.Maybe [API.Types.ProviderPlatform.Management.Endpoints.Account.DashboardAccessType],
     title :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
@@ -131,6 +138,10 @@ data RcVerifyStatusResp = RcVerifyStatusResp {approved :: Kernel.Prelude.Maybe K
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data GSTDocumentMetadata = GSTDocumentMetadata {gstNumber :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data LocalAddressProofDocumentMetadata = LocalAddressProofDocumentMetadata {proofDocumentType :: Kernel.Prelude.Maybe Dashboard.Common.Driver.AddressDocumentType, state :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -139,6 +150,18 @@ data PanDocumentMetadata = PanDocumentMetadata
   { driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     panDocType :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.PanType,
     panNumber :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RCDocumentMetadata = RCDocumentMetadata
+  { fitnessExpiry :: Kernel.Prelude.UTCTime,
+    vehicleColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleManufacturer :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleModelYear :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    vehicleNumberPlate :: Kernel.Prelude.Text,
+    vehicleVariant :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -196,6 +219,26 @@ data VehicleDocumentItem = VehicleDocumentItem
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data VehicleDocumentStatusRes = VehicleDocumentStatusRes {vehicleDocument :: Kernel.Prelude.Maybe VehicleDocumentItem}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehicleFitnessCertificateDocumentMetadata = VehicleFitnessCertificateDocumentMetadata {applicationNumber :: Kernel.Prelude.Text, fitnessExpiry :: Kernel.Prelude.UTCTime, rcNumber :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehicleInsuranceDocumentMetadata = VehicleInsuranceDocumentMetadata {insuranceExpiry :: Kernel.Prelude.UTCTime, insuranceProvider :: Kernel.Prelude.Text, policyNumber :: Kernel.Prelude.Text, rcNumber :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehiclePUCDocumentMetadata = VehiclePUCDocumentMetadata {pucExpiry :: Kernel.Prelude.UTCTime, pucNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehiclePermitDocumentMetadata = VehiclePermitDocumentMetadata {permitExpiry :: Kernel.Prelude.UTCTime, permitNumber :: Kernel.Prelude.Text, rcNumber :: Kernel.Prelude.Text, regionCovered :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 newtype VerifyDocumentRes = VerifyDocumentRes {enableFleetOwner :: Kernel.Prelude.Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -218,7 +261,7 @@ data VerifyType
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-type API = ("onboarding" :> (GetOnboardingDocumentConfigsHelper :<|> GetOnboardingRegisterStatusHelper :<|> GetOnboardingRegisterVehicleStatus :<|> PostOnboardingVerifyHelper :<|> GetOnboardingGetReferralDetailsHelper))
+type API = ("onboarding" :> (GetOnboardingDocumentConfigsHelper :<|> GetOnboardingRegisterStatusHelper :<|> GetOnboardingRegisterVehicleStatus :<|> PostOnboardingVerifyHelper :<|> GetOnboardingVehicleDocuments :<|> GetOnboardingGetReferralDetailsHelper))
 
 type GetOnboardingDocumentConfigs =
   ( "document" :> "configs" :> QueryParam "makeSelfieAadhaarPanMandatory" Kernel.Prelude.Bool :> QueryParam "onlyVehicle" Kernel.Prelude.Bool
@@ -302,6 +345,8 @@ type PostOnboardingVerifyHelper =
            VerifyDocumentRes
   )
 
+type GetOnboardingVehicleDocuments = ("vehicle" :> "documents" :> QueryParam "rcNo" Kernel.Prelude.Text :> QueryParam "rcId" Kernel.Prelude.Text :> Get '[JSON] VehicleDocumentStatusRes)
+
 type GetOnboardingGetReferralDetails = ("get" :> "referralDetails" :> MandatoryQueryParam "referralCode" Kernel.Prelude.Text :> Get '[JSON] ReferralInfoRes)
 
 type GetOnboardingGetReferralDetailsHelper =
@@ -316,19 +361,21 @@ data OnboardingAPIs = OnboardingAPIs
     getOnboardingRegisterStatus :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus -> EulerHS.Types.EulerClient StatusRes,
     getOnboardingRegisterVehicleStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient RcVerifyStatusResp,
     postOnboardingVerify :: VerifyType -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Endpoints.Account.DashboardAccessType -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> VerifyReq -> EulerHS.Types.EulerClient VerifyDocumentRes,
+    getOnboardingVehicleDocuments :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient VehicleDocumentStatusRes,
     getOnboardingGetReferralDetails :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient ReferralInfoRes
   }
 
 mkOnboardingAPIs :: (Client EulerHS.Types.EulerClient API -> OnboardingAPIs)
 mkOnboardingAPIs onboardingClient = (OnboardingAPIs {..})
   where
-    getOnboardingDocumentConfigs :<|> getOnboardingRegisterStatus :<|> getOnboardingRegisterVehicleStatus :<|> postOnboardingVerify :<|> getOnboardingGetReferralDetails = onboardingClient
+    getOnboardingDocumentConfigs :<|> getOnboardingRegisterStatus :<|> getOnboardingRegisterVehicleStatus :<|> postOnboardingVerify :<|> getOnboardingVehicleDocuments :<|> getOnboardingGetReferralDetails = onboardingClient
 
 data OnboardingUserActionType
   = GET_ONBOARDING_DOCUMENT_CONFIGS
   | GET_ONBOARDING_REGISTER_STATUS
   | GET_ONBOARDING_REGISTER_VEHICLE_STATUS
   | POST_ONBOARDING_VERIFY
+  | GET_ONBOARDING_VEHICLE_DOCUMENTS
   | GET_ONBOARDING_GET_REFERRAL_DETAILS
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
