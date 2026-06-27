@@ -1,6 +1,7 @@
 module Domain.Action.Dashboard.Fleet.Onboarding
   ( getOnboardingDocumentConfigs,
     getOnboardingRegisterStatus,
+    getOnboardingVehicleDocuments,
     castStatusRes,
     postOnboardingVerify,
     getOnboardingGetReferralDetails,
@@ -28,6 +29,7 @@ import Domain.Types.Person
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Environment
 import Kernel.Beam.Functions
+import Kernel.External.Encryption (decrypt, encrypt, hash)
 import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -40,6 +42,7 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.DriverOnboarding.VehicleDocs as VehicleDocs
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Cac.TransporterConfig as SCTC
+import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as FODVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
@@ -47,6 +50,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.DriverLicense as DLQuery
 import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.Person as PersonQuery
+import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 
 getOnboardingDocumentConfigs ::
   ShortId DM.Merchant ->
@@ -104,7 +108,8 @@ castDocumentVerificationConfigAPIEntity Onboarding.DocumentVerificationConfigAPI
       documentFields = fmap (map SDO.castDocumentFieldInfo) documentFields,
       documentFlowGrouping = SDO.castDocumentFlowGrouping documentFlowGrouping,
       isReminderSupported = isReminderSupported,
-      isApprovalSupported = isApprovalSupported
+      isApprovalSupported = isApprovalSupported,
+      rolesAllowedToUploadDocument = fmap (mapMaybe SDO.castPersonRoleToDashboardAccessType) rolesAllowedToUploadDocument
     }
 
 getOnboardingGetReferralDetails ::
@@ -239,6 +244,51 @@ castDocumentMetadata = \case
         { state = l.state,
           proofDocumentType = DDriver.castToCommon <$> l.proofDocumentType
         }
+  VehicleDocs.GSTMetadata g ->
+    CommonOnboarding.GSTMetadata
+      CommonOnboarding.GSTDocumentMetadata
+        { gstNumber = g.gstNumber
+        }
+  VehicleDocs.RCMetadata r ->
+    CommonOnboarding.RCMetadata
+      CommonOnboarding.RCDocumentMetadata
+        { fitnessExpiry = r.fitnessExpiry,
+          vehicleNumberPlate = r.vehicleNumberPlate,
+          vehicleVariant = r.vehicleVariant,
+          vehicleManufacturer = r.vehicleManufacturer,
+          vehicleModel = r.vehicleModel,
+          vehicleModelYear = r.vehicleModelYear,
+          vehicleColor = r.vehicleColor
+        }
+  VehicleDocs.VehiclePUCMetadata p ->
+    CommonOnboarding.VehiclePUCMetadata
+      CommonOnboarding.VehiclePUCDocumentMetadata
+        { pucNumber = p.pucNumber,
+          pucExpiry = p.pucExpiry
+        }
+  VehicleDocs.VehicleFitnessMetadata f ->
+    CommonOnboarding.VehicleFitnessMetadata
+      CommonOnboarding.VehicleFitnessCertificateDocumentMetadata
+        { fitnessExpiry = f.fitnessExpiry,
+          applicationNumber = f.applicationNumber,
+          rcNumber = f.rcNumber
+        }
+  VehicleDocs.VehicleInsuranceMetadata i ->
+    CommonOnboarding.VehicleInsuranceMetadata
+      CommonOnboarding.VehicleInsuranceDocumentMetadata
+        { policyNumber = i.policyNumber,
+          insuranceExpiry = i.insuranceExpiry,
+          insuranceProvider = i.insuranceProvider,
+          rcNumber = i.rcNumber
+        }
+  VehicleDocs.VehiclePermitMetadata p ->
+    CommonOnboarding.VehiclePermitMetadata
+      CommonOnboarding.VehiclePermitDocumentMetadata
+        { permitNumber = p.permitNumber,
+          permitExpiry = p.permitExpiry,
+          regionCovered = p.regionCovered,
+          rcNumber = p.rcNumber
+        }
 
 castPanType :: DPan.PanType -> CommonDriverRegistration.PanType
 castPanType DPan.INDIVIDUAL = CommonDriverRegistration.INDIVIDUAL
@@ -268,6 +318,35 @@ castDocsVerificationStatus = \case
   DDVS.ADMIN_PENDING -> Dashboard.Common.ADMIN_PENDING
   DDVS.ADMIN_APPROVED -> Dashboard.Common.ADMIN_APPROVED
   DDVS.ADMIN_REJECTED -> Dashboard.Common.ADMIN_REJECTED
+
+getOnboardingVehicleDocuments ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Text ->
+  Maybe Text ->
+  Environment.Flow CommonOnboarding.VehicleDocumentStatusRes
+getOnboardingVehicleDocuments merchantShortId opCity mbRcNo mbRcId = do
+  when (isNothing mbRcNo && isNothing mbRcId) $ throwError (InvalidRequest "Either rcNo or rcId must be provided")
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCity.id Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  rc <- case mbRcId of
+    Just rcId -> RCQuery.findById (Id rcId) >>= fromMaybeM (InvalidRequest $ "RC not found by id: " <> rcId)
+    Nothing -> case mbRcNo of
+      Just rcNo -> do
+        rcNoEnc <- encrypt rcNo
+        RCQuery.findByCertificateNumberHash (rcNoEnc & hash) >>= fromMaybeM (InvalidRequest $ "RC not found for number: " <> rcNo)
+      Nothing -> throwError (InvalidRequest "Either rcNo or rcId must be provided")
+  let entity = IQuery.VehicleRCEntity rc
+  entityImages <- IQuery.findAllByEntityId transporterConfig entity
+  now <- getCurrentTime
+  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
+  allDocumentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId merchantOpCity.id Nothing
+  registrationNo <- decrypt rc.certificateNumber
+  let skipMessages = True
+  vehicleDocuments <- VehicleDocs.fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs ENGLISH (Just registrationNo) Nothing skipMessages
+  let mbVehicleDoc = find (\doc -> doc.registrationNo == registrationNo) vehicleDocuments
+  return CommonOnboarding.VehicleDocumentStatusRes {vehicleDocument = castVehicleDocumentItem <$> mbVehicleDoc}
 
 applyVehicleDocsFilter :: Maybe Dashboard.Common.DocsVerificationStatus -> CommonOnboarding.StatusRes -> CommonOnboarding.StatusRes
 applyVehicleDocsFilter Nothing res = res

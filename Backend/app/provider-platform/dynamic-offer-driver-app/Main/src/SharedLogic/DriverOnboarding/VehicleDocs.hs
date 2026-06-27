@@ -105,11 +105,62 @@ data LocalAddressProofDocumentMetadata = LocalAddressProofDocumentMetadata
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
+newtype GSTDocumentMetadata = GSTDocumentMetadata
+  { gstNumber :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data RCDocumentMetadata = RCDocumentMetadata
+  { fitnessExpiry :: UTCTime,
+    vehicleNumberPlate :: Text,
+    vehicleVariant :: Maybe Text,
+    vehicleManufacturer :: Maybe Text,
+    vehicleModel :: Maybe Text,
+    vehicleModelYear :: Maybe Int,
+    vehicleColor :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data VehiclePUCDocumentMetadata = VehiclePUCDocumentMetadata
+  { pucNumber :: Maybe Text,
+    pucExpiry :: UTCTime
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data VehicleFitnessCertificateDocumentMetadata = VehicleFitnessCertificateDocumentMetadata
+  { fitnessExpiry :: UTCTime,
+    applicationNumber :: Text,
+    rcNumber :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data VehicleInsuranceDocumentMetadata = VehicleInsuranceDocumentMetadata
+  { policyNumber :: Text,
+    insuranceExpiry :: UTCTime,
+    insuranceProvider :: Text,
+    rcNumber :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data VehiclePermitDocumentMetadata = VehiclePermitDocumentMetadata
+  { permitNumber :: Text,
+    permitExpiry :: UTCTime,
+    regionCovered :: Text,
+    rcNumber :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
 data DocumentMetadata
   = DLMetadata DLDocumentMetadata
   | AadhaarMetadata AadhaarDocumentMetadata
   | PanMetadata PanDocumentMetadata
   | LocalAddressProofMetadata LocalAddressProofDocumentMetadata
+  | GSTMetadata GSTDocumentMetadata
+  | RCMetadata RCDocumentMetadata
+  | VehiclePUCMetadata VehiclePUCDocumentMetadata
+  | VehicleFitnessMetadata VehicleFitnessCertificateDocumentMetadata
+  | VehicleInsuranceMetadata VehicleInsuranceDocumentMetadata
+  | VehiclePermitMetadata VehiclePermitDocumentMetadata
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
 data DocumentStatusItem = DocumentStatusItem
@@ -267,11 +318,11 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
     vehicleDocumentTypes <- getVehicleDocTypes merchantOpCityId allDocumentVerificationConfigs verifiedVehicleCategory userSelectedVehicleCategory onlyMandatoryDocs
     documents <-
       vehicleDocumentTypes `forM` \docType -> do
-        (mbStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId) <- getProcessedVehicleDocuments entityImagesInfo docType processedVehicle (Just rcImagesInfo)
+        (mbStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbMetadata) <- getProcessedVehicleDocuments entityImagesInfo docType processedVehicle (Just rcImagesInfo)
         case mbStatus of
           Just status -> do
             mbMessage <- documentStatusMessage status Nothing docType mbProcessedUrl language skipMessages
-            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> mbMessage, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = Nothing}
+            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> mbMessage, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = mbMetadata}
           Nothing -> do
             (status, mbReason, mbUrl, _, mbS3PathInProgress, mbImageIdInProgress) <- getInProgressVehicleDocuments entityImagesInfo (Just rcImagesInfo) docType docVerificationConfigs
             mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
@@ -435,10 +486,11 @@ computeAdminDocsVerificationStatus docs
   | all ((== VALID) . (.verificationStatus)) docs = DDVS.ADMIN_APPROVED
   | otherwise = DDVS.ADMIN_PENDING
 
-getProcessedVehicleDocuments :: IQuery.EntityImagesInfo -> DVC.DocumentType -> RC.VehicleRegistrationCertificate -> Maybe IQuery.RcImagesInfo -> Flow (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text)
+getProcessedVehicleDocuments :: IQuery.EntityImagesInfo -> DVC.DocumentType -> RC.VehicleRegistrationCertificate -> Maybe IQuery.RcImagesInfo -> Flow (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe DocumentMetadata)
 getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo = do
   let entity = entityImagesInfo.entity
       (mbS3Path, mbImageId) = getImageMetaFromVehicleImage entityImagesInfo docType mbRcImagesInfo
+      enableMetadata = fromMaybe False entityImagesInfo.transporterConfig.enableDocumentMetadata
       lookupImage imgId =
         let mbImg = find (\img -> img.id == imgId) entityImagesInfo.entityImages
             s3 = mbImg <&> (.s3Path)
@@ -451,50 +503,119 @@ getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo =
             | status == INVALID && not (null vehicleRC.failedRules) = Just $ T.intercalate ", " vehicleRC.failedRules
             | otherwise = vehicleRC.rejectReason
           (s3, iid) = lookupImage vehicleRC.documentImageId
-      return (Just status, reason, Nothing, Just vehicleRC.fitnessExpiry, s3, iid)
+      mbMetadata <-
+        if enableMetadata
+          then do
+            vehicleNumberPlate <- decrypt vehicleRC.certificateNumber
+            pure $
+              Just $
+                RCMetadata
+                  RCDocumentMetadata
+                    { fitnessExpiry = vehicleRC.fitnessExpiry,
+                      vehicleNumberPlate,
+                      vehicleVariant = show <$> vehicleRC.vehicleVariant,
+                      vehicleManufacturer = vehicleRC.vehicleManufacturer,
+                      vehicleModel = vehicleRC.vehicleModel,
+                      vehicleModelYear = vehicleRC.vehicleModelYear,
+                      vehicleColor = vehicleRC.vehicleColor
+                    }
+          else pure Nothing
+      return (Just status, reason, Nothing, Just vehicleRC.fitnessExpiry, s3, iid, mbMetadata)
     DVC.VehiclePermit -> do
       mbDoc <- listToMaybe <$> VPQuery.findByRcId (Just 1) Nothing vehicleRC.id
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
-      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.permitExpiry, s3, iid)
+      mbMetadata <-
+        if enableMetadata
+          then forM mbDoc $ \doc -> do
+            pNo <- decrypt doc.permitNumber
+            rcNo <- decrypt vehicleRC.certificateNumber
+            pure $
+              VehiclePermitMetadata
+                VehiclePermitDocumentMetadata
+                  { permitNumber = pNo,
+                    permitExpiry = doc.permitExpiry,
+                    regionCovered = doc.regionCovered,
+                    rcNumber = rcNo
+                  }
+          else pure Nothing
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.permitExpiry, s3, iid, mbMetadata)
     DVC.VehicleFitnessCertificate -> do
       mbDoc <- listToMaybe <$> VFCQuery.findByRcId (Just 1) Nothing vehicleRC.id
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
-      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, Just vehicleRC.fitnessExpiry, s3, iid)
+      mbMetadata <-
+        if enableMetadata
+          then forM mbDoc $ \doc -> do
+            appNo <- decrypt doc.applicationNumber
+            rcNo <- decrypt vehicleRC.certificateNumber
+            pure $
+              VehicleFitnessMetadata
+                VehicleFitnessCertificateDocumentMetadata
+                  { fitnessExpiry = doc.fitnessExpiry,
+                    applicationNumber = appNo,
+                    rcNumber = rcNo
+                  }
+          else pure Nothing
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, Just vehicleRC.fitnessExpiry, s3, iid, mbMetadata)
     DVC.VehicleInsurance -> do
       mbDoc <- listToMaybe <$> VIQuery.findByRcId (Just 1) Nothing vehicleRC.id
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
-      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), (mbDoc >>= (.rejectReason)), Nothing, vehicleRC.insuranceValidity, s3, iid)
+      mbMetadata <-
+        if enableMetadata
+          then forM mbDoc $ \doc -> do
+            polNo <- decrypt doc.policyNumber
+            rcNo <- decrypt vehicleRC.certificateNumber
+            pure $
+              VehicleInsuranceMetadata
+                VehicleInsuranceDocumentMetadata
+                  { policyNumber = polNo,
+                    insuranceExpiry = doc.policyExpiry,
+                    insuranceProvider = doc.policyProvider,
+                    rcNumber = rcNo
+                  }
+          else pure Nothing
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), (mbDoc >>= (.rejectReason)), Nothing, vehicleRC.insuranceValidity, s3, iid, mbMetadata)
     DVC.VehiclePUC -> do
       mbDoc <- listToMaybe <$> VPUCQuery.findByRcId (Just 1) Nothing vehicleRC.id
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
-      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.pucExpiry, s3, iid)
+      mbMetadata <-
+        if enableMetadata
+          then forM mbDoc $ \doc -> do
+            mbPucNo <- mapM decrypt doc.pucNumber
+            pure $
+              VehiclePUCMetadata
+                VehiclePUCDocumentMetadata
+                  { pucNumber = mbPucNo,
+                    pucExpiry = doc.pucExpiry
+                  }
+          else pure Nothing
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.pucExpiry, s3, iid, mbMetadata)
     DVC.VehicleNOC -> do
       mbDoc <- listToMaybe <$> VNOCQuery.findByRcId (Just 1) Nothing vehicleRC.id
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
-      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, mbDoc <&> (.nocExpiry), s3, iid)
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, mbDoc <&> (.nocExpiry), s3, iid, Nothing)
     DVC.VehicleInspectionForm -> do
       -- Check all vehicle photos based on RC, not driver
       (status, reason, url) <- checkVehiclePhotosStatusByRC mbRcImagesInfo
-      return (Just status, reason, url, Nothing, Nothing, Nothing)
+      return (Just status, reason, url, Nothing, Nothing, Nothing, Nothing)
     DVC.InspectionHub -> do
       registrationNo <- decrypt vehicleRC.certificateNumber
       status <- getInspectionHubStatusForResponseStatus DOHR.ONBOARDING_INSPECTION Nothing (Just registrationNo)
-      return (status, Nothing, Nothing, Nothing, Nothing, Nothing)
+      return (status, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
     DVC.BotApproval -> do
       registrationNo <- decrypt vehicleRC.certificateNumber
       status <- getBotApprovalStatusForVehicle vehicleRC.id.getId registrationNo
-      return (status, Nothing, Nothing, Nothing, Nothing, Nothing)
+      return (status, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
     DVC.SubscriptionPlan -> case entity of
       IQuery.PersonEntity person -> do
         mbPlan <- QDPlan.findByDriverIdWithServiceName (cast person.id) Plan.YATRI_SUBSCRIPTION -- fix later on basis of vehicle category
-        return (Just $ boolToStatus (isJust mbPlan), Nothing, Nothing, Nothing, Nothing, Nothing)
-      IQuery.VehicleRCEntity _rc -> return (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+        return (Just $ boolToStatus (isJust mbPlan), Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+      IQuery.VehicleRCEntity _rc -> return (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
     _ -> do
       let mbLatestImage = case mbRcImagesInfo of
             Just rcImagesInfo -> listToMaybe (IQuery.filterRecentByPersonRCAndImageType rcImagesInfo docType)
             Nothing -> Nothing
           mbStatus = mbLatestImage >>= (.verificationStatus) <&> mapStatus
-      return (mbStatus, Nothing, Nothing, Nothing, mbS3Path, mbImageId)
+      return (mbStatus, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing)
   where
     boolToStatus :: Bool -> ResponseStatus
     boolToStatus = \case

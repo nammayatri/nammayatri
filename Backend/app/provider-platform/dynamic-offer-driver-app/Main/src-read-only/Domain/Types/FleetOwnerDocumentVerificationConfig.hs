@@ -25,6 +25,7 @@ data FleetOwnerDocumentVerificationConfig = FleetOwnerDocumentVerificationConfig
     isDisabled :: Kernel.Prelude.Bool,
     isHidden :: Kernel.Prelude.Bool,
     isImageValidationRequired :: Kernel.Prelude.Bool,
+    markImageValidOnValidationSkip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isMandatory :: Kernel.Prelude.Bool,
     isMandatoryForEnabling :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     maxRetryCount :: Kernel.Prelude.Int,
@@ -32,6 +33,7 @@ data FleetOwnerDocumentVerificationConfig = FleetOwnerDocumentVerificationConfig
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     order :: Kernel.Prelude.Int,
     role :: Domain.Types.Person.Role,
+    rolesAllowedToUploadDocument :: Kernel.Prelude.Maybe [Domain.Types.Person.Role],
     title :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
