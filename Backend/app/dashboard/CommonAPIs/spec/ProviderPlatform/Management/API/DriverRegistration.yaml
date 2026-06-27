@@ -16,6 +16,8 @@ imports:
   CreateOrderResp: Kernel.External.Payment.Interface.Types
   PayoutOrderStatusResp: Kernel.External.Payout.Interface.Types
   DocsVerificationStatus: Dashboard.Common
+  IndianState: Kernel.Types.Beckn.Context
+  AddressDocumentType: Dashboard.Common.Driver
 
 module: DriverRegistration
 apiPrefix: driver
@@ -630,8 +632,12 @@ types:
   ServiceType:
     enum: "HyperVerge,Idfy"
     derive: "HttpInstance"
+  LocalResidenceProofApproveDetails:
+    - documentImageId: Id Image
+    - state: Maybe IndianState
+    - proofDocumentType: Maybe AddressDocumentType
   ApproveDetails:
-    - enum: "RC RCApproveDetails, DL DLApproveDetails, UploadProfile (Id Image), SSNApprove Text, ProfilePhoto (Id Image), VehiclePermit VPermitApproveDetails, VehiclePUC VPUCApproveDetails, VehicleInsurance VInsuranceApproveDetails, VehicleFitnessCertificate FitnessApproveDetails, VehicleInspectionForm VInspectionApproveDetails, Pan PanApproveDetails, NOC NOCApproveDetails, BusinessLicenseImg BusinessLicenseApproveDetails, CommonDocument CommonDocumentApproveDetails, Aadhaar AadhaarApproveDetails, VehicleFrontImg (Id Image), VehicleBackImg (Id Image), VehicleRightImg (Id Image), VehicleLeftImg (Id Image), VehicleFrontInteriorImg (Id Image), VehicleBackInteriorImg (Id Image), OdometerImg (Id Image), LocalResidenceProofImg (Id Image), PoliceVerificationCertificateImg (Id Image), UDYAMApprove UDYAMApproveDetails, LDCApprove LDCApproveDetails, GSTApprove GSTApproveDetails"
+    - enum: "RC RCApproveDetails, DL DLApproveDetails, UploadProfile (Id Image), SSNApprove Text, ProfilePhoto (Id Image), VehiclePermit VPermitApproveDetails, VehiclePUC VPUCApproveDetails, VehicleInsurance VInsuranceApproveDetails, VehicleFitnessCertificate FitnessApproveDetails, VehicleInspectionForm VInspectionApproveDetails, Pan PanApproveDetails, NOC NOCApproveDetails, BusinessLicenseImg BusinessLicenseApproveDetails, CommonDocument CommonDocumentApproveDetails, Aadhaar AadhaarApproveDetails, VehicleFrontImg (Id Image), VehicleBackImg (Id Image), VehicleRightImg (Id Image), VehicleLeftImg (Id Image), VehicleFrontInteriorImg (Id Image), VehicleBackInteriorImg (Id Image), OdometerImg (Id Image), LocalResidenceProofApprove LocalResidenceProofApproveDetails, PoliceVerificationCertificateImg (Id Image), UDYAMApprove UDYAMApproveDetails, LDCApprove LDCApproveDetails, GSTApprove GSTApproveDetails, DriverVehicleNOCImg (Id Image)"
   GSTApproveDetails:
     - fleetOwnerId: Id Person
     - documentImageId: Id Image

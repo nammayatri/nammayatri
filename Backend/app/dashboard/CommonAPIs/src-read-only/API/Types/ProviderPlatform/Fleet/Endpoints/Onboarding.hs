@@ -6,6 +6,7 @@ module API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding where
 import qualified API.Types.ProviderPlatform.Management.Endpoints.Account
 import qualified API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
 import qualified Dashboard.Common
+import qualified Dashboard.Common.Driver
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -14,11 +15,25 @@ import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
 import Servant
 import Servant.Client
+
+data AadhaarDocumentMetadata = AadhaarDocumentMetadata
+  { aadhaarNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    nameOnCard :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DLDocumentMetadata = DLDocumentMetadata {dateOfExpiry :: Kernel.Prelude.UTCTime, driverDateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime, driverLicenseNumber :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DocumentApplicableType
   = FLEET
@@ -41,11 +56,20 @@ data DocumentFlowGrouping
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DocumentMetadata
+  = DLMetadata DLDocumentMetadata
+  | AadhaarMetadata AadhaarDocumentMetadata
+  | PanMetadata PanDocumentMetadata
+  | LocalAddressProofMetadata LocalAddressProofDocumentMetadata
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DocumentStatusItem = DocumentStatusItem
   { documentType :: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType,
     expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     imageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     imageId2 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    metadata :: Kernel.Prelude.Maybe DocumentMetadata,
     s3Path :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     verificationMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     verificationStatus :: ResponseStatus,
@@ -104,6 +128,18 @@ data FieldType
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RcVerifyStatusResp = RcVerifyStatusResp {approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, documents :: [DocumentStatusItem], registrationNo :: Kernel.Prelude.Text, verified :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data LocalAddressProofDocumentMetadata = LocalAddressProofDocumentMetadata {proofDocumentType :: Kernel.Prelude.Maybe Dashboard.Common.Driver.AddressDocumentType, state :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PanDocumentMetadata = PanDocumentMetadata
+  { driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    panDocType :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.PanType,
+    panNumber :: Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -5,6 +5,7 @@ module API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration where
 
 import qualified API.Types.ProviderPlatform.Management.Endpoints.Account
 import qualified Dashboard.Common
+import qualified Dashboard.Common.Driver
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -16,6 +17,7 @@ import qualified Kernel.External.Verification.Interface.Types
 import qualified Kernel.External.Verification.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
@@ -74,11 +76,12 @@ data ApproveDetails
   | VehicleFrontInteriorImg (Kernel.Types.Id.Id Dashboard.Common.Image)
   | VehicleBackInteriorImg (Kernel.Types.Id.Id Dashboard.Common.Image)
   | OdometerImg (Kernel.Types.Id.Id Dashboard.Common.Image)
-  | LocalResidenceProofImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+  | LocalResidenceProofApprove LocalResidenceProofApproveDetails
   | PoliceVerificationCertificateImg (Kernel.Types.Id.Id Dashboard.Common.Image)
   | UDYAMApprove UDYAMApproveDetails
   | LDCApprove LDCApproveDetails
   | GSTApprove GSTApproveDetails
+  | DriverVehicleNOCImg (Kernel.Types.Id.Id Dashboard.Common.Image)
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -332,6 +335,14 @@ data ImageDocumentsRejectDetails = ImageDocumentsRejectDetails {reason :: Kernel
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LDCApproveDetails = LDCApproveDetails {documentId :: Kernel.Types.Id.Id Dashboard.Common.CommonDriverOnboardingDocuments, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data LocalResidenceProofApproveDetails = LocalResidenceProofApproveDetails
+  { documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image,
+    state :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState,
+    proofDocumentType :: Kernel.Prelude.Maybe Dashboard.Common.Driver.AddressDocumentType
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
