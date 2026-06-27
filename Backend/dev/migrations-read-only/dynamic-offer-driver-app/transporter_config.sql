@@ -967,3 +967,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN block_driver_ow
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_document_metadata boolean ;
