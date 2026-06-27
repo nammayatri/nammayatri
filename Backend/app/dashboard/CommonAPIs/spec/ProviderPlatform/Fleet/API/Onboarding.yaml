@@ -87,6 +87,15 @@ apis:
               type: VerifyDocumentRes
 
   - GET:
+      endpoint: /vehicle/documents
+      auth: ApiAuthV2
+      query:
+        - rcNo: Text
+        - rcId: Text
+      response:
+        type: VehicleDocumentStatusRes
+
+  - GET:
       endpoint: /get/referralDetails
       auth: ApiAuthV2
       mandatoryQuery:
@@ -149,6 +158,7 @@ types:
     documentCategory: Maybe DocumentCategory
     isReminderSupported: Maybe Bool
     isApprovalSupported: Maybe Bool
+    rolesAllowedToUploadDocument: Maybe [DashboardAccessType]
   DocumentCategory:
     enum: "Driver,Vehicle,Permission,Training"
   DocumentFlowGrouping:
@@ -180,7 +190,7 @@ types:
     expiryDate: Maybe UTCTime
     metadata: Maybe DocumentMetadata
   DocumentMetadata:
-    enum: "DLMetadata DLDocumentMetadata | AadhaarMetadata AadhaarDocumentMetadata | PanMetadata PanDocumentMetadata | LocalAddressProofMetadata LocalAddressProofDocumentMetadata"
+    enum: "DLMetadata DLDocumentMetadata | AadhaarMetadata AadhaarDocumentMetadata | PanMetadata PanDocumentMetadata | LocalAddressProofMetadata LocalAddressProofDocumentMetadata | GSTMetadata GSTDocumentMetadata | RCMetadata RCDocumentMetadata | VehiclePUCMetadata VehiclePUCDocumentMetadata | VehicleFitnessMetadata VehicleFitnessCertificateDocumentMetadata | VehicleInsuranceMetadata VehicleInsuranceDocumentMetadata | VehiclePermitMetadata VehiclePermitDocumentMetadata"
   DLDocumentMetadata:
     driverLicenseNumber: Text
     driverDateOfBirth: Maybe UTCTime
@@ -197,6 +207,33 @@ types:
   LocalAddressProofDocumentMetadata:
     state: Maybe IndianState
     proofDocumentType: Maybe AddressDocumentType
+  GSTDocumentMetadata:
+    gstNumber: Text
+  RCDocumentMetadata:
+    fitnessExpiry: UTCTime
+    vehicleNumberPlate: Text
+    vehicleVariant: Maybe Text
+    vehicleManufacturer: Maybe Text
+    vehicleModel: Maybe Text
+    vehicleModelYear: Maybe Int
+    vehicleColor: Maybe Text
+  VehiclePUCDocumentMetadata:
+    pucNumber: Maybe Text
+    pucExpiry: UTCTime
+  VehicleFitnessCertificateDocumentMetadata:
+    fitnessExpiry: UTCTime
+    applicationNumber: Text
+    rcNumber: Text
+  VehicleInsuranceDocumentMetadata:
+    policyNumber: Text
+    insuranceExpiry: UTCTime
+    insuranceProvider: Text
+    rcNumber: Text
+  VehiclePermitDocumentMetadata:
+    permitNumber: Text
+    permitExpiry: UTCTime
+    regionCovered: Text
+    rcNumber: Text
   ResponseStatus:
     enum: "NO_DOC_AVAILABLE,PENDING,VALID,FAILED,INVALID,LIMIT_EXCEED,MANUAL_VERIFICATION_REQUIRED,UNAUTHORIZED,PULL_REQUIRED,CONSENT_DENIED"
   VehicleDocumentItem:
@@ -213,6 +250,8 @@ types:
     imageId: Maybe Text
     expiryDate: Maybe UTCTime
     docsVerificationStatus: Maybe DocsVerificationStatus
+  VehicleDocumentStatusRes:
+    vehicleDocument: Maybe VehicleDocumentItem
   ReferralInfoRes:
     personId: Id Driver
     name: Text

@@ -272,7 +272,8 @@ data RCDetails = RCDetails
     failedRules :: [Text],
     verificationStatus :: Maybe Documents.VerificationStatus,
     s3Path :: Maybe Text,
-    documentExpiry :: Maybe UTCTime
+    documentExpiry :: Maybe UTCTime,
+    permitExpiry :: Maybe UTCTime
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -788,7 +789,8 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
             failedRules = rc.failedRules,
             verificationStatus = Just rc.verificationStatus,
             s3Path = s3Path,
-            documentExpiry = Just rc.fitnessExpiry -- Fitness expiry = RC expiry
+            documentExpiry = Just rc.fitnessExpiry, -- Fitness expiry = RC expiry
+            permitExpiry = rc.permitExpiry
           }
 
 isFleetRole :: DP.Role -> Bool
@@ -1360,7 +1362,13 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
       mbGSTCertificate <- QDGST.findByDriverId driverId
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId1)) mbGSTCertificate
           iid2 = mbGSTCertificate >>= (.documentImageId2) <&> (.getId)
-      return (mapStatus . (.verificationStatus) <$> mbGSTCertificate, Nothing, Nothing, Nothing, s3, iid, iid2, Nothing)
+      mbGstMetadata <-
+        if enableMetadata
+          then forM mbGSTCertificate $ \gst -> do
+            gstNumberDec <- decrypt gst.gstin
+            pure $ GSTMetadata GSTDocumentMetadata {gstNumber = gstNumberDec}
+          else pure Nothing
+      return (mapStatus . (.verificationStatus) <$> mbGSTCertificate, Nothing, Nothing, Nothing, s3, iid, iid2, mbGstMetadata)
     DVC.BackgroundVerification -> do
       mbBackgroundVerification <- BVQuery.findByDriverId driverId
       -- Expiry from BackgroundVerification table's expiresAt field (not from Image table)

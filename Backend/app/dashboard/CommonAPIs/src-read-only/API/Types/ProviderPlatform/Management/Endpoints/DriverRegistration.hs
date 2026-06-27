@@ -27,6 +27,7 @@ import Servant.Client
 
 data AadhaarApproveDetails = AadhaarApproveDetails
   { documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image,
+    documentImageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
     aadhaarNumber :: Kernel.Prelude.Text,
     nameOnCard :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -82,6 +83,7 @@ data ApproveDetails
   | LDCApprove LDCApproveDetails
   | GSTApprove GSTApproveDetails
   | DriverVehicleNOCImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+  | TANApprove TANApproveDetails
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -334,6 +336,10 @@ data ImageDocumentsRejectDetails = ImageDocumentsRejectDetails {reason :: Kernel
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data InspectionHubRejectDetails = InspectionHubRejectDetails {reason :: Kernel.Prelude.Text, requestId :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data LDCApproveDetails = LDCApproveDetails {documentId :: Kernel.Types.Id.Id Dashboard.Common.CommonDriverOnboardingDocuments, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -403,7 +409,8 @@ data RCDetails = RCDetails
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     failedRules :: [Kernel.Prelude.Text],
-    verificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus
+    verificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
+    permitExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -451,6 +458,7 @@ data RejectDetails
   | ImageDocuments ImageDocumentsRejectDetails
   | CommonDocumentReject CommonDocumentRejectDetails
   | UDYAMReject UDYAMRejectDetails
+  | InspectionHubReject InspectionHubRejectDetails
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -472,6 +480,10 @@ data StatusRes = StatusRes
     driverLicenseDetails :: Kernel.Prelude.Maybe [DLDetails],
     vehicleRegistrationCertificateDetails :: Kernel.Prelude.Maybe [RCDetails]
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TANApproveDetails = TANApproveDetails {documentId :: Kernel.Types.Id.Id Dashboard.Common.CommonDriverOnboardingDocuments, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
