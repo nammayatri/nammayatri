@@ -48,6 +48,15 @@ import Common.Types.App as CTP
 import RemoteConfig as RemoteConfig
 
 
+type TranslatedChatComponent = {
+    message :: String
+  , originalMessage :: Maybe String
+  , sentBy :: String
+  , timeStamp :: String
+  , type :: String
+  , delay :: Int
+}
+
 data ScreenOutput = LogoutUser
   | RefreshHomeScreen HomeScreenState
   | GoToHelp HomeScreenState
@@ -255,8 +264,8 @@ data Action = NoAction
   | RideCompletedAC RideCompletedCard.Action
   | RiderRideCompletedAC RiderRideCompletedCard.Action
   | LoadMessages
-  | LoadTranslatedMessages (Array CTP.ChatComponent)
-  | OpenChatWithTranslatedMessages (Array CTP.ChatComponent)
+  | LoadTranslatedMessages Int String (Array TranslatedChatComponent)
+  | OpenChatWithTranslatedMessages Int String (Array TranslatedChatComponent)
   | KeyboardCallback String
   | NotifyDriverStatusCountDown Int String String
   | UpdateProfileButtonAC PrimaryButtonController.Action

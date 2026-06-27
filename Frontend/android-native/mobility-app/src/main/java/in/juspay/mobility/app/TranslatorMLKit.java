@@ -36,9 +36,12 @@ import in.juspay.hyper.core.BridgeComponents;
 
 
 public class TranslatorMLKit {
-    private static Translator translator;
+    private static final Map<String, Translator> translatorCache = new HashMap<>();
+    private Translator translator;
 
     private final Context context;
+    private String sourceLanguage;
+    private String targetLanguage;
 
     static final RemoteModelManager remoteModelManager = RemoteModelManager.getInstance();
 
@@ -47,21 +50,21 @@ public class TranslatorMLKit {
     }
 
     public TranslatorMLKit(String sourceLanguage, String destinationLanguage, Context context) {
-        String key = destinationLanguage.substring(0, 2).toLowerCase();
-        if (languageMap.containsKey(key)) {
-            translator = downloadModel(sourceLanguage, destinationLanguage);
-        } else {
-            translator = downloadModel(sourceLanguage, "en"); // Keeping english as default language
-        }
         this.context = context;
+        this.sourceLanguage = getSupportedLanguageCode(sourceLanguage, "en");
+        this.targetLanguage = getSupportedLanguageCode(destinationLanguage, "en");
+        if (!this.sourceLanguage.equals(this.targetLanguage)) {
+            translator = downloadModel(this.sourceLanguage, this.targetLanguage);
+        }
     }
 
     public static String result, LOG_TAG = "Mobility Translator";
 
     public void triggerDownloadForLang(String language) {
         try {
-            TranslatorOptions options = buildTranslatorOptions("en", language);
-            initializeTranslator(options, context);
+            String targetLanguage = getSupportedLanguageCode(language, "en");
+            TranslatorOptions options = buildTranslatorOptions("en", targetLanguage);
+            initializeTranslator("en-" + targetLanguage, options, context);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -70,7 +73,7 @@ public class TranslatorMLKit {
     public Translator downloadModel(String sourceLanguage, String finalLanguage) {
         try {
             TranslatorOptions options = buildTranslatorOptions(sourceLanguage, finalLanguage);
-            return initializeTranslator(options, context);
+            return initializeTranslator(sourceLanguage + "-" + finalLanguage, options, context);
         } catch (Exception exception) {
             exception.printStackTrace();
             firebaseLogEventWithParams("download_translation_model_ml", "download_failed", exception.toString(), context);
@@ -79,28 +82,18 @@ public class TranslatorMLKit {
     }
 
     private TranslatorOptions buildTranslatorOptions(String sourceLanguage, String finalLanguage) {
-        String targetLanguage = (finalLanguage == null || finalLanguage.equals("null")) ? "en" : finalLanguage.substring(0, 2).toLowerCase();
         return new TranslatorOptions.Builder()
                 .setSourceLanguage(sourceLanguage)
-                .setTargetLanguage(targetLanguage)
+                .setTargetLanguage(finalLanguage)
                 .build();
     }
 
-    private Translator initializeTranslator(TranslatorOptions options, Context context) {
-        if (translator != null) {
-            translator.close();
+    private synchronized Translator initializeTranslator(String cacheKey, TranslatorOptions options, Context context) {
+        if (translatorCache.containsKey(cacheKey)) {
+            return translatorCache.get(cacheKey);
         }
-
         Translator scopedTranslator = Translation.getClient(options);
-
-        scopedTranslator.downloadModelIfNeeded()
-                .addOnSuccessListener(
-                        v -> firebaseLogEventWithParams("download_translation_model", "download_successful", "successful_translation", context))
-                .addOnFailureListener(
-                        e -> {
-                            Log.d(LOG_TAG, "download failed");
-                            firebaseLogEventWithParams("download_translation_model", "download_failed", e.toString(), context);
-                        });
+        translatorCache.put(cacheKey, scopedTranslator);
         return scopedTranslator;
     }
 
@@ -127,45 +120,56 @@ public class TranslatorMLKit {
 
     public void translateStringInTextView(String stringToTranslate, TextView textView) {
         if (translator != null) {
-            translator.translate(stringToTranslate)
+            translator.downloadModelIfNeeded()
                     .addOnSuccessListener(
-                            translatedText -> {
-                                if (textView != null) {
-                                    Animation fadeInAnimation = AnimationUtils.loadAnimation(textView.getContext(), R.anim.fadein);
-                                    textView.startAnimation(fadeInAnimation);
-                                    textView.setText(translatedText);
-                                }
-                            })
+                            v -> translator.translate(stringToTranslate)
+                                    .addOnSuccessListener(
+                                            translatedText -> {
+                                                if (textView != null) {
+                                                    Animation fadeInAnimation = AnimationUtils.loadAnimation(textView.getContext(), R.anim.fadein);
+                                                    textView.startAnimation(fadeInAnimation);
+                                                    textView.setText(translatedText);
+                                                }
+                                            })
+                                    .addOnFailureListener(
+                                            e -> Log.d(LOG_TAG, "translation failed")))
                     .addOnFailureListener(
-                            e -> Log.d(LOG_TAG, "translation failed"));
+                            e -> {
+                                Log.d(LOG_TAG, "download failed");
+                                firebaseLogEventWithParams("download_translation_model", "download_failed", e.toString(), context);
+                            });
         }
     }
 
     public void translateStringWithCallback(String initialAddress, String callback, BridgeComponents bridgeComponents) {
-        if (translator != null) {
-            translator.translate(initialAddress)
+        if (sourceLanguage != null && sourceLanguage.equals(targetLanguage)) {
+            sendCallback(callback, initialAddress, bridgeComponents);
+        } else if (translator != null) {
+            translator.downloadModelIfNeeded()
                     .addOnSuccessListener(
-                            translatedText -> {
-                                if (callback != null) {
-                                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s',%s);",
-                                            callback, JSONObject.quote(translatedText));
-                                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
-                                }
-                            })
+                            v -> translator.translate(initialAddress)
+                                    .addOnSuccessListener(
+                                            translatedText -> sendCallback(callback, translatedText, bridgeComponents))
+                                    .addOnFailureListener(
+                                            e -> sendCallback(callback, initialAddress, bridgeComponents)))
                     .addOnFailureListener(
                             e -> {
-                                if (callback != null) {
-                                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s',%s);",
-                                            callback, JSONObject.quote(initialAddress));
-                                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
-                                }
+                                Log.d(LOG_TAG, "download failed");
+                                firebaseLogEventWithParams("download_translation_model", "download_failed", e.toString(), context);
+                                sendCallback(callback, initialAddress, bridgeComponents);
                             });
         } else {
-            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s',%s);",
-                    callback, JSONObject.quote(initialAddress));
-            bridgeComponents.getJsCallback().addJsToWebView(javascript);
+            sendCallback(callback, initialAddress, bridgeComponents);
         }
 
+    }
+
+    private void sendCallback(String callback, String value, BridgeComponents bridgeComponents) {
+        if (callback != null && bridgeComponents != null) {
+            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s',%s);",
+                    callback, JSONObject.quote(value));
+            bridgeComponents.getJsCallback().addJsToWebView(javascript);
+        }
     }
 
     public void listDownloadedModels(String callback, BridgeComponents bridgeComponents) {
@@ -195,7 +199,15 @@ public class TranslatorMLKit {
                         });
     }
 
-    public Map<String, String> languageMap = new HashMap<>(Map.<String, String>ofEntries(
+    public static String getSupportedLanguageCode(String language, String fallbackLanguage) {
+        if (language == null || language.equals("null") || language.length() < 2) {
+            return fallbackLanguage;
+        }
+        String key = language.substring(0, 2).toLowerCase();
+        return languageMap.containsKey(key) ? key : fallbackLanguage;
+    }
+
+    public static final Map<String, String> languageMap = new HashMap<>(Map.<String, String>ofEntries(
             entry("af", "Afrikaans"),
             entry("ar", "Arabic"),
             entry("be", "Belarusian"),

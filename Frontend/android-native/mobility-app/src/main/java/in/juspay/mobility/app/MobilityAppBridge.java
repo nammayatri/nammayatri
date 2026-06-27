@@ -68,6 +68,8 @@ import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.perf.FirebasePerformance;
 import com.google.firebase.perf.metrics.Trace;
+import com.google.mlkit.nl.languageid.LanguageIdentification;
+import com.google.mlkit.nl.languageid.LanguageIdentifier;
 
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer;
@@ -623,8 +625,17 @@ public class MobilityAppBridge extends HyperBridge {
             Context context = bridgeComponents.getContext();
             SharedPreferences sharedPrefs = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String lang = sharedPrefs.getString("LANGUAGE_KEY", "en");
-            TranslatorMLKit translator = new TranslatorMLKit("en", lang, context);
-            translator.translateStringWithCallback(toTranslate, callback, bridgeComponents);
+            LanguageIdentifier languageIdentifier = LanguageIdentification.getClient();
+            languageIdentifier.identifyLanguage(toTranslate)
+                    .addOnSuccessListener(sourceLanguage -> {
+                        String detectedLanguage = "und".equals(sourceLanguage) ? "en" : sourceLanguage;
+                        TranslatorMLKit translator = new TranslatorMLKit(detectedLanguage, lang, context);
+                        translator.translateStringWithCallback(toTranslate, callback, bridgeComponents);
+                    })
+                    .addOnFailureListener(e -> {
+                        TranslatorMLKit translator = new TranslatorMLKit("en", lang, context);
+                        translator.translateStringWithCallback(toTranslate, callback, bridgeComponents);
+                    });
         });
     }
 

@@ -24,7 +24,7 @@ import Screens.HomeScreen.ComponentConfig
 import Screens.SubscriptionScreen.Controller
 import Common.Resources.Constants (zoomLevel)
 import Common.Styles.Colors as Color
-import Common.Types.App (OptionButtonList, LazyCheck(..), Paths(..), UploadFileConfig(..), ChatComponent) as Common
+import Common.Types.App (OptionButtonList, LazyCheck(..), Paths(..), UploadFileConfig(..)) as Common
 import Components.Banner as Banner
 import Components.BannerCarousel as BannerCarousel
 import Components.BottomNavBar as BottomNavBar
@@ -187,7 +187,7 @@ instance showAction :: Show Action where
   show (RecenterButtonAction) = "RecenterButtonAction"
   show (ChatViewActionController var1) = "ChatViewActionController_" <> show var1
   show (UpdateMessages _ _ _ _) = "UpdateMessages"
-  show (LoadTranslatedMessages _) = "LoadTranslatedMessages"
+  show (LoadTranslatedMessages _ _ _) = "LoadTranslatedMessages"
   show (InitializeChat) = "InitializeChat"
   show (OpenChatScreen) = "OpenChatScreen"
   show (RemoveChat) = "RemoveChat"
@@ -528,6 +528,15 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | EnablePetRides ST.HomeScreenState
                     | DriverConsentAgree ST.HomeScreenState
 
+type TranslatedChatComponent = {
+    message :: String
+  , originalMessage :: Maybe String
+  , sentBy :: String
+  , timeStamp :: String
+  , type :: String
+  , delay :: Int
+}
+
 data Action = NoAction
             | BackPressed
             | ScreenClick
@@ -558,7 +567,7 @@ data Action = NoAction
             | RecenterButtonAction
             | ChatViewActionController ChatView.Action
             | UpdateMessages String String String String
-            | LoadTranslatedMessages (Array Common.ChatComponent)
+            | LoadTranslatedMessages Int String (Array TranslatedChatComponent)
             | InitializeChat
             | OpenChatScreen
             | RemoveChat
@@ -1427,28 +1436,48 @@ translateChatMessages currentUser suggestionKey targetLanguage messages =
   traverse (translateChatMessage currentUser suggestionKey targetLanguage) messages
 
 translateChatMessage currentUser suggestionKey targetLanguage message =
-  if message.sentBy == currentUser || targetLanguage == "EN_US" || isKnownChatSuggestion suggestionKey message.message then
-    pure message
+  if message.sentBy == currentUser || isKnownChatSuggestion suggestionKey message.message then
+    pure $ toTranslatedChatComponent message Nothing
   else do
     translated <- doAff $ makeAff \cb -> do
       JB.translateStringWithTimeout (cb <<< Right) (\translatedMessage -> translatedMessage) 700 message.message
       pure nonCanceler
-    pure $ message { message = translated }
+    pure $ toTranslatedChatComponent (message { message = translated }) $ if translated == message.message then Nothing else Just message.message
+
+toTranslatedChatComponent { message, sentBy, timeStamp, type: type_, delay } originalMessage =
+  { message, originalMessage, sentBy, timeStamp, type: type_, delay}
+
+toChatComponentConfig { message, originalMessage, sentBy, timeStamp, type: type_, delay } =
+  { message, messageTitle: originalMessage, messageAction: Nothing, messageLabel: Nothing, sentBy, timeStamp, type: type_, delay}
+
+chatMessagesSnapshot messages =
+  { count: Array.length messages
+  , lastTimeStamp: case Array.last messages of
+      Just value -> value.timeStamp
+      Nothing -> ""
+  }
+
+isCurrentChatSnapshot count lastTimeStamp messages =
+  let snapshot = chatMessagesSnapshot messages
+  in snapshot.count == count && snapshot.lastTimeStamp == lastTimeStamp
 
 isKnownChatSuggestion suggestionKey message =
   getMessageFromKey suggestionKey message "EN_US" /= message || not (Array.null (getSuggestionsfromKey suggestionKey message))
 
 eval (RideActionModalAction (RideActionModal.LoadMessages)) state = do
   let allMessages = getChatMessages Common.FunctionCall
-  continueWithCmd state [do
-    translatedMessages <- translateChatMessages "Driver" chatSuggestion (getLanguageLocale languageKey) allMessages
-    pure $ LoadTranslatedMessages translatedMessages
-  ]
+      snapshot = chatMessagesSnapshot allMessages
+      transformedMessages = map (\message -> toChatComponentConfig $ toTranslatedChatComponent message Nothing) allMessages
+  if isCurrentChatSnapshot snapshot.count snapshot.lastTimeStamp state.data.messages then continue state {props {canSendSuggestion = true}}
+  else continueWithCmd state {data {messages = transformedMessages}} [do
+      translatedMessages <- translateChatMessages "Driver" chatSuggestion (getLanguageLocale languageKey) allMessages
+      pure $ LoadTranslatedMessages snapshot.count snapshot.lastTimeStamp translatedMessages
+    ]
 
-eval (LoadTranslatedMessages translatedMessages) state = do
-  let toChatComponentConfig { message, sentBy, timeStamp, type: type_, delay } =
-        { message, messageTitle: Nothing, messageAction: Nothing, messageLabel: Nothing, sentBy, timeStamp, type: type_, delay}
-  case (Array.last translatedMessages) of
+eval (LoadTranslatedMessages requestCount requestLastTimeStamp translatedMessages) state = do
+  let allMessages = getChatMessages Common.FunctionCall
+  if not $ isCurrentChatSnapshot requestCount requestLastTimeStamp allMessages then continue state
+  else case (Array.last translatedMessages) of
       Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true}} else
                       if value.sentBy == "Driver" then updateMessagesWithCmd state {data {messages = toChatComponentConfig <$> translatedMessages, chatSuggestionsList = []}, props {canSendSuggestion = true}}
                       else do
