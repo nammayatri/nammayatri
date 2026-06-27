@@ -635,7 +635,8 @@ public class MobilityAppBridge extends HyperBridge {
                     .addOnFailureListener(e -> {
                         TranslatorMLKit translator = new TranslatorMLKit("en", lang, context);
                         translator.translateStringWithCallback(toTranslate, callback, bridgeComponents);
-                    });
+                    })
+                    .addOnCompleteListener(task -> languageIdentifier.close());
         });
     }
 
