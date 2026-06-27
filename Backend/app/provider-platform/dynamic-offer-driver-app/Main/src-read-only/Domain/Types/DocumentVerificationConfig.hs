@@ -33,6 +33,7 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     isDisabled :: Kernel.Prelude.Bool,
     isHidden :: Kernel.Prelude.Bool,
     isImageValidationRequired :: Kernel.Prelude.Bool,
+    markImageValidOnValidationSkip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isMandatory :: Kernel.Prelude.Bool,
     isMandatoryForEnabling :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isReminderSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

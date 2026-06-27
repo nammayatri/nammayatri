@@ -33,6 +33,7 @@ data DocumentVerificationConfigT f = DocumentVerificationConfigT
     isDisabled :: B.C f Kernel.Prelude.Bool,
     isHidden :: B.C f Kernel.Prelude.Bool,
     isImageValidationRequired :: B.C f Kernel.Prelude.Bool,
+    markImageValidOnValidationSkip :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     isMandatory :: B.C f Kernel.Prelude.Bool,
     isMandatoryForEnabling :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isReminderSupported :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
