@@ -28,6 +28,7 @@ import com.google.mlkit.nl.translate.TranslatorOptions;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -199,11 +200,11 @@ public class TranslatorMLKit {
         if (language == null || language.equals("null") || language.length() < 2) {
             return fallbackLanguage;
         }
-        String key = language.substring(0, 2).toLowerCase();
+        String key = language.split("[-_]")[0].toLowerCase(Locale.ROOT);
         return languageMap.containsKey(key) ? key : fallbackLanguage;
     }
 
-    public static final Map<String, String> languageMap = new HashMap<>(Map.<String, String>ofEntries(
+    public static final Map<String, String> languageMap = Collections.unmodifiableMap(new HashMap<>(Map.<String, String>ofEntries(
             entry("af", "Afrikaans"),
             entry("ar", "Arabic"),
             entry("be", "Belarusian"),
@@ -263,5 +264,5 @@ public class TranslatorMLKit {
             entry("ur", "Urdu"),
             entry("vi", "Vietnamese"),
             entry("zh", "Chinese")
-    ));
+    )));
 }
