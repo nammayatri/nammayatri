@@ -31,12 +31,13 @@ import org.json.JSONObject;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import in.juspay.hyper.core.BridgeComponents;
 
 
 public class TranslatorMLKit {
-    private static final Map<String, Translator> translatorCache = new HashMap<>();
+    private static final Map<String, Translator> translatorCache = new ConcurrentHashMap<>();
     private Translator translator;
 
     private final Context context;
@@ -88,13 +89,8 @@ public class TranslatorMLKit {
                 .build();
     }
 
-    private synchronized Translator initializeTranslator(String cacheKey, TranslatorOptions options, Context context) {
-        if (translatorCache.containsKey(cacheKey)) {
-            return translatorCache.get(cacheKey);
-        }
-        Translator scopedTranslator = Translation.getClient(options);
-        translatorCache.put(cacheKey, scopedTranslator);
-        return scopedTranslator;
+    private Translator initializeTranslator(String cacheKey, TranslatorOptions options, Context context) {
+        return translatorCache.computeIfAbsent(cacheKey, ignored -> Translation.getClient(options));
     }
 
     public void deleteDownloadedModel(String language) {
