@@ -15,6 +15,7 @@ import qualified API.Types.UI.DriverOnboardingV2 as Onboarding
 import qualified Dashboard.Common
 import qualified Data.Text as Text
 import qualified Domain.Action.Dashboard.Common as DCommon
+import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as DAV
 import qualified Domain.Action.UI.DriverOnboarding.GstVerification as DGV
 import qualified Domain.Action.UI.DriverOnboarding.PanVerification as DPV
@@ -37,6 +38,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.DriverOnboarding.VehicleDocs as VehicleDocs
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as FODVC
@@ -226,8 +228,44 @@ castDocumentStatusItem SStatus.DocumentStatusItem {..} =
     { documentType = SDO.castDocumentType documentType,
       verificationStatus = castResponseStatus verificationStatus,
       expiryDate = documentExpiry,
+      metadata = castDocumentMetadata <$> metadata,
       ..
     }
+
+castDocumentMetadata :: VehicleDocs.DocumentMetadata -> CommonOnboarding.DocumentMetadata
+castDocumentMetadata = \case
+  VehicleDocs.DLMetadata dl ->
+    CommonOnboarding.DLMetadata
+      CommonOnboarding.DLDocumentMetadata
+        { driverLicenseNumber = dl.driverLicenseNumber,
+          driverDateOfBirth = dl.driverDateOfBirth,
+          dateOfExpiry = dl.dateOfExpiry
+        }
+  VehicleDocs.AadhaarMetadata a ->
+    CommonOnboarding.AadhaarMetadata
+      CommonOnboarding.AadhaarDocumentMetadata
+        { aadhaarNumber = a.aadhaarNumber,
+          nameOnCard = a.nameOnCard,
+          dateOfBirth = a.dateOfBirth,
+          address = a.address
+        }
+  VehicleDocs.PanMetadata p ->
+    CommonOnboarding.PanMetadata
+      CommonOnboarding.PanDocumentMetadata
+        { panNumber = p.panNumber,
+          panDocType = castPanType <$> p.panDocType,
+          driverDob = p.driverDob
+        }
+  VehicleDocs.LocalAddressProofMetadata l ->
+    CommonOnboarding.LocalAddressProofMetadata
+      CommonOnboarding.LocalAddressProofDocumentMetadata
+        { state = l.state,
+          proofDocumentType = DDriver.castToCommon <$> l.proofDocumentType
+        }
+
+castPanType :: DPan.PanType -> CommonDriverRegistration.PanType
+castPanType DPan.INDIVIDUAL = CommonDriverRegistration.INDIVIDUAL
+castPanType DPan.BUSINESS = CommonDriverRegistration.BUSINESS
 
 castDLDetails :: SStatus.DLDetails -> CommonDriverRegistration.DLDetails
 castDLDetails SStatus.DLDetails {..} = CommonDriverRegistration.DLDetails {..}
