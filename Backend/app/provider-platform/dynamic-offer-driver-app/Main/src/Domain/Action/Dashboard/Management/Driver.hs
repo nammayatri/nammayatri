@@ -70,6 +70,8 @@ module Domain.Action.Dashboard.Management.Driver
     getDriverIdentityInfo,
     postDriverIdentityInfoUpdate,
     postDriverAssociationChange,
+    castToCommon,
+    castFromCommon,
   )
 where
 
