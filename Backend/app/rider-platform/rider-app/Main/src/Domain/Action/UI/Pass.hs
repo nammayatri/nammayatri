@@ -716,10 +716,6 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
   mbLastVerified <- QPassVerifyTransaction.findLastVerifiedVehicleNumberByPurchasePassId purchasedPass.id
   let lastVerifiedVehicleNumber = fmap fst mbLastVerified
   let isAutoVerified = (mbLastVerified >>= snd) == Just True
-  -- Prefer the uploaded media file (new flow) and resolve it to a URL; fall back to the legacy inline photo.
-  mbMediaUrl <- case purchasedPass.passPhotoMediaId of
-    Just mediaId -> fmap (.url) <$> QMediaFile.findById mediaId
-    Nothing -> pure Nothing
   return $
     PassAPI.PurchasedPassAPIEntity
       { id = purchasedPass.id,
@@ -732,7 +728,8 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         startDate = purchasedPass.startDate,
         deviceMismatch,
         deviceSwitchAllowed = purchasedPass.deviceSwitchCount < maxSwitchCount,
-        profilePicture = mbMediaUrl <|> purchasedPass.profilePicture <|> person.profilePicture,
+        profilePicture = purchasedPass.profilePicture <|> person.profilePicture,
+        passPhotoMediaId = purchasedPass.passPhotoMediaId,
         daysToExpire = daysToExpire,
         purchaseDate = DT.utctDay purchasedPass.createdAt,
         expiryDate = purchasedPass.endDate,
