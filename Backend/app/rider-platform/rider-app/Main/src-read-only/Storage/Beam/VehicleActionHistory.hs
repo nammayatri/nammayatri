@@ -1,20 +1,22 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Beam.DispatcherHistory where
+module Storage.Beam.VehicleActionHistory where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.VehicleActionHistory
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
-data DispatcherHistoryT f = DispatcherHistoryT
-  { conductorCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+data VehicleActionHistoryT f = VehicleActionHistoryT
+  { action :: (B.C f Domain.Types.VehicleActionHistory.VehicleActionType),
+    conductorCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     currentVehicle :: (B.C f Kernel.Prelude.Text),
-    depotId :: (B.C f Kernel.Prelude.Text),
+    depotId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     dispatcherId :: (B.C f Kernel.Prelude.Text),
     driverCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     id :: (B.C f Kernel.Prelude.Text),
@@ -22,18 +24,18 @@ data DispatcherHistoryT f = DispatcherHistoryT
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     reasonContent :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     reasonTag :: (B.C f Kernel.Prelude.Text),
-    replacedVehicle :: (B.C f Kernel.Prelude.Text),
+    replacedVehicle :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime),
     waybillNo :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text))
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table DispatcherHistoryT where
-  data PrimaryKey DispatcherHistoryT f = DispatcherHistoryId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = DispatcherHistoryId . id
+instance B.Table VehicleActionHistoryT where
+  data PrimaryKey VehicleActionHistoryT f = VehicleActionHistoryId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
+  primaryKey = VehicleActionHistoryId . id
 
-type DispatcherHistory = DispatcherHistoryT Identity
+type VehicleActionHistory = VehicleActionHistoryT Identity
 
-$(enableKVPG (''DispatcherHistoryT) [('id)] [[('dispatcherId)]])
+$(enableKVPG (''VehicleActionHistoryT) [('id)] [[('action)], [('dispatcherId)]])
 
-$(mkTableInstances (''DispatcherHistoryT) "dispatcher_history")
+$(mkTableInstances (''VehicleActionHistoryT) "vehicle_action_history")

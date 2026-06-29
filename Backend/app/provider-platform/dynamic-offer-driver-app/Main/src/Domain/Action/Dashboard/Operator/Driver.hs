@@ -819,7 +819,7 @@ getDriverReviewQueueRequest merchantShortId opCity entityType reviewRequestType 
       case finalPersonIds of
         Just [] -> pure []
         _ -> do
-          driverInfoList <- QDIExtra.findByVerifiedAndEnabled merchantOpCity.id True (fromMaybe False mbApproved) mbFrom mbTo limit offset finalPersonIds
+          driverInfoList <- QDIExtra.findByVerifiedAndApprovedAndEnabled merchantOpCity.id True mbApproved (Just False) mbFrom mbTo limit offset finalPersonIds
           let driverIds = map (.driverId) driverInfoList
           if null driverIds
             then pure []

@@ -328,7 +328,8 @@ data SubscriptionPurchaseListItem = SubscriptionPurchaseListItem
     revenueRecognized :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     linkedRides :: [LinkedRideItem],
     createdAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    updatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    orderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
