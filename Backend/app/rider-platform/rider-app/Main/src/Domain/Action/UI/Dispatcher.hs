@@ -16,10 +16,10 @@ where
 
 import qualified API.Types.UI.Dispatcher
 import qualified BecknV2.OnDemand.Enums as BecknSpec
-import qualified Domain.Types.DispatcherHistory
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
+import qualified Domain.Types.VehicleActionHistory
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
@@ -33,8 +33,8 @@ import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.Queries.DepotManager as QD
-import qualified Storage.Queries.DispatcherHistory as QDH
 import Storage.Queries.Person as QP
+import qualified Storage.Queries.VehicleActionHistory as QVAH
 import Tools.Auth ()
 import Tools.Error
 import qualified Tools.MultiModal as MM
@@ -83,24 +83,25 @@ postDispatcherUpdateFleetSchedule (mbPersonId, _merchantId) req = do
   let (reasonTag, reasonContent) = case req.reason of
         API.Types.UI.Dispatcher.BreakDown -> ("BreakDown", Nothing)
         API.Types.UI.Dispatcher.OtherReason txt -> ("OtherReason", Just txt)
-  let dispatcherHistory =
-        Domain.Types.DispatcherHistory.DispatcherHistory
+  let vehicleActionHistory =
+        Domain.Types.VehicleActionHistory.VehicleActionHistory
           { id = historyId,
             dispatcherId = personId,
+            action = Domain.Types.VehicleActionHistory.DISPATCHER,
             currentVehicle = req.sourceFleetId,
-            replacedVehicle = req.updatedFleetId,
+            replacedVehicle = Just req.updatedFleetId,
             driverCode = sourceFleetInfo.driver_code,
             conductorCode = sourceFleetInfo.conductor_code,
             merchantId = person.merchantId,
             merchantOperatingCityId = person.merchantOperatingCityId,
-            depotId = depotManager.depotCode.getId,
+            depotId = Just depotManager.depotCode.getId,
             reasonTag = reasonTag,
             reasonContent = reasonContent,
             createdAt = now,
             updatedAt = now,
             waybillNo = sourceFleetInfo.waybill_no
           }
-  QDH.create dispatcherHistory
+  QVAH.create vehicleActionHistory
   -- adding fleet override info in redis for waybill.
   Redis.setExp (fleetOverrideKey req.updatedFleetId) (req.sourceFleetId, sourceFleetInfo.waybill_no & fromMaybe "") 86400
   pure $ Kernel.Types.APISuccess.Success
@@ -197,19 +198,19 @@ getDispatcherHistory (mbPersonId, _merchantId) mbLimit mbOffset = do
   _ <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let limit = fromMaybe 15 mbLimit
       offset = fromMaybe 0 mbOffset
-  historyRecords <- B.runInReplica $ QDH.findByDispatcherId (Just limit) (Just offset) personId
+  historyRecords <- B.runInReplica $ QVAH.findAllByDispatcherIdAndAction (Just limit) (Just offset) personId Domain.Types.VehicleActionHistory.DISPATCHER
   pure $ map convertToHistoryRes historyRecords
   where
-    convertToHistoryRes :: Domain.Types.DispatcherHistory.DispatcherHistory -> API.Types.UI.Dispatcher.DispatcherHistoryRes
-    convertToHistoryRes Domain.Types.DispatcherHistory.DispatcherHistory {..} =
+    convertToHistoryRes :: Domain.Types.VehicleActionHistory.VehicleActionHistory -> API.Types.UI.Dispatcher.DispatcherHistoryRes
+    convertToHistoryRes Domain.Types.VehicleActionHistory.VehicleActionHistory {..} =
       API.Types.UI.Dispatcher.DispatcherHistoryRes
         { API.Types.UI.Dispatcher.id = Kernel.Types.Id.getId id,
           API.Types.UI.Dispatcher.dispatcherId = Kernel.Types.Id.getId dispatcherId,
           API.Types.UI.Dispatcher.currentVehicle = currentVehicle,
-          API.Types.UI.Dispatcher.replacedVehicle = replacedVehicle,
+          API.Types.UI.Dispatcher.replacedVehicle = fromMaybe "" replacedVehicle,
           API.Types.UI.Dispatcher.historyDriverCode = fromMaybe "" driverCode,
           API.Types.UI.Dispatcher.historyConductorCode = fromMaybe "" conductorCode,
-          API.Types.UI.Dispatcher.depotId = depotId,
+          API.Types.UI.Dispatcher.depotId = fromMaybe "" depotId,
           API.Types.UI.Dispatcher.reasonTag = reasonTag,
           API.Types.UI.Dispatcher.reasonContent = reasonContent,
           API.Types.UI.Dispatcher.createdAt = createdAt,

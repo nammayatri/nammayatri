@@ -116,7 +116,18 @@ getOrCreatePaymentCustomer person = do
     -- Re-check inside the lock: another concurrent request may have already created it
     mbCustomer <- QPaymentCustomer.findByPersonIdAndPaymentMode (Just person.id) (Just paymentMode)
     case mbCustomer of
-      Just customer -> return customer
+      Just customer ->
+        if customer.customerId == person.id.getId
+          then do
+            getCustomerResp <- TPayment.getCustomer person.merchantId person.merchantOperatingCityId person.paymentMode customer.customerId
+            QPaymentCustomer.updateCATExpiryAndCustomerIdByPersonId getCustomerResp.clientAuthToken getCustomerResp.clientAuthTokenExpiry getCustomerResp.customerId (Just person.id) (Just paymentMode)
+            return
+              customer
+                { DPaymentCustomer.customerId = getCustomerResp.customerId,
+                  DPaymentCustomer.clientAuthToken = getCustomerResp.clientAuthToken,
+                  DPaymentCustomer.clientAuthTokenExpiry = getCustomerResp.clientAuthTokenExpiry
+                }
+          else return customer
       Nothing -> do
         -- Create a customer in payment service if not there
         mbEmailDecrypted <- mapM decrypt person.email

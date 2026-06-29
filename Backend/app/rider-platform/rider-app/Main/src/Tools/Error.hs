@@ -1095,6 +1095,9 @@ data MultimodalError
   | CategoriesAndTotalPriceMismatch Text Text
   | NoSelectedCategoryFound Text
   | NoValidBusRoute Text Text
+  | BusBlocked Text -- vehicleNumber
+  | BusBlockNotAllowed Text -- personId
+  | BusBlockLimitExceeded Int -- maxLimit
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''MultimodalError
@@ -1120,6 +1123,9 @@ instance IsBaseError MultimodalError where
     CategoriesAndTotalPriceMismatch categoriesTotalPrice totalPrice -> Just $ "Categories and total price mismatch: " <> categoriesTotalPrice <> " and " <> totalPrice
     NoSelectedCategoryFound quoteId -> Just $ "No selected category found in quote categories, quoteId : " <> quoteId
     NoValidBusRoute source dest -> Just $ "No valid bus route found between " <> source <> " and " <> dest
+    BusBlocked vehicleNumber -> Just $ "Bus " <> vehicleNumber <> " is currently blocked by checker"
+    BusBlockNotAllowed personId -> Just $ "Person " <> personId <> " is not allowed to block or unblock buses."
+    BusBlockLimitExceeded maxLimit -> Just $ "Bus block limit reached: a person can block at most " <> show maxLimit <> " buses."
 
 instance IsHTTPError MultimodalError where
   toErrorCode = \case
@@ -1142,6 +1148,9 @@ instance IsHTTPError MultimodalError where
     StopDoesNotHaveLocation _ -> "STOP_DOES_NOT_HAVE_LOCATION"
     CategoriesAndTotalPriceMismatch _ _ -> "CATEGORIES_AND_TOTAL_PRICE_MISMATCH"
     NoSelectedCategoryFound _ -> "NO_SELECTED_CATEGORY_FOUND"
+    BusBlocked _ -> "BUS_BLOCKED"
+    BusBlockNotAllowed _ -> "BUS_BLOCK_NOT_ALLOWED"
+    BusBlockLimitExceeded _ -> "BUS_BLOCK_LIMIT_EXCEEDED"
 
   toHttpCode = \case
     InvalidStationChange _ _ -> E400
@@ -1163,6 +1172,9 @@ instance IsHTTPError MultimodalError where
     StopDoesNotHaveLocation _ -> E400
     CategoriesAndTotalPriceMismatch _ _ -> E500
     NoSelectedCategoryFound _ -> E500
+    BusBlocked _ -> E403
+    BusBlockNotAllowed _ -> E403
+    BusBlockLimitExceeded _ -> E403
 
 instance IsAPIError MultimodalError
 

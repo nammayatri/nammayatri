@@ -1052,7 +1052,6 @@ library
       Domain.Types.DeviceVehicleMapping
       Domain.Types.Disability
       Domain.Types.DisabilityTranslation
-      Domain.Types.DispatcherHistory
       Domain.Types.DraftTicketChange
       Domain.Types.DraftTicketChangeHistory
       Domain.Types.DriverOffer
@@ -1186,6 +1185,7 @@ library
       Domain.Types.Translations
       Domain.Types.UiRiderConfig
       Domain.Types.ValueAddNP
+      Domain.Types.VehicleActionHistory
       Domain.Types.VehicleConfig
       Domain.Types.VehicleRouteMapping
       Domain.Types.VehicleSeatLayoutMapping
@@ -1221,7 +1221,6 @@ library
       Storage.Beam.DeviceVehicleMapping
       Storage.Beam.Disability
       Storage.Beam.DisabilityTranslation
-      Storage.Beam.DispatcherHistory
       Storage.Beam.DraftTicketChange
       Storage.Beam.DraftTicketChangeHistory
       Storage.Beam.DriverOffer
@@ -1354,6 +1353,7 @@ library
       Storage.Beam.Translations
       Storage.Beam.UiRiderConfig
       Storage.Beam.ValueAddNP
+      Storage.Beam.VehicleActionHistory
       Storage.Beam.VehicleConfig
       Storage.Beam.VehicleRouteMapping
       Storage.Beam.VehicleSeatLayoutMapping
@@ -1394,7 +1394,6 @@ library
       Storage.Queries.DeviceVehicleMapping
       Storage.Queries.Disability
       Storage.Queries.DisabilityTranslation
-      Storage.Queries.DispatcherHistory
       Storage.Queries.DraftTicketChange
       Storage.Queries.DraftTicketChangeHistory
       Storage.Queries.DriverOffer
@@ -1602,6 +1601,7 @@ library
       Storage.Queries.Translations
       Storage.Queries.UiRiderConfig
       Storage.Queries.ValueAddNP
+      Storage.Queries.VehicleActionHistory
       Storage.Queries.VehicleConfig
       Storage.Queries.VehicleRouteMapping
       Storage.Queries.VehicleSeatLayoutMapping

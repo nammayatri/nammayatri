@@ -282,6 +282,9 @@ types:
     waybillStatus: Maybe WaybillStatus
     derive': "Generic, ToSchema"
 
+  BlockedVehiclesResp:
+    blockedVehicleNumbers: "[Text]"
+
   UpdatePaymentOrderReq:
     quantity: Int
     childTicketQuantity: Int
@@ -654,6 +657,22 @@ apis:
         newServiceTiers: "[ServiceTierType]"
       response:
         type: PublicTransportData
+
+  - POST:
+      endpoint: /publicTransport/vehicleData/{vehicleNumber}/block
+      auth: TokenAuth
+      params:
+        vehicleNumber: Text
+      mandatoryQuery:
+        isBlock: Bool
+      response:
+        type: BlockedVehiclesResp
+
+  - GET:
+      endpoint: /publicTransport/blockedVehicles
+      auth: TokenAuth
+      response:
+        type: BlockedVehiclesResp
 
   - GET:
       endpoint: /multimodal/{journeyId}/order/{legOrder}/getLegTierOptions
