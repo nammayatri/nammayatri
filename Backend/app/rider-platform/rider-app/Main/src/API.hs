@@ -23,6 +23,7 @@ import qualified API.Beckn as Beckn
 import qualified API.Conductor as Conductor
 import qualified API.Dashboard as Dashboard
 import qualified API.Depot as Depot
+import qualified API.FleetEngineToken as FleetEngineToken
 import qualified API.FRFS as FRFS
 import qualified API.FRFSMetrics as FRFSMetrics
 import qualified API.IGM as IGM
@@ -93,6 +94,7 @@ type MainAPI =
     :<|> Conductor.API
     :<|> Depot.API
     :<|> FRFSMetrics.API
+    :<|> FleetEngineToken.API
 
 riderAPI :: Proxy API
 riderAPI = Proxy
@@ -123,6 +125,7 @@ mainServer =
     :<|> Conductor.handler
     :<|> Depot.handler
     :<|> FRFSMetrics.handler
+    :<|> FleetEngineToken.handler
 
 type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString
 

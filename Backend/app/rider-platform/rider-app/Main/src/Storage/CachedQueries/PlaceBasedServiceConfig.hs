@@ -160,3 +160,4 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
   SettlementServiceConfig cfg -> SettlementService cfg.settlementService
   EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
     EventTrackingInterface.MoengageConfig _ -> EventTrackingService EventTracking.Moengage
+  FleetEngineServiceConfig _ -> FleetEngineService GoogleFleetEngine
