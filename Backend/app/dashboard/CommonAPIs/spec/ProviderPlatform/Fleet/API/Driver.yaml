@@ -2064,6 +2064,9 @@ types:
   FleetOwnerInfoRes:
     - id: Text
     - name: Maybe Text
+    - firstName: Text
+    - middleName: Maybe Text
+    - lastName: Maybe Text
     - mobileNo: Maybe Text
     - blocked: Bool
     - enabled: Bool
