@@ -226,12 +226,65 @@ in
       # still forces evaluation of every haskell derivation, which kicks off
       # a full cabal build at `, run-local-test-dashboard` time. Short-circuit
       # to a noop command in those profiles so the derivation graph stays slim.
+      # Wrap a cabal command in a mount namespace so GHC sees CI paths.
+      # Reads .ci-project-root / .ci-cabal-dir written by cache-restore.
+      # If those files don't exist, runs the command normally.
+      wrapInCiNamespace = cmd: ''
+        if [ -f .ci-project-root ]; then
+          CI_PROJECT_ROOT=$(cat .ci-project-root)
+          CI_CABAL_DIR=$(cat .ci-cabal-dir 2>/dev/null || echo "")
+          LOCAL_ROOT=$(pwd)
+          CI_HOME=$(echo "$CI_PROJECT_ROOT" | cut -d/ -f1-3)
+          GHC_VER=$(ghc --numeric-version)
+          # Overlay individual .a files from CI tarball over nix store.
+          # Must bind-mount FILES not directories — mounting a directory hides
+          # all other files (shared libs, .conf) that ghc-pkg needs.
+          NIX_OVERLAY=""
+          if [ -d "$LOCAL_ROOT/.nix-deps/nix/store" ]; then
+            while IFS= read -r dep_file; do
+              rel="''${dep_file#"$LOCAL_ROOT"/.nix-deps}"
+              if [ -f "$rel" ]; then
+                NIX_OVERLAY="$NIX_OVERLAY mount --bind /tmp/ns-root/.nix-deps$rel $rel &&"
+              fi
+            done < <(find "$LOCAL_ROOT/.nix-deps/nix/store" -name "*.a" -type f 2>/dev/null)
+          fi
+          unshare --user --mount --map-root-user bash -c "
+            set -e
+            export LC_ALL=C
+            # Save local root before tmpfs hides /home
+            mkdir -p /tmp/ns-root
+            mount --bind $LOCAL_ROOT /tmp/ns-root
+            mount -t tmpfs tmpfs /home
+            mkdir -p $CI_HOME
+            mkdir -p $CI_PROJECT_ROOT
+            mount --bind /tmp/ns-root $CI_PROJECT_ROOT
+            if [ -n '$CI_CABAL_DIR' ]; then
+              mkdir -p $CI_CABAL_DIR
+              if [ -d /tmp/ns-root/.cabal-dir ]; then
+                mount --bind /tmp/ns-root/.cabal-dir $CI_CABAL_DIR
+                mkdir -p $CI_CABAL_DIR/store/ghc-$GHC_VER
+                ghc-pkg init $CI_CABAL_DIR/store/ghc-$GHC_VER/package.db 2>/dev/null || true
+              else
+                mkdir -p $CI_CABAL_DIR/store/ghc-$GHC_VER
+                ghc-pkg init $CI_CABAL_DIR/store/ghc-$GHC_VER/package.db 2>/dev/null || true
+              fi
+              export CABAL_DIR=$CI_CABAL_DIR
+            fi
+            $NIX_OVERLAY true
+            cd $CI_PROJECT_ROOT
+            ${cmd}
+          "
+        else
+          ${cmd}
+        fi
+      '';
+
       haskellProcessFor = name:
         if cfg.profile != "full" && cfg.profile != "backend"
         then { command = ":"; }
         else if cfg.useCabal
         then {
-          command = "set -x; pwd; cabal run ${cabalTargetForExe.${name}}";
+          command = "set -x; pwd; " + wrapInCiNamespace "cabal run ${cabalTargetForExe.${name}}";
           environment.CABAL_TARGET = cabalTargetForExe.${name};
         }
         else {
@@ -295,6 +348,7 @@ in
           "rider-producer-exe"
           "nammayatri-init"
           "log-cleaner"
+          "cache-restore"
           "cabal-build"
           "beckn-gateway"
           "mock-registry"
@@ -387,7 +441,7 @@ in
             "db-primary-replica".shutdown.signal = lib.mkForce 9;
           })
           (lib.mkIf (cfg.profile == "backend") (
-            let excluded = [ "caddy-reverse-proxy" "nammayatri-init" "cabal-build" "osrm-server" ];
+            let excluded = [ "caddy-reverse-proxy" "nammayatri-init" "cabal-build" "cache-restore" "osrm-server" ];
             in lib.listToAttrs (map
               (n: lib.nameValuePair n {
                 depends_on."caddy-reverse-proxy".condition = "process_healthy";
@@ -512,18 +566,309 @@ in
               shutdown.signal = 9;
             };
 
-            # Run 'cabal build' for all local Haskel processes
-            cabal-build = {
+            # Restore dist-newstyle cache from MinIO before building.
+            # Finds the nearest ancestor commit on main that has a cached
+            # dist-newstyle tarball, downloads it, and extracts it so that
+            # cabal-build only rebuilds the delta.
+            cache-restore = {
               imports = [ common ];
-              disabled = !cfg.useCabal;
+              disabled = !cfg.useCabal || cfg.profile != "backend";
               command = pkgs.writeShellApplication {
-                name = "cabal-build";
+                name = "cache-restore";
+                runtimeInputs = with pkgs; [ coreutils gnutar gnugrep gnused git jq minio-client zstd findutils binutils ];
                 text = ''
-                  set -x
-                  cabal build ${builtins.concatStringsSep " " (accumulateProcessEnv "CABAL_TARGET" config.settings.processes)}
+                  set -euo pipefail
+
+                  DIST_DIR="dist-newstyle"
+
+                  # ── Skip download if local build already has HIE files ──
+                  # After a full build, local dist-newstyle has HIE files.
+                  # Re-downloading the CI cache would lose them and trigger a
+                  # full rebuild. Only download when HIE files are missing.
+                  if [ -d "$DIST_DIR/build" ]; then
+                    HIE_FILE=$(find . -name "*.hie" -path "*/.hie/*" -print -quit 2>/dev/null || true)
+                    if [ -n "$HIE_FILE" ]; then
+                      echo "cache-restore: .hie files found, skipping download"
+                      exit 0
+                    fi
+                  fi
+
+                  # ── MinIO credentials ──
+                  # Prefer /etc/service_discovery.json (written by github-runner daemon);
+                  # fall back to chicken's local IP for devbox use.
+                  MINIO_ENDPOINT=""
+                  MINIO_ACCESS_KEY=""
+                  MINIO_SECRET_KEY=""
+                  if [ -f /etc/service_discovery.json ]; then
+                    MINIO_ENDPOINT=$(jq -r '.minio_endpoint // empty' /etc/service_discovery.json)
+                    MINIO_ACCESS_KEY=$(jq -r '.minio_access_key // empty' /etc/service_discovery.json)
+                    MINIO_SECRET_KEY=$(jq -r '.minio_secret_key // empty' /etc/service_discovery.json)
+                  fi
+                  if [ -z "$MINIO_ENDPOINT" ]; then
+                    MINIO_ENDPOINT="http://192.168.10.120:9000"
+                    MINIO_ACCESS_KEY="minioadmin"
+                    MINIO_SECRET_KEY="MinioAdmin@123"
+                  fi
+
+                  # Set up the alias (just saves config, doesn't test connectivity).
+                  mc alias set nycache "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY" || true
+                  # Actually test connectivity by listing the bucket.
+                  if ! mc ls nycache/haskell-cache/ >/dev/null 2>&1; then
+                    echo "cache-restore: cannot reach MinIO at $MINIO_ENDPOINT, skipping"
+                    exit 0
+                  fi
+                  echo "cache-restore: connected to MinIO at $MINIO_ENDPOINT"
+
+                  # ── Find most recent cached commit in MinIO ──
+                  # Use mc find to locate all tarballs, sort by modification
+                  # time (most recent first), and pick the newest one.
+                  FOUND_SHA=""
+                  FOUND_SHA=$(mc find "nycache/haskell-cache/cabal-build/" \
+                    --name "dist-newstyle.tar.zst" --json 2>/dev/null \
+                    | jq -rs 'sort_by(.lastModified) | reverse | .[0].key // empty' \
+                    | sed -n 's|.*/cabal-build/\([^/]*\)/dist-newstyle.tar.zst|\1|p')
+
+                  if [ -z "$FOUND_SHA" ]; then
+                    echo "cache-restore: no cached commit found in MinIO, skipping"
+                    exit 0
+                  fi
+                  echo "cache-restore: found most recent cache for commit $FOUND_SHA"
+
+                  # ── Download and extract ──
+                  TMPFILE=$(mktemp /tmp/dist-newstyle-XXXXXX.tar.zst)
+                  trap 'rm -f "$TMPFILE"' EXIT
+
+                  echo "cache-restore: downloading dist-newstyle.tar.zst from MinIO..."
+                  if ! mc cp "nycache/haskell-cache/cabal-build/$FOUND_SHA/dist-newstyle.tar.zst" "$TMPFILE" 2>/dev/null; then
+                    echo "cache-restore: download failed, skipping"
+                    exit 0
+                  fi
+
+                  echo "cache-restore: extracting..."
+                  rm -rf "$DIST_DIR"
+                  tar -I 'zstd -T0' -xf "$TMPFILE" -C .
+                  if [ ! -d "$DIST_DIR" ]; then
+                    echo "cache-restore: ERROR — tar extraction did not create $DIST_DIR"
+                    echo "cache-restore: tar contents:" && tar -I 'zstd -T0' -tf "$TMPFILE" | head -5
+                    echo "cache-restore: cwd=$(pwd), ls:" && ls -la
+                    exit 1
+                  fi
+                  echo "cache-restore: extracted $DIST_DIR ($(du -sh "$DIST_DIR" | cut -f1))"
+
+                  # ── Link HIE dirs from tarball ──
+                  # CI includes hie/ in the tarball alongside dist-newstyle.
+                  # Set up .hie symlinks so GHC finds them and skips
+                  # [HIE file is out of date] recompilation.
+                  if [ -d "hie" ]; then
+                    grep -E '^[[:space:]]+(app|lib|test)' cabal.project 2>/dev/null | awk '{print $1}' | while read -r pkg; do
+                      [ -d "$pkg" ] || continue
+                      if [ -d "hie/$pkg" ]; then
+                        rm -rf "$pkg/.hie"
+                        ln -sfn "$(pwd)/hie/$pkg" "$pkg/.hie"
+                      fi
+                    done
+                    echo "cache-restore: linked .hie dirs from CI cache"
+                  else
+                    echo "cache-restore: no hie/ in tarball (older cache), HIE files will be rebuilt"
+                  fi
+
+                  # ── Detect CI's GHC derivation from the cache ──
+                  # The cache was built with a specific ghc-9.2.7-with-packages
+                  # derivation. We must use the SAME one for incremental builds,
+                  # otherwise GHC sees [.a changed] on every module because
+                  # different derivations have different package libraries.
+                  #
+                  # Extract GHC path from setup-config (small ~20KB file) instead
+                  # of scanning the entire 6GB+ build directory.
+                  CI_GHC=""
+                  SETUP_CFG_GHC=""
+                  SETUP_CFG_GHC=$(find "$DIST_DIR" -name "setup-config" -type f -print -quit 2>/dev/null || true)
+                  if [ -n "$SETUP_CFG_GHC" ]; then
+                    CI_GHC=$(strings "$SETUP_CFG_GHC" \
+                      | grep -m1 -oE '/nix/store/[a-z0-9]+-ghc-[0-9.]+-with-packages/bin/ghc' || true)
+                  fi
+
+                  if [ -n "$CI_GHC" ] && [ -x "$CI_GHC" ]; then
+                    echo "$CI_GHC" > "$DIST_DIR/.ci-ghc-path"
+                    CURRENT_GHC=$(command -v ghc || echo "")
+                    if [ "$CI_GHC" != "$CURRENT_GHC" ]; then
+                      echo "cache-restore: CI used $CI_GHC"
+                      echo "cache-restore: shell has $CURRENT_GHC"
+                      echo "cache-restore: cabal-build will use CI's GHC for incremental build"
+                    else
+                      echo "cache-restore: GHC derivation matches current shell — perfect"
+                    fi
+                  elif [ -n "$CI_GHC" ]; then
+                    echo "cache-restore: WARNING — found CI GHC at $CI_GHC but it is not executable"
+                    echo "cache-restore: check if NFS mount from chicken includes this derivation"
+                  else
+                    echo "cache-restore: WARNING — could not detect CI's GHC derivation from cache"
+                    echo "cache-restore: incremental build may recompile everything"
+                  fi
+
+                  # ── Read CI's project root and cabal-dir from MinIO ──
+                  # CI pushes build-path.txt and cabal-dir-path.txt alongside the tarball.
+                  CI_PROJECT_ROOT=""
+                  CI_CABAL_DIR=""
+                  BUILD_PATH_TMP=$(mktemp /tmp/build-path-XXXXXX.txt)
+                  CABAL_DIR_TMP=$(mktemp /tmp/cabal-dir-path-XXXXXX.txt)
+                  if mc cp "nycache/haskell-cache/cabal-build/$FOUND_SHA/build-path.txt" "$BUILD_PATH_TMP" 2>/dev/null; then
+                    CI_PROJECT_ROOT="$(cat "$BUILD_PATH_TMP")/Backend"
+                  fi
+                  if mc cp "nycache/haskell-cache/cabal-build/$FOUND_SHA/cabal-dir-path.txt" "$CABAL_DIR_TMP" 2>/dev/null; then
+                    CI_CABAL_DIR="$(cat "$CABAL_DIR_TMP")"
+                  fi
+                  rm -f "$BUILD_PATH_TMP" "$CABAL_DIR_TMP"
+
+                  if [ -n "$CI_PROJECT_ROOT" ]; then
+                    echo "$CI_PROJECT_ROOT" > .ci-project-root
+                    echo "cache-restore: CI project root: $CI_PROJECT_ROOT"
+                  fi
+                  if [ -n "$CI_CABAL_DIR" ]; then
+                    echo "$CI_CABAL_DIR" > .ci-cabal-dir
+                    echo "cache-restore: CI CABAL_DIR: $CI_CABAL_DIR"
+                  fi
+
+                  echo "cache-restore: done — dist-newstyle restored from $FOUND_SHA"
                 '';
               };
             };
+
+            # Run 'cabal build' for all local Haskell processes.
+            # Uses unshare + mount --bind to make the ENTIRE Backend directory
+            # appear at CI's original project root path, then cd into it.
+            # This way cabal sees the exact same project root, builddir, and
+            # source paths as CI — no reconfiguration, no fingerprint mismatch.
+            # Multiple users can build simultaneously because each unshare
+            # creates an isolated mount namespace.
+            cabal-build = {
+              imports = [ common ];
+              disabled = !cfg.useCabal;
+              depends_on = lib.optionalAttrs (cfg.profile == "backend") {
+                "cache-restore".condition = "process_completed";
+              };
+              command = pkgs.writeShellApplication {
+                name = "cabal-build";
+                runtimeInputs = lib.optionals pkgs.stdenv.isLinux [ pkgs.util-linux ];
+                text = ''
+                  GHC_FLAG=""
+                  if [ -f dist-newstyle/.ci-ghc-path ]; then
+                    CI_GHC=$(cat dist-newstyle/.ci-ghc-path)
+                    if [ -x "$CI_GHC" ]; then
+                      GHC_FLAG="-w $CI_GHC"
+                      echo "cabal-build: using CI's GHC: $CI_GHC"
+                    else
+                      echo "cabal-build: CI GHC not found at $CI_GHC, using shell GHC"
+                    fi
+                  fi
+
+                  TARGETS="${builtins.concatStringsSep " " (accumulateProcessEnv "CABAL_TARGET" config.settings.processes)}"
+
+                  # If .ci-project-root doesn't exist but dist-newstyle has CI
+                  # paths (from a previous cache-restore), detect them from
+                  # setup-config so we still use the namespace.
+                  if [ ! -f .ci-project-root ] && [ -d dist-newstyle/build ]; then
+                    SETUP_CFG=$(find dist-newstyle -name "setup-config" -type f -print -quit 2>/dev/null || true)
+                    if [ -n "$SETUP_CFG" ]; then
+                      DETECTED_ROOT=$(strings "$SETUP_CFG" \
+                        | grep -m1 -oE '/[^ "]+/nammayatri/Backend' \
+                        | sed 's|/Backend.*|/Backend|' || true)
+                      if [ -n "$DETECTED_ROOT" ] && [ "$DETECTED_ROOT" != "$(pwd)" ]; then
+                        echo "$DETECTED_ROOT" > .ci-project-root
+                        # Detect cabal-dir too
+                        DETECTED_STORE_DB=$(strings "$SETUP_CFG" \
+                          | grep -oE '/[^ "]+/store/ghc-[0-9.]+/package\.db' \
+                          | grep -v '/nix/store/' | head -1 || true)
+                        if [ -n "$DETECTED_STORE_DB" ]; then
+                          echo "''${DETECTED_STORE_DB%%/store/*}" > .ci-cabal-dir
+                        fi
+                        echo "cabal-build: auto-detected CI project root from setup-config: $DETECTED_ROOT"
+                      fi
+                    fi
+                  fi
+
+                  if [ -f .ci-project-root ]; then
+                    CI_PROJECT_ROOT=$(cat .ci-project-root)
+                    CI_CABAL_DIR=$(cat .ci-cabal-dir 2>/dev/null || echo "")
+                    LOCAL_ROOT=$(pwd)
+                    echo "cabal-build: local root:  $LOCAL_ROOT"
+                    echo "cabal-build: CI root:     $CI_PROJECT_ROOT"
+                    echo "cabal-build: CI cabal-dir: $CI_CABAL_DIR"
+
+                    # Derive CI user's home (/home/<user>) from the project root.
+                    # We mount tmpfs there so we can create both the project root
+                    # and cabal-dir directories inside the namespace.
+                    CI_HOME=$(echo "$CI_PROJECT_ROOT" | cut -d/ -f1-3)
+                    GHC_VER=$(ghc --numeric-version)
+
+                    # Build overlay commands in the outer shell to avoid
+                    # escaping issues inside bash -c "...".
+                    # Overlays non-reproducible .a files from CI tarball over
+                    # the nix store so GHC's addDependentFile fingerprint matches.
+                    # Uses /tmp/ns-root reference — LOCAL_ROOT is hidden after tmpfs /home.
+                    # Overlay individual .a files from CI tarball over nix store.
+                    # Must bind-mount FILES not directories — mounting a directory
+                    # hides all other files (shared libs, .conf) that ghc-pkg needs.
+                    NIX_OVERLAY=""
+                    if [ -d "$LOCAL_ROOT/.nix-deps/nix/store" ]; then
+                      while IFS= read -r dep_file; do
+                        rel="''${dep_file#"$LOCAL_ROOT"/.nix-deps}"
+                        if [ -f "$rel" ]; then
+                          NIX_OVERLAY="$NIX_OVERLAY mount --bind /tmp/ns-root/.nix-deps$rel $rel &&"
+                          echo "cabal-build: will overlay file $rel"
+                        else
+                          echo "cabal-build: WARNING — $rel not found on this machine, cannot overlay"
+                        fi
+                      done < <(find "$LOCAL_ROOT/.nix-deps/nix/store" -name "*.a" -type f 2>/dev/null)
+                    fi
+
+                    # shellcheck disable=SC2086
+                    unshare --user --mount --map-root-user bash -c "
+                      set -e
+                      export LC_ALL=C
+                      # Save local root before tmpfs hides /home
+                      mkdir -p /tmp/ns-root
+                      mount --bind $LOCAL_ROOT /tmp/ns-root
+                      mount -t tmpfs tmpfs /home
+                      mkdir -p $CI_HOME
+                      mkdir -p $CI_PROJECT_ROOT
+                      mount --bind /tmp/ns-root $CI_PROJECT_ROOT
+
+                      if [ -n '$CI_CABAL_DIR' ]; then
+                        mkdir -p $CI_CABAL_DIR
+                        if [ -d /tmp/ns-root/.cabal-dir ]; then
+                          mount --bind /tmp/ns-root/.cabal-dir $CI_CABAL_DIR
+                          # Create empty store (excluded from tarball to avoid
+                          # stale package registrations from CI runners)
+                          mkdir -p $CI_CABAL_DIR/store/ghc-$GHC_VER
+                          ghc-pkg init $CI_CABAL_DIR/store/ghc-$GHC_VER/package.db 2>/dev/null || true
+                          echo cabal-build: bind-mounted CI cabal-dir from cache
+                        else
+                          mkdir -p $CI_CABAL_DIR/store/ghc-$GHC_VER
+                          ghc-pkg init $CI_CABAL_DIR/store/ghc-$GHC_VER/package.db 2>/dev/null || true
+                          echo cabal-build: created empty cabal-dir '(no .cabal-dir in cache)'
+                        fi
+                        export CABAL_DIR=$CI_CABAL_DIR
+                        echo cabal-build: CABAL_DIR=$CI_CABAL_DIR
+                      fi
+
+                      $NIX_OVERLAY true
+
+                      cd $CI_PROJECT_ROOT
+                      echo cabal-build: pwd=\$(pwd)
+                      cabal build $GHC_FLAG $TARGETS 2>&1
+                    "
+                  else
+                    echo "cabal-build: no CI project root detected, building normally"
+                    # Don't use CI's GHC without the namespace — it references
+                    # CI runner paths (/home/khuzema/...) that don't exist here.
+                    # shellcheck disable=SC2086
+                    cabal build $TARGETS
+                  fi
+                '';
+              };
+            };
+
 
             # Processes from other repos in nammayatri GitHub org
             beckn-gateway = {

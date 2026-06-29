@@ -59,19 +59,21 @@ evaluateRewardsIfEnabled ::
   Id DP.Person ->
   Id DMOC.MerchantOperatingCity ->
   UTCTime ->
+  Maybe Bool ->
   m ()
-evaluateRewardsIfEnabled riderId moCityId completedAt = do
+evaluateRewardsIfEnabled riderId moCityId completedAt mbIsValidRide = do
   enabled <- maybe False (.enableRewardsManagement) <$> CQRC.findByMerchantOperatingCityId moCityId
-  when enabled $ evaluateRewardsForRider riderId moCityId completedAt
+  when enabled $ evaluateRewardsForRider riderId moCityId completedAt mbIsValidRide
 
 evaluateRewardsForRider ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Hedis.HedisFlow m r, ServiceFlow m r, EncFlow m r) =>
   Id DP.Person ->
   Id DMOC.MerchantOperatingCity ->
   UTCTime ->
+  Maybe Bool ->
   m ()
-evaluateRewardsForRider riderId moCityId completedAt = do
-  context <- Ctx.readRiderContext riderId
+evaluateRewardsForRider riderId moCityId completedAt mbIsValidRide = do
+  context <- Ctx.readRiderContext riderId mbIsValidRide
   activeCampaigns <- QRCmpE.findAllActiveInCityAtTime moCityId completedAt
   logInfo $
     "rewards.eval.start riderId="

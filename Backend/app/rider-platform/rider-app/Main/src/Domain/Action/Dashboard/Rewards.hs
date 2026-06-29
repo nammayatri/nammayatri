@@ -317,7 +317,7 @@ postRewardsTriggerEval merchantShortId opCity personId = do
     throwError (PersonDoesNotExist personId.getId)
   now <- getCurrentTime
   fork "Trigger rewards eval" $
-    RewardsConsumer.evaluateRewardsIfEnabled (castId personId) merchantOpCity.id now
+    RewardsConsumer.evaluateRewardsIfEnabled (castId personId) merchantOpCity.id now Nothing
   pure Success
 
 loadMerchantContext ::
