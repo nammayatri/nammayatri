@@ -17,24 +17,9 @@ ALTER TABLE atlas_app.reward_cohort ADD PRIMARY KEY ( id);
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.reward_cohort ALTER COLUMN eligibility_json_logic TYPE jsonb USING eligibility_json_logic::jsonb;
 ALTER TABLE atlas_app.reward_cohort ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_app.reward_cohort ADD COLUMN merchant_id character varying(36) ;
 ALTER TABLE atlas_app.reward_cohort ADD COLUMN presentation jsonb ;
 
 
 ------- SQL updates -------
-
-ALTER TABLE atlas_app.reward_cohort ALTER COLUMN presentation TYPE jsonb USING CASE WHEN presentation IS NULL OR presentation = '' THEN NULL ELSE presentation::jsonb END;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.reward_cohort ALTER COLUMN eligibility_json_logic TYPE jsonb USING eligibility_json_logic::jsonb;
-ALTER TABLE atlas_app.reward_cohort ALTER COLUMN presentation TYPE jsonb USING CASE WHEN presentation IS NULL OR presentation = '' THEN NULL ELSE presentation::jsonb END;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.reward_cohort ALTER COLUMN presentation TYPE jsonb;
-ALTER TABLE atlas_app.reward_cohort ALTER COLUMN eligibility_json_logic TYPE jsonb;
