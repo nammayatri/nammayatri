@@ -723,6 +723,9 @@ data FleetListDriverResT = FleetListDriverResT {fleetDriversInfos :: [FleetDrive
 data FleetOwnerInfoRes = FleetOwnerInfoRes
   { id :: Kernel.Prelude.Text,
     name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    firstName :: Kernel.Prelude.Text,
+    middleName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    lastName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     blocked :: Kernel.Prelude.Bool,
     enabled :: Kernel.Prelude.Bool,

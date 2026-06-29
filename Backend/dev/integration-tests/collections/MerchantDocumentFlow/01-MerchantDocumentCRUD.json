@@ -6,6 +6,72 @@
   },
   "item": [
     {
+      "name": "Pre-cleanup: Find existing MerchantDocument",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/list?role=\"Driver\"&language=en",
+          "host": ["{{dashboard_base_url}}"],
+          "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "list"],
+          "query": [
+            { "key": "role", "value": "\"Driver\"" },
+            { "key": "language", "value": "en" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "var existing = (d.documents || []).find(function(doc) {",
+              "  return doc.documentType === 'TermsAndConditions' && doc.role === 'Driver';",
+              "});",
+              "pm.environment.set('existing_doc_id', existing ? existing.id : '');",
+              "pm.test('Pre-cleanup list OK', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pre-cleanup: Delete existing MerchantDocument if any",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"id\": \"{{existing_doc_id}}\"}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/delete",
+          "host": ["{{dashboard_base_url}}"],
+          "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "delete"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var existingId = pm.environment.get('existing_doc_id');",
+              "pm.test('Pre-cleanup delete OK (skipped if none)', function () {",
+              "  if (!existingId) { return; }",
+              "  pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "Driver Auth (sendOTP)",
       "request": {
         "method": "POST",
@@ -17,8 +83,8 @@
           "raw": "{\n    \"mobileNumber\": \"{{_test_driver_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{merchantId}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
         },
         "url": {
-          "raw": "{{bpp_url}}/auth",
-          "host": ["{{bpp_url}}"],
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": ["{{baseURL_namma_P}}"],
           "path": ["auth"]
         }
       },
@@ -48,8 +114,8 @@
           "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"merchant-doc-test-device\"\n}"
         },
         "url": {
-          "raw": "{{bpp_url}}/auth/{{driver_authId}}/verify",
-          "host": ["{{bpp_url}}"],
+          "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+          "host": ["{{baseURL_namma_P}}"],
           "path": ["auth", "{{driver_authId}}", "verify"]
         }
       },
@@ -80,8 +146,8 @@
           "raw": "{\n    \"documentType\": \"TermsAndConditions\",\n    \"role\": \"Driver\",\n    \"language\": \"ENGLISH\",\n    \"url\": \"https://example.com/tos-integration-test.html\",\n    \"title\": \"Integration Test TOS\",\n    \"city\": null\n}"
         },
         "url": {
-          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/create",
-          "host": ["{{dashboard_url}}"],
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/create",
+          "host": ["{{dashboard_base_url}}"],
           "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "create"]
         }
       },
@@ -112,8 +178,8 @@
           { "key": "token", "value": "{{dashboard_token}}" }
         ],
         "url": {
-          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/list?role=\"Driver\"&language=en",
-          "host": ["{{dashboard_url}}"],
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/list?role=\"Driver\"&language=en",
+          "host": ["{{dashboard_base_url}}"],
           "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "list"],
           "query": [
             { "key": "role", "value": "\"Driver\"" },
@@ -146,8 +212,8 @@
           { "key": "token", "value": "{{dashboard_token}}" }
         ],
         "url": {
-          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/TermsAndConditions?role=\"Driver\"&language=en",
-          "host": ["{{dashboard_url}}"],
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/TermsAndConditions?role=\"Driver\"&language=en",
+          "host": ["{{dashboard_base_url}}"],
           "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "TermsAndConditions"],
           "query": [
             { "key": "role", "value": "\"Driver\"" },
@@ -178,8 +244,8 @@
           { "key": "token", "value": "{{driver_token}}" }
         ],
         "url": {
-          "raw": "{{bpp_url}}/merchant/document/list?role=\"Driver\"&language=en",
-          "host": ["{{bpp_url}}"],
+          "raw": "{{baseURL_namma_P}}/merchant/document/list?role=\"Driver\"&language=en",
+          "host": ["{{baseURL_namma_P}}"],
           "path": ["merchant", "document", "list"],
           "query": [
             { "key": "role", "value": "\"Driver\"" },
@@ -208,8 +274,8 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{bpp_url}}/merchant/document/TermsAndConditions?merchantId={{merchantId}}&language=en&merchantCity={{city}}",
-          "host": ["{{bpp_url}}"],
+          "raw": "{{baseURL_namma_P}}/merchant/document/TermsAndConditions?merchantId={{merchantId}}&language=en&merchantCity={{city}}",
+          "host": ["{{baseURL_namma_P}}"],
           "path": ["merchant", "document", "TermsAndConditions"],
           "query": [
             { "key": "merchantId", "value": "{{merchantId}}" },
@@ -245,8 +311,8 @@
           "raw": "{\n    \"id\": \"{{created_doc_id}}\",\n    \"url\": \"https://example.com/tos-updated.html\",\n    \"title\": \"Integration Test TOS (Updated)\"\n}"
         },
         "url": {
-          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/update",
-          "host": ["{{dashboard_url}}"],
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/update",
+          "host": ["{{dashboard_base_url}}"],
           "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "update"]
         }
       },
@@ -273,8 +339,8 @@
           { "key": "token", "value": "{{dashboard_token}}" }
         ],
         "url": {
-          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/TermsAndConditions?role=\"Driver\"&language=en",
-          "host": ["{{dashboard_url}}"],
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/TermsAndConditions?role=\"Driver\"&language=en",
+          "host": ["{{dashboard_base_url}}"],
           "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "TermsAndConditions"],
           "query": [
             { "key": "role", "value": "\"Driver\"" },
@@ -310,8 +376,8 @@
           "raw": "{\n    \"id\": \"{{created_doc_id}}\"\n}"
         },
         "url": {
-          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/delete",
-          "host": ["{{dashboard_url}}"],
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/delete",
+          "host": ["{{dashboard_base_url}}"],
           "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "delete"]
         }
       },
@@ -336,8 +402,8 @@
           { "key": "token", "value": "{{dashboard_token}}" }
         ],
         "url": {
-          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/list?role=\"Driver\"&language=en",
-          "host": ["{{dashboard_url}}"],
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/list?role=\"Driver\"&language=en",
+          "host": ["{{dashboard_base_url}}"],
           "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "list"],
           "query": [
             { "key": "role", "value": "\"Driver\"" },

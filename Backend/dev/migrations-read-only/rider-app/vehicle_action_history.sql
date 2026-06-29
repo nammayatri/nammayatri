@@ -1,0 +1,20 @@
+CREATE TABLE atlas_app.vehicle_action_history ();
+
+ALTER TABLE atlas_app.vehicle_action_history ADD COLUMN action text NOT NULL;
+ALTER TABLE atlas_app.vehicle_action_history ADD COLUMN conductor_code text ;
+ALTER TABLE atlas_app.vehicle_action_history ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.vehicle_action_history ADD COLUMN current_vehicle text NOT NULL;
+ALTER TABLE atlas_app.vehicle_action_history ADD COLUMN depot_id text ;
+ALTER TABLE atlas_app.vehicle_action_history ADD COLUMN dispatcher_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.vehicle_action_history ADD COLUMN driver_code text ;
+ALTER TABLE atlas_app.vehicle_action_history ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.vehicle_action_history ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.vehicle_action_history ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.vehicle_action_history ADD COLUMN reason_content text ;
+ALTER TABLE atlas_app.vehicle_action_history ADD COLUMN reason_tag text NOT NULL;
+ALTER TABLE atlas_app.vehicle_action_history ADD COLUMN replaced_vehicle text ;
+ALTER TABLE atlas_app.vehicle_action_history ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.vehicle_action_history ADD COLUMN waybill_no text ;
+ALTER TABLE atlas_app.vehicle_action_history ADD PRIMARY KEY ( id);
+CREATE INDEX CONCURRENTLY vehicle_action_history_idx_action ON atlas_app.vehicle_action_history USING btree (action);
+CREATE INDEX CONCURRENTLY vehicle_action_history_idx_dispatcher_id ON atlas_app.vehicle_action_history USING btree (dispatcher_id);

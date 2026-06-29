@@ -26,6 +26,7 @@ DepotManager:
     updatedAt: UTCTime
     enabled: Bool
     isAdmin: Bool
+    isBlockAllowed: Maybe Bool
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
 

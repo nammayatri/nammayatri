@@ -519,7 +519,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
             totalInvoiceValue = invoice.totalAmount,
             tdsReference = tdsRef,
             irn = invoice.irn,
-            qrCode = Nothing,
+            qrCode = invoice.signedQRCode,
             rideId = listToMaybe rideIds,
             subscriptionId = listToMaybe subscriptionIds,
             supplierName = invoice.supplierName,

@@ -39,6 +39,7 @@ updateByPrimaryKey (Domain.Types.DepotManager.DepotManager {..}) = do
   updateWithKV
     [ Se.Set Beam.enabled enabled,
       Se.Set Beam.isAdmin isAdmin,
+      Se.Set Beam.isBlockAllowed isBlockAllowed,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.updatedAt _now
@@ -54,6 +55,7 @@ instance FromTType' Beam.DepotManager Domain.Types.DepotManager.DepotManager whe
             depotCode = Kernel.Types.Id.Id depotCode,
             enabled = enabled,
             isAdmin = isAdmin,
+            isBlockAllowed = isBlockAllowed,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             personId = Kernel.Types.Id.Id personId,
@@ -67,6 +69,7 @@ instance ToTType' Beam.DepotManager Domain.Types.DepotManager.DepotManager where
         Beam.depotCode = Kernel.Types.Id.getId depotCode,
         Beam.enabled = enabled,
         Beam.isAdmin = isAdmin,
+        Beam.isBlockAllowed = isBlockAllowed,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.personId = Kernel.Types.Id.getId personId,
