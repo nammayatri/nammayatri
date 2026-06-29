@@ -99,7 +99,11 @@ notifyTripCreated booking ride =
   withFleetEngine booking.merchantOperatingCityId $ \providerId token baseUrl -> do
     let tripId = ride.id.getId
         vehicleId = mkFleetEngineVehicleId ride.driverId
-    FEClient.createTrip baseUrl providerId token tripId (FETypes.mkCreateTripBody FETypes.EXCLUSIVE Nothing Nothing Nothing)
+        -- Waypoints let Fleet Engine compute a meaningful ETA to pickup/dropoff;
+        -- toLocation can be absent (e.g. open-destination rides).
+        pickupPoint = Just (FETypes.LatLng booking.fromLocation.lat booking.fromLocation.lon)
+        dropoffPoint = (\loc -> FETypes.LatLng loc.lat loc.lon) <$> booking.toLocation
+    FEClient.createTrip baseUrl providerId token tripId (FETypes.mkCreateTripBody FETypes.EXCLUSIVE pickupPoint dropoffPoint Nothing)
     FEClient.assignVehicleAndStart baseUrl providerId token tripId vehicleId
 
 notifyTripStatus :: FleetEngineFlow m r => Id DMOC.MerchantOperatingCity -> Id SRide.Ride -> FETypes.TripStatus -> m ()
