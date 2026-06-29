@@ -194,7 +194,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
     callIdfy :: Person.Person -> Maybe DPan.DriverPanCard -> DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
     callIdfy person mdriverPanInformation driverDocument transporterConfig = do
       documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just DTO.PanCard, vehicleCategory = Just CAR}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId DTO.PanCard CAR Nothing)) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.PanCard))
-      image1 <- getDocumentImage person.id req.imageId ODC.PanCard
+      image1 <- getValidDocumentImage person.id req.imageId ODC.PanCard
       let extractReq =
             Verification.ExtractImageReq
               { image1 = image1,
@@ -214,8 +214,8 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
               let extractedNameOnCard = extractedPan.name_on_card
               logInfo ("extractedNameOnCard: " <> show extractedNameOnCard)
               logInfo ("panName: " <> show panName)
-              panFaceConfig <- listToMaybe <$> CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId DTO.PanCard Nothing
-              fmOutcome <- maybe (pure FMSkip) (\cfg -> runDocFaceMatch person cfg (Id req.imageId)) panFaceConfig
+              -- Reuse the category-aware documentVerificationConfig resolved in callIdfy (was a category-agnostic re-fetch).
+              fmOutcome <- runDocFaceMatch person documentVerificationConfig (Id req.imageId) (Just image1)
               when (fmOutcome == FMFail) $ throwError FaceMatchFailed
               when (verifyBy /= DPan.FRONTEND_SDK) $ do
                 case (panName, extractedNameOnCard) of

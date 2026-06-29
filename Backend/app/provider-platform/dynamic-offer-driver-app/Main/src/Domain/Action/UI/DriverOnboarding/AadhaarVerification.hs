@@ -411,10 +411,10 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
     _ -> pure ()
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
-  image1 <- getDocumentImage person.id req.aadhaarFrontImageId ODC.AadhaarCard
+  image1 <- getValidDocumentImage person.id req.aadhaarFrontImageId ODC.AadhaarCard
   image2 <- case req.aadhaarBackImageId of
     Just backImageId -> do
-      image <- getDocumentImage person.id backImageId ODC.AadhaarCard
+      image <- getValidDocumentImage person.id backImageId ODC.AadhaarCard
       return $ Just image
     Nothing -> return Nothing
   let extractReq =
@@ -437,7 +437,7 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
                 person.id
               throwError $ DocumentAlreadyValidated "Aadhaar"
         aadhaarDocConfig <- listToMaybe <$> CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.AadhaarCard Nothing
-        faceMatchOutcome <- maybe (pure FMSkip) (\cfg -> runDocFaceMatch person cfg (Id req.aadhaarFrontImageId)) aadhaarDocConfig
+        faceMatchOutcome <- maybe (pure FMSkip) (\cfg -> runDocFaceMatch person cfg (Id req.aadhaarFrontImageId) (Just image1)) aadhaarDocConfig
         when (faceMatchOutcome == FMFail) $ throwError FaceMatchFailed
         resp <- Verification.extractAadhaarImage person.merchantId merchantOpCityId extractReq
         mbAadhaarNumber <- case resp.extractedAadhaar of

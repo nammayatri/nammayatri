@@ -165,14 +165,16 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
   if isNameCompareRequired transporterConfig verifyBy || gstPanLinkCheckRequired
     then Redis.withWaitOnLockRedisWithExpiry (makeDocumentVerificationLockKey personId.getId) 10 10 runBody
     else runBody
-  res <- case person.role of
+  -- GST upload promoted FLEET_OWNER -> FLEET_BUSINESS in the DB above, but person.role is still stale in memory.
+  let enablementRole = if person.role == Person.FLEET_OWNER then Person.FLEET_BUSINESS else person.role
+  res <- case enablementRole of
     Person.DRIVER -> do
       fork "enabling driver if all the mandatory document is verified" $ do
         void $ SStatus.processStatusEvent (Just person) (Just transporterConfig) (SStatus.PersonDocChangedEvent person.id)
       pure False
     role
       | DCommon.checkFleetOwnerRole role ->
-        DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId (Just transporterConfig)
+        DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType enablementRole) person.merchantOperatingCityId (Just transporterConfig)
     _ -> pure False
   pure res
   where
@@ -222,7 +224,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
               listToMaybe <$> getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just ODC.GSTCertificate, vehicleCategory = Nothing}) (Just (CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.GSTCertificate Nothing))
                 >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate))
             pure dvc.checkExtraction
-      image1 <- getDocumentImage person.id req.imageId ODC.GSTCertificate
+      image1 <- getValidDocumentImage person.id req.imageId ODC.GSTCertificate
       let extractReq =
             Verification.ExtractImageReq
               { image1 = image1,
@@ -325,10 +327,17 @@ onVerifyGstHandler person imageId1 imageId2 output = do
     when (verificationStatus == Documents.VALID) $ QFOI.updateFleetName mbLegalName person.id
   (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
   let rejectForMissingLegalName = ImageQuery.updateVerificationStatusAndFailureReason Documents.INVALID GstLegalNameNotFound imageId1
-      markImagesValidIfNeeded =
-        when (((image1 >>= (.verificationStatus)) /= Just Documents.VALID) && ((image2 >>= (.verificationStatus)) /= Just Documents.VALID)) $
-          mapM_ (maybe (return ()) (ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard."))) [Just imageId1, imageId2]
-  if legalNameMissing then rejectForMissingLegalName else markImagesValidIfNeeded
+      promoteImagesToValid =
+        forM_ [(image1, Just imageId1), (image2, imageId2)] $ \(mbImg, mbImgId) ->
+          unless ((mbImg >>= (.verificationStatus)) `elem` [Just Documents.VALID, Just Documents.INVALID]) $
+            whenJust mbImgId $ ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard.")
+      invalidateImages =
+        forM_ [(image1, Just imageId1), (image2, imageId2)] $ \(mbImg, mbImgId) ->
+          unless ((mbImg >>= (.verificationStatus)) == Just Documents.INVALID) $
+            whenJust mbImgId $ ImageQuery.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid "GST verification failed")
+  if legalNameMissing
+    then rejectForMissingLegalName
+    else if verificationStatus == Documents.VALID then promoteImagesToValid else invalidateImages
 
 assertUploadedGstLinkedToExistingPan :: Person.Person -> Text -> Id Image.Image -> Flow ()
 assertUploadedGstLinkedToExistingPan person gstin imageId = do
