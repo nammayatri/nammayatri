@@ -277,6 +277,21 @@ _:
                 esac
               done
             done
+            # Derive developer name for registry and locking.
+            REGISTRY="/tmp/devbox-registry.json"
+            DEV_NAME=$(echo "''${FLAKE_ROOT}" | ${pkgs.gnused}/bin/sed -n 's|^/tmp/\([^/]*\)/nammayatri.*|\1|p')
+            # Acquire an exclusive lock so concurrent startups on the same
+            # devbox serialise their resolve-ports + registry-write sequence.
+            # This prevents two developers from reading the registry at the
+            # same time and resolving to the same ports.
+            # The lock is fd-based: if the process exits (including on error
+            # or signal), the fd is closed and the lock is released automatically.
+            LOCKFILE="/tmp/devbox-ports.lock"
+            if [[ -n "$DEV_NAME" ]]; then
+              exec 9>"$LOCKFILE"
+              ${pkgs.util-linux}/bin/flock 9
+              echo "── Pre-flight: acquired devbox port lock ──"
+            fi
             # Resolve ports.nix with available free ports so multiple
             # backend instances on the same devbox don't collide.
             echo "── Pre-flight: resolving free ports ──"
@@ -287,8 +302,6 @@ _:
             fi
             # Write resolved ports to devbox-registry.json so other tools
             # (dashboard, other developers) can discover our ports.
-            REGISTRY="/tmp/devbox-registry.json"
-            DEV_NAME=$(echo "''${FLAKE_ROOT}" | ${pkgs.gnused}/bin/sed -n 's|^/tmp/\([^/]*\)/nammayatri.*|\1|p')
             if [[ -n "$DEV_NAME" ]]; then
               echo "── Pre-flight: updating devbox-registry.json (dev: $DEV_NAME) ──"
               # Parse ports-resolved.nix into a JSON object: {"name": port, ...}
@@ -319,6 +332,12 @@ _:
                 --argjson caddy "''${CADDY_PORT:-null}" \
                 '.users[$dev] = {dir: $dir, ports: $ports, caddyPort: $caddy}')
               echo "$REG" > "$REGISTRY"
+            fi
+            # Release the devbox port lock now that the registry is written.
+            if [[ -n "$DEV_NAME" ]]; then
+              ${pkgs.util-linux}/bin/flock -u 9
+              exec 9>&-
+              echo "── Pre-flight: released devbox port lock ──"
             fi
             # Generate Caddyfile from resolved ports for single-entry-point access.
             # Service list lives in Backend/nix/services/caddyfile.nix; we
