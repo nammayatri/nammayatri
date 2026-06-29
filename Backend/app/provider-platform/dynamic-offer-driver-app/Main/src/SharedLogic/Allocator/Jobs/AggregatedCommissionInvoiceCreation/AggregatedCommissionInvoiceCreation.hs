@@ -30,6 +30,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Invoice.Interface as InvoiceI
 import qualified Lib.Finance.Invoice.Service as InvoiceSvc
@@ -65,8 +66,7 @@ runAggregatedCommissionInvoiceCreationJob ::
   ( BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m,
-    MonadIO m,
+    Finance.HasActorInfo m r,
     HasShortDurationRetryCfg r c,
     HasField "maxShards" r Int,
     HasField "schedulerSetName" r Text,
@@ -123,7 +123,7 @@ tryEmitInvoice ::
   ( BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m
+    Finance.HasActorInfo m r
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -189,7 +189,7 @@ emitInvoice ::
   ( BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m
+    Finance.HasActorInfo m r
   ) =>
   DM.Merchant ->
   Maybe Text -> -- sellerName

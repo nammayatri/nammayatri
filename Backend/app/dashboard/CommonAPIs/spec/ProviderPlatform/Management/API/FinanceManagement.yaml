@@ -16,6 +16,9 @@ imports:
   DateOrTime: Lib.Finance.Invoice.PdfService
   Value: Data.Aeson
   Language: Kernel.External.Types
+  AuditAction: Lib.Finance.Domain.Types.AuditEntry
+  AuditEntityType: Lib.Finance.Domain.Types.AuditEntry
+  ActorType: Lib.Finance.Core.Types
 
 importPackageOverrides:
   Domain.Types.Invoice: "beckn-spec"
@@ -81,6 +84,23 @@ apis:
       auth: ApiAuthV2
       response:
         type: InvoiceListRes
+
+  # ----- Audit trail -----
+  - GET: # AuditListAPI
+      endpoint: /finance/audit/list
+      query:
+        - limit: Int
+        - offset: Int
+        - from: UTCTime
+        - to: UTCTime
+        - entityType: AuditEntityType
+        - action: AuditAction
+        - actorType: ActorType
+        - actorId: Text
+        - entityId: Text
+      auth: ApiAuthV2
+      response:
+        type: AuditListRes
 
   # ----- Reconciliation -----
   - GET: # ReconciliationAPI
@@ -304,6 +324,25 @@ types:
     - taxRate: Maybe Double
     - issuedToTaxNo: Maybe Text
     - issuedByTaxNo: Maybe Text
+
+  # ----- Audit trail -----
+  AuditListRes:
+    - totalItems: Int
+    - summary: Summary
+    - auditEntries: [AuditListItem]
+  AuditListItem:
+    - auditEntryId: Text
+    - entityType: AuditEntityType
+    - entityId: Text
+    - action: AuditAction
+    - actorType: ActorType
+    - actorId: Maybe Text
+    - previousState: Maybe Value
+    - newState: Maybe Value
+    - metadata: Maybe Value
+    - ipAddress: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
 
   # ----- Reconciliation -----
   ReconciliationRes:

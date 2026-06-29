@@ -31,6 +31,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Auth
 
 type API =
@@ -87,19 +88,19 @@ handler =
     :<|> subscriptionPurchases
 
 planList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Int -> Maybe Int -> Maybe Vehicle.VehicleVariant -> Maybe DPlan.ServiceNames -> FlowHandler DPlan.PlanListAPIRes
-planList (driverId, merchantId, merchantOpCityId) mbLimit mbOffset vehicleVariant mbServiceName = withFlowHandlerAPI $ DPlan.planList (driverId, merchantId, merchantOpCityId) (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) mbLimit mbOffset vehicleVariant
+planList (driverId, merchantId, merchantOpCityId) mbLimit mbOffset vehicleVariant mbServiceName = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo driverId $ DPlan.planList (driverId, merchantId, merchantOpCityId) (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) mbLimit mbOffset vehicleVariant
 
 planSuspend :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DPlan.ServiceNames -> FlowHandler APISuccess
-planSuspend (driverId, merchantId, merchantOpCityId) mbServiceName = withFlowHandlerAPI $ DPlan.planSuspend (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) False (driverId, merchantId, merchantOpCityId)
+planSuspend (driverId, merchantId, merchantOpCityId) mbServiceName = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo driverId $ DPlan.planSuspend (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) False (driverId, merchantId, merchantOpCityId)
 
 planResume :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DPlan.ServiceNames -> FlowHandler APISuccess
-planResume (driverId, merchantId, merchantOpCityId) mbServiceName = withFlowHandlerAPI $ DPlan.planResume (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) (driverId, merchantId, merchantOpCityId)
+planResume (driverId, merchantId, merchantOpCityId) mbServiceName = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo driverId $ DPlan.planResume (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) (driverId, merchantId, merchantOpCityId)
 
 currentPlan :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DPlan.ServiceNames -> FlowHandler DPlan.CurrentPlanRes
-currentPlan (driverId, merchantId, merchantOpCityId) mbServiceName = withFlowHandlerAPI $ DPlan.currentPlan (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) (driverId, merchantId, merchantOpCityId)
+currentPlan (driverId, merchantId, merchantOpCityId) mbServiceName = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo driverId $ DPlan.currentPlan (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) (driverId, merchantId, merchantOpCityId)
 
 planSubscribe :: Id DPlan.Plan -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DPlan.ServiceNames -> FlowHandler DPlan.PlanSubscribeRes
-planSubscribe planId (personId, merchantId, merchantOpCityId) mbServiceName = withFlowHandlerAPI $ do
+planSubscribe planId (personId, merchantId, merchantOpCityId) mbServiceName = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ do
   case mbServiceName of
     Just DPlan.PREPAID_SUBSCRIPTION -> DPlan.planSubscribe DPlan.PREPAID_SUBSCRIPTION planId (False, Nothing) (personId, merchantId, merchantOpCityId) DPlan.NoData
     _ -> do
@@ -112,11 +113,11 @@ planSubscribe planId (personId, merchantId, merchantOpCityId) mbServiceName = wi
         else do DPlan.planSubscribe (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) planId (False, Nothing) (personId, merchantId, merchantOpCityId) DPlan.NoData
 
 planSelect :: Id DPlan.Plan -> Maybe DPlan.ServiceNames -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
-planSelect planId mbServiceName (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ DPlan.planSwitch (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) planId (personId, merchantId, merchantOpCityId)
+planSelect planId mbServiceName (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DPlan.planSwitch (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) planId (personId, merchantId, merchantOpCityId)
 
 planServiceLists :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DPlan.ServicesEntity
-planServiceLists = withFlowHandlerAPI . DPlan.planServiceLists
+planServiceLists (driverId, merchantId, merchantOpCityId) = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo driverId . DPlan.planServiceLists $ (driverId, merchantId, merchantOpCityId)
 
 subscriptionPurchases :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Int -> Maybe Int -> Maybe DSP.SubscriptionPurchaseStatus -> FlowHandler DPlan.SubscriptionPurchaseListRes
 subscriptionPurchases (driverId, merchantId, merchantOpCityId) mbLimit mbOffset mbStatus =
-  withFlowHandlerAPI $ DPlan.subscriptionPurchaseList (driverId, merchantId, merchantOpCityId) mbLimit mbOffset mbStatus
+  withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo driverId $ DPlan.subscriptionPurchaseList (driverId, merchantId, merchantOpCityId) mbLimit mbOffset mbStatus

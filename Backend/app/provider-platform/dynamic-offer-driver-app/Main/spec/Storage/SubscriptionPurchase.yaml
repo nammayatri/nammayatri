@@ -11,6 +11,7 @@ imports:
   ServiceNames: Domain.Types.Extra.Plan
   Invoice: Lib.Finance.Domain.Types.Invoice
   Value: Data.Aeson
+  ActorType: Lib.Finance.Core.Types
 
 SubscriptionPurchase:
   tableName: subscription_purchase
@@ -48,6 +49,12 @@ SubscriptionPurchase:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     reconciliationStatus: Maybe Value
+
+    # --- Audit ---
+    createdBy: Maybe ActorType                     # Who created this record
+    createdById: Maybe Text                        # requestId for UNKNOWN/SYSTEM, jobId for JOB, personId for PERSON/DASHBOARD_PERSON
+    updatedBy: Maybe ActorType                     # Who updated this record
+    updatedById: Maybe Text                        # requestId for UNKNOWN/SYSTEM, jobId for JOB, personId for PERSON/DASHBOARD_PERSON
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SubscriptionPurchaseStatus>

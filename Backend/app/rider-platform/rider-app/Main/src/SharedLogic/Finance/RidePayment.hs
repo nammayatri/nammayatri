@@ -149,6 +149,7 @@ import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (MonadFlow, getCurrentTime, logDebug, logError, logInfo, throwError)
 import Lib.Finance
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Invoice.Service as FInvoiceService
@@ -289,7 +290,7 @@ applyBookingProviderFieldsToCtx booking ctx =
 --   Expense(BUYER) → Asset(BUYER) since they represent real BAP cost, not pass-through.
 --   Returns entry IDs for later settlement + invoice ID.
 createRidePaymentLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   HighPrecMoney -> -- rideFare (base, without tax)
   HighPrecMoney -> -- gstAmount (GST/VAT on ride fare)
@@ -391,7 +392,7 @@ data UpsertCoreLedgerResult = UpsertCoreLedgerResult
 --       'voidRidePaymentLedger') and recreate at the new amounts.
 --     * Prior core entries but totals match → no-op.
 upsertCoreRidePaymentLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   HighPrecMoney -> -- rideFare (without GST, post-discount)
   HighPrecMoney -> -- gstAmount  (post-discount)
@@ -494,7 +495,7 @@ upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platfo
 --   create PENDING entries as usual, then immediately settle them so the
 --   ledger ends in the captured state with no outstanding rider obligation.
 createFullyDiscountedRidePaymentLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   HighPrecMoney -> -- rideFare (original, before discount)
   HighPrecMoney -> -- gstAmount
@@ -560,7 +561,7 @@ riderObligationRefTypes =
 --   'createRidePaymentLedger' and voided together with the ledger entries
 --   in 'voidRidePaymentLedger'.
 settleRidePaymentLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   [Id LE.LedgerEntry] -> -- entry IDs from createRidePaymentLedger
   Text -> -- settlement reason
@@ -600,7 +601,7 @@ settleRidePaymentLedger ctx entryIds settledReason = do
 --   dashboard payout-offer sync to backfill the cashback entry so the payout
 --   job has something to drain. No-op when the amount is non-positive.
 createSettledCashbackPayoutLeg ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   HighPrecMoney ->
   m ()
@@ -681,7 +682,7 @@ getPayoutEligibilityData counterparty personId = do
 --   lock TTL). Idempotent — entries already PROCESSING/PAID_OUT are
 --   left alone.
 reserveCashbackEntriesForPayout ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   [Id LE.LedgerEntry] ->
   Maybe Text -> -- optional PayoutRequest id (settlementId)
   m ()
@@ -697,7 +698,7 @@ reserveCashbackEntriesForPayout entryIds mbSettlementId = do
 --   PayoutFailed) or the webhook reports a terminal failure.
 --   Only flips PROCESSING entries — PAID_OUT entries are untouched.
 releaseCashbackEntriesReservation ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   [Id LE.LedgerEntry] ->
   m ()
 releaseCashbackEntriesReservation entryIds = do
@@ -715,7 +716,7 @@ releaseCashbackEntriesReservation entryIds = do
 --   Idempotent: if all supplied entries are already PAID_OUT we no-op
 --   (and skip creating a duplicate drain transfer).
 markCashbackEntriesAsPaidOut ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   [Id LE.LedgerEntry] -> -- original cashback entry IDs (from PayoutRequest.ledgerEntryIds)
   HighPrecMoney -> -- payout amount (drives the OwnerLiability → BuyerExternal drain)
@@ -797,18 +798,19 @@ buildRidePaymentInvoiceConfig ctx rideFare gstAmount tollFare tollVatAmount plat
 --   recreate the ledger — stale invoices from the previous attempt must
 --   also be marked VOIDED so dashboards / lookups don't surface them.
 voidRidePaymentLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, MonadFlow m, Finance.HasActorInfo m r) =>
   [Id LE.LedgerEntry] ->
   m ()
 voidRidePaymentLedger entryIds = do
   -- Collect linked invoice IDs BEFORE voiding the entries, in case
   -- voiding cascades or otherwise disrupts the link lookup.
+  actorInfo <- asks (.actorInfo)
   mbInvoices <- forM entryIds $ \entryId -> FInvoiceService.getInvoiceForEntry entryId
   let uniqueInvoiceIds = List.nub [inv.id | Just inv <- mbInvoices]
   forM_ entryIds $ \entryId ->
     voidEntry entryId "PaymentIntentCancelled"
   forM_ uniqueInvoiceIds $ \invId ->
-    QInvoice.updateStatus FInvoice.Voided invId
+    QInvoice.updateStatus FInvoice.Voided (Just actorInfo.actorType) actorInfo.actorId invId
   logInfo $
     "Voided " <> show (length entryIds) <> " ride payment ledger entries and "
       <> show (length uniqueInvoiceIds)
@@ -819,7 +821,7 @@ voidRidePaymentLedger entryIds = do
 
 -- | Mark cancellation fee invoice as Paid after successful Stripe capture.
 markCancellationFeeInvoicePaid ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Maybe (Id FInvoice.Invoice) ->
   m ()
 markCancellationFeeInvoicePaid mbInvoiceId =
@@ -829,7 +831,7 @@ markCancellationFeeInvoicePaid mbInvoiceId =
 
 -- | Find and cancel the Ride invoice linked to a rideId (called when ride intent is cancelled).
 voidRideInvoice ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Text -> -- rideId
   m ()
 voidRideInvoice rideId = do
@@ -850,7 +852,7 @@ voidRideInvoice rideId = do
 -- | Void all unsettled ledger entries for a ride then cancel the ride invoice.
 --   Single call-site for any cancellation path (cash or online, with or without fee).
 voidRidePaymentEntriesAndInvoice ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Text -> -- rideId
   m ()
 voidRidePaymentEntriesAndInvoice rideId = do
@@ -862,7 +864,7 @@ voidRidePaymentEntriesAndInvoice rideId = do
 
 -- | Mark the Ride invoice as Paid after successful payment capture.
 markRideInvoicePaid ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Text -> -- rideId
   m ()
 markRideInvoicePaid rideId = do
@@ -876,7 +878,7 @@ markRideInvoicePaid rideId = do
 
 -- | Mark the Ride invoice as Issued when capture fails (entries now DUE for collection).
 markRideInvoiceIssued ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Text -> -- rideId
   m ()
 markRideInvoiceIssued rideId = do
@@ -897,7 +899,7 @@ markRideInvoiceIssued rideId = do
 --   Capture-side legs happen in settleRidePaymentLedger when chargePaymentIntent
 --   succeeds. Tip is a pure pass-through to the driver — no BAP commission.
 createTipLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   HighPrecMoney -> -- tipAmount
   m (Either FinanceError [Id LE.LedgerEntry])
@@ -914,7 +916,7 @@ createTipLedger ctx tipAmount = do
 --   cancellation fee. Call 'markCancellationFeeInvoicePaid' on success or
 --   'voidCancellationFeeLedger' / 'markDueCancellationFeeLedger' on failure.
 createPendingCancellationFeeLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   HighPrecMoney -> -- cancellationFee (without GST)
   HighPrecMoney -> -- cancellationGST
@@ -1042,7 +1044,7 @@ findDueRidePaymentEntries rideId = do
 
 -- | Mark ledger entries as DUE (capture was attempted and failed).
 markEntriesAsDue ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   [Id LE.LedgerEntry] ->
   m ()
 markEntriesAsDue entryIds = do
@@ -1073,7 +1075,7 @@ isRidePaymentSettled rideId = do
 --   Called after chargePaymentIntent succeeds when tip was folded into the
 --   existing PI (paymentStatus was not Completed when tip was added).
 regenerateRideTipInvoice ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, MonadFlow m, Finance.HasActorInfo m r) =>
   Text -> -- rideId
   HighPrecMoney -> -- tipAmount
   m ()

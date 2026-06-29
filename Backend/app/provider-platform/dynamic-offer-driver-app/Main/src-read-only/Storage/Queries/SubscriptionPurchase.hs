@@ -60,7 +60,9 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.SubscriptionPurchase.SubscriptionPurchase {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.enableServiceUsageCharge enableServiceUsageCharge,
+    [ Se.Set Beam.createdBy createdBy,
+      Se.Set Beam.createdById createdById,
+      Se.Set Beam.enableServiceUsageCharge enableServiceUsageCharge,
       Se.Set Beam.expiryDate expiryDate,
       Se.Set Beam.financeInvoiceId (Kernel.Types.Id.getId <$> financeInvoiceId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
@@ -77,6 +79,8 @@ updateByPrimaryKey (Domain.Types.SubscriptionPurchase.SubscriptionPurchase {..})
       Se.Set Beam.serviceName serviceName,
       Se.Set Beam.startDate startDate,
       Se.Set Beam.status status,
+      Se.Set Beam.updatedBy updatedBy,
+      Se.Set Beam.updatedById updatedById,
       Se.Set Beam.vehicleCategory vehicleCategory,
       Se.Set Beam.waiveOfMode waiveOfMode,
       Se.Set Beam.waiveOffEnabledOn waiveOffEnabledOn,

@@ -38,6 +38,7 @@ import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.Queries.Booking as QRB
+import qualified Tools.ActorInfo as ActorInfo
 import TransactionLogs.PushLogs
 
 type API =
@@ -53,7 +54,7 @@ track ::
   SignatureAuthResult ->
   Track.TrackReqV2 ->
   FlowHandler AckResponse
-track transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI do
+track transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.trackReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "track APIV2 Flow" $ "Reached:-" <> show reqV2

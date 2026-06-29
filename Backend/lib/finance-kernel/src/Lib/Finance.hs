@@ -39,6 +39,11 @@ module Lib.Finance
     module Lib.Finance.StateMachine.Interface,
     module Lib.Finance.StateMachine.Service,
 
+    -- * SAP Journal Entry
+    module Lib.Finance.Domain.Types.SapJournalEntry,
+    module Lib.Finance.SapJournalEntry.Interface,
+    module Lib.Finance.SapJournalEntry.Service,
+
     -- * Audit
     module Lib.Finance.Domain.Types.AuditEntry,
     module Lib.Finance.Audit.Interface,
@@ -67,10 +72,11 @@ import Lib.Finance.Core.Money
 import Lib.Finance.Core.Types
 -- Domain types (generated from YAML)
 import Lib.Finance.Domain.Types.Account
-import Lib.Finance.Domain.Types.AuditEntry
+import Lib.Finance.Domain.Types.AuditEntry hiding (AuditEntityType (..)) -- avoid conflicts
 import Lib.Finance.Domain.Types.CurrentState
 import Lib.Finance.Domain.Types.Invoice
 import Lib.Finance.Domain.Types.LedgerEntry hiding (Expense, Revenue)
+import Lib.Finance.Domain.Types.SapJournalEntry
 import Lib.Finance.Error.Types
 import Lib.Finance.FinanceM
 import Lib.Finance.Invoice.Interface
@@ -78,6 +84,8 @@ import Lib.Finance.Invoice.PdfService
 import Lib.Finance.Invoice.Service
 import Lib.Finance.Ledger.Interface
 import Lib.Finance.Ledger.Service
+import Lib.Finance.SapJournalEntry.Interface
+import Lib.Finance.SapJournalEntry.Service
 import Lib.Finance.StateMachine.Interface
 import Lib.Finance.StateMachine.Service
 import Lib.Finance.Tax.Interface

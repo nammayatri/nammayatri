@@ -13,6 +13,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
 import Kernel.Types.Id (Id (..), cast)
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import Lib.LocationUpdates (LocationUpdateFlow)
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -32,7 +33,7 @@ refreshPayoutRequestStatus ::
   ( EncFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     HasField "kafkaProducerTools" r KafkaProducerTools,
     PaymentBeamFlow.BeamFlow m r,
     FinanceBeamFlow.BeamFlow m r
@@ -48,7 +49,7 @@ refreshPayoutRequestStatus payoutRequest = do
       ( EncFlow m r,
         EsqDBFlow m r,
         CacheFlow m r,
-        MonadFlow m,
+        Finance.HasActorInfo m r,
         HasField "kafkaProducerTools" r KafkaProducerTools,
         PaymentBeamFlow.BeamFlow m r,
         FinanceBeamFlow.BeamFlow m r
