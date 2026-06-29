@@ -209,9 +209,11 @@ jobs:
           # ghc-pkg dump to fail. GHC-provided packages are sufficient.
           tar -I 'zstd -T0 -3' -cf dist-newstyle.tar.zst -C "$CACHE_ROOT" $EXCLUDES --exclude='.cabal-dir/logs' --exclude='.cabal-dir/store' dist-newstyle/ hie/ .cabal-dir/ .nix-deps/
           echo "$GITHUB_WORKSPACE" > build-path.txt
+          echo "$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir" > cabal-dir-path.txt
           mc cp dist-newstyle.tar.zst "minio/haskell-cache/cabal-build/${{ github.sha }}/dist-newstyle.tar.zst"
           mc cp build-path.txt "minio/haskell-cache/cabal-build/${{ github.sha }}/build-path.txt"
-          rm -f dist-newstyle.tar.zst build-path.txt
+          mc cp cabal-dir-path.txt "minio/haskell-cache/cabal-build/${{ github.sha }}/cabal-dir-path.txt"
+          rm -f dist-newstyle.tar.zst build-path.txt cabal-dir-path.txt
 
       - name: Build repl artifacts (dynamic-offer-driver-app)
         run: |
