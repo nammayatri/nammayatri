@@ -909,6 +909,24 @@ removeVehicle isTaxiBoothRequest driverId = do
   when ((not isTaxiBoothRequest) && isJust isOnRide) $ throwError RCVehicleOnRide
   VQuery.deleteById driverId -- delete the vehicle entry too for the driver
 
+cleanupOrphanedDriverVehicleAssociation ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
+  Id Person.Person ->
+  Domain.VehicleRegistrationCertificate ->
+  m ()
+cleanupOrphanedDriverVehicleAssociation oldDriverId rc = do
+  logWarning $
+    "Cleaning up orphaned RC/vehicle for missing person: driverId="
+      <> oldDriverId.getId
+      <> ", rcId="
+      <> rc.id.getId
+  DAQuery.deactivateRCForDriver False oldDriverId rc.id
+  mbVehicle <- VQuery.findById oldDriverId
+  whenJust mbVehicle $ \vehicle -> do
+    rcNumber <- decrypt rc.certificateNumber
+    when (vehicle.registrationNo == rcNumber) $
+      VQuery.deleteById oldDriverId
+
 validateRCActivation :: Bool -> Id Person.Person -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> Flow Bool
 validateRCActivation isTaxiBoothRequest driverId transporterConfig rc = do
   now <- getCurrentTime
@@ -948,7 +966,7 @@ validateRCActivation isTaxiBoothRequest driverId transporterConfig rc = do
   where
     deactivateIfWeCanDeactivate :: Id Person.Person -> UTCTime -> (Id Person.Person -> Flow ()) -> Flow ()
     deactivateIfWeCanDeactivate oldDriverId now deactivateFunc = do
-      driverInfo <- DIQuery.findById oldDriverId >>= fromMaybeM (PersonNotFound oldDriverId.getId)
+      driverInfo <- DIQuery.findById oldDriverId >>= fromMaybeM DriverInfoNotFound
       let canUnlinkWhenOffline = transporterConfig.allowRcUnlinkWhenDriverOffline == Just True && driverInfo.mode == Just DCommon.OFFLINE
       mLastRideAssigned <- RQuery.findLastRideAssigned oldDriverId
       case mLastRideAssigned of
@@ -960,12 +978,15 @@ validateRCActivation isTaxiBoothRequest driverId transporterConfig rc = do
               throwError RCActiveOnOtherAccount
         Nothing -> do
           -- if driver didn't take any ride yet
-          person <- Person.findById oldDriverId >>= fromMaybeM (PersonNotFound oldDriverId.getId)
-          if ((nominalDiffTimeToSeconds (diffUTCTime now person.createdAt) > transporterConfig.automaticRCActivationCutOff || canUnlinkWhenOffline) && driverInfo.onRide == False) || isTaxiBoothRequest
-            then deactivateFunc oldDriverId
-            else do
-              DAQuery.updateRcErrorMessage oldDriverId rc.id (show RCActiveOnOtherAccount)
-              throwError RCActiveOnOtherAccount
+          mbPerson <- Person.findById oldDriverId
+          case mbPerson of
+            Nothing -> cleanupOrphanedDriverVehicleAssociation oldDriverId rc
+            Just person -> do
+              if ((nominalDiffTimeToSeconds (diffUTCTime now person.createdAt) > transporterConfig.automaticRCActivationCutOff || canUnlinkWhenOffline) && driverInfo.onRide == False) || isTaxiBoothRequest
+                then deactivateFunc oldDriverId
+                else do
+                  DAQuery.updateRcErrorMessage oldDriverId rc.id (show RCActiveOnOtherAccount)
+                  throwError RCActiveOnOtherAccount
 
 activateRC :: DI.DriverInformation -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTC.TransporterConfig -> UTCTime -> Domain.VehicleRegistrationCertificate -> Flow ()
 activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
