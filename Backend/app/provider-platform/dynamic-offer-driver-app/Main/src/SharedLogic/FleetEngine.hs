@@ -18,8 +18,7 @@
 -- the driver id. The server JWT is minted on the fly from the city's encrypted
 -- service-account JSON via 'Kernel.External.FleetEngine.Auth'.
 module SharedLogic.FleetEngine
-  ( mkFleetEngineVehicleId,
-    mkDriverToken,
+  ( mkDriverToken,
     notifyTripCreated,
     notifyDriverArrived,
     notifyRideStarted,
@@ -55,10 +54,6 @@ type FleetEngineFlow m r =
     HasRequestId r
   )
 
--- | Stable Fleet Engine vehicle id for a driver.
-mkFleetEngineVehicleId :: Id DP.Person -> Text
-mkFleetEngineVehicleId driverId = "driver-" <> driverId.getId
-
 getFleetEngineCfg ::
   (CacheFlow m r, EsqDBFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
@@ -92,7 +87,7 @@ mkDriverToken merchantOpCityId driverId = do
           logError $ "FleetEngine: invalid service account for city " <> merchantOpCityId.getId <> ": " <> T.pack err
           pure Nothing
         Right sa -> do
-          let vehicleId = mkFleetEngineVehicleId driverId
+          let vehicleId = driverId.getId -- Fleet Engine vehicleId is the driverId (driver<->vehicle is 1:1)
               ttl = fromMaybe FEConfig.defaultDriverTokenTtl cfg.driverTokenTtlSeconds
           eToken <- liftIO $ FEAuth.mintFleetEngineToken sa (FEAuth.DriverToken vehicleId) ttl
           case eToken of
@@ -129,7 +124,8 @@ notifyTripCreated :: FleetEngineFlow m r => DRB.Booking -> SRide.Ride -> m ()
 notifyTripCreated booking ride =
   withFleetEngine booking.merchantOperatingCityId $ \providerId token baseUrl -> do
     let tripId = ride.id.getId
-        vehicleId = mkFleetEngineVehicleId ride.driverId
+        -- Fleet Engine vehicleId is the driverId (driver<->vehicle is 1:1 here)
+        vehicleId = ride.driverId.getId
         -- Waypoints let Fleet Engine compute a meaningful ETA to pickup/dropoff;
         -- toLocation can be absent (e.g. open-destination rides).
         pickupPoint = Just (FETypes.LatLng booking.fromLocation.lat booking.fromLocation.lon)
