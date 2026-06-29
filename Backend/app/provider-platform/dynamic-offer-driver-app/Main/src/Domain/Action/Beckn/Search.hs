@@ -1086,7 +1086,7 @@ buildSearchReqLocation :: (ServiceFlow m r, HasPlaceNameCacheMetrics m r) => Id 
 buildSearchReqLocation merchantId merchantOpCityId sessionToken address customerLanguage latLong@Maps.LatLong {..} = do
   updAddress <- case address of
     Just loc
-      | customerLanguage == Just Maps.ENGLISH && isJust loc.ward ->
+      | fromMaybe Maps.ENGLISH customerLanguage == Maps.ENGLISH && isJust loc.ward ->
         pure $
           Address
             { areaCode = loc.area_code,
@@ -1099,9 +1099,7 @@ buildSearchReqLocation merchantId merchantOpCityId sessionToken address customer
               area = loc.ward,
               full_address = decodeAddress loc
             }
-    _ -> do
-      logError $ "buildSearchReqLocation: merchantId: " <> show merchantId <> ", merchantOpCityId: " <> show merchantOpCityId <> ", latLong: " <> show latLong <> " customerLanguage " <> show customerLanguage <> " address " <> show address
-      getAddressByGetPlaceName merchantId merchantOpCityId sessionToken latLong
+    _ -> getAddressByGetPlaceName merchantId merchantOpCityId sessionToken latLong
   id <- Id <$> generateGUID
   now <- getCurrentTime
   let createdAt = now
