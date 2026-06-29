@@ -106,10 +106,6 @@ const URL_VAR_TO_SERVICE: Record<string, { service: ParsedStep['service']; strip
   'baseUrl_dashboard': { service: 'rider' },
   'mockServerUrl': { service: 'mock-server' },
   'mock_server_url': { service: 'juspay-payment' },
-  // driver-app webhook receiver (e.g. Idfy CRC). Value http://localhost:8016 (caddy,
-  // same entrypoint as the other driver base URLs); no path prefix, so the raw webhook
-  // path /{merchant}/{city}/service/... routes via /proxy/driver-raw to the driver-app.
-  'driverAppWebhookBase': { service: 'driver' },
 };
 
 // ── Parser ──

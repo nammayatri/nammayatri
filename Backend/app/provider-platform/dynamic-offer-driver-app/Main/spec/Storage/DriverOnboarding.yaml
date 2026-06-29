@@ -1161,6 +1161,9 @@ DriverUdyam :
       kvFunction: updateWithKV
       params: [verificationStatus, rejectReason, updatedAt]
       where: id
+    deleteByDriverId:
+      kvFunction: deleteWithKV
+      where: driverId
 
 DriverRidePayoutBankAccount:
   tableName: driver_ride_payout_bank_account

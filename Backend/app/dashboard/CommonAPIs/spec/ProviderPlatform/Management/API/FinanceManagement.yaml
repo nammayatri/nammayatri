@@ -227,6 +227,7 @@ types:
     - linkedRides: [LinkedRideItem]
     - createdAt: Maybe UTCTime
     - updatedAt: Maybe UTCTime
+    - orderId: Maybe Text
 
   LinkedRideItem:
     - rideId: Text
