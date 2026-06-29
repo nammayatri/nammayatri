@@ -888,6 +888,8 @@ library
       Tools.Metrics
       Tools.Metrics.ARDUBPPMetrics
       Tools.Metrics.ARDUBPPMetrics.Types
+      Tools.Metrics.PlaceNameCacheMetrics
+      Tools.Metrics.PlaceNameCacheMetrics.Types
       Tools.Metrics.SendSearchRequestToDriverMetrics
       Tools.Metrics.SendSearchRequestToDriverMetrics.Types
       Tools.Notifications

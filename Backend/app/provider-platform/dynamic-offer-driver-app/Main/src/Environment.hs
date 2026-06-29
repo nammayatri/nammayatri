@@ -234,6 +234,7 @@ data AppEnv = AppEnv
     googleTranslateKey :: Text,
     bppMetrics :: BPPMetricsContainer,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
+    placeNameCacheMetrics :: PlaceNameCacheMetricsContainer,
     searchRequestExpirationSeconds :: NominalDiffTime,
     searchRequestExpirationSecondsForMultimodal :: NominalDiffTime,
     driverQuoteExpirationSeconds :: NominalDiffTime,
@@ -376,6 +377,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   let kafkaProducerForART = Just kafkaProducerTools
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
+  placeNameCacheMetrics <- registerPlaceNameCacheMetricsContainer
   coreMetrics <- Metrics.registerCoreMetricsContainer
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   serviceClickhouseEnv <- createConn driverClickhouseCfg

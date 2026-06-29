@@ -42,6 +42,7 @@ import qualified Storage.CachedQueries.Maps.PlaceNameCache as CM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMOC
 import qualified Tools.Maps as Maps
+import Tools.Metrics.PlaceNameCacheMetrics
 
 data AutoCompleteReq = AutoCompleteReq
   { input :: Text,
@@ -65,7 +66,7 @@ expirePlaceNameCache placeNameCache merchantOpCityId = do
     let toBeDeletedPlaceNameCache = filter (\obj -> obj.createdAt < expiryDate) placeNameCache
     mapM_ CM.delete toBeDeletedPlaceNameCache
 
-getPlaceName :: ServiceFlow m r => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
+getPlaceName :: (ServiceFlow m r, HasPlaceNameCacheMetrics m r) => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
 getPlaceName merchantId merchantOpCityId entityId req = do
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   case req.getBy of
@@ -76,15 +77,15 @@ getPlaceName merchantId merchantOpCityId entityId req = do
           placeNameCache <- CM.findPlaceByGeoHash (pack geoHash)
           fork "Place Name Cache Expiry" $ expirePlaceNameCache placeNameCache merchantOpCityId
           if null placeNameCache
-            then callMapsApi merchantId merchantOpCityId req merchant.geoHashPrecisionValue entityId
-            else pure $ map convertToGetPlaceNameResp placeNameCache
+            then incrementCacheMiss *> callMapsApi merchantId merchantOpCityId req merchant.geoHashPrecisionValue entityId
+            else incrementCacheHit *> pure (map convertToGetPlaceNameResp placeNameCache)
         Nothing -> callMapsApi merchantId merchantOpCityId req merchant.geoHashPrecisionValue entityId
     MIT.ByPlaceId placeId -> do
       placeNameCache <- CM.findPlaceByPlaceId placeId
       fork "Place Name Cache Expiry" $ expirePlaceNameCache placeNameCache merchantOpCityId
       if null placeNameCache
-        then callMapsApi merchantId merchantOpCityId req merchant.geoHashPrecisionValue entityId
-        else pure $ map convertToGetPlaceNameResp placeNameCache
+        then incrementCacheMiss *> callMapsApi merchantId merchantOpCityId req merchant.geoHashPrecisionValue entityId
+        else incrementCacheHit *> pure (map convertToGetPlaceNameResp placeNameCache)
 
 callMapsApi :: ServiceFlow m r => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maps.GetPlaceNameReq -> Int -> Maybe Text -> m Maps.GetPlaceNameResp
 callMapsApi merchantId merchantOpCityId req geoHashPrecisionValue entityId = do
