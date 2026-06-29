@@ -540,6 +540,7 @@ library
       SharedLogic.Finance.Reconciliation
       SharedLogic.Finance.Wallet
       SharedLogic.Fleet
+      SharedLogic.FleetEngine
       SharedLogic.FleetOperatorStats
       SharedLogic.FleetVehicleStats
       SharedLogic.GoogleMaps
