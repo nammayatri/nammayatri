@@ -931,6 +931,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
              rideEndTime,
              paymentStatus = if SPayment.isOnlinePayment mbMerchant booking then DRide.NotInitiated else DRide.Completed,
              endOdometerReading,
+             rideTags = ride.rideTags <> ((\valid -> ["ValidRide#" <> if valid then "Yes" else "No"] :: [Text]) <$> isValidRide),
              commission = rideCommission
             }
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
@@ -1114,6 +1115,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
       booking.riderId
       booking.merchantOperatingCityId
       (fromMaybe now rideEndTime)
+      isValidRide
   offerDiscountBreakup <-
     if rideDiscountAmount > 0
       then do
