@@ -196,6 +196,7 @@ makeWhereCondition whereClause mappings = do
       let columnText = quote' $ replaceMappings column mappings
       case term of
         In values -> columnText <> " IN " <> valueToTextForInConditions values
+        Eq SqlNull -> columnText <> " IS NULL"
         Eq value -> columnText <> " = " <> valueToText value
         GreaterThan value -> columnText <> " > " <> valueToText value
         GreaterThanOrEq value -> columnText <> " >= " <> valueToText value
@@ -203,6 +204,7 @@ makeWhereCondition whereClause mappings = do
         LessThanOrEq value -> columnText <> " <= " <> valueToText value
         Null -> columnText <> " IS NULL"
         Like txt -> columnText <> " LIKE " <> txt
+        Not (Eq SqlNull) -> columnText <> " IS NOT NULL"
         Not (Eq value) -> columnText <> " != " <> valueToText value
         Not (In values) -> columnText <> " NOT IN " <> valueToTextForInConditions values
         Not Null -> columnText <> " IS NOT NULL"

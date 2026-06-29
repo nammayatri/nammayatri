@@ -927,7 +927,7 @@ _SSH_KEY_CANDIDATES = [
     os.path.expanduser("~/.ssh/id_rsa"),
     os.path.expanduser("~/.ssh/id_ecdsa"),
 ]
-BASE_API_HOST = os.environ.get("BASE_API_HOST", "3.108.177.163")
+BASE_API_HOST = os.environ.get("BASE_API_HOST", "34.100.155.111")
 BASE_API_PORT = os.environ.get("BASE_API_PORT", "8787")
 
 
@@ -992,32 +992,44 @@ def _fetch_machines() -> dict:
     except Exception as e:
         return {"machines": [], "myIps": [], "error": f"base station API unreachable: {e}"}
 
-    # Collect this machine's IPs so we can pick the best route to each host.
-    my_ips: list[str] = []
+    # Collect this machine's IPs + networks so we can pick the best route.
+    import ipaddress
+    my_networks: list[tuple[str, ipaddress.IPv4Network]] = []
     try:
         if sys.platform == "darwin":
             out = subprocess.check_output(["ifconfig"], text=True, timeout=3)
-            my_ips = [ip for ip in re.findall(r"inet (\d+\.\d+\.\d+\.\d+)", out)
-                      if ip != "127.0.0.1"]
+            # Parse "inet <ip> netmask <hex>" pairs from ifconfig output
+            for m in re.finditer(r"inet (\d+\.\d+\.\d+\.\d+) netmask (0x[0-9a-fA-F]+)", out):
+                ip_str, mask_hex = m.group(1), m.group(2)
+                if ip_str == "127.0.0.1":
+                    continue
+                mask_int = int(mask_hex, 16)
+                prefix = bin(mask_int).count("1")
+                net = ipaddress.ip_network(f"{ip_str}/{prefix}", strict=False)
+                my_networks.append((ip_str, net))
         else:
             out = subprocess.check_output(["hostname", "-I"], text=True, timeout=3).strip()
-            my_ips = [ip.strip() for ip in out.split() if ip.strip()]
+            for ip_str in out.split():
+                ip_str = ip_str.strip()
+                if ip_str:
+                    # Default /24 for Linux (hostname -I doesn't give netmask)
+                    net = ipaddress.ip_network(f"{ip_str}/24", strict=False)
+                    my_networks.append((ip_str, net))
     except Exception:
         pass
-
-    def _same_subnet(ip1: str, ip2: str) -> bool:
-        """Compare first two octets (/16) to decide if same LAN."""
-        if not ip1 or not ip2:
-            return False
-        a = ip1.split(".")
-        b = ip2.split(".")
-        return len(a) >= 2 and len(b) >= 2 and a[0] == b[0] and a[1] == b[1]
+    my_ips = [ip for ip, _ in my_networks]
 
     def _pick_best(local_ip: str, aws_ip: str) -> str:
-        """If any of our IPs is on the same /16 as local_ip, use LAN; else VPN."""
-        for my_ip in my_ips:
-            if _same_subnet(my_ip, local_ip):
-                return local_ip
+        """If any of our IPs is on the same subnet as local_ip, use LAN; else VPN."""
+        if not local_ip:
+            return aws_ip or local_ip
+        try:
+            target = ipaddress.ip_address(local_ip)
+            for _, net in my_networks:
+                if target in net:
+                    return local_ip
+        except ValueError:
+            pass
         return aws_ip or local_ip
 
     machines: list[dict] = []
@@ -1495,8 +1507,17 @@ def remote_clear_data(body: dict) -> dict:
     session = _remote_session_make("clear-data", host)
     _remote_register(session)
 
-    # `yes y | … , clear-data` answers the confirmation prompt non-interactively.
-    inner = "cd Backend && yes y | nix develop .#backend -c , clear-data"
+    # Delete data/ contents directly — no nix evaluation needed.
+    inner = (
+        "for entry in data/*/; do"
+        " [ -d \"$entry\" ] || continue;"
+        " name=$(basename \"$entry\");"
+        " case \"$name\" in ny-react-native|control-center) echo \"keeping $name\"; continue;; esac;"
+        " echo \"rm -rf $entry\"; rm -rf -- \"$entry\";"
+        " done;"
+        " find data/ -maxdepth 1 -type f -delete 2>/dev/null || true;"
+        " echo Done."
+    )
 
     if _is_localhost(host):
         argv = ["bash", "-lc", f"cd {PROJECT_ROOT} && {inner}"]
@@ -1555,7 +1576,7 @@ def remote_cabal_clean(body: dict) -> dict:
     session = _remote_session_make("cabal-clean", host)
     _remote_register(session)
 
-    inner = "cd Backend && nix develop .#backend -c cabal clean"
+    inner = "cd Backend && rm -rf dist-newstyle .ci-project-root .ci-cabal-dir"
 
     if _is_localhost(host):
         argv = ["bash", "-lc", f"cd {PROJECT_ROOT} && {inner}"]

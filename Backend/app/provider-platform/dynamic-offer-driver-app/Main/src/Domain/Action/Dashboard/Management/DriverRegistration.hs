@@ -2505,9 +2505,9 @@ getDriverRegistrationPayoutOrderStatus merchantShortId opCity driverId orderId =
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   paymentOrder <- QOrder.findById (Id orderId) >>= fromMaybeM (InvalidRequest "UPI registration order not found")
   unless (paymentOrder.personId == cast driverId) $ throwError (InvalidRequest "Order does not belong to this driver")
-  freshStatus <-
+  (freshStatus, mbCapturedVpa) <-
     if paymentOrder.status == Payment.CHARGED
-      then pure paymentOrder.status
+      then pure (paymentOrder.status, Nothing)
       else do
         let commonPersonId = cast @Common.Driver @DPayment.Person driverId
             commonMerchantOpCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
@@ -2518,17 +2518,23 @@ getDriverRegistrationPayoutOrderStatus merchantShortId opCity driverId orderId =
         paymentStatus <- DPayment.orderStatusService commonMerchantOpCityId commonPersonId (Id orderId) orderStatusCall
         case paymentStatus of
           DPayment.PaymentStatus {status, payerVpa} -> do
-            when (status == Payment.CHARGED) $ do
+            when ((status == Payment.CHARGED || status == Payment.AUTO_REFUNDED) && isJust payerVpa) $ do
               let personId = cast @Common.Driver @DP.Person driverId
               whenJust payerVpa $ \vpa ->
                 QFOIE.updatePayoutVpaAndStatus (Just vpa) (Just DFOI.VIA_WEBHOOK) personId
               QOrder.updateVpa (Id orderId) payerVpa
-            pure status
-          _ -> DPayment.getTransactionStatus paymentStatus
+            pure (status, payerVpa)
+          _ -> do
+            s <- DPayment.getTransactionStatus paymentStatus
+            pure (s, Nothing)
+  let registrationStatus =
+        if freshStatus == Payment.AUTO_REFUNDED && isJust mbCapturedVpa
+          then PayoutTypes.SUCCESS
+          else mapTxnStatusToPayoutStatus freshStatus
   pure $
     PayoutTypes.CreatePayoutOrderResp
       { orderId = orderId,
-        status = mapTxnStatusToPayoutStatus freshStatus,
+        status = registrationStatus,
         amount = paymentOrder.amount,
         orderType = Nothing,
         udf1 = Nothing,

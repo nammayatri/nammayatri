@@ -642,7 +642,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                     issuedByAddress = invoiceParams.issuedByAddress,
                     supplierName = Nothing,
                     supplierAddress = Nothing,
-                    supplierGSTIN = Nothing,
+                    supplierGSTIN = invoiceParams.merchantGstin,
                     supplierTaxNo = Nothing,
                     supplierId = Nothing,
                     merchantGstin = invoiceParams.merchantGstin,

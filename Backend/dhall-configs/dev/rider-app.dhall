@@ -296,6 +296,7 @@ let RiderJobType =
       | DailyPassStatusUpdate
       | PassExpiryReminderMaster
       | SettlementReportIngestion
+      | ReconcileRewardInflight
       >
 
 let jobInfoMapx =
@@ -342,6 +343,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.DailyPassStatusUpdate, mapValue = True }
       , { mapKey = RiderJobType.PassExpiryReminderMaster, mapValue = True }
       , { mapKey = RiderJobType.SettlementReportIngestion, mapValue = True }
+      , { mapKey = RiderJobType.ReconcileRewardInflight, mapValue = False }
       ]
 
 let cacConfig =
@@ -530,6 +532,7 @@ in  { esqDBCfg
       , remotePath = "/tmp/remote_path"
       }
     , blackListedJobs = [] : List Text
+    , useCachedActiveRidesList = False
     , emailServiceConfig
     , masterCloudProxyConfig =
       { masterUrl = Some "http://localhost:${driverAppInternalPort}"

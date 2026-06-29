@@ -60,6 +60,10 @@ data AvailableRoute = AvailableRoute
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data BlockedVehiclesResp = BlockedVehiclesResp {blockedVehicleNumbers :: [Kernel.Prelude.Text]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data ChangeStopsReq = ChangeStopsReq
   { journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     legOrder :: Kernel.Prelude.Int,

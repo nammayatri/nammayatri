@@ -1355,6 +1355,12 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
           then (.registeredAt) <$> (QFOI.findByPrimaryKey driverId >>= fromMaybeM (PersonNotFound driverId.getId))
           else pure Nothing
       return (VALID <$ mbRegisteredAt, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+    DVC.BankingDetails -> do
+      hasBankingDetails <-
+        if isFleetRole role
+          then maybe False (isJust . (.payoutVpa)) <$> QFOI.findByPrimaryKey driverId
+          else maybe False (\di -> isJust di.driverBankAccountDetails || isJust di.payerVpa) <$> DIQuery.findById (cast driverId)
+      return (if hasBankingDetails then Just VALID else Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
     _ -> commonDocStatus docType
 
 callGetDLGetStatus :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()

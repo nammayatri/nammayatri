@@ -29,13 +29,17 @@ import qualified SharedLogic.BehaviourManagement.CustomerCancellationRate as CRW
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
--- | v1: windowed completed-ride counts plus hasTakenValidRide from Person.
--- Cohort eligibilityJsonLogic can reference ridesLastNd and hasTakenValidRide.
+-- | v1: windowed completed-ride counts plus hasTakenValidRide from Person, and
+-- isValidRide for the ride that triggered this evaluation. isValidRide is Nothing
+-- (JSON null) when there is no ride context (e.g. dashboard triggerEval) or the BPP
+-- did not send the validity tag. Cohort eligibilityJsonLogic can reference
+-- ridesLastNd, hasTakenValidRide and isValidRide.
 readRiderContext ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) =>
   Id DP.Person ->
+  Maybe Bool ->
   m A.Value
-readRiderContext personId = do
+readRiderContext personId mbIsValidRide = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   ridesLast1d <- CRWindow.getCompletedCount 1 personId
   ridesLast3d <- CRWindow.getCompletedCount 3 personId
@@ -50,5 +54,6 @@ readRiderContext personId = do
           ("ridesLast7d", A.toJSON ridesLast7d),
           ("ridesLast30d", A.toJSON ridesLast30d),
           ("ridesLast90d", A.toJSON ridesLast90d),
-          ("hasTakenValidRide", A.toJSON person.hasTakenValidRide)
+          ("hasTakenValidRide", A.toJSON person.hasTakenValidRide),
+          ("isValidRide", A.toJSON mbIsValidRide)
         ]
