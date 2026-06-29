@@ -15,7 +15,7 @@
 
 pkgs.writeShellApplication {
   name = "resolve-ports";
-  runtimeInputs = with pkgs; [ coreutils gnugrep lsof ]
+  runtimeInputs = with pkgs; [ coreutils gnugrep gnused lsof jq ]
     ++ lib.optionals pkgs.stdenv.isLinux [ pkgs.iproute2 ];
   text = ''
     set -euo pipefail
@@ -29,8 +29,35 @@ pkgs.writeShellApplication {
       CHECK_ONLY=true
     fi
 
+    # ── Load ports claimed by OTHER developers from devbox-registry.json ──
+    # This avoids the timing race where another dev's services haven't
+    # fully bound yet when we probe with ss/lsof.
+    declare -A registry_ports
+    _registry_count=0
+    REGISTRY="/tmp/devbox-registry.json"
+    # Derive current dev name from FLAKE_ROOT: /tmp/<devname>/nammayatri → <devname>
+    MY_DEV_NAME=$(echo "''${FLAKE_ROOT}" | sed -n 's|^/tmp/\([^/]*\)/nammayatri.*|\1|p')
+    if [[ -f "$REGISTRY" ]] && [[ -n "$MY_DEV_NAME" ]]; then
+      # Extract all ports from every developer EXCEPT ourselves.
+      while IFS= read -r p; do
+        if [[ -n "$p" ]]; then
+          registry_ports[$p]=1
+          _registry_count=$((_registry_count + 1))
+        fi
+      done < <(jq -r --arg me "$MY_DEV_NAME" \
+        '[.users // {} | to_entries[] | select(.key != $me) | .value.ports // {} | to_entries[].value] | .[]' \
+        "$REGISTRY" 2>/dev/null || true)
+      if [[ $_registry_count -gt 0 ]]; then
+        echo "  Loaded $_registry_count port(s) claimed by other developers from devbox-registry.json"
+      fi
+    fi
+
     is_port_in_use() {
       local port=$1
+      # Check the devbox registry first (other developers' claimed ports).
+      if [[ -n "''${registry_ports[$port]:-}" ]]; then
+        return 0
+      fi
       if command -v ss &>/dev/null; then
         ss -tln 2>/dev/null | grep -qE ":''${port}(\s|$)" && return 0
       fi
