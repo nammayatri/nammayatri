@@ -121,13 +121,13 @@ $(YTH.generateGenericDefault ''OfferEligibilityInput)
 -------------------------------------------------------------------------------------------------------
 ----------------------------------- Fetch Offers List With Caching ------------------------------------
 -------------------------------------------------------------------------------------------------------
-invalidateOfferListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> m ()
-invalidateOfferListCache person merchantOperatingCityId paymentServiceType price = do
+invalidateOfferListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> Price -> m ()
+invalidateOfferListCache person merchantOperatingCityId price = do
   riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
   req <- mkOfferListReq person price
   let customerId = fromMaybe person.id.getId (req.customer <&> (.customerId))
       version = fromMaybe "N/A" riderConfig.offerListCacheVersion
-  DPayment.invalidateOfferListCacheService customerId version paymentServiceType
+  DPayment.invalidateOfferListCacheServiceForAllServiceTypes customerId version
 
 offerListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> Maybe Text -> m Payment.OfferListResp
 offerListCache merchantId personId merchantOperatingCityId paymentServiceType price mbServiceTierType = do
