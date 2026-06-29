@@ -25,6 +25,7 @@ import qualified Domain.Types.TransporterConfig as DTC
 import Environment
 import qualified IssueManagement.Common as ICommon
 import Kernel.Beam.Functions
+import Kernel.External.Notification.FCM.Types (FCMOverlayReq)
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import Kernel.Types.APISuccess
@@ -74,6 +75,8 @@ reportIssue rideId issueType apiKey = do
     ICommon.SYNC_BOOKING -> pure ()
     ICommon.EXTRA_FARE_MITIGATION -> handleExtraFareMitigation ride booking.vehicleServiceTier
     ICommon.DRUNK_AND_DRIVE_VIOLATION -> handleDrunkAndDriveViolation ride
+    ICommon.UNHYGIENIC_VEHICLE -> handleUnhygienicVehicle ride
+    ICommon.VEHICLE_UNSAFE -> handleVehicleUnsafe ride
   return Success
 
 handleTollRelatedIssue :: Ride -> Flow ()
@@ -178,6 +181,62 @@ handleDrunkAndDriveViolation ride = do
           let entityData = Notify.DrunkAndDriveViolationWarningData {driverId = ride.driverId.getId, drunkAndDriveViolationCount}
           Notify.drunkAndDriveViolationWarningOverlay person.merchantOperatingCityId person fcmOverlayReq entityData
       else QDriverInfo.updateDynamicBlockedStateWithActivity ride.driverId (Just "DRUNK_AND_DRIVE_VIOLATION") Nothing "AUTOMATICALLY_BLOCKED_BY_APP" person.merchantId "AUTOMATICALLY_BLOCKED_BY_APP" ride.merchantOperatingCityId DTDBT.Application True Nothing Nothing DrunkAndDriveViolation
+
+handleUnhygienicVehicle :: Ride -> Flow ()
+handleUnhygienicVehicle ride =
+  handleVehicleQualityViolation
+    ride
+    ((.unhygienicVehicleViolationCount))
+    QDI.updateUnhygienicVehicleViolationCount
+    "UNHYGIENIC_VEHICLE"
+    "UNHYGIENIC_VEHICLE_WARNING"
+    LYT.UNHYGIENIC_VEHICLE_BEHAVIOR
+    (\person fcmOverlayReq -> Notify.unhygienicVehicleWarningOverlay ride.merchantOperatingCityId person fcmOverlayReq (Notify.UnhygienicVehicleWarningData {driverId = ride.driverId.getId}))
+
+handleVehicleUnsafe :: Ride -> Flow ()
+handleVehicleUnsafe ride =
+  handleVehicleQualityViolation
+    ride
+    ((.vehicleUnsafeViolationCount))
+    QDI.updateVehicleUnsafeViolationCount
+    "VEHICLE_UNSAFE"
+    "VEHICLE_UNSAFE_WARNING"
+    LYT.VEHICLE_UNSAFE_BEHAVIOR
+    (\person fcmOverlayReq -> Notify.vehicleUnsafeWarningOverlay ride.merchantOperatingCityId person fcmOverlayReq (Notify.VehicleUnsafeWarningData {driverId = ride.driverId.getId}))
+
+handleVehicleQualityViolation ::
+  Ride ->
+  (DI.DriverInformation -> Maybe Int) ->
+  (Maybe Int -> Id DP.Person -> Flow ()) ->
+  Text ->
+  Text ->
+  LYT.LogicDomain ->
+  (DP.Person -> FCMOverlayReq -> Flow ()) ->
+  Flow ()
+handleVehicleQualityViolation ride getCount updateCount actionType overlayKey logicDomain sendNotification = do
+  driverInfo <- QDI.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+  let violationCount = fromMaybe 0 (getCount driverInfo) + 1
+  void $ updateCount (Just violationCount) ride.driverId
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
+  let counterConfig = BTT.CounterConfig {windowSizeDays = 365, counters = [BTT.ACTION_COUNT], periods = []}
+  BTRecorder.incrementCounterOnly counterConfig BTT.DRIVER ride.driverId.getId actionType BTT.ACTION_COUNT
+  eventTime <- getCurrentTime
+  let actionEvent =
+        BTT.ActionEvent
+          { entityType = BTT.DRIVER,
+            entityId = ride.driverId.getId,
+            actionType,
+            merchantOperatingCityId = ride.merchantOperatingCityId.getId,
+            flowContext = A.object [],
+            eventData = A.object ["violationCount" A..= violationCount],
+            timestamp = eventTime
+          }
+  handled <- runBehaviorPipeline transporterConfig ride.driverId ride.merchantOperatingCityId counterConfig actionEvent [] logicDomain
+  unless handled $ do
+    logInfo $ "No " <> show logicDomain <> " rules configured, using fallback for driver " <> ride.driverId.getId
+    person <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+    mbOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory ride.merchantOperatingCityId overlayKey (fromMaybe ENGLISH person.language) Nothing Nothing Nothing
+    whenJust mbOverlay $ \overlay -> sendNotification person (Notify.mkOverlayReq overlay)
 
 handleAcRestriction :: Ride -> DI.DriverInformation -> Flow ()
 handleAcRestriction ride driverInfo = do
