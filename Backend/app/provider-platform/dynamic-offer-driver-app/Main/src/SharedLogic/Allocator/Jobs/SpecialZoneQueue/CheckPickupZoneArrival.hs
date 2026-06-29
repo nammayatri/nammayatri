@@ -123,6 +123,10 @@ runArrivalCheckForRequest requestId driverId gateId specialLocationId vehicleTyp
                   void $ LTSFlow.manualQueueRemove specialLocationId vehicleType merchantId driverId (Just "no_show_at_pickup")
                   QSZQR.updateResponse (Just DSZQR.NoShow) DSZQR.Expired requestId
                   SpecialZoneDriverDemand.runSupplyDecrementForRequest requestId.getId gateId vehicleType
+                  -- A no-show frees a committed slot — drop the trigger's net accept
+                  -- counter so the retry loop (if still within its window) tops up. No-op for App-driven.
+                  whenJust request.triggerRequestId $ \trid ->
+                    SpecialZoneDriverDemand.decrementTriggerAcceptCount trid
                   nowTs <- getCurrentTime
                   let nsNotificationDuration = fromMaybe 15 gate.pickupRequestResponseTimeoutInSec
                       nsNotificationActiveTillInSec = fromMaybe 30 gate.notificationActiveTillInSec
