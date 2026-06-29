@@ -19,6 +19,7 @@
 -- service-account JSON via 'Kernel.External.FleetEngine.Auth'.
 module SharedLogic.FleetEngine
   ( mkFleetEngineVehicleId,
+    mkDriverToken,
     notifyTripCreated,
     notifyDriverArrived,
     notifyRideStarted,
@@ -69,6 +70,36 @@ getFleetEngineCfg merchantOpCityId = do
       DOSC.FleetEngineServiceConfig cfg -> Just cfg
       _ -> Nothing
     Nothing -> Nothing
+
+-- | Mint a short-lived, vehicle-scoped Fleet Engine driver JWT for the driver's
+-- Driver SDK. Returns 'Nothing' when the feature is off for the city (no Fleet
+-- Engine service config); throws via 'logError' + 'Nothing' only on
+-- config/token errors so callers can decide how to surface it. On success
+-- returns @(token, vehicleId, providerId)@.
+mkDriverToken ::
+  FleetEngineFlow m r =>
+  Id DMOC.MerchantOperatingCity ->
+  Id DP.Person ->
+  m (Maybe (Text, Text, Text))
+mkDriverToken merchantOpCityId driverId = do
+  mbCfg <- getFleetEngineCfg merchantOpCityId
+  case mbCfg of
+    Nothing -> pure Nothing -- feature off for this city
+    Just cfg -> do
+      saText <- decrypt cfg.serviceAccountJson
+      case FEAuth.parseServiceAccount saText of
+        Left err -> do
+          logError $ "FleetEngine: invalid service account for city " <> merchantOpCityId.getId <> ": " <> T.pack err
+          pure Nothing
+        Right sa -> do
+          let vehicleId = mkFleetEngineVehicleId driverId
+              ttl = fromMaybe FEConfig.defaultDriverTokenTtl cfg.driverTokenTtlSeconds
+          eToken <- liftIO $ FEAuth.mintFleetEngineToken sa (FEAuth.DriverToken vehicleId) ttl
+          case eToken of
+            Left err -> do
+              logError $ "FleetEngine: driver token mint failed for city " <> merchantOpCityId.getId <> ": " <> T.pack err
+              pure Nothing
+            Right token -> pure $ Just (token, vehicleId, cfg.providerId)
 
 -- | Resolve config, mint a server token and run the action. Silently skips when
 -- the feature is off for the city; logs (without throwing) on config/token
