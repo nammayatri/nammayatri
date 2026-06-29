@@ -84,6 +84,7 @@ import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import SharedLogic.Ride
+import SharedLogic.VehicleServiceTier (fetchVehicleTierForDriverWithUsageRestriction)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
@@ -302,8 +303,12 @@ otpRideCreate driver otpCode booking clientId = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   isVehicleVariantNotAllowed <- isNotAllowedVehicleVariant vehicle.variant booking.vehicleServiceTier
   when isVehicleVariantNotAllowed $ throwError $ InvalidRequest "Wrong Vehicle Variant"
-  when (booking.status `elem` [DRB.COMPLETED, DRB.CANCELLED]) $ throwError (BookingInvalidStatus $ show booking.status)
   driverInfo <- QDI.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
+  serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction False (Just driverInfo) (Just vehicle) Nothing Nothing driver.id booking.merchantOperatingCityId
+  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> filter (not . snd) serviceTiers
+  isVehicleServiceNotAllowed <- isNotAllowedVehicleService availableServiceTiersForDriver booking.vehicleServiceTier
+  when isVehicleServiceNotAllowed $ throwError $ InvalidRequest "Wrong Vehicle Service Tier"
+  when (booking.status `elem` [DRB.COMPLETED, DRB.CANCELLED]) $ throwError (BookingInvalidStatus $ show booking.status)
   unless (driverInfo.subscribed || isKaaliPeeliBooking booking) $ throwError DriverUnsubscribed
   unless (driverInfo.enabled || fromMaybe False transporterConfig.allowDisableDriverToTakeSpecialZoneRide) $ throwError DriverAccountDisabled
   when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))
@@ -335,6 +340,9 @@ otpRideCreate driver otpCode booking clientId = do
     isNotAllowedVehicleVariant driverVehicleVariant bookingServiceTier = do
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow bookingServiceTier booking.merchantOperatingCityId (booking.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show bookingServiceTier))
       return $ driverVehicleVariant `notElem` vehicleServiceTierItem.allowedVehicleVariant
+
+    isNotAllowedVehicleService driverServiceTier vehicleServiceTier = do
+      return $ vehicleServiceTier `notElem` driverServiceTier
 
 arrivedAtStop :: Id DRide.Ride -> LatLong -> Flow APISuccess
 arrivedAtStop rideId pt = do
