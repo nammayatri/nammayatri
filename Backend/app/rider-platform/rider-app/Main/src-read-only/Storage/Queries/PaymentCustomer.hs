@@ -34,18 +34,18 @@ findByPersonIdAndPaymentMode ::
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode -> m (Maybe Domain.Types.PaymentCustomer.PaymentCustomer))
 findByPersonIdAndPaymentMode personId paymentMode = do findOneWithKV [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId <$> personId), Se.Is Beam.paymentMode $ Se.Eq paymentMode]]
 
-updateCATExpiryAndCustomerIdByPersonId ::
+updateCATAndExipry ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.External.Payment.Interface.Types.CustomerId -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode -> m ())
-updateCATExpiryAndCustomerIdByPersonId clientAuthToken clientAuthTokenExpiry customerId personId paymentMode = do
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.External.Payment.Interface.Types.CustomerId -> Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode -> m ())
+updateCATAndExipry clientAuthToken clientAuthTokenExpiry customerId paymentMode = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.clientAuthToken clientAuthToken,
-      Se.Set Beam.clientAuthTokenExpiry clientAuthTokenExpiry,
-      Se.Set Beam.customerId customerId,
-      Se.Set Beam.updatedAt _now
+    [Se.Set Beam.clientAuthToken clientAuthToken, Se.Set Beam.clientAuthTokenExpiry clientAuthTokenExpiry, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.customerId $ Se.Eq customerId,
+          Se.Is Beam.paymentMode $ Se.Eq paymentMode
+        ]
     ]
-    [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId <$> personId), Se.Is Beam.paymentMode $ Se.Eq paymentMode]]
 
 updateDefaultPaymentMethodId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

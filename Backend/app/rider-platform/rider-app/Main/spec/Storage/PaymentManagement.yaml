@@ -33,11 +33,11 @@ PaymentCustomer:
       where:
         and: [personId, paymentMode]
 
-    updateCATExpiryAndCustomerIdByPersonId:
+    updateCATAndExipry:
       kvFunction: updateWithKV
-      params: [clientAuthToken, clientAuthTokenExpiry, customerId]
+      params: [clientAuthToken, clientAuthTokenExpiry]
       where:
-        and: [personId, paymentMode]
+        and: [customerId, paymentMode]
 
     updateDefaultPaymentMethodId:
       kvFunction: updateWithKV
