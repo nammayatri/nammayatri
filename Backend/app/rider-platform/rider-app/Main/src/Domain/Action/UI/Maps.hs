@@ -54,6 +54,7 @@ import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
 import Tools.Error
 import qualified Tools.Maps as Maps
+import Tools.Metrics.PlaceNameCacheMetrics
 
 data AutoCompleteType = PICKUP | DROP deriving (Generic, Show, Read, Eq, Ord, FromJSON, ToJSON, ToSchema)
 
@@ -129,7 +130,7 @@ expirePlaceNameCache placeNameCache merchantOperatingCityId = do
     let toBeDeletedPlaceNameCache = filter (\obj -> obj.createdAt < expiryDate) placeNameCache
     mapM_ CM.delete toBeDeletedPlaceNameCache
 
-getPlaceName :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> Maybe Text -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
+getPlaceName :: (ServiceFlow m r, HasPlaceNameCacheMetrics m r) => (Id DP.Person, Id DMerchant.Merchant) -> Maybe Text -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
 getPlaceName (personId, merchantId) entityId req = do
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
@@ -143,8 +144,8 @@ getPlaceName (personId, merchantId) entityId req = do
               source = snd placeNameCache'
           fork "Place Name Cache Expiry" $ expirePlaceNameCache placeNameCache merchantOperatingCityId
           if null placeNameCache
-            then callMapsApi merchantId merchantOperatingCityId entityId req merchant.geoHashPrecisionValue
-            else pure $ map (convertToGetPlaceNameResp source) placeNameCache
+            then incrementCacheMiss *> callMapsApi merchantId merchantOperatingCityId entityId req merchant.geoHashPrecisionValue
+            else incrementCacheHit *> pure (map (convertToGetPlaceNameResp source) placeNameCache)
         Nothing -> callMapsApi merchantId merchantOperatingCityId entityId req merchant.geoHashPrecisionValue
     MIT.ByPlaceId placeId -> do
       placeNameCache' <- CM.findPlaceByPlaceId placeId
@@ -152,8 +153,8 @@ getPlaceName (personId, merchantId) entityId req = do
           source = snd placeNameCache'
       fork "Place Name Cache Expiry" $ expirePlaceNameCache placeNameCache merchantOperatingCityId
       if null placeNameCache
-        then callMapsApi merchantId merchantOperatingCityId entityId req merchant.geoHashPrecisionValue
-        else pure $ map (convertToGetPlaceNameResp source) placeNameCache
+        then incrementCacheMiss *> callMapsApi merchantId merchantOperatingCityId entityId req merchant.geoHashPrecisionValue
+        else incrementCacheHit *> pure (map (convertToGetPlaceNameResp source) placeNameCache)
 
 callMapsApi :: (MonadFlow m, ServiceFlow m r, HasKafkaProducer r) => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
 callMapsApi merchantId merchantOperatingCityId entityId req geoHashPrecisionValue = do

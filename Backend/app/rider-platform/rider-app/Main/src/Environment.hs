@@ -271,6 +271,7 @@ data AppEnv = AppEnv
     isShuttingDown :: TMVar (),
     bapMetrics :: BAPMetricsContainer,
     coreMetrics :: CoreMetricsContainer,
+    placeNameCacheMetrics :: PlaceNameCacheMetricsContainer,
     loggerEnv :: LoggerEnv,
     kafkaProducerTools :: KafkaProducerTools,
     kafkaEnvs :: BAPKafkaEnvs,
@@ -356,6 +357,7 @@ buildAppEnv cfg@AppCfg {..} = do
   passettoContext <- uncurry mkPassettoContextAuto encTools.service
   bapMetrics <- registerBAPMetricsContainer metricsSearchDurationTimeout
   coreMetrics <- registerCoreMetricsContainer
+  placeNameCacheMetrics <- registerPlaceNameCacheMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv

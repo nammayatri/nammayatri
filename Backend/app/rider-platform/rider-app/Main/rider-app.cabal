@@ -781,6 +781,8 @@ library
       Tools.Metrics
       Tools.Metrics.BAPMetrics
       Tools.Metrics.BAPMetrics.Types
+      Tools.Metrics.PlaceNameCacheMetrics
+      Tools.Metrics.PlaceNameCacheMetrics.Types
       Tools.MultiModal
       Tools.Notifications
       Tools.Payment
