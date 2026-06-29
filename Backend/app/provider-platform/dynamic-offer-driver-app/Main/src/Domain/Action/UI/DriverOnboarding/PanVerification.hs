@@ -208,7 +208,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
               logInfo ("extractedNameOnCard: " <> show extractedNameOnCard)
               logInfo ("panName: " <> show panName)
               panFaceConfig <- listToMaybe <$> CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId DTO.PanCard Nothing
-              fmOutcome <- maybe (pure FMSkip) (\cfg -> runDocFaceMatch person cfg (Id req.imageId)) panFaceConfig
+              fmOutcome <- maybe (pure FMSkip) (\cfg -> runDocFaceMatch person cfg (Id req.imageId) (Just image1)) panFaceConfig
               when (fmOutcome == FMFail) $ throwError FaceMatchFailed
               when (verifyBy /= DPan.FRONTEND_SDK) $ do
                 case (panName, extractedNameOnCard) of

@@ -204,7 +204,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             return ()
   let runDlFaceMatch = do
         dlFaceConfig <- listToMaybe <$> CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId DTO.DriverLicense Nothing
-        dlFaceOutcome <- maybe (pure FMSkip) (\cfg -> runDocFaceMatch person cfg imageId1) dlFaceConfig
+        dlFaceOutcome <- maybe (pure FMSkip) (\cfg -> runDocFaceMatch person cfg imageId1 Nothing) dlFaceConfig
         when (dlFaceOutcome == FMFail) $ throwError FaceMatchFailed
   let runBody = do
         when (isNameCompareRequired transporterConfig verifyBy) $

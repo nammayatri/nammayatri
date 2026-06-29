@@ -901,7 +901,11 @@ getDocumentImage personId imageId_ expectedDocType = do
     throwError (ImageNotFound imageId_)
   unless (imageMetadata.imageType == expectedDocType) $
     throwError (ImageInvalidType (show expectedDocType) "")
-  Redis.withLockRedisAndReturnValue (imageS3Lock (imageMetadata.s3Path)) 5 $
+  getImageFromS3 imageMetadata
+
+getImageFromS3 :: Image.Image -> Flow Text
+getImageFromS3 imageMetadata =
+  Redis.withLockRedisAndReturnValue (imageS3Lock imageMetadata.s3Path) 5 $
     S3.get $ T.unpack imageMetadata.s3Path
 
 -- | Outcome of a server-side selfie-vs-document face match.
@@ -917,8 +921,8 @@ data FaceMatchOutcome = FMSkip | FMPass | FMFail | FMDeferred
 --   (IDfy two-image compare). Only runs for non-SDK uploads (workflowTransactionId == Nothing);
 --   SDK uploads are already face-matched on-device. On a mismatch the document Image is marked
 --   INVALID with FaceMatchFailed so the existing reupload UX surfaces it.
-runDocFaceMatch :: Person.Person -> ODC.DocumentVerificationConfig -> Id Image.Image -> Flow FaceMatchOutcome
-runDocFaceMatch person config docImageId =
+runDocFaceMatch :: Person.Person -> ODC.DocumentVerificationConfig -> Id Image.Image -> Maybe Text -> Flow FaceMatchOutcome
+runDocFaceMatch person config docImageId mbDocImage =
   case config.faceMatchSourceDoc of
     Nothing -> pure FMSkip
     Just sourceDocType -> do
@@ -932,7 +936,7 @@ runDocFaceMatch person config docImageId =
           case DL.find ((== Just Documents.VALID) . (.verificationStatus)) sourceImages of
             Nothing -> pure FMDeferred -- no selfie yet; resolve when it arrives
             Just sourceImage -> do
-              documentImage1 <- getDocumentImage person.id docImageId.getId config.documentType
+              documentImage1 <- maybe (getImageFromS3 docImage) pure mbDocImage
               documentImage2 <- getDocumentImage person.id sourceImage.id.getId sourceDocType
               resp <-
                 Verification.faceCompare person.merchantId person.merchantOperatingCityId $
@@ -955,16 +959,22 @@ runDocFaceMatch person config docImageId =
 runDeferredFaceMatchOnSelfie :: Person.Person -> UTCTime -> Flow ()
 runDeferredFaceMatchOnSelfie person selfieCreatedAt =
   forM_ [ODC.DriverLicense, ODC.PanCard, ODC.AadhaarCard] $ \docType -> do
-    mbConfig <- listToMaybe <$> CQDVC.findByMerchantOpCityIdAndDocumentType person.merchantOperatingCityId docType Nothing
-    whenJust mbConfig $ \config -> whenJust config.faceMatchSourceDoc $ \_ -> do
-      docImages <- ImageQuery.findRecentByPersonIdAndImageType person.id docType
-      whenJust (DL.find (\img -> img.verificationStatus == Just Documents.VALID && isNothing img.workflowTransactionId && img.createdAt < selfieCreatedAt) docImages) $ \docImg -> do
-        outcome <- runDocFaceMatch person config docImg.id
-        when (outcome == FMFail) $ case docType of
-          ODC.DriverLicense -> DLQuery.updateVerificationStatus Documents.INVALID docImg.id
-          ODC.PanCard -> DPQuery.updateVerificationStatus Documents.INVALID person.id
-          ODC.AadhaarCard -> QAadhaarCard.updateVerificationStatus Documents.INVALID person.id
-          _ -> pure ()
+    result <- try @_ @SomeException $ matchDeferredDoc docType
+    case result of
+      Right _ -> pure ()
+      Left err -> logError $ "Deferred face match failed for " <> show docType <> " of driver " <> person.id.getId <> ": " <> show err
+  where
+    matchDeferredDoc docType = do
+      mbConfig <- listToMaybe <$> CQDVC.findByMerchantOpCityIdAndDocumentType person.merchantOperatingCityId docType Nothing
+      whenJust mbConfig $ \config -> whenJust config.faceMatchSourceDoc $ \_ -> do
+        docImages <- ImageQuery.findRecentByPersonIdAndImageType person.id docType
+        whenJust (DL.find (\img -> img.verificationStatus == Just Documents.VALID && isNothing img.workflowTransactionId && img.createdAt < selfieCreatedAt) docImages) $ \docImg -> do
+          outcome <- runDocFaceMatch person config docImg.id Nothing
+          when (outcome == FMFail) $ case docType of
+            ODC.DriverLicense -> DLQuery.updateVerificationStatus Documents.INVALID docImg.id
+            ODC.PanCard -> DPQuery.updateVerificationStatus Documents.INVALID person.id
+            ODC.AadhaarCard -> QAadhaarCard.updateVerificationStatus Documents.INVALID person.id
+            _ -> pure ()
 
 mkRCIdfyVerificationEntity :: MonadFlow m => Person.Person -> Text -> UTCTime -> DIdfy.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> m DIdfy.IdfyVerification
 mkRCIdfyVerificationEntity person requestId now imageExtractionValidation encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbStatus = do
