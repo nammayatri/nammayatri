@@ -173,32 +173,38 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
       logInfo $ "IdfyWebhook.onVerify: CRC result -> storing court record for driverId(group_id)=" <> rsp.group_id
       CourtRecordCheck.onVerifyCRC (Id rsp.group_id) resSrcOp.source_output
       return Ack
-    _ -> do
-      verificationReq <- IVQuery.findByRequestId rsp.request_id >>= fromMaybeM (InternalError $ "Verification request not found for requestId : " <> rsp.request_id)
-      person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
-      logInfo $
-        "IdfyWebhook.onVerify: looked up verificationReq requestId=" <> rsp.request_id
-          <> " driverId="
-          <> verificationReq.driverId.getId
-          <> " docType="
-          <> show verificationReq.docType
-          <> " status="
-          <> verificationReq.status
-      IVQuery.updateResponse rsp.status (Just respDump) rsp.request_id
-      let resultStatus = getResultStatus rsp.result
-      logInfo $ "IdfyWebhook.onVerify: parsed resultStatus=" <> show resultStatus
-      if resultStatus == Just "source_down"
-        then do
-          logInfo $ "IdfyWebhook.onVerify: source_down path requestId=" <> rsp.request_id
-          handleIdfySourceDown person scheduleRetryVerificationJob verificationReq
-          return Ack
-        else do
-          mbRemPriorityList <- CQO.getVerificationPriorityList verificationReq.driverId
-          logInfo $ "IdfyWebhook.onVerify: routing to verifyDocument mbRemPriorityList=" <> show mbRemPriorityList
-          ack_ <- maybe (pure Ack) (flip (verifyDocument person verificationReq) mbRemPriorityList) rsp.result
-          logInfo $ "IdfyWebhook.onVerify: completed requestId=" <> rsp.request_id
-          void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent verificationReq.driverId)
-          return ack_
+    _
+      | rsp._type == "ind_court_record" -> do
+        -- Failed CRC (no CRCResult) has no idfy_verification row; record on driver_identity_info instead of throwing.
+        logWarning $ "IdfyWebhook.onVerify: CRC callback without result for driverId(group_id)=" <> rsp.group_id <> " status=" <> rsp.status
+        CourtRecordCheck.onVerifyCRCError (Id rsp.group_id) ("Idfy CRC failed: status=" <> rsp.status)
+        return Ack
+      | otherwise -> do
+        verificationReq <- IVQuery.findByRequestId rsp.request_id >>= fromMaybeM (InternalError $ "Verification request not found for requestId=" <> rsp.request_id)
+        person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
+        logInfo $
+          "IdfyWebhook.onVerify: looked up verificationReq requestId=" <> rsp.request_id
+            <> " driverId="
+            <> verificationReq.driverId.getId
+            <> " docType="
+            <> show verificationReq.docType
+            <> " status="
+            <> verificationReq.status
+        IVQuery.updateResponse rsp.status (Just respDump) rsp.request_id
+        let resultStatus = getResultStatus rsp.result
+        logInfo $ "IdfyWebhook.onVerify: parsed resultStatus=" <> show resultStatus
+        if resultStatus == Just "source_down"
+          then do
+            logInfo $ "IdfyWebhook.onVerify: source_down path requestId=" <> rsp.request_id
+            handleIdfySourceDown person scheduleRetryVerificationJob verificationReq
+            return Ack
+          else do
+            mbRemPriorityList <- CQO.getVerificationPriorityList verificationReq.driverId
+            logInfo $ "IdfyWebhook.onVerify: routing to verifyDocument mbRemPriorityList=" <> show mbRemPriorityList
+            ack_ <- maybe (pure Ack) (flip (verifyDocument person verificationReq) mbRemPriorityList) rsp.result
+            logInfo $ "IdfyWebhook.onVerify: completed requestId=" <> rsp.request_id
+            void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent verificationReq.driverId)
+            return ack_
   where
     getResultStatus :: Maybe Idfy.IdfyResult -> Maybe Text
     getResultStatus mbResult =
