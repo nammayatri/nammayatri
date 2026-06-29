@@ -92,6 +92,7 @@ data RideE e = Ride
     rideEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     rideRating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     rideStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    rideTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     safetyCheckStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     safetyJourneyStatus :: Kernel.Prelude.Maybe Domain.Types.Ride.SosJourneyStatus,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
@@ -118,9 +119,9 @@ data RideE e = Ride
   }
   deriving (Generic)
 
-type Ride = RideE 'AsEncrypted
+type Ride = RideE ('AsEncrypted)
 
-type DecryptedRide = RideE 'AsUnencrypted
+type DecryptedRide = RideE ('AsUnencrypted)
 
 instance EncryptedItem Ride where
   type Unencrypted Ride = (DecryptedRide, HashSalt)
@@ -193,6 +194,7 @@ instance EncryptedItem Ride where
           rideEndTime = rideEndTime entity,
           rideRating = rideRating entity,
           rideStartTime = rideStartTime entity,
+          rideTags = rideTags entity,
           safetyCheckStatus = safetyCheckStatus entity,
           safetyJourneyStatus = safetyJourneyStatus entity,
           shortId = shortId entity,
@@ -286,6 +288,7 @@ instance EncryptedItem Ride where
             rideEndTime = rideEndTime entity,
             rideRating = rideRating entity,
             rideStartTime = rideStartTime entity,
+            rideTags = rideTags entity,
             safetyCheckStatus = safetyCheckStatus entity,
             safetyJourneyStatus = safetyJourneyStatus entity,
             shortId = shortId entity,
@@ -338,16 +341,16 @@ data SosJourneyStatus
 
 data UnexpectedConditionStage = DriverDeviated | UnusualStop | UnsafeArea deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancellationFeeStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CancellationFeeStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverArrivalStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverArrivalStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosJourneyStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SosJourneyStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''UnexpectedConditionStage)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''UnexpectedConditionStage))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PaymentStatus)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''PaymentStatus))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''DriverArrivalStatus)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''DriverArrivalStatus))
