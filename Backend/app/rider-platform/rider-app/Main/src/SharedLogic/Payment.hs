@@ -270,7 +270,7 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
             fork "Invalidate Offer List Cache" $ do
               person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
               let merchantOperatingCityId = maybe person.merchantOperatingCityId (cast @DPayment.MerchantOperatingCity @DMOC.MerchantOperatingCity) paymentOrder.merchantOperatingCityId
-              invalidateOfferListCache person merchantOperatingCityId (mkPrice (Just paymentOrder.currency) paymentOrder.amount)
+              invalidateOfferListCache person merchantOperatingCityId paymentService (mkPrice (Just paymentOrder.currency) paymentOrder.amount)
             fork "increment rider spend" $
               Redis.runInMasterCloudRedisCellWithCrossAppRedis $
                 SWC.incrementByValue

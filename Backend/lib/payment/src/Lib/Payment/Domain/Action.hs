@@ -47,7 +47,6 @@ module Lib.Payment.Domain.Action
     getTransactionStatus,
     offerListService,
     invalidateOfferListCacheService,
-    invalidateOfferListCacheServiceForAllServiceTypes,
     listDomainOffers,
     listDomainOffersWithBasket,
     splitOfferRespByProduct,
@@ -978,14 +977,6 @@ invalidateOfferListCacheService ::
 invalidateOfferListCacheService customerId version paymentServiceType = do
   let key = makeOfferListCacheKey version paymentServiceType customerId
   Redis.withCrossAppRedis $ Redis.del key
-
-invalidateOfferListCacheServiceForAllServiceTypes ::
-  (MonadFlow m, CacheFlow m r) =>
-  Text ->
-  Text ->
-  m ()
-invalidateOfferListCacheServiceForAllServiceTypes customerId version =
-  mapM_ (invalidateOfferListCacheService customerId version) [minBound .. maxBound]
 
 makeOfferListCacheKey :: Text -> DOrder.PaymentServiceType -> Text -> Text
 makeOfferListCacheKey version serviceType customerId =
