@@ -129,6 +129,7 @@ import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
+import Tools.Metrics.PlaceNameCacheMetrics
 import Utils.Common.Cac.KeyNameConstants
 
 data DSearchReq = DSearchReq
@@ -1081,7 +1082,7 @@ getDestinationCity merchant dropLatLong = do
               throwError RideNotServiceable
         (g : _) -> return (CityState {city = g.city, state = g.state}, Just $ show g.city)
 
-buildSearchReqLocation :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.Location
+buildSearchReqLocation :: (ServiceFlow m r, HasPlaceNameCacheMetrics m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.Location
 buildSearchReqLocation merchantId merchantOpCityId sessionToken address customerLanguage latLong@Maps.LatLong {..} = do
   updAddress <- case address of
     Just loc
@@ -1098,7 +1099,9 @@ buildSearchReqLocation merchantId merchantOpCityId sessionToken address customer
               area = loc.ward,
               full_address = decodeAddress loc
             }
-    _ -> getAddressByGetPlaceName merchantId merchantOpCityId sessionToken latLong
+    _ -> do
+      logError $ "buildSearchReqLocation: merchantId: " <> show merchantId <> ", merchantOpCityId: " <> show merchantOpCityId <> ", latLong: " <> show latLong <> " customerLanguage " <> show customerLanguage <> " address " <> show address
+      getAddressByGetPlaceName merchantId merchantOpCityId sessionToken latLong
   id <- Id <$> generateGUID
   now <- getCurrentTime
   let createdAt = now
@@ -1124,8 +1127,9 @@ buildSearchReqLocation merchantId merchantOpCityId sessionToken address customer
         ..
       }
 
-getAddressByGetPlaceName :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> LatLong -> m Address
+getAddressByGetPlaceName :: (ServiceFlow m r, HasPlaceNameCacheMetrics m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> LatLong -> m Address
 getAddressByGetPlaceName merchantId merchantOpCityId sessionToken latLong = do
+  --TODO: add a log here
   pickupRes <-
     DMaps.getPlaceName merchantId merchantOpCityId Nothing $
       Maps.GetPlaceNameReq
