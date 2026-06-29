@@ -963,19 +963,25 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
     when (issueMessage.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
   updatedIssueMessage <- mkIssueMessage existingIssueMessage merchantOperatingCity issueHandle
   handleMessagePriorityUpdates existingIssueMessage updatedIssueMessage.optionId updatedIssueMessage.categoryId updatedIssueMessage.messageType updatedIssueMessage.priority identifier
-  whenJust existingIssueMessage $ \extIM -> do
-    clearOptionAndCategoryCache extIM
-    clearUpdatedIssueMessagesCacheIfRequired extIM updatedIssueMessage
   upsertTranslations updatedIssueMessage.message ((.message) <$> existingIssueMessage) merchantOperatingCity (fromMaybe [] req.messageTranslations)
   traverse_ (\newSentence -> upsertTranslations newSentence ((.messageAction) =<< existingIssueMessage) merchantOperatingCity (fromMaybe [] req.actionTranslations)) updatedIssueMessage.messageAction
   traverse_ (\newSentence -> upsertTranslations newSentence ((.messageTitle) =<< existingIssueMessage) merchantOperatingCity (fromMaybe [] req.titleTranslations)) updatedIssueMessage.messageTitle
+  -- Cache invalidation runs strictly AFTER the DB write so a concurrent reader
+  -- can't repopulate the cache with the old row between the DEL and the UPDATE.
+  -- Always clear the new parent's option+category list caches (and the old
+  -- parent's too, if it differs); the previous code only cleared the new
+  -- parent's list caches when the parent id actually changed, so plain text /
+  -- label / priority edits silently kept showing the old copy in the customer
+  -- app until configsExpTime elapsed.
   if isJust existingIssueMessage
     then do
       QIM.updateByPrimaryKey updatedIssueMessage
       clearIssueMessageIdCaches updatedIssueMessage
-    else do
+      whenJust existingIssueMessage $ \extIM -> clearOptionAndCategoryCache extIM
       clearOptionAndCategoryCache updatedIssueMessage
+    else do
       QIM.create updatedIssueMessage
+      clearOptionAndCategoryCache updatedIssueMessage
   return $
     Common.UpsertIssueMessageRes
       { messageId = updatedIssueMessage.id
@@ -1013,11 +1019,6 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
     clearIssueMessageIdCaches im = do
       CQIM.clearAllIssueMessageByIdAndLanguageCache im.id identifier
       CQIM.clearIssueMessageByIdCache im.id identifier
-
-    clearUpdatedIssueMessagesCacheIfRequired :: BeamFlow m r => DIM.IssueMessage -> DIM.IssueMessage -> m ()
-    clearUpdatedIssueMessagesCacheIfRequired extIM upIM = do
-      when (extIM.optionId /= upIM.optionId || extIM.categoryId /= upIM.categoryId) $
-        clearOptionAndCategoryCache upIM
 
     clearOptionAndCategoryCache :: BeamFlow m r => DIM.IssueMessage -> m ()
     clearOptionAndCategoryCache im = do
@@ -1714,15 +1715,22 @@ reorderOptions merchantShortId city req issueHandle identifier = do
   merchantOperatingCity <-
     issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
-  mapM_
-    ( \(optId, newPriority) -> do
+  -- Collect each option's parent message-id while we're inside the per-option
+  -- loop so we can invalidate the options-by-message-and-language list cache
+  -- once per unique parent after the writes. Previously only the
+  -- single-option-by-id caches were cleared, so the customer app kept showing
+  -- the old priority order until configsExpTime elapsed.
+  parentMessageIds <-
+    fmap (DL.nub . catMaybes) $
+      forM req.optionOrder $ \(optId, newPriority) -> do
         issueOption <- CQIO.findById optId identifier >>= fromMaybeM (IssueOptionNotFound optId.getId)
         when (issueOption.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
         QIO.updatePriority optId newPriority
         CQIO.clearIssueOptionByIdCache optId identifier
         CQIO.clearAllIssueOptionByIdAndLanguageCache optId identifier
-    )
-    req.optionOrder
+        pure (Id <$> issueOption.issueMessageId)
+  forM_ parentMessageIds $ \msgId ->
+    CQIO.clearAllIssueOptionByMessageAndLanguageCache msgId identifier
   pure Success
 
 reorderMessages ::
@@ -1737,15 +1745,23 @@ reorderMessages merchantShortId city req issueHandle identifier = do
   merchantOperatingCity <-
     issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
-  mapM_
-    ( \(msgId, newPriority) -> do
-        issueMessage <- CQIM.findById msgId identifier >>= fromMaybeM (IssueMessageDoesNotExist msgId.getId)
-        when (issueMessage.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
-        QIM.updatePriority msgId newPriority
-        CQIM.clearIssueMessageByIdCache msgId identifier
-        CQIM.clearAllIssueMessageByIdAndLanguageCache msgId identifier
-    )
-    req.messageOrder
+  -- Collect each message's parent (option / category) ids while we update
+  -- priorities, then invalidate the messages-by-option-and-language and
+  -- messages-by-category-and-language list caches once per unique parent.
+  -- Previously only by-id caches were cleared, so the customer app kept
+  -- showing the old priority order until configsExpTime elapsed.
+  parents <-
+    forM req.messageOrder $ \(msgId, newPriority) -> do
+      issueMessage <- CQIM.findById msgId identifier >>= fromMaybeM (IssueMessageDoesNotExist msgId.getId)
+      when (issueMessage.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
+      QIM.updatePriority msgId newPriority
+      CQIM.clearIssueMessageByIdCache msgId identifier
+      CQIM.clearAllIssueMessageByIdAndLanguageCache msgId identifier
+      pure (issueMessage.optionId, issueMessage.categoryId)
+  forM_ (DL.nub $ mapMaybe fst parents) $ \optId ->
+    CQIM.clearAllIssueMessageByOptionIdAndLanguageCache optId identifier
+  forM_ (DL.nub $ mapMaybe snd parents) $ \catId ->
+    CQIM.clearAllIssueMessageByCategoryIdAndLanguageCache catId identifier
   pure Success
 
 copyIssueCategory ::
