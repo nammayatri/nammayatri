@@ -81,7 +81,7 @@ getcustomer person = do
           }
     else do
       getCustomerResp <- TPayment.getCustomer person.merchantId person.merchantOperatingCityId person.paymentMode customer.customerId
-      QPaymentCustomer.updateCATAndExipry getCustomerResp.clientAuthToken getCustomerResp.clientAuthTokenExpiry getCustomerResp.customerId (Just paymentMode)
+      QPaymentCustomer.updateCATExpiryAndCustomerIdByPersonId getCustomerResp.clientAuthToken getCustomerResp.clientAuthTokenExpiry getCustomerResp.customerId (Just person.id) (Just paymentMode)
       return getCustomerResp
 
 buildCreateCustomer ::
