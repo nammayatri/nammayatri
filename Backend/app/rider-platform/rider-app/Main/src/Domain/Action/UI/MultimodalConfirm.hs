@@ -908,6 +908,10 @@ postPublicTransportVehicleDataBlock (mbPersonId, _merchantId) vehicleNumber isBl
         blockVehicle personId configs vehicleNumber
         reconcileCheckerBlockedList personId configs
       else do
+        let key = mkCheckerBlockedListKey personId
+        vehicles <- fromMaybe [] <$> Hedis.safeGet key
+        when (vehicleNumber `Kernel.Prelude.notElem` vehicles) $
+          throwError (BusBlockNotAllowed personId.getId)
         unblockVehicle personId configs vehicleNumber
         reconcileCheckerBlockedList personId configs
   historyId <- generateGUID
