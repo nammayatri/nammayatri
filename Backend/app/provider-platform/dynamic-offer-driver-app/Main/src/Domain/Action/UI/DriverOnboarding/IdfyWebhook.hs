@@ -174,7 +174,7 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
       CourtRecordCheck.onVerifyCRC (Id rsp.group_id) resSrcOp.source_output
       return Ack
     _ -> do
-      verificationReq <- IVQuery.findByRequestId rsp.request_id >>= fromMaybeM (InternalError "Verification request not found for requestId : " <> show rsp.request_id)
+      verificationReq <- IVQuery.findByRequestId rsp.request_id >>= fromMaybeM (InternalError $ "Verification request not found for requestId : " <> rsp.request_id)
       person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
       logInfo $
         "IdfyWebhook.onVerify: looked up verificationReq requestId=" <> rsp.request_id
