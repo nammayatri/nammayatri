@@ -31,7 +31,7 @@ import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.OfferStats as DOfferStats
