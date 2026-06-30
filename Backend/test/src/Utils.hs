@@ -188,7 +188,7 @@ resetCustomer token = runAppFlow "" $ do
   activeBookings <- BQB.findByRiderIdAndStatus (Id regToken.entityId) BDB.activeBookingStatus
   forM_ activeBookings $ \activeBooking -> do
     rides <- BQRide.findActiveByRBId activeBooking.id
-    _ <- BQB.updateStatus activeBooking.id BDB.CANCELLED
+    _ <- BQB.updateStatus activeBooking.riderId activeBooking.id BDB.CANCELLED
     void . forM rides $ \ride ->
       BQRide.updateStatus ride.id BDRide.CANCELLED
 
