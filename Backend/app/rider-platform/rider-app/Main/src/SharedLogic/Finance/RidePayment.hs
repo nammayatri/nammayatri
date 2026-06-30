@@ -105,6 +105,7 @@ module SharedLogic.Finance.RidePayment
     upsertCoreRidePaymentLedger,
     UpsertCoreLedgerResult (..),
     settleRidePaymentLedger,
+    createSettledCashbackPayoutLeg,
     getWalletAccountByOwner,
     getWalletBalanceByOwner,
     getPayoutEligibilityData,
@@ -590,6 +591,29 @@ settleRidePaymentLedger ctx entryIds settledReason = do
       logError $ "Failed to post settlement capture legs: " <> show err
       pure $ Left err
     Right _ -> pure $ Right ()
+
+-- | Post and settle ONLY the cashback-payout accrual leg
+--   (BuyerExpense → OwnerLiability, ref 'ridePaymentRefCashbackPayout'),
+--   leaving it in the same SETTLED / settlementStatus=NULL state that ride
+--   completion produces. This is the state the ExecuteCashRideCashbackPayout
+--   job looks for (settled + unsettled-settlementStatus). Used by the
+--   dashboard payout-offer sync to backfill the cashback entry so the payout
+--   job has something to drain. No-op when the amount is non-positive.
+createSettledCashbackPayoutLeg ::
+  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  FinanceCtx ->
+  HighPrecMoney ->
+  m ()
+createSettledCashbackPayoutLeg ctx cashbackPayoutAmount =
+  when (cashbackPayoutAmount > 0) $ do
+    result <- runFinance ctx $ void $ transferPending BuyerExpense OwnerLiability cashbackPayoutAmount ridePaymentRefCashbackPayout
+    case result of
+      Left err -> logError $ "Failed to create cashback payout ledger leg for " <> ctx.referenceId <> ": " <> show err
+      Right (_, entryIds) -> do
+        settleResult <- settleRidePaymentLedger ctx entryIds settledReasonRidePayment
+        case settleResult of
+          Right () -> logInfo $ "Settled cashback payout ledger leg for ride: " <> ctx.referenceId
+          Left err -> logError $ "Cashback payout ledger leg settle failed for " <> ctx.referenceId <> ": " <> show err
 
 -- ---------------------------------------------------------------------------
 -- Wallet account / payout-eligibility helpers
