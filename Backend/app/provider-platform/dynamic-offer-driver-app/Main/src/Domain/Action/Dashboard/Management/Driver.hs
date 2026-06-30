@@ -871,9 +871,12 @@ postDriverUpdateVehicleVariant _merchantShortId _opCity _ req = do
 
 updateVehicleVariantAndServiceTier :: DV.VehicleVariant -> DVeh.Vehicle -> DVC.VehicleCategory -> Flow ()
 updateVehicleVariantAndServiceTier variant vehicle vehicleCategory = do
+  -- Compute service tiers against the NEW variant: callers pass the vehicle read before the
+  -- variant change is persisted, so override it in-memory before fetching eligible tiers.
+  let updatedVehicle = vehicle {DVeh.variant = variant} :: DVeh.Vehicle
   driver <- B.runInReplica $ QPerson.findById vehicle.driverId >>= fromMaybeM (PersonDoesNotExist vehicle.driverId.getId)
   vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId Nothing
-  serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction True Nothing (Just vehicle) Nothing (Just vehicleServiceTiers) vehicle.driverId driver.merchantOperatingCityId
+  serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction True Nothing (Just updatedVehicle) Nothing (Just vehicleServiceTiers) vehicle.driverId driver.merchantOperatingCityId
   let availableServiceTiersForDriver = (.serviceTierType) . fst <$> serviceTiers
   QVehicle.updateVariantAndServiceTiers variant availableServiceTiersForDriver (Just vehicleCategory) vehicle.driverId
 
