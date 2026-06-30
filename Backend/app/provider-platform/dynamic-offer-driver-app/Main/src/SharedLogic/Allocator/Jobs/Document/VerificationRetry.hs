@@ -68,7 +68,7 @@ retryDocumentVerificationJob ::
   m ExecutionResult
 retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.getId) do
   let jobData = jobDetails.jobInfo.jobData
-  verificationReq <- IVQuery.findByRequestId jobData.requestId >>= fromMaybeM (InternalError "Verification request not found in retryDocumentVerificationJob for requestId : " <> show jobData.requestId)
+  verificationReq <- IVQuery.findByRequestId jobData.requestId >>= fromMaybeM (InternalError $ "Verification request not found in retryDocumentVerificationJob for requestId : " <> jobData.requestId)
   person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
   documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId verificationReq.docType (fromMaybe DVC.CAR verificationReq.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show verificationReq.docType))
   let maxRetryCount = documentVerificationConfig.maxRetryCount

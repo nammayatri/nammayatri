@@ -156,7 +156,7 @@ idfyWebhookV2Handler merchantShortId opCity secret val = do
 onVerify :: Idfy.VerificationResponse -> Text -> Flow AckResponse
 onVerify (Idfy.VerificationResponse rsp) respDump = do
   logInfo $ "IdfyWebhook.onVerify: received webhook rsp=" <> show rsp <> " respDump=" <> respDump
-  verificationReq <- IVQuery.findByRequestId rsp.request_id >>= fromMaybeM (InternalError "Verification request not found for requestId : " <> show rsp.request_id)
+  verificationReq <- IVQuery.findByRequestId rsp.request_id >>= fromMaybeM (InternalError $ "Verification request not found for requestId : " <> rsp.request_id)
   person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
   logInfo $
     "IdfyWebhook.onVerify: looked up verificationReq requestId=" <> rsp.request_id
