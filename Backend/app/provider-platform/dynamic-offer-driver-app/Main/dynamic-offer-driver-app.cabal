@@ -86,6 +86,7 @@ library
       API.Internal.TollUpsert
       API.Internal.VerifyEmailUpdate
       API.Internal.ViolationDetection
+      API.Internal.XyneWebhook
       API.Types.UI.TicketKapture
       API.UI
       API.UI.Aarokya
@@ -367,6 +368,7 @@ library
       Domain.Action.UI.VehicleInfo
       Domain.Action.UI.Whatsapp
       Domain.Action.UI.WMB
+      Domain.Action.UI.XyneWebhook
       Domain.Action.UnifiedDashboard.Fleet.HealthCheck
       Domain.Action.UnifiedDashboard.Management.HealthCheck
       Domain.Action.UnifiedDashboard.Management.Person

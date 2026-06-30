@@ -72,6 +72,7 @@ library
       API.Internal.UpdateCancellationFeeStatus
       API.Internal.VerifyEmailUpdate
       API.Internal.ViolationDetection
+      API.Internal.XyneWebhook
       API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
       API.Types.Dashboard.AppManagement.OrphanInstances.TicketDashboard
       API.Types.Dashboard.AppManagement.OrphanInstances.TransitOperator
@@ -351,6 +352,7 @@ library
       Domain.Action.UI.TransitOperator.Validation
       Domain.Action.UI.TriggerFCM
       Domain.Action.UI.Whatsapp
+      Domain.Action.UI.XyneWebhook
       Domain.Action.UI.ZendeskWebhook
       Domain.Action.UnifiedDashboard.Management.HealthCheck
       Domain.Action.UnifiedDashboard.RideBooking.HealthCheck

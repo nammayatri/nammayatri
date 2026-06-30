@@ -1,7 +1,6 @@
 module Domain.Action.UI.Aarokya where
 
 import Control.Applicative ((<|>))
-import Control.Monad (guard)
 import qualified Data.Aeson as A
 import Data.Char (isAlphaNum)
 import qualified Data.Map as M
@@ -73,7 +72,7 @@ generateToken (personId, merchantId, merchantOpCityId) = do
   -- Best-effort: a failure here (e.g. driver_identity_info not yet migrated in this
   -- environment, KV hiccup, unparseable Idfy data) must never fail token generation.
   -- withTryCatch logs and we fall back to no address.
-  mbAddress <- either (const Nothing) id <$> withTryCatch "aarokya:resolveDriverAddress" (resolveDriverAddress personId merchantId merchantOpCityId person)
+  mbAddress <- either (const Nothing) (\x -> x) <$> withTryCatch "aarokya:resolveDriverAddress" (resolveDriverAddress personId merchantId merchantOpCityId person)
   -- DOB is the driver's own identity attribute, so it is read directly by driverId
   -- (no name match needed): Driving License first, PAN card as fallback. Optional.
   mbPanCard <- QPan.findByDriverId personId

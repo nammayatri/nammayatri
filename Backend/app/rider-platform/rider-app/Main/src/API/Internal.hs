@@ -27,6 +27,7 @@ import qualified API.Internal.StopEvents as StopEvents
 import qualified API.Internal.UpdateCancellationFeeStatus as UpdateCancellationFeeStatus
 import qualified API.Internal.VerifyEmailUpdate as VerifyEmailUpdate
 import qualified API.Internal.ViolationDetection as ViolationDetection
+import qualified API.Internal.XyneWebhook as XyneWebhook
 import Environment
 import Servant
 import Tools.Auth ()
@@ -56,6 +57,7 @@ type API =
            :<|> InMemManagement.API
            :<|> FRFSInternal.API
            :<|> ZendeskWebhook.API
+           :<|> XyneWebhook.API
        )
 
 handler :: FlowServer API
@@ -83,3 +85,4 @@ handler =
     :<|> InMemManagement.handler
     :<|> FRFSInternal.handler
     :<|> ZendeskWebhook.handler
+    :<|> XyneWebhook.handler
