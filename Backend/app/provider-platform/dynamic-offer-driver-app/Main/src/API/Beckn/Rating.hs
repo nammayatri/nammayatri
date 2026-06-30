@@ -32,7 +32,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import TransactionLogs.PushLogs
 
 type API =
@@ -60,7 +60,7 @@ rating merchantId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBeck
         Redis.whenWithLockRedis (ratingProcessingLockKey dRatingReq.bookingId.getId) 60 $
           DRating.handler merchantId dRatingReq ride
       fork "rating received pushing ondc logs" do
-        booking <- B.runInReplica $ QRB.findById dRatingReq.bookingId >>= fromMaybeM (BookingDoesNotExist dRatingReq.bookingId.getId)
+        booking <- B.runInReplica $ QBookingLite.findByIdLite dRatingReq.bookingId >>= fromMaybeM (BookingDoesNotExist dRatingReq.bookingId.getId)
         void $ pushLogs "rating" (toJSON reqV2) booking.providerId.getId "MOBILITY"
     pure Ack
 

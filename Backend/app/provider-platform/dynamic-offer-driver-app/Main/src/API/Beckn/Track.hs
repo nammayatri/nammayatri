@@ -37,7 +37,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
-import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import TransactionLogs.PushLogs
 
 type API =
@@ -73,7 +73,7 @@ track transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBe
     internalEndPointHashMap <- asks (.internalEndPointHashMap)
     let becknOnTrackMessage = ACL.mkOnTrackMessageV2 dTrackRes
     logTagInfo "track APIV2 Flow" $ "Sending OnTrack APIV2" <> show becknOnTrackMessage
-    booking <- QRB.findById dTrackReq.bookingId >>= fromMaybeM (BookingNotFound dTrackReq.bookingId.getId)
+    booking <- QBookingLite.findByIdLite dTrackReq.bookingId >>= fromMaybeM (BookingNotFound dTrackReq.bookingId.getId)
     let vehicleCategory = Utils.mapServiceTierToCategory booking.vehicleServiceTier
     bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporterId (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
     fork "track received pushing ondc logs" do

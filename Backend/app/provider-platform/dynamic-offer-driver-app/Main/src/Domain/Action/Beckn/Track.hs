@@ -36,7 +36,7 @@ import qualified SharedLogic.External.LocationTrackingService.API.DriversLocatio
 import SharedLogic.External.LocationTrackingService.Types
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
-import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Ride as QRide
 
 newtype DTrackReq = TrackReq
@@ -62,7 +62,7 @@ track transporterId req = do
     QM.findById transporterId
       >>= fromMaybeM (MerchantNotFound transporterId.getId)
   ride <- QRide.findOneByBookingId req.bookingId >>= fromMaybeM (RideDoesNotExist req.bookingId.getId)
-  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  booking <- QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let transporterId' = booking.providerId
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
   unless (transporterId' == transporterId) $ throwError AccessDenied
