@@ -140,6 +140,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
                           Nothing
                           Nothing
                   void $ RidePaymentFinance.markCashbackEntriesAsPaidOut ctx entryIds payoutOrder.amount.amount payoutReq.id.getId
+                  Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_COMPLETED" payoutOrder.amount.amount
               else when (isPayoutStatusFailed payoutStatus) $
                 -- Webhook reported a terminal failure. Release the PROCESSING
                 -- reservation that the scheduler job set so the entries are
@@ -150,6 +151,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
                     let entryIds = map Id (fromMaybe [] payoutReq.ledgerEntryIds)
                     RidePaymentFinance.releaseCashbackEntriesReservation entryIds
                     logInfo $ "Released cashback reservation after webhook failure for payoutRequest " <> payoutReq.id.getId
+                    Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_FAILED" payoutOrder.amount.amount
             fork "Update Payout Status and Transactions for RideOfferCashback" $ do
               callPayoutService payoutOrder payoutConfig person
           _ -> logTagError "Webhook Handler Error" $ "Unsupported Payout Entity:" <> show payoutOrder.entityName

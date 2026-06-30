@@ -968,6 +968,8 @@ processIssueReportTypeActions (personId, merchantId) mbIssueReportType mbRide mb
     Just SYNC_BOOKING -> processBookingSyncReq issueHandle
     Just EXTRA_FARE_MITIGATION -> processExternalIssueReporting EXTRA_FARE_MITIGATION issueHandle
     Just DRUNK_AND_DRIVE_VIOLATION -> processExternalIssueReporting DRUNK_AND_DRIVE_VIOLATION issueHandle
+    Just UNHYGIENIC_VEHICLE -> processExternalIssueReporting UNHYGIENIC_VEHICLE issueHandle
+    Just VEHICLE_UNSAFE -> processExternalIssueReporting VEHICLE_UNSAFE issueHandle
     Nothing -> return ()
   where
     processBookingSyncReq :: BeamFlow m r => ServiceHandle m -> m ()
