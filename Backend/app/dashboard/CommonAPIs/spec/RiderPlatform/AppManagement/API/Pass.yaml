@@ -66,6 +66,7 @@ apis:
       query:
         limit: Int
         offset: Int
+        status: Text
       response:
         type: "[PurchasedPassTransactionAPIEntity]"
 
