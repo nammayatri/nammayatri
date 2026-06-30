@@ -468,7 +468,8 @@ buildFleetOwnerAuthReq merchantId' opCity Common.FleetOwnerLoginReqV2 {..} =
       registrationLat = Nothing,
       registrationLon = Nothing,
       otpChannel = Nothing,
-      password = Nothing
+      password = Nothing,
+      employeeId = Nothing
     }
 
 updateFleetOwnerInfo ::

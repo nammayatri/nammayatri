@@ -381,17 +381,34 @@ newtype GimsVerifyResp = GimsVerifyResp
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
--- | Employee login request for conductor GIMS_EMAIL_PASSWORD auth (driver-app only).
--- GIMS expects pre-hashed values: SHA256(hashSalt <> value).
+-- | Employee login request for conductor GIMS auth (driver-app only).
+-- `auth_type` selects which identifier is sent: "Email" -> email_hash (hashed,
+-- PII), "EmployeeId" -> employee_id (plain; it is a username, not a secret).
+-- Only the matching identifier is populated; omitNothingFields keeps the unused one
+-- off the wire so the existing Email contract is unchanged. The password is always
+-- pre-hashed: SHA256(hashSalt <> value).
 data GimsEmployeeLoginReq = GimsEmployeeLoginReq
   { auth_type :: Maybe Text,
-    email_hash :: Text,
+    email_hash :: Maybe Text,
+    employee_id :: Maybe Text,
     password_hash :: Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show)
+
+instance ToJSON GimsEmployeeLoginReq where
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+
+instance FromJSON GimsEmployeeLoginReq where
+  parseJSON = genericParseJSON defaultOptions
 
 instance HideSecrets GimsEmployeeLoginReq where
-  hideSecrets req = req {email_hash = "***", password_hash = "***"}
+  hideSecrets GimsEmployeeLoginReq {..} =
+    GimsEmployeeLoginReq
+      { auth_type = auth_type,
+        email_hash = "***" <$ email_hash,
+        employee_id = employee_id,
+        password_hash = "***"
+      }
 
 -- | Roles GIMS recognises for an employee. Wire form is lowercase
 -- (\"driver\" / \"conductor\"); parser is case-insensitive. Unknown values
