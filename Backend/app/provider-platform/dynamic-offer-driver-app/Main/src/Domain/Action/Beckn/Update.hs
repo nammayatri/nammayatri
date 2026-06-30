@@ -402,12 +402,21 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             let isTollAllowed =
                   maybe
                     True
-                    ( \(_, _, _, isAutoRickshawAllowed, isTwoWheelerAllowed) ->
-                        ((booking.vehicleServiceTier == DVST.AUTO_RICKSHAW || booking.vehicleServiceTier == DVST.AUTO_PLUS) && isAutoRickshawAllowed)
-                          || (booking.vehicleServiceTier == DVST.BIKE && fromMaybe False isTwoWheelerAllowed)
+                    ( \tollInfo ->
+                        ((booking.vehicleServiceTier == DVST.AUTO_RICKSHAW || booking.vehicleServiceTier == DVST.AUTO_PLUS) && tollInfo.isAutoRickshawAllowed)
+                          || (booking.vehicleServiceTier == DVST.BIKE && fromMaybe False tollInfo.isTwoWheelerAllowed)
                           || (booking.vehicleServiceTier /= DVST.AUTO_RICKSHAW && booking.vehicleServiceTier /= DVST.AUTO_PLUS && booking.vehicleServiceTier /= DVST.BIKE)
                     )
                     mbTollInfo
+                mbVehicleTollCharges =
+                  join $
+                    mbTollInfo <&> \tollInfo ->
+                      let TollChargeDetails {..} = case booking.vehicleServiceTier of
+                            DVST.AUTO_RICKSHAW -> tollInfo.autoRickshawTollChargeDetails
+                            DVST.AUTO_PLUS -> tollInfo.autoRickshawTollChargeDetails
+                            DVST.BIKE -> tollInfo.twoWheelerTollChargeDetails
+                            _ -> TollChargeDetails tollInfo.tollCharges tollInfo.tollNames tollInfo.tollIds
+                       in if tollCharges > 0 && not (null tollNames) then Just tollCharges else Nothing
             when (not isTollAllowed) $ do
               sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId "Trip Update Request Not Available" "Vehicle not allowed for toll route."
               throwError $ InvalidRequest "Vehicle not allowed for toll route."
@@ -442,7 +451,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     timeDiffFromUtc = Nothing,
                     shouldApplyBusinessDiscount = booking.billingCategory == SLT.BUSINESS,
                     shouldApplyPersonalDiscount = booking.billingCategory == SLT.PERSONAL,
-                    tollCharges = mbTollInfo <&> (\(tollCharges, _, _, _, _) -> tollCharges),
+                    tollCharges = mbVehicleTollCharges,
                     currency = booking.currency,
                     distanceUnit = booking.distanceUnit,
                     estimatedCongestionCharge = booking.estimatedCongestionCharge,
