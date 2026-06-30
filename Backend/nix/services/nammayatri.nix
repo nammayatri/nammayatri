@@ -162,15 +162,8 @@ in
         "dynamic-offer-driver-drainer-exe"
         "driver-offer-allocator-exe"
         "rider-app-scheduler-exe"
-        "image-api-helper-exe"
-        "mock-fcm-exe"
-        "mock-google-exe"
-        "mock-idfy-exe"
-        "mock-sms-exe"
         "producer-exe"
-        "search-result-aggregator-exe"
         "kafka-consumers-exe"
-        "unified-dashboard-exe"
       ];
 
       # In non-backend profiles (e.g. testDashboard) every haskell process is
