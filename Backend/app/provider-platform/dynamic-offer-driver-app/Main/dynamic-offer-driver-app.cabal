@@ -743,6 +743,7 @@ library
       Storage.Queries.CancellationDuesDetailsExtra
       Storage.Queries.Coins.CoinHistory
       Storage.Queries.Coins.CoinsConfig
+      Storage.Queries.Coins.CoinsConfigExtra
       Storage.Queries.CommonDriverOnboardingDocumentsExtra
       Storage.Queries.CommunicationDeliveryExtra
       Storage.Queries.CommunicationExtra
