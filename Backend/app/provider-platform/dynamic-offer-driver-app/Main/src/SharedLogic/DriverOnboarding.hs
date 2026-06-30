@@ -86,6 +86,7 @@ import qualified Storage.Queries.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverPanCard as DPQuery
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.FleetOwnerInformation as FOI
+import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Image as Query
@@ -264,6 +265,10 @@ createDriverRCAssociationIfPossible ::
   VehicleRegistrationCertificate ->
   m ()
 createDriverRCAssociationIfPossible transporterConfig driverId rc = do
+  when (transporterConfig.blockDriverOwnRCForFleetDrivers == Just True && isNothing rc.fleetOwnerId) $ do
+    mbFleetAssoc <- QFDA.findByDriverId driverId True
+    whenJust mbFleetAssoc $ \_ ->
+      throwError (InvalidRequest "Fleet drivers cannot onboard their own vehicle. Use a fleet vehicle.")
   if canCreateRCAssociation transporterConfig rc
     then do
       driverRCAssoc <- makeRCAssociation transporterConfig.merchantId transporterConfig.merchantOperatingCityId rc.id defaultAssociationEnd
