@@ -128,3 +128,23 @@ findBySettlementId ::
   m [Domain.PgPaymentSettlementReport]
 findBySettlementId settlementId =
   findAllWithKV [Se.Is Beam.settlementId $ Se.Eq (Just settlementId)]
+
+findBySettlementDateRange ::
+  (BeamFlow m r) =>
+  Text ->
+  UTCTime ->
+  UTCTime ->
+  Int ->
+  Int ->
+  m [Domain.PgPaymentSettlementReport]
+findBySettlementDateRange merchantId fromDate toDate limit offset =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq merchantId,
+          Se.Is Beam.settlementDate $ Se.GreaterThanOrEq (Just fromDate),
+          Se.Is Beam.settlementDate $ Se.LessThanOrEq (Just toDate)
+        ]
+    ]
+    (Se.Asc Beam.settlementId)
+    (Just limit)
+    (Just offset)
