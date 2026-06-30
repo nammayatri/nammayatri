@@ -34,6 +34,7 @@ module Domain.Action.ProviderPlatform.Management.DriverRegistration
     getDriverRegistrationPayoutOrderStatus,
     postDriverRegistrationDeleteBankAccount,
     getDriverRegistrationDocumentsCommonList,
+    postDriverRegistrationDocumentRegister,
   )
 where
 
@@ -248,3 +249,9 @@ getDriverRegistrationDocumentsCommonList ::
 getDriverRegistrationDocumentsCommonList merchantShortId opCity apiTokenInfo limit offset from to documentType verificationStatus driverId sortByField sortOrder = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationDocumentsCommonList) limit offset from to documentType verificationStatus driverId sortByField sortOrder
+
+postDriverRegistrationDocumentRegister :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.DocumentRegisterReq -> Flow APISuccess
+postDriverRegistrationDocumentRegister merchantShortId opCity apiTokenInfo driverId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationDocumentRegister) driverId req
