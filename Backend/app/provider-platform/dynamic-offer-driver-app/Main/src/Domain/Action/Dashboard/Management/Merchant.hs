@@ -3621,9 +3621,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- call ride exophone
   mbExophone <-
-    getConfig (ExophoneDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing, exophoneType = Nothing}) (Just (CQExophone.findAllCallExophoneByMerchantOpCityId newMerchantOperatingCityId)) >>= \case
+    getConfig (ExophoneDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing, exophoneType = Just DExophone.CALL_RIDE}) (Just (CQExophone.findAllCallExophoneByMerchantOpCityId newMerchantOperatingCityId)) >>= \case
       [] -> do
-        exophones <- getConfig (ExophoneDimensions {merchantOperatingCityId = baseOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing, exophoneType = Nothing}) (Just (CQExophone.findAllCallExophoneByMerchantOpCityId baseOperatingCityId))
+        exophones <- getConfig (ExophoneDimensions {merchantOperatingCityId = baseOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing, exophoneType = Just DExophone.CALL_RIDE}) (Just (CQExophone.findAllCallExophoneByMerchantOpCityId baseOperatingCityId))
         return $ Just exophones
       _ -> return Nothing
 
@@ -3762,7 +3762,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         CPC.clearCacheById newMerchantOperatingCityId
         CQTC.clearCache newMerchantOperatingCityId
         CQIssueConfig.clearIssueConfigCache (cast newMerchantOperatingCityId) ICommon.DRIVER
-        exoPhone <- getConfig (ExophoneDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing, exophoneType = Nothing}) (Just (CQExophone.findAllCallExophoneByMerchantOpCityId newMerchantOperatingCityId))
+        exoPhone <- getConfig (ExophoneDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing, exophoneType = Just DExophone.CALL_RIDE}) (Just (CQExophone.findAllCallExophoneByMerchantOpCityId newMerchantOperatingCityId))
         CQExophone.clearCache newMerchantOperatingCityId exoPhone
         whenJust mbAddCityReq $ \_ -> Hedis.del $ cacheRegistryKey <> lookupRequestToRedisKey lookupReq
     )

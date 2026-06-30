@@ -134,7 +134,13 @@ $(YTH.generateGenericDefault ''DRMC.ReminderConfig)
 $(YTH.generateGenericDefault ''DSPC.ScheduledPayoutConfig)
 $(YTH.generateGenericDefault ''DTANC.TagActionNotificationConfig)
 $(YTH.generateGenericDefault ''DFODVC.FleetOwnerDocumentVerificationConfig)
-$(YTH.generateGenericDefault ''DMSC.MerchantServiceConfig)
+
+-- MerchantServiceConfig has secret EncryptedField sub-types that cannot be auto-defaulted;
+-- stub genDef to []. Its ConfigPilot read/write work via ToJSON/FromJSON; only the domain
+-- schema (which needs ToSchema) is skipped. Mirrors rider IntegratedBPPConfig.
+instance YTH.GenericDefaults DMSC.MerchantServiceConfig where
+  genDef _ = []
+
 $(YTH.generateGenericDefault ''DCC.CoinsConfig)
 
 $(genToSchema ''DTP.PayoutConfig)
@@ -149,7 +155,6 @@ $(genToSchema ''DRMC.ReminderConfig)
 $(genToSchema ''DSPC.ScheduledPayoutConfig)
 $(genToSchema ''DTANC.TagActionNotificationConfig)
 $(genToSchema ''DFODVC.FleetOwnerDocumentVerificationConfig)
-$(genToSchema ''DMSC.MerchantServiceConfig)
 $(genToSchema ''DCC.CoinsConfig)
 $(genToSchema ''TaggedDriverPoolInput)
 $(genToSchema ''CancellationCoinData)
@@ -708,13 +713,6 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
         LYT.DomainSchemaResp
           { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
             LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DFODVC.FleetOwnerDocumentVerificationConfig))
-          }
-    LYT.DRIVER_CONFIG LYT.MerchantServiceConfig -> do
-      defaultConfig <- fromMaybeM (InvalidRequest "MerchantServiceConfig default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DMSC.MerchantServiceConfig))
-      return $
-        LYT.DomainSchemaResp
-          { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
-            LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DMSC.MerchantServiceConfig))
           }
     LYT.DRIVER_CONFIG LYT.CoinsConfig -> do
       defaultConfig <- fromMaybeM (InvalidRequest "CoinsConfig default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DCC.CoinsConfig))

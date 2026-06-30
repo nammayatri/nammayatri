@@ -17,6 +17,13 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.IntegratedBPPConfig as Beam
 import Storage.Queries.OrphanInstances.IntegratedBPPConfig
 
+findAllByMerchantOperatingCityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  m [Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig]
+findAllByMerchantOperatingCityId merchantOperatingCityId =
+  findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
 findAllByDomainAndCityAndVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Prelude.Text ->

@@ -469,7 +469,7 @@ issueUpdate merchantShortId opCity issueReportId issueHandle identifier req = do
           -- customerResponse so the agent UI doesn't keep showing a previous
           -- ESCALATE/ACCEPT badge against the new prompt.
           QIR.clearCustomerResponse issueReportId
-          Just <$> appendAgentResolvedChats issueReport newStatus merchantOpCity.id identifier
+          Just <$> appendAgentResolvedChats issueReport newStatus merchantOpCity.id identifier issueHandle
       _ -> pure req.status
     QIR.updateStatusAssignee issueReportId effectiveStatus req.assignee
     whenJust req.assignee $ \assignee -> mkIssueAssigneeUpdateComment assignee merchantOpCity
@@ -533,8 +533,9 @@ appendAgentResolvedChats ::
   IssueStatus ->
   Id MerchantOperatingCity ->
   Identifier ->
+  ServiceHandle m ->
   m IssueStatus
-appendAgentResolvedChats issueReport targetStatus merchantOpCityId identifier = do
+appendAgentResolvedChats issueReport targetStatus merchantOpCityId identifier issueHandle = do
   issueConfig <- issueHandle.findIssueConfig merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
   let shouldUseCloseMsgs =
         targetStatus == CLOSED
@@ -645,7 +646,7 @@ ticketStatusCallBack reqJson issueHandle identifier = do
             (return person.merchantOperatingCityId)
             return
             issueReport.merchantOperatingCityId
-        effectiveStatus <- appendAgentResolvedChats issueReport RESOLVED merchantOpCityId identifier
+        effectiveStatus <- appendAgentResolvedChats issueReport RESOLVED merchantOpCityId identifier issueHandle
         -- Pull the external ticket conversation snapshot and persist it onto the issue
         -- chat (legacy webhook only — agent-internal flow already has chat in our DB).
         merchantId <- maybe (return person.merchantId) (const $ return person.merchantId) issueReport.merchantId

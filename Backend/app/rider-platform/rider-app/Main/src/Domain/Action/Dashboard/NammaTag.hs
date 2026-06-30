@@ -133,7 +133,7 @@ import qualified Storage.CachedQueries.Person as CQPerson
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SQRRNC
 import qualified Storage.CachedQueries.UiRiderConfig as UIRC
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
-import Storage.ConfigPilot.Config.CancellationReason (CancellationReasonDimensions (..))
+import Storage.ConfigPilot.Config.CancellationReason ()
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
 import Storage.ConfigPilot.Config.HotSpotConfig (HotSpotConfigDimensions (..))
@@ -156,7 +156,6 @@ import qualified Storage.Queries.IntegratedBPPConfig as SQIBC
 import qualified Storage.Queries.MerchantPaymentMethod as SQMPM
 import qualified Storage.Queries.PassCategory as SQPC
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.StopFare as SQSF
 import qualified Storage.Queries.Translations as SQTL
 import qualified Storage.Queries.UiRiderConfig as SQU
 import Storage.Queries.UiRiderConfigExtra ()
@@ -175,11 +174,19 @@ $(YTH.generateGenericDefault ''DFRFS.FRFSConfig)
 $(YTH.generateGenericDefault ''DTBC.BecknConfig)
 $(YTH.generateGenericDefault ''DTE.Exophone)
 $(YTH.generateGenericDefault ''DHSC.HotSpotConfig)
-$(YTH.generateGenericDefault ''DMPM.MerchantPaymentMethod)
+
+instance YTH.GenericDefaults DMPM.MerchantPaymentMethod where
+  genDef _ = []
+
 $(YTH.generateGenericDefault ''DCR.CancellationReason)
 $(YTH.generateGenericDefault ''DTL.Translations)
-$(YTH.generateGenericDefault ''DIBC.IntegratedBPPConfig)
-$(YTH.generateGenericDefault ''DIC.IssueConfig)
+
+instance YTH.GenericDefaults DIBC.IntegratedBPPConfig where
+  genDef _ = []
+
+instance YTH.GenericDefaults DIC.IssueConfig where
+  genDef _ = []
+
 $(YTH.generateGenericDefault ''DPC.PassCategory)
 $(YTH.generateGenericDefault ''DSF.StopFare)
 
@@ -194,11 +201,14 @@ $(genToSchema ''DFRFS.FRFSConfig)
 $(genToSchema ''DTBC.BecknConfig)
 $(genToSchema ''DTE.Exophone)
 $(genToSchema ''DHSC.HotSpotConfig)
-$(genToSchema ''DMPM.MerchantPaymentMethod)
+
+deriving instance ToSchema DMPM.MerchantPaymentMethod
+
 $(genToSchema ''DCR.CancellationReason)
 $(genToSchema ''DTL.Translations)
-$(genToSchema ''DIBC.IntegratedBPPConfig)
-$(genToSchema ''DIC.IssueConfig)
+
+-- IntegratedBPPConfig is skipped: its ProviderConfig sub-types contain encrypted/secret
+-- fields (EncryptedField) with no ToSchema, so a config schema cannot be derived for it.
 $(genToSchema ''DPC.PassCategory)
 $(genToSchema ''DSF.StopFare)
 $(genToSchema ''PickupETA.PickupETAInput)
@@ -677,13 +687,6 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
           { LYTU.defaultValue = A.toJSON (LYTU.Config def' Nothing 1),
             LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DTL.Translations))
           }
-    LYTU.RIDER_CONFIG LYTU.IntegratedBPPConfig -> do
-      def' <- fromMaybeM (InvalidRequest "IntegratedBPPConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DIBC.IntegratedBPPConfig))
-      return $
-        LYTU.DomainSchemaResp
-          { LYTU.defaultValue = A.toJSON (LYTU.Config def' Nothing 1),
-            LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DIBC.IntegratedBPPConfig))
-          }
     LYTU.RIDER_CONFIG LYTU.IssueConfig -> do
       def' <- fromMaybeM (InvalidRequest "IssueConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DIC.IssueConfig))
       return $
@@ -886,25 +889,22 @@ postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity req = do
       cfgs <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = mocId, timeDiffEvent = Nothing}) (Just (SQRRNC.findAllByMerchantOperatingCityId (Id mocId) (Just [])))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.HotSpotConfig -> do
-      cfgs <- getConfig (HotSpotConfigDimensions {merchantOperatingCityId = mocId}) (Just (SQHSC.findAllByMerchantOperatingCityId (Id mocId)))
+      cfgs <- maybeToList <$> getConfig (HotSpotConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId}) (Just (SQHSC.findConfigByMerchantId (cast merchantOperatingCity.merchantId)))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.MerchantPaymentMethod -> do
-      cfgs <- getConfig (MerchantPaymentMethodDimensions {merchantOperatingCityId = mocId}) (Just (SQMPM.findAllByMerchantOperatingCityId (Id mocId)))
-      pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
-    LYTU.CancellationReason -> do
-      cfgs <- getConfig (CancellationReasonDimensions {merchantOperatingCityId = mocId}) (Just (SQCR.findAllByMerchantOperatingCityId (Id mocId)))
+      cfgs <- getConfig (MerchantPaymentMethodDimensions {merchantOperatingCityId = mocId, configId = Nothing}) (Just (SQMPM.findAllByMerchantOperatingCityId (Id mocId)))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.Translation -> do
-      cfgs <- getConfig (TranslationDimensions {merchantOperatingCityId = mocId}) (Just (SQTL.findAllByMerchantOperatingCityId (Id mocId)))
+      cfgs <- maybeToList <$> getConfig (TranslationDimensions {merchantOperatingCityId = Just mocId, messageKey = "", language = Nothing}) (Just (Prelude.listToMaybe <$> SQTL.findAllByMerchantOperatingCityId (Id mocId)))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.IntegratedBPPConfig -> do
-      cfgs <- getConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = mocId}) (Just (SQIBC.findAllByMerchantOperatingCityId (Id mocId)))
+      cfgs <- getConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = mocId, configId = Nothing, agencyKey = Nothing, domain = Nothing, vehicleCategory = Nothing, platformType = Nothing}) (Just (SQIBC.findAllByMerchantOperatingCityId (Id mocId)))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.IssueConfig -> do
-      cfgs <- getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId}) (Just (SQIC.findAllByMerchantOperatingCityId (Id mocId)))
+      cfgs <- maybeToList <$> getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId, identifier = ""}) (Just (SQIC.findByMerchantOpCityId (cast $ Id mocId)))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.PassCategory -> do
-      cfgs <- getConfig (PassCategoryDimensions {merchantOperatingCityId = mocId}) (Just (SQPC.findAllByMerchantOperatingCityId (Id mocId)))
+      cfgs <- getConfig (PassCategoryDimensions {merchantOperatingCityId = mocId, configId = Nothing}) (Just (SQPC.findAllByMerchantOperatingCityId (Id mocId)))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     _ -> throwError $ InvalidRequest $ "Config type " <> show req.configType <> " is not supported for getConfigWithDimensions"
   where
@@ -942,8 +942,6 @@ getNammaTagConfigPilotGetDimensionSchema _merchantShortId _opCity configType = d
       pure $ mkDimSchema (Proxy @HotSpotConfigDimensions)
     LYTU.MerchantPaymentMethod ->
       pure $ mkDimSchema (Proxy @MerchantPaymentMethodDimensions)
-    LYTU.CancellationReason ->
-      pure $ mkDimSchema (Proxy @CancellationReasonDimensions)
     LYTU.Translation ->
       pure $ mkDimSchema (Proxy @TranslationDimensions)
     LYTU.IntegratedBPPConfig ->
