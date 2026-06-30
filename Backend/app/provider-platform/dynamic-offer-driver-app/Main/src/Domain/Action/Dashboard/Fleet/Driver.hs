@@ -347,6 +347,23 @@ postDriverFleetAddVehicleHelper isBulkUpload merchantShortId opCity reqDriverPho
             DP.DRIVER -> "dashboard -> addVehicleUnderFleetDriver"
             _ -> "dashboard -> addVehicleUnderUnknown"
       logTagInfo logTag (show getEntityData.id)
+      -- Notify driver about vehicle link (only when linking to a driver, not fleet-only)
+      when (getEntityData.role == DP.DRIVER) $
+        fork "Fleet vehicle linked notification" $ do
+          mbFleetOwner <- QPerson.findById (Id fleetOwnerId)
+          let fleetName = maybe "Fleet" (\fo -> fo.firstName <> maybe "" (" " <>) fo.lastName) mbFleetOwner
+          Notification.dispatchMerchantNotification
+            merchantOpCityId
+            getEntityData
+            ( Notification.MerchantPNReq
+                { key = "FLEET_VEHICLE_LINKED",
+                  tripCategory = Nothing,
+                  subCategory = Nothing,
+                  dynamicParams = [("vehicleNo", req.registrationNo), ("fleetName", fleetName)],
+                  entityId = getEntityData.id.getId
+                }
+            )
+            Nothing
       pure Success
     _ -> throwError (InvalidRequest "Invalid Data")
 
@@ -811,15 +828,18 @@ postDriverFleetUnlink merchantShortId opCity requestorId reqDriverId vehicleNo m
     fork "Fleet vehicle unlink notification" $ do
       merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
       driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-      mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "FLEET_VEHICLE_UNLINKED" Nothing Nothing driver.language Nothing
-      whenJust mbMerchantPN $ \merchantPN -> do
-        let notification =
-              Notification.NotifReq
-                { title = merchantPN.title,
-                  message = merchantPN.body,
-                  entityId = personId.getId
-                }
-        Notification.notifyDriverOnEvents merchantOpCityId personId driver.deviceToken notification merchantPN.fcmNotificationType
+      Notification.dispatchMerchantNotification
+        merchantOpCityId
+        driver
+        ( Notification.MerchantPNReq
+            { key = "FLEET_VEHICLE_UNLINKED",
+              tripCategory = Nothing,
+              subCategory = Nothing,
+              dynamicParams = [("vehicleNo", vehicleNo)],
+              entityId = personId.getId
+            }
+        )
+        Nothing
   pure Success
 
 unlinkVehicleFromDriver :: DM.Merchant -> Id DP.Person -> Text -> Context.City -> DP.Role -> Flow ()
@@ -1179,6 +1199,23 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
           ( \driverInfo -> do
               DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER entityId driverInfo.driverFlowStatus
           )
+      -- Notify driver about removal from fleet
+      fork "Fleet driver removed notification" $ do
+        driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+        mbFleetOwner <- QPerson.findById (Id entityId)
+        let fleetName = maybe "Fleet" (\fo -> fo.firstName <> maybe "" (" " <>) fo.lastName) mbFleetOwner
+        Notification.dispatchMerchantNotification
+          merchantOpCityId
+          driver
+          ( Notification.MerchantPNReq
+              { key = "FLEET_DRIVER_REMOVED",
+                tripCategory = Nothing,
+                subCategory = Nothing,
+                dynamicParams = [("fleetName", fleetName)],
+                entityId = personId.getId
+              }
+          )
+          Nothing
     (Just DP.OPERATOR, Just entityId) -> do
       -- Check if there's an active association before ending it
       mbActiveAssociation <- DOV.findByDriverIdAndOperatorId personId (Id entityId) True
@@ -1196,6 +1233,23 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
           ( \driverInfo -> do
               DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.OPERATOR entityId driverInfo.driverFlowStatus
           )
+      -- Notify driver about removal from operator
+      fork "Operator driver removed notification" $ do
+        driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+        mbOperator <- QPerson.findById (Id entityId)
+        let operatorName = maybe "Operator" (\op -> op.firstName <> maybe "" (" " <>) op.lastName) mbOperator
+        Notification.dispatchMerchantNotification
+          merchantOpCityId
+          driver
+          ( Notification.MerchantPNReq
+              { key = "FLEET_DRIVER_REMOVED",
+                tripCategory = Nothing,
+                subCategory = Nothing,
+                dynamicParams = [("fleetName", operatorName)],
+                entityId = personId.getId
+              }
+          )
+          Nothing
     _ -> throwError (InvalidRequest "Invalid Data")
   pure Success
 
@@ -3605,6 +3659,20 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
             FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id onboardedOperatorId (fromMaybe DVC.CAR req_.driverOnboardingVehicleCategory) False Nothing
             whenJust req_.badgeType $ createOrUpdateFleetBadge merchant moc person req_ fleetOwner
             sendDeepLinkForAuth person driverMobile moc.merchantId moc.id moc.country fleetOwner
+          fork "Fleet driver linked notification" $ do
+            let fleetOwnerName = fleetOwner.firstName <> maybe "" (" " <>) fleetOwner.lastName
+            Notification.dispatchMerchantNotification
+              moc.id
+              person
+              ( Notification.MerchantPNReq
+                  { key = "FLEET_DRIVER_LINKED",
+                    tripCategory = Nothing,
+                    subCategory = Nothing,
+                    dynamicParams = [("fleetName", fleetOwnerName)],
+                    entityId = person.id.getId
+                  }
+              )
+              Nothing
 
     linkDriverToOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
     linkDriverToOperator merchant moc operator req_ = do

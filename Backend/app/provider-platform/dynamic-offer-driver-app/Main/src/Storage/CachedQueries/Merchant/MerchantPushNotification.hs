@@ -16,6 +16,9 @@
 module Storage.CachedQueries.Merchant.MerchantPushNotification
   ( create,
     findAllByMerchantOpCityId,
+    findAllByMerchantOpCityIdAndMessageKey,
+    findByPrimaryKey,
+    updateByPrimaryKey,
     findMatchingMerchantPN,
     findAllByMerchantOpCityIdInRideFlow,
     findMatchingMerchantPNInRideFlow,
@@ -44,6 +47,15 @@ create = Queries.create
 findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe [LYT.ConfigVersionMap] -> m [MerchantPushNotification]
 findAllByMerchantOpCityId id mbConfigVersionMap =
   DynamicLogic.findAllConfigs (cast id) (LYT.DRIVER_CONFIG LYT.MerchantPushNotification) mbConfigVersionMap Nothing (Queries.findAllByMerchantOpCityId id)
+
+findAllByMerchantOpCityIdAndMessageKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> m [MerchantPushNotification]
+findAllByMerchantOpCityIdAndMessageKey = Queries.findAllByMerchantOpCityIdAndMessageKey
+
+findByPrimaryKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantPushNotification -> m (Maybe MerchantPushNotification)
+findByPrimaryKey = Queries.findByPrimaryKey
+
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantPushNotification -> m ()
+updateByPrimaryKey = Queries.updateByPrimaryKey
 
 findMatchingMerchantPN :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> Maybe Notification.SubCategory -> Maybe Language -> Maybe [LYT.ConfigVersionMap] -> m (Maybe MerchantPushNotification)
 findMatchingMerchantPN merchantOperatingCityId messageKey tripCategory subCategory personLanguage mbConfigVersionMap = do

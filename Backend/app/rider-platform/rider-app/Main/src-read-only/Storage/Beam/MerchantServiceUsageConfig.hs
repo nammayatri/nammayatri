@@ -78,8 +78,8 @@ instance B.Table MerchantServiceUsageConfigT where
 
 type MerchantServiceUsageConfig = MerchantServiceUsageConfigT Identity
 
-$(enableKVPG (''MerchantServiceUsageConfigT) [('merchantOperatingCityId)] [])
+$(enableKVPG ''MerchantServiceUsageConfigT ['merchantOperatingCityId] [])
 
-$(mkTableInstances (''MerchantServiceUsageConfigT) "merchant_service_usage_config")
+$(mkTableInstances ''MerchantServiceUsageConfigT "merchant_service_usage_config")
 
-$(Domain.Types.UtilsTH.mkCacParseInstance (''MerchantServiceUsageConfigT))
+$(Domain.Types.UtilsTH.mkCacParseInstance ''MerchantServiceUsageConfigT)

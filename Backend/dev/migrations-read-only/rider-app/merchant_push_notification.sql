@@ -18,3 +18,9 @@ ALTER TABLE atlas_app.merchant_push_notification ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_push_notification ADD COLUMN should_trigger boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_push_notification ADD COLUMN is_critical boolean ;
+ALTER TABLE atlas_app.merchant_push_notification ADD COLUMN channels text[] ;
