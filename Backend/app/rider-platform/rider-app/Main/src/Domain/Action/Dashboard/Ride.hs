@@ -81,7 +81,6 @@ import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Offer as SOffer

@@ -23,7 +23,7 @@ import qualified Domain.Types.VehicleVariant as DV
 import qualified Domain.Types.Yudhishthira as Y
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as Payment
-import Kernel.External.Types (Language (ENGLISH), SchedulerFlow, ServiceFlow)
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
@@ -31,7 +31,7 @@ import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.OfferStats as DOfferStats
@@ -50,9 +50,6 @@ import SharedLogic.JobScheduler (ExecuteCashRideCashbackPayoutJobData (..), Ride
 import SharedLogic.OfferTypes as Reexport
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
-import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPayoutCfg
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
-import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import qualified Storage.Queries.BookingExtra as QBooking
@@ -337,7 +334,7 @@ processRideOffer mbOfferStatsInput booking person ride offerBasePrice mbFareCtx 
   whenJust mbOfferStatsInput $ \offerStatsInput ->
     whenJust booking.selectedOfferId $ \offerId ->
       whenJust mbRideOfferEntity $ \rideOfferEntity -> do
-        riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+        riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
         when riderConfig.enableRideHailingOffers $ do
           useDomainOffers <- TPayment.useDomainOffers booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing
           let applyOfferCall = TPayment.offerApply booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing Nothing person.clientSdkVersion
@@ -368,7 +365,7 @@ scheduleCashbackPayoutJob ::
 scheduleCashbackPayoutJob booking ride personId ridePayoutAmount =
   when (ridePayoutAmount > 0) $ do
     let vehicleCategory = DV.castVehicleVariantToVehicleCategory ride.vehicleVariant
-    payoutCfg <- getOneConfig (PayoutDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing}) (Just (maybeToList <$> CQPayoutCfg.findByCityIdAndVehicleCategory booking.merchantOperatingCityId vehicleCategory (Just [])))
+    payoutCfg <- getOneConfig (PayoutDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing})
     case payoutCfg of
       Just payoutConfig -> do
         let cashbackPayoutJobData = ExecuteCashRideCashbackPayoutJobData {personId = personId}
