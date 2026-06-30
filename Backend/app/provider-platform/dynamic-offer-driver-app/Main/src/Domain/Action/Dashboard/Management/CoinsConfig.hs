@@ -1,6 +1,7 @@
 module Domain.Action.Dashboard.Management.CoinsConfig
   ( putCoinsConfigUpdate,
     postCoinsConfigCreate,
+    getCoinsConfigList,
   )
 where
 
@@ -11,16 +12,52 @@ import qualified Domain.Types.Merchant
 import Domain.Types.Translations (Translations (..))
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Functions as B
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error (GenericError (InvalidRequest))
 import qualified Kernel.Types.Id as ID
 import qualified Kernel.Utils.Common as UC
 import qualified Lib.DriverCoins.Types as DCT
+import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.CoinsConfig as CQConfig
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Coins.CoinsConfig as QConfig
+import qualified Storage.Queries.Coins.CoinsConfigExtra as QCoinsConfigExtra
 import Storage.Queries.Translations (create)
 import Storage.Queries.TranslationsExtra (isTranslationExist)
+
+getCoinsConfigList ::
+  ID.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  Environment.Flow Common.CoinsConfigListRes
+getCoinsConfigList merchantShortId opCity mbLimit mbOffset = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let limit = fromMaybe 10 mbLimit
+      offset = fromMaybe 0 mbOffset
+  configs <-
+    B.runInReplica $
+      QCoinsConfigExtra.findAllByMerchantOptCityIdWithLimitOffset merchantOpCityId (Just limit) (Just offset)
+  pure $
+    Common.CoinsConfigListRes
+      { configs = map buildCoinsConfigListItem configs
+      }
+
+buildCoinsConfigListItem :: DTCC.CoinsConfig -> Common.CoinsConfigListItem
+buildCoinsConfigListItem coinsConfig =
+  Common.CoinsConfigListItem
+    { entriesId = ID.cast coinsConfig.id,
+      eventFunction = coinsConfig.eventFunction,
+      eventName = coinsConfig.eventName,
+      coins = coinsConfig.coins,
+      expirationAt = coinsConfig.expirationAt,
+      active = coinsConfig.active,
+      vehicleCategory = coinsConfig.vehicleCategory,
+      tripCategoryType = coinsConfig.tripCategoryType
+    }
 
 putCoinsConfigUpdate ::
   ID.ShortId Domain.Types.Merchant.Merchant ->

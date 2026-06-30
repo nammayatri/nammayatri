@@ -42,3 +42,9 @@ ALTER TABLE atlas_driver_offer_bpp.toll ALTER COLUMN currency TYPE text;
 
 ALTER TABLE atlas_driver_offer_bpp.toll ALTER COLUMN merchant_operating_city_id TYPE text;
 ALTER TABLE atlas_driver_offer_bpp.toll ALTER COLUMN merchant_id TYPE text;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.toll ADD COLUMN is_two_wheeler_toll_charge_applicable boolean ;
+ALTER TABLE atlas_driver_offer_bpp.toll ADD COLUMN is_auto_rickshaw_toll_charge_applicable boolean ;

@@ -9,6 +9,14 @@ imports:
 module: CoinsConfig
 
 apis:
+  - GET: # CoinsConfigListAPI
+      endpoint: /list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+      response:
+        type: CoinsConfigListRes
   - PUT: # Updating Entries
       endpoint: /update
       auth: ApiAuthV2
@@ -53,3 +61,14 @@ types:
   EventMessage:
     - message: Text
     - language: Language
+  CoinsConfigListRes:
+    - configs: [CoinsConfigListItem]
+  CoinsConfigListItem:
+    - entriesId: Id CoinsConfig
+    - eventFunction: DriverCoinsFunctionType
+    - eventName: Text
+    - coins: Int
+    - expirationAt: Maybe Int
+    - active: Bool
+    - vehicleCategory: Maybe VehicleCategory
+    - tripCategoryType: Maybe TripCategoryType

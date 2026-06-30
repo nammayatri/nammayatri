@@ -16,6 +16,7 @@ import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Utils.Common (logInfo, logWarning)
 import Kernel.Utils.Logging (logDebug)
 import Kernel.Utils.Servant.Client (HasRequestId)
+import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as Dom
 import Lib.Finance.Domain.Types.SettlementFileInfo (SettlementFileStatus (..))
 import Lib.Finance.Settlement.Fetch (SftpFetchMeta (..), fetchSettlementCsv)
 import qualified Lib.Finance.Settlement.Transformer as Transformer
@@ -46,8 +47,9 @@ ingestPaymentSettlementReport ::
   Maybe JuspayOrderStatusConfig ->
   Text ->
   Text ->
+  (Text -> m (Maybe Dom.OrderType, Maybe Bool)) ->
   m IngestionResult
-ingestPaymentSettlementReport cfg mbJuspayCfg merchantId merchantOperatingCityId = do
+ingestPaymentSettlementReport cfg mbJuspayCfg merchantId merchantOperatingCityId resolveOrderType = do
   logInfo $ "Starting settlement report ingestion for merchant: " <> merchantId
   fetchResult <- fetchSettlementCsv cfg merchantId merchantOperatingCityId
   case fetchResult of
@@ -110,7 +112,7 @@ ingestPaymentSettlementReport cfg mbJuspayCfg merchantId merchantOperatingCityId
                       parseErrors = [],
                       storeErrors = []
                     }
-          else storeParseResult merchantId merchantOperatingCityId parseResult
+          else storeParseResult merchantId merchantOperatingCityId cfg.bankCode resolveOrderType parseResult
       finalizeSftpFileCursor mbSftpMeta parseHadNoReports
       pure result
 
@@ -157,9 +159,11 @@ storeParseResult ::
   (BeamFlow.BeamFlow m r) =>
   Text ->
   Text ->
+  Maybe Text ->
+  (Text -> m (Maybe Dom.OrderType, Maybe Bool)) ->
   ParsePaymentSettlementResult ->
   m IngestionResult
-storeParseResult merchantId merchantOperatingCityId parseResult = do
+storeParseResult merchantId merchantOperatingCityId mbBankCode resolveOrderType parseResult = do
   logInfo $
     "Parse complete. Total rows: " <> show (totalRows parseResult)
       <> ", Failed: "
@@ -171,7 +175,7 @@ storeParseResult merchantId merchantOperatingCityId parseResult = do
     logWarning $ "Parse errors: " <> show (errors parseResult)
 
   results <- forM (reports parseResult) $ \report -> do
-    pgReport <- Transformer.toPgPaymentSettlementReport merchantId merchantOperatingCityId Nothing Nothing report
+    pgReport <- Transformer.toPgPaymentSettlementReport merchantId merchantOperatingCityId Nothing Nothing mbBankCode resolveOrderType report
     result <- try @_ @SomeException $ QPgReport.create pgReport
     case result of
       Right _ -> pure (Just pgReport, Nothing)
