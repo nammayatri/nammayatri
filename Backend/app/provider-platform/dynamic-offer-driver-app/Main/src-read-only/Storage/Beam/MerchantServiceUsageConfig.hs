@@ -26,10 +26,10 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
-  { aadhaarVerificationService :: (B.C f Kernel.External.AadhaarVerification.Types.AadhaarVerificationService),
-    autoComplete :: (B.C f Kernel.External.Maps.Types.MapsService),
-    backgroundVerification :: (B.C f Kernel.External.BackgroundVerification.Types.BackgroundVerificationService),
-    categoryBasedVerificationPriorityList :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
+  { aadhaarVerificationService :: B.C f Kernel.External.AadhaarVerification.Types.AadhaarVerificationService,
+    autoComplete :: B.C f Kernel.External.Maps.Types.MapsService,
+    backgroundVerification :: B.C f Kernel.External.BackgroundVerification.Types.BackgroundVerificationService,
+    categoryBasedVerificationPriorityList :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     challanProvidersPriorityList :: B.C f (Kernel.Prelude.Maybe [Kernel.External.ChallanSearch.Types.ChallanSearchService]),
     createBankAccount :: (B.C f Kernel.External.Payment.Types.PaymentService),
     createPayoutOrder :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Types.PayoutService)),
