@@ -38,6 +38,7 @@ import qualified API.Internal.SpecialLocationList as SpecialLocationList
 import qualified API.Internal.SpecialLocationUpsert as SpecialLocationUpsert
 import qualified API.Internal.StopDetection as StopDetection
 import qualified API.Internal.ViolationDetection as ViolationDetection
+import qualified API.Internal.XyneWebhook as XyneWebhook
 import Environment
 import Servant
 import Tools.Auth ()
@@ -78,6 +79,7 @@ type API =
            :<|> SendSMS.API
            :<|> InMemManagement.API
            :<|> MasterCloudForward.API
+           :<|> XyneWebhook.API
        )
 
 handler :: AppEnv -> FlowServer API
@@ -116,3 +118,4 @@ handler env =
     :<|> SendSMS.handler
     :<|> InMemManagement.handler
     :<|> MasterCloudForward.handler env
+    :<|> XyneWebhook.handler
