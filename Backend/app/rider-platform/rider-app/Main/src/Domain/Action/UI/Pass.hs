@@ -1310,13 +1310,18 @@ getMultimodalPassTransactions ::
     ) ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Environment.Flow [PassAPI.PurchasedPassTransactionAPIEntity]
   )
-getMultimodalPassTransactions (mbCallerPersonId, _) mbLimitParam mbOffsetParam = do
+getMultimodalPassTransactions (mbCallerPersonId, _) mbLimitParam mbOffsetParam mbStatusParam = do
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
   let limit = fromMaybe 10 mbLimitParam
   let offset = fromMaybe 0 mbOffsetParam
-  allPurchasedPassTransactions <- QPurchasedPassPayment.findAllWithPersonId (Just limit) (Just offset) personId
+  -- status is a comma-separated list (e.g. "Active,PreBooked"); unparseable tokens are dropped.
+  let statuses = maybe [] (mapMaybe (readMaybe . T.unpack . T.strip) . T.splitOn ",") mbStatusParam
+  allPurchasedPassTransactions <- case statuses of
+    [] -> QPurchasedPassPayment.findAllWithPersonId (Just limit) (Just offset) personId
+    _ -> QPurchasedPassPayment.findAllByPersonIdAndStatuses (Just limit) (Just offset) personId statuses
   return $ map buildPurchasedPassPaymentAPIEntity allPurchasedPassTransactions
 
 buildPurchasedPassPaymentAPIEntity :: DPurchasedPassPayment.PurchasedPassPayment -> PassAPI.PurchasedPassTransactionAPIEntity
