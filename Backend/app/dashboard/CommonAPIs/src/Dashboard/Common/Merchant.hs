@@ -996,7 +996,9 @@ data UpsertTollReq = UpsertTollReq
     tollStartGates :: [TollGateAPIEntity],
     tollEndGates :: [TollGateAPIEntity],
     isAutoRickshawAllowed :: Bool,
-    isTwoWheelerAllowed :: Maybe Bool
+    isTwoWheelerAllowed :: Maybe Bool,
+    isAutoRickshawTollChargeApplicable :: Maybe Bool,
+    isTwoWheelerTollChargeApplicable :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -1013,6 +1015,8 @@ data TollAPIEntity = TollAPIEntity
     tollEndGates :: [TollGateAPIEntity],
     isAutoRickshawAllowed :: Bool,
     isTwoWheelerAllowed :: Maybe Bool,
+    isAutoRickshawTollChargeApplicable :: Maybe Bool,
+    isTwoWheelerTollChargeApplicable :: Maybe Bool,
     merchantId :: Maybe Text,
     merchantOperatingCityId :: Maybe Text
   }
