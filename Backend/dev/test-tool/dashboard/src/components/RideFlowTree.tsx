@@ -94,8 +94,11 @@ function nodeStatus(node: TreeNode, results: Record<string, StepResult>): StepSt
   const statuses = node.steps.map(s => results[s.id]?.status);
   if (statuses.some(s => s === 'fail')) return 'fail';
   if (statuses.some(s => s === 'running')) return 'running';
-  if (statuses.every(s => s === 'pass')) return 'pass';
-  if (statuses.some(s => s === 'pass')) return 'running'; // partially done
+  // Done when every step has settled — a skipped step (e.g. Inflate Distance, which only
+  // runs for upward-recompute) counts as settled, not pending. Otherwise the node stays
+  // stuck on "Running..." even after the flow completes.
+  if (statuses.every(s => s === 'pass' || s === 'skip')) return 'pass';
+  if (statuses.some(s => s === 'pass' || s === 'skip')) return 'running'; // partially done
   return 'pending';
 }
 

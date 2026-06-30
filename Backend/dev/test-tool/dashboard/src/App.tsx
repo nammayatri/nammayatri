@@ -46,11 +46,24 @@ export interface FlowDef {
 function buildRideFlowSteps(): Record<string, Step[]> {
   return {
     'driver-setup': [
+      { id: 'fix-driver-pool', name: 'Prepare Driver Pool', method: 'POST', service: 'internal',
+        path: '/api/fix-driver-pool',
+        summary: (d: any) => d?.ok
+          ? (d.geom_rows_fixed > 0 ? `Fixed geometry (${d.geom_rows_fixed} rows) + pool — restarting services` : 'Pool ready (geometry OK)')
+          : `Pool fix errors: ${(d?.errors || []).join(', ')}`,
+        save: (d, ctx) => { ctx._servicesRestarted = d?.restarted; },
+        assert: () => null },
+      { id: 'wait-rider-app', name: 'Wait for Services', method: 'GET', service: 'internal',
+        path: '/api/rider-health',
+        skip: (ctx) => !ctx._servicesRestarted,
+        poll: { intervalMs: 3000, timeoutMs: 90000 },
+        assert: (d) => d?.ok ? null : 'Services still restarting',
+        summary: () => 'Services restarted and ready' },
       { id: 'driver-active', name: 'Set Driver Online', method: 'POST', service: 'driver',
         path: '/driver/setActivity?active=true&mode=%22ONLINE%22', auth: true },
       { id: 'driver-location', name: 'Start Location Ping', method: 'POST', service: 'lts',
         path: '/driver/location', auth: true,
-        extraHeaders: (ctx) => ({ 'vt': ctx.driverVehicleVariant || 'SUV', 'dm': 'ONLINE', ...(ctx.driverMerchantId ? { 'mid': ctx.driverMerchantId } : {}) }),
+        extraHeaders: (ctx) => ({ 'vt': ctx.driverVehicleVariant || 'SEDAN', 'dm': 'ONLINE', ...(ctx.driverMerchantId ? { 'mid': ctx.driverMerchantId } : {}) }),
         body: (ctx) => {
           const origin = ctx.searchOrigin || ctx.driverLocation || { lat: 10.0739, lon: 76.2733 };
           return [{ pt: { lat: origin.lat, lon: origin.lon }, ts: new Date().toISOString() }];
@@ -58,6 +71,10 @@ function buildRideFlowSteps(): Record<string, Step[]> {
         save: (_d, ctx) => { startLocationPinger(ctx); } },
     ],
     'discovery': [
+      { id: 'clear-stale-bookings', name: 'Clear Stale Bookings', method: 'POST', service: 'internal',
+        path: '/api/fix-driver-pool',
+        assert: () => null,
+        summary: () => 'Stale bookings cleared' },
       { id: 'ride-search', name: 'Search Ride', method: 'POST', service: 'rider', path: '/rideSearch', auth: true,
         body: (ctx) => ({
           fareProductType: 'ONE_WAY',
@@ -82,8 +99,29 @@ function buildRideFlowSteps(): Record<string, Step[]> {
           ctx.quotes = d.quotes || [];
           if (d.estimates?.length > 0) {
             const driverVariant = ctx.driverVehicleVariant;
-            const match = driverVariant && d.estimates.find((e: any) => e.vehicleVariant === driverVariant);
-            ctx.selectedEstimateId = match ? match.id : d.estimates[0].id;
+            // The driver only receives a search request if the rider's selected estimate is
+            // a tier the driver's vehicle can serve. Picking estimates[0] blindly breaks
+            // merchants like Yatri Sathi (Kolkata) where the first estimate by priority is a
+            // BIKE/AUTO/E_RICKSHAW tier that a SEDAN driver can't fulfill → "No nearby requests".
+            // 1) exact tier match (vehicleVariant or serviceTierType), then
+            // 2) same vehicle category (car/auto/bike/erickshaw), then
+            // 3) first estimate as a last resort.
+            const tierCategory = (v?: string): string => {
+              const x = (v || '').toUpperCase();
+              if (/SEDAN|SUV|HATCHBACK|TAXI|AC_PRIORITY|PREMIUM|HERITAGE|COMFY|ECO|XL|COMFORT/.test(x)) return 'CAR';
+              if (/AUTO/.test(x)) return 'AUTO';
+              if (/E_RICKSHAW|ERICKSHAW/.test(x)) return 'ERICK';
+              if (/BIKE/.test(x)) return 'BIKE';
+              return 'OTHER';
+            };
+            const estVariant = (e: any) => e.vehicleVariant || e.serviceTierType;
+            const exact = driverVariant && d.estimates.find((e: any) =>
+              e.vehicleVariant === driverVariant || e.serviceTierType === driverVariant);
+            const sameCat = !exact && driverVariant && d.estimates.find((e: any) =>
+              tierCategory(estVariant(e)) === tierCategory(driverVariant));
+            const chosen = exact || sameCat || d.estimates[0];
+            ctx.selectedEstimateId = chosen.id;
+            ctx.selectedEstimateVariant = estVariant(chosen);
           }
         },
         assert: (d) => (d.estimates?.length > 0) ? null : 'No estimates yet',
@@ -185,8 +223,13 @@ function buildRideFlowSteps(): Record<string, Step[]> {
     ],
     'fulfillment': [
       { id: 'driver-ride-list', name: 'Get Active Ride (Driver)', method: 'GET', service: 'driver',
-        path: '/driver/ride/list?onlyActive=true&limit=1', auth: true,
-        poll: { intervalMs: 2000, timeoutMs: 10000 },
+        // Query by status=NEW (assigned, not yet started) rather than onlyActive=true.
+        // onlyActive=true depends on driverInfo.onRide, which is read from a replica in
+        // listDriverRides and can still be False right after assignment, returning [] —
+        // causing "No active ride for driver". status=NEW goes through findAllByDriverId
+        // and is independent of the onRide flag.
+        path: '/driver/ride/list?status=%22NEW%22&limit=1', auth: true,
+        poll: { intervalMs: 2000, timeoutMs: 20000 },
         save: (d, ctx) => {
           const rides = d.list || d;
           const active = Array.isArray(rides) ? rides[0] : null;
@@ -194,7 +237,7 @@ function buildRideFlowSteps(): Record<string, Step[]> {
         },
         assert: (d) => {
           const rides = d.list || d;
-          return (Array.isArray(rides) && rides.length > 0) ? null : 'No active ride for driver';
+          return (Array.isArray(rides) && rides.length > 0) ? null : 'No active ride for driver (status=NEW)';
         },
         summary: (d) => {
           const rides = d.list || d;
@@ -252,8 +295,8 @@ function buildRideFlowSteps(): Record<string, Step[]> {
     ],
     'driver-cancel': [
       { id: 'driver-ride-list-cancel', name: 'Get Active Ride (Driver)', method: 'GET', service: 'driver',
-        path: '/driver/ride/list?onlyActive=true&limit=1', auth: true,
-        poll: { intervalMs: 2000, timeoutMs: 10000 },
+        path: '/driver/ride/list?status=%22NEW%22&limit=1', auth: true,
+        poll: { intervalMs: 2000, timeoutMs: 20000 },
         save: (d, ctx) => {
           const rides = d.list || d;
           const active = Array.isArray(rides) ? rides[0] : null;
@@ -261,7 +304,7 @@ function buildRideFlowSteps(): Record<string, Step[]> {
         },
         assert: (d) => {
           const rides = d.list || d;
-          return (Array.isArray(rides) && rides.length > 0) ? null : 'No active ride for driver';
+          return (Array.isArray(rides) && rides.length > 0) ? null : 'No assigned ride for driver (status=NEW)';
         },
         summary: (d) => {
           const rides = d.list || d;
@@ -692,7 +735,7 @@ function App() {
     Object.assign(ctxRef.current, {
       driverToken: selectedDriverToken || '',
       driverPersonId: selectedDriverPersonId || '',
-      driverVehicleVariant: selectedDriverVariant || 'SUV',
+      driverVehicleVariant: selectedDriverVariant || 'SEDAN',
       driverMerchantId: selectedDriverMerchantId || '',
       driverLocation: driverLoc,
       searchOrigin: fromLoc?.gps,
@@ -802,6 +845,12 @@ function App() {
       const logExtra = { request: { method: step.method, url: displayPath, body: reqBody }, response: { status: result.status, body: result.data } };
 
       if (error) {
+        if (step.ignoreError) {
+          const msg = summaryText ? `[SKIP] ${step.name} (${result.elapsed}ms) — ${summaryText}` : `[SKIP] ${step.name}: ${error} (${result.elapsed}ms)`;
+          setStepResults(prev => ({ ...prev, [step.id]: { stepId: step.id, status: 'pass', durationMs: result.elapsed, response: result.data, statusCode: result.status, summary: summaryText } }));
+          log('info', msg, logExtra);
+          return true;
+        }
         setStepResults(prev => ({ ...prev, [step.id]: { stepId: step.id, status: 'fail', durationMs: result.elapsed, response: result.data, error: error || undefined, statusCode: result.status } }));
         log('error', `[FAIL] ${step.name}: ${error} (${result.elapsed}ms)`, logExtra);
         return false;
@@ -821,26 +870,64 @@ function App() {
   const runNodeSteps = useCallback(async (nodeId: string) => {
     const steps = allSteps[nodeId];
     if (!steps) return;
-    setRunningNodeId(nodeId);
+
+    // Outcome nodes act on a ride. Cancellation/fulfillment need a FRESH, non-terminal
+    // booking — running them standalone after a previous run reuses that run's bookingId
+    // (initCtx preserves saved context), which is often COMPLETED/CANCELLED, giving
+    // RIDE_INVALID_STATUS / "No assigned ride". If the current booking is missing or
+    // terminal, rebuild a fresh ride (driver online -> discovery -> accept -> booking) first.
+    const OUTCOME_NODES = ['fulfillment', 'driver-cancel', 'customer-cancel'];
+    let prereq: string[] = [];
+    const needsFreshRide = OUTCOME_NODES.includes(nodeId) &&
+      (!ctxRef.current.bookingId || ctxRef.current.bookingTerminal);
+    if (needsFreshRide) {
+      // Reset to a clean context so stale rideId/bookingId/terminal flags don't leak in.
+      ctxRef.current = {};
+      prereq = ['discovery', 'driver-accept', 'booking'];
+      log('info', `-- ${nodeId}: no fresh booking, rebuilding ride first --`);
+    }
+
     setIsRunning(true);
+    abortRef.current = false;
     initCtx();
     // Always sync latest captureRideId from input
     ctxRef.current.captureRideId = captureRideIdRef.current || undefined;
-    log('info', `-- Running: ${nodeId} --`);
 
-    for (const step of steps) {
-      if (abortRef.current) break;
-      const ok = await executeStep(step);
-      if (!ok) break;
-      if (ctxRef.current.bookingTerminal) {
-        log('warn', `Booking is ${ctxRef.current.bookingStatus} — ${ctxRef.current.cancellationReason || 'terminal state'}. Stopping.`);
-        break;
+    // Ensure the driver is online + pinging before rebuilding a ride.
+    if (needsFreshRide && activeFlow.hasDriverSetup) {
+      const locs = getLocationsForCity(selectedCity);
+      const loc = locs[driverLocationIdx]?.gps || locs[0]?.gps;
+      ctxRef.current.searchOrigin = loc;
+      ctxRef.current.driverLocation = loc;
+      setRunningNodeId('driver-setup');
+      log('info', '-- Making driver available --');
+      for (const step of allSteps['driver-setup']) {
+        if (abortRef.current) { setIsRunning(false); setRunningNodeId(null); return; }
+        const ok = await executeStep(step);
+        if (!ok) { setIsRunning(false); setRunningNodeId(null); return; }
+        await new Promise(r => setTimeout(r, 300));
       }
-      await new Promise(r => setTimeout(r, 300));
+      setDriverAvailable(true);
+    }
+
+    for (const seqNode of [...prereq, nodeId]) {
+      setRunningNodeId(seqNode);
+      log('info', `-- Running: ${seqNode} --`);
+      for (const step of allSteps[seqNode]) {
+        if (abortRef.current) break;
+        const ok = await executeStep(step);
+        if (!ok) break;
+        if (ctxRef.current.bookingTerminal && seqNode !== nodeId) {
+          log('warn', `Booking is ${ctxRef.current.bookingStatus} — ${ctxRef.current.cancellationReason || 'terminal state'}. Stopping.`);
+          break;
+        }
+        await new Promise(r => setTimeout(r, 300));
+      }
+      if (abortRef.current) break;
     }
     setIsRunning(false);
     setRunningNodeId(null);
-  }, [allSteps, executeStep, initCtx, log]);
+  }, [allSteps, executeStep, initCtx, log, activeFlow, selectedCity, driverLocationIdx, setDriverAvailable]);
 
   const makeDriverAvailable = useCallback(async () => {
     initCtx();

@@ -73,6 +73,40 @@ export const bangaloreLocations: LocationPreset[] = [
   },
 ];
 
+// ===================== CHENNAI (ANNA_APP) =====================
+export const chennaiLocations: LocationPreset[] = [
+  {
+    name: 'Chennai Central Railway Station',
+    city: 'Chennai',
+    gps: { lat: 13.0827, lon: 80.2707 },
+    address: { street: 'Park Town', city: 'Chennai', state: 'Tamil Nadu', country: 'India', area: 'Park Town', areaCode: '600003', title: 'Chennai Central' },
+  },
+  {
+    name: 'Chennai Airport',
+    city: 'Chennai',
+    gps: { lat: 12.9941, lon: 80.1709 },
+    address: { street: 'Tirusulam', city: 'Chennai', state: 'Tamil Nadu', country: 'India', area: 'Tirusulam', areaCode: '600016', title: 'Chennai Airport' },
+  },
+  {
+    name: 'T. Nagar Bus Terminus',
+    city: 'Chennai',
+    gps: { lat: 13.0418, lon: 80.2341 },
+    address: { street: 'Thyagaraya Rd', city: 'Chennai', state: 'Tamil Nadu', country: 'India', area: 'T. Nagar', areaCode: '600017', title: 'T. Nagar' },
+  },
+  {
+    name: 'Anna Nagar Tower Park',
+    city: 'Chennai',
+    gps: { lat: 13.0892, lon: 80.2090 },
+    address: { street: '3rd Avenue', city: 'Chennai', state: 'Tamil Nadu', country: 'India', area: 'Anna Nagar', areaCode: '600040', title: 'Anna Nagar' },
+  },
+  {
+    name: 'Adyar Bus Depot',
+    city: 'Chennai',
+    gps: { lat: 13.0067, lon: 80.2561 },
+    address: { street: 'LB Road', city: 'Chennai', state: 'Tamil Nadu', country: 'India', area: 'Adyar', areaCode: '600020', title: 'Adyar' },
+  },
+];
+
 // ===================== DELHI (BHARAT_TAXI) =====================
 export const delhiLocations: LocationPreset[] = [
   {
@@ -135,10 +169,128 @@ export const helsinkiLocations: LocationPreset[] = [
   },
 ];
 
+// ===================== KOLKATA (JATRI_SAATHI) =====================
+export const kolkataLocations: LocationPreset[] = [
+  {
+    name: 'Howrah Junction Railway Station',
+    city: 'Kolkata',
+    gps: { lat: 22.5830, lon: 88.3426 },
+    address: {
+      street: 'Station Rd',
+      city: 'Howrah',
+      state: 'West Bengal',
+      country: 'India',
+      area: 'Howrah',
+      areaCode: '711101',
+      title: 'Howrah Junction',
+    },
+  },
+  {
+    name: 'Netaji Subhas Chandra Bose International Airport',
+    city: 'Kolkata',
+    gps: { lat: 22.6547, lon: 88.4467 },
+    address: {
+      street: 'Jessore Rd',
+      city: 'Kolkata',
+      state: 'West Bengal',
+      country: 'India',
+      area: 'Dum Dum',
+      areaCode: '700052',
+      title: 'Kolkata Airport',
+    },
+  },
+  {
+    name: 'Esplanade Metro Station',
+    city: 'Kolkata',
+    gps: { lat: 22.5656, lon: 88.3528 },
+    address: {
+      street: 'Jawaharlal Nehru Rd',
+      city: 'Kolkata',
+      state: 'West Bengal',
+      country: 'India',
+      area: 'Esplanade',
+      areaCode: '700069',
+      title: 'Esplanade',
+    },
+  },
+  {
+    name: 'Park Street',
+    city: 'Kolkata',
+    gps: { lat: 22.5519, lon: 88.3527 },
+    address: {
+      street: 'Park St',
+      city: 'Kolkata',
+      state: 'West Bengal',
+      country: 'India',
+      area: 'Park Street',
+      areaCode: '700016',
+      title: 'Park Street',
+    },
+  },
+  {
+    name: 'Salt Lake Sector V',
+    city: 'Kolkata',
+    gps: { lat: 22.5697, lon: 88.4335 },
+    address: {
+      street: 'Sector V',
+      city: 'Kolkata',
+      state: 'West Bengal',
+      country: 'India',
+      area: 'Salt Lake',
+      areaCode: '700091',
+      title: 'Sector V',
+    },
+  },
+  {
+    name: 'Sealdah Railway Station',
+    city: 'Kolkata',
+    gps: { lat: 22.5676, lon: 88.3702 },
+    address: {
+      street: 'Beliaghata Rd',
+      city: 'Kolkata',
+      state: 'West Bengal',
+      country: 'India',
+      area: 'Sealdah',
+      areaCode: '700014',
+      title: 'Sealdah Station',
+    },
+  },
+  {
+    name: 'New Town Eco Park',
+    city: 'Kolkata',
+    gps: { lat: 22.5804, lon: 88.4677 },
+    address: {
+      street: 'Major Arterial Rd',
+      city: 'Kolkata',
+      state: 'West Bengal',
+      country: 'India',
+      area: 'New Town',
+      areaCode: '700156',
+      title: 'Eco Park',
+    },
+  },
+  {
+    name: 'Dakshineswar Kali Temple',
+    city: 'Kolkata',
+    gps: { lat: 22.6551, lon: 88.3573 },
+    address: {
+      street: 'Dakshineswar',
+      city: 'Kolkata',
+      state: 'West Bengal',
+      country: 'India',
+      area: 'Dakshineswar',
+      areaCode: '700076',
+      title: 'Dakshineswar Temple',
+    },
+  },
+];
+
 // Get locations by city name
 export function getLocationsForCity(city: string): LocationPreset[] {
   const cityLower = city.toLowerCase();
   if (cityLower.includes('kochi')) return kochiLocations;
+  if (cityLower.includes('chennai')) return chennaiLocations;
+  if (cityLower.includes('kolkata')) return kolkataLocations;
   if (cityLower.includes('bangalore') || cityLower.includes('bengaluru')) return bangaloreLocations;
   if (cityLower.includes('delhi')) return delhiLocations;
   if (cityLower.includes('helsinki')) return helsinkiLocations;
@@ -146,4 +298,5 @@ export function getLocationsForCity(city: string): LocationPreset[] {
 }
 
 // Get all locations
-export const allLocations = [...kochiLocations, ...bangaloreLocations, ...delhiLocations, ...helsinkiLocations];
+export const allLocations = [...kochiLocations, ...kolkataLocations, ...chennaiLocations, ...bangaloreLocations, ...delhiLocations, ...helsinkiLocations];
+

@@ -5,11 +5,23 @@
 -- point-in-polygon in Haskell, cached in memory) instead of PostGIS at runtime.
 
 UPDATE atlas_app.geometry
-SET geom_geo_json = ST_AsGeoJSON(geom)
-WHERE geom IS NOT NULL
-  AND geom_geo_json IS NULL;
+SET geom_geo_json = ST_AsGeoJSON(
+  CASE
+    WHEN ST_SRID(geom) = 4326 THEN geom
+    WHEN ST_SRID(geom) = 0 THEN ST_SetSRID(geom, 4326)
+    ELSE ST_Transform(geom, 4326)
+  END,
+  6
+)
+WHERE geom IS NOT NULL;
 
 UPDATE atlas_driver_offer_bpp.geometry
-SET geom_geo_json = ST_AsGeoJSON(geom)
-WHERE geom IS NOT NULL
-  AND geom_geo_json IS NULL;
+SET geom_geo_json = ST_AsGeoJSON(
+  CASE
+    WHEN ST_SRID(geom) = 4326 THEN geom
+    WHEN ST_SRID(geom) = 0 THEN ST_SetSRID(geom, 4326)
+    ELSE ST_Transform(geom, 4326)
+  END,
+  6
+)
+WHERE geom IS NOT NULL;

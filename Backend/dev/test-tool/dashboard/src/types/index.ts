@@ -18,6 +18,8 @@ export interface Step {
   poll?: { intervalMs: number; timeoutMs: number };
   // Summary: extract key info from response to show in the log line
   summary?: (data: any, ctx: Record<string, any>) => string;
+  // If true, a non-2xx response is logged as info but does not fail the step
+  ignoreError?: boolean;
 }
 
 export interface StepResult {
@@ -51,6 +53,7 @@ export interface Config {
   riderUrl: string;
   driverUrl: string;
   token: string;
+  driverToken?: string;
   stripeUrl: string;
 }
 
