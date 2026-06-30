@@ -64,6 +64,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
+import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.DriverOnboarding.Digilocker
@@ -75,6 +76,7 @@ import SharedLogic.DriverOnboarding.Digilocker
   )
 import qualified SharedLogic.DriverOnboarding.Digilocker as DigilockerLockerShared
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.Merchant as SMerchant
@@ -411,7 +413,14 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- runInReplica $ QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+  baseCityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+  -- Resolve driver location only when special-zone tier names are configured;
+  -- otherwise this endpoint should avoid an extra LTS call on every preferences refresh.
+  mbSpecialLocationId <-
+    if any (isJust . (.specialZone)) baseCityVehicleServiceTiers
+      then getDriverCurrentSpecialLocationId personId
+      else pure Nothing
+  let cityVehicleServiceTiers = map (CQVST.applySpecialZoneName mbSpecialLocationId) baseCityVehicleServiceTiers
   let personLanguage = fromMaybe ENGLISH person.language
 
   driverVehicleServiceTierTypes <- fetchVehicleTierForDriverWithUsageRestriction False (Just driverInfo) (Just vehicle) Nothing (Just cityVehicleServiceTiers) personId merchantOpCityId
@@ -482,6 +491,19 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
         enableForAirport = driverInfo.enableForAirport,
         airConditioned = mbAirConditioned
       }
+  where
+    getDriverCurrentSpecialLocationId personId' =
+      ( (listToMaybe <$> LTSFlow.driversLocation [personId'])
+          >>= maybe
+            (pure Nothing)
+            ( \loc ->
+                fmap (.id.getId)
+                  <$> QSpecialLocation.findPickupSpecialLocationByLatLong LatLong {lat = loc.lat, lon = loc.lon}
+            )
+      )
+        `C.catchAll` \err -> do
+          logWarning $ "Unable to resolve special location for driver " <> personId'.getId <> ": " <> show err
+          pure Nothing
 
 postDriverUpdateServiceTiers ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
