@@ -44,23 +44,35 @@ jobs:
       - name: Check repl artifacts exist for merge base
         id: artifact-check
         run: |
-          BASE_SHA="${{ steps.merge-base.outputs.sha }}"
-          if mc stat "minio/haskell-cache/cabal-repl/$BASE_SHA/dynamic-offer-driver-app.tar.zst" > /dev/null 2>&1 && \
-             mc stat "minio/haskell-cache/cabal-repl/$BASE_SHA/rider-app.tar.zst" > /dev/null 2>&1 && \
-             mc stat "minio/haskell-cache/cabal-repl/$BASE_SHA/repl-support.tar.zst" > /dev/null 2>&1 && \
-             mc stat "minio/haskell-cache/cabal-repl/$BASE_SHA/cache-root.txt" > /dev/null 2>&1 && \
-             mc stat "minio/haskell-cache/cabal-build/$BASE_SHA/build-path.txt" > /dev/null 2>&1; then
+          MERGE_BASE="${{ steps.merge-base.outputs.sha }}"
+          FOUND_SHA=""
+
+          for sha in $(git log --format='%H' -n 10 "$MERGE_BASE"); do
+            echo "Checking artifacts for $sha..."
+            if mc stat "minio/haskell-cache/cabal-repl/$sha/dynamic-offer-driver-app.tar.zst" > /dev/null 2>&1 && \
+               mc stat "minio/haskell-cache/cabal-repl/$sha/rider-app.tar.zst" > /dev/null 2>&1 && \
+               mc stat "minio/haskell-cache/cabal-repl/$sha/repl-support.tar.zst" > /dev/null 2>&1 && \
+               mc stat "minio/haskell-cache/cabal-repl/$sha/cache-root.txt" > /dev/null 2>&1 && \
+               mc stat "minio/haskell-cache/cabal-build/$sha/build-path.txt" > /dev/null 2>&1; then
+              FOUND_SHA="$sha"
+              echo "Artifacts found for $sha"
+              break
+            fi
+            echo "No artifacts for $sha, trying previous commit..."
+          done
+
+          if [ -n "$FOUND_SHA" ]; then
             echo "found=true" >> $GITHUB_OUTPUT
-            echo "Artifacts found for $BASE_SHA"
+            echo "base_sha=$FOUND_SHA" >> $GITHUB_OUTPUT
           else
-            echo "found=false" >> $GITHUB_OUTPUT
-            echo "::warning::No repl artifacts found for merge base $BASE_SHA — skipping incremental repl check"
+            echo "::error::No repl artifacts found in last 10 commits from merge base $MERGE_BASE — cannot run incremental repl check"
+            exit 1
           fi
 
       - name: Download repl artifacts from MinIO
         if: steps.artifact-check.outputs.found == 'true'
         run: |
-          BASE_SHA="${{ steps.merge-base.outputs.sha }}"
+          BASE_SHA="${{ steps.artifact-check.outputs.base_sha }}"
           mkdir -p /tmp/ny-pr-artifacts
 
           mc cp "minio/haskell-cache/cabal-build/$BASE_SHA/build-path.txt"                   /tmp/ny-pr-artifacts/build-path.txt
@@ -131,7 +143,7 @@ jobs:
               cabal repl dynamic-offer-driver-app \
                 --repl-options='-fno-code -fwrite-interface' \
                 --builddir=dist-newrepl-driver <<< ':quit' 2>&1 | tee /tmp/repl-driver-out.txt
-              grep -qE ': error:' /tmp/repl-driver-out.txt && exit 1 || true
+              grep -q 'Failed' /tmp/repl-driver-out.txt && exit 1 || true
             "
 
       - name: Repl check — rider-app
@@ -176,7 +188,7 @@ jobs:
               cabal repl rider-app \
                 --repl-options='-fno-code -fwrite-interface' \
                 --builddir=dist-newrepl-rider <<< ':quit' 2>&1 | tee /tmp/repl-rider-out.txt
-              grep -qE ': error:' /tmp/repl-rider-out.txt && exit 1 || true
+              grep -q 'Failed' /tmp/repl-rider-out.txt && exit 1 || true
             "
 
       - name: Cleanup
