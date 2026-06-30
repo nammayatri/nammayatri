@@ -256,7 +256,7 @@ updateTollRouteDeviation merchantOpCityId driverId (Just ride) batchWaypoints = 
     QRide.updateDriverDeviatedToTollRoute ride.id isTollPresentOnCurrentRoute
   return (driverDeviatedToTollRoute, isTollPresentOnCurrentRoute)
 
-getTravelledDistanceAndTollInfo :: LocationUpdateFlow m r c => Id DMOC.MerchantOperatingCity -> Maybe Ride -> Meters -> Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool) -> m (Meters, Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool))
+getTravelledDistanceAndTollInfo :: LocationUpdateFlow m r c => Id DMOC.MerchantOperatingCity -> Maybe Ride -> Meters -> Maybe TollsDetector.TollInfo -> m (Meters, Maybe TollsDetector.TollInfo)
 getTravelledDistanceAndTollInfo _ Nothing _ estimatedTollInfo = do
   logInfo "No ride found to get travelled distance"
   return (0, estimatedTollInfo)

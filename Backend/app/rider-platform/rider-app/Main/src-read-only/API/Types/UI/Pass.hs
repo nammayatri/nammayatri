@@ -115,6 +115,7 @@ data PurchasedPassAPIEntity = PurchasedPassAPIEntity
     lastVerifiedVehicleNumber :: Data.Maybe.Maybe Data.Text.Text,
     passEntity :: PassDetailsAPIEntity,
     passNumber :: Data.Text.Text,
+    passPhotoMediaId :: Data.Maybe.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     profilePicture :: Data.Maybe.Maybe Data.Text.Text,
     purchaseDate :: Data.Time.Day,
     startDate :: Data.Time.Day,
