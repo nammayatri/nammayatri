@@ -24,17 +24,22 @@ postZendeskWebhook mbAuth payload = do
   case (payload.ticket_id, payload.status) of
     (Just ticketId, Just status) ->
       when (T.toLower status `elem` ["solved", "closed"]) $
-        handleTicketClosed ticketId
+        handleTicketClosed ticketId (T.toLower status)
     _ -> logWarning "ZendeskWebhook: missing ticket_id or status in payload"
   return Success
 
-handleTicketClosed :: Text -> Flow ()
-handleTicketClosed ticketId = do
+handleTicketClosed :: Text -> Text -> Flow ()
+handleTicketClosed ticketId status = do
   mbSos <- SafetyQSos.findByTicketId (Just ticketId)
   case mbSos of
     Just sos -> do
       SafetyQSos.updateStatus DSos.Resolved sos.id
       logInfo $ "ZendeskWebhook: SOS resolved for ticketId=" <> ticketId
     Nothing -> do
-      QIR.updateIssueStatus ticketId IssueCommon.RESOLVED
-      logInfo $ "ZendeskWebhook: IssueReport closed for ticketId=" <> ticketId
+      if (status == "solved")
+        then do
+          QIR.updateIssueStatus ticketId IssueCommon.RESOLVED
+          logInfo $ "ZendeskWebhook: IssueReport resolved for ticketId=" <> ticketId
+        else do
+          QIR.updateIssueStatus ticketId IssueCommon.CLOSED
+          logInfo $ "ZendeskWebhook: IssueReport closed for ticketId=" <> ticketId
