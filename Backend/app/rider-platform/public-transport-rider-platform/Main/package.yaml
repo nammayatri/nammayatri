@@ -106,6 +106,9 @@ library:
     - condition: flag(Local)
       then:
         ghc-options:
+          - -Wno-ambiguous-fields
+          - -Wno-incomplete-uni-patterns
+          - -Wno-incomplete-record-updates
           - -O0
           - -funfolding-use-threshold20
           - -fno-cse
@@ -130,6 +133,9 @@ executables:
     - condition: flag(Local)
       then:
         ghc-options:
+          - -Wno-ambiguous-fields
+          - -Wno-incomplete-uni-patterns
+          - -Wno-incomplete-record-updates
           - -O0
           - -funfolding-use-threshold20
           - -fno-cse

@@ -13,19 +13,10 @@
     let
       # Packages to exclude from CI builds (not needed for production deployment)
       ciExcludedPackages = [
-        "hunit-tests"
-        "beckn-test"
-        "route-extractor"
-        "mock-public-transport-provider-platform"
-        "public-transport-rider-platform"
-        "public-transport-search-consumer"
         "mock-payment"
-        "mock-rider-platform"
         "sdk-event-pipeline"
         "special-zone"
-        "example-service"
         "safety-dashboard"
-        "search-result-aggregator"
         "beckn-cli"
         "alchemist"
         "arion"
@@ -38,19 +29,11 @@
       ];
       # Apps to exclude from CI builds (devour-flake via om ci run)
       ciExcludedApps = [
-        "hunit-tests"
         "beckn-cli-exe"
-        "route-extractor-exe"
-        "mock-public-transport-provider-platform-exe"
-        "public-transport-rider-platform-exe"
-        "public-transport-search-consumer-exe"
         "mock-payment-exe"
-        "mock-rider-platform-exe"
         "sdk-event-pipeline-exe"
         "special-zone-exe"
-        "example-service-exe"
         "safety-dashboard-exe"
-        "search-result-aggregator-exe"
         "trace"
         "alchemist-generator-exe"
       ];
@@ -145,34 +128,18 @@
           alchemist.custom = cacConfig;
           beckn-cli.custom = cacConfig;
           provider-dashboard.custom = cacConfig;
-          example-service.custom = cacConfig;
-          mock-fcm.custom = cacConfig;
-          mock-google.custom = cacConfig;
-          mock-public-transport-provider-platform.custom = cacConfig;
-          mock-rider-platform.custom = cacConfig;
-          mock-sms.custom = cacConfig;
-          mock-payment.custom = cacConfig;
-          public-transport-rider-platform.custom = cacConfig;
-          public-transport-search-consumer.custom = cacConfig;
           rider-app.custom = cacConfig;
-          search-result-aggregator.custom = cacConfig;
           rider-app-drainer.custom = cacConfig;
           special-zone.custom = cacConfig;
-          image-api-helper.custom = cacConfig;
-          route-extractor.custom = cacConfig;
           dynamic-offer-driver-app.custom = cacConfig;
           producer.custom = cacConfig;
           dynamic-offer-driver-drainer.custom = cacConfig;
           lib-dashboard.custom = cacConfig;
           kafka-consumers.custom = cacConfig;
           driver-offer-allocator.custom = cacConfig;
-          beckn-test.custom = cacConfig;
           rider-dashboard.custom = cacConfig;
-
-
           namma-dsl.libraryProfiling = false;
           location-updates.check = false;
-          beckn-test.check = false;
           singletons-th.jailbreak = true;
           singletons-base = {
             jailbreak = true;
