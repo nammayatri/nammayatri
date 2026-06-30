@@ -1113,7 +1113,7 @@ types:
   Command:
     - enum: "COMMIT,VIEW_DIFF"
   TableName:
-    - enum: "SUBSCRIPTION_CONFIG,PLAN,PLAN_TRANSLATION"
+    - enum: "SUBSCRIPTION_CONFIG,PLAN,PLAN_TRANSLATION,VENDOR_SPLIT_DETAILS"
   UpsertPlanAndConfigResp:
     - respCode: APISuccess
     - executedAction: Action
