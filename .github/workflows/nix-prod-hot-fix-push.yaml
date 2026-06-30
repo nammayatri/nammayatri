@@ -1,11 +1,9 @@
 name: Nix CI (Prod Hot Fix Push)
 
 on:
-  push:
-    branches:
-      - "prodHotPush-Common"
-      - "prodHotPush-BAP"
-      - "prodHotPush-BPP"
+  # Auto-push triggers disabled. Superseded by cabal-prod-hot-fix-push.yaml.
+  # Kept as a manual fallback in case the cabal-based workflow has issues
+  # and we need to fall back to the full nix build path.
   workflow_dispatch:
 
 # Cancel in-progress Pull Request workflows if a new workflow is triggered, or a new commit is pushed to the branch.
