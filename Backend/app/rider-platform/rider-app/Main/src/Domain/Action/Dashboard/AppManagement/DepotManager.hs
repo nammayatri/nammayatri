@@ -46,7 +46,7 @@ postDepotManagerUpsertOne merchantShortId opCity req = do
   result <- withTryCatch "postDepotManagerUpsertOne" $ do
     personId <- findOrCreatePerson merchant req
     let depotId = Id req.depotCode :: Id DDepot.Depot
-    QDepotManagerExtra.upsertDepotManagerDetail merchant merchantOperatingCity personId depotId req.isAdmin req.enabled
+    QDepotManagerExtra.upsertDepotManagerDetail merchant merchantOperatingCity personId depotId req.isAdmin req.enabled req.isBlockAllowed
 
   case result of
     Left _err ->
@@ -81,7 +81,7 @@ postDepotManagerUpsertMany merchantShortId opCity req = do
     result <- withTryCatch "postDepotManagerUpsertMany" $ do
       personId <- findOrCreatePerson merchant item
       let depotId = Id item.depotCode :: Id DDepot.Depot
-      QDepotManagerExtra.upsertDepotManagerDetail merchant merchantOperatingCity personId depotId item.isAdmin item.enabled
+      QDepotManagerExtra.upsertDepotManagerDetail merchant merchantOperatingCity personId depotId item.isAdmin item.enabled item.isBlockAllowed
     case result of
       Left _err -> pure (Left item.mobileNumber)
       Right _ -> pure (Right item.mobileNumber)
@@ -123,6 +123,7 @@ getDepotManagerList merchantShortId _opCity mLimit mOffset = do
                   mobileNumber = mobile,
                   isAdmin = dm.isAdmin,
                   enabled = dm.enabled,
+                  isBlockAllowed = dm.isBlockAllowed,
                   createdAt = dm.createdAt,
                   updatedAt = dm.updatedAt
                 }
@@ -176,6 +177,7 @@ getDepotManagerByMobileNumber merchantShortId _opCity mbMobileNumber mbCountryCo
               mobileNumber = mobileNumber,
               isAdmin = depotManager.isAdmin,
               enabled = depotManager.enabled,
+              isBlockAllowed = depotManager.isBlockAllowed,
               createdAt = depotManager.createdAt,
               updatedAt = depotManager.updatedAt
             }
@@ -208,6 +210,7 @@ getDepotManagerByDepotCode merchantShortId _opCity mbDepotCode mbLimit mbOffset 
                   mobileNumber = mobile,
                   isAdmin = dm.isAdmin,
                   enabled = dm.enabled,
+                  isBlockAllowed = dm.isBlockAllowed,
                   createdAt = dm.createdAt,
                   updatedAt = dm.updatedAt
                 }

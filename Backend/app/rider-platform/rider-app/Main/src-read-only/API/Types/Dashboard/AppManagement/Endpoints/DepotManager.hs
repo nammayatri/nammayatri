@@ -28,6 +28,7 @@ data DepotManagerDetail = DepotManagerDetail
     depotCode :: Kernel.Prelude.Text,
     enabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isAdmin :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isBlockAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     mobileNumber :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
@@ -49,6 +50,7 @@ data DepotManagerInfo = DepotManagerInfo
     depotCode :: Kernel.Prelude.Text,
     enabled :: Kernel.Prelude.Bool,
     isAdmin :: Kernel.Prelude.Bool,
+    isBlockAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     mobileNumber :: Kernel.Prelude.Text,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     updatedAt :: Kernel.Prelude.UTCTime

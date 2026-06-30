@@ -59,8 +59,9 @@ upsertDepotManagerDetail ::
   Id DDepot.Depot ->
   Maybe Bool ->
   Maybe Bool ->
+  Maybe Bool ->
   m ()
-upsertDepotManagerDetail merchant merchantOperatingCity personId depotId mbIsAdmin mbEnabled = do
+upsertDepotManagerDetail merchant merchantOperatingCity personId depotId mbIsAdmin mbEnabled mbIsBlockAllowed = do
   mbExistingDepotManager <- findOneWithDb [Se.Is Beam.personId $ Se.Eq (getId personId)]
   now <- getCurrentTime
   dbConf <- getMasterBeamConfig
@@ -68,6 +69,7 @@ upsertDepotManagerDetail merchant merchantOperatingCity personId depotId mbIsAdm
     Just existing -> do
       let isAdmin = fromMaybe existing.isAdmin mbIsAdmin
           enabled = fromMaybe existing.enabled mbEnabled
+          isBlockAllowed = maybe existing.isBlockAllowed Just mbIsBlockAllowed
       void $
         L.runDB dbConf $
           L.updateRows $
@@ -78,6 +80,7 @@ upsertDepotManagerDetail merchant merchantOperatingCity personId depotId mbIsAdm
                     [ Beam.depotCode row B.<-. B.val_ (getId depotId),
                       Beam.isAdmin row B.<-. B.val_ isAdmin,
                       Beam.enabled row B.<-. B.val_ enabled,
+                      Beam.isBlockAllowed row B.<-. B.val_ isBlockAllowed,
                       Beam.updatedAt row B.<-. B.val_ now
                     ]
               )
@@ -91,6 +94,7 @@ upsertDepotManagerDetail merchant merchantOperatingCity personId depotId mbIsAdm
                 DDepotManager.depotCode = depotId,
                 DDepotManager.enabled = enabled,
                 DDepotManager.isAdmin = isAdmin,
+                DDepotManager.isBlockAllowed = mbIsBlockAllowed,
                 DDepotManager.merchantId = merchant.id,
                 DDepotManager.merchantOperatingCityId = merchantOperatingCity.id,
                 DDepotManager.personId = personId,

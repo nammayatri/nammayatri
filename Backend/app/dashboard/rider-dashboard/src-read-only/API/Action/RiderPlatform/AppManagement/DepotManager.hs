@@ -29,49 +29,49 @@ handler merchantId city = postDepotManagerUpsertOne merchantId city :<|> postDep
 
 type PostDepotManagerUpsertOne =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.DEPOT_MANAGER / 'API.Types.Dashboard.AppManagement.DepotManager.POST_DEPOT_MANAGER_UPSERT_ONE)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.DEPOT_MANAGER) / ('API.Types.Dashboard.AppManagement.DepotManager.POST_DEPOT_MANAGER_UPSERT_ONE))
       :> API.Types.Dashboard.AppManagement.DepotManager.PostDepotManagerUpsertOne
   )
 
 type PostDepotManagerUpsertMany =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.DEPOT_MANAGER / 'API.Types.Dashboard.AppManagement.DepotManager.POST_DEPOT_MANAGER_UPSERT_MANY)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.DEPOT_MANAGER) / ('API.Types.Dashboard.AppManagement.DepotManager.POST_DEPOT_MANAGER_UPSERT_MANY))
       :> API.Types.Dashboard.AppManagement.DepotManager.PostDepotManagerUpsertMany
   )
 
 type GetDepotManagerList =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.DEPOT_MANAGER / 'API.Types.Dashboard.AppManagement.DepotManager.GET_DEPOT_MANAGER_LIST)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.DEPOT_MANAGER) / ('API.Types.Dashboard.AppManagement.DepotManager.GET_DEPOT_MANAGER_LIST))
       :> API.Types.Dashboard.AppManagement.DepotManager.GetDepotManagerList
   )
 
 type DeleteDepotManager =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.DEPOT_MANAGER / 'API.Types.Dashboard.AppManagement.DepotManager.DELETE_DEPOT_MANAGER)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.DEPOT_MANAGER) / ('API.Types.Dashboard.AppManagement.DepotManager.DELETE_DEPOT_MANAGER))
       :> API.Types.Dashboard.AppManagement.DepotManager.DeleteDepotManager
   )
 
 type GetDepotManagerByMobileNumber =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.DEPOT_MANAGER / 'API.Types.Dashboard.AppManagement.DepotManager.GET_DEPOT_MANAGER_BY_MOBILE_NUMBER)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.DEPOT_MANAGER) / ('API.Types.Dashboard.AppManagement.DepotManager.GET_DEPOT_MANAGER_BY_MOBILE_NUMBER))
       :> API.Types.Dashboard.AppManagement.DepotManager.GetDepotManagerByMobileNumber
   )
 
 type GetDepotManagerByDepotCode =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.DEPOT_MANAGER / 'API.Types.Dashboard.AppManagement.DepotManager.GET_DEPOT_MANAGER_BY_DEPOT_CODE)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.DEPOT_MANAGER) / ('API.Types.Dashboard.AppManagement.DepotManager.GET_DEPOT_MANAGER_BY_DEPOT_CODE))
       :> API.Types.Dashboard.AppManagement.DepotManager.GetDepotManagerByDepotCode
   )
 
@@ -81,14 +81,14 @@ postDepotManagerUpsertOne merchantShortId opCity apiTokenInfo req = withFlowHand
 postDepotManagerUpsertMany :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.Dashboard.AppManagement.DepotManager.DepotManagerDetails -> Environment.FlowHandler API.Types.Dashboard.AppManagement.DepotManager.UpsertDepotManagerResp)
 postDepotManagerUpsertMany merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.DepotManager.postDepotManagerUpsertMany merchantShortId opCity apiTokenInfo req
 
-getDepotManagerList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.Dashboard.AppManagement.DepotManager.DepotManagerListResp)
+getDepotManagerList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.Dashboard.AppManagement.DepotManager.DepotManagerListResp)
 getDepotManagerList merchantShortId opCity apiTokenInfo limit offset = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.DepotManager.getDepotManagerList merchantShortId opCity apiTokenInfo limit offset
 
 deleteDepotManager :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.Dashboard.AppManagement.DepotManager.DeleteDepotManagerReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 deleteDepotManager merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.DepotManager.deleteDepotManager merchantShortId opCity apiTokenInfo req
 
-getDepotManagerByMobileNumber :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.AppManagement.DepotManager.DepotManagerInfo)
+getDepotManagerByMobileNumber :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler API.Types.Dashboard.AppManagement.DepotManager.DepotManagerInfo)
 getDepotManagerByMobileNumber merchantShortId opCity apiTokenInfo mobileNumber countryCode = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.DepotManager.getDepotManagerByMobileNumber merchantShortId opCity apiTokenInfo mobileNumber countryCode
 
-getDepotManagerByDepotCode :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.Dashboard.AppManagement.DepotManager.DepotManagerListResp)
+getDepotManagerByDepotCode :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.Dashboard.AppManagement.DepotManager.DepotManagerListResp)
 getDepotManagerByDepotCode merchantShortId opCity apiTokenInfo depotCode limit offset = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.DepotManager.getDepotManagerByDepotCode merchantShortId opCity apiTokenInfo depotCode limit offset

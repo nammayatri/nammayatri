@@ -75,6 +75,7 @@ types:
     depotCode: Text
     isAdmin: Maybe Bool
     enabled: Maybe Bool
+    isBlockAllowed: Maybe Bool
     derive: "'HideSecrets"
 
   DepotManagerDetails:
@@ -98,6 +99,7 @@ types:
     mobileNumber: Text
     isAdmin: Bool
     enabled: Bool
+    isBlockAllowed: Maybe Bool
     createdAt: UTCTime
     updatedAt: UTCTime
 
