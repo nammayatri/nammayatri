@@ -109,6 +109,14 @@ apis:
         endpoint: RideAPI MultipleRideSyncRideEndpoint
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT RIDES MULTIPLE_RIDE_SYNC
   - POST:
+      endpoint: /payoutOfferSync
+      name: PostRidePayoutOfferSync
+      auth: ApiAuthV2
+      request:
+        type: MultipleRideSyncReq
+      response:
+        type: MultipleRideSyncResp
+  - POST:
       endpoint: /cancel
       name: PostRideCancelMultiple
       auth: ApiAuthV2

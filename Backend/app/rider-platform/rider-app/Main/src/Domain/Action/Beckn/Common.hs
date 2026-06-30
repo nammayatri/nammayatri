@@ -160,7 +160,6 @@ import qualified Tools.EventTracking as ET
 import Tools.Maps (LatLong (..))
 import Tools.Metrics (HasBAPMetrics, incrementRideCreatedRequestCount)
 import qualified Tools.Notifications as Notify
-import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as TP
 import qualified Tools.SMS as Sms
 import qualified Tools.Ticket as Ticket
@@ -444,6 +443,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         sosId = Nothing,
         isTierUpgrade = Just isTierUpgrade,
         assignedServiceTierName = assignedServiceTierName,
+        rideTags = Nothing,
         ..
       }
 
@@ -900,44 +900,6 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
         Nothing -> totalFare.amount
       offerBasePrice = mkPrice (Just totalFare.currency) discountApplicableFareAmountTaxIncl
-  -- Persist offer details in Ride OfferEntity table for fast lookup in rideList
-  mbRideOfferEntity <-
-    case booking.selectedOfferId of
-      Just offerId -> do
-        mbOfferDetails <- SOffer.getSelectedOfferDetailsWithBasket booking.merchantId person.id booking.merchantOperatingCityId DOrder.RideHailing (show booking.vehicleServiceTierType) offerBasePrice offerId fareCtx (Just ride) (Just booking) Nothing
-        case mbOfferDetails of
-          Just (offerDetails, computed) -> do
-            rideOfferId <- generateGUID
-            now <- getCurrentTime
-            pure $
-              Just $
-                DOfferEntity.OfferEntity
-                  { id = rideOfferId,
-                    entityId = ride.id.getId,
-                    entityType = DOfferEntity.RIDE,
-                    offerId = offerDetails.offerId,
-                    offerCode = offerDetails.offerCode,
-                    offerTitle = offerDetails.offerTitle,
-                    offerDescription = offerDetails.offerDescription,
-                    offerTnc = offerDetails.offerTnc,
-                    offerSponsoredBy = offerDetails.offerSponsoredBy,
-                    autoApply = offerDetails.autoApply,
-                    isHidden = offerDetails.isHidden,
-                    discountAmount = computed.discountAmount,
-                    payoutAmount = computed.payoutAmount,
-                    amountSaved = computed.amountSaved,
-                    postOfferAmount = computed.postOfferAmount,
-                    merchantId = booking.merchantId,
-                    merchantOperatingCityId = booking.merchantOperatingCityId,
-                    createdAt = now,
-                    updatedAt = now
-                  }
-          Nothing -> pure Nothing
-      Nothing -> pure Nothing
-  whenJust mbRideOfferEntity $ \rideOfferEntity -> do
-    QOfferEntity.create rideOfferEntity
-  let rideDiscountAmount = maybe 0 (.discountAmount) mbRideOfferEntity
-      ridePayoutAmount = maybe 0 (.payoutAmount) mbRideOfferEntity
   let rideCommission = maybe booking.commission Just commission
       updRide =
         ride{status = DRide.COMPLETED,
@@ -952,6 +914,14 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
              rideTags = ride.rideTags <> ((\valid -> ["ValidRide#" <> if valid then "Yes" else "No"] :: [Text]) <$> isValidRide),
              commission = rideCommission
             }
+  -- Persist offer details in Ride OfferEntity table for fast lookup in rideList,
+  -- apply the offer for cash rides, and schedule the cashback-payout job when
+  -- the offer carries a payout.
+  let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
+  mbOfferStatsInput <- if onlinePayment then pure Nothing else Just <$> SPayment.buildOfferStatsInput person
+  mbRideOfferEntity <- SOffer.processRideOffer mbOfferStatsInput booking person updRide offerBasePrice fareCtx
+  let rideDiscountAmount = maybe 0 (.discountAmount) mbRideOfferEntity
+      ridePayoutAmount = maybe 0 (.payoutAmount) mbRideOfferEntity
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
   let shouldUpdateRideComplete =
         case minTripDistanceForReferralCfg of
@@ -981,19 +951,10 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
       addOffersNammaTags updRide person
 
   -- we should create job for collecting money from customer
-  let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
-      applicationFeeAmount' = fromMaybe 0 rideCommission
+  let applicationFeeAmount' = fromMaybe 0 rideCommission
 
   if not onlinePayment
     then do
-      whenJust booking.selectedOfferId $ \offerId -> whenJust mbRideOfferEntity $ \rideOfferEntity -> when riderConfig.enableRideHailingOffers $ do
-        useDomainOffers <- TPayment.useDomainOffers booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing
-        let applyOfferCall = TPayment.offerApply booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing Nothing person.clientSdkVersion
-        offerStatsInput <- SPayment.buildOfferStatsInput person
-        let mbProduct = Just (show booking.vehicleServiceTierType, totalFare.amount)
-        void $
-          withTryCatch "applyOfferWithoutPayment:cashRide" $
-            DPayment.applyOfferWithoutPaymentService ride.id.getId offerId rideOfferEntity.offerCode offerStatsInput (Just rideDiscountAmount) (Just ridePayoutAmount) totalFare.amount totalFare.currency person.merchantId.getId person.merchantOperatingCityId.getId useDomainOffers applyOfferCall ride.createdAt mbProduct
       let riderName = listToMaybe $ catMaybes [person.firstName, person.middleName, person.lastName]
           mbInvCfg = riderConfig.invoiceConfig
           cashLedgerCtx =
@@ -1103,17 +1064,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           logDebug $ "Scheduling execute payment intent job for order: " <> show scheduleAfter
           createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
 
-  let vehicleCategory = DV.castVehicleVariantToVehicleCategory ride.vehicleVariant
-  when (ridePayoutAmount > 0) $ do
-    payoutCfg <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing}) (Just (maybeToList <$> CQPayoutCfg.findByCityIdAndVehicleCategory booking.merchantOperatingCityId vehicleCategory (Just [])))
-    case payoutCfg of
-      Just payoutConfig -> do
-        let cashbackPayoutJobData = ExecuteCashRideCashbackPayoutJobData {personId = person.id}
-            scheduleAfter = Kernel.Utils.Common.secondsToNominalDiffTime (fromIntegral payoutConfig.scheduleCashbackPayoutAfter)
-        createJobIn @_ @'ExecuteCashRideCashbackPayout (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter cashbackPayoutJobData
-      Nothing -> do
-        logError $ "No payout config found for vehicle category - for offers: " <> show vehicleCategory <> " merchant operating city: " <> booking.merchantOperatingCityId.getId
-        pure ()
+  -- Schedule the cashback-payout job after the ledger leg has been created above.
+  SOffer.scheduleCashbackPayoutJob booking updRide person.id ridePayoutAmount
 
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}

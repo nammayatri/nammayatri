@@ -1252,6 +1252,11 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
                     else (stations, routes)
             mkResponse finalStations finalRoutes ([] :: [DRSM.RouteStopMapping]) bppConfig Nothing
 
+  let dedupScheduleRouteCodes mbRouteCodeAndServiceType =
+        nub $
+          filter (\rid -> Just rid /= (fst <$> mbRouteCodeAndServiceType)) $
+            maybe [] (map (.route_id)) mbOppositeTripDetails
+
   transportDataList <-
     withTryCatch
       "getOTPRestServiceReq:getPublicTransportData"
@@ -1266,16 +1271,8 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
         Left _ -> do
           mbRouteCodeAndServiceType :: Maybe (Kernel.Prelude.Text, Maybe Spec.ServiceTierType) <- getRouteCodeAndServiceType mbVehicleLiveRouteInfo merchant merchantOperatingCityId
           lst1 <- mapConcurrently (fetchData mbRouteCodeAndServiceType) integratedBPPConfigs
-          lst2 <-
-            maybe
-              (pure [])
-              ( \oppositeTripDetails ->
-                  concat
-                    <$> mapConcurrently
-                      (\oppositeTripDetail -> mapConcurrently (fetchData (Just (oppositeTripDetail.route_id, snd =<< mbRouteCodeAndServiceType))) integratedBPPConfigs)
-                      oppositeTripDetails
-              )
-              mbOppositeTripDetails
+          let scheduleRouteCodes = dedupScheduleRouteCodes mbRouteCodeAndServiceType
+          lst2 <- concat <$> mapConcurrently (\rid -> mapConcurrently (fetchData (Just (rid, snd =<< mbRouteCodeAndServiceType))) integratedBPPConfigs) scheduleRouteCodes
           return (lst1 <> lst2)
         Right configsWithFeedInfo -> do
           -- Group configs by feed_id and take first config for each feed_id
@@ -1283,7 +1280,8 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
               uniqueConfigs = map (head . snd) $ HashMap.toList configsByFeedId
           mbRouteCodeAndServiceType <- getRouteCodeAndServiceType mbVehicleLiveRouteInfo merchant merchantOperatingCityId
           lst1 <- mapConcurrently (fetchData mbRouteCodeAndServiceType) uniqueConfigs
-          lst2 <- maybe (pure []) (\oppositeTripDetails -> concat <$> mapConcurrently (\oppositeTripDetail -> mapConcurrently (fetchData (Just (oppositeTripDetail.route_id, snd =<< mbRouteCodeAndServiceType))) uniqueConfigs) oppositeTripDetails) mbOppositeTripDetails
+          let scheduleRouteCodes = dedupScheduleRouteCodes mbRouteCodeAndServiceType
+          lst2 <- concat <$> mapConcurrently (\rid -> mapConcurrently (fetchData (Just (rid, snd =<< mbRouteCodeAndServiceType))) uniqueConfigs) scheduleRouteCodes
           return (lst1 <> lst2)
 
   gtfsVersion <-
