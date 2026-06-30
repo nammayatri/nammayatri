@@ -40,9 +40,6 @@ library:
     - condition: flag(Local)
       then:
         ghc-options:
-          - -Wno-ambiguous-fields
-          - -Wno-incomplete-uni-patterns
-          - -Wno-incomplete-record-updates
           - -O0
           - -j4
       else:
