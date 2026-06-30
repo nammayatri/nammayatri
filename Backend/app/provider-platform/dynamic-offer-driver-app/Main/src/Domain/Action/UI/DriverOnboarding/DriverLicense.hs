@@ -205,13 +205,20 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
   let runBody = do
         when (VC.isNameCompareRequired transporterConfig verifyBy) $
           VC.validateDocument merchantId merchantOpCityId person.id nameOnTheCard dateOfBirth Nothing DTO.DriverLicense VC.DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
-        mdriverLicense <- Query.findByDLNumber driverLicenseNumber
+        mbExistingLicense <- Query.findByDLNumber driverLicenseNumber
+        let mdriverLicense =
+              mbExistingLicense >>= \dl ->
+                if dl.verificationStatus == Documents.INVALID
+                  then Nothing
+                  else Just dl
         case mdriverLicense of
           Just driverLicense -> do
+            when (driverLicense.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $
+              throwError $ DocumentUnderManualReview "DL"
             when (driverLicense.driverId /= personId) $
               if fromMaybe False documentVerificationConfig.allowLicenseTransfer
                 then do
-                  mDriverDL <- Query.findByDriverId personId
+                  mDriverDL <- Query.findByDriverIdAndVerificationStatus personId Documents.VALID
                   whenJust mDriverDL $ \_ -> throwImageError imageId1 DriverAlreadyLinked
                 else do
                   -- Fleet-aware duplicate check: single query for both drivers' fleet associations
@@ -236,7 +243,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
                 verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
               else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
           Nothing -> do
-            mDriverDL <- Query.findByDriverId personId
+            mDriverDL <- Query.findByDriverIdAndVerificationStatus personId Documents.VALID
             when (isJust mDriverDL) $ do
               Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
               throwImageError imageId1 DriverAlreadyLinked
