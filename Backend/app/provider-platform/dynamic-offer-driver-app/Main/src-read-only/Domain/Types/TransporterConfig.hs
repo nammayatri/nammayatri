@@ -456,7 +456,8 @@ data InvoiceConfig = InvoiceConfig
     invoiceSellerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     invoiceSellerTradeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     logoUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl,
-    showVatInputLineItem :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    showVatInputLineItem :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    useFareBreakupLineItems :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, (Show), (ToJSON), (FromJSON), (Eq))
 

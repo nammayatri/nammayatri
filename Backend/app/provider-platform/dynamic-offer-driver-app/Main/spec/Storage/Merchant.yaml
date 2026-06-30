@@ -1018,6 +1018,7 @@ TransporterConfig:
       driverInvoiceLineItemsVatInclusive: Bool
       emitLedgerEntries: Bool
       showVatInputLineItem: Maybe Bool
+      useFareBreakupLineItems: Maybe Bool
       logoUrl: Maybe BaseUrl
       commissionAggregationEnabled: Maybe Bool
       commissionAggregationFrequency: Maybe CommissionAggregationFrequency
