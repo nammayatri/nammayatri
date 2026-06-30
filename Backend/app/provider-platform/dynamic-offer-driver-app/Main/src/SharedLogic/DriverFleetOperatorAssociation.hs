@@ -371,7 +371,6 @@ performAssociationChange merchant merchantOpCity requestorId subjectId operatorC
           Just old | old.operatorId == newOperator.id.getId -> pure ()
           _ -> do
             AC.withAssociation (AC.guardNoLiveRideInFleet fleetOwnerId) $ do
-              fleetDriverIds <- QFDA.getActiveDriverIdsByFleetOwnerId fleetOwnerId
               whenJust mbActiveAssociation $ \old -> QFOA.endFleetOperatorAssociation (Id old.fleetOwnerId) (Id old.operatorId)
               newAssoc <- makeFleetOperatorAssociation merchant'.id moc'.id fleetOwnerId newOperator.id.getId defaultAssociationEnd
               QFOA.create newAssoc

@@ -246,6 +246,14 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
     rcs <- RCQuery.findAllById (map (.rcId) allLinkedRCs)
     let validLinkedRCs = Kernel.Prelude.filter (\rc -> rc.verificationStatus /= Documents.INVALID) rcs
     unless (length validLinkedRCs < (transporterConfig.rcLimit + (if isDashboard then 1 else 0))) $ throwError (RCLimitReached transporterConfig.rcLimit)
+  when
+    ( person.role == Person.DRIVER && isNothing mbFleetOwnerId
+        && transporterConfig.blockDriverOwnRCForFleetDrivers == Just True
+    )
+    $ do
+      mbFleetAssoc <- FDA.findByDriverId personId True
+      whenJust mbFleetAssoc $ \_ ->
+        throwError (InvalidRequest "Fleet drivers cannot register their own vehicle. Use a fleet vehicle.")
   let mbAirConditioned = maybe req.airConditioned (\category -> if category `elem` [DVC.CAR, DVC.AMBULANCE, DVC.BUS] then req.airConditioned else Just False) req.vehicleCategory
       (mbOxygen, mbVentilator) = maybe (req.oxygen, req.ventilator) (\category -> if category == DVC.AMBULANCE then (req.oxygen, req.ventilator) else (Just False, Just False)) req.vehicleCategory
 
