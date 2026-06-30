@@ -1259,7 +1259,7 @@ applyOfferWithoutPaymentService ::
   UTCTime ->
   Maybe (Text, HighPrecMoney) -> -- mbProduct: (serviceTierType, amount) for basket
   m ()
-applyOfferWithoutPaymentService referenceId offerId offerCode offerStatsInput discountAmount payoutAmount orderAmount currency merchantId merchantOperatingCityId useDomainOffers applyOfferCall rideCreatedAt mbProduct = do
+applyOfferWithoutPaymentService referenceId offerId offerCode offerStatsInput discountAmount payoutAmount orderDiscountApplicableAmount currency merchantId merchantOperatingCityId useDomainOffers applyOfferCall rideCreatedAt mbProduct = do
   existingOffers <- QOfflineOffer.findByReferenceId referenceId
   when (null existingOffers) $ do
     now <- getCurrentTime
@@ -1277,7 +1277,7 @@ applyOfferWithoutPaymentService referenceId offerId offerCode offerStatsInput di
             { txnId = referenceId,
               offers = [offerId],
               customer = customer,
-              amount = orderAmount,
+              amount = orderDiscountApplicableAmount,
               currency = currency,
               planId = "dummy-not-required",
               registrationDate = addUTCTime 19800 rideCreatedAt, -- ist time
