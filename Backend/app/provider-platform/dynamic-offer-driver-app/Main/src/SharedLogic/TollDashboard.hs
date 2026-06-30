@@ -29,7 +29,6 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common
 import qualified Toll.Domain.Types.Toll as Toll
 import Toll.Domain.Types.TollGate
   ( TollGate (..),
@@ -49,6 +48,8 @@ tollToAPIEntity Toll.Toll {..} =
       tollEndGates = map tollGateToAPI tollEndGates,
       isAutoRickshawAllowed = isAutoRickshawAllowed,
       isTwoWheelerAllowed = isTwoWheelerAllowed,
+      isAutoRickshawTollChargeApplicable = isAutoRickshawTollChargeApplicable,
+      isTwoWheelerTollChargeApplicable = isTwoWheelerTollChargeApplicable,
       merchantId = merchantId,
       merchantOperatingCityId = merchantOperatingCityId
     }
@@ -92,15 +93,16 @@ mkTollFromUpsertReq req tollId now merchantOpCityId merchantId mbExisting =
       tollEndGates = map tollGateFromAPI req.tollEndGates,
       isAutoRickshawAllowed = req.isAutoRickshawAllowed,
       isTwoWheelerAllowed = req.isTwoWheelerAllowed,
+      isAutoRickshawTollChargeApplicable = Just $ fromMaybe (maybe False (fromMaybe False . (.isAutoRickshawTollChargeApplicable)) mbExisting) req.isAutoRickshawTollChargeApplicable,
+      isTwoWheelerTollChargeApplicable = Just $ fromMaybe (maybe False (fromMaybe False . (.isTwoWheelerTollChargeApplicable)) mbExisting) req.isTwoWheelerTollChargeApplicable,
       merchantId = Just merchantId,
       merchantOperatingCityId = Just merchantOpCityId,
       createdAt = maybe now (.createdAt) mbExisting,
       updatedAt = now
     }
 
-invalidateTollCache :: (CacheFlow m r) => Text -> m ()
-invalidateTollCache merchantOpCityId =
-  Hedis.del $ CQToll.makeTollsKeyByMerchantOperatingCityId merchantOpCityId
+invalidateTollCache :: Hedis.HedisFlow m r => Text -> m ()
+invalidateTollCache = CQToll.clearCache
 
 applyPagination :: Maybe Int -> Maybe Int -> [a] -> [a]
 applyPagination mbLimit mbOffset items =

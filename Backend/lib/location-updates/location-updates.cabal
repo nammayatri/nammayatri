@@ -28,6 +28,7 @@ library
   exposed-modules:
       Lib.LocationUpdates
       Lib.LocationUpdates.Internal
+      Lib.LocationUpdates.TollTypes
   other-modules:
       Paths_location_updates
   hs-source-dirs:
