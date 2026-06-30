@@ -348,9 +348,6 @@ data SAPEntryType
   | ChargebackEntry
   deriving (Show)
 
--- | Human-readable description sent to SAP (headerdesc) and stored on the
--- journal entry. Kept distinct from the `Show` instance (constructor names) so
--- the values match the finance spec / dashboard, not the Haskell type.
 entryDescription :: SAPEntryType -> Text
 entryDescription SubscriptionPurchase = "Online Subscription Sale"
 entryDescription PGSettlementOrder = "Online Subscription PG Settlement"
