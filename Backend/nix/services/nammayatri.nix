@@ -619,20 +619,27 @@ in
                   fi
                   echo "cache-restore: connected to MinIO at $MINIO_ENDPOINT"
 
-                  # ── Find most recent cached commit in MinIO ──
-                  # Use mc find to locate all tarballs, sort by modification
-                  # time (most recent first), and pick the newest one.
+                  # ── Find nearest ancestor commit that has a cache in MinIO ──
+                  # Walk the user's git history and pick the first commit with a cache.
+                  # If no ancestor matches, skip and let cabal build from scratch.
                   FOUND_SHA=""
-                  FOUND_SHA=$(mc find "nycache/haskell-cache/cabal-build/" \
-                    --name "dist-newstyle.tar.zst" --json 2>/dev/null \
-                    | jq -rs 'sort_by(.lastModified) | reverse | .[0].key // empty' \
-                    | sed -n 's|.*/cabal-build/\([^/]*\)/dist-newstyle.tar.zst|\1|p')
-
-                  if [ -z "$FOUND_SHA" ]; then
-                    echo "cache-restore: no cached commit found in MinIO, skipping"
+                  GIT_SHAS=$(git log --format='%H' -n 50 2>/dev/null || true)
+                  if [ -z "$GIT_SHAS" ]; then
+                    echo "cache-restore: no git history found (ensure .git is synced), skipping"
                     exit 0
                   fi
-                  echo "cache-restore: found most recent cache for commit $FOUND_SHA"
+                  for sha in $GIT_SHAS; do
+                    if mc stat "nycache/haskell-cache/cabal-build/$sha/dist-newstyle.tar.zst" >/dev/null 2>&1; then
+                      FOUND_SHA="$sha"
+                      break
+                    fi
+                  done
+
+                  if [ -z "$FOUND_SHA" ]; then
+                    echo "cache-restore: no cached ancestor commit found in MinIO (checked last 50), skipping"
+                    exit 0
+                  fi
+                  echo "cache-restore: found cache for ancestor commit $FOUND_SHA"
 
                   # ── Download and extract ──
                   TMPFILE=$(mktemp /tmp/dist-newstyle-XXXXXX.tar.zst)

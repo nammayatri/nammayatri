@@ -124,6 +124,8 @@ data DriverInformationT f = DriverInformationT
     totalReferred :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     tripDistanceMaxThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     tripDistanceMinThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
+    unhygienicVehicleViolationCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    vehicleUnsafeViolationCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     verified :: B.C f Kernel.Prelude.Bool,
     weeklyCancellationRateBlockingCooldown :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     weeklyExtraKms :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),

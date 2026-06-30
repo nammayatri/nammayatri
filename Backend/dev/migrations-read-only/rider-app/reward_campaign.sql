@@ -34,7 +34,6 @@ ALTER TABLE atlas_app.reward_campaign ALTER COLUMN claim_mode SET DEFAULT 'AutoC
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.reward_campaign ALTER COLUMN reclaim_policy TYPE jsonb USING CASE WHEN reclaim_policy IS NULL OR reclaim_policy = '' THEN NULL ELSE reclaim_policy::jsonb END;
 
 
 ------- SQL updates -------

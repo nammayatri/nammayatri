@@ -908,7 +908,7 @@ import uuid as _uuid
 from collections import deque as _deque
 
 REMOTE_EXCLUDES = [
-    ".git", "data", "node_modules", "dist-newstyle",
+    "data", "node_modules", "dist-newstyle",
     "dist", ".direnv", "_build", "result", "result-*",
     ".cabal-dir",
     "Frontend/android-native", "Frontend/ios",
@@ -1576,7 +1576,7 @@ def remote_cabal_clean(body: dict) -> dict:
     session = _remote_session_make("cabal-clean", host)
     _remote_register(session)
 
-    inner = "cd Backend && rm -rf dist-newstyle .ci-project-root .ci-cabal-dir"
+    inner = "cd Backend && rm -rf dist-newstyle .ci-project-root .ci-cabal-dir .cabal-dir .nix-deps"
 
     if _is_localhost(host):
         argv = ["bash", "-lc", f"cd {PROJECT_ROOT} && {inner}"]
