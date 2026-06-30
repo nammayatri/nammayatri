@@ -196,6 +196,7 @@ data DSelectRes = DSelectRes
     driverPreference :: Maybe [Text],
     mbJourneyId :: Maybe (Id DJ.Journey),
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
+    paymentInstrument :: Maybe DMPM.PaymentInstrument,
     paymentMode :: Maybe DMPM.PaymentMode,
     emailDomain :: Maybe Text
   }
