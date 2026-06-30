@@ -256,6 +256,10 @@ DriverLicense:
     findByDriverId:
       kvFunction: findOneWithKV
       where: driverId
+    findByDriverIdAndVerificationStatus:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, verificationStatus]
     deleteByDriverId:
       kvFunction: deleteWithKV
       where: driverId

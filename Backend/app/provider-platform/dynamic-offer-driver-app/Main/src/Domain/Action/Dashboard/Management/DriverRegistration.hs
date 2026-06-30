@@ -1396,7 +1396,7 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
       licenseNumber <- mapM encrypt req.driverLicenseNumber
       -- Check for duplicate DL number if being changed
       whenJust req.driverLicenseNumber $ \dlNum -> do
-        mbExistingDL <- QDL.findByDLNumber dlNum
+        mbExistingDL <- QDL.findByDLNumberAndStatus dlNum Documents.VALID
         whenJust mbExistingDL $ \existingDL ->
           when (existingDL.driverId /= dl.driverId) $
             throwError DLAlreadyLinked
@@ -1435,12 +1435,12 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
           let driverId = dlImage.personId
           -- Check if DL number is already linked to another driver
           encryptedDLNumber <- encrypt dlNumber
-          mbExistingDL <- QDL.findByDLNumber dlNumber
+          mbExistingDL <- QDL.findByDLNumberAndStatus dlNumber Documents.VALID
           whenJust mbExistingDL $ \existingDL ->
             when (existingDL.driverId /= driverId) $
               throwError DLAlreadyLinked
           -- Check if driver already has a DL
-          mbDriverDL <- QDL.findByDriverId driverId
+          mbDriverDL <- QDL.findByDriverIdAndVerificationStatus driverId Documents.VALID
           whenJust mbDriverDL $ \_ ->
             throwError DriverAlreadyLinked
           now <- getCurrentTime
