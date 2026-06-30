@@ -107,6 +107,7 @@ types:
     deviceMismatch: Bool
     deviceSwitchAllowed: Bool
     profilePicture: Maybe Text
+    passPhotoMediaId: Maybe (Id MediaFile)
     futureRenewals: [PurchasedPassTransactionAPIEntity]
     isPreferredSourceAndDestinationSet: Bool
     derive: "Show"

@@ -21,7 +21,9 @@ instance FromTType' Beam.Toll Toll.Domain.Types.Toll.Toll where
         Toll.Domain.Types.Toll.Toll
           { id = Kernel.Types.Id.Id id,
             isAutoRickshawAllowed = isAutoRickshawAllowed,
+            isAutoRickshawTollChargeApplicable = isAutoRickshawTollChargeApplicable,
             isTwoWheelerAllowed = isTwoWheelerAllowed,
+            isTwoWheelerTollChargeApplicable = isTwoWheelerTollChargeApplicable,
             name = name,
             price = Kernel.Types.Common.mkPrice currency price,
             tollEndGates = tollEndGates,
@@ -37,7 +39,9 @@ instance ToTType' Beam.Toll Toll.Domain.Types.Toll.Toll where
     Beam.TollT
       { Beam.id = Kernel.Types.Id.getId id,
         Beam.isAutoRickshawAllowed = isAutoRickshawAllowed,
+        Beam.isAutoRickshawTollChargeApplicable = isAutoRickshawTollChargeApplicable,
         Beam.isTwoWheelerAllowed = isTwoWheelerAllowed,
+        Beam.isTwoWheelerTollChargeApplicable = isTwoWheelerTollChargeApplicable,
         Beam.name = name,
         Beam.currency = ((Kernel.Prelude.Just . (.currency))) price,
         Beam.price = (.amount) price,

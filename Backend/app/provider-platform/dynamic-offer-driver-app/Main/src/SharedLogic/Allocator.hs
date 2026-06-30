@@ -97,6 +97,8 @@ data AllocatorJobType
   | ScheduledTDSDistribution
   | IffcoTokioInsurance
   | AggregatedCommissionInvoiceCreation
+  | SAPSubscriptionPurchaseDispatch
+  | SAPPGSettlementDispatch
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -150,6 +152,8 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SScheduledTDSDistribution jobData = AnyJobInfo <$> restoreJobInfo SScheduledTDSDistribution jobData
   restoreAnyJobInfo SIffcoTokioInsurance jobData = AnyJobInfo <$> restoreJobInfo SIffcoTokioInsurance jobData
   restoreAnyJobInfo SAggregatedCommissionInvoiceCreation jobData = AnyJobInfo <$> restoreJobInfo SAggregatedCommissionInvoiceCreation jobData
+  restoreAnyJobInfo SSAPSubscriptionPurchaseDispatch jobData = AnyJobInfo <$> restoreJobInfo SSAPSubscriptionPurchaseDispatch jobData
+  restoreAnyJobInfo SSAPPGSettlementDispatch jobData = AnyJobInfo <$> restoreJobInfo SSAPPGSettlementDispatch jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -627,3 +631,35 @@ data AggregatedCommissionInvoiceCreationJobData = AggregatedCommissionInvoiceCre
 instance JobInfoProcessor 'AggregatedCommissionInvoiceCreation
 
 type instance JobContent 'AggregatedCommissionInvoiceCreation = AggregatedCommissionInvoiceCreationJobData
+
+data SAPSubscriptionPurchaseDispatchJobData = SAPSubscriptionPurchaseDispatchJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    scheduledTime :: TimeOfDay,
+    timeDiffFromUtc :: Seconds,
+    maxApiRetries :: Int,
+    startTime :: UTCTime,
+    endTime :: UTCTime,
+    scheduleNextJob :: Maybe Bool
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SAPSubscriptionPurchaseDispatch
+
+type instance JobContent 'SAPSubscriptionPurchaseDispatch = SAPSubscriptionPurchaseDispatchJobData
+
+data SAPPGSettlementDispatchJobData = SAPPGSettlementDispatchJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    scheduledTime :: TimeOfDay,
+    timeDiffFromUtc :: Seconds,
+    maxApiRetries :: Int,
+    startTime :: UTCTime,
+    endTime :: UTCTime,
+    scheduleNextJob :: Maybe Bool
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SAPPGSettlementDispatch
+
+type instance JobContent 'SAPPGSettlementDispatch = SAPPGSettlementDispatchJobData
