@@ -1088,7 +1088,7 @@ buildSearchReqLocation :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantO
 buildSearchReqLocation merchantId merchantOpCityId sessionToken address customerLanguage latLong@Maps.LatLong {..} = do
   updAddress <- case address of
     Just loc
-      | customerLanguage == Just Maps.ENGLISH && isJust loc.ward ->
+      | fromMaybe Maps.ENGLISH customerLanguage == Maps.ENGLISH && isJust loc.ward ->
         pure $
           Address
             { areaCode = loc.area_code,
