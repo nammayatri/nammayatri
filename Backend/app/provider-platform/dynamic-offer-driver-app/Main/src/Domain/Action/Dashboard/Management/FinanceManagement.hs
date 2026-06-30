@@ -8,6 +8,8 @@ module Domain.Action.Dashboard.Management.FinanceManagement
     getFinanceManagementFinancePaymentGatewayTransactionList,
     getFinanceManagementFinanceWalletLedger,
     getFinanceManagementFinanceInvoicePdf,
+    getFinanceManagementFinanceSapJournals,
+    getFinanceManagementFinanceSapJournalsTransactions,
   )
 where
 
@@ -46,6 +48,7 @@ import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerEntry
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as PgPaymentSettlementReport
 import qualified Lib.Finance.Domain.Types.ReconciliationEntry as ReconciliationEntry
 import qualified Lib.Finance.Domain.Types.ReconciliationSummary as ReconSummary
+import qualified Lib.Finance.Domain.Types.SapJournalEntry as SJE
 import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
 import qualified Lib.Finance.Ledger.Service as LedgerService
@@ -59,6 +62,7 @@ import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntryExt
 import qualified Lib.Finance.Storage.Queries.PgPaymentSettlementReportExtra as QPgPaymentSettlementReport
 import qualified Lib.Finance.Storage.Queries.ReconciliationEntryExtra as QReconEntryExtra
 import qualified Lib.Finance.Storage.Queries.ReconciliationSummaryExtra as QReconSummaryExtra
+import qualified Lib.Finance.Storage.Queries.SapJournalEntryExtra as QSapJournalEntry
 import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as PaymentTransaction
 import qualified Lib.Payment.Domain.Types.Refunds as PaymentRefund
@@ -1423,3 +1427,111 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
       { pdfBase64 = pdfBase64,
         invoiceNumber = chosenInv.invoiceNumber
       }
+
+getFinanceManagementFinanceSapJournals ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Maybe Text ->
+  Flow API.SapJournalListRes
+getFinanceManagementFinanceSapJournals merchantShortId opCity mbBatchId mbBelnr mbDateFrom mbDateTo mbLimit mbOffset mbStatus mbTransactionType = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let limitVal = mkPageLimit mbLimit
+      mbTxnType = mbTransactionType >>= readMaybe . toString
+      mbSt = mbStatus >>= readMaybe . toString
+  entries <- QSapJournalEntry.findByMerchantIdWithFilters merchant.id.getId merchantOpCityId.getId mbDateFrom mbDateTo mbTxnType mbSt mbBatchId mbBelnr (Just limitVal) mbOffset
+  let totalItems = length entries
+      summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
+      journals = map toSapJournalItem entries
+  pure API.SapJournalListRes {totalItems, summary, journals}
+
+getFinanceManagementFinanceSapJournalsTransactions ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  UTCTime ->
+  UTCTime ->
+  Text ->
+  Flow API.SapJournalTransactionsRes
+getFinanceManagementFinanceSapJournalsTransactions merchantShortId opCity mbLimit mbOffset periodEndTime periodStartTime transactionType = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  case transactionType of
+    "SubscriptionPurchase" -> do
+      rows <- QSubscriptionPurchase.findSubscriptionPurchasesWithTaxByDateRange merchantOpCityId periodStartTime periodEndTime mbLimit mbOffset
+      let items = map subscriptionToTransactionItem rows
+      pure API.SapJournalTransactionsRes {total = length items, transactions = items}
+    _ -> do
+      txnType <- parseTxnType transactionType
+      reports <- QPgPaymentSettlementReport.findByTxnDateRangeAndTxnType merchant.id.getId merchantOpCityId.getId periodStartTime periodEndTime txnType mbLimit mbOffset
+      let items = map pgSettlementToTransactionItem reports
+      pure API.SapJournalTransactionsRes {total = length items, transactions = items}
+  where
+    subscriptionToTransactionItem :: (Text, HighPrecMoney, HighPrecMoney, HighPrecMoney, HighPrecMoney, HighPrecMoney, UTCTime) -> API.SapJournalTransactionItem
+    subscriptionToTransactionItem (spId, planFee, cgst, sgst, igst, taxableValue, purchaseTimestamp) =
+      API.SapJournalTransactionItem
+        { debitAmount = planFee,
+          creditAmount = cgst + sgst + igst + taxableValue,
+          currency = "INR",
+          description = "Subscription Purchase",
+          subscriptionId = Just spId,
+          creationDate = purchaseTimestamp,
+          createdBy = "System"
+        }
+
+    pgSettlementToTransactionItem :: PgPaymentSettlementReport.PgPaymentSettlementReport -> API.SapJournalTransactionItem
+    pgSettlementToTransactionItem r =
+      let amount = case r.txnType of
+            PgPaymentSettlementReport.ORDER -> r.txnAmount
+            PgPaymentSettlementReport.REFUND -> fromMaybe 0 r.refundAmount
+            PgPaymentSettlementReport.CHARGEBACK -> fromMaybe 0 r.chargebackAmount
+       in API.SapJournalTransactionItem
+            { debitAmount = amount,
+              creditAmount = amount,
+              currency = show r.currency,
+              description = show r.txnType,
+              subscriptionId = r.subscriptionPurchaseId,
+              creationDate = r.createdAt,
+              createdBy = fromMaybe "System" r.createdBy
+            }
+
+    parseTxnType :: (MonadThrow m, Log m) => Text -> m PgPaymentSettlementReport.TxnType
+    parseTxnType = \case
+      "Order" -> pure PgPaymentSettlementReport.ORDER
+      "Refund" -> pure PgPaymentSettlementReport.REFUND
+      "Chargeback" -> pure PgPaymentSettlementReport.CHARGEBACK
+      other -> throwError $ InvalidRequest ("Invalid transactionType: " <> other)
+
+toSapJournalItem :: SJE.SapJournalEntry -> API.SapJournalItem
+toSapJournalItem entry =
+  API.SapJournalItem
+    { id = entry.id.getId,
+      belnr = entry.belnr,
+      batchId = entry.batchId,
+      blart = entry.blart,
+      transactionType = show entry.transactionType,
+      description = entry.description,
+      budat = entry.budat,
+      bldat = entry.bldat,
+      gjahr = entry.gjahr,
+      totalDebitAmount = entry.totalDebitAmount,
+      totalCreditAmount = entry.totalCreditAmount,
+      currency = show entry.currency,
+      transactionCount = entry.transactionCount,
+      glNumber = entry.glNumber,
+      glName = entry.glName,
+      sapMessage = entry.sapMessage,
+      status = show entry.status,
+      merchantId = entry.merchantId,
+      merchantOperatingCityId = entry.merchantOperatingCityId,
+      createdAt = entry.createdAt,
+      updatedAt = entry.updatedAt
+    }

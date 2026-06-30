@@ -128,6 +128,7 @@ PgPaymentSettlementReport:
     # --- Order classification ---
     orderType: Maybe OrderType                     # SUBSCRIPTION | PAYOUT_REGISTRATION
     isValidSubscriptionPurchase: Maybe Bool
+    subscriptionPurchaseId: Maybe Text
 
     # --- Reconciliation result ---
     reconStatus: ReconStatus                       # Set to UNMATCHED on ingest; updated by recon job

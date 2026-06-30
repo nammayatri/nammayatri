@@ -47,7 +47,7 @@ ingestPaymentSettlementReport ::
   Maybe JuspayOrderStatusConfig ->
   Text ->
   Text ->
-  (Text -> m (Maybe Dom.OrderType, Maybe Bool)) ->
+  (Text -> m (Maybe Dom.OrderType, Maybe Bool, Maybe Text)) ->
   m IngestionResult
 ingestPaymentSettlementReport cfg mbJuspayCfg merchantId merchantOperatingCityId resolveOrderType = do
   logInfo $ "Starting settlement report ingestion for merchant: " <> merchantId
@@ -160,7 +160,7 @@ storeParseResult ::
   Text ->
   Text ->
   Maybe Text ->
-  (Text -> m (Maybe Dom.OrderType, Maybe Bool)) ->
+  (Text -> m (Maybe Dom.OrderType, Maybe Bool, Maybe Text)) ->
   ParsePaymentSettlementResult ->
   m IngestionResult
 storeParseResult merchantId merchantOperatingCityId mbBankCode resolveOrderType parseResult = do
