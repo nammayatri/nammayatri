@@ -140,6 +140,7 @@ import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleCategory as Enums
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
+import qualified Domain.Types.VendorSplitDetails as DVSD
 import qualified Domain.Types.WhiteListOrg as WLO
 import Environment
 import qualified EulerHS.Language as L
@@ -221,6 +222,7 @@ import qualified Storage.CachedQueries.Plan as CQPlan
 import qualified Storage.CachedQueries.PlanTranslation as SCQPT
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.CachedQueries.VendorSplitDetails as CQVSD
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.DriverPoolConfig (DriverPoolConfigDimensions (..))
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
@@ -249,6 +251,7 @@ import qualified Storage.Queries.RegistryMapFallback as QRMF
 import qualified Storage.Queries.SubscriptionConfig as QSC
 import qualified Storage.Queries.ValueAddNP as SQVNP
 import qualified Storage.Queries.VehicleServiceTier as QVST
+import qualified Storage.Queries.VendorSplitDetails as QVSD
 import qualified Storage.Queries.WhiteListOrg as QWLO
 import qualified Toll.Domain.Types.Toll as Toll
 import qualified Toll.Storage.CachedQueries.Toll as CQToll
@@ -4136,26 +4139,14 @@ postMerchantConfigClearCacheSubscription merchantShortId opCity req = do
     Just Common.PLAN -> clearPlanCache merchantOpCity
     Just Common.SUBSCRIPTION_CONFIG -> clearSubscriptionConfigCache merchantOpCity req.serviceName
     Just Common.PLAN_TRANSLATION -> clearPlanTranslation
+    Just Common.VENDOR_SPLIT_DETAILS -> clearVendorSplitCache merchantOpCity
     Nothing -> clearPlanCache merchantOpCity
   where
     clearPlanCache merchantOpCity = do
       plans <- QPlan.fetchAllPlanByMerchantOperatingCityMbServiceName merchantOpCity.id (castServiceName <$> req.serviceName)
       let plansToClearCache = filter (filterCriteriaPlan req.serviceName (Id <$> req.planId)) plans
-      forM_ plansToClearCache $ \plan -> do
-        let keysToClear =
-              [ CQPlan.makeAllPlanKey,
-                CQPlan.makePlanIdAndPaymentModeKey plan.id plan.paymentMode plan.serviceName,
-                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName (Just plan.isDeprecated) (Just True),
-                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName (Just plan.isDeprecated) Nothing,
-                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName Nothing (Just True),
-                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName Nothing Nothing,
-                CQPlan.makeMerchantIdAndTypeKey plan.merchantOpCityId plan.planType plan.serviceName plan.vehicleCategory False,
-                CQPlan.makeMerchantIdKey plan.merchantOpCityId plan.serviceName,
-                CQPlan.makeMerchantIdAndPaymentModeAndVariantKey plan.merchantOpCityId plan.paymentMode plan.serviceName plan.vehicleVariant (Just plan.isDeprecated),
-                CQPlan.makeIdKey plan.merchantOpCityId plan.paymentMode plan.serviceName plan.vehicleCategory plan.isDeprecated,
-                SPayment.makeOfferListCacheVersionKey
-              ]
-        forM_ keysToClear $ \key -> Hedis.del key
+      forM_ plansToClearCache CQPlan.clearPlanCacheForPlan
+      Hedis.del SPayment.makeOfferListCacheVersionKey
       return Success
     clearSubscriptionConfigCache merchantOpCity mbServiceName = do
       let serviceName = maybe Plan.YATRI_SUBSCRIPTION castServiceName mbServiceName
@@ -4169,7 +4160,22 @@ postMerchantConfigClearCacheSubscription merchantShortId opCity req = do
     clearPlanTranslation = do
       pts <- SQPT.findAllByPlanId . Id =<< (pure req.planId >>= fromMaybeM (InvalidRequest $ "plan id not provided"))
       let keysToClear = map (\pt -> SCQPT.makePlanIdAndLanguageKey pt.planId pt.language) pts
-      forM_ keysToClear $ \key -> Hedis.del key
+      -- PlanTranslation is read via withCrossAppRedis (see CachedQueries.PlanTranslation),
+      Hedis.withCrossAppRedis $ forM_ keysToClear $ \key -> Hedis.del key
+      return Success
+    clearVendorSplitCache merchantOpCity = do
+      planIds <- case req.planId of
+        Just planId -> pure [Id planId]
+        Nothing -> map (\p -> p.id) <$> QPlan.fetchAllPlanByMerchantOperatingCityMbServiceName merchantOpCity.id (castServiceName <$> req.serviceName)
+      forM_ planIds $ \planId -> do
+        rows <- QVSD.findAllByCityAndPlan merchantOpCity.id (Just $ getId planId)
+        let keysToClear =
+              CQVSD.makeCityAndPlanKey merchantOpCity.id planId :
+              map CQVSD.makeRowAreaKey rows
+        forM_ keysToClear $ \key -> Hedis.del key
+
+      planlessRows <- QVSD.findAllByCityAndPlan merchantOpCity.id Nothing
+      forM_ (map CQVSD.makeRowAreaKey planlessRows) $ \key -> Hedis.del key
       return Success
     filterCriteriaPlan mbServiceName mbPlanId =
       case (mbServiceName, mbPlanId) of
@@ -4188,19 +4194,19 @@ postMerchantConfigUpsertPlanAndConfigSubscription merchantShortId city req = do
   merchantOperatingCity <-
     CQMOC.findByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
-  let mocId = merchantOperatingCity.id
   case req.action of
-    Common.UPDATE_CONFIG -> applyOperation Common.UPDATE_CONFIG mocId req
-    Common.CREATE_CONFIG -> applyOperation Common.CREATE_CONFIG mocId req
+    Common.UPDATE_CONFIG -> applyOperation Common.UPDATE_CONFIG merchantOperatingCity req
+    Common.CREATE_CONFIG -> applyOperation Common.CREATE_CONFIG merchantOperatingCity req
   where
-    applyOperation :: Common.Action -> Id DMOC.MerchantOperatingCity -> Common.UpsertPlanAndConfigReq -> Flow Common.UpsertPlanAndConfigResp
-    applyOperation actionType _ Common.UpsertPlanAndConfigReq {command, tableName, config} =
+    applyOperation :: Common.Action -> DMOC.MerchantOperatingCity -> Common.UpsertPlanAndConfigReq -> Flow Common.UpsertPlanAndConfigResp
+    applyOperation actionType merchantOpCity Common.UpsertPlanAndConfigReq {command, tableName, config} =
       case command of
         Common.VIEW_DIFF -> do
           existingConfig <- case tableName of
             Common.SUBSCRIPTION_CONFIG -> runWithDecodeToType config tableName True (\(val :: DSC.SubscriptionConfig) -> QSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName val.merchantOperatingCityId val.serviceName)
             Common.PLAN -> runWithDecodeToType config tableName True (\(val :: Plan.Plan) -> QPlan.findByIdAndPaymentModeWithServiceName val.id val.paymentMode val.serviceName)
             Common.PLAN_TRANSLATION -> runWithDecodeToType config tableName True (\(val :: [PlanTrans.PlanTranslation]) -> catMaybes <$> mapM (\ele -> SQPT.findByPlanIdAndLanguage ele.planId ele.language) val)
+            Common.VENDOR_SPLIT_DETAILS -> runWithDecodeToType config tableName True (\(val :: [DVSD.VendorSplitDetails]) -> catMaybes <$> mapM (\ele -> QVSD.findByPrimaryKey ele.area ele.merchantOperatingCityId ele.vehicleVariant ele.vendorId) val)
           diffVal <- do
             case existingConfig of
               JsonVal val -> pure $ Just (jsonDiff val config)
@@ -4214,13 +4220,41 @@ postMerchantConfigUpsertPlanAndConfigSubscription merchantShortId city req = do
                 diff = diffVal
               }
         Common.COMMIT -> do
+          let resolvedMerchantId = merchantOpCity.merchantId
+              resolvedMerchantOpCityId = merchantOpCity.id
+              withResolvedPlanIds plan = plan {Plan.merchantId = resolvedMerchantId, Plan.merchantOpCityId = resolvedMerchantOpCityId}
+              withResolvedVendorSplitCity vendorSplit = vendorSplit {DVSD.merchantOperatingCityId = resolvedMerchantOpCityId}
+              withResolvedSubscriptionConfigCity subscriptionConfig = subscriptionConfig {DSC.merchantOperatingCityId = Just resolvedMerchantOpCityId}
           _ <- case (actionType, tableName) of
-            (Common.CREATE_CONFIG, Common.SUBSCRIPTION_CONFIG) -> runWithDecodeToType config tableName False QSC.create
-            (Common.CREATE_CONFIG, Common.PLAN) -> runWithDecodeToType config tableName False QPlan.create
-            (Common.CREATE_CONFIG, Common.PLAN_TRANSLATION) -> runWithDecodeToType config tableName False $ (\(val :: [PlanTrans.PlanTranslation]) -> forM_ val SQPT.create)
-            (Common.UPDATE_CONFIG, Common.SUBSCRIPTION_CONFIG) -> runWithDecodeToType config tableName False QSC.updateByPrimaryKey
-            (Common.UPDATE_CONFIG, Common.PLAN) -> runWithDecodeToType config tableName False QPlanE.updateByPrimaryKeyP
-            (Common.UPDATE_CONFIG, Common.PLAN_TRANSLATION) -> runWithDecodeToType config tableName False $ (\(val :: [PlanTrans.PlanTranslation]) -> forM_ val SQPT.updateByPrimaryKey)
+            (Common.CREATE_CONFIG, Common.SUBSCRIPTION_CONFIG) -> runWithDecodeToType config tableName False $ \(subscriptionConfig :: DSC.SubscriptionConfig) -> QSC.create (withResolvedSubscriptionConfigCity subscriptionConfig)
+            (Common.CREATE_CONFIG, Common.PLAN) -> runWithDecodeToType config tableName False $ \(plan :: Plan.Plan) -> do
+              let planToCreate = withResolvedPlanIds plan
+              QPlan.create planToCreate
+              CQPlan.clearPlanCacheForPlan planToCreate
+            (Common.CREATE_CONFIG, Common.PLAN_TRANSLATION) -> runWithDecodeToType config tableName False $ \(val :: [PlanTrans.PlanTranslation]) -> do
+              forM_ val SQPT.create
+              Hedis.withCrossAppRedis $ forM_ val $ \pt -> Hedis.del (SCQPT.makePlanIdAndLanguageKey pt.planId pt.language)
+            (Common.CREATE_CONFIG, Common.VENDOR_SPLIT_DETAILS) -> runWithDecodeToType config tableName False $ \(val :: [DVSD.VendorSplitDetails]) -> do
+              let vendorSplitsToCreate = map withResolvedVendorSplitCity val
+              forM_ vendorSplitsToCreate QVSD.create
+              forM_ vendorSplitsToCreate clearVendorSplitRowCache
+            (Common.UPDATE_CONFIG, Common.SUBSCRIPTION_CONFIG) -> runWithDecodeToType config tableName False $ \(subscriptionConfig :: DSC.SubscriptionConfig) -> QSC.updateByPrimaryKey (withResolvedSubscriptionConfigCity subscriptionConfig)
+            (Common.UPDATE_CONFIG, Common.PLAN) -> runWithDecodeToType config tableName False $ \(plan :: Plan.Plan) -> do
+              let planToUpdate = withResolvedPlanIds plan
+              mbOldPlan <- QPlan.findByPrimaryKey planToUpdate.id
+              QPlanE.updateByPrimaryKeyP planToUpdate
+              whenJust mbOldPlan CQPlan.clearPlanCacheForPlan
+              CQPlan.clearPlanCacheForPlan planToUpdate
+            (Common.UPDATE_CONFIG, Common.PLAN_TRANSLATION) -> runWithDecodeToType config tableName False $ \(val :: [PlanTrans.PlanTranslation]) -> do
+              forM_ val SQPT.updateByPrimaryKey
+              Hedis.withCrossAppRedis $ forM_ val $ \pt -> Hedis.del (SCQPT.makePlanIdAndLanguageKey pt.planId pt.language)
+            (Common.UPDATE_CONFIG, Common.VENDOR_SPLIT_DETAILS) -> runWithDecodeToType config tableName False $ \(val :: [DVSD.VendorSplitDetails]) ->
+              forM_ val $ \rawVendorSplit -> do
+                let vendorSplitToUpdate = withResolvedVendorSplitCity rawVendorSplit
+                mbOldRow <- QVSD.findByPrimaryKey vendorSplitToUpdate.area vendorSplitToUpdate.merchantOperatingCityId vendorSplitToUpdate.vehicleVariant vendorSplitToUpdate.vendorId
+                QVSD.updateByPrimaryKey vendorSplitToUpdate
+                whenJust mbOldRow clearVendorSplitRowCache
+                clearVendorSplitRowCache vendorSplitToUpdate
           pure
             Common.UpsertPlanAndConfigResp
               { respCode = Success,
@@ -4245,6 +4279,12 @@ postMerchantConfigUpsertPlanAndConfigSubscription merchantShortId city req = do
             else pure $ Void ()
         DAT.Error err ->
           throwError $ InvalidRequest (show err)
+    -- VendorSplit caches live in the default namespace (plain safeGet reads). Used 3× (create,
+    -- plus update's old and new rows), so kept as a helper rather than inlined.
+    clearVendorSplitRowCache :: DVSD.VendorSplitDetails -> Flow ()
+    clearVendorSplitRowCache vendorSplit = do
+      whenJust (Id <$> vendorSplit.dailyPlanId) $ \dailyPlanId -> Hedis.del (CQVSD.makeCityAndPlanKey vendorSplit.merchantOperatingCityId dailyPlanId)
+      Hedis.del (CQVSD.makeRowAreaKey vendorSplit)
 
 jsonDiff :: Value -> Value -> Value
 jsonDiff (DAT.Object a) (DAT.Object b) =

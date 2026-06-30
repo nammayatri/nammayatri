@@ -702,6 +702,7 @@ data TableName
   = SUBSCRIPTION_CONFIG
   | PLAN
   | PLAN_TRANSLATION
+  | VENDOR_SPLIT_DETAILS
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -1408,9 +1409,9 @@ type PostMerchantMerchantDocumentUpdate = ("merchantDocument" :> "update" :> Req
 
 type PostMerchantMerchantDocumentDelete = ("merchantDocument" :> "delete" :> ReqBody ('[JSON]) DeleteMerchantDocumentReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
-type GetMerchantMerchantMessageCatalog = ("merchantMessage" :> "catalog" :> MandatoryQueryParam "catalogType" MerchantMessageCatalogType :> Get ('[JSON]) MerchantMessageCatalogResp)
+type GetMerchantMerchantMessageCatalog = ("merchantMessage" :> "catalog" :> MandatoryQueryParam "catalogType" MerchantMessageCatalogType :> Get '[JSON] MerchantMessageCatalogResp)
 
-type PostMerchantMerchantMessageUpsert = ("merchantMessage" :> "upsert" :> ReqBody ('[JSON]) UpsertMerchantMessageReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostMerchantMerchantMessageUpsert = ("merchantMessage" :> "upsert" :> ReqBody '[JSON] UpsertMerchantMessageReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type DeleteMerchantMerchantMessage =
   ( "merchantMessage" :> Capture "messageKey" Kernel.Prelude.Text :> QueryParam "vehicleCategory" Dashboard.Common.VehicleCategory
@@ -1419,7 +1420,7 @@ type DeleteMerchantMerchantMessage =
            Kernel.Types.APISuccess.APISuccess
   )
 
-type GetMerchantCityList = ("cityList" :> Get ('[JSON]) CityListResp)
+type GetMerchantCityList = ("cityList" :> Get '[JSON] CityListResp)
 
 data MerchantAPIs = MerchantAPIs
   { postMerchantUpdate :: (MerchantUpdateReq -> EulerHS.Types.EulerClient MerchantUpdateRes),
@@ -1580,6 +1581,6 @@ $(mkHttpInstancesForEnum (''MerchantDocumentPlatformTypeT))
 
 $(mkHttpInstancesForEnum (''MerchantDocumentRoleT))
 
-$(mkHttpInstancesForEnum (''MerchantMessageCatalogType))
+$(mkHttpInstancesForEnum ''MerchantMessageCatalogType)
 
-$(Data.Singletons.TH.genSingletons [(''MerchantUserActionType)])
+$(Data.Singletons.TH.genSingletons [''MerchantUserActionType])
