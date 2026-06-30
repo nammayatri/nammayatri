@@ -24,6 +24,7 @@ module Domain.Action.Dashboard.Ride
     getRideTripRoute,
     getRidePickupRoute,
     postRideSyncMultiple,
+    postRidePayoutOfferSync,
     validateMultipleRideSyncReq,
     cancellationChargesWaiveOff,
     cancellationChargesWaiveOffCore,
@@ -43,6 +44,7 @@ import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.RideFlowDebug as RideFlowDebug
 import Domain.Action.Dashboard.Route (mkGetLocation)
 import qualified Domain.Action.UI.EstimateBP as EstimateBP
+import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Booking as DTB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
@@ -53,6 +55,7 @@ import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.Location (Location (..))
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.OfferEntity as DOfferEntity
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
@@ -78,7 +81,11 @@ import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
+import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified SharedLogic.Offer as SOffer
+import qualified SharedLogic.Payment as SPayment
 import Storage.CachedQueries.Merchant (findByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -86,6 +93,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.FareBreakup as QFareBreakup
+import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
@@ -615,6 +623,64 @@ postRideSyncMultiple merchantShortId _ req = withDynamicLogLevel "ride-sync-mult
 validateMultipleRideSyncReq :: Validate Common.MultipleRideSyncReq
 validateMultipleRideSyncReq Common.MultipleRideSyncReq {..} = do
   validateField "rides" rides $ UniqueField @"rideId"
+
+postRidePayoutOfferSync ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.MultipleRideSyncReq ->
+  Flow Common.MultipleRideSyncResp
+postRidePayoutOfferSync merchantShortId _ req = withDynamicLogLevel "ride-payout-offer-sync" $ do
+  withLogTag ("merchantShortId-" <> merchantShortId.getShortId) $ do
+    logDebug $ "Starting ride payout offer sync for " <> show (length req.rides) <> " rides"
+    runRequestValidation validateMultipleRideSyncReq req
+    merchant <- findMerchantByShortId merchantShortId
+    withLogTag ("merchantId-" <> merchant.id.getId) $ do
+      logTagInfo "dashboard -> ridePayoutOfferSync : " $ show (req.rides <&> (.rideId))
+      respItems <- forM req.rides $ \reqItem -> do
+        let rideId = cast @Common.Ride @DRide.Ride reqItem.rideId
+        withLogTag ("rideId-" <> rideId.getId) $ do
+          info <- handle Common.listItemErrHandler $ do
+            ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+            booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+            unless (merchant.id == booking.merchantId) $ throwError (RideDoesNotExist rideId.getId)
+            void $ syncRidePayoutOffer booking ride
+            logDebug $ "Successfully synced payout offer for ride: " <> rideId.getId
+            pure Common.SuccessItem
+          pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
+      pure $ Common.MultipleRideSyncResp {list = respItems}
+  where
+    -- Sync the payout offer for an already-completed ride. Only acts on rides
+    -- whose booking-level offer is a pure payout (no discount, payout > 0).
+    -- Reconstructs the offer inputs from persisted fare breakups, runs the
+    -- shared offer processing (entity + apply + payout job), and backfills the
+    -- settled cashback ledger leg so the payout job has an entry to drain.
+    -- Idempotent — skips rides that already have a persisted ride OfferEntity.
+    syncRidePayoutOffer booking ride = do
+      mbBookingOfferEntity <- QOfferEntity.findByEntityIdAndEntityType booking.id.getId DOfferEntity.BOOKING
+      case mbBookingOfferEntity of
+        Just bookingOffer | bookingOffer.discountAmount <= 0 && bookingOffer.payoutAmount > 0 -> do
+          mbExisting <- QOfferEntity.findByEntityIdAndEntityType ride.id.getId DOfferEntity.RIDE
+          case mbExisting of
+            Just existing -> pure $ Just existing
+            Nothing -> do
+              person <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
+              totalFare <- ride.totalFare & fromMaybeM (RideFieldNotPresent "totalFare")
+              breakups <- QFareBreakup.findAllByEntityIdAndEntityType ride.id.getId DFareBreakup.RIDE
+              let fareCtx = RD.parseProjectFareParamsBreakup $ (\fb -> (fb.description, fb.amount.amount)) <$> breakups
+                  discountApplicableFareAmountTaxIncl = case fareCtx of
+                    Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
+                    Nothing -> totalFare.amount
+                  offerBasePrice = mkPrice (Just totalFare.currency) discountApplicableFareAmountTaxIncl
+              offerStatsInput <- SPayment.buildOfferStatsInput person
+              mbRideOfferEntity <- SOffer.processRideOffer (Just offerStatsInput) booking person ride offerBasePrice fareCtx
+              let ridePayoutAmount = maybe 0 (.payoutAmount) mbRideOfferEntity
+                  cashLedgerCtx =
+                    RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
+                      RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency False person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
+              RidePaymentFinance.createSettledCashbackPayoutLeg cashLedgerCtx ridePayoutAmount
+              SOffer.scheduleCashbackPayoutJob booking ride person.id ridePayoutAmount
+              pure mbRideOfferEntity
+        _ -> pure Nothing
 
 cancellationChargesWaiveOff ::
   ShortId DM.Merchant ->

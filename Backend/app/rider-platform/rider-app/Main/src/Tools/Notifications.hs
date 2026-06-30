@@ -1502,6 +1502,20 @@ notifyPersonOnEvents person entityData notifType = do
           ]
   notifyPerson person.merchantId merchantOperatingCityId person.id notificationData Nothing
 
+notifyRiderPayoutStatus ::
+  (ServiceFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Person ->
+  Text ->
+  HighPrecMoney ->
+  m ()
+notifyRiderPayoutStatus person pnKey amount = do
+  mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow person.merchantOperatingCityId pnKey Nothing Nothing person.language []
+  whenJust mbMerchantPN $ \merchantPN ->
+    when merchantPN.shouldTrigger $ do
+      let params = [("amount", show amount)]
+          entityData = NotifReq {title = buildTemplate params merchantPN.title, message = buildTemplate params merchantPN.body}
+      notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
+
 notifyTicketCancelled :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> Person.Person -> m ()
 notifyTicketCancelled ticketBookingId ticketBookingCategoryName person = do
   let entity = Notification.Entity Notification.Product person.id.getId ()

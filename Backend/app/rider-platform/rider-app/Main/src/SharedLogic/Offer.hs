@@ -14,14 +14,16 @@ import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.OfferEntity as DOfferEntity
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonStats as DPS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as SSR
+import qualified Domain.Types.VehicleVariant as DV
 import qualified Domain.Types.Yudhishthira as Y
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as Payment
-import Kernel.External.Types (ServiceFlow)
+import Kernel.External.Types (Language (ENGLISH), SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
@@ -29,24 +31,32 @@ import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.OfferStats as DOfferStats
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PersonDailyOfferStats as DPDOS
+import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.OfferStats as QOfferStats
 import qualified Lib.Payment.Storage.Queries.PersonDailyOfferStats as QPersonDailyOfferStats
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Tools.Utils as LYTUtils
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.TypesTH as YTH
+import SharedLogic.JobScheduler (ExecuteCashRideCashbackPayoutJobData (..), RiderJobType (..))
 import SharedLogic.OfferTypes as Reexport
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPayoutCfg
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import qualified Storage.CachedQueries.Translations as CQTranslations
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.BookingExtra as QBooking
+import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPersonStats
 import qualified Storage.Queries.RideExtra as QRide
@@ -252,6 +262,120 @@ deriveComputedOfferAmount mbFareCtx offer = do
         postOfferAmount = postOfferAmount,
         amountSaved = offer.discountAmount + offer.cashbackAmount
       }
+
+-------------------------------------------------------------------------------------------------------
+----------------------------------- Ride Payout Offer (entity + payout job) ---------------------------
+-------------------------------------------------------------------------------------------------------
+
+-- | Resolve the selected offer for a completed ride, persist the corresponding
+--   'OfferEntity' row, apply the offer without payment for cash rides, and
+--   schedule the cashback-payout job when the offer carries a payout. Shared
+--   between the ride-completed handler and the dashboard "ride payout offer
+--   sync" so both produce identical effects. Returns the persisted entity
+--   (when an offer applies) so callers can reuse its discount/payout amounts.
+--
+--   @mbOfferStatsInput@ controls the offer-apply-without-payment step: pass
+--   @Just@ the offer-stats input (built by the caller via
+--   'SharedLogic.Payment.buildOfferStatsInput') for cash rides; pass @Nothing@
+--   for online rides (the offer is applied via the payment-intent flow there).
+processRideOffer ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EncFlow m r,
+    ServiceFlow m r,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    BeamFlow m r,
+    PaymentBeamFlow.BeamFlow m r
+  ) =>
+  Maybe DPayment.OfferStatsInput ->
+  DRB.Booking ->
+  Person.Person ->
+  DRide.Ride ->
+  Price ->
+  OfferFareCtx ->
+  m (Maybe DOfferEntity.OfferEntity)
+processRideOffer mbOfferStatsInput booking person ride offerBasePrice mbFareCtx = do
+  mbRideOfferEntity <-
+    case booking.selectedOfferId of
+      Just offerId -> do
+        mbOfferDetails <- getSelectedOfferDetailsWithBasket booking.merchantId person.id booking.merchantOperatingCityId DOrder.RideHailing (show booking.vehicleServiceTierType) offerBasePrice offerId mbFareCtx (Just ride) (Just booking) Nothing
+        case mbOfferDetails of
+          Just (offerDetails, computed) -> do
+            rideOfferId <- generateGUID
+            now <- getCurrentTime
+            let rideOfferEntity =
+                  DOfferEntity.OfferEntity
+                    { id = rideOfferId,
+                      entityId = ride.id.getId,
+                      entityType = DOfferEntity.RIDE,
+                      offerId = offerDetails.offerId,
+                      offerCode = offerDetails.offerCode,
+                      offerTitle = offerDetails.offerTitle,
+                      offerDescription = offerDetails.offerDescription,
+                      offerTnc = offerDetails.offerTnc,
+                      offerSponsoredBy = offerDetails.offerSponsoredBy,
+                      autoApply = offerDetails.autoApply,
+                      isHidden = offerDetails.isHidden,
+                      discountAmount = computed.discountAmount,
+                      payoutAmount = computed.payoutAmount,
+                      amountSaved = computed.amountSaved,
+                      postOfferAmount = computed.postOfferAmount,
+                      merchantId = booking.merchantId,
+                      merchantOperatingCityId = booking.merchantOperatingCityId,
+                      createdAt = now,
+                      updatedAt = now
+                    }
+            QOfferEntity.create rideOfferEntity
+            pure $ Just rideOfferEntity
+          Nothing -> pure Nothing
+      Nothing -> pure Nothing
+  let rideDiscountAmount = maybe 0 (.discountAmount) mbRideOfferEntity
+      ridePayoutAmount = maybe 0 (.payoutAmount) mbRideOfferEntity
+  -- Cash-ride offer apply-without-payment: records offer usage/stats. Online
+  -- rides apply the offer through the payment-intent flow instead.
+  whenJust mbOfferStatsInput $ \offerStatsInput ->
+    whenJust booking.selectedOfferId $ \offerId ->
+      whenJust mbRideOfferEntity $ \rideOfferEntity -> do
+        riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+        when riderConfig.enableRideHailingOffers $ do
+          useDomainOffers <- TPayment.useDomainOffers booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing
+          let applyOfferCall = TPayment.offerApply booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing Nothing person.clientSdkVersion
+              mbProduct = Just (show booking.vehicleServiceTierType, offerBasePrice.amount)
+          void $
+            withTryCatch "applyOfferWithoutPayment:cashRide" $
+              DPayment.applyOfferWithoutPaymentService ride.id.getId offerId rideOfferEntity.offerCode offerStatsInput (Just rideDiscountAmount) (Just ridePayoutAmount) offerBasePrice.amount offerBasePrice.currency person.merchantId.getId person.merchantOperatingCityId.getId useDomainOffers applyOfferCall ride.createdAt mbProduct
+  pure mbRideOfferEntity
+
+-- | Schedule the delayed cashback-payout job for a completed ride that earned a
+--   payout offer. Call this AFTER the cashback ledger leg has been created
+--   (ride completion writes it via the core ride-payment ledger; the dashboard
+--   sync writes it via 'SharedLogic.Finance.RidePayment.createSettledCashbackPayoutLeg')
+--   so the job has an entry to drain. No-op when the payout amount is non-positive.
+scheduleCashbackPayoutJob ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text]
+  ) =>
+  DRB.Booking ->
+  DRide.Ride ->
+  Id Person.Person ->
+  HighPrecMoney ->
+  m ()
+scheduleCashbackPayoutJob booking ride personId ridePayoutAmount =
+  when (ridePayoutAmount > 0) $ do
+    let vehicleCategory = DV.castVehicleVariantToVehicleCategory ride.vehicleVariant
+    payoutCfg <- getOneConfig (PayoutDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing}) (Just (maybeToList <$> CQPayoutCfg.findByCityIdAndVehicleCategory booking.merchantOperatingCityId vehicleCategory (Just [])))
+    case payoutCfg of
+      Just payoutConfig -> do
+        let cashbackPayoutJobData = ExecuteCashRideCashbackPayoutJobData {personId = personId}
+            scheduleAfter = secondsToNominalDiffTime (fromIntegral payoutConfig.scheduleCashbackPayoutAfter)
+        createJobIn @_ @'ExecuteCashRideCashbackPayout (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter cashbackPayoutJobData
+      Nothing ->
+        logError $ "No payout config found for vehicle category - for offers: " <> show vehicleCategory <> " merchant operating city: " <> booking.merchantOperatingCityId.getId
 
 mkCumulativeOfferResp ::
   (MonadFlow m, EncFlow m r, BeamFlow m r, ClickhouseFlow m r) =>

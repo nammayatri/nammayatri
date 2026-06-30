@@ -6,7 +6,7 @@ import Domain.Types.VehicleCategory as DV
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payout.Interface as Payout
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -28,12 +28,14 @@ import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as TP
 
 executeCashRideCashbackPayoutJob ::
   ( EncFlow m r,
     CacheFlow m r,
     MonadFlow m,
+    ServiceFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
@@ -57,6 +59,7 @@ runPayoutForPerson ::
   ( EncFlow m r,
     CacheFlow m r,
     MonadFlow m,
+    ServiceFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
@@ -98,6 +101,7 @@ submitCashbackPayout ::
   ( EncFlow m r,
     CacheFlow m r,
     MonadFlow m,
+    ServiceFlow m r,
     EsqDBFlow m r,
     SchedulerFlow r,
     HasShortDurationRetryCfg r c,
@@ -169,7 +173,9 @@ submitCashbackPayout person payoutVpa payoutConfig cashbackEntries totalAmount =
           <> show (length originalEntryIds)
           <> " amount="
           <> show totalAmount
+      Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_INITIATED" totalAmount
     PayoutRequest.PayoutFailed _ err -> do
       RidePaymentFinance.releaseCashbackEntriesReservation originalEntryIds
       RidePaymentFinance.markCashbackEntriesAsDue originalEntryIds
       logError $ "Cashback payout submission failed for person=" <> person.id.getId <> ": " <> err
+      Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_FAILED" totalAmount
