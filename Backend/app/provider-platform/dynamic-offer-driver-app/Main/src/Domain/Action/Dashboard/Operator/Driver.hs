@@ -1201,7 +1201,7 @@ getDriverRequestReviewHistory merchantShortId opCity apiEntityType reviewRequest
     Just mob -> do
       mobHash <- getDbHash mob
       let countryCode = fromMaybe "+91" mbMobileCountryCode
-      mbPerson <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRoles countryCode mobHash merchant.id [DP.DRIVER, DP.FLEET_OWNER]
+      mbPerson <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRoles countryCode mobHash merchant.id [DP.DRIVER, DP.FLEET_OWNER, DP.FLEET_BUSINESS]
       pure $ Just $ maybe [] (\p -> [p.id.getId]) mbPerson
 
   case mbPersonIdsForMobile of
