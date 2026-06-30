@@ -78,8 +78,12 @@ fetchAllPlanByMerchantOperatingCityMbServiceName merchantOpCityId mbServiceName 
 updateByPrimaryKeyP :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Plan.Plan -> m ())
 updateByPrimaryKeyP (Domain.Types.Plan.Plan {..}) = do
   updateWithKV
-    [ Se.Set BeamP.allowStrikeOff (Just allowStrikeOff),
+    [ Se.Set BeamP.airportRideSubscription airportRideSubscription,
+      Se.Set BeamP.allowStrikeOff (Just allowStrikeOff),
       Se.Set BeamP.basedOnEntity basedOnEntity,
+      Se.Set BeamP.billingType billingType,
+      Se.Set BeamP.isFleetOwnerPlan isFleetOwnerPlan,
+      Se.Set BeamP.validityInDays validityInDays,
       Se.Set BeamP.cgstPercentage cgstPercentage,
       Se.Set BeamP.description description,
       Se.Set BeamP.eligibleForCoinDiscount eligibleForCoinDiscount,

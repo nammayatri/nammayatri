@@ -75,7 +75,7 @@ postPlanManagementCreate merchantShortId opCity req = do
             isFleetOwnerPlan = req.isFleetOwnerPlan
           }
   QPlan.create plan
-  CQPlan.clearPlanCacheByCity merchantOpCityId plan.serviceName
+  CQPlan.clearPlanCacheForPlan plan
   pure $ Common.CreatePlanResp {planId = planId.getId}
 
 postPlanManagementDeletePlan ::
@@ -87,7 +87,7 @@ postPlanManagementDeletePlan _merchantShortId _opCity planIdText = do
   let planId = Id planIdText
   plan <- QPlan.findByPrimaryKey planId >>= fromMaybeM (InvalidRequest "Plan not found")
   QPlanExtra.markAsDeprecated planId
-  CQPlan.clearPlanCacheByCity plan.merchantOpCityId plan.serviceName
+  CQPlan.clearPlanCacheForPlan plan
   pure Success
 
 postPlanManagementActivatePlan ::
@@ -99,7 +99,7 @@ postPlanManagementActivatePlan _merchantShortId _opCity planIdText = do
   let planId = Id planIdText
   plan <- QPlan.findByPrimaryKey planId >>= fromMaybeM (InvalidRequest "Plan not found")
   QPlanExtra.markAsActive planId
-  CQPlan.clearPlanCacheByCity plan.merchantOpCityId plan.serviceName
+  CQPlan.clearPlanCacheForPlan plan
   pure Success
 
 getPlanManagementListPlans ::
