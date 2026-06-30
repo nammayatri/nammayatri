@@ -4516,7 +4516,7 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
     unless isValid $ throwError AccessDenied
 
   -- Update basic profile fields (name, email, mobile) in one go
-  when (isJust req.firstName || isJust req.lastName || isJust req.email || isJust req.mobileNo) $ do
+  when (isJust req.firstName || isJust req.middleName || isJust req.lastName || isJust req.email || isJust req.mobileNo) $ do
     -- Email uniqueness
     whenJust req.email $ \reqEmail -> do
       existingPerson <- QPerson.findByEmailAndMerchantIdAndRole (Just reqEmail) merchant.id driver.role
@@ -4540,6 +4540,7 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
     let updDriver =
           driver
             { DP.firstName = fromMaybe driver.firstName req.firstName,
+              DP.middleName = req.middleName <|> driver.middleName,
               DP.lastName = req.lastName <|> driver.lastName,
               DP.email = req.email <|> driver.email,
               DP.mobileCountryCode = newMobileCountryCode,

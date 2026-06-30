@@ -1567,6 +1567,7 @@ types:
     - derive: "'HideSecrets"
   UpdateDriverReq:
     - firstName: Maybe Text
+    - middleName: Maybe Text
     - lastName: Maybe Text
     - mobileNo: Maybe Text
     - mobileCountryCode: Maybe Text

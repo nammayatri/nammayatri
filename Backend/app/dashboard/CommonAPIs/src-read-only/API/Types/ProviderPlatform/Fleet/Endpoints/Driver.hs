@@ -1182,6 +1182,7 @@ data UnlinkedVehicle = UnlinkedVehicle {vehicleNo :: Kernel.Prelude.Maybe Kernel
 
 data UpdateDriverReq = UpdateDriverReq
   { firstName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    middleName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lastName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
