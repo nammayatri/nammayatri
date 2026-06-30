@@ -158,7 +158,6 @@ test-suite location-updates-tests
     , lens
     , location-updates
     , mobility-core
-    , mock-google
     , record-dot-preprocessor
     , record-hasfield
     , servant
