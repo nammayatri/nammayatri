@@ -1163,6 +1163,8 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
       let expectedValue = case gwFilter of
             API.Juspay -> "juspay"
             API.BillDesk -> "billdesk"
+            API.RazorPay -> "razorpay"
+            API.CCAvenue -> "ccavenue"
        in maybe False ((== expectedValue) . canonicalizeText) mbActualValue
 
     canonicalizeText :: Text -> Text
