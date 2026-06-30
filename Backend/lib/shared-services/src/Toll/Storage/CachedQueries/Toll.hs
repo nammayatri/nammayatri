@@ -16,6 +16,7 @@
 module Toll.Storage.CachedQueries.Toll
   ( findAllTollsByMerchantOperatingCity,
     makeTollsKeyByMerchantOperatingCityId,
+    clearCache,
   )
 where
 
@@ -32,14 +33,21 @@ import qualified Toll.Storage.Queries.Toll as Queries
 --   each app satisfies via the orphan instance in @Storage.Beam.Toll@.
 findAllTollsByMerchantOperatingCity :: BeamFlow m r => Text -> m [Toll]
 findAllTollsByMerchantOperatingCity merchantOpCityId =
-  (Hedis.safeGet $ makeTollsKeyByMerchantOperatingCityId merchantOpCityId) >>= \case
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeTollsKeyByMerchantOperatingCityId merchantOpCityId) >>= \case
     Just a -> pure a
     Nothing -> cacheAllTollsByMerchantOperatingCity merchantOpCityId /=<< Queries.findAllTollsByMerchantOperatingCity (Just merchantOpCityId)
 
 cacheAllTollsByMerchantOperatingCity :: (CacheFlow m r) => Text -> [Toll] -> m ()
 cacheAllTollsByMerchantOperatingCity merchantOpCityId tolls = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp (makeTollsKeyByMerchantOperatingCityId merchantOpCityId) tolls expTime
+  Hedis.withCrossAppRedis $
+    Hedis.setExp (makeTollsKeyByMerchantOperatingCityId merchantOpCityId) tolls expTime
 
 makeTollsKeyByMerchantOperatingCityId :: Text -> Text
 makeTollsKeyByMerchantOperatingCityId merchantOpCityId = "CachedQueries:Toll:MerchantOpCityId-" <> merchantOpCityId
+
+clearCache :: Hedis.HedisFlow m r => Text -> m ()
+clearCache merchantOpCityId =
+  Hedis.runInMultiCloudRedisWrite $
+    Hedis.withCrossAppRedis $
+      Hedis.del $ makeTollsKeyByMerchantOperatingCityId merchantOpCityId
