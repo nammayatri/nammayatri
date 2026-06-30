@@ -460,7 +460,7 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
           Nothing -> throwImageError (Id req.aadhaarFrontImageId) ImageExtractionFailed
         whenJust mbAadhaarNumber $ \aadhaarNumber -> do
           case person.role of
-            Person.FLEET_OWNER -> do
+            role | DCommon.checkFleetOwnerRole role -> do
               encryptedAadhaarNumber <- encrypt aadhaarNumber
               QFOI.updateAadhaarImage (Just encryptedAadhaarNumber) (Just req.aadhaarFrontImageId) req.aadhaarBackImageId person.id
             Person.DRIVER -> do

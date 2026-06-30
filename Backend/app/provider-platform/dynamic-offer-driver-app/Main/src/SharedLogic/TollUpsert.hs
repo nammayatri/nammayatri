@@ -23,6 +23,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Vector as V
@@ -46,6 +47,8 @@ data TollCSVRow = TollCSVRow
     currency :: Text,
     isAutoRickshawAllowed :: Text,
     isTwoWheelerAllowed :: Text,
+    isAutoRickshawTollChargeApplicable :: Maybe Text,
+    isTwoWheelerTollChargeApplicable :: Maybe Text,
     tollStartGates :: Text,
     tollEndGates :: Text
   }
@@ -61,8 +64,20 @@ instance FromNamedRecord TollCSVRow where
       <*> r .: "currency"
       <*> r .: "is_auto_rickshaw_allowed"
       <*> r .: "is_two_wheeler_allowed"
+      <*> optionalNamedField r "is_auto_rickshaw_toll_charge_applicable"
+      <*> optionalNamedField r "is_two_wheeler_toll_charge_applicable"
       <*> r .: "toll_start_gates"
       <*> r .: "toll_end_gates"
+
+-- | Cassava has no built-in optional named-field lookup; treat a missing or
+-- empty column as 'Nothing' so older CSVs without the toll-charge flags still parse.
+optionalNamedField :: FromField a => NamedRecord -> BS.ByteString -> Parser (Maybe a)
+optionalNamedField r key =
+  case HM.lookup key r of
+    Nothing -> pure Nothing
+    Just bs
+      | BS.null bs -> pure Nothing
+      | otherwise -> Just <$> parseField bs
 
 upsertTollsFromCsv ::
   Context.City ->
@@ -104,6 +119,8 @@ processRow opCity merchantOpCity row = do
   currency <- readCSVField row.currency "currency"
   isAutoRickshawAllowed <- readCSVField row.isAutoRickshawAllowed "is_auto_rickshaw_allowed"
   isTwoWheelerAllowed <- readMaybeCSVField row.isTwoWheelerAllowed "is_two_wheeler_allowed"
+  isAutoRickshawTollChargeApplicable <- readMaybeCSVFieldFromOptional row.isAutoRickshawTollChargeApplicable "is_auto_rickshaw_toll_charge_applicable"
+  isTwoWheelerTollChargeApplicable <- readMaybeCSVFieldFromOptional row.isTwoWheelerTollChargeApplicable "is_two_wheeler_toll_charge_applicable"
   tollStartGates <- parseGates row.tollStartGates "toll_start_gates"
   tollEndGates <- parseGates row.tollEndGates "toll_end_gates"
   let upsertReq =
@@ -114,7 +131,9 @@ processRow opCity merchantOpCity row = do
             tollStartGates = tollStartGates,
             tollEndGates = tollEndGates,
             isAutoRickshawAllowed = isAutoRickshawAllowed,
-            isTwoWheelerAllowed = isTwoWheelerAllowed
+            isTwoWheelerAllowed = isTwoWheelerAllowed,
+            isAutoRickshawTollChargeApplicable = isAutoRickshawTollChargeApplicable,
+            isTwoWheelerTollChargeApplicable = isTwoWheelerTollChargeApplicable
           }
   mbTollIdText <- pure $ cleanField row.tollId
   mbExisting <- case mbTollIdText of
@@ -160,6 +179,10 @@ readCSVField fieldValue fieldName =
 readMaybeCSVField :: Read a => Text -> Text -> Flow (Maybe a)
 readMaybeCSVField fieldValue _ =
   pure $ cleanField fieldValue >>= readMaybe . T.unpack
+
+readMaybeCSVFieldFromOptional :: Read a => Maybe Text -> Text -> Flow (Maybe a)
+readMaybeCSVFieldFromOptional Nothing _ = pure Nothing
+readMaybeCSVFieldFromOptional (Just fieldValue) fieldName = readMaybeCSVField fieldValue fieldName
 
 cleanCSVField :: Text -> Text -> Flow Text
 cleanCSVField fieldValue fieldName =

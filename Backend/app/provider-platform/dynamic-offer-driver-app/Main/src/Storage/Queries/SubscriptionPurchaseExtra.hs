@@ -3,17 +3,21 @@ module Storage.Queries.SubscriptionPurchaseExtra where
 import Data.List (partition, sortBy)
 import Data.Ord (comparing)
 import qualified Data.Set as Set
+import qualified Database.Beam as B
 import Domain.Types.Extra.Plan (ServiceNames)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.SubscriptionPurchase
 import qualified Domain.Types.VehicleCategory as DVC
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as ITTDomain
 import qualified Lib.Finance.Domain.Types.Invoice
 import qualified Sequelize as Se
+import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.SubscriptionPurchase as Beam
 import Storage.Queries.OrphanInstances.SubscriptionPurchase ()
 
@@ -273,3 +277,47 @@ findByFinanceInvoiceId ::
   m (Maybe SubscriptionPurchase)
 findByFinanceInvoiceId invoiceId =
   findOneWithKV [Se.Is Beam.financeInvoiceId $ Se.Eq (Just (Kernel.Types.Id.getId invoiceId))]
+
+findSubscriptionTotalsByDateRange ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  m (Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney, Int)
+findSubscriptionTotalsByDateRange merchantOpCityId startTime endTime = do
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.aggregate_
+            ( \(sp, itt) ->
+                ( B.as_ @(Maybe HighPrecMoney) $ B.sum_ sp.planFee,
+                  B.as_ @(Maybe HighPrecMoney) $ B.sum_ itt.cgstAmount,
+                  B.as_ @(Maybe HighPrecMoney) $ B.sum_ itt.sgstAmount,
+                  B.as_ @(Maybe HighPrecMoney) $ B.sum_ itt.igstAmount,
+                  B.as_ @(Maybe HighPrecMoney) $ B.sum_ itt.taxableValue,
+                  B.as_ @Int B.countAll_
+                )
+            )
+            $ B.filter_'
+              ( \(sp, _) ->
+                  sp.merchantOperatingCityId B.==?. B.val_ merchantOpCityId.getId
+                    B.&&?. B.sqlBool_ (sp.status B./=. B.val_ PENDING)
+                    B.&&?. B.sqlBool_ (sp.status B./=. B.val_ FAILED)
+                    B.&&?. B.sqlBool_ (sp.purchaseTimestamp B.>=. B.val_ startTime)
+                    B.&&?. B.sqlBool_ (sp.purchaseTimestamp B.<=. B.val_ endTime)
+              )
+              do
+                sp <- B.all_ (BeamCommon.subscriptionPurchase BeamCommon.atlasDB)
+                itt <-
+                  B.join_
+                    (BeamCommon.indirectTaxTransaction BeamCommon.atlasDB)
+                    (\itt -> itt.referenceId B.==. sp.id B.&&. itt.transactionType B.==. B.val_ ITTDomain.Subscription)
+                pure (sp, itt)
+  case res of
+    Right [row] -> pure row
+    Right _ -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, 0)
+    Left err -> do
+      L.logError ("findSubscriptionTotalsByDateRange" :: Text) $ "failed for mocId=" <> merchantOpCityId.getId <> " error=" <> show err
+      pure (Nothing, Nothing, Nothing, Nothing, Nothing, 0)
