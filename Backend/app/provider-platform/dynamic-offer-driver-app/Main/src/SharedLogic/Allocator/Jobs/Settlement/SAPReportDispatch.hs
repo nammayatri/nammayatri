@@ -348,6 +348,15 @@ data SAPEntryType
   | ChargebackEntry
   deriving (Show)
 
+-- | Human-readable description sent to SAP (headerdesc) and stored on the
+-- journal entry. Kept distinct from the `Show` instance (constructor names) so
+-- the values match the finance spec / dashboard, not the Haskell type.
+entryDescription :: SAPEntryType -> Text
+entryDescription SubscriptionPurchase = "Online Subscription Sale"
+entryDescription PGSettlementOrder = "Online Subscription PG Settlement"
+entryDescription RefundEntry = "Online Subscription Refund"
+entryDescription ChargebackEntry = "Online Subscription Chargeback"
+
 data PostingDirection = Debit | Credit
 
 toShkzg :: PostingDirection -> Text
@@ -418,7 +427,7 @@ buildJournalRequest sapCfg entryType amount fromTime = do
             batchId = bId,
             requestDate = reqDate,
             requestTime = reqTime,
-            headerdesc = show entryType,
+            headerdesc = entryDescription entryType,
             bukrs = sapCfg.bukrs,
             blart = sapCfg.blart,
             budat = postingDate,
@@ -590,7 +599,7 @@ buildSubscriptionJournalRequest sapCfg fromTime totals entryType = do
             batchId = bId,
             requestDate = reqDate,
             requestTime = reqTime,
-            headerdesc = show entryType,
+            headerdesc = entryDescription entryType,
             bukrs = sapCfg.bukrs,
             blart = sapCfg.blart,
             budat = postingDate,
