@@ -715,7 +715,9 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
         _ -> pure (Documents.VALID, Nothing)
 
   let updatedReq = req {API.Types.UI.DriverOnboardingV2.nameOnGovtDB = mbNameFromGovtDB <|> req.nameOnGovtDB}
-  QDPC.upsertPanRecord =<< buildPanCard merchantId person updatedReq verificationStatus (Just merchantOpCityId)
+  mbDriverPanCard <- QDPC.findByDriverId personId
+  panCardDetails <- buildPanCard merchantId person updatedReq verificationStatus (Just merchantOpCityId)
+  QDPC.upsertPanRecord panCardDetails mbDriverPanCard
   let allowPanAadhaarLink = fromMaybe True transporterConfig.allowPanAadhaarLinkage
   unless allowPanAadhaarLink $
     logInfo $

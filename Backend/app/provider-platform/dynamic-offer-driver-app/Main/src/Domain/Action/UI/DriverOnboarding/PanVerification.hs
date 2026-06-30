@@ -149,17 +149,22 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
         when gstPanLinkCheckRequired $
           GstVerification.assertUploadedPanLinkedToExistingGst person req.panNumber (Id req.imageId)
         mdriverPanInformation <- DPQuery.findByDriverId person.id
+        whenJust mdriverPanInformation $ \driverPanInformation -> do
+          let verificationStatus = driverPanInformation.verificationStatus
+          when (verificationStatus == Documents.VALID && not (fromMaybe False transporterConfig.allowPanReupload)) $ do
+            Utils.cleanupUploadedImages [Id req.imageId] person.id
+            throwError $ DocumentAlreadyValidated "PAN"
         case mbPanVerificationService of
           Just VI.HyperVerge -> do
             let panReq = DO.DriverPanReq {panNumber = req.panNumber, imageId1 = Id req.imageId, imageId2 = Nothing, consent = True, nameOnCard = Nothing, dateOfBirth = Nothing, consentTimestamp = Nothing, validationStatus = Nothing, verifiedBy = Nothing, transactionId = Nothing, nameOnGovtDB = Nothing, docType = Nothing}
             mbNameFromGovtDB <- checkIfGenuineReq panReq person
             panCardDetails <- buildPanCard person Nothing mbNameFromGovtDB Nothing (Just verifyBy) (Id req.imageId) req.panNumber (Just Documents.VALID)
-            DPQuery.create panCardDetails
+            DPQuery.upsertPanRecord panCardDetails mdriverPanInformation
           Just VI.Idfy -> do
             void $ callIdfy person mdriverPanInformation driverDocument transporterConfig
           _ -> do
             panCardDetails <- buildPanCard person Nothing Nothing Nothing (Just verifyBy) (Id req.imageId) req.panNumber Nothing
-            DPQuery.create $ panCardDetails
+            DPQuery.upsertPanRecord panCardDetails mdriverPanInformation
         case person.role of
           role | DCommon.checkFleetOwnerRole role -> do
             encryptedPanNumber <- encrypt req.panNumber
@@ -230,26 +235,12 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
               pure extractedPan
             Nothing -> throwImageError (Id req.imageId) ImageExtractionFailed
 
-      case mdriverPanInformation of
-        Just driverPanInformation -> do
-          let verificationStatus = driverPanInformation.verificationStatus
-          when (verificationStatus == Documents.VALID && not (fromMaybe False transporterConfig.allowPanReupload)) $ do
-            Utils.cleanupUploadedImages [Id req.imageId] person.id
-            throwError $ DocumentAlreadyValidated "PAN"
-
-          resp <- Verification.extractPanImage person.merchantId merchantOpCityId extractReq
-          extractedPan <- validateExtractedPan resp
-          when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
-            DVRC.validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
-          DPQuery.updateVerificationStatus Documents.VALID person.id
-        Nothing -> do
-          resp <- Verification.extractPanImage person.merchantId merchantOpCityId extractReq
-          extractedPan <- validateExtractedPan resp
-          when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
-            DVRC.validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
-          panCardDetails <- buildPanCard person extractedPan.pan_type extractedPan.name_on_card extractedPan.date_of_birth (Just verifyBy) (Id req.imageId) req.panNumber (if not documentVerificationConfig.doStrictVerifcation then Just Documents.VALID else Nothing)
-          DPQuery.create panCardDetails
-
+      resp <- Verification.extractPanImage person.merchantId merchantOpCityId extractReq
+      extractedPan <- validateExtractedPan resp
+      when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
+        DVRC.validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
+      panCardDetails <- buildPanCard person extractedPan.pan_type extractedPan.name_on_card extractedPan.date_of_birth (Just verifyBy) (Id req.imageId) req.panNumber (if not documentVerificationConfig.doStrictVerifcation then Just Documents.VALID else Nothing)
+      DPQuery.upsertPanRecord panCardDetails mdriverPanInformation
       pure Success
 
     checkIfGenuineReq :: (ServiceFlow m r) => API.Types.UI.DriverOnboardingV2.DriverPanReq -> Person.Person -> m (Maybe Text)
