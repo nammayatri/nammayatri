@@ -1099,7 +1099,9 @@ buildSearchReqLocation merchantId merchantOpCityId sessionToken address customer
               area = loc.ward,
               full_address = decodeAddress loc
             }
-    _ -> getAddressByGetPlaceName merchantId merchantOpCityId sessionToken latLong
+    _ -> do
+      logError $ "buildSearchReqLocation: merchantId: " <> show merchantId <> ", merchantOpCityId: " <> show merchantOpCityId <> ", latLong: " <> show latLong <> " customerLanguage " <> show customerLanguage <> " address " <> show address
+      getAddressByGetPlaceName merchantId merchantOpCityId sessionToken latLong
   id <- Id <$> generateGUID
   now <- getCurrentTime
   let createdAt = now
