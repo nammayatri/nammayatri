@@ -16,9 +16,9 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.UserCancellationDues as UserCancellationDues
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
-import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.Merchant as QM
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import Tools.DynamicLogic
@@ -40,7 +40,7 @@ customerCancellationDuesWaiveOff merchantId apiKey req = withLogTag ("customerCa
   let rideId = (Id req.rideId) :: Id DRide.Ride
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound req.rideId)
   let bookingId = (Id req.bookingId) :: Id DBooking.Booking
-  booking <- QBooking.findById bookingId >>= fromMaybeM (BookingNotFound req.bookingId)
+  booking <- QBookingLite.findByIdLite bookingId >>= fromMaybeM (BookingNotFound req.bookingId)
   riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
   riderDetails <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
   -- Check if cancellation dues for this ride are still pending

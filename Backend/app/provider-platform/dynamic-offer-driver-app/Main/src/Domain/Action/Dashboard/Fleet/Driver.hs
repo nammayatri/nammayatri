@@ -158,7 +158,6 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as TR
 import qualified Domain.Types.Route as DRoute
-import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.TransporterConfig as DTCConfig
 import Domain.Types.TripTransaction
 import qualified Domain.Types.TripTransaction as DTT
@@ -189,6 +188,7 @@ import qualified Lib.Finance.Domain.Types.Account as FinanceAccount
 import qualified Lib.Finance.Storage.Queries.Account as QFinanceAccount
 import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
+import qualified SharedLogic.Association.Change as AC
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverFlowStatus as SDF
@@ -233,7 +233,6 @@ import qualified Storage.Queries.DriverIdentityInfo as QDII
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOperatorAssociation as DOV
-import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverOperatorAssociationExtra as QDOAExtra
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
@@ -255,7 +254,6 @@ import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperatorAssoc
 import qualified Storage.Queries.FleetOperatorDailyStatsExtra as QFODSExtra
 import qualified Storage.Queries.FleetOperatorStats as QFleetOperatorStats
 import qualified Storage.Queries.FleetOwnerInformation as FOI
-import Storage.Queries.FleetRCAssociationExtra as FRAE
 import Storage.Queries.FleetRcDailyStatsExtra as QFRDSExtra
 import qualified Storage.Queries.FleetRouteAssociation as QFRA
 import qualified Storage.Queries.Image as QImage
@@ -264,11 +262,9 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonExtra as QPersonExtra
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.RideExtra as QRideExtra
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteTripStopMapping as QRTSM
 import qualified Storage.Queries.SearchRequest as QSR
-import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
 import qualified Storage.Queries.TripAlertRequest as QTAR
 import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -753,7 +749,7 @@ getDriverFleetGetAllDriver merchantShortId _opCity mblimit mboffset mbMobileNumb
       fleetDriversInfos <- mapM (convertToDriverAPIEntityT fleetNameMap) pairs
       return $ Common.FleetListDriverResT fleetDriversInfos
     Just False -> do
-      pairs <- FDV.findAllInactiveDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mobileNumberHash mbName mbSearchString
+      pairs <- FDV.findAllActiveDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mobileNumberHash mbName mbSearchString (Just False)
       fleetDriversInfos <- mapM (convertToDriverAPIEntityT fleetNameMap) pairs
       return $ Common.FleetListDriverResT fleetDriversInfos
     Nothing -> do
@@ -834,6 +830,7 @@ unlinkVehicleFromDriver merchant personId vehicleNo opCity role = do
   driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  AC.guardNoLiveRideByRC rc.id
   when (transporterConfig.deactivateRCOnUnlink == Just True) $ DomainRC.deactivateCurrentRC transporterConfig personId
   when ((driverInfo.onboardingVehicleCategory /= Just DVC.BUS && isNotVipOfficer) && transporterConfig.disableDriverWhenUnlinkingVehicle == Just True) $ Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig personId False (Just False)
   _ <- QRCAssociation.endAssociationForRC personId rc.id
@@ -854,15 +851,16 @@ postDriverFleetRemoveVehicle merchantShortId _ fleetOwnerId_ vehicleNo mbRequest
   vehicle <- QVehicle.findByRegistrationNo vehicleNo
   whenJust vehicle $ \veh -> do
     isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId veh.driverId fleetOwnerId_ True
-    when (isJust isFleetDriver) $ throwError (InvalidRequest "Vehicle is linked to a fleet driver, please unlink the vehicle from the driver before removing it.")
+    when (isJust isFleetDriver) $ throwError (InvalidRequest "Vehicle is linked/active to a fleet driver, please deactivate/unlink the vehicle from the driver before removing it.")
   vehicleRC <- RCQuery.findLastVehicleRCWrapper vehicleNo >>= fromMaybeM (VehicleDoesNotExist vehicleNo)
   unless (isJust vehicleRC.fleetOwnerId && vehicleRC.fleetOwnerId == Just fleetOwnerId_) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId_)
+  AC.guardNoLiveRideByRC vehicleRC.id
   associations <- QRCAssociation.findAllActiveAssociationByRCId vehicleRC.id ----- Here ending all the association of the vehicle with the fleet drivers
   forM_ associations $ \assoc -> do
     isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId assoc.driverId fleetOwnerId_ True
     when (isJust isFleetDriver) $ QRCAssociation.endAssociationForRC assoc.driverId vehicleRC.id
   RCQuery.upsert (updatedVehicleRegistrationCertificate vehicleRC)
-  FRAE.endAssociationForRC (Id fleetOwnerId_ :: Id DP.Person) vehicleRC.id
+  endFleetRCAssociationIfPossible (Id fleetOwnerId_) vehicleRC.id
   pure Success
   where
     updatedVehicleRegistrationCertificate DVRC.VehicleRegistrationCertificate {..} = DVRC.VehicleRegistrationCertificate {fleetOwnerId = Nothing, ..}
@@ -1146,58 +1144,68 @@ postDriverFleetRemoveDriver ::
   Text ->
   Id Common.Driver ->
   Maybe Text ->
+  Maybe Text ->
   Flow APISuccess
-postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetOwnerId = do
+postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetOwnerId operatorCode = do
   (mbEntityRole, mbEntityId) <- validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let personId = cast @Common.Driver @DP.Person driverId
   case (mbEntityRole, mbEntityId) of
     (Just DP.FLEET_OWNER, Just entityId) -> do
+      when (merchant.overwriteAssociation == Just True && isNothing operatorCode) $ throwError (InvalidRequest "operatorCode is required")
       DCommon.checkFleetOwnerVerification entityId merchant.fleetOwnerEnabledCheck
-      associationList <- QRCAssociation.findAllLinkedByDriverId personId
-      forM_ associationList $ \assoc -> do
-        rc <- RCQuery.findByRCIdAndFleetOwnerId assoc.rcId $ Just entityId
-        when (isJust rc) $ throwError (InvalidRequest "Driver is linked to fleet Vehicle, first unlink then try")
-      -- Check if there's an active association before ending it
-      mbActiveAssociation <- FDV.findByDriverIdAndFleetOwnerId personId entityId True
-      -- Check if driver has any active rides (not completed or cancelled)
-      when (isJust mbActiveAssociation) $ do
-        mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId personId
-        when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before removing from fleet")
-      FDV.endFleetDriverAssociation entityId personId
-      -- Only decrement analytics if there was an active association
-      when (isJust mbActiveAssociation) $ do
-        Analytics.handleDriverAnalyticsAndFlowStatus
-          transporterConfig
-          personId
-          Nothing
-          ( \_ -> do
-              Analytics.decrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just entityId) personId
-          )
-          ( \driverInfo -> do
-              DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER entityId driverInfo.driverFlowStatus
-          )
+      mbNewOperator <- forM operatorCode $ SA.resolveOperatorByCode merchantOpCityId
+
+      Redis.withLockRedis (driverAssociationC personId) 10 $ do
+        -- Check if there's an active association before ending it
+        mbActiveAssociation <- FDV.findByDriverIdAndFleetOwnerId personId entityId True
+        AC.withAssociation (AC.guardNoLiveRideByDriver personId) $ do
+          QRCAssociation.endAllRCAssociationsForDriver personId
+          FDV.endFleetDriverAssociation entityId personId
+          whenJust mbNewOperator $ linkDriverToNewOperator merchant merchantOpCity personId
+        -- Only decrement analytics if there was an active association
+        when (isJust mbActiveAssociation) $ do
+          Analytics.handleDriverAnalyticsAndFlowStatus
+            transporterConfig
+            personId
+            Nothing
+            ( \_ -> do
+                Analytics.decrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just entityId) personId
+            )
+            ( \driverInfo -> do
+                DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER entityId driverInfo.driverFlowStatus
+            )
+        -- Increment analytics for the new operator association, if one was created
+        whenJust mbNewOperator $ \newOperator -> adjustOperatorAnalytics transporterConfig personId newOperator.id.getId 1
     (Just DP.OPERATOR, Just entityId) -> do
-      -- Check if there's an active association before ending it
-      mbActiveAssociation <- DOV.findByDriverIdAndOperatorId personId (Id entityId) True
-      DOV.endOperatorDriverAssociation entityId personId
-      -- Only decrement analytics if there was an active association
-      when (isJust mbActiveAssociation) $ do
-        Analytics.handleDriverAnalyticsAndFlowStatus
-          transporterConfig
-          personId
-          Nothing
-          ( \driverInfo -> do
-              activeSubscriptions <- QSubscriptionPurchaseExtra.countActiveSubscriptionsForOwner personId.getId DSP.DRIVER
-              AnalyticsExtra.adjustOperatorDriverAssociationAnalytics transporterConfig entityId (-1) activeSubscriptions driverInfo.enabled
-          )
-          ( \driverInfo -> do
-              DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.OPERATOR entityId driverInfo.driverFlowStatus
-          )
+      mbNewOperator <- forM operatorCode $ SA.resolveOperatorByCode merchantOpCityId
+      case mbNewOperator of
+        Just newOperator | newOperator.id.getId == entityId -> throwError (InvalidRequest "Driver is already associated with this operator")
+        _ ->
+          Redis.withLockRedis (driverAssociationC personId) 10 $ do
+            -- Check if there's an active association before ending it
+            mbActiveAssociation <- DOV.findByDriverIdAndOperatorId personId (Id entityId) True
+            AC.withAssociation (AC.guardNoLiveRideByDriver personId) $ do
+              DOV.endOperatorDriverAssociation entityId personId
+              whenJust mbNewOperator $ linkDriverToNewOperator merchant merchantOpCity personId
+            -- Only decrement analytics if there was an active association
+            when (isJust mbActiveAssociation) $ adjustOperatorAnalytics transporterConfig personId entityId (-1)
+            -- Increment analytics for the new operator association, if one was created
+            whenJust mbNewOperator $ \newOperator -> adjustOperatorAnalytics transporterConfig personId newOperator.id.getId 1
     _ -> throwError (InvalidRequest "Invalid Data")
   pure Success
+  where
+    driverAssociationC personId = "DriverOperatorAssociationChange:" <> personId.getId
+
+    linkDriverToNewOperator merchant moc personId newOperator = do
+      driverPerson <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      driverMobile <- mapM decrypt driverPerson.mobileNumber >>= fromMaybeM (InvalidRequest "Driver mobile number not found")
+      SA.associateDriverWithOperator merchant moc driverPerson newOperator False driverMobile Nothing
+
+    adjustOperatorAnalytics = SA.adjustOperatorAnalytics
 
 validateRequestorRoleAndGetEntityId :: Text -> Maybe Text -> Flow (Maybe DP.Role, Maybe Text)
 validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId = do
@@ -2787,8 +2795,9 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
     Just authId -> do
       smsCfg <- asks (.smsCfg)
       deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
-
       SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
+      when (merchant.overwriteAssociation == Just True) $
+        QRCAssociation.endAllRCAssociationsForDriver person.id
 
       void $ DRBReg.verify authId True fleetOwnerId (mbOperator <&> (.id)) transporterConfig Common.AuthVerifyReq {otp = req.otp, deviceToken = deviceToken}
 
@@ -2816,13 +2825,11 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
 
       SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
-
-      -- Check if driver has any active rides (not completed or cancelled)
-      mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId person.id
-      when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
+      when (merchant.overwriteAssociation == Just True) $
+        QRCAssociation.endAllRCAssociationsForDriver person.id
 
       -- onboarded operator required only for new drivers
-      assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing DomainRC.defaultAssociationEnd
       QFDV.create assoc
       when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById person.id
       Analytics.handleDriverAnalyticsAndFlowStatus
@@ -3548,7 +3555,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
               >>= fromMaybeM (FleetOwnerNotFound fleetPhoneNo)
         unless (fleetOwnerCsv.id == fleetOwner.id) $
           throwError AccessDenied
-      linkDriverToFleetOwner merchant moc fleetOwner Nothing req_
+      linkDriverToFleetOwner merchant moc transporterConfig fleetOwner Nothing req_
 
     processDriverByOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DTCConfig.TransporterConfig -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
     processDriverByOperator merchant moc transporterConfig operator req_ = do
@@ -3573,7 +3580,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
             now <- getCurrentTime
             when (now > associatedTill) $
               throwError (InvalidRequest "FleetOperatorAssociation expired")
-          linkDriverToFleetOwner merchant moc fleetOwner (Just operator.id) req_
+          linkDriverToFleetOwner merchant moc transporterConfig fleetOwner (Just operator.id) req_
 
     processDriverByAdmin :: DM.Merchant -> DMOC.MerchantOperatingCity -> DTCConfig.TransporterConfig -> DriverDetails -> Flow ()
     processDriverByAdmin merchant moc transporterConfig req_ = do
@@ -3591,14 +3598,17 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
               QP.findByMobileNumberAndMerchantAndRoles mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS]
                 >>= fromMaybeM (FleetOwnerNotFound fleetPhoneNo)
           DCommon.checkFleetOwnerVerification fleetOwner.id.getId merchant.fleetOwnerEnabledCheck
-          linkDriverToFleetOwner merchant moc fleetOwner Nothing req_
+          linkDriverToFleetOwner merchant moc transporterConfig fleetOwner Nothing req_
 
-    linkDriverToFleetOwner :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> Maybe (Id DP.Person) -> DriverDetails -> Flow () -- TODO: create single query to update all later
-    linkDriverToFleetOwner merchant moc fleetOwner mbOperatorId req_ = do
+    linkDriverToFleetOwner :: DM.Merchant -> DMOC.MerchantOperatingCity -> DTCConfig.TransporterConfig -> DP.Person -> Maybe (Id DP.Person) -> DriverDetails -> Flow () -- TODO: create single query to update all later
+    linkDriverToFleetOwner merchant moc transporterConfig fleetOwner mbOperatorId req_ = do
       (person, isNew) <- fetchOrCreatePerson moc req_
       (if isNew then pure False else DDriver.checkFleetDriverAssociation fleetOwner.id person.id)
         >>= \isAssociated -> unless isAssociated $ do
-          unless isNew $ SA.checkForDriverAssociationOverwrite merchant person.id
+          unless isNew $ do
+            SA.endDriverAssociationsIfAllowed merchant moc.id transporterConfig person
+            when (merchant.overwriteAssociation == Just True) $
+              QRCAssociation.endAllRCAssociationsForDriver person.id
           fork "Sending Fleet Consent SMS to Driver" $ do
             let driverMobile = req_.driverPhoneNumber
             let onboardedOperatorId = if isNew then mbOperatorId else Nothing
@@ -3610,12 +3620,9 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
     linkDriverToOperator merchant moc operator req_ = do
       (person, isNew) <- fetchOrCreatePerson moc req_
       (if isNew then pure False else DDriver.checkDriverOperatorAssociation person.id operator.id)
-        >>= \isAssociated -> unless isAssociated $ do
-          unless isNew $ SA.checkForDriverAssociationOverwrite merchant person.id
-          fork "Sending Operator Consent SMS to Driver" $ do
-            let driverMobile = req_.driverPhoneNumber
-            QDOA.createDriverOperatorAssociationIfNotExists moc person.id operator.id (fromMaybe DVC.CAR req_.driverOnboardingVehicleCategory) False
-            sendOperatorDeepLinkForAuth person driverMobile moc.merchantId moc.id moc.country operator
+        >>= \isAssociated ->
+          unless isAssociated $
+            SA.associateDriverWithOperator merchant moc person operator isNew req_.driverPhoneNumber req_.driverOnboardingVehicleCategory
 
     sendDeepLinkForAuth :: DP.Person -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.Country -> DP.Person -> Flow ()
     sendDeepLinkForAuth person mobileNumber merchantId merchantOpCityId country fleetOwner = do
@@ -3628,20 +3635,6 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
             MessageBuilder.BuildFleetDeepLinkAuthMessage
               { fleetOwnerName = fleetOwner.firstName,
                 fleetOwnerId = fleetOwner.id.getId
-              }
-        let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType) >>= Sms.checkSmsResult
-
-    sendOperatorDeepLinkForAuth :: DP.Person -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.Country -> DP.Person -> Flow ()
-    sendOperatorDeepLinkForAuth person mobileNumber merchantId merchantOpCityId country operator = do
-      let countryCode = fromMaybe (P.getCountryMobileCode country) person.mobileCountryCode
-          phoneNumber = countryCode <> mobileNumber
-      smsCfg <- asks (.smsCfg)
-      withLogTag ("sending Operator Deeplink Auth SMS" <> getId person.id) $ do
-        (mbSender, message, templateId, messageType) <-
-          MessageBuilder.buildOperatorDeepLinkAuthMessage merchantOpCityId $
-            MessageBuilder.BuildOperatorDeepLinkAuthMessage
-              { operatorName = operator.firstName
               }
         let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType) >>= Sms.checkSmsResult
@@ -4456,7 +4449,10 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
 
   (pnType, messageBuilder) <- case req.approve of
     Just True -> do
+      SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig driver
       QFDV.approveFleetDriverAssociation driverId (Id fleetOwnerId) req.reason
+      when (merchant.overwriteAssociation == Just True) $ do
+        QRCAssociation.endAllRCAssociationsForDriver driverId
       when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $
         QDBA.deleteById driverId
 

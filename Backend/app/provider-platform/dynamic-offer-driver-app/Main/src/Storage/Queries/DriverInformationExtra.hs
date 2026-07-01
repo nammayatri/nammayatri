@@ -57,8 +57,14 @@ findByVerifiedAndApprovedAndEnabled merchantOpCityId isVerified mbApproved mbEna
     _ -> do
       let approvedClauses = case mbApproved of
             Nothing -> []
-            Just approvedVal ->
-              [ Se.Is BeamDI.approved (Se.Eq (Just approvedVal))
+            Just True ->
+              [ Se.Is BeamDI.approved (Se.Eq (Just True))
+              ]
+            Just False ->
+              [ Se.Or
+                  [ Se.Is BeamDI.approved (Se.Eq Nothing),
+                    Se.Is BeamDI.approved (Se.Eq (Just False))
+                  ]
               ]
       let enabledClauses = case mbEnabled of
             Nothing -> []

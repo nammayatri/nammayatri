@@ -13,6 +13,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.TH
 import SharedLogic.Booking (getfareBreakups)
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
@@ -45,7 +46,7 @@ getBookingFareBreakup _ entityId mbEntityType = do
   booking <- case fromMaybe Booking mbEntityType of
     Booking -> QBooking.findById (Id entityId) >>= fromMaybeM (BookingDoesNotExist entityId)
     Ride -> do
-      ride <- QRide.findById (Id entityId) >>= fromMaybeM (RideNotFound entityId)
+      ride <- QRideLite.findByIdLite (Id entityId) >>= fromMaybeM (RideNotFound entityId)
       QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   mbRide <- QRide.findByRBId booking.id
   (fareBreakups, estimatedFareBreakups) <- getfareBreakups booking mbRide

@@ -16,17 +16,25 @@
 module Storage.Queries.QueriesExtra.BookingLite where
 
 import qualified Domain.Types.Booking
+import qualified Domain.Types.Common
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.RiderDetails
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
+import qualified Kernel.Utils.JSON
+import qualified Lib.Yudhishthira.Types
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as Beam
+import qualified Storage.Queries.Transformers.Booking
 
 ---------------- Use this function if you need the data which are here as per your domain requirement ----------------
 ---------------- Add items in the below domain according to your use                                  ----------------
+---------------- NOTE: keep this lightweight — only scalar columns / pure transforms, NO extra table  ----------------
+---------------- reads (LocationMapping / Location / FareParameters). It must stay a single KV read.  ----------------
 
-findByIdLite :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id BookingLite -> m (Maybe BookingLite))
+findByIdLite :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m (Maybe BookingLite))
 findByIdLite id = findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findBookingsFromDBLite :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Kernel.Types.Id.Id BookingLite] -> m [BookingLite]
@@ -35,7 +43,16 @@ findBookingsFromDBLite bookingIds = findAllWithKV [Se.Is Beam.id $ Se.In (Kernel
 data BookingLite = BookingLite
   { id :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     riderName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    status :: Domain.Types.Booking.BookingStatus
+    status :: Domain.Types.Booking.BookingStatus,
+    transactionId :: Kernel.Prelude.Text,
+    providerId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    quoteId :: Kernel.Prelude.Text,
+    bapId :: Kernel.Prelude.Text,
+    displayBookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    riderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails),
+    vehicleServiceTier :: Domain.Types.Common.ServiceTierType,
+    tripCategory :: Domain.Types.Common.TripCategory,
+    configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -48,5 +65,14 @@ instance FromTType' BookingLiteTable BookingLite where
         BookingLite
           { id = Kernel.Types.Id.Id id,
             riderName = riderName,
-            status = status
+            status = status,
+            transactionId = transactionId,
+            providerId = Kernel.Types.Id.Id providerId,
+            quoteId = quoteId,
+            bapId = bapId,
+            displayBookingId = displayBookingId,
+            riderId = Kernel.Types.Id.Id <$> riderId,
+            vehicleServiceTier = vehicleVariant,
+            tripCategory = Storage.Queries.Transformers.Booking.getTripCategory bookingType tripCategory,
+            configInExperimentVersions = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)
           }

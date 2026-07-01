@@ -953,3 +953,17 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_gst_pan_link
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN supported_map_providers text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN block_driver_own_rc_for_fleet_drivers boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

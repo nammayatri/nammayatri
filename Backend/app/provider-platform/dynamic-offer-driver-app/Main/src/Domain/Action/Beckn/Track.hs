@@ -19,6 +19,8 @@ module Domain.Action.Beckn.Track
   )
 where
 
+import qualified BecknV2.OnDemand.Enums as DS
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import Data.Maybe
 import qualified Domain.Types.Booking as DBooking
 import Domain.Types.DriverLocation
@@ -36,7 +38,6 @@ import qualified SharedLogic.External.LocationTrackingService.API.DriversLocatio
 import SharedLogic.External.LocationTrackingService.Types
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
-import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 
 newtype DTrackReq = TrackReq
@@ -48,24 +49,25 @@ data DTrackRes = TrackRes
     transporter :: DM.Merchant,
     isRideCompleted :: Bool,
     driverLocation :: Maybe DriverLocation,
-    isValueAddNP :: Bool
+    isValueAddNP :: Bool,
+    vehicleCategory :: DS.VehicleCategory
   }
   deriving (Generic, Show)
 
 track ::
   (CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], HasShortDurationRetryCfg r c) =>
   Id DM.Merchant ->
+  Text ->
   DTrackReq ->
   m DTrackRes
-track transporterId req = do
+track transporterId bapId req = do
   transporter <-
     QM.findById transporterId
       >>= fromMaybeM (MerchantNotFound transporterId.getId)
   ride <- QRide.findOneByBookingId req.bookingId >>= fromMaybeM (RideDoesNotExist req.bookingId.getId)
-  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  let transporterId' = booking.providerId
-  isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-  unless (transporterId' == transporterId) $ throwError AccessDenied
+  vehicleVariant <- ride.vehicleVariant & fromMaybeM (InternalError "Vehicle variant not found for ride")
+  let vehicleCategory = Utils.mapVariantToVehicle vehicleVariant
+  isValueAddNP <- CQVAN.isValueAddNP bapId
   let isRideCompleted = (\status -> status `elem` [DRide.COMPLETED, DRide.CANCELLED]) ride.status
   (driverLocation :: Maybe DriverLocation) <-
     if not isValueAddNP

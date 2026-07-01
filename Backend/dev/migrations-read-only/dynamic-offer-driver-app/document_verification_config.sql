@@ -154,3 +154,4 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN only_
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN face_match_source_doc text ;

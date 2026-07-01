@@ -65,6 +65,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
     getDriverSearchRequestStats,
     getDriverIdentityInfo,
     postDriverIdentityInfoUpdate,
+    postDriverAssociationChange,
   )
 where
 
@@ -436,3 +437,9 @@ postDriverIdentityInfoUpdate merchantShortId opCity apiTokenInfo driverId req = 
   T.withTransactionStoring transaction $ do
     let requestorId = apiTokenInfo.personId.getId
     Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverIdentityInfoUpdate) driverId requestorId req
+
+postDriverAssociationChange :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Common.ChangeAssociationReq -> Environment.Flow APISuccess)
+postDriverAssociationChange merchantShortId opCity apiTokenInfo subjectId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) (Just (Id subjectId)) Nothing (Just req)
+  T.withTransactionStoring transaction (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverAssociationChange) apiTokenInfo.personId.getId subjectId req)
