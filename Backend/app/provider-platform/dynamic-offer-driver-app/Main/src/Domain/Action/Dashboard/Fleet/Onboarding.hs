@@ -288,6 +288,24 @@ castDocumentMetadata = \case
           regionCovered = p.regionCovered,
           rcNumber = p.rcNumber
         }
+  VehicleDocs.UDYAMMetadata u ->
+    CommonOnboarding.UDYAMMetadata
+      CommonOnboarding.UDYAMDocumentMetadata
+        { udyamNumber = u.udyamNumber,
+          tdsRate = u.tdsRate
+        }
+  VehicleDocs.TANMetadata t ->
+    CommonOnboarding.TANMetadata
+      CommonOnboarding.TANDocumentMetadata
+        { documentId = t.documentId,
+          tdsRate = t.tdsRate
+        }
+  VehicleDocs.LDCMetadata l ->
+    CommonOnboarding.LDCMetadata
+      CommonOnboarding.LDCDocumentMetadata
+        { documentId = l.documentId,
+          tdsRate = l.tdsRate
+        }
 
 castPanType :: DPan.PanType -> CommonDriverRegistration.PanType
 castPanType DPan.INDIVIDUAL = CommonDriverRegistration.INDIVIDUAL

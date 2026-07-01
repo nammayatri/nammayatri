@@ -5,6 +5,7 @@ module Domain.Types.DriverUdyam where
 
 import Data.Aeson
 import qualified Domain.Types.DriverPanCard
+import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -16,6 +17,7 @@ import qualified Tools.Beam.UtilsTH
 
 data DriverUdyamE e = DriverUdyam
   { driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    documentImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
     enterpriseName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     enterpriseType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.DriverUdyam.DriverUdyam,
@@ -41,6 +43,7 @@ instance EncryptedItem DriverUdyam where
     pure
       DriverUdyam
         { driverId = driverId entity,
+          documentImageId = documentImageId entity,
           enterpriseName = enterpriseName entity,
           enterpriseType = enterpriseType entity,
           id = id entity,
@@ -58,6 +61,7 @@ instance EncryptedItem DriverUdyam where
     pure
       ( DriverUdyam
           { driverId = driverId entity,
+            documentImageId = documentImageId entity,
             enterpriseName = enterpriseName entity,
             enterpriseType = enterpriseType entity,
             id = id entity,

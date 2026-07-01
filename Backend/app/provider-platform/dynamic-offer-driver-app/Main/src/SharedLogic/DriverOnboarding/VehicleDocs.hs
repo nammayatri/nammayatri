@@ -147,6 +147,24 @@ data VehiclePermitDocumentMetadata = VehiclePermitDocumentMetadata
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
+data UDYAMDocumentMetadata = UDYAMDocumentMetadata
+  { udyamNumber :: Maybe Text,
+    tdsRate :: Maybe Double
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data TANDocumentMetadata = TANDocumentMetadata
+  { documentId :: Text,
+    tdsRate :: Maybe Double
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data LDCDocumentMetadata = LDCDocumentMetadata
+  { documentId :: Text,
+    tdsRate :: Maybe Double
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
 data DocumentMetadata
   = DLMetadata DLDocumentMetadata
   | AadhaarMetadata AadhaarDocumentMetadata
@@ -158,6 +176,9 @@ data DocumentMetadata
   | VehicleFitnessMetadata VehicleFitnessCertificateDocumentMetadata
   | VehicleInsuranceMetadata VehicleInsuranceDocumentMetadata
   | VehiclePermitMetadata VehiclePermitDocumentMetadata
+  | UDYAMMetadata UDYAMDocumentMetadata
+  | TANMetadata TANDocumentMetadata
+  | LDCMetadata LDCDocumentMetadata
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
 data DocumentStatusItem = DocumentStatusItem
