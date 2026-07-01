@@ -10,6 +10,8 @@ Toll:
     tollEndGates : "[TollGate]"
     isAutoRickshawAllowed : Bool
     isTwoWheelerAllowed : Maybe Bool
+    isAutoRickshawTollChargeApplicable : Maybe Bool
+    isTwoWheelerTollChargeApplicable : Maybe Bool
     price: Price
 
 
@@ -20,6 +22,8 @@ Toll:
   default:
     isAutoRickshawAllowed: 'false'
     isTwoWheelerAllowed: 'false'
+    isAutoRickshawTollChargeApplicable: 'false'
+    isTwoWheelerTollChargeApplicable: 'false'
 
   constraints:
     id: PrimaryKey

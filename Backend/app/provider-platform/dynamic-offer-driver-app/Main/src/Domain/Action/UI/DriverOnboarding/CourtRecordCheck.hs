@@ -5,6 +5,7 @@ module Domain.Action.UI.DriverOnboarding.CourtRecordCheck
   )
 where
 
+import Control.Applicative ((<|>))
 import Data.Time (utctDay)
 import qualified Domain.Types.DriverIdentityInfo as DDII
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -20,6 +21,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import qualified Storage.Queries.DriverIdentityInfo as QDII
 import qualified Storage.Queries.DriverInformationExtra as QDI
+import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Tools.Verification as Verification
 
 runCourtRecordCheck :: Person.Person -> DMOC.MerchantOperatingCity -> Flow ()
@@ -37,9 +39,12 @@ runCourtRecordCheck person merchantOpCity = do
     if isJust (mbIdentityInfo >>= (.courtRecord) >>= (.result))
       then logInfo $ "CourtRecordCheck: court record already present for driver " <> person.id.getId <> ", skipping submit"
       else do
-        mbPanNumber <- mapM decrypt driverInfo.panNumber
+        mbPanCard <- QPanCard.findByDriverId person.id
+        mbPanFromInfo <- mapM decrypt driverInfo.panNumber
+        mbPanFromCard <- mapM (decrypt . (.panCardNumber)) mbPanCard
         let driverName = person.firstName <> maybe "" (" " <>) person.lastName
-            mbDob = utctDay <$> driverInfo.driverDob
+            mbDob = (utctDay <$> driverInfo.driverDob) <|> (utctDay <$> (mbPanCard >>= (.driverDob)))
+            mbPanNumber = mbPanFromInfo <|> mbPanFromCard
             mbAddress = mbIdentityInfo >>= (.address)
             req =
               VI.VerifyCRCReq

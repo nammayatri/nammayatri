@@ -20,6 +20,23 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
+data CoinsConfigListItem = CoinsConfigListItem
+  { entriesId :: Kernel.Types.Id.Id Dashboard.Common.CoinsConfig,
+    eventFunction :: Dashboard.Common.DriverCoins.DriverCoinsFunctionType,
+    eventName :: Kernel.Prelude.Text,
+    coins :: Kernel.Prelude.Int,
+    expirationAt :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    active :: Kernel.Prelude.Bool,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
+    tripCategoryType :: Kernel.Prelude.Maybe Dashboard.Common.DriverCoins.TripCategoryType
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CoinsConfigListRes = CoinsConfigListRes {configs :: [CoinsConfigListItem]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data CreateCoinsConfigReq
   = NewCoinsConfig NewCoinsConfigReq
   | DuplicateCoinsConfig DuplicateCoinsConfigsReq
@@ -60,24 +77,28 @@ data UpdateReq = UpdateReq {entriesId :: Kernel.Types.Id.Id Dashboard.Common.Coi
 instance Kernel.Types.HideSecrets.HideSecrets UpdateReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("coinsConfig" :> (PutCoinsConfigUpdate :<|> PostCoinsConfigCreate))
+type API = ("coinsConfig" :> (GetCoinsConfigList :<|> PutCoinsConfigUpdate :<|> PostCoinsConfigCreate))
+
+type GetCoinsConfigList = ("list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get '[JSON] CoinsConfigListRes)
 
 type PutCoinsConfigUpdate = ("update" :> ReqBody '[JSON] UpdateReq :> Put '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostCoinsConfigCreate = ("create" :> ReqBody '[JSON] CreateCoinsConfigReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 data CoinsConfigAPIs = CoinsConfigAPIs
-  { putCoinsConfigUpdate :: UpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+  { getCoinsConfigList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient CoinsConfigListRes,
+    putCoinsConfigUpdate :: UpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postCoinsConfigCreate :: CreateCoinsConfigReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkCoinsConfigAPIs :: (Client EulerHS.Types.EulerClient API -> CoinsConfigAPIs)
 mkCoinsConfigAPIs coinsConfigClient = (CoinsConfigAPIs {..})
   where
-    putCoinsConfigUpdate :<|> postCoinsConfigCreate = coinsConfigClient
+    getCoinsConfigList :<|> putCoinsConfigUpdate :<|> postCoinsConfigCreate = coinsConfigClient
 
 data CoinsConfigUserActionType
-  = PUT_COINS_CONFIG_UPDATE
+  = GET_COINS_CONFIG_LIST
+  | PUT_COINS_CONFIG_UPDATE
   | POST_COINS_CONFIG_CREATE
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
