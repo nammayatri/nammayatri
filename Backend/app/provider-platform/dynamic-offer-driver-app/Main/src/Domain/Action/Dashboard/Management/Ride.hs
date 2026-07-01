@@ -55,6 +55,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.CallStatusExtra as QCallStatus
 import qualified Storage.Queries.DriverFee as QDriverFee
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
@@ -183,7 +184,7 @@ getRideCallCount _merchantShortId _opCity rideId = do
 
 postRideWaiverRideCancellationPenalty :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Common.WaiverRideCancellationPenaltyReq -> Flow APISuccess
 postRideWaiverRideCancellationPenalty _merchantShortId _opCity rideId req = do
-  ride <- QRide.findById (cast @Common.Ride @DRide.Ride rideId) >>= fromMaybeM (InvalidRequest $ "Ride does not exist: " <> rideId.getId)
+  ride <- QRideLite.findByIdLite (cast @Common.Ride @DRide.Ride rideId) >>= fromMaybeM (InvalidRequest $ "Ride does not exist: " <> rideId.getId)
   when (ride.status /= DRide.CANCELLED) $ throwError (InvalidRequest "Ride is not cancelled")
   case (ride.driverCancellationPenaltyFeeId, ride.driverCancellationPenaltyAmount) of
     (Just driverCancellationPenaltyFeeId, Just driverCancellationPenaltyAmount) -> do

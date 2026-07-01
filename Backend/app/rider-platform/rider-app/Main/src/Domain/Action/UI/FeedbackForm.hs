@@ -27,9 +27,9 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified Storage.CachedQueries.FeedbackForm as CQFF
 import qualified Storage.CachedQueries.Merchant as QMerchant
-import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 
 makeFeedbackFormList :: [FeedbackFormAPIEntity] -> FeedbackFormList
 makeFeedbackFormList item =
@@ -88,8 +88,8 @@ feedbackForm personId ratingValue = do
 submitFeedback :: FeedbackFormReq -> Flow APISuccess
 submitFeedback req = do
   let rideId = req.rideId
-  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  ride <- QRideLite.findByIdLite rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   merchant <- QMerchant.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   let bppReq =
         CallBPPInternal.FeedbackFormReq

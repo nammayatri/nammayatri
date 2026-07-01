@@ -35,11 +35,11 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import qualified Storage.CachedQueries.Merchant as QMerc
-import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Feedback as QFeedback
 import qualified Storage.Queries.FeedbackBadge as QFeedbackBadge
 import qualified Storage.Queries.FeedbackBadgeExtra as QFeedbackBadgeExtra
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error (RatingError (..))
@@ -78,7 +78,7 @@ rating ::
 rating apiKey FeedbackReq {..} = do
   internalAPIKey <- asks (.internalAPIKey)
   ride <- B.runInReplica $ QRide.findByBPPRideId rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  booking <- B.runInReplica $ B.runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  booking <- B.runInReplica $ B.runInReplica $ QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   person <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
   merchant <- QMerc.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   _ <- validateRequest ratingValue ride.status

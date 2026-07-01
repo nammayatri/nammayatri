@@ -26,12 +26,12 @@ import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
-import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import Tools.Notifications
 
 callCustomerFCM :: Id Ride -> Maybe Text -> Flow APISuccess
 callCustomerFCM rideId apiKey = do
-  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  ride <- runInReplica $ QRideLite.findByIdLite rideId >>= fromMaybeM (RideNotFound rideId.getId)
   merchantId <- maybe (runInReplica (QBookingLite.findByIdLite (cast ride.bookingId) >>= fromMaybeM (BookingNotFound ride.bookingId.getId)) <&> (.providerId)) return ride.merchantId
   merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   unless (Just merchant.internalApiKey == apiKey) $

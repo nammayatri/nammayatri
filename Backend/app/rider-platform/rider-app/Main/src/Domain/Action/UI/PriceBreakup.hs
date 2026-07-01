@@ -15,7 +15,7 @@ import qualified Kernel.Types.Id
 import Kernel.Types.Price
 import Kernel.Utils.Common
 import qualified Storage.Clickhouse.QuoteBreakup as CHQ
-import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 
 getPriceBreakup ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -25,7 +25,7 @@ getPriceBreakup ::
     Environment.Flow API.Types.UI.PriceBreakup.QuoteBreakupRes
   )
 getPriceBreakup (_, _) bookingId = do
-  booking <- B.runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  booking <- B.runInReplica $ QBookingLite.findByIdLite bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   quoteBreakups <- case booking.quoteId of
     Nothing -> pure []
     Just qId -> CHQ.findAllByQuoteId qId booking.createdAt

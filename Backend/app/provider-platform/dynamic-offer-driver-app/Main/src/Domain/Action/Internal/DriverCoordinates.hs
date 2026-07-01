@@ -26,12 +26,12 @@ import Kernel.Utils.Error
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
-import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import Tools.Error
 
 getDriverCoordinates :: Id Ride -> Maybe Text -> Flow (Maybe Maps.LatLong)
 getDriverCoordinates rideId apiKey = do
-  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  ride <- runInReplica $ QRideLite.findByIdLite rideId >>= fromMaybeM (RideNotFound rideId.getId)
   merchantId <- maybe ((runInReplica $ QBookingLite.findByIdLite (cast ride.bookingId) >>= fromMaybeM (BookingNotFound ride.bookingId.getId)) <&> (.providerId)) return ride.merchantId
   merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   unless (Just merchant.internalApiKey == apiKey) $
