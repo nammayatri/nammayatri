@@ -123,6 +123,51 @@
       }
     },
     {
+      "name": "Switch City (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('dashboard_token', d.authToken);",
+              "console.log('Switched to', d.merchantId, d.city);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
       "name": "D1 Add Vehicle",
       "event": [
         {
@@ -802,8 +847,12 @@
             "exec": [
               "var d = pm.response.json();",
               "if (d.estimates && d.estimates.length > 0) {",
-              "    pm.environment.set('estimateId', d.estimates[0].id);",
-              "    console.log('Estimate:', d.estimates[0].id, d.estimates[0].vehicleVariant, d.estimates[0].estimatedFare);",
+              "    var want = pm.environment.get('auto_vehicle_variant') || 'AUTO_RICKSHAW';",
+              "    var est = d.estimates.find(e => e.vehicleVariant === want)",
+              "           || d.estimates.find(e => e.vehicleServiceTierType === want)",
+              "           || d.estimates[0];",
+              "    pm.environment.set('estimateId', est.id);",
+              "    console.log('Estimate:', est.id, est.vehicleVariant, est.estimatedFare, '(wanted', want + ')');",
               "}",
               "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
               "pm.test('Has estimates', function () { pm.expect(d, 'response body').to.be.an('object'); pm.expect(d.estimates, 'estimates field').to.be.an('array'); pm.expect(d.estimates.length, 'estimate count').to.be.above(0); });"
@@ -883,9 +932,9 @@
           "listen": "prerequest",
           "script": {
             "exec": [
-              "// Wait briefly before checking nearby requests",
+              "// Wait 25s for allocator batch cycle (~22s) to dispatch SRFD to nearby driver",
               "const start = Date.now();",
-              "while (Date.now() - start < 1000) { /* busy wait */ }"
+              "while (Date.now() - start < 25000) { /* busy wait */ }"
             ],
             "type": "text/javascript"
           }
@@ -1330,9 +1379,9 @@
           "listen": "prerequest",
           "script": {
             "exec": [
-              "// Wait briefly before checking nearby requests",
+              "// Wait 25s for allocator to reallocate to D2 after D1 cancel",
               "const start = Date.now();",
-              "while (Date.now() - start < 1000) { /* busy wait */ }"
+              "while (Date.now() - start < 25000) { /* busy wait */ }"
             ],
             "type": "text/javascript"
           }
