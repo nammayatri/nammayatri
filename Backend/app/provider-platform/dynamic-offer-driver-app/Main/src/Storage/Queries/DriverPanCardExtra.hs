@@ -48,15 +48,16 @@ findValidByDriverId driverId = do
         ]
     ]
 
-upsertPanRecord :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => DriverPanCard -> m ()
-upsertPanRecord a@DriverPanCard {..} =
-  findOneWithKV [Se.Is Beam.driverId $ Se.Eq driverId.getId] >>= \case
+upsertPanRecord :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => DriverPanCard -> Maybe DriverPanCard -> m ()
+upsertPanRecord a@DriverPanCard {..} mbExisting =
+  case mbExisting of
     Just _ ->
       updateOneWithKV
         [ Se.Set Beam.consentTimestamp consentTimestamp,
           Se.Set Beam.driverDob driverDob,
           Se.Set Beam.driverName driverName,
           Se.Set Beam.documentImageId1 documentImageId1.getId,
+          Se.Set Beam.panCardNumberEncrypted (panCardNumber & unEncrypted . encrypted),
           Se.Set Beam.panCardNumberHash (panCardNumber & hash),
           Se.Set Beam.updatedAt updatedAt,
           Se.Set Beam.verificationStatus verificationStatus,

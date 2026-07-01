@@ -396,6 +396,7 @@ apis:
       auth: ApiAuthV2
       query:
         fleetOwnerId: Text
+        operatorCode: Text
       params:
         driverId: Id Driver
       response:
@@ -411,6 +412,7 @@ apis:
               requestorId: Text
             query:
               - fleetOwnerId: Text
+              - operatorCode: Text
             response:
               type: APISuccess
 
@@ -2432,8 +2434,6 @@ types:
     - rejectReason: Maybe Text
     - approved: Maybe Bool
     - association: Maybe AssociationDetail
-
-
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

@@ -117,3 +117,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN crea
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN challan_providers_priority_list text[];
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN face_match_service character varying(30) ;

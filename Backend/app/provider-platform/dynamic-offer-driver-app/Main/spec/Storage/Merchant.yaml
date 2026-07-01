@@ -46,6 +46,7 @@ imports:
   Hours: Kernel.Types.Common
   ExotelMapping: Domain.Types.Extra.TransporterConfig
   KnowledgeCenterSopTypesConfig: Domain.Types.Extra.TransporterConfig
+  TdsConfig: Domain.Types.Extra.TransporterConfig
   Expand: Kernel.External.Payout.Interface.Types
   TripCategory: Domain.Types.Trip
   IssueBreachConfig: SharedLogic.BehaviourManagement.IssueBreach
@@ -628,6 +629,7 @@ MerchantServiceUsageConfig:
     driverBackgroundVerificationService: DriverBackgroundVerificationService
     aadhaarVerificationService: AadhaarVerificationService
     faceVerificationService: VerificationService
+    faceMatchService: VerificationService
     panVerificationService: Maybe VerificationService
     gstVerificationService: Maybe VerificationService
     dashboardPanVerificationService: Maybe VerificationService
@@ -658,18 +660,21 @@ MerchantServiceUsageConfig:
     categoryBasedVerificationPriorityList: Maybe Value
     createPayoutOrder: Maybe PayoutService
     payoutOrderStatus: Maybe PayoutService
+    faceMatchService: Maybe VerificationService
 
   fromTType:
     llmChatCompletion: Kernel.Prelude.fromMaybe ChatCompletion.Types.AzureOpenAI|I
     categoryBasedVerificationPriorityList: Kernel.Utils.JSON.valueToMaybe =<< categoryBasedVerificationPriorityList|E
     createPayoutOrder: fromMaybe (Kernel.External.Payout.Types.Juspay)|I
     payoutOrderStatus: fromMaybe (Kernel.External.Payout.Types.Juspay)|I
+    faceMatchService: Kernel.Prelude.fromMaybe Kernel.External.Verification.Types.Idfy|I
 
   toTType:
     llmChatCompletion: Kernel.Prelude.Just|I
     categoryBasedVerificationPriorityList: Data.Aeson.toJSON <$> categoryBasedVerificationPriorityList|E
     createPayoutOrder: Kernel.Prelude.Just|I
     payoutOrderStatus: Kernel.Prelude.Just|I
+    faceMatchService: Kernel.Prelude.Just|I
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -699,6 +704,7 @@ MerchantServiceUsageConfig:
     getDistancesForScheduledRides: text
     aadhaarVerificationService: character varying(30)
     faceVerificationService: character varying(30)
+    faceMatchService: character varying(30)
     panVerificationService: character varying(30)
     gstVerificationService: character varying(30)
     dashboardPanVerificationService: character varying(30)
@@ -1003,9 +1009,12 @@ TransporterConfig:
       subscriptionGst: GstBreakup
       airportEntryFeeGst: Maybe GstBreakup
       securityDepositGst: Maybe GstBreakup
-      defaultTdsRate: Maybe Double
-      subscriptionTdsRate: Maybe Double
-      invalidPanTdsRate: Double
+      defaultTdsRate: Maybe TdsConfig
+      subscriptionTdsRate: Maybe TdsConfig
+      invalidPanTdsRate: TdsConfig
+      individualLinked: Maybe TdsConfig
+      individualNotLinked: Maybe TdsConfig
+      businessTds: Maybe TdsConfig
       serviceVatPercentage: Maybe Double
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     CommissionAggregationFrequency:
@@ -1345,6 +1354,7 @@ TransporterConfig:
     stclConfig: Maybe StclConfig # STCL membership tunables. Any field left as Nothing falls back to defaults in Domain.Action.UI.StclMembership.
     useCategoryBasedVerificationPriorityList: Maybe Bool
     supportedMapProviders: "Maybe [MapProvider]" # Merchant-level allowlist constraining driver-selectable map providers; Nothing = allow all.
+    blockDriverOwnRCForFleetDrivers: Maybe Bool # When True, fleet-linked drivers cannot onboard/activate their own (non-fleet) RC
 
   beamType:
     currency: Maybe Currency

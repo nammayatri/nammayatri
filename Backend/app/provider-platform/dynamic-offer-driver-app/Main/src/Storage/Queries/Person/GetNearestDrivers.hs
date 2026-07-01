@@ -364,5 +364,5 @@ estimateDeductionsFromConfig taxConfig rideFare govtCharges_ tollCharges_ parkin
           tollAmount = fromMaybe 0 tollCharges_
           parkingAmount = fromMaybe 0 parkingCharge_
           baseFare = totalFare - gstAmount - tollAmount - parkingAmount
-          tdsRate = Just taxConfig.invalidPanTdsRate
+          tdsRate = Just taxConfig.invalidPanTdsRate.rate
        in gstAmount + estimateWalletDeductions tdsRate baseFare

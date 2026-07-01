@@ -740,7 +740,7 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
             person.id.getId
             creditAmount
             paidAmount
-            transporterConfig.taxConfig.subscriptionTdsRate
+            ((.rate) <$> transporterConfig.taxConfig.subscriptionTdsRate)
             subscriptionGstBreakdown
             currency
             merchantId.getId

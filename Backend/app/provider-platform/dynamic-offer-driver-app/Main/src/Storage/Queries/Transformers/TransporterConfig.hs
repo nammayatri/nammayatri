@@ -74,17 +74,24 @@ $(mkFieldParserWithDefault ''TaxConfig)
 
 parseTaxConfig :: (Monad m, Log m) => Text -> Maybe A.Value -> m TaxConfig
 parseTaxConfig merchantOperatingCityId mbVal = do
-  let def =
+  let emptyGst = GstBreakup {cgstPercentage = Nothing, sgstPercentage = Nothing, igstPercentage = Nothing}
+      def =
         TaxConfig
-          { rideGst = GstBreakup {cgstPercentage = Nothing, sgstPercentage = Nothing, igstPercentage = Nothing},
-            subscriptionGst = GstBreakup {cgstPercentage = Nothing, sgstPercentage = Nothing, igstPercentage = Nothing},
+          { rideGst = emptyGst,
+            subscriptionGst = emptyGst,
             airportEntryFeeGst = Nothing,
             securityDepositGst = Nothing,
             defaultTdsRate = Nothing,
             subscriptionTdsRate = Nothing,
-            invalidPanTdsRate = 0,
+            invalidPanTdsRate = TdsConfig {rate = 0, thresholdAmount = Nothing},
+            individualLinked = Nothing,
+            individualNotLinked = Nothing,
+            businessTds = Nothing,
             serviceVatPercentage = Nothing
           }
+  -- Legacy flat-number TDS fields are tolerated by TdsConfig's hand-written
+  -- FromJSON (Domain.Types.Extra.TransporterConfig), so no post-parse backfill
+  -- is needed here.
   parseFieldWithDefaultM "transporterConfig" "taxConfig" merchantOperatingCityId def parseTaxConfigWithDefault mbVal
 
 parseKnowledgeCenterSopTypesConfig :: (Monad m, Log m) => Text -> Maybe A.Value -> m Extra.KnowledgeCenterSopTypesConfig

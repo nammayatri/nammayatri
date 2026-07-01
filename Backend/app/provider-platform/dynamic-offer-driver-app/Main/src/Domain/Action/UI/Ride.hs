@@ -100,6 +100,7 @@ import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Rating as QR
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
@@ -365,7 +366,7 @@ stopAction rideId pt stopLocId action = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   void $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   void $ QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
-  void $ runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  void $ runInReplica $ QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   stopsLM <- QLM.getLatestStopsByEntityId rideId.getId
   unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus ("This ride " <> ride.id.getId <> " is not in progress" <> Text.pack (show ride.status))
   when (null stopsLM) $ throwError $ InvalidRequest ("No stop present to be reached for ride " <> ride.id.getId)

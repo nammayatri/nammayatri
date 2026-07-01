@@ -10,6 +10,7 @@ where
 import qualified API.Types.ProviderPlatform.Management.CoinsConfig
 import qualified Domain.Action.Dashboard.Management.CoinsConfig
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.VehicleCategory
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -23,8 +24,8 @@ import Tools.Auth
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.ProviderPlatform.Management.CoinsConfig.API)
 handler merchantId city = getCoinsConfigList merchantId city :<|> putCoinsConfigUpdate merchantId city :<|> postCoinsConfigCreate merchantId city
 
-getCoinsConfigList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.CoinsConfig.CoinsConfigListRes)
-getCoinsConfigList a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.CoinsConfig.getCoinsConfigList a4 a3 a2 a1
+getCoinsConfigList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Environment.FlowHandler API.Types.ProviderPlatform.Management.CoinsConfig.CoinsConfigListRes)
+getCoinsConfigList a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.CoinsConfig.getCoinsConfigList a6 a5 a4 a3 a2 a1
 
 putCoinsConfigUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.CoinsConfig.UpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 putCoinsConfigUpdate a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.CoinsConfig.putCoinsConfigUpdate a3 a2 a1

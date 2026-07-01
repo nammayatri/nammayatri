@@ -272,6 +272,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
   localResidenceProofImgs <- getDriverImages merchant.id DVC.LocalResidenceProof
   policeVerificationCertificateImgs <- getDriverImages merchant.id DVC.PoliceVerificationCertificate
   drivingSchoolCertificateImgs <- getDriverImages merchant.id DVC.DrivingSchoolCertificate
+  medicalCertificateImgs <- getDriverImages merchant.id DVC.MedicalCertificate
   commonDocumentsData <- runInReplica (QCommonDriverOnboardingDocuments.findByDriverId (Just (cast driverId)))
   let commonDocuments = map toCommonDocumentItem commonDocumentsData
   allDlImgs <- runInReplica (QDL.findAllByImageId (map (Id) $ mapMaybe listToMaybe dlImgs))
@@ -315,6 +316,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
         policeVerificationCertificate = policeVerificationCertificateImgs,
         drivingSchoolCertificate = drivingSchoolCertificateImgs,
         udyamCertificate = udyamImgs,
+        medicalCertificate = medicalCertificateImgs,
         commonDocuments = commonDocuments
       }
   where
@@ -1396,7 +1398,7 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
       licenseNumber <- mapM encrypt req.driverLicenseNumber
       -- Check for duplicate DL number if being changed
       whenJust req.driverLicenseNumber $ \dlNum -> do
-        mbExistingDL <- QDL.findByDLNumber dlNum
+        mbExistingDL <- QDL.findByDLNumberAndStatus dlNum Documents.VALID
         whenJust mbExistingDL $ \existingDL ->
           when (existingDL.driverId /= dl.driverId) $
             throwError DLAlreadyLinked
@@ -1435,12 +1437,12 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
           let driverId = dlImage.personId
           -- Check if DL number is already linked to another driver
           encryptedDLNumber <- encrypt dlNumber
-          mbExistingDL <- QDL.findByDLNumber dlNumber
+          mbExistingDL <- QDL.findByDLNumberAndStatus dlNumber Documents.VALID
           whenJust mbExistingDL $ \existingDL ->
             when (existingDL.driverId /= driverId) $
               throwError DLAlreadyLinked
           -- Check if driver already has a DL
-          mbDriverDL <- QDL.findByDriverId driverId
+          mbDriverDL <- QDL.findByDriverIdAndVerificationStatus driverId Documents.VALID
           whenJust mbDriverDL $ \_ ->
             throwError DriverAlreadyLinked
           now <- getCurrentTime

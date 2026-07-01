@@ -25,6 +25,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
 import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperatorAssociation
+import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
 import Tools.Error
@@ -47,6 +48,8 @@ postOperatorConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
 
   SA.endDriverAssociationsIfAllowed merchant merchantOperatingCityId transporterConfig driver
+  when (merchant.overwriteAssociation == Just True) $
+    QRCAssociation.endAllRCAssociationsForDriver driverId
 
   DOR.makeDriverReferredByOperator merchantOperatingCityId driverId operator.id
 

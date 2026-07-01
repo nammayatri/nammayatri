@@ -79,14 +79,20 @@ instance Kernel.Types.HideSecrets.HideSecrets UpdateReq where
 
 type API = ("coinsConfig" :> (GetCoinsConfigList :<|> PutCoinsConfigUpdate :<|> PostCoinsConfigCreate))
 
-type GetCoinsConfigList = ("list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get '[JSON] CoinsConfigListRes)
+type GetCoinsConfigList =
+  ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> QueryParam "eventName" Kernel.Prelude.Text
+      :> QueryParam
+           "vehicleCategory"
+           Domain.Types.VehicleCategory.VehicleCategory
+      :> Get '[JSON] CoinsConfigListRes
+  )
 
 type PutCoinsConfigUpdate = ("update" :> ReqBody '[JSON] UpdateReq :> Put '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostCoinsConfigCreate = ("create" :> ReqBody '[JSON] CreateCoinsConfigReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 data CoinsConfigAPIs = CoinsConfigAPIs
-  { getCoinsConfigList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient CoinsConfigListRes,
+  { getCoinsConfigList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> EulerHS.Types.EulerClient CoinsConfigListRes,
     putCoinsConfigUpdate :: UpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postCoinsConfigCreate :: CreateCoinsConfigReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }

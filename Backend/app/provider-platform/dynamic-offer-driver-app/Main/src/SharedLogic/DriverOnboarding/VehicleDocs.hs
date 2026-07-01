@@ -312,7 +312,6 @@ fetchInprogressVehicleDocuments ::
   Flow [VehicleDocumentItem]
 fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language processedVehicleDocuments mbReqRegistrationNo onlyMandatoryDocs skipMessages = do
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
-      mbPersonId = IQuery.getPersonEntityId entityImagesInfo
   mbVerificationReqRecord <- case entityImagesInfo.entity of
     IQuery.PersonEntity person -> do
       -- Driver inspection or status handler
@@ -338,14 +337,17 @@ fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs 
             else do
               rcNoEnc <- encrypt registrationNo
               rc <- RCQuery.findByCertificateNumberHash (rcNoEnc & hash)
-              (isUnlinked, mbRcId) <- case rc of
-                Just rc_ -> do
-                  iu <- maybe (pure []) (\personId -> DRAQuery.findUnlinkedRC personId rc_.id) mbPersonId
-                  pure (iu, Just rc_.id)
-                Nothing -> pure ([], Nothing)
+              -- VRC-derived "RC link already created (done)" check, replacing the
+              -- driver_rc_association history read (findUnlinkedRC). Reuses the RC row
+              -- fetched just above + transporterConfig from entityImagesInfo, so it adds
+              -- no DB query: if the VRC exists, is not a fleet RC, and
+              -- canCreateRCAssociation holds, the driver-RC link would have been created,
+              -- so this is not an in-progress document.
+              let mbRcId = (.id) <$> rc
+                  rcLinkAlreadyCreated = maybe False (\rc_ -> isNothing rc_.fleetOwnerId && SDO.canCreateRCAssociation entityImagesInfo.transporterConfig rc_) rc
               mbRcImagesInfo <- forM mbRcId $ \rcId -> do
                 IQuery.getRcImagesInfoFromEntityImagesInfo entityImagesInfo rcId vehicleDocsLoadedByRcId
-              if isJust (find (\doc -> doc.registrationNo == registrationNo) processedVehicleDocuments) || not (null isUnlinked)
+              if isJust (find (\doc -> doc.registrationNo == registrationNo) processedVehicleDocuments) || rcLinkAlreadyCreated
                 then return []
                 else do
                   let userSelectedVehicleCategory = fromMaybe DVC.CAR verificationReqRecord.vehicleCategory

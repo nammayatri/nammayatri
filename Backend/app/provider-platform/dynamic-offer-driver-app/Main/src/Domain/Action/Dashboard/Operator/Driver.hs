@@ -74,7 +74,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
@@ -91,6 +91,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverGstin as QDGST
@@ -281,8 +282,11 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
             (vehicleDocItem, allDocumentVerificationConfigs) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOpCity transporterConfig language registrationNo Nothing
             let vehicleCategory = fromMaybe vehicleDocItem.userSelectedVehicleCategory vehicleDocItem.verifiedVehicleCategory
             -- Vehicle docs: no fleet-driver/individual applicableTo split → Nothing, [].
-            depsValid <- inspectionDependenciesValid merchantOpCity.id DVC.InspectionHub Nothing [] vehicleCategory vehicleDocItem.documents
-            pure (Just (vehicleDocItem, allDocumentVerificationConfigs), depsValid)
+            -- Throws (naming the offending docs) if any InspectionHub dependency doc isn't VALID.
+            invalidInspectionDeps <- inspectionInvalidDependencyDocs merchantOpCity.id DVC.InspectionHub Nothing [] vehicleCategory vehicleDocItem.documents
+            unless (null invalidInspectionDeps) $
+              throwError (InvalidRequest $ "Cannot approve: InspectionHub dependency documents not valid: " <> T.intercalate ", " (map show invalidInspectionDeps))
+            pure (Just (vehicleDocItem, allDocumentVerificationConfigs), True)
           else (Nothing,) <$> SStatus.fetchAndCheckVehicleDocsValidForEnabling rc merchantOpCity transporterConfig language registrationNo
       when allVehicleDocsVerified $ do
         if enableBotFlow
@@ -335,7 +339,11 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
             (allDocVerificationConfigs, driverDocStatuses, vehicleCategory) <- SStatus.fetchDriverDocStatusesForPerson person merchantOpCity transporterConfig language Nothing
             isFleetDriver <- SStatus.hasActiveFleetAssociation person.id
             let driverConfigs = case allDocVerificationConfigs of Right cs -> cs; Left _ -> []
-            inspectionDependenciesValid merchantOpCity.id DVC.DriverInspectionHub (Just isFleetDriver) driverConfigs vehicleCategory driverDocStatuses
+            -- Throws (naming the offending docs) if any DriverInspectionHub dependency doc isn't VALID.
+            invalidInspectionDeps <- inspectionInvalidDependencyDocs merchantOpCity.id DVC.DriverInspectionHub (Just isFleetDriver) driverConfigs vehicleCategory driverDocStatuses
+            unless (null invalidInspectionDeps) $
+              throwError (InvalidRequest $ "Cannot approve: DriverInspectionHub dependency documents not valid: " <> T.intercalate ", " (map show invalidInspectionDeps))
+            pure True
           else SStatus.fetchAndCheckDriverDocsValidForEnabling person merchantOpCity transporterConfig language
       when allDriverDocsVerified $ do
         unless enableBotFlow $ do
@@ -361,14 +369,14 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       let reqUpdatedStatus = if allDriverDocsVerified then castReqStatusToDomain request.status else PENDING
       void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
 
-    -- True iff the inspection-hub config's dependency docs are all VALID. Drives APPROVED vs PENDING.
-    -- On the driver side a dep counts only if it applies per dvc `applicableTo` (a fleet driver skips
-    -- INDIVIDUAL-only deps like OperatorPartnerCode); pass Nothing/[] for vehicle docs (no applicableTo split).
-    inspectionDependenciesValid merchantOpCityId inspectionHubDocType mbIsFleetDriver driverConfigs vehicleCategory docStatuses = do
+    -- The inspection-hub config's dependency docs that are NOT VALID (empty ⇒ all valid). Drives the
+    -- throw-on-approve. On the driver side a dep counts only if it applies per dvc `applicableTo` (a fleet
+    -- driver skips INDIVIDUAL-only deps like OperatorPartnerCode); pass Nothing/[] for vehicle docs.
+    inspectionInvalidDependencyDocs merchantOpCityId inspectionHubDocType mbIsFleetDriver driverConfigs vehicleCategory docStatuses = do
       mbInspectionCfg <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId inspectionHubDocType vehicleCategory Nothing
       pure $ case mbInspectionCfg of
-        Nothing -> True
-        Just inspectionCfg -> SStatus.dependencyDocsAllValid mbIsFleetDriver driverConfigs inspectionCfg.dependencyDocumentType docStatuses
+        Nothing -> []
+        Just inspectionCfg -> SStatus.invalidDependencyDocs mbIsFleetDriver driverConfigs inspectionCfg.dependencyDocumentType docStatuses
 
     getMerchantInfo mShortId city = do
       merchant <- findMerchantByShortId mShortId
@@ -623,8 +631,9 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
   case mbAuthId of
     Just authId -> do
       smsCfg <- asks (.smsCfg)
-
       SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
+      when (merchant.overwriteAssociation == Just True) $
+        QDRC.endAllRCAssociationsForDriver person.id
 
       deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
       let regId = Id authId :: Id SR.RegistrationToken
@@ -657,6 +666,8 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       when (otp /= req.otp) $ throwError InvalidOtp
 
       SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
+      when (merchant.overwriteAssociation == Just True) $
+        QDRC.endAllRCAssociationsForDriver person.id
 
       verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person transporterConfig
 
@@ -669,7 +680,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       when (isJust checkAssocOperator) $
         throwError (InvalidRequest "Driver already associated with operator")
 
-      assoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId person.id operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      assoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId person.id operator.id.getId DomainRC.defaultAssociationEnd
       QDOA.create assoc
       Analytics.handleDriverAnalyticsAndFlowStatus
         transporterConfig
@@ -962,8 +973,9 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
             let runReconcile = do
                   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound reqId)
                   transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
-                  dependencyDocsValid <- SStatus.botApproveAndReconcile merchantOpCity person transporterConfig
-                  pure (if dependencyDocsValid then DRR.COMPLETED else DRR.IN_PROGRESS, Nothing, Nothing)
+                  -- Throws (naming the offending docs) if any BotApproval dependency doc isn't VALID.
+                  SStatus.botApproveAndReconcile merchantOpCity person transporterConfig
+                  pure (DRR.COMPLETED, Nothing, Nothing)
             unless driverInfo.verified $ throwError (InvalidRequest "Driver is not verified")
             if driverInfo.approved == Just True
               then runReconcile
@@ -983,8 +995,9 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
             -- Sync dependency-docs check; the heavy fleet recompute (sets `enabled` + cascades) is forked.
             fleetPerson <- QPerson.findById fleetOwnerInfo.fleetOwnerPersonId >>= fromMaybeM (PersonNotFound fleetOwnerInfo.fleetOwnerPersonId.getId)
             transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
-            dependencyDocsValid <- SStatus.botApproveAndReconcile merchantOpCity fleetPerson transporterConfig
-            pure (if dependencyDocsValid then DRR.COMPLETED else DRR.IN_PROGRESS, Nothing, Nothing)
+            -- Throws (naming the offending docs) if any BotApproval dependency doc isn't VALID.
+            SStatus.botApproveAndReconcile merchantOpCity fleetPerson transporterConfig
+            pure (DRR.COMPLETED, Nothing, Nothing)
           else do
             applyDocRejections req.entityType reqId validatedDocs
             QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.enabled = False, DFOI.verified = False}
@@ -1063,11 +1076,19 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
             Nothing -> pure Nothing
     validateDocs mocId entityType = do
       allFODVC <- case entityType of
-        API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> CQFODVC.findAllByMerchantOpCityId mocId Nothing
+        API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER ->
+          getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = mocId.getId, documentType = Nothing}) (Just (CQFODVC.findAllByMerchantOpCityId mocId Nothing))
         _ -> pure []
       allDVC <- case entityType of
         API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> pure []
         _ -> CQDVC.findAllByMerchantOpCityId mocId Nothing
+
+      -- Resolve the fleet owner's role once (entityId is the fleet owner's person id) so the per-doc FODVC
+      -- lookup can match the right role's row instead of being role-blind.
+      mbFleetOwnerRole <- case entityType of
+        API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER ->
+          Just . (.role) <$> (QPerson.findById (Kernel.Types.Id.Id req.entityId) >>= fromMaybeM (PersonNotFound req.entityId))
+        _ -> pure Nothing
 
       forM req.rejectDocumentUpdateReq $ \doc -> do
         let domainDocType = mapDocumentType doc.documentType
@@ -1078,9 +1099,12 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
 
         isMandatory <- case entityType of
           API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> do
-            config <- case filter (\c -> c.documentType == domainDocType) allFODVC of
-              (c : _) -> pure c
-              [] -> throwError (InvalidRequest "Document Verification Config not found")
+            -- Role-aware: match this fleet owner's role, falling back to any fleet-role row on drift.
+            let isFleetRoleCfg r = r `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS]
+                mbConfig =
+                  (mbFleetOwnerRole >>= \role -> find (\c -> c.documentType == domainDocType && c.role == role) allFODVC)
+                    <|> find (\c -> c.documentType == domainDocType && isFleetRoleCfg c.role) allFODVC
+            config <- mbConfig & fromMaybeM (InvalidRequest "Document Verification Config not found")
             pure config.isMandatory
           _ -> do
             case filter (\c -> c.documentType == domainDocType) allDVC of
@@ -1180,7 +1204,7 @@ getDriverRequestReviewHistory merchantShortId opCity apiEntityType reviewRequest
     Just mob -> do
       mobHash <- getDbHash mob
       let countryCode = fromMaybe "+91" mbMobileCountryCode
-      mbPerson <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRoles countryCode mobHash merchant.id [DP.DRIVER, DP.FLEET_OWNER]
+      mbPerson <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRoles countryCode mobHash merchant.id [DP.DRIVER, DP.FLEET_OWNER, DP.FLEET_BUSINESS]
       pure $ Just $ maybe [] (\p -> [p.id.getId]) mbPerson
 
   case mbPersonIdsForMobile of

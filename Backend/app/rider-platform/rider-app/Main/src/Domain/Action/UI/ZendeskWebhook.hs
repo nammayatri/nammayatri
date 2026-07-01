@@ -36,5 +36,5 @@ handleTicketClosed ticketId = do
       SafetyQSos.updateStatus DSos.Resolved sos.id
       logInfo $ "ZendeskWebhook: SOS resolved for ticketId=" <> ticketId
     Nothing -> do
-      QIR.updateIssueStatus ticketId IssueCommon.CLOSED
+      QIR.updateIssueStatus ticketId IssueCommon.RESOLVED
       logInfo $ "ZendeskWebhook: IssueReport closed for ticketId=" <> ticketId

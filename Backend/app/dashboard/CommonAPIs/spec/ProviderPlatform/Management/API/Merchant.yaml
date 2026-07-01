@@ -715,11 +715,13 @@ apis:
       response:
         type: APISuccess
       userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_MERCHANT_MESSAGE
-  - POST: # MerchantMessageDeleteAPI
-      endpoint: /merchantMessage/delete
+  - DELETE: # MerchantMessageDeleteAPI
+      endpoint: /merchantMessage/{messageKey}
       auth: ApiAuthV2
-      request:
-        type: DeleteMerchantMessageReq
+      params:
+        messageKey: Text
+      query:
+        vehicleCategory: VehicleCategory
       response:
         type: APISuccess
       userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DELETE_MERCHANT_MESSAGE
@@ -1353,10 +1355,6 @@ types:
     - messageType: Maybe Text
     - senderHeader: Maybe Text
     - templateName: Maybe Text
-    - vehicleCategory: Maybe VehicleCategory
-    - derive: "'HideSecrets"
-  DeleteMerchantMessageReq:
-    - messageKey: Text
     - vehicleCategory: Maybe VehicleCategory
     - derive: "'HideSecrets"
   CityListResp:
