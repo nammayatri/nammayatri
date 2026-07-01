@@ -2,6 +2,8 @@ module API.UI.Issue where
 
 import qualified API.Types.ProviderPlatform.Management.Ride as DRide
 import qualified API.Types.ProviderPlatform.Management.Ride as PPMR
+import qualified AWS.S3 as S3
+import qualified Data.Text as T
 import Domain.Action.Dashboard.Ride as DRide
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -15,6 +17,7 @@ import qualified IssueManagement.Domain.Action.UI.Issue as Common
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueOption as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as Domain
+import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Ticket.Interface.Types as TIT
@@ -102,11 +105,21 @@ driverIssueHandle =
       findByMobileNumberAndMerchantId = castPersonByMobileNumberAndMerchant,
       mbFindFRFSTicketBookingById = Nothing,
       mbFindStationByIdWithContext = Nothing,
-      -- Live chat is not yet exposed on driver-app. Leaving this hook as
-      -- `Nothing` means dashboard operator comments on driver-side issues
-      -- are persisted but no FCM push is sent to the driver.
-      mbSendChatNotification = Nothing
+      mbSendChatNotification = Just (\pid payload -> Notify.notifyOnIssueChatMessage (cast pid) payload),
+      -- Nothing = never forward driver-side chat messages to the ticket
+      -- service. Driver-app doesn't use XyneSpaces today; enable this by
+      -- returning a check against MerchantServiceUsageConfig if that changes.
+      mbShouldForwardChatToTicketService = Nothing,
+      mbFetchMediaBase64 = Just fetchMediaBase64FromS3
     }
+
+-- | Fetch a MediaFile's bytes directly from S3 (returning the base64 payload
+-- 'AWS.S3.get' produces). Same mechanism the shared IssueManagement handler
+-- uses to embed attachments as @data:@ URIs on outbound ticket calls.
+fetchMediaBase64FromS3 :: DMF.MediaFile -> Flow (Maybe Text)
+fetchMediaBase64FromS3 mf = case mf.s3FilePath of
+  Just s3Key -> Just <$> S3.get (T.unpack s3Key)
+  Nothing -> pure Nothing
 
 castPersonById :: Id Common.Person -> Flow (Maybe Common.Person)
 castPersonById driverId = do

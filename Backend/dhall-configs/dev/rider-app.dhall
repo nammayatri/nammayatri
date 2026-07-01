@@ -525,4 +525,5 @@ in  { esqDBCfg
     , masterCloudProxyConfig =
       { masterUrl = Some "http://localhost:8116", masterSecret = Some "123" }
     , bapHostRedirectMap = [] : List { mapKey : Text, mapValue : Optional Text }
+    , xyneWebhookSigningSecret = "<XYNE_WEBHOOK_SIGNING_SECRET>"
     }

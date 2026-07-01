@@ -556,4 +556,5 @@ in  { esqDBCfg
     , ttenTokenCacheExpiry = +86390
     , masterCloudProxyConfig =
       { masterUrl = None Text, masterSecret = Some "123" }
+    , xyneWebhookSigningSecret = "<XYNE_WEBHOOK_SIGNING_SECRET>"
     }
