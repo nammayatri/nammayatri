@@ -201,7 +201,16 @@ types:
     expiryDate: Maybe UTCTime
     metadata: Maybe DocumentMetadata
   DocumentMetadata:
-    enum: "DLMetadata DLDocumentMetadata | AadhaarMetadata AadhaarDocumentMetadata | PanMetadata PanDocumentMetadata | LocalAddressProofMetadata LocalAddressProofDocumentMetadata | GSTMetadata GSTDocumentMetadata | RCMetadata RCDocumentMetadata | VehiclePUCMetadata VehiclePUCDocumentMetadata | VehicleFitnessMetadata VehicleFitnessCertificateDocumentMetadata | VehicleInsuranceMetadata VehicleInsuranceDocumentMetadata | VehiclePermitMetadata VehiclePermitDocumentMetadata"
+    enum: "DLMetadata DLDocumentMetadata | AadhaarMetadata AadhaarDocumentMetadata | PanMetadata PanDocumentMetadata | LocalAddressProofMetadata LocalAddressProofDocumentMetadata | GSTMetadata GSTDocumentMetadata | RCMetadata RCDocumentMetadata | VehiclePUCMetadata VehiclePUCDocumentMetadata | VehicleFitnessMetadata VehicleFitnessCertificateDocumentMetadata | VehicleInsuranceMetadata VehicleInsuranceDocumentMetadata | VehiclePermitMetadata VehiclePermitDocumentMetadata | UDYAMMetadata UDYAMDocumentMetadata | TANMetadata TANDocumentMetadata | LDCMetadata LDCDocumentMetadata"
+  UDYAMDocumentMetadata:
+    udyamNumber: Maybe Text
+    tdsRate: Maybe Double
+  TANDocumentMetadata:
+    documentId: Text
+    tdsRate: Maybe Double
+  LDCDocumentMetadata:
+    documentId: Text
+    tdsRate: Maybe Double
   DLDocumentMetadata:
     driverLicenseNumber: Text
     driverDateOfBirth: Maybe UTCTime

@@ -67,6 +67,30 @@ data DocumentMetadata
   | VehicleFitnessMetadata VehicleFitnessCertificateDocumentMetadata
   | VehicleInsuranceMetadata VehicleInsuranceDocumentMetadata
   | VehiclePermitMetadata VehiclePermitDocumentMetadata
+  | UDYAMMetadata UDYAMDocumentMetadata
+  | TANMetadata TANDocumentMetadata
+  | LDCMetadata LDCDocumentMetadata
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UDYAMDocumentMetadata = UDYAMDocumentMetadata
+  { udyamNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TANDocumentMetadata = TANDocumentMetadata
+  { documentId :: Kernel.Prelude.Text,
+    tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data LDCDocumentMetadata = LDCDocumentMetadata
+  { documentId :: Kernel.Prelude.Text,
+    tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
