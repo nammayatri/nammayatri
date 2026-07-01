@@ -727,6 +727,7 @@ library
       Storage.Queries.PopularLocationExtra
       Storage.Queries.PurchasedPassExtra
       Storage.Queries.PurchasedPassPaymentExtra
+      Storage.Queries.QueriesExtra.BookingLite
       Storage.Queries.QueriesExtra.RideLite
       Storage.Queries.QuoteExtra
       Storage.Queries.RatingExtra

@@ -39,7 +39,7 @@ import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.PersonExtra as QPerson
-import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import Tools.Error
 
 type AckResp = AckResponse
@@ -69,7 +69,7 @@ callBasedEndRide ::
   m AckResp
 callBasedEndRide shandle merchantId mobileNumberHash callFrom = do
   driver <- runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash merchantId DP.DRIVER >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
-  activeRide <- runInReplica $ QRide.getActiveByDriverId driver.id >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
+  activeRide <- runInReplica $ QRideLite.getActiveByDriverIdLite driver.id >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
   void $ QRB.findById activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
   void $ EndRide.callBasedEndRide shandle activeRide.id (EndRide.CallBasedEndRideReq driver)
   return Ack
