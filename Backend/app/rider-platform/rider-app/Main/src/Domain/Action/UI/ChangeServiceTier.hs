@@ -49,7 +49,7 @@ getChangeServiceTierQuotes (_personId, _merchantId) bookingId = do
   let searchRequestId = currentQuote.requestId
 
   -- Reuse existing search results logic, then filter
-  searchResults <- QuoteAction.getQuotes searchRequestId (Just True) False
+  searchResults <- QuoteAction.getQuotes searchRequestId (Just True)
 
   -- Filter quotes: different tier
   let notSameTierQuote = \case

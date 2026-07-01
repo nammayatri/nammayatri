@@ -47,10 +47,7 @@ handler =
   getQuotes
 
 getQuotes :: Id SSR.SearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> FlowHandler DQuote.GetQuotesRes
-getQuotes searchRequestId (personId, merchantId) mbAllowMultiple = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ getQuotes' searchRequestId (personId, merchantId) mbAllowMultiple False
+getQuotes searchRequestId (personId, merchantId) mbAllowMultiple = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ getQuotes' searchRequestId (personId, merchantId) mbAllowMultiple
 
--- | The trailing Bool is isDashboardQuoteReq: True only for dashboard-originated
--- quote fetches, which surfaces commission as a fare-breakup line. Customer app
--- callers pass False.
-getQuotes' :: Id SSR.SearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> Bool -> Flow DQuote.GetQuotesRes
-getQuotes' searchRequestId _ mbAllowMultiple isDashboardQuoteReq = DQuote.getQuotes searchRequestId mbAllowMultiple isDashboardQuoteReq
+getQuotes' :: Id SSR.SearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> Flow DQuote.GetQuotesRes
+getQuotes' searchRequestId _ mbAllowMultiple = DQuote.getQuotes searchRequestId mbAllowMultiple

@@ -197,8 +197,8 @@ translateServiceTierText mocId language mbText = case mbText of
       <&> Just . maybe text (.message)
   Nothing -> pure Nothing
 
-getQuotes :: Id SSR.SearchRequest -> Maybe Bool -> Bool -> Flow GetQuotesRes
-getQuotes searchRequestId mbAllowMultiple isDashboardQuoteReq = do
+getQuotes :: Id SSR.SearchRequest -> Maybe Bool -> Flow GetQuotesRes
+getQuotes searchRequestId mbAllowMultiple = do
   searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   unless (mbAllowMultiple == Just True) $ do
     activeBooking <- runInReplica $ QBooking.findLatestSelfAndPartyBookingByRiderId searchRequest.riderId
@@ -209,7 +209,7 @@ getQuotes searchRequestId mbAllowMultiple isDashboardQuoteReq = do
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId searchRequest.merchantOperatingCityId))
     quoteList <- QQuote.findAllBySRId searchRequest.id
     estimateList <- QEstimate.findAllBySRId searchRequest.id
-    buildGetQuotesRes searchRequest estimateList quoteList riderConfig isDashboardQuoteReq
+    buildGetQuotesRes searchRequest estimateList quoteList riderConfig
 
 -- | Sync-path entry: builds GetQuotesRes from in-memory estimates/quotes
 -- produced by 'Domain.Action.Beckn.OnSearch.onSearch'. Skips the Redis
@@ -220,21 +220,19 @@ getQuotesFromInMemory ::
   [DEstimate.Estimate] ->
   [SQuote.Quote] ->
   Maybe DRC.RiderConfig ->
-  Bool ->
   Flow GetQuotesRes
-getQuotesFromInMemory searchRequest estimateList quoteList mbRiderConfig isDashboardQuoteReq = do
+getQuotesFromInMemory searchRequest estimateList quoteList mbRiderConfig = do
   activeBooking <- runInReplica $ QBooking.findLatestSelfAndPartyBookingByRiderId searchRequest.riderId
   whenJust activeBooking $ \booking -> processActiveBooking booking searchRequest.isDashboardRequest OnSearch
-  buildGetQuotesRes searchRequest estimateList quoteList mbRiderConfig isDashboardQuoteReq
+  buildGetQuotesRes searchRequest estimateList quoteList mbRiderConfig
 
 buildGetQuotesRes ::
   SSR.SearchRequest ->
   [DEstimate.Estimate] ->
   [SQuote.Quote] ->
   Maybe DRC.RiderConfig ->
-  Bool ->
   Flow GetQuotesRes
-buildGetQuotesRes searchRequest estimateList quoteList mbRiderConfig isDashboardQuoteReq = do
+buildGetQuotesRes searchRequest estimateList quoteList mbRiderConfig = do
   journeyData <- getJourneys searchRequest searchRequest.hasMultimodalSearch
   person <- QP.findById searchRequest.riderId >>= fromMaybeM (PersonDoesNotExist searchRequest.riderId.getId)
   let mostFrequentVehicleCategory = SLS.mostFrequent person.lastUsedVehicleServiceTiers
@@ -243,7 +241,7 @@ buildGetQuotesRes searchRequest estimateList quoteList mbRiderConfig isDashboard
       language = fromMaybe Lang.ENGLISH person.language
   providerLookup <- buildProviderLookup estimateList quoteList
   offers <- getOffers searchRequest enableRideHailingOffers providerLookup quoteList language
-  estimates' <- getEstimates searchRequest enableRideHailingOffers isReferredRide isDashboardQuoteReq providerLookup estimateList language
+  estimates' <- getEstimates searchRequest enableRideHailingOffers isReferredRide providerLookup estimateList language
   let vehicleServiceTierOrderConfig = maybe [] (.userServiceTierOrderConfig) mbRiderConfig
       defaultServiceTierOrderConfig = maybe [] (.defaultServiceTierOrderConfig) mbRiderConfig
       specialLocationTierOrderConfig = getSpecialLocationTierOrder searchRequest.discoveredSpecialLocationId mbRiderConfig
@@ -404,8 +402,8 @@ offerCreationTime (OnRentalCab QuoteAPIEntity {createdAt}) = createdAt
 offerCreationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
 offerCreationTime (OnMeterRide QuoteAPIEntity {createdAt}) = createdAt
 
-getEstimates :: SSR.SearchRequest -> Bool -> Bool -> Bool -> HM.HashMap Text (BppDetails, Bool) -> [DEstimate.Estimate] -> Lang.Language -> Flow [UEstimate.EstimateAPIEntity]
-getEstimates searchRequest _enableRideHailingOffers isReferredRide isDashboardQuoteReq providerLookup estimateList language = do
+getEstimates :: SSR.SearchRequest -> Bool -> Bool -> HM.HashMap Text (BppDetails, Bool) -> [DEstimate.Estimate] -> Lang.Language -> Flow [UEstimate.EstimateAPIEntity]
+getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLookup estimateList language = do
   let sortedEstimates = sortByEstimatedFare estimateList
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId searchRequest.merchantOperatingCityId))
   let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
@@ -440,7 +438,7 @@ getEstimates searchRequest _enableRideHailingOffers isReferredRide isDashboardQu
       -- reflects VAT redistribution via applyRideDiscount.
       Just resp -> SOffer.mkCumulativeOfferResp searchRequest.merchantOperatingCityId resp [] mbBreakup
     (bppDetails, valueAddNP) <- lookupProvider providerLookup estimate.providerId
-    apiEntity <- UEstimate.mkEstimateAPIEntity isReferredRide mbOffer bppDetails valueAddNP isDashboardQuoteReq estimate
+    apiEntity <- UEstimate.mkEstimateAPIEntity isReferredRide mbOffer bppDetails valueAddNP estimate
     serviceTierName <- translateServiceTierText searchRequest.merchantOperatingCityId language apiEntity.serviceTierName
     serviceTierShortDesc <- translateServiceTierText searchRequest.merchantOperatingCityId language apiEntity.serviceTierShortDesc
     pure apiEntity {UEstimate.serviceTierName = serviceTierName, UEstimate.serviceTierShortDesc = serviceTierShortDesc}
