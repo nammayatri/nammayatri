@@ -20,12 +20,12 @@ module Domain.Action.Beckn.Track
 where
 
 import qualified BecknV2.OnDemand.Enums as DS
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import Data.Maybe
 import qualified Domain.Types.Booking as DBooking
 import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.VehicleVariant as DVV
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
@@ -66,7 +66,7 @@ track transporterId bapId req = do
       >>= fromMaybeM (MerchantNotFound transporterId.getId)
   ride <- QRide.findOneByBookingId req.bookingId >>= fromMaybeM (RideDoesNotExist req.bookingId.getId)
   vehicleVariant <- ride.vehicleVariant & fromMaybeM (InternalError "Vehicle variant not found for ride")
-  let vehicleCategory = DVV.castVehicleVariantToVehicleCategory vehicleVariant
+  let vehicleCategory = Utils.mapVariantToVehicle vehicleVariant
   isValueAddNP <- CQVAN.isValueAddNP bapId
   let isRideCompleted = (\status -> status `elem` [DRide.COMPLETED, DRide.CANCELLED]) ride.status
   (driverLocation :: Maybe DriverLocation) <-

@@ -27,12 +27,12 @@ import Kernel.Utils.Error
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
-import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import Tools.Error
 
 getDeliveryImage :: Id Ride -> Maybe Text -> Flow Text
 getDeliveryImage rideId apiKey = do
-  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  ride <- runInReplica $ QRideLite.findByIdLite rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- runInReplica $ QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   merchant <- QM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   unless (Just merchant.internalApiKey == apiKey) $

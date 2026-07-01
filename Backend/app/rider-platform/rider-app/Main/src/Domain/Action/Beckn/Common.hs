@@ -142,6 +142,7 @@ import qualified Storage.Queries.JourneyLeg as QJL
 import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonStats as QPersonStats
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideExtra as QERIDE
@@ -1932,7 +1933,7 @@ sendBookingCancelledMessageViaWhatsapp personId riderConfig = do
 updateAndNotifyDriverArrivalStatus :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, ServiceFlow m r) => DRB.Booking -> DRide.Ride -> DRide.DriverArrivalStatus -> m ()
 updateAndNotifyDriverArrivalStatus booking ride newStatus =
   Redis.withWaitOnLockRedisWithExpiry (driverArrivalStatusLockKey ride.id.getId) 5 30 $ do
-    freshRide <- QRide.findById ride.id >>= fromMaybeM (RideDoesNotExist ride.id.getId)
+    freshRide <- QRideLite.findByIdLite ride.id >>= fromMaybeM (RideDoesNotExist ride.id.getId)
     let isHigherStatus = maybe True (newStatus >) freshRide.driverArrivalStatus
     when (freshRide.status /= DRide.INPROGRESS && isHigherStatus) $ do
       void $ QRide.updateDriverArrivalStatus (Just newStatus) ride.id
