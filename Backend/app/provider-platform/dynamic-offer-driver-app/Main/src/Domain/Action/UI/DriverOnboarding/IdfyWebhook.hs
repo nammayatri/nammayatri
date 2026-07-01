@@ -280,7 +280,7 @@ handleIdfySourceDown person retryFunc verificationReq = do
             Verification.AsyncResp res -> do
               now <- getCurrentTime
               case res.requestor of
-                VT.Idfy -> IVQuery.create =<< RC.mkIdfyVerificationEntity person res.requestId now verificationReq.imageExtractionValidation verificationReq.documentNumber verificationReq.issueDateOnDoc verificationReq.vehicleCategory verificationReq.airConditioned verificationReq.oxygen verificationReq.ventilator verificationReq.documentImageId1 Nothing Nothing
+                VT.Idfy -> IVQuery.create =<< SLogicOnboarding.mkRCIdfyVerificationEntity person res.requestId now verificationReq.imageExtractionValidation verificationReq.documentNumber verificationReq.issueDateOnDoc verificationReq.vehicleCategory verificationReq.airConditioned verificationReq.oxygen verificationReq.ventilator verificationReq.documentImageId1 Nothing Nothing
                 VT.HyperVergeRCDL -> HVQuery.create =<< RC.mkHyperVergeVerificationEntity person res.requestId now verificationReq.imageExtractionValidation verificationReq.documentNumber verificationReq.issueDateOnDoc verificationReq.vehicleCategory verificationReq.airConditioned verificationReq.oxygen verificationReq.ventilator verificationReq.documentImageId1 Nothing Nothing res.transactionId
                 _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> T.pack (show res.requestor))
               CQO.setVerificationPriorityList person.id resp'.remPriorityList

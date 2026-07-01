@@ -691,12 +691,12 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
 
   mbExistingDL <- QDLE.findByDLNumber dlNumber
   whenJust mbExistingDL $ \existingDL -> do
-    when (existingDL.driverId /= person.id) $
-      throwError $ DocumentAlreadyLinkedToAnotherDriver "DL"
     when (existingDL.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $
       throwError $ DocumentUnderManualReview "DL"
-    when (existingDL.verificationStatus == Documents.VALID) $
-      throwError $ DocumentAlreadyValidated "DL"
+    when (existingDL.verificationStatus == Documents.VALID) $ do
+      if existingDL.driverId /= person.id
+        then throwError $ DocumentAlreadyLinkedToAnotherDriver "DL"
+        else throwError $ DocumentAlreadyValidated "DL"
 
   logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", No blocking duplicate DL found, proceeding with upload"
 

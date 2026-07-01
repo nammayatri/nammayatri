@@ -69,6 +69,7 @@ module Domain.Action.Dashboard.Management.Driver
     getDriverSearchRequestStats,
     getDriverIdentityInfo,
     postDriverIdentityInfoUpdate,
+    postDriverAssociationChange,
   )
 where
 
@@ -137,6 +138,7 @@ import SharedLogic.Allocator
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import SharedLogic.DriverFleetOperatorAssociation (checkDriverOperatorAssociation, checkFleetDriverAssociation, checkFleetOperatorAssociation, isAssociationBetweenTwoPerson)
+import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverOnboarding.Status (ResponseStatus (..))
@@ -1633,4 +1635,18 @@ postDriverIdentityInfoUpdate merchantShortId opCity driverId requestorId req = d
         req.address
         (castFromCommon <$> req.addressDocumentType)
         req.addressState
+  pure Success
+
+postDriverAssociationChange :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Common.ChangeAssociationReq -> Flow APISuccess
+postDriverAssociationChange merchantShortId opCity requestorId subjectId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+  case req.changeType of
+    Common.ChangeFleetDriver -> throwError (InvalidRequest "ChangeFleetDriver is not supported via this API; use the fleet driver removal API instead")
+    _ -> do
+      operatorCode <- fromMaybeM (InvalidRequest "newOperatorCode is required") req.newOperatorCode
+      let changeType = case req.changeType of
+            Common.ChangeFleetOperator -> SA.ChangeFleetOperator
+            _ -> SA.ChangeDriverOperator
+      SA.performAssociationChange merchant merchantOpCity requestorId subjectId operatorCode changeType
   pure Success

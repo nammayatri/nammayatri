@@ -244,8 +244,8 @@ postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req s
 
   if skipOtpVerification
     then do
-      SA.endFleetAssociationsIfAllowed merchant merchantOpCityId transporterConfig fleetOwner
-      fleetOperatorAssociation <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId (getId fleetOwner.id) operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      SA.endFleetAssociationsIfAllowed merchantOpCityId transporterConfig fleetOwner
+      fleetOperatorAssociation <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId (getId fleetOwner.id) operator.id.getId DomainRC.defaultAssociationEnd
       QFOA.create fleetOperatorAssociation
     else do
       smsCfg <- asks (.smsCfg)
@@ -302,10 +302,9 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
     )
     $ throwError (InvalidRequest "Fleet already associated with another operator. Multiple operator links not allowed for this city.")
 
-  -- Only end associations if overwriteAssociation is enabled and multi-link is not allowed
-  when (merchant.overwriteAssociation == Just True && transporterConfig.allowMultiFleetOperatorLink /= Just True) $
-    SA.endFleetAssociationsIfAllowed merchant merchantOpCityId transporterConfig fleetOwner
-  fleetOperatorAssociation <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId (getId fleetOwner.id) operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+  when (transporterConfig.allowMultiFleetOperatorLink /= Just True) $ do
+    SA.endFleetAssociationsIfAllowed merchantOpCityId transporterConfig fleetOwner
+  fleetOperatorAssociation <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId (getId fleetOwner.id) operator.id.getId DomainRC.defaultAssociationEnd
   QFOA.create fleetOperatorAssociation
   let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
   when allowCacheDriverFlowStatus $ do

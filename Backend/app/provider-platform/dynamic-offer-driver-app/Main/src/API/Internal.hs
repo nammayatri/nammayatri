@@ -42,6 +42,7 @@ import qualified API.Internal.TollList as TollList
 import qualified API.Internal.TollUpsert as TollUpsert
 import qualified API.Internal.VerifyEmailUpdate as VerifyEmailUpdate
 import qualified API.Internal.ViolationDetection as ViolationDetection
+import qualified API.Internal.XyneWebhook as XyneWebhook
 import Environment
 import Servant
 import Tools.Auth ()
@@ -86,6 +87,7 @@ type API =
            :<|> VerifyEmailUpdate.API
            :<|> InMemManagement.API
            :<|> MasterCloudForward.API
+           :<|> XyneWebhook.API
        )
 
 handler :: AppEnv -> FlowServer API
@@ -128,3 +130,4 @@ handler env =
     :<|> VerifyEmailUpdate.handler
     :<|> InMemManagement.handler
     :<|> MasterCloudForward.handler env
+    :<|> XyneWebhook.handler

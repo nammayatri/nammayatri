@@ -91,8 +91,7 @@ data DriverProfileRes = DriverProfileRes
 
 knowYourDriver :: Id Ride -> Maybe Bool -> Maybe Text -> Flow DriverProfileRes
 knowYourDriver rideId withImages apiKey = do
-  let rideLiteId = cast rideId :: Id QRLite.RideLite
-  QRLite.findByIdLite rideLiteId >>= fromMaybeM (RideNotFound rideId.getId)
+  QRLite.findByIdLite rideId >>= fromMaybeM (RideNotFound rideId.getId)
     >>= \ride ->
       getDriver ride.driverId apiKey
         >>= getDriverProfile withImages

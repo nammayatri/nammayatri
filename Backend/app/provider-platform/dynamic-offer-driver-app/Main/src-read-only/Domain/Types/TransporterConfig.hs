@@ -66,6 +66,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     badDebtSchedulerTime :: Kernel.Prelude.NominalDiffTime,
     badDebtTimeThreshold :: Kernel.Prelude.Int,
     bankErrorExpiry :: Kernel.Prelude.NominalDiffTime,
+    blockDriverOwnRCForFleetDrivers :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     bookAnyVehicleDowngradeLevel :: Kernel.Prelude.Int,
     bulkWaiveOffLimit :: Kernel.Prelude.Int,
     cacheOfferListByDriverId :: Kernel.Prelude.Bool,
@@ -480,13 +481,16 @@ data SubscriptionConfig = SubscriptionConfig
 
 data TaxConfig = TaxConfig
   { airportEntryFeeGst :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.GstBreakup,
-    defaultTdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    invalidPanTdsRate :: Kernel.Prelude.Double,
+    businessTds :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig,
+    defaultTdsRate :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig,
+    individualLinked :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig,
+    individualNotLinked :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig,
+    invalidPanTdsRate :: Domain.Types.Extra.TransporterConfig.TdsConfig,
     rideGst :: Domain.Types.TransporterConfig.GstBreakup,
     securityDepositGst :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.GstBreakup,
     serviceVatPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     subscriptionGst :: Domain.Types.TransporterConfig.GstBreakup,
-    subscriptionTdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double
+    subscriptionTdsRate :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig
   }
   deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), (Eq))
 

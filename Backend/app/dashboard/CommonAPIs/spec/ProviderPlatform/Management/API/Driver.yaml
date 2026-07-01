@@ -668,6 +668,27 @@ apis:
             response:
               type: APISuccess
 
+  - POST: # postDriverAssociationChange
+      endpoint: /{subjectId}/association/change
+      auth: ApiAuthV2
+      params:
+        subjectId: Text
+      request:
+        type: ChangeAssociationReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{requestorId}/{subjectId}/association/change
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+              subjectId: Text
+            request:
+              type: ChangeAssociationReq
+            response:
+              type: APISuccess
+
 types:
   DriverIdentityInfoRes:
     - driverId: Id Driver
@@ -938,6 +959,14 @@ types:
     - day: Day
     - response: Maybe SearchRequestForDriverResponse
     - count: Int
+  AssociationChangeType:
+    enum: "ChangeDriverOperator, ChangeFleetOperator, ChangeFleetDriver"
+    derive: "'HideSecrets"
+  ChangeAssociationReq:
+    - changeType: AssociationChangeType
+    - newOperatorCode: Maybe Text
+    - fleetOwnerId: Maybe Text
+    - derive: "'HideSecrets"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
