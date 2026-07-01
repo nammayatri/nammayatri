@@ -10,6 +10,7 @@ import qualified Data.Text as Text
 import qualified Domain.Types.Coins.CoinsConfig as DTCC
 import qualified Domain.Types.Merchant
 import Domain.Types.Translations (Translations (..))
+import qualified Domain.Types.VehicleCategory as DTV
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
@@ -32,15 +33,17 @@ getCoinsConfigList ::
   Kernel.Types.Beckn.Context.City ->
   Maybe Int ->
   Maybe Int ->
+  Maybe Text ->
+  Maybe DTV.VehicleCategory ->
   Environment.Flow Common.CoinsConfigListRes
-getCoinsConfigList merchantShortId opCity mbLimit mbOffset = do
+getCoinsConfigList merchantShortId opCity mbLimit mbOffset mbEventName mbVehicleCategory = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   configs <-
     B.runInReplica $
-      QCoinsConfigExtra.findAllByMerchantOptCityIdWithLimitOffset merchantOpCityId (Just limit) (Just offset)
+      QCoinsConfigExtra.findAllByMerchantOptCityIdWithLimitOffset merchantOpCityId mbEventName mbVehicleCategory (Just limit) (Just offset)
   pure $
     Common.CoinsConfigListRes
       { configs = map buildCoinsConfigListItem configs
