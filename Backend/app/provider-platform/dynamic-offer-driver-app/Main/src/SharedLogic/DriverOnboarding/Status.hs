@@ -18,7 +18,9 @@ module SharedLogic.DriverOnboarding.Status
     validateMandatoryVehicleDocsForRC,
     fetchVehicleDocStatusesForRC,
     fetchDriverDocStatusesForPerson,
-    dependencyDocsAllValid,
+    invalidDependencyDocs,
+    getFleetDocVerificationConfig,
+    findFleetDocVerificationConfig,
     hasActiveFleetAssociation,
     recomputeFleetVerifiedAndEnabled,
     recomputeDriverVerifiedAndEnabled,
@@ -56,6 +58,7 @@ import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLicense as DL
+import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as FODVC
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -116,6 +119,7 @@ import qualified Storage.Queries.RideExtra as QRideExtra
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Tools.BackgroundVerification as BackgroundVerification
+import Tools.Error (DocumentVerificationConfigError (..))
 import qualified Tools.Plasma as TPlasma
 import qualified Tools.SMS as Sms
 import qualified Tools.Verification as Verification
@@ -174,15 +178,42 @@ docAppliesToDriver (Just isFleetDriver) applicableTo = case applicableTo of
 hasActiveFleetAssociation :: Id DP.Person -> Flow Bool
 hasActiveFleetAssociation personId = isJust <$> QFDA.findByDriverId personId True
 
--- | Are all of @deps@ VALID, counting only those that apply per dvc `applicableTo`?
---   @mbIsFleetDriver = Nothing@ disables the split (vehicle / fleet-owner / legacy → all deps required);
---   @driverConfigs@ supplies each dep's `applicableTo` (pass [] when no split is needed).
-dependencyDocsAllValid :: Maybe Bool -> [DVC.DocumentVerificationConfig] -> [DVC.DocumentType] -> [DocumentStatusItem] -> Bool
-dependencyDocsAllValid mbIsFleetDriver driverConfigs deps docStatuses =
-  all (`elem` validDocTypes) (filter depApplies deps)
+-- | The applicable dependency docs that are NOT VALID (empty ⇒ all good). Counts only deps that apply per
+--   dvc `applicableTo`: @mbIsFleetDriver = Nothing@ disables the split (vehicle / fleet-owner / legacy → all
+--   deps required); @driverConfigs@ supplies each dep's `applicableTo` (pass [] when no split is needed).
+--   Returns the offending doc types so callers can report them.
+invalidDependencyDocs :: Maybe Bool -> [DVC.DocumentVerificationConfig] -> [DVC.DocumentType] -> [DocumentStatusItem] -> [DVC.DocumentType]
+invalidDependencyDocs mbIsFleetDriver driverConfigs deps docStatuses =
+  filter (\dep -> dep `notElem` validDocTypes) (filter depApplies deps)
   where
     validDocTypes = map (.documentType) $ filter (\d -> d.verificationStatus == VALID) docStatuses
     depApplies dep = maybe True (\c -> docAppliesToDriver mbIsFleetDriver c.applicableTo) (find (\c -> c.documentType == dep) driverConfigs)
+
+-- | Pick the fleet config row for @docType@. Only for a fleet role (FLEET_OWNER/FLEET_BUSINESS) is the
+--   role filter applied — prefer the row matching that exact role, falling back to the first @docType@ row.
+--   For any other role, behave like the old code: just take the first @docType@ row (role-blind).
+findFleetConfigForRole :: DVC.DocumentType -> DP.Role -> [FODVC.FleetOwnerDocumentVerificationConfig] -> Maybe FODVC.FleetOwnerDocumentVerificationConfig
+findFleetConfigForRole docType role fleetConfigs
+  | isFleetRole role =
+    find (\c -> c.documentType == docType && c.role == role) fleetConfigs
+      <|> find (\c -> c.documentType == docType) fleetConfigs
+  | otherwise = find (\c -> c.documentType == docType) fleetConfigs
+
+-- | Non-throwing: fetch fleet configs for @docType@ via config-pilot (in-mem cached) and pick the row for
+--   @role@ (see 'findFleetConfigForRole'). Returns Nothing when the city has no such config.
+findFleetDocVerificationConfig :: Id DMOC.MerchantOperatingCity -> DVC.DocumentType -> DP.Role -> Flow (Maybe FODVC.FleetOwnerDocumentVerificationConfig)
+findFleetDocVerificationConfig merchantOpCityId docType role = do
+  configs <-
+    getConfig
+      (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType})
+      (Just (filter (\c -> c.documentType == docType) <$> CQFODVC.findAllByMerchantOpCityId merchantOpCityId Nothing))
+  pure $ findFleetConfigForRole docType role configs
+
+-- | Throwing variant of 'findFleetDocVerificationConfig' — errors if the city has no such config.
+getFleetDocVerificationConfig :: Id DMOC.MerchantOperatingCity -> DVC.DocumentType -> DP.Role -> Flow FODVC.FleetOwnerDocumentVerificationConfig
+getFleetDocVerificationConfig merchantOpCityId docType role =
+  findFleetDocVerificationConfig merchantOpCityId docType role
+    >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show docType))
 
 data StatusRes' = StatusRes'
   { driverDocuments :: [DocumentStatusItem],
@@ -997,12 +1028,14 @@ recomputeFleetVerifiedAndEnabled person allDocVerificationConfigs driverDocument
   -- read-replica lag right after the write).
   pure allFleetEnablingDocsValid
 
--- | BOT approve: returns whether BotApproval's dependency docs are VALID, and forks the recompute.
+-- | BOT approve: throws (naming the offending docs) if any BotApproval dependency doc is NOT VALID;
+--   otherwise forks the verified/enabled recompute. Throwing before the fork guarantees we never
+--   force-enable a fleet/driver whose deps haven't passed.
 botApproveAndReconcile ::
   DMOC.MerchantOperatingCity ->
   DP.Person ->
   DTC.TransporterConfig ->
-  Flow Bool
+  Flow ()
 botApproveAndReconcile merchantOperatingCity person transporterConfig = do
   let language = fromMaybe merchantOperatingCity.language person.language
   (allDocVerificationConfigs, driverDocuments, vehicleCategory) <- fetchDriverDocStatusesForPerson person merchantOperatingCity transporterConfig language (Just True)
@@ -1011,18 +1044,21 @@ botApproveAndReconcile merchantOperatingCity person transporterConfig = do
   isFleetDriver <- case allDocVerificationConfigs of
     Right _ -> hasActiveFleetAssociation person.id
     Left _ -> pure False
-  let dependencyDocsValid = case allDocVerificationConfigs of
+  let invalidDeps = case allDocVerificationConfigs of
         Left fleetConfigs ->
-          dependencyDocsAllValid Nothing [] (maybe [] (.dependencyDocumentType) $ find (\c -> c.documentType == DVC.BotApproval) fleetConfigs) driverDocuments
+          -- Role-aware: pick the BotApproval row for this person's role, not just any role's row.
+          invalidDependencyDocs Nothing [] (maybe [] (.dependencyDocumentType) $ findFleetConfigForRole DVC.BotApproval person.role fleetConfigs) driverDocuments
         Right driverConfigs ->
-          dependencyDocsAllValid (Just isFleetDriver) driverConfigs (maybe [] (.dependencyDocumentType) $ find (\c -> c.documentType == DVC.BotApproval) driverConfigs) driverDocuments
+          invalidDependencyDocs (Just isFleetDriver) driverConfigs (maybe [] (.dependencyDocumentType) $ find (\c -> c.documentType == DVC.BotApproval) driverConfigs) driverDocuments
+  -- Block approval (and the fork below) when any dependency doc isn't VALID — surface which docs failed.
+  unless (null invalidDeps) $
+    throwError (InvalidRequest $ "Cannot approve: BotApproval dependency documents not valid: " <> T.intercalate ", " (map show invalidDeps))
   -- Force BotApproval VALID: ReviewRequest isn't COMPLETED yet, but approval is committed.
   fork "botApproveAndReconcile: recompute verified/enabled" $ do
     let docs' = map forceBotApprovalValid driverDocuments
     if isFleetRole person.role
       then void $ recomputeFleetVerifiedAndEnabled person allDocVerificationConfigs docs' vehicleCategory Nothing
       else void $ recomputeDriverVerifiedAndEnabled merchantOperatingCity.id merchantOperatingCity.merchantId person allDocVerificationConfigs docs' vehicleCategory Nothing Nothing Nothing transporterConfig (Just isFleetDriver)
-  pure dependencyDocsValid
   where
     forceBotApprovalValid :: DocumentStatusItem -> DocumentStatusItem
     forceBotApprovalValid d
@@ -1250,6 +1286,8 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
         let mbImg = find (\img -> img.id == imgId) entityImagesInfo.entityImages
             iid = Just imgId.getId
          in (mbImg <&> (.s3Path), iid)
+      lookupImageFailReason imgId =
+        extractImageFailReason (find (\img -> img.id == imgId) entityImagesInfo.entityImages >>= (.failureReason))
       commonDocStatus dt = do
         mbDoc <- listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndDocumentType (Just driverId) dt
         let (status, reason, url) = checkImageValidity entityImagesInfo dt
@@ -1268,16 +1306,19 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
           -- Expiry from DL table's licenseExpiry field (not from Image table)
           let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId1)) mbDL'
               iid2 = mbDL' >>= (.documentImageId2) <&> (.getId)
-          return (mapStatus <$> (mbDL' <&> (.verificationStatus)), mbDL' >>= (.rejectReason), Nothing, mbDL' <&> (.licenseExpiry), s3, iid, iid2)
+              reason = (mbDL' >>= (.rejectReason)) <|> (if (mbDL' <&> (.verificationStatus)) == Just Documents.INVALID then (mbDL' <&> (.documentImageId1)) >>= lookupImageFailReason else Nothing)
+          return (mapStatus <$> (mbDL' <&> (.verificationStatus)), reason, Nothing, mbDL' <&> (.licenseExpiry), s3, iid, iid2)
         else do
           let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId1)) mbDL
               iid2 = mbDL >>= (.documentImageId2) <&> (.getId)
-          return (mapStatus <$> (mbDL <&> (.verificationStatus)), mbDL >>= (.rejectReason), Nothing, mbDL <&> (.licenseExpiry), s3, iid, iid2)
+              reason = (mbDL >>= (.rejectReason)) <|> (if (mbDL <&> (.verificationStatus)) == Just Documents.INVALID then (mbDL <&> (.documentImageId1)) >>= lookupImageFailReason else Nothing)
+          return (mapStatus <$> (mbDL <&> (.verificationStatus)), reason, Nothing, mbDL <&> (.licenseExpiry), s3, iid, iid2)
     DVC.AadhaarCard -> do
       mbAadhaarCard <- QAadhaarCard.findByPrimaryKey driverId
       let (s3, iid) = maybe (mbS3Path, mbImageId) lookupImage (mbAadhaarCard >>= (.aadhaarFrontImageId))
           iid2 = mbAadhaarCard >>= (.aadhaarBackImageId) <&> (.getId)
-      return (mapStatus . (.verificationStatus) <$> mbAadhaarCard, Nothing, Nothing, Nothing, s3, iid, iid2)
+          reason = if (mbAadhaarCard <&> (.verificationStatus)) == Just Documents.INVALID then (mbAadhaarCard >>= (.aadhaarFrontImageId)) >>= lookupImageFailReason else Nothing
+      return (mapStatus . (.verificationStatus) <$> mbAadhaarCard, reason, Nothing, Nothing, s3, iid, iid2)
     DVC.Permissions -> return (Just VALID, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing)
     DVC.SocialSecurityNumber -> do
       mbSSN <- QDSSN.findByDriverId driverId
@@ -1292,7 +1333,8 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
       mbPanCard <- QDPC.findByDriverId driverId
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId1)) mbPanCard
           iid2 = mbPanCard >>= (.documentImageId2) <&> (.getId)
-      return (mapStatus . (.verificationStatus) <$> mbPanCard, Nothing, Nothing, Nothing, s3, iid, iid2)
+          reason = if (mbPanCard <&> (.verificationStatus)) == Just Documents.INVALID then (mbPanCard <&> (.documentImageId1)) >>= lookupImageFailReason else Nothing
+      return (mapStatus . (.verificationStatus) <$> mbPanCard, reason, Nothing, Nothing, s3, iid, iid2)
     DVC.GSTCertificate -> do
       mbGSTCertificate <- QDGST.findByDriverId driverId
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId1)) mbGSTCertificate
@@ -1477,19 +1519,19 @@ getInProgressDriverDocuments role driverId entityImagesInfo docType possibleVehi
   (status, mbReason, mbUrl) <- case docType of
     DDVC.DriverLicense -> checkIfUnderProgress entityImagesInfo DDVC.DriverLicense
     DDVC.BackgroundVerification -> checkBackgroundVerificationStatus driverId merchantId merchantOpCityId
-    DDVC.AadhaarCard -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.AadhaarCard onlyImageLookup filteredDocVerificationConfigs
-    DDVC.PanCard -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.PanCard onlyImageLookup filteredDocVerificationConfigs
-    DDVC.GSTCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.GSTCertificate onlyImageLookup filteredDocVerificationConfigs
+    DDVC.AadhaarCard -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.AadhaarCard onlyImageLookup filteredDocVerificationConfigs
+    DDVC.PanCard -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.PanCard onlyImageLookup filteredDocVerificationConfigs
+    DDVC.GSTCertificate -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.GSTCertificate onlyImageLookup filteredDocVerificationConfigs
     DDVC.Permissions -> return (VALID, Nothing, Nothing)
     DDVC.ProfilePhoto -> do
       let mbImages = IQuery.filterRecentLatestByEntityIdAndImageType entityImagesInfo DDVC.ProfilePhoto
-      return (fromMaybe NO_DOC_AVAILABLE (mapStatus <$> (mbImages >>= (.verificationStatus))), Nothing, Nothing)
-    DDVC.UploadProfile -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.UploadProfile onlyImageLookup filteredDocVerificationConfigs
-    DDVC.DrivingSchoolCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.DrivingSchoolCertificate onlyImageLookup filteredDocVerificationConfigs
-    DDVC.PoliceVerificationCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.PoliceVerificationCertificate onlyImageLookup filteredDocVerificationConfigs
-    DDVC.LocalResidenceProof -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.LocalResidenceProof onlyImageLookup filteredDocVerificationConfigs
-    DDVC.DriverVehicleNOC -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.DriverVehicleNOC onlyImageLookup filteredDocVerificationConfigs
-    DDVC.TrainingForm -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.TrainingForm onlyImageLookup filteredDocVerificationConfigs
+      return (maybe NO_DOC_AVAILABLE mapStatus (mbImages >>= (.verificationStatus)), Nothing, Nothing)
+    DDVC.UploadProfile -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.UploadProfile onlyImageLookup filteredDocVerificationConfigs
+    DDVC.DrivingSchoolCertificate -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.DrivingSchoolCertificate onlyImageLookup filteredDocVerificationConfigs
+    DDVC.PoliceVerificationCertificate -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.PoliceVerificationCertificate onlyImageLookup filteredDocVerificationConfigs
+    DDVC.LocalResidenceProof -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.LocalResidenceProof onlyImageLookup filteredDocVerificationConfigs
+    DDVC.DriverVehicleNOC -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.DriverVehicleNOC onlyImageLookup filteredDocVerificationConfigs
+    DDVC.TrainingForm -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.TrainingForm onlyImageLookup filteredDocVerificationConfigs
     DDVC.DriverInspectionHub -> do
       mbStatus <- getInspectionHubStatusForResponseStatus DOHR.DRIVER_ONBOARDING_INSPECTION (Just driverId) Nothing
       let status = fromMaybe INVALID mbStatus
@@ -1500,25 +1542,29 @@ getInProgressDriverDocuments role driverId entityImagesInfo docType possibleVehi
     DDVC.BotApproval -> do
       mbStatus <- getBotApprovalStatusForPerson role driverId
       return (fromMaybe NO_DOC_AVAILABLE mbStatus, Nothing, Nothing)
-    DDVC.BusinessLicense -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.BusinessLicense onlyImageLookup filteredDocVerificationConfigs
-    DDVC.TaxiTransportLicense -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.TaxiTransportLicense onlyImageLookup filteredDocVerificationConfigs
-    DDVC.BusinessRegistrationExtract -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.BusinessRegistrationExtract onlyImageLookup filteredDocVerificationConfigs
-    DDVC.TAXDetails -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.TAXDetails onlyImageLookup filteredDocVerificationConfigs
-    DDVC.FinnishIDResidencePermit -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.FinnishIDResidencePermit onlyImageLookup filteredDocVerificationConfigs
-    DDVC.TANCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.TANCertificate onlyImageLookup filteredDocVerificationConfigs
-    DDVC.LDCCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.LDCCertificate onlyImageLookup filteredDocVerificationConfigs
+    DDVC.BusinessLicense -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.BusinessLicense onlyImageLookup filteredDocVerificationConfigs
+    DDVC.TaxiTransportLicense -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.TaxiTransportLicense onlyImageLookup filteredDocVerificationConfigs
+    DDVC.BusinessRegistrationExtract -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.BusinessRegistrationExtract onlyImageLookup filteredDocVerificationConfigs
+    DDVC.TAXDetails -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.TAXDetails onlyImageLookup filteredDocVerificationConfigs
+    DDVC.FinnishIDResidencePermit -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.FinnishIDResidencePermit onlyImageLookup filteredDocVerificationConfigs
+    DDVC.TANCertificate -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.TANCertificate onlyImageLookup filteredDocVerificationConfigs
+    DDVC.LDCCertificate -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.LDCCertificate onlyImageLookup filteredDocVerificationConfigs
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
   return (status, mbReason, mbUrl, Nothing, mbS3Path, mbImageId, Nothing)
 
-checkIfImageUploadedOrInvalidated :: IQuery.EntityImagesInfo -> DDVC.DocumentType -> Bool -> DocVerificationConfigs -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
-checkIfImageUploadedOrInvalidated entityImagesInfo docType onlyImageLookup allDocVerificationConfigs = do
+checkIfImageUploadedOrInvalidated :: DP.Role -> IQuery.EntityImagesInfo -> DDVC.DocumentType -> Bool -> DocVerificationConfigs -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
+checkIfImageUploadedOrInvalidated role entityImagesInfo docType onlyImageLookup allDocVerificationConfigs = do
   let images = IQuery.filterRecentByEntityIdAndImageType entityImagesInfo docType
       hasDocumentVerificationConfig =
         case allDocVerificationConfigs of
           Left fleetConfigs ->
-            any
-              (\config -> config.documentType == docType && not config.isDefaultEnabledOnManualVerification)
-              fleetConfigs
+            -- Per-docType role match for fleet roles; fall back to any config row for this docType (old behavior).
+            let exactRoleConfigs = filter (\c -> c.documentType == docType && c.role == role) fleetConfigs
+                fallbackConfigs = filter (\c -> c.documentType == docType) fleetConfigs
+                effectiveConfigs = if isFleetRole role && not (null exactRoleConfigs) then exactRoleConfigs else fallbackConfigs
+             in any
+                  (\config -> not config.isDefaultEnabledOnManualVerification)
+                  effectiveConfigs
           Right driverConfigs ->
             any
               ( \config ->

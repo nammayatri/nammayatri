@@ -25,6 +25,7 @@ import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.FollowRide as CQFollowRide
 import qualified Storage.Queries.Booking as Booking
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
@@ -100,7 +101,7 @@ getFollowRideECStatus (mbPersonId, _merchantId) rideId = do
 getFollowRideCustomerDetails :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id DRide.Ride -> Flow FollowRideCustomerDetailsRes
 getFollowRideCustomerDetails (_, _) rideId = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  booking <- Booking.findByPrimaryKey ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  booking <- QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
   customerPhone <- mapM decrypt person.mobileNumber
   return $ FollowRideCustomerDetailsRes {bookingId = ride.bookingId, customerName = SLP.getName person, ..}

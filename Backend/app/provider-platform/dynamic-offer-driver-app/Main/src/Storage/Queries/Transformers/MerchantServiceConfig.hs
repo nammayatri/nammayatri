@@ -104,6 +104,7 @@ getConfigJSON = \case
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> toJSON cfg
     Ticket.ZendeskConfig cfg -> toJSON cfg
+    Ticket.XyneSpacesConfig cfg -> toJSON cfg
   Domain.NotificationServiceConfig notificationServiceCfg -> case notificationServiceCfg of
     Notification.FCMConfig cfg -> toJSON cfg
     Notification.PayTMConfig cfg -> toJSON cfg
@@ -193,6 +194,7 @@ getServiceName = \case
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig _ -> Domain.IssueTicketService Ticket.Kapture
     Ticket.ZendeskConfig _ -> Domain.IssueTicketService Ticket.Zendesk
+    Ticket.XyneSpacesConfig _ -> Domain.IssueTicketService Ticket.XyneSpaces
   Domain.NotificationServiceConfig notificationServiceCfg -> case notificationServiceCfg of
     Notification.FCMConfig _ -> Domain.NotificationService Notification.FCM
     Notification.PayTMConfig _ -> Domain.NotificationService Notification.PayTM
@@ -292,6 +294,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.MembershipPaymentService paymentServiceName -> Domain.MembershipPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
   Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> eitherValue configJSON
   Domain.IssueTicketService Ticket.Zendesk -> Domain.IssueTicketServiceConfig . Ticket.ZendeskConfig <$> eitherValue configJSON
+  Domain.IssueTicketService Ticket.XyneSpaces -> Domain.IssueTicketServiceConfig . Ticket.XyneSpacesConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.GRPC -> Domain.NotificationServiceConfig . Notification.GRPCConfig <$> eitherValue configJSON

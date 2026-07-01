@@ -69,7 +69,7 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     postMerchantMerchantDocumentUpdate,
     postMerchantMerchantDocumentDelete,
     postMerchantMerchantMessageUpsert,
-    postMerchantMerchantMessageDelete,
+    deleteMerchantMerchantMessage,
     getMerchantMerchantMessageCatalog,
     getMerchantCityList,
     postMerchantConfigTollUpsert,
@@ -714,11 +714,11 @@ postMerchantConfigFareProductSetEnabled merchantShortId opCity apiTokenInfo req 
   transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigFareProductSetEnabled) req
 
-postMerchantMerchantMessageDelete :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.DeleteMerchantMessageReq -> Environment.Flow APISuccess
-postMerchantMerchantMessageDelete merchantShortId opCity apiTokenInfo req = do
+deleteMerchantMerchantMessage :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Maybe Common.VehicleCategory -> Environment.Flow APISuccess
+deleteMerchantMerchantMessage merchantShortId opCity apiTokenInfo messageKey mbVehicleCategory = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
-  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantMerchantMessageDelete) req
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing T.emptyRequest
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.deleteMerchantMerchantMessage) messageKey mbVehicleCategory
 
 getMerchantMerchantMessageCatalog :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.MerchantMessageCatalogType -> Environment.Flow Common.MerchantMessageCatalogResp
 getMerchantMerchantMessageCatalog merchantShortId opCity apiTokenInfo catalogType = do

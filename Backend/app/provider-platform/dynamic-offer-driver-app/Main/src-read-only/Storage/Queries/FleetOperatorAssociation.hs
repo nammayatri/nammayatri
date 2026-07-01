@@ -25,6 +25,9 @@ createMany = traverse_ create
 deleteByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ())
 deleteByFleetOwnerId fleetOwnerId = do deleteWithKV [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId]
 
+deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation -> m ())
+deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 findAllFleetAssociations :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.FleetOperatorAssociation.FleetOperatorAssociation])
 findAllFleetAssociations fleetOwnerId = do findAllWithKV [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId]
 

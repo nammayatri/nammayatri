@@ -374,12 +374,12 @@ postDriverFleetRemoveVehicle merchantShortId opCity apiTokenInfo vehicleNo mbFle
   (fleetOwnerId, requestorId) <- getFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetRemoveVehicle) fleetOwnerId vehicleNo (Just requestorId)
 
-postDriverFleetRemoveDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Text -> Flow APISuccess
-postDriverFleetRemoveDriver merchantShortId opCity apiTokenInfo driverId mbFleetOwnerId = do
+postDriverFleetRemoveDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Text -> Maybe Text -> Flow APISuccess
+postDriverFleetRemoveDriver merchantShortId opCity apiTokenInfo driverId mbFleetOwnerId operatorCode = do
   checkFleetOwnerVerification apiTokenInfo.personId
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetRemoveDriver) requestorId driverId mbFleetOwnerId'
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetRemoveDriver) requestorId driverId mbFleetOwnerId' operatorCode
 
 ---------------------------------------------------------------------------------------------------------------
 ---------------------------------------- READ LAYER (Single Fleet Level) --------------------------------------

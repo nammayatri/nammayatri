@@ -26,5 +26,10 @@ DriverOperatorAssociation:
     operatorId: text
     driverId: text
 
+  queries:
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+
   extraOperations:
     - EXTRA_QUERY_FILE

@@ -277,3 +277,13 @@ findByFleetOwnerIdWithLimitOffset fleetOwnerId isActive limit offset = do
     (Se.Desc BeamFOA.createdAt)
     (Just limit)
     (Just offset)
+
+-- Mark the association ended (isActive=false, associatedTill=now). This UPDATE
+-- streams to ClickHouse (drainer -> Kafka) as the terminal history event; the
+-- caller then hard-deletes the row. Hard deletes are NOT pushed to Kafka.
+endById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id FleetOperatorAssociation -> m ()
+endById rowId = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set BeamFOA.isActive False, Se.Set BeamFOA.associatedTill (Just now), Se.Set BeamFOA.updatedAt now]
+    [Se.Is BeamFOA.id $ Se.Eq rowId.getId]

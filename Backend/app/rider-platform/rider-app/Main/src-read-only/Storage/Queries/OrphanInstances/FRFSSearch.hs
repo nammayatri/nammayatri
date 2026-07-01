@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.FRFSSearch where
 
+import qualified Data.Text
 import qualified Domain.Types.FRFSSearch
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -12,14 +13,19 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.JSON
+import qualified Kernel.Utils.Version
 import qualified Storage.Beam.FRFSSearch as Beam
 
 instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
   fromTType' (Beam.FRFSSearchT {..}) = do
+    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
+    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     pure $
       Just
         Domain.Types.FRFSSearch.FRFSSearch
           { busLocationData = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData),
+            clientBundleVersion = clientBundleVersion',
+            clientSdkVersion = clientSdkVersion',
             cloudType = cloudType,
             fromStationAddress = fromStationAddress,
             fromStationCode = fromStationId,
@@ -55,6 +61,8 @@ instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
   toTType' (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
     Beam.FRFSSearchT
       { Beam.busLocationData = Just $ toJSON busLocationData,
+        Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
+        Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.cloudType = cloudType,
         Beam.fromStationAddress = fromStationAddress,
         Beam.fromStationId = fromStationCode,

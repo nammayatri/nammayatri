@@ -23,10 +23,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("customer" :> (GetCustomerList :<|> DeleteCustomerDelete :<|> PostCustomerBlock :<|> PostCustomerUnblock :<|> GetCustomerInfo :<|> GetCustomerCancellationDuesDetails :<|> PostCustomerUpdateSafetyCenterBlocking :<|> PostCustomerPersonNumbers :<|> PostCustomerPersonId :<|> PostCustomerUpdatePaymentMode))
+type API = ("customer" :> (GetCustomerList :<|> DeleteCustomerDelete :<|> PostCustomerBlock :<|> PostCustomerUnblock :<|> GetCustomerInfo :<|> GetCustomerCancellationDuesDetails :<|> PostCustomerUpdateSafetyCenterBlocking :<|> PostCustomerPersonNumbers :<|> PostCustomerPersonId :<|> PostCustomerUpdatePaymentMode :<|> PostCustomerOffersList :<|> PostCustomerApplyOffer))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getCustomerList merchantId city :<|> deleteCustomerDelete merchantId city :<|> postCustomerBlock merchantId city :<|> postCustomerUnblock merchantId city :<|> getCustomerInfo merchantId city :<|> getCustomerCancellationDuesDetails merchantId city :<|> postCustomerUpdateSafetyCenterBlocking merchantId city :<|> postCustomerPersonNumbers merchantId city :<|> postCustomerPersonId merchantId city :<|> postCustomerUpdatePaymentMode merchantId city
+handler merchantId city = getCustomerList merchantId city :<|> deleteCustomerDelete merchantId city :<|> postCustomerBlock merchantId city :<|> postCustomerUnblock merchantId city :<|> getCustomerInfo merchantId city :<|> getCustomerCancellationDuesDetails merchantId city :<|> postCustomerUpdateSafetyCenterBlocking merchantId city :<|> postCustomerPersonNumbers merchantId city :<|> postCustomerPersonId merchantId city :<|> postCustomerUpdatePaymentMode merchantId city :<|> postCustomerOffersList merchantId city :<|> postCustomerApplyOffer merchantId city
 
 type GetCustomerList =
   ( ApiAuth
@@ -108,6 +108,22 @@ type PostCustomerUpdatePaymentMode =
       :> API.Types.RiderPlatform.Management.Customer.PostCustomerUpdatePaymentMode
   )
 
+type PostCustomerOffersList =
+  ( ApiAuth
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.CUSTOMER) / ('API.Types.RiderPlatform.Management.Customer.POST_CUSTOMER_OFFERS_LIST))
+      :> API.Types.RiderPlatform.Management.Customer.PostCustomerOffersList
+  )
+
+type PostCustomerApplyOffer =
+  ( ApiAuth
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.CUSTOMER) / ('API.Types.RiderPlatform.Management.Customer.POST_CUSTOMER_APPLY_OFFER))
+      :> API.Types.RiderPlatform.Management.Customer.PostCustomerApplyOffer
+  )
+
 getCustomerList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Customer) -> Environment.FlowHandler API.Types.RiderPlatform.Management.Customer.CustomerListRes)
 getCustomerList merchantShortId opCity apiTokenInfo limit offset enabled blocked phone personId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.getCustomerList merchantShortId opCity apiTokenInfo limit offset enabled blocked phone personId
 
@@ -137,3 +153,9 @@ postCustomerPersonId merchantShortId opCity apiTokenInfo req = withFlowHandlerAP
 
 postCustomerUpdatePaymentMode :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> API.Types.RiderPlatform.Management.Customer.UpdatePaymentModeReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postCustomerUpdatePaymentMode merchantShortId opCity apiTokenInfo customerId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.postCustomerUpdatePaymentMode merchantShortId opCity apiTokenInfo customerId req
+
+postCustomerOffersList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Customer.CustomerOffersListReq -> Environment.FlowHandler [API.Types.RiderPlatform.Management.Customer.CustomerOfferEntity])
+postCustomerOffersList merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.postCustomerOffersList merchantShortId opCity apiTokenInfo req
+
+postCustomerApplyOffer :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Customer.ApplyCustomerOfferReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postCustomerApplyOffer merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.postCustomerApplyOffer merchantShortId opCity apiTokenInfo req

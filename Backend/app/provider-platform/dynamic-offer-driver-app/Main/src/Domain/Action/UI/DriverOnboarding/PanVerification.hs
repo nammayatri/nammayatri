@@ -65,6 +65,7 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.Finance.Wallet as Wallet
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -80,6 +81,7 @@ import qualified Storage.Queries.Person as Person
 import Tools.Error
 import qualified Tools.Utils as Utils
 import qualified Tools.Verification as Verification
+import Utils.Common.Cac.KeyNameConstants
 
 data DriverPanReq = DriverPanReq
   { panNumber :: Text,
@@ -117,10 +119,10 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyPanHitsCountKey req.panNumber) externalServiceRateLimitOptions
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  (blocked, driverDocument) <- DVRC.getDriverDocumentInfo person
+  (blocked, driverDocument) <- getDriverDocumentInfo person
   when blocked $ throwError AccountBlocked
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
-  DVRC.validateIndividualPANCheck transporterConfig person req.panNumber
+  validateIndividualPANCheck transporterConfig person req.panNumber
   case transporterConfig.allowDuplicatePan of
     Just False -> do
       panHash <- getDbHash req.panNumber
@@ -147,17 +149,22 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
         when gstPanLinkCheckRequired $
           GstVerification.assertUploadedPanLinkedToExistingGst person req.panNumber (Id req.imageId)
         mdriverPanInformation <- DPQuery.findByDriverId person.id
+        whenJust mdriverPanInformation $ \driverPanInformation -> do
+          let verificationStatus = driverPanInformation.verificationStatus
+          when (verificationStatus == Documents.VALID && not (fromMaybe False transporterConfig.allowPanReupload)) $ do
+            Utils.cleanupUploadedImages [Id req.imageId] person.id
+            throwError $ DocumentAlreadyValidated "PAN"
         case mbPanVerificationService of
           Just VI.HyperVerge -> do
             let panReq = DO.DriverPanReq {panNumber = req.panNumber, imageId1 = Id req.imageId, imageId2 = Nothing, consent = True, nameOnCard = Nothing, dateOfBirth = Nothing, consentTimestamp = Nothing, validationStatus = Nothing, verifiedBy = Nothing, transactionId = Nothing, nameOnGovtDB = Nothing, docType = Nothing}
             mbNameFromGovtDB <- checkIfGenuineReq panReq person
             panCardDetails <- buildPanCard person Nothing mbNameFromGovtDB Nothing (Just verifyBy) (Id req.imageId) req.panNumber (Just Documents.VALID)
-            DPQuery.create panCardDetails
+            DPQuery.upsertPanRecord panCardDetails mdriverPanInformation
           Just VI.Idfy -> do
             void $ callIdfy person mdriverPanInformation driverDocument transporterConfig
           _ -> do
             panCardDetails <- buildPanCard person Nothing Nothing Nothing (Just verifyBy) (Id req.imageId) req.panNumber Nothing
-            DPQuery.create $ panCardDetails
+            DPQuery.upsertPanRecord panCardDetails mdriverPanInformation
         case person.role of
           role | DCommon.checkFleetOwnerRole role -> do
             encryptedPanNumber <- encrypt req.panNumber
@@ -167,8 +174,8 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
             DIQuery.updatePanNumber (Just encryptedPanNumber) person.id
           _ -> pure ()
 
-  if DVRC.isNameCompareRequired transporterConfig verifyBy || gstPanLinkCheckRequired
-    then Redis.withWaitOnLockRedisWithExpiry (DVRC.makeDocumentVerificationLockKey personId.getId) 10 10 runBody
+  if isNameCompareRequired transporterConfig verifyBy || gstPanLinkCheckRequired
+    then Redis.withWaitOnLockRedisWithExpiry (makeDocumentVerificationLockKey personId.getId) 10 10 runBody
     else runBody
   mdriverPanCard <- DPQuery.findByDriverId person.id
   logInfo ("mdriverPanCard isJust: " <> show (isJust mdriverPanCard))
@@ -184,10 +191,10 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
     _ -> pure False
   pure res
   where
-    callIdfy :: Person.Person -> Maybe DPan.DriverPanCard -> DVRC.DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
+    callIdfy :: Person.Person -> Maybe DPan.DriverPanCard -> DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
     callIdfy person mdriverPanInformation driverDocument transporterConfig = do
       documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just DTO.PanCard, vehicleCategory = Just CAR}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId DTO.PanCard CAR Nothing)) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.PanCard))
-      image1 <- DVRC.getDocumentImage person.id req.imageId ODC.PanCard
+      image1 <- getValidDocumentImage person.id req.imageId ODC.PanCard
       let extractReq =
             Verification.ExtractImageReq
               { image1 = image1,
@@ -207,6 +214,9 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
               let extractedNameOnCard = extractedPan.name_on_card
               logInfo ("extractedNameOnCard: " <> show extractedNameOnCard)
               logInfo ("panName: " <> show panName)
+              -- Reuse the category-aware documentVerificationConfig resolved in callIdfy (was a category-agnostic re-fetch).
+              fmOutcome <- runDocFaceMatch person documentVerificationConfig (Id req.imageId) (Just image1)
+              when (fmOutcome == FMFail) $ throwError FaceMatchFailed
               when (verifyBy /= DPan.FRONTEND_SDK) $ do
                 case (panName, extractedNameOnCard) of
                   (Just providedName, Just extractedName) | not (T.null providedName) && not (T.null extractedName) -> do
@@ -217,7 +227,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
                               percentage = Just True,
                               driverId = person.id.getId
                             }
-                    isValid <- DVRC.isNameComparePercentageValid person.merchantId merchantOpCityId nameCompareReq
+                    isValid <- isNameComparePercentageValid person.merchantId merchantOpCityId nameCompareReq
                     unless isValid $ throwError (MismatchDataError "Provided name and extracted name on card do not match")
                   _ -> pure ()
                 when documentVerificationConfig.doStrictVerifcation $ do
@@ -228,26 +238,12 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
               pure extractedPan
             Nothing -> throwImageError (Id req.imageId) ImageExtractionFailed
 
-      case mdriverPanInformation of
-        Just driverPanInformation -> do
-          let verificationStatus = driverPanInformation.verificationStatus
-          when (verificationStatus == Documents.VALID && not (fromMaybe False transporterConfig.allowPanReupload)) $ do
-            Utils.cleanupUploadedImages [Id req.imageId] person.id
-            throwError $ DocumentAlreadyValidated "PAN"
-
-          resp <- Verification.extractPanImage person.merchantId merchantOpCityId extractReq
-          extractedPan <- validateExtractedPan resp
-          when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
-            DVRC.validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
-          DPQuery.updateVerificationStatus Documents.VALID person.id
-        Nothing -> do
-          resp <- Verification.extractPanImage person.merchantId merchantOpCityId extractReq
-          extractedPan <- validateExtractedPan resp
-          when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
-            DVRC.validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
-          panCardDetails <- buildPanCard person extractedPan.pan_type extractedPan.name_on_card extractedPan.date_of_birth (Just verifyBy) (Id req.imageId) req.panNumber (if not documentVerificationConfig.doStrictVerifcation then Just Documents.VALID else Nothing)
-          DPQuery.create panCardDetails
-
+      resp <- Verification.extractPanImage person.merchantId merchantOpCityId extractReq
+      extractedPan <- validateExtractedPan resp
+      when (isNameCompareRequired transporterConfig verifyBy) $
+        validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
+      panCardDetails <- buildPanCard person extractedPan.pan_type extractedPan.name_on_card extractedPan.date_of_birth (Just verifyBy) (Id req.imageId) req.panNumber (if not documentVerificationConfig.doStrictVerifcation then Just Documents.VALID else Nothing)
+      DPQuery.upsertPanRecord panCardDetails mdriverPanInformation
       pure Success
 
     checkIfGenuineReq :: (ServiceFlow m r) => API.Types.UI.DriverOnboardingV2.DriverPanReq -> Person.Person -> m (Maybe Text)
@@ -317,7 +313,10 @@ onVerifyPanHandler person imageId1 imageId2 output = do
     Just details -> do
       mEncryptedPanNumber <- mapM encrypt (Just $ details.inputPanNumber)
       let isvalid = (&&) <$> output.dobMatch <*> output.nameMatch
-      when (isvalid == Just True) $ DPQuery.updateVerificationStatus Documents.VALID person.id
+      (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
+      -- Sticky INVALID: a face-match failure on the document image must not be overturned by a late 3P webhook.
+      let docImageInvalid = (image1 >>= (.verificationStatus)) == Just Documents.INVALID
+      when (isvalid == Just True && not docImageInvalid) $ DPQuery.updateVerificationStatus Documents.VALID person.id
       when (isvalid == Just False) $ DPQuery.updateVerificationStatus Documents.INVALID person.id
       case person.role of
         role | DCommon.checkFleetOwnerRole role -> do
@@ -325,10 +324,11 @@ onVerifyPanHandler person imageId1 imageId2 output = do
         Person.DRIVER -> do
           DIQuery.updatePanNumber mEncryptedPanNumber person.id
         _ -> pure ()
-      (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
-      when (((image1 >>= (.verificationStatus)) /= Just Documents.VALID) && ((image2 >>= (.verificationStatus)) /= Just Documents.VALID)) $
-        mapM_ (maybe (return ()) (ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard."))) [Just imageId1, imageId2]
+      forM_ [(image1, Just imageId1), (image2, imageId2)] $ \(mbImg, mbImgId) ->
+        when ((mbImg >>= (.verificationStatus)) `notElem` [Just Documents.VALID, Just Documents.INVALID]) $
+          whenJust mbImgId $ ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard.")
     _ -> pure ()
+  materializeTdsRateFor person
 
 buildPanCard :: Person.Person -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe DPan.VerifiedBy -> Id Image.Image -> Text -> Maybe Documents.VerificationStatus -> Flow DPan.DriverPanCard
 buildPanCard person panType panName panDob verifyBy image1 panNumber verificationStatus = do
@@ -348,7 +348,7 @@ buildPanCard person panType panName panDob verifyBy image1 panNumber verificatio
         createdAt = now,
         updatedAt = now,
         consent = True,
-        docType = castTextToDomainType panType <|> DVRC.inferPanTypeFromNumber panNumber,
+        docType = castTextToDomainType panType <|> inferPanTypeFromNumber panNumber,
         consentTimestamp = now,
         documentImageId2 = Nothing,
         driverDob = parsedDob,
@@ -472,7 +472,7 @@ shouldTriggerPanAadhaarLinkage _ merchantOpCityId docType panNumber = do
     getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
       >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let allowed = fromMaybe True transporterConfig.allowPanAadhaarLinkage
-      isBusiness = docType == Just DPan.BUSINESS || DVRC.isBusinessPan (Just panNumber)
+      isBusiness = docType == Just DPan.BUSINESS || isBusinessPan (Just panNumber)
   pure (allowed && not isBusiness)
 
 verifyPanAadhaarLinkageIfAadhaarExists ::
@@ -508,6 +508,21 @@ verifyPanAadhaarLinkageIfAadhaarExists person merchantOpCityId mdriverPanCard = 
             IVQuery.create ivEntity
           _ -> throwError $ InternalError ("Service provider not configured for PAN-Aadhaar linkage. Provider: " <> show verifyRes.requestor)
 
+materializeTdsRateFor :: Person.Person -> Flow ()
+materializeTdsRateFor person = do
+  transporterConfig <-
+    SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id)))
+      >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  -- No-op unless PAN-Aadhaar-link TDS is enabled for the merchant; otherwise
+  -- leave tds_rate alone so other merchants' rate resolution is unchanged.
+  when (Wallet.panAadhaarLinkTdsEnabled transporterConfig.taxConfig) $ do
+    mbPanCard <- DPQuery.findByDriverId person.id
+    let mbRate = Wallet.computeEffectiveTdsRate mbPanCard Nothing transporterConfig.taxConfig
+    whenJust mbRate $ \rate ->
+      if DCommon.checkFleetOwnerRole person.role
+        then QFOI.updateTdsRate (Just rate) (cast person.id)
+        else DIQuery.updateTdsRate (Just rate) (cast person.id)
+
 onVerifyPanAadhaarLink :: VerificationReqRecord -> VT.PanAadhaarLinkResponse -> VT.VerificationService -> Flow AckResponse
 onVerifyPanAadhaarLink verificationReq output serviceName = do
   person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
@@ -515,10 +530,19 @@ onVerifyPanAadhaarLink verificationReq output serviceName = do
     VT.Idfy -> do
       logInfo ("onVerifyPanAadhaarLink: " <> show output)
       IVQuery.updateExtractValidationStatus Domain.Success verificationReq.requestId
-      case output.message of
-        Just "PAN & Aadhaar are linked" -> DPQuery.updatePanAadhaarLinkage (Just DPan.PAN_AADHAAR_LINKED) person.id
-        Just "Aadhaar linked to some other PAN" -> DPQuery.updatePanAadhaarLinkage (Just DPan.AADHAAR_LINKED_TO_OTHER_PAN) person.id
-        Just "This PAN number does not exist" -> DPQuery.updatePanAadhaarLinkage (Just DPan.PAN_DOES_NOT_EXIST) person.id
-        other -> throwError $ InternalError ("Unknown message in onVerifyPanAadhaarLink. Message : " <> show other)
+      case (output.isLinked, output.message) of
+        (Just True, _) ->
+          DPQuery.updatePanAadhaarLinkage (Just DPan.PAN_AADHAAR_LINKED) person.id
+        (Just False, Just "Aadhaar linked to some other PAN") ->
+          DPQuery.updatePanAadhaarLinkage (Just DPan.AADHAAR_LINKED_TO_OTHER_PAN) person.id
+        (Just False, Just "This PAN number does not exist") ->
+          DPQuery.updatePanAadhaarLinkage (Just DPan.PAN_DOES_NOT_EXIST) person.id
+        (Just False, _) ->
+          DPQuery.updatePanAadhaarLinkage (Just DPan.PAN_AADHAAR_NOT_LINKED) person.id
+        (Nothing, _) ->
+          logWarning $ "onVerifyPanAadhaarLink: Idfy response had no isLinked field, leaving column NULL. Payload: " <> show output
     _ -> throwError $ InternalError ("Unknown Service provider webhook encopuntered in onVerifyPanAadhaarLink. Name of provider : " <> show serviceName)
+  -- Recompute and materialize the effective TDS rate now that linkage status
+  -- has been updated. No-op unless PAN-Aadhaar-link TDS is enabled.
+  materializeTdsRateFor person
   pure Ack

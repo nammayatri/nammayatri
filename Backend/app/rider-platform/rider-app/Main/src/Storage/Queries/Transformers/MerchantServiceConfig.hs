@@ -72,6 +72,7 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.MembershipPaymentService paymentServiceName -> Domain.MembershipPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
     Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> valueToMaybe configJSON
     Domain.IssueTicketService Ticket.Zendesk -> Domain.IssueTicketServiceConfig . Ticket.ZendeskConfig <$> valueToMaybe configJSON
+    Domain.IssueTicketService Ticket.XyneSpaces -> Domain.IssueTicketServiceConfig . Ticket.XyneSpacesConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.JourneyMonitoring -> Domain.TokenizationServiceConfig . Tokenize.JourneyMonitoringTokenizationServiceConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.HyperVerge -> Domain.TokenizationServiceConfig . Tokenize.HyperVergeTokenizationServiceConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.Gullak -> Domain.TokenizationServiceConfig . Tokenize.GullakTokenizationServiceConfig <$> valueToMaybe configJSON
@@ -160,6 +161,7 @@ getServiceNameConfigJson = \case
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
     Ticket.ZendeskConfig cfg -> (Domain.IssueTicketService Ticket.Zendesk, toJSON cfg)
+    Ticket.XyneSpacesConfig cfg -> (Domain.IssueTicketService Ticket.XyneSpaces, toJSON cfg)
   Domain.TokenizationServiceConfig tokenizationCfg -> case tokenizationCfg of
     Tokenize.HyperVergeTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.HyperVerge, toJSON cfg)
     Tokenize.GullakTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.Gullak, toJSON cfg)
