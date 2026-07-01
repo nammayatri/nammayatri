@@ -887,9 +887,9 @@
           "listen": "prerequest",
           "script": {
             "exec": [
-              "// Wait briefly before checking nearby requests",
+              "// Wait 25s for Kafka allocator batch cycle (~22s) to distribute search to nearby drivers",
               "const start = Date.now();",
-              "while (Date.now() - start < 1000) { /* busy wait */ }"
+              "while (Date.now() - start < 25000) { /* busy wait */ }"
             ],
             "type": "text/javascript"
           }
@@ -1334,9 +1334,9 @@
           "listen": "prerequest",
           "script": {
             "exec": [
-              "// Wait briefly before checking nearby requests",
+              "// Wait 25s for Kafka allocator batch cycle (~22s) to distribute search to nearby drivers",
               "const start = Date.now();",
-              "while (Date.now() - start < 1000) { /* busy wait */ }"
+              "while (Date.now() - start < 25000) { /* busy wait */ }"
             ],
             "type": "text/javascript"
           }
@@ -1597,7 +1597,7 @@
             "exec": [
               "// Small delay before ending ride",
               "const start = Date.now();",
-              "while (Date.now() - start < 1000) { /* busy wait */ }"
+              "while (Date.now() - start < 25000) { /* busy wait */ }"
             ],
             "type": "text/javascript"
           }
