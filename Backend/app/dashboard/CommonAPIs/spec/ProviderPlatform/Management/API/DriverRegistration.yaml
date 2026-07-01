@@ -494,14 +494,11 @@ types:
   CommonDocumentRejectDetails:
     - reason: Text
     - documentId: Id CommonDriverOnboardingDocuments
-  UDYAMRejectDetails:
-    - reason: Text
-    - udyamId: Id DriverUdyam
   InspectionHubRejectDetails:
     - reason: Text
     - requestId: Text
   RejectDetails:
-    - enum: "SSNReject SSNRejectDetails, ImageDocuments ImageDocumentsRejectDetails, CommonDocumentReject CommonDocumentRejectDetails, UDYAMReject UDYAMRejectDetails, InspectionHubReject InspectionHubRejectDetails"
+    - enum: "SSNReject SSNRejectDetails, ImageDocuments ImageDocumentsRejectDetails, CommonDocumentReject CommonDocumentRejectDetails, InspectionHubReject InspectionHubRejectDetails"
   CommonDocumentItem:
     - documentId: Id CommonDriverOnboardingDocuments
     - documentType: DocumentType
@@ -619,7 +616,7 @@ types:
     - documentId: Id CommonDriverOnboardingDocuments
     - updatedDocumentData: Maybe Text  # Updated JSON data if any corrections needed
   UDYAMApproveDetails:
-    - udyamId: Id DriverUdyam
+    - documentImageId: Id Image
     - tdsRate: Maybe Double            # Persisted on FleetOwnerInformation on approval
     - udyamNumber: Maybe Text
   LDCApproveDetails:

@@ -457,7 +457,6 @@ data RejectDetails
   = SSNReject SSNRejectDetails
   | ImageDocuments ImageDocumentsRejectDetails
   | CommonDocumentReject CommonDocumentRejectDetails
-  | UDYAMReject UDYAMRejectDetails
   | InspectionHubReject InspectionHubRejectDetails
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -494,11 +493,7 @@ data TriggerReminderReq = TriggerReminderReq {documentType :: DocumentType, dueD
 instance Kernel.Types.HideSecrets.HideSecrets TriggerReminderReq where
   hideSecrets = Kernel.Prelude.identity
 
-data UDYAMApproveDetails = UDYAMApproveDetails {udyamId :: Kernel.Types.Id.Id Dashboard.Common.DriverUdyam, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double, udyamNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data UDYAMRejectDetails = UDYAMRejectDetails {reason :: Kernel.Prelude.Text, udyamId :: Kernel.Types.Id.Id Dashboard.Common.DriverUdyam}
+data UDYAMApproveDetails = UDYAMApproveDetails {documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double, udyamNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
