@@ -72,34 +72,36 @@ jobs:
         if: steps.artifact-check.outputs.found == 'true'
         run: |
           BASE_SHA="${{ steps.artifact-check.outputs.base_sha }}"
-          mkdir -p /tmp/ny-pr-artifacts
+          ARTIFACTS_DIR=/tmp/ny-pr-artifacts-${{ github.run_id }}
+          mkdir -p "$ARTIFACTS_DIR"
 
-          mc cp "minio/haskell-cache/cabal-build/$BASE_SHA/build-path.txt"                   /tmp/ny-pr-artifacts/build-path.txt
-          mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/cache-root.txt"                    /tmp/ny-pr-artifacts/cache-root.txt
-          mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/dynamic-offer-driver-app.tar.zst"  /tmp/ny-pr-artifacts/driver.tar.zst
-          mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/repl-support.tar.zst"              /tmp/ny-pr-artifacts/repl-support.tar.zst
+          mc cp "minio/haskell-cache/cabal-build/$BASE_SHA/build-path.txt"                   "$ARTIFACTS_DIR/build-path.txt"
+          mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/cache-root.txt"                    "$ARTIFACTS_DIR/cache-root.txt"
+          mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/dynamic-offer-driver-app.tar.zst"  "$ARTIFACTS_DIR/driver.tar.zst"
+          mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/repl-support.tar.zst"              "$ARTIFACTS_DIR/repl-support.tar.zst"
 
-          ORIGINAL_PATH=$(cat /tmp/ny-pr-artifacts/build-path.txt)
-          ORIGINAL_CACHE_ROOT=$(cat /tmp/ny-pr-artifacts/cache-root.txt)
+          echo "ARTIFACTS_DIR=$ARTIFACTS_DIR" >> $GITHUB_ENV
+          ORIGINAL_PATH=$(cat "$ARTIFACTS_DIR/build-path.txt")
+          ORIGINAL_CACHE_ROOT=$(cat "$ARTIFACTS_DIR/cache-root.txt")
           echo "Original build path: $ORIGINAL_PATH"
           echo "Original cache root: $ORIGINAL_CACHE_ROOT"
           echo "original_path=$ORIGINAL_PATH" >> $GITHUB_ENV
           echo "original_cache_root=$ORIGINAL_CACHE_ROOT" >> $GITHUB_ENV
 
       - name: Extract repl artifacts
-        if: steps.artifact-check.outputs.found == 'true'
+        if: success() && steps.artifact-check.outputs.found == 'true'
         run: |
           PR_CACHE_ROOT=/tmp/ny-pr-cache-${{ github.run_id }}
           mkdir -p "$PR_CACHE_ROOT"
           echo "PR_CACHE_ROOT=$PR_CACHE_ROOT" >> $GITHUB_ENV
 
-          tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/driver.tar.zst       -C "$PR_CACHE_ROOT"
-          tar -I 'zstd -T0' -xf /tmp/ny-pr-artifacts/repl-support.tar.zst -C "$PR_CACHE_ROOT"
+          tar -I 'zstd -T0' -xf "$ARTIFACTS_DIR/driver.tar.zst"       -C "$PR_CACHE_ROOT"
+          tar -I 'zstd -T0' -xf "$ARTIFACTS_DIR/repl-support.tar.zst" -C "$PR_CACHE_ROOT"
 
-          rm -f /tmp/ny-pr-artifacts/*.tar.zst
+          rm -f "$ARTIFACTS_DIR"/*.tar.zst
 
       - name: Repl check — dynamic-offer-driver-app
-        if: steps.artifact-check.outputs.found == 'true'
+        if: success() && steps.artifact-check.outputs.found == 'true'
         run: |
           CI_PROJECT_ROOT="$original_path"
           LOCAL_ROOT="$GITHUB_WORKSPACE"
@@ -118,7 +120,7 @@ jobs:
 
           nix develop .#backend --command \
             unshare --user --mount --map-root-user bash -c "
-              set -e
+              set -eo pipefail
               mkdir -p /tmp/ns-root
               mount --bind $LOCAL_ROOT /tmp/ns-root
               mount -t tmpfs tmpfs /home
@@ -139,10 +141,11 @@ jobs:
               export CABAL_DIR=$ORIGINAL_CABAL_DIR
               cabal repl dynamic-offer-driver-app \
                 --repl-options='-fno-code -fwrite-interface' \
-                --builddir=dist-newrepl-driver <<< ':quit' 2>&1 | tee /tmp/repl-driver-out.txt
-              grep -q 'Failed' /tmp/repl-driver-out.txt && exit 1 || true
+                --builddir=dist-newrepl-driver <<< ':quit' 2>&1 | tee /tmp/repl-driver-out-${{ github.run_id }}.txt
+              [ -f /tmp/repl-driver-out-${{ github.run_id }}.txt ] || { echo "ERROR: repl output file missing — cabal repl may have crashed before producing output"; exit 1; }
+              grep -q 'Failed' /tmp/repl-driver-out-${{ github.run_id }}.txt && exit 1 || true
             "
 
       - name: Cleanup
         if: always()
-        run: rm -rf "$PR_CACHE_ROOT" /tmp/ny-pr-artifacts /tmp/ns-root /tmp/repl-driver-out.txt
+        run: rm -rf "$PR_CACHE_ROOT" "$ARTIFACTS_DIR" /tmp/ns-root /tmp/repl-driver-out-${{ github.run_id }}.txt
