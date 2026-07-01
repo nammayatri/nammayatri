@@ -16,7 +16,7 @@ import Kernel.Utils.Logging
 import SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified Storage.Queries.CallStatus as CallStatus
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Ride as QR
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import Tools.Metrics (CoreMetrics)
 import qualified Tools.Notifications as TN
 
@@ -47,7 +47,7 @@ prodLoopStatus (ProdLoopStatusReq {..}) = do
       case callStatus.merchantOperatingCityId of
         Just operatingCityId -> case callStatus.entityId of
           Just rideId -> do
-            ride <- runInReplica $ QR.findById (Id rideId) >>= fromMaybeM (RideDoesNotExist rideId)
+            ride <- runInReplica $ QRideLite.findByIdLite (Id rideId) >>= fromMaybeM (RideDoesNotExist rideId)
             let personId = ride.driverId.getId
             person <- runInReplica $ QP.findById (Id personId) >>= fromMaybeM (PersonDoesNotExist personId)
             let deviceToken = person.deviceToken

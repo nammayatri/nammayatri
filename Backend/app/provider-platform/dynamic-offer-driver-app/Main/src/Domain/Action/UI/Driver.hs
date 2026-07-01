@@ -1027,7 +1027,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
                 Nothing -> QDBA.findByPrimaryKey driverId >>= fromMaybeM (DriverBankAccountNotFound driverId.getId)
             unless driverBankAccount.chargesEnabled $ throwError (DriverChargesDisabled driverId.getId)
           unless (driverInfo.enabled) $ throwError DriverAccountDisabled
-          unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
+          unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked || transporterConfig.enableBotFlow == Just True) $ throwError DriverUnsubscribed
           -- BOT-flow go-online checks (separate): active vehicle required; a fleet driver needs their fleet
           -- enabled with an active fleet subscription; an individual (non-fleet) driver needs their own subscription.
           when (transporterConfig.enableBotFlow == Just True) $ do

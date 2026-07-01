@@ -60,7 +60,7 @@ createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorI
         id <- generateGUID
         createWithKV $
           FleetDriverAssociation
-            { associatedTill = convertTextToUTC (Just "2099-12-12"),
+            { associatedTill = defaultAssociationEnd,
               driverId = driverId,
               fleetOwnerId = fleetOwnerId.getId,
               associatedOn = Just now,
@@ -638,3 +638,13 @@ revokeFleetDriverAssociation driverId fleetOwnerId = do
     [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId]]
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.fleetOwnerId = LTSSync.Set Nothing}
+
+-- Mark the association ended (isActive=false, associatedTill=now). This UPDATE
+-- streams to ClickHouse (drainer -> Kafka) as the terminal history event; the
+-- caller then hard-deletes the row. Hard deletes are NOT pushed to Kafka.
+endById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id FleetDriverAssociation -> m ()
+endById rowId = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set BeamFDVA.isActive False, Se.Set BeamFDVA.associatedTill (Just now), Se.Set BeamFDVA.updatedAt now]
+    [Se.Is BeamFDVA.id $ Se.Eq rowId.getId]

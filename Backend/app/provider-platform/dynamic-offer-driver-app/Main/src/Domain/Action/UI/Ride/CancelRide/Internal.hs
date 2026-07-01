@@ -105,6 +105,7 @@ import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFP
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
@@ -579,6 +580,23 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
     Nothing -> logError "createCancellationLedgerEntries: riderId not present in booking"
     Just rid -> do
       merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
+      let driverOrFleetPersonId = fromMaybe ride.driverId ride.fleetOwnerId
+      mbPanCard <- QPanCard.findByDriverId driverOrFleetPersonId
+      driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      mbDriverInfo <- QDI.findById (cast ride.driverId)
+      -- Read the materialized tds_rate for the tax subject (fleet owner if it's
+      -- a fleet ride, else the driver). Set by the PAN / linkage webhooks when
+      -- PAN-Aadhaar-link TDS is enabled (see PanVerification.materializeTdsRateFor).
+      mbStoredTdsRate <- case ride.fleetOwnerId of
+        Just fleetOwnerId -> do
+          mbFleetInfo <- QFOI.findByPrimaryKey (cast fleetOwnerId)
+          pure (mbFleetInfo >>= (.tdsRate))
+        Nothing -> pure (mbDriverInfo >>= (.tdsRate))
+      mbCumulativeEarnings <- case ride.fleetOwnerId of
+        Just _ -> pure Nothing
+        Nothing -> do
+          mbStats <- QDriverStats.findByPrimaryKey (cast ride.driverId)
+          pure $ (.totalEarnings) <$> mbStats
       let rideGst = transporterConfig.taxConfig.rideGst
           -- VAT stays with the driver (OwnerLiability), GST is remitted to govt (GovtIndirect) — mirrors createDriverWalletTransaction.
           cancellationTaxDest = if fromMaybe False booking.fareParams.isVatTaxType then OwnerLiability else GovtIndirect
@@ -586,14 +604,15 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
             [ (baseCancellation, walletReferenceCustomerCancellationCharges, OwnerLiability),
               (gstOnCancellation, walletReferenceCustomerCancellationGST, cancellationTaxDest)
             ]
-          mbTdsRate = transporterConfig.taxConfig.defaultTdsRate
+          mbTdsRate =
+            if panAadhaarLinkTdsEnabled transporterConfig.taxConfig
+              then computeEffectiveTdsRate mbPanCard mbStoredTdsRate transporterConfig.taxConfig
+              else (.rate) <$> transporterConfig.taxConfig.defaultTdsRate
           mbTdsAmount = do
             rate <- mbTdsRate
-            let amount = baseCancellation * realToFrac rate
-            if amount > 0 then Just amount else Nothing
-      driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-      mbPanCard <- QPanCard.findByDriverId ride.driverId
-      mbDriverInfo <- QDI.findById (cast ride.driverId)
+            let rawAmount = baseCancellation * realToFrac rate
+                gatedAmount = applyThresholdBenefit transporterConfig.taxConfig mbCumulativeEarnings mbPanCard baseCancellation rawAmount
+            if gatedAmount > 0 then Just gatedAmount else Nothing
       -- Resolve rider's payment-mode choice from booking.paymentMethodId — same logic as EndRide.
       -- Cash → "CASH", anything else (Card/UPI/Wallet/NetBanking/BoothOnline) → "ONLINE".
       isOnline <- do

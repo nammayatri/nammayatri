@@ -58,6 +58,7 @@ DRIVER_IMAGE_DIR="$SCRIPT_DIR/collections/DriverImageFlow"
 PAN_HARD_CHECK_DIR="$SCRIPT_DIR/collections/PanHardCheckFlow"
 REWARDS_DIR="$SCRIPT_DIR/collections/RewardsFlow"
 PANGST_DIR="$SCRIPT_DIR/collections/PanGstCrossCheckFlow"
+FACEMATCH_DIR="$SCRIPT_DIR/collections/FaceMatchOnboardingFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
 DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
@@ -111,6 +112,7 @@ OPHUB_SETUP_SQL="$SCRIPT_DIR/collections/OperationHubFlow/setup-local-operation-
 OPHUB_CHALLAN_SETUP_SQL="$SCRIPT_DIR/collections/OperationHubFlow/setup-challan-search-test.sql"
 TOLL_SETUP_SQL="$SCRIPT_DIR/../local-testing-data/toll-dashboard-access.sql"
 PROVIDER_DASHBOARD_SEED_SQL="$SCRIPT_DIR/../local-testing-data/provider-dashboard.sql"
+FACEMATCH_SETUP_SQL="$SCRIPT_DIR/../local-testing-data/facematch-config.sql"
 
 seed_ophub() {
     echo "Seeding operation hub + challan search config..."
@@ -589,6 +591,17 @@ run_pangst() {
     run_frfs "$PANGST_DIR" "PAN-GST CROSS CHECK" "${1:-}" "${2:-}"
 }
 
+# Face match onboarding: enable the per-document face-match toggle (base data comes from config sync).
+seed_facematch_config() {
+    echo "Seeding face-match config (document_verification_config.face_match_source_doc)..."
+    psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" -f "$FACEMATCH_SETUP_SQL" >/dev/null 2>&1 \
+        || echo "WARNING: face-match seed failed — run manually: psql -h $DB_HOST -p $DB_PORT -U $DB_USER_SUPER -d $DB_NAME -f $FACEMATCH_SETUP_SQL"
+}
+run_facematch() {
+    seed_facematch_config
+    run_frfs "$FACEMATCH_DIR" "FACE MATCH ONBOARDING" "${1:-}" "${2:-}"
+}
+
 # ── Help ──
 
 show_help() {
@@ -618,6 +631,7 @@ show_help() {
     echo "  toll-ride           Run toll + auto ride flow (estimate tollChargesInfo)"
     echo "  toll                Run toll-config then toll-ride"
     echo "  rewards             Run rewards dashboard + rider unlock suites (NY + BT)"
+    echo "  face-match          Run selfie<->document face match onboarding suites (auto-seeds face-match config)"
     echo "  ./run-tests.sh toll-config NY_Bangalore       # Toll dashboard APIs (Bangalore)"
     echo "  ./run-tests.sh toll-config BT_Delhi           # Toll dashboard APIs (Delhi)"
     echo "  ./run-tests.sh rewards NY_Bangalore           # Rewards APIs (Namma Yatri)"
@@ -753,6 +767,9 @@ case "${1:-}" in
         ;;
     pan-gst|pangst)
         run_pangst "${2:-}" "${3:-}"
+        ;;
+    face-match|facematch)
+        run_facematch "${2:-}" "${3:-}"
         ;;
     "")
         run_rides

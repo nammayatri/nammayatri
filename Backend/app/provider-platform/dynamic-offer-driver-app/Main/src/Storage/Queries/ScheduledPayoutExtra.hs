@@ -15,9 +15,9 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Beam.ScheduledPayout as Beam
-import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.PayoutStatusHistory as QPSH
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.ScheduledPayout as QSP
 import Tools.Error
 import qualified Tools.SMS as SMS
@@ -78,7 +78,7 @@ sendDriverPayoutSms ::
 sendDriverPayoutSms mId mocId scheduledPayout amount = do
   let driverId = Id scheduledPayout.driverId
   driver <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  booking <- QBooking.findById (Id scheduledPayout.bookingId) >>= fromMaybeM (BookingNotFound scheduledPayout.bookingId)
+  booking <- QBookingLite.findByIdLite (Id scheduledPayout.bookingId) >>= fromMaybeM (BookingNotFound scheduledPayout.bookingId)
   smsCfg <- asks (.smsCfg)
   mobile <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   let countryCode = fromMaybe "+91" driver.mobileCountryCode

@@ -20,6 +20,8 @@ import qualified Tools.Beam.UtilsTH
 
 data FRFSSearch = FRFSSearch
   { busLocationData :: [API.Types.UI.RiderLocation.BusLocation],
+    clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     cloudType :: Kernel.Prelude.Maybe Kernel.Types.Version.CloudType,
     fromStationAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromStationCode :: Kernel.Prelude.Text,

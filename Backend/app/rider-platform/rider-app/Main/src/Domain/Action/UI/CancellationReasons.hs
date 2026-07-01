@@ -27,7 +27,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Translations as CQTranslations
-import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
@@ -39,7 +39,7 @@ getRideBookingCancellationReasons ::
   Maybe Lang.Language ->
   Flow [API.CancellationReasonEntity]
 getRideBookingCancellationReasons _authInfo bookingId mbLang = do
-  booking <- B.runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  booking <- B.runInReplica $ QBookingLite.findByIdLite bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   mbActiveRide <- B.runInReplica $ QRide.findActiveByRBId bookingId
   let merchantOperatingCityId = booking.merchantOperatingCityId
       hasRideAssigned = isJust mbActiveRide

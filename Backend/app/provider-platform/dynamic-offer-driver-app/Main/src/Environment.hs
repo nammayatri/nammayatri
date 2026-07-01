@@ -194,7 +194,8 @@ data AppCfg = AppCfg
     ttenTokenCacheExpiry :: Seconds,
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
     enableLtsPoolDataForPooling :: Bool,
-    rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg
+    rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
+    xyneWebhookSigningSecret :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -323,7 +324,8 @@ data AppEnv = AppEnv
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
     masterCloudForwarderManager :: Http.Manager,
     enableLtsPoolDataForPooling :: Bool,
-    rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg
+    rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
+    xyneWebhookSigningSecret :: Text
   }
   deriving (Generic)
 

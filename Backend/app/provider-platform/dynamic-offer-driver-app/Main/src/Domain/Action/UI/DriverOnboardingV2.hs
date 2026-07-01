@@ -65,6 +65,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
+import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.DriverOnboarding.Digilocker
@@ -85,6 +86,7 @@ import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
@@ -705,7 +707,7 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentAlreadyValidated "PAN"
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  VRC.validateIndividualPANCheck transporterConfig person req.panNumber
+  SDO.validateIndividualPANCheck transporterConfig person req.panNumber
   (verificationStatus, mbNameFromGovtDB) <-
     if isDigiLockerFlow
       then pure (Documents.VALID, Nothing)
@@ -715,7 +717,9 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
         _ -> pure (Documents.VALID, Nothing)
 
   let updatedReq = req {API.Types.UI.DriverOnboardingV2.nameOnGovtDB = mbNameFromGovtDB <|> req.nameOnGovtDB}
-  QDPC.upsertPanRecord =<< buildPanCard merchantId person updatedReq verificationStatus (Just merchantOpCityId)
+  mbDriverPanCard <- QDPC.findByDriverId personId
+  panCardDetails <- buildPanCard merchantId person updatedReq verificationStatus (Just merchantOpCityId)
+  QDPC.upsertPanRecord panCardDetails mbDriverPanCard
   let allowPanAadhaarLink = fromMaybe True transporterConfig.allowPanAadhaarLinkage
   unless allowPanAadhaarLink $
     logInfo $
@@ -784,7 +788,7 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
       unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId.getId)
       unless (imageMetadata.imageType == DTO.PanCard) $
         throwError (ImageInvalidType (show DTO.PanCard) "")
-      Redis.withLockRedisAndReturnValue (VRC.imageS3Lock (imageMetadata.s3Path)) 5 $
+      Redis.withLockRedisAndReturnValue (SDO.imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
     checkIfGenuineReq :: (ServiceFlow m r) => API.Types.UI.DriverOnboardingV2.DriverPanReq -> m (Maybe Text)
     checkIfGenuineReq API.Types.UI.DriverOnboardingV2.DriverPanReq {..} = do
@@ -902,7 +906,7 @@ postDriverRegisterGstin (mbPersonId, merchantId, merchantOpCityId) req = do
       unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId.getId)
       unless (imageMetadata.imageType == DTO.GSTCertificate) $
         throwError (ImageInvalidType (show DTO.GSTCertificate) "")
-      Redis.withLockRedisAndReturnValue (VRC.imageS3Lock (imageMetadata.s3Path)) 5 $
+      Redis.withLockRedisAndReturnValue (SDO.imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
     callIdfy :: Text -> Flow Documents.VerificationStatus
     callIdfy personId = do
@@ -1342,9 +1346,13 @@ postDriverLinkToFleet ::
   (Maybe (Id Domain.Types.Person.Person), Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
   APITypes.LinkToFleetReq ->
   Flow APISuccess
-postDriverLinkToFleet (mbDriverId, _, _) req = do
+postDriverLinkToFleet (mbDriverId, merchantId, _) req = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
-  fdaForFleetOwner <- FDA.findByDriverIdAndFleetOwnerIdWithStatus driverId req.fleetOwnerId.getId
+  -- Fetch the driver's (non-expired) fleet associations once and reuse them for both the
+  -- this-fleet branching below and the D17 "active with another fleet" guard, avoiding a
+  -- second read on fleet_driver_association.
+  driverFleetAssocs <- FDA.findAllByDriverIdWithStatus driverId
+  let fdaForFleetOwner = DL.find (\fda -> fda.fleetOwnerId == req.fleetOwnerId.getId) driverFleetAssocs
   case req.isRevoke of
     Just True -> do
       case fdaForFleetOwner of
@@ -1356,6 +1364,10 @@ postDriverLinkToFleet (mbDriverId, _, _) req = do
         Just fda | fda.isActive -> throwError $ InvalidRequest "Driver is already linked to this fleet"
         Just _ -> throwError $ InvalidRequest "Driver already has a pending fleet association request with this fleet"
         Nothing -> do
+          merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+          -- Reuse the fleet associations already fetched above; the shared guard only adds the
+          -- driver-operator read (and short-circuits entirely when overwrite is enabled).
+          SA.guardDriverNotAssociated merchant driverId (any (.isActive) driverFleetAssocs)
           let requestReason = fromMaybe "Driver requested to join fleet" req.requestReason
           FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just requestReason)
   return Success
