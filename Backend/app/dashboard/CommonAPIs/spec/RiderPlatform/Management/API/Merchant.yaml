@@ -310,8 +310,6 @@ apis:
   - GET: # RiderMerchantMessageCatalogAPI
       endpoint: /merchantMessage/catalog
       auth: ApiAuthV2
-      mandatoryQuery:
-        - catalogType: RiderMerchantMessageCatalogType
       response:
         type: RiderMerchantMessageCatalogResp
       userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT GET_RIDER_MERCHANT_MESSAGE_CATALOG
@@ -323,11 +321,11 @@ apis:
       response:
         type: APISuccess
       userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_RIDER_MERCHANT_MESSAGE
-  - POST: # RiderMerchantMessageDeleteAPI
-      endpoint: /merchantMessage/delete
+  - DELETE: # RiderMerchantMessageDeleteAPI
+      endpoint: /merchantMessage/{messageKey}
       auth: ApiAuthV2
-      request:
-        type: DeleteRiderMerchantMessageReq
+      params:
+        messageKey: Text
       response:
         type: APISuccess
       userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT DELETE_RIDER_MERCHANT_MESSAGE
@@ -379,9 +377,6 @@ types:
     - defaultServiceTierOrderConfig: "Maybe [ServiceTierType]"
     - noOfRideRequestsConfig: Maybe Int
     - derive: "'HideSecrets"
-  RiderMerchantMessageCatalogType:
-    - enum: "KEY"
-    - derive: "HttpInstance"
   RiderMerchantMessageCatalogResp:
     - values: "[Text]"
   UpsertRiderMerchantMessageReq:
@@ -392,9 +387,6 @@ types:
     - jsonData: Maybe Value
     - messageType: Maybe Text
     - senderHeader: Maybe Text
-    - derive: "'HideSecrets"
-  DeleteRiderMerchantMessageReq:
-    - messageKey: Text
     - derive: "'HideSecrets"
 
 extraOperations:

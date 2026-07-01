@@ -41,7 +41,7 @@ module Domain.Action.Dashboard.Merchant
     postMerchantConfigDebugLogUpdate,
     getMerchantMerchantMessageCatalog,
     postMerchantMerchantMessageUpsert,
-    postMerchantMerchantMessageDelete,
+    deleteMerchantMerchantMessage,
   )
 where
 
@@ -1991,9 +1991,8 @@ postMerchantConfigDebugLogUpdate merchantShortId city req = do
 getMerchantMerchantMessageCatalog ::
   ShortId DM.Merchant ->
   Context.City ->
-  Common.RiderMerchantMessageCatalogType ->
   Flow Common.RiderMerchantMessageCatalogResp
-getMerchantMerchantMessageCatalog _merchantShortId _city _catalogType = do
+getMerchantMerchantMessageCatalog _merchantShortId _city = do
   let values = map show [minBound .. maxBound :: DMM.MessageKey]
   pure $ Common.RiderMerchantMessageCatalogResp {values}
 
@@ -2049,14 +2048,14 @@ postMerchantMerchantMessageUpsert merchantShortId city req = do
       CQMM.clearCache merchantOpCity.id messageKey
   pure Success
 
-postMerchantMerchantMessageDelete ::
+deleteMerchantMerchantMessage ::
   ShortId DM.Merchant ->
   Context.City ->
-  Common.DeleteRiderMerchantMessageReq ->
+  Text ->
   Flow APISuccess
-postMerchantMerchantMessageDelete merchantShortId city req = do
+deleteMerchantMerchantMessage merchantShortId city messageKeyText = do
   merchantOpCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
-  messageKey <- readMaybe (T.unpack req.messageKey) & fromMaybeM (InvalidRequest $ "Invalid messageKey: " <> req.messageKey)
+  messageKey <- readMaybe (T.unpack messageKeyText) & fromMaybeM (InvalidRequest $ "Invalid messageKey: " <> messageKeyText)
   _ <- CQMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCity.id messageKey Nothing >>= fromMaybeM (InvalidRequest $ "MerchantMessage not found for messageKey: " <> show messageKey)
   QMM.deleteByMerchantOperatingCityIdAndMessageKey merchantOpCity.id messageKey
   CQMM.clearCache merchantOpCity.id messageKey
