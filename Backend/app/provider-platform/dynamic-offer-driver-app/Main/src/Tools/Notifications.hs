@@ -1195,7 +1195,7 @@ data VehicleUnsafeWarningData = VehicleUnsafeWarningData
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-unhygienicVehicleWarningOverlay ::
+unhygienicVehicleWarningNotify ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Hedis.HedisFlow m r,
@@ -1203,28 +1203,28 @@ unhygienicVehicleWarningOverlay ::
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
-  FCM.FCMOverlayReq ->
   UnhygienicVehicleWarningData ->
   m ()
-unhygienicVehicleWarningOverlay mOpCityId person req entityData = do
-  fcmConfig <- findFCMConfigWithFallback mOpCityId person.id
-  FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken person.id) notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
-  where
-    notificationData =
-      FCM.FCMData
-        { fcmNotificationType = FCM.UNHYGIENIC_VEHICLE_WARNING,
-          fcmShowNotification = FCM.SHOW,
-          fcmEntityType = FCM.Person,
-          fcmEntityIds = entityData.driverId,
-          fcmEntityData = Just entityData,
-          fcmNotificationJSON = FCM.createAndroidNotification notifTitle body FCM.UNHYGIENIC_VEHICLE_WARNING Nothing,
-          fcmOverlayNotificationJSON = Just $ FCM.createAndroidOverlayNotification req,
-          fcmNotificationId = Nothing
-        }
-    notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title
-    body = FCMNotificationBody $ fromMaybe "Description" req.description
+unhygienicVehicleWarningNotify mOpCityId person entityData = do
+  mbMerchantPN <- CPN.findMatchingMerchantPN mOpCityId "UNHYGIENIC_VEHICLE_WARNING" Nothing Nothing (Just $ fromMaybe ENGLISH person.language) Nothing
+  whenJust mbMerchantPN $ \merchantPN -> do
+    fcmConfig <- findFCMConfigWithFallback mOpCityId person.id
+    let notifTitle = FCMNotificationTitle merchantPN.title
+        body = FCMNotificationBody merchantPN.body
+        notificationData =
+          FCM.FCMData
+            { fcmNotificationType = FCM.UNHYGIENIC_VEHICLE_WARNING,
+              fcmShowNotification = FCM.SHOW,
+              fcmEntityType = FCM.Person,
+              fcmEntityIds = entityData.driverId,
+              fcmEntityData = Just entityData,
+              fcmNotificationJSON = FCM.createAndroidNotification notifTitle body FCM.UNHYGIENIC_VEHICLE_WARNING Nothing,
+              fcmOverlayNotificationJSON = Nothing,
+              fcmNotificationId = Nothing
+            }
+    FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken person.id) notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
 
-vehicleUnsafeWarningOverlay ::
+vehicleUnsafeWarningNotify ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Hedis.HedisFlow m r,
@@ -1232,26 +1232,26 @@ vehicleUnsafeWarningOverlay ::
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
-  FCM.FCMOverlayReq ->
   VehicleUnsafeWarningData ->
   m ()
-vehicleUnsafeWarningOverlay mOpCityId person req entityData = do
-  fcmConfig <- findFCMConfigWithFallback mOpCityId person.id
-  FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken person.id) notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
-  where
-    notificationData =
-      FCM.FCMData
-        { fcmNotificationType = FCM.VEHICLE_UNSAFE_WARNING,
-          fcmShowNotification = FCM.SHOW,
-          fcmEntityType = FCM.Person,
-          fcmEntityIds = entityData.driverId,
-          fcmEntityData = Just entityData,
-          fcmNotificationJSON = FCM.createAndroidNotification notifTitle body FCM.VEHICLE_UNSAFE_WARNING Nothing,
-          fcmOverlayNotificationJSON = Just $ FCM.createAndroidOverlayNotification req,
-          fcmNotificationId = Nothing
-        }
-    notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title
-    body = FCMNotificationBody $ fromMaybe "Description" req.description
+vehicleUnsafeWarningNotify mOpCityId person entityData = do
+  mbMerchantPN <- CPN.findMatchingMerchantPN mOpCityId "VEHICLE_UNSAFE_WARNING" Nothing Nothing (Just $ fromMaybe ENGLISH person.language) Nothing
+  whenJust mbMerchantPN $ \merchantPN -> do
+    fcmConfig <- findFCMConfigWithFallback mOpCityId person.id
+    let notifTitle = FCMNotificationTitle merchantPN.title
+        body = FCMNotificationBody merchantPN.body
+        notificationData =
+          FCM.FCMData
+            { fcmNotificationType = FCM.VEHICLE_UNSAFE_WARNING,
+              fcmShowNotification = FCM.SHOW,
+              fcmEntityType = FCM.Person,
+              fcmEntityIds = entityData.driverId,
+              fcmEntityData = Just entityData,
+              fcmNotificationJSON = FCM.createAndroidNotification notifTitle body FCM.VEHICLE_UNSAFE_WARNING Nothing,
+              fcmOverlayNotificationJSON = Nothing,
+              fcmNotificationId = Nothing
+            }
+    FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken person.id) notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
 
 driverStopDetectionAlert ::
   ( ServiceFlow m r,

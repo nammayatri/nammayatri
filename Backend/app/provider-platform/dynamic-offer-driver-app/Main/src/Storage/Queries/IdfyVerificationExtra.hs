@@ -32,3 +32,21 @@ findLatestByDriverIdAndDocType limit offset driverId docType fromDate toDate = d
     (Se.Desc Beam.createdAt)
     (Just limit)
     (Just offset)
+
+findLatestCompletedByDriverIdAndDocType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DP.Person ->
+  DVC.DocumentType ->
+  m (Maybe DIdfy.IdfyVerification)
+findLatestCompletedByDriverIdAndDocType driverId docType =
+  listToMaybe
+    <$> findAllWithOptionsKV
+      [ Se.And
+          [ Se.Is Beam.driverId $ Se.Eq (getId driverId),
+            Se.Is Beam.docType $ Se.Eq docType,
+            Se.Is Beam.status $ Se.Eq "completed"
+          ]
+      ]
+      (Se.Desc Beam.createdAt)
+      (Just 1)
+      Nothing

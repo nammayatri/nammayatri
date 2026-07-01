@@ -43,12 +43,14 @@ import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified Storage.Cac.TransporterConfig as SCTC
+import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
 import Tools.Error
@@ -130,8 +132,14 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
           DriverInformation.incrementReferralCountByPersonId (Just newtotalRef) dr.driverId
           return Success
         Person.OPERATOR -> do
+          existingFleetAssocs <- QFDA.findAllByDriverId personId True
+          unless (null existingFleetAssocs) $
+            throwError (InvalidRequest "Fleet-linked drivers cannot apply an operator referral code; their operator is derived from the fleet")
+          merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+          person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+          SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
           DriverInformation.updateReferredByOperatorId (Just dr.driverId.getId) personId
-          driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+          driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId DomainRC.defaultAssociationEnd
           void $ QDOA.create driverOperatorAssData
           Analytics.handleDriverAnalyticsAndFlowStatus
             transporterConfig

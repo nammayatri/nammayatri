@@ -26,10 +26,10 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
-  { aadhaarVerificationService :: (B.C f Kernel.External.AadhaarVerification.Types.AadhaarVerificationService),
-    autoComplete :: (B.C f Kernel.External.Maps.Types.MapsService),
-    backgroundVerification :: (B.C f Kernel.External.BackgroundVerification.Types.BackgroundVerificationService),
-    categoryBasedVerificationPriorityList :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
+  { aadhaarVerificationService :: B.C f Kernel.External.AadhaarVerification.Types.AadhaarVerificationService,
+    autoComplete :: B.C f Kernel.External.Maps.Types.MapsService,
+    backgroundVerification :: B.C f Kernel.External.BackgroundVerification.Types.BackgroundVerificationService,
+    categoryBasedVerificationPriorityList :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     challanProvidersPriorityList :: B.C f (Kernel.Prelude.Maybe [Kernel.External.ChallanSearch.Types.ChallanSearchService]),
     createBankAccount :: (B.C f Kernel.External.Payment.Types.PaymentService),
     createPayoutOrder :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Types.PayoutService)),
@@ -38,6 +38,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     dashboardPanVerificationService :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService)),
     dashboardUdyamVerificationService :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService)),
     driverBackgroundVerificationService :: (B.C f Kernel.External.Verification.Types.DriverBackgroundVerificationService),
+    faceMatchService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService),
     faceVerificationService :: (B.C f Kernel.External.Verification.Types.VerificationService),
     getBankAccount :: (B.C f Kernel.External.Payment.Types.PaymentService),
     getDistances :: (B.C f Kernel.External.Maps.Types.MapsService),
@@ -80,8 +81,8 @@ instance B.Table MerchantServiceUsageConfigT where
 
 type MerchantServiceUsageConfig = MerchantServiceUsageConfigT Identity
 
-$(enableKVPG (''MerchantServiceUsageConfigT) [('merchantOperatingCityId)] [])
+$(enableKVPG ''MerchantServiceUsageConfigT ['merchantOperatingCityId] [])
 
-$(mkTableInstances (''MerchantServiceUsageConfigT) "merchant_service_usage_config")
+$(mkTableInstances ''MerchantServiceUsageConfigT "merchant_service_usage_config")
 
-$(Domain.Types.UtilsTH.mkCacParseInstance (''MerchantServiceUsageConfigT))
+$(Domain.Types.UtilsTH.mkCacParseInstance ''MerchantServiceUsageConfigT)

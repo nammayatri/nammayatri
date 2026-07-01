@@ -17,11 +17,11 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, throwError)
 import qualified SharedLogic.LocationMapping as SLM
-import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import Tools.Error
 
 postAddDestination ::
@@ -34,8 +34,8 @@ postAddDestination bppRideId mbToken addDestinationReq = do
   internalAPIKey <- asks (.internalAPIKey)
   unless (Just internalAPIKey == mbToken) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
-  ride <- QRide.findByBPPRideId (Kernel.Types.Id.Id bppRideId) >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId)
-  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  ride <- QRideLite.findByBPPRideIdLite (Kernel.Types.Id.Id bppRideId) >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId)
+  booking <- QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   unless (booking.tripCategory == Just (OneWay MeterRide)) $
     throwError $ InvalidRequest ("Invalid trip category " <> show booking.tripCategory)
   dropLocation <- buildLocation ride.merchantId ride.merchantOperatingCityId addDestinationReq.destinationLatLong addDestinationReq.destinationLocation

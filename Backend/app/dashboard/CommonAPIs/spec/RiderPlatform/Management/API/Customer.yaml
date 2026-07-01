@@ -116,7 +116,20 @@ apis:
         type: UpdatePaymentModeReq
       response:
         type: APISuccess
-
+  - POST:
+      endpoint: /offersList
+      auth: ApiAuthV2
+      request:
+        type: CustomerOffersListReq
+      response:
+        type: "[CustomerOfferEntity]"
+  - POST:
+      endpoint: /applyOffer
+      auth: ApiAuthV2
+      request:
+        type: ApplyCustomerOfferReq
+      response:
+        type: APISuccess
 types:
   CustomerListRes:
     - totalItems: Int # for backward compatibility
@@ -157,4 +170,25 @@ types:
   UpdatePaymentModeReq:
     - recordType: NewType
     - paymentMode: PaymentMode
+    - derive: "'HideSecrets"
+  CustomerOfferEntity:
+    - offerId: Text
+    - offerCode: Text
+    - offerTitle: Maybe Text
+    - offerDescription: Maybe Text
+    - autoApply: Bool
+    - isHidden: Bool
+    - amountSaved: HighPrecMoney
+    - postOfferAmount: HighPrecMoney
+  CustomerOffersListReq:
+    - mobileNumber: Text
+    - mobileCountryCode: Maybe Text
+    - amount: Maybe HighPrecMoney
+    - derive: "'HideSecrets"
+  ApplyCustomerOfferReq:
+    - mobileNumber: Text
+    - mobileCountryCode: Maybe Text
+    - offerCode: Text
+    - validityHours: Int
+    - amount: Maybe HighPrecMoney
     - derive: "'HideSecrets"

@@ -363,6 +363,7 @@ types:
     - policeVerificationCertificate: [Text]
     - drivingSchoolCertificate: [Text]
     - udyamCertificate: [Text]
+    - medicalCertificate: [Text]
     - commonDocuments: [CommonDocumentItem]
   GetDocumentResponse:
     - imageBase64: Text

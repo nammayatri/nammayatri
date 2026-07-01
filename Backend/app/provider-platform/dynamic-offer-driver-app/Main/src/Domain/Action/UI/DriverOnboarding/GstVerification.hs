@@ -59,9 +59,7 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
-import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
-import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverGstin as DGQuery
@@ -97,7 +95,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
   checkSlidingWindowLimitWithOptions (makeVerifyGstinHitsCountKey req.gstin) externalServiceRateLimitOptions
 
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  (blocked, driverDocument) <- DVRC.getDriverDocumentInfo person
+  (blocked, driverDocument) <- getDriverDocumentInfo person
   when blocked $ throwError AccountBlocked
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   case transporterConfig.allowDuplicateGst of
@@ -164,17 +162,19 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
               Person.updatePersonRole person.id Person.FLEET_BUSINESS
               QFOI.updateFleetType FOI.BUSINESS_FLEET person.id
           _ -> pure ()
-  if DVRC.isNameCompareRequired transporterConfig verifyBy || gstPanLinkCheckRequired
-    then Redis.withWaitOnLockRedisWithExpiry (DVRC.makeDocumentVerificationLockKey personId.getId) 10 10 runBody
+  if isNameCompareRequired transporterConfig verifyBy || gstPanLinkCheckRequired
+    then Redis.withWaitOnLockRedisWithExpiry (makeDocumentVerificationLockKey personId.getId) 10 10 runBody
     else runBody
-  res <- case person.role of
+  -- GST upload promoted FLEET_OWNER -> FLEET_BUSINESS in the DB above, but person.role is still stale in memory.
+  let enablementRole = if person.role == Person.FLEET_OWNER then Person.FLEET_BUSINESS else person.role
+  res <- case enablementRole of
     Person.DRIVER -> do
       fork "enabling driver if all the mandatory document is verified" $ do
         void $ SStatus.processStatusEvent (Just person) (Just transporterConfig) (SStatus.PersonDocChangedEvent person.id)
       pure False
     role
       | DCommon.checkFleetOwnerRole role ->
-        DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId (Just transporterConfig)
+        DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType enablementRole) person.merchantOperatingCityId (Just transporterConfig)
     _ -> pure False
   pure res
   where
@@ -211,22 +211,20 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
             stateName = mbStateName
           }
 
-    callIdfy :: Person.Person -> Maybe DGst.DriverGstin -> DVRC.DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
+    callIdfy :: Person.Person -> Maybe DGst.DriverGstin -> DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
     callIdfy person mdriverGstInformation driverDocument transporterConfig = do
       logDebug $ "callIdfy: " <> show req
       checkExtraction <-
         if DCommon.checkFleetOwnerRole person.role
           then do
-            fodvc <-
-              getOneConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just ODC.GSTCertificate}) (Just (maybeToList <$> CQFODVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.GSTCertificate Nothing))
-                >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate))
+            fodvc <- SStatus.getFleetDocVerificationConfig merchantOpCityId ODC.GSTCertificate person.role
             pure fodvc.checkExtraction
           else do
             dvc <-
               listToMaybe <$> getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just ODC.GSTCertificate, vehicleCategory = Nothing}) (Just (CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.GSTCertificate Nothing))
                 >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate))
             pure dvc.checkExtraction
-      image1 <- DVRC.getDocumentImage person.id req.imageId ODC.GSTCertificate
+      image1 <- getValidDocumentImage person.id req.imageId ODC.GSTCertificate
       let extractReq =
             Verification.ExtractImageReq
               { image1 = image1,
@@ -263,14 +261,14 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
 
           resp <- Verification.extractGSTImage person.merchantId merchantOpCityId extractReq
           extractedGst <- validateExtractedGst resp
-          when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
-            DVRC.validateDocument person.merchantId merchantOpCityId person.id Nothing Nothing extractedGst.pan_number ODC.GSTCertificate driverDocument
+          when (isNameCompareRequired transporterConfig verifyBy) $
+            validateDocument person.merchantId merchantOpCityId person.id Nothing Nothing extractedGst.pan_number ODC.GSTCertificate driverDocument
           DGQuery.updateVerificationStatus Documents.MANUAL_VERIFICATION_REQUIRED person.id
         Nothing -> do
           resp <- Verification.extractGSTImage person.merchantId merchantOpCityId extractReq
           extractedGst <- validateExtractedGst resp
-          when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
-            DVRC.validateDocument person.merchantId merchantOpCityId person.id Nothing Nothing extractedGst.pan_number ODC.GSTCertificate driverDocument
+          when (isNameCompareRequired transporterConfig verifyBy) $
+            validateDocument person.merchantId merchantOpCityId person.id Nothing Nothing extractedGst.pan_number ODC.GSTCertificate driverDocument
           gstCardDetails <- buildGstinCard person extractedGst.address extractedGst.constitution_of_business extractedGst.date_of_liability extractedGst.is_provisional extractedGst.legal_name extractedGst.trade_name extractedGst.type_of_registration extractedGst.valid_from extractedGst.valid_upto extractedGst.pan_number Nothing Nothing
           DGQuery.create gstCardDetails
       pure Success
@@ -329,10 +327,17 @@ onVerifyGstHandler person imageId1 imageId2 output = do
     when (verificationStatus == Documents.VALID) $ QFOI.updateFleetName mbLegalName person.id
   (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
   let rejectForMissingLegalName = ImageQuery.updateVerificationStatusAndFailureReason Documents.INVALID GstLegalNameNotFound imageId1
-      markImagesValidIfNeeded =
-        when (((image1 >>= (.verificationStatus)) /= Just Documents.VALID) && ((image2 >>= (.verificationStatus)) /= Just Documents.VALID)) $
-          mapM_ (maybe (return ()) (ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard."))) [Just imageId1, imageId2]
-  if legalNameMissing then rejectForMissingLegalName else markImagesValidIfNeeded
+      promoteImagesToValid =
+        forM_ [(image1, Just imageId1), (image2, imageId2)] $ \(mbImg, mbImgId) ->
+          unless ((mbImg >>= (.verificationStatus)) `elem` [Just Documents.VALID, Just Documents.INVALID]) $
+            whenJust mbImgId $ ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard.")
+      invalidateImages =
+        forM_ [(image1, Just imageId1), (image2, imageId2)] $ \(mbImg, mbImgId) ->
+          unless ((mbImg >>= (.verificationStatus)) == Just Documents.INVALID) $
+            whenJust mbImgId $ ImageQuery.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid "GST verification failed")
+  if legalNameMissing
+    then rejectForMissingLegalName
+    else if verificationStatus == Documents.VALID then promoteImagesToValid else invalidateImages
 
 assertUploadedGstLinkedToExistingPan :: Person.Person -> Text -> Id Image.Image -> Flow ()
 assertUploadedGstLinkedToExistingPan person gstin imageId = do
