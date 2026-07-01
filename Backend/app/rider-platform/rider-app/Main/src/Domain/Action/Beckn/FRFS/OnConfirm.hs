@@ -33,6 +33,7 @@ import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSRecon as Recon
 import qualified Domain.Types.FRFSTicket as Ticket
 import qualified Domain.Types.FRFSTicketBooking as Booking
+import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingStatus as Booking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -45,6 +46,7 @@ import ExternalBPP.CallAPI.Cancel
 import Kernel.Beam.Functions
 import Kernel.External.Encryption as ENC
 import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
+import qualified Kernel.External.Notification as Notification
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude as Prelude hiding (lookup)
 import Kernel.Sms.Config (SmsConfig)
@@ -56,7 +58,9 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSUtils as FRFSUtils
@@ -87,6 +91,7 @@ import qualified Storage.Queries.PersonStats as QPS
 import qualified Text.Regex as TR
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
+import qualified Tools.Notifications as TNotifications
 import qualified Tools.SMS as Sms
 import qualified UrlShortner.Common as UrlShortner
 import qualified Utils.Common.JWT.Config as GW
@@ -115,7 +120,7 @@ validateRequest ::
     HasMasterCloudForwarder r
   ) =>
   DOrder ->
-  m (Merchant, Booking.FRFSTicketBooking, [DFRFSQuoteCategory.FRFSQuoteCategory])
+  m (Merchant, Booking.FRFSTicketBooking, [DFRFSQuoteCategory.FRFSQuoteCategory], DFRFSTicketBookingPayment.FRFSTicketBookingPayment)
 validateRequest DOrder {..} = do
   _ <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   booking <- runInReplica $ QTBooking.findById (Id messageId) >>= fromMaybeM (BookingDoesNotExist messageId)
@@ -135,7 +140,7 @@ validateRequest DOrder {..} = do
       let updatedBooking = booking {Booking.bppOrderId = Just bppOrderId}
       void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL updatedBooking
       throwM $ InvalidRequest "Booking expired, initated cancel request"
-    else return (merchant, booking, quoteCategories)
+    else return (merchant, booking, quoteCategories, bookingPayment)
 
 onConfirmFailure ::
   ( CacheFlow m r,
@@ -189,9 +194,10 @@ onConfirm ::
   Merchant ->
   Booking.FRFSTicketBooking ->
   [DFRFSQuoteCategory.FRFSQuoteCategory] ->
+  DFRFSTicketBookingPayment.FRFSTicketBookingPayment ->
   DOrder ->
   m ()
-onConfirm merchant booking' quoteCategories dOrder = do
+onConfirm merchant booking' quoteCategories bookingPayment dOrder = do
   Metrics.finishMetrics Metrics.CONFIRM_FRFS merchant.name dOrder.transactionId booking'.merchantOperatingCityId.getId
   let booking = booking' {Booking.bppOrderId = Just dOrder.bppOrderId}
   let discountedTickets = fromMaybe 0 booking.discountedTickets
@@ -209,6 +215,13 @@ onConfirm merchant booking' quoteCategories dOrder = do
   whenJust mbJourneyId $ \journeyId -> do
     QJourneyExtra.updateLongestJourneyExpiryTimeWithTickets journeyId tickets
   void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
+  fork "notify FRFS ticket success after confirm" $ do
+    allConfirmed <- allOrderBookingsConfirmed bookingPayment.paymentOrderId
+    when allConfirmed $ do
+      paymentOrder <- QOrder.findById bookingPayment.paymentOrderId >>= fromMaybeM (PaymentOrderNotFound bookingPayment.paymentOrderId.getId)
+      lockAcquired <- Redis.tryLockRedis ("frfsTicketSuccessNotify:" <> bookingPayment.paymentOrderId.getId) 86400
+      when lockAcquired $
+        TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_SUCCESS bookingPayment.paymentOrderId booking.riderId (fromMaybe DPaymentOrder.Normal paymentOrder.paymentServiceType)
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mRiderNumber <- mapM ENC.decrypt person.mobileNumber
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
@@ -233,6 +246,14 @@ onConfirm merchant booking' quoteCategories dOrder = do
         void $ QTBooking.updateGoogleWalletLinkById (Just url) booking.id
   return ()
   where
+    allOrderBookingsConfirmed orderId = do
+      bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId orderId
+      let bookingIds = Prelude.map (.frfsTicketBookingId) bookingPayments
+      bookings <- QFRFSTicketBooking.findAllByIds bookingIds
+      let foundIds = Prelude.map (.id) bookings
+      whenJust (find (`notElem` foundIds) bookingIds) $ \missingId ->
+        throwError (FRFSTicketBookingNotFound missingId.getId)
+      pure $ not (Prelude.null bookingIds) && all (\b -> b.status == DFRFSTicketBooking.CONFIRMED) bookings
     sendTicketBookedSMS mRiderNumber mRiderMobileCountryCode fareParameters =
       whenJust booking'.partnerOrgId $ \pOrgId -> do
         fork "send ticket booked sms" $

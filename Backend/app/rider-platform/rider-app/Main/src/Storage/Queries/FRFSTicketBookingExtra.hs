@@ -114,6 +114,9 @@ findAllByTripId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m [FRF
 findAllByTripId tripId = do
   findAllWithKV [Se.Is Beam.tripId $ Se.Eq (Just tripId)]
 
+findAllByIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Id FRFSTicketBooking] -> m [FRFSTicketBooking]
+findAllByIds bookingIds = findAllWithKV [Se.Is Beam.id $ Se.In (map getId bookingIds)]
+
 findAllConfirmedByTripId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m [FRFSTicketBooking]
 findAllConfirmedByTripId tripId = do
   findAllWithKV

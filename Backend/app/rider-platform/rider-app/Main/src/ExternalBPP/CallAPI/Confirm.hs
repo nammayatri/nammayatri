@@ -133,5 +133,5 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
       DOrder ->
       m ()
     processOnConfirm onConfirmReq = do
-      (merchant', booking'', quoteCategories') <- DACFOC.validateRequest onConfirmReq
-      DACFOC.onConfirm merchant' booking'' quoteCategories' onConfirmReq
+      (merchant', booking'', quoteCategories', bookingPayment') <- DACFOC.validateRequest onConfirmReq
+      DACFOC.onConfirm merchant' booking'' quoteCategories' bookingPayment' onConfirmReq
