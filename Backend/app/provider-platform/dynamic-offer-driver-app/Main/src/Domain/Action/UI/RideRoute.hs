@@ -24,11 +24,11 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Ride
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
-import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 
 rideRoute :: (MonadFlow m, EncFlow m r, HedisFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Ride -> (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> m RouteInfo
 rideRoute rideId (_, _, _) = do
-  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  ride <- QRideLite.findByIdLite rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let key = searchRequestKey booking.transactionId
   runInMultiCloudRedisMaybeResult (safeGet key) >>= fromMaybeM (RideDoesNotExist $ getId rideId)

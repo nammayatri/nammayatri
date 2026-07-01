@@ -24,14 +24,14 @@ import Kernel.Types.Price (PriceAPIEntity (..))
 import Kernel.Utils.Common
 import qualified Storage.Clickhouse.Estimate as CHE
 import qualified Storage.Clickhouse.EstimateBreakup as CH
-import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Quote as QQuote
-import qualified Storage.Queries.Ride as QRide
 
 getRideEstimateBreakup :: ((Kernel.Prelude.Maybe (Id.Id Person.Person), Id.Id Merchant.Merchant) -> Id.Id Ride.Ride -> Environment.Flow API.Types.UI.EstimateBP.EstimateDetailsRes)
 getRideEstimateBreakup (_, _) rideId_ = do
-  ride <- B.runInReplica $ QRide.findById rideId_ >>= fromMaybeM (RideDoesNotExist rideId_.getId)
-  booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  ride <- B.runInReplica $ QRideLite.findByIdLite rideId_ >>= fromMaybeM (RideDoesNotExist rideId_.getId)
+  booking <- B.runInReplica $ QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   case booking.quoteId of
     Just quoteId -> do
       quote <- B.runInReplica $ QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)

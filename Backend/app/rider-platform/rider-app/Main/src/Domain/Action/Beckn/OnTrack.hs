@@ -31,7 +31,7 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
-import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
@@ -69,7 +69,7 @@ onTrack ValidatedOnTrackReq {..} = do
 validateRequest :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => OnTrackReq -> m ValidatedOnTrackReq
 validateRequest OnTrackReq {..} = do
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId:" <> bppRideId.getId)
-  booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  booking <- B.runInReplica $ QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   if isValueAddNP && isNothing trackUrl
     then throwError $ InvalidRequest "TrackUrl is required for ValueAddNP"

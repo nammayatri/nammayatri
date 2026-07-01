@@ -30,7 +30,8 @@ import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -171,8 +172,8 @@ postPaymentRefundRequestRespond merchantShortId opCity orderId req = do
 
     initiateRefundsApiCall merchantOpCity refundRequest = do
       let rideId = cast @DPaymentOrder.PaymentOrder @DRide.Ride refundRequest.orderId
-      ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-      booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+      ride <- QRideLite.findByIdLite rideId >>= fromMaybeM (RideNotFound rideId.getId)
+      booking <- QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
       driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
       let commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCity.id
       let refundReq =
