@@ -70,7 +70,6 @@ import qualified SharedLogic.Finance.Wallet as SLFW
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.CoinsConfig as CDCQ
 import qualified Storage.CachedQueries.MonetaryRewardConfig as CWCQ
-import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Coins.CoinHistory as CHistory
 import qualified Storage.Queries.DriverQuote as QDQ
@@ -78,6 +77,7 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDAE
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Translations as MTQuery
 import qualified Tools.DynamicLogic as TDL
@@ -337,7 +337,7 @@ validateCancellation rideId rideStartTime initialDisToPickup cancellationDisToPi
     Just rideIdText -> do
       ride <- QRide.findById (Id rideIdText) >>= fromMaybeM (RideNotFound rideIdText)
       let bookingId = ride.bookingId.getId
-      booking <- QBooking.findById (Id bookingId) >>= fromMaybeM (BookingNotFound bookingId)
+      booking <- QBookingLite.findByIdLite (Id bookingId) >>= fromMaybeM (BookingNotFound bookingId)
       let quoteId = booking.quoteId
       driverQuote <- QDQ.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
       let estimatedTimeToPickup = secondsToNominalDiffTime driverQuote.durationToPickup
