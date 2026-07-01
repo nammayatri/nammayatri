@@ -661,6 +661,7 @@ apis:
         - approved: Bool
         - driverDocsVerificationStatus: DocsVerificationStatus
         - driverId: Text
+        - pickLatestDoc: Bool
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
@@ -706,6 +707,7 @@ apis:
         - isRequestorFleerOwner: Bool
         - approved: Bool
         - vehicleDocsVerificationStatus: DocsVerificationStatus
+        - pickLatestDoc: Bool
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
