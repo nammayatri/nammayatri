@@ -13,6 +13,7 @@ module Domain.Action.UI.DriverOnboarding.UdyamVerification
   )
 where
 
+import Control.Applicative ((<|>))
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DFR
 import qualified Domain.Types.DocumentVerificationConfig as ODC
@@ -78,7 +79,7 @@ verifyUdyam (personId, merchantOpCityId) req = do
   cfg <- SStatus.getFleetDocVerificationConfig merchantOpCityId ODC.UDYAMCertificate person.role
   if cfg.doStrictVerifcation
     then verifyUdyamFlow person merchantOpCityId req.uamNumber req.imageId1
-    else upsertManualUdyamRecord person req.uamNumber
+    else upsertManualUdyamRecord person req.uamNumber (Just req.imageId1)
   res <- case person.role of
     Person.DRIVER -> do
       fork "enabling driver if all the mandatory document is verified" $ do
@@ -115,6 +116,7 @@ onVerifyUdyam verificationReq output serviceName = do
           let updated =
                 driverUdyam
                   { DUdyam.verificationStatus = Documents.VALID,
+                    DUdyam.documentImageId = Just verificationReq.documentImageId1 <|> driverUdyam.documentImageId,
                     DUdyam.enterpriseName = output.enterpriseName,
                     DUdyam.enterpriseType = output.enterpriseType,
                     DUdyam.rejectReason = Nothing,
@@ -122,7 +124,7 @@ onVerifyUdyam verificationReq output serviceName = do
                   }
           DUQuery.updateByPrimaryKey updated
         Nothing -> do
-          udyamCardDetails <- buildDriverUdyamCard person verificationReq.documentNumber output.enterpriseName output.enterpriseType Documents.VALID
+          udyamCardDetails <- buildDriverUdyamCard person verificationReq.documentNumber output.enterpriseName output.enterpriseType Documents.VALID (Just verificationReq.documentImageId1)
           DUQuery.create udyamCardDetails
       case person.role of
         role
@@ -132,8 +134,8 @@ onVerifyUdyam verificationReq output serviceName = do
     _ -> throwError $ InternalError ("Unknown Service provider webhook encountered in onVerifyUdyam. Name of provider : " <> show serviceName)
   pure Ack
 
-upsertManualUdyamRecord :: Person.Person -> Text -> Flow ()
-upsertManualUdyamRecord person uamNumber = do
+upsertManualUdyamRecord :: Person.Person -> Text -> Maybe (Id Image.Image) -> Flow ()
+upsertManualUdyamRecord person uamNumber mbImageId = do
   encryptedUam <- encrypt uamNumber
   existing <- DUQuery.findByDriverId person.id
   now <- getCurrentTime
@@ -142,6 +144,7 @@ upsertManualUdyamRecord person uamNumber = do
       let updated =
             driverUdyam
               { DUdyam.udyamNumber = encryptedUam,
+                DUdyam.documentImageId = mbImageId <|> driverUdyam.documentImageId,
                 DUdyam.verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
                 DUdyam.rejectReason = Nothing,
                 DUdyam.enterpriseName = Nothing,
@@ -150,16 +153,17 @@ upsertManualUdyamRecord person uamNumber = do
               }
       DUQuery.updateByPrimaryKey updated
     Nothing -> do
-      udyamCardDetails <- buildDriverUdyamCard person encryptedUam Nothing Nothing Documents.MANUAL_VERIFICATION_REQUIRED
+      udyamCardDetails <- buildDriverUdyamCard person encryptedUam Nothing Nothing Documents.MANUAL_VERIFICATION_REQUIRED mbImageId
       DUQuery.create udyamCardDetails
 
-buildDriverUdyamCard :: Person.Person -> EncryptedHashedField 'AsEncrypted Text -> Maybe Text -> Maybe Text -> Documents.VerificationStatus -> Flow DUdyam.DriverUdyam
-buildDriverUdyamCard person encryptedUdyamNumber enterpriseName enterpriseType verificationStatus = do
+buildDriverUdyamCard :: Person.Person -> EncryptedHashedField 'AsEncrypted Text -> Maybe Text -> Maybe Text -> Documents.VerificationStatus -> Maybe (Id Image.Image) -> Flow DUdyam.DriverUdyam
+buildDriverUdyamCard person encryptedUdyamNumber enterpriseName enterpriseType verificationStatus mbImageId = do
   now <- getCurrentTime
   uuid <- generateGUID
   return $
     DUdyam.DriverUdyam
       { driverId = person.id,
+        documentImageId = mbImageId,
         id = Id uuid :: Id DUdyam.DriverUdyam,
         udyamNumber = encryptedUdyamNumber,
         verificationStatus = verificationStatus,

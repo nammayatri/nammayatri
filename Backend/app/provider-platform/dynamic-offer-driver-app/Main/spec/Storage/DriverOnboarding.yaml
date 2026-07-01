@@ -1139,6 +1139,7 @@ DriverUdyam :
   fields:
     id: Id DriverUdyam
     driverId: Id Person
+    documentImageId: Maybe (Id Image)
     udyamNumber: EncryptedHashedField e Text
     enterpriseType: Maybe Text
     enterpriseName : Maybe Text
@@ -1151,6 +1152,7 @@ DriverUdyam :
     id: PrimaryKey
     driverId: SecondaryKey
     udyamNumberHash: "!SecondaryKey" # forcing to be a secondary key
+    documentImageId: SecondaryKey
 
   queries:
     findById:
@@ -1159,6 +1161,9 @@ DriverUdyam :
     findByDriverId:
       kvFunction: findOneWithKV
       where: driverId
+    findByImageId:
+      kvFunction: findOneWithKV
+      where: documentImageId
     updateVerificationStatus:
       kvFunction: updateWithKV
       params: [verificationStatus, updatedAt]
