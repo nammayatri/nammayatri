@@ -31,7 +31,6 @@ import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.OfferStats as DOfferStats
@@ -52,6 +51,7 @@ import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.BookingExtra as QBooking
 import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.Person as QPerson
@@ -144,42 +144,45 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
   let customerId = fromMaybe person.id.getId (req.customer <&> (.customerId))
       version = fromMaybe "N/A" riderConfig.offerListCacheVersion
   useDomainOffers <- TPayment.useDomainOffers merchantId merchantOperatingCityId Nothing DOrder.RideHailing
-  if useDomainOffers
-    then do
-      let domainOfferCall = \_ -> do
-            personOfferStats <- QOfferStats.findAllByEntityIdAndEntityType personId.getId DOfferStats.Person
-            staticPersonOfferStats <- do
-              personPhone <- mapM decrypt person.mobileNumber
-              case personPhone of
-                Just phone -> do
-                  staticId <- SLUtils.getStaticCustomerId person phone
-                  if staticId /= personId.getId
-                    then QOfferStats.findAllByEntityIdAndEntityType staticId DOfferStats.StaticPerson
-                    else pure []
-                Nothing -> pure []
-            deviceOfferStats <- case person.deviceId of
-              Just did | not (T.null did) -> QOfferStats.findAllByEntityIdAndEntityType did DOfferStats.Device
-              _ -> pure []
-            -- offerStats <- QOfferStats.findAllByEntityIdAndEntityType offerId.getId DOfferStats.Offer
-            today <- utctDay <$> getCurrentTime
-            mbPersonDailyOfferStats <- QPersonDailyOfferStats.findByPersonIdAndDate personId.getId today
-            mbPersonStats <- QPersonStats.findByPersonId personId
-            let domainContext =
-                  Just $
-                    A.toJSON
-                      OfferEligibilityInput
-                        { personOfferStats = personOfferStats,
-                          staticPersonOfferStats = staticPersonOfferStats,
-                          deviceOfferStats = deviceOfferStats,
-                          personDailyOfferStats = mbPersonDailyOfferStats,
-                          personStats = mbPersonStats,
-                          serviceTierType = mbServiceTierType
-                        }
-            DPayment.listDomainOffers merchantId.getId merchantOperatingCityId.getId price.amount price.currency domainContext
-      DPayment.offerListService customerId version paymentServiceType (6 * 3600) False domainOfferCall req
-    else do
-      let offerListCall = TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType (Just customerId) person.clientSdkVersion
-      DPayment.offerListService customerId version paymentServiceType (31 * 86400) True offerListCall req
+  autoApplyOfferCodes <- getAutoApplyOfferCodes person.customerNammaTags
+  offerListResp <-
+    if useDomainOffers
+      then do
+        let domainOfferCall = \_ -> do
+              personOfferStats <- QOfferStats.findAllByEntityIdAndEntityType personId.getId DOfferStats.Person
+              staticPersonOfferStats <- do
+                personPhone <- mapM decrypt person.mobileNumber
+                case personPhone of
+                  Just phone -> do
+                    staticId <- SLUtils.getStaticCustomerId person phone
+                    if staticId /= personId.getId
+                      then QOfferStats.findAllByEntityIdAndEntityType staticId DOfferStats.StaticPerson
+                      else pure []
+                  Nothing -> pure []
+              deviceOfferStats <- case person.deviceId of
+                Just did | not (T.null did) -> QOfferStats.findAllByEntityIdAndEntityType did DOfferStats.Device
+                _ -> pure []
+              -- offerStats <- QOfferStats.findAllByEntityIdAndEntityType offerId.getId DOfferStats.Offer
+              today <- utctDay <$> getCurrentTime
+              mbPersonDailyOfferStats <- QPersonDailyOfferStats.findByPersonIdAndDate personId.getId today
+              mbPersonStats <- QPersonStats.findByPersonId personId
+              let domainContext =
+                    Just $
+                      A.toJSON
+                        OfferEligibilityInput
+                          { personOfferStats = personOfferStats,
+                            staticPersonOfferStats = staticPersonOfferStats,
+                            deviceOfferStats = deviceOfferStats,
+                            personDailyOfferStats = mbPersonDailyOfferStats,
+                            personStats = mbPersonStats,
+                            serviceTierType = mbServiceTierType
+                          }
+              DPayment.listDomainOffers merchantId.getId merchantOperatingCityId.getId price.amount price.currency domainContext
+        DPayment.offerListService customerId version paymentServiceType (6 * 3600) False domainOfferCall req
+      else do
+        let offerListCall = TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType (Just customerId) person.clientSdkVersion
+        DPayment.offerListService customerId version paymentServiceType (31 * 86400) True offerListCall req
+  pure $ overrideOfferListRespAutoApply autoApplyOfferCodes offerListResp
 
 -- | Optional fare context — when provided, postOfferAmount is recomputed
 --   via the shared 'Domain.SharedLogic.RideDiscount.applyRideDiscount'
@@ -408,6 +411,61 @@ mkCumulativeOfferResp merchantOperatingCityId offerListRes legInfos mbFareCtx = 
             ..
           }
 
+autoApplyOfferTagName :: Text
+autoApplyOfferTagName = "AutoApplyOffer"
+
+getAutoApplyOfferCodes :: (MonadTime m) => Maybe [LYT.TagNameValueExpiry] -> m [Text]
+getAutoApplyOfferCodes mbTags = do
+  validTags <- LYTUtils.filterExpiredTags (fromMaybe [] mbTags)
+  now <- getCurrentTime
+  pure $
+    mapMaybe
+      ( \tag -> case LYTUtils.parseTag tag now of
+          Just (LYT.TagName tagName, tagValue, _)
+            | tagName == autoApplyOfferTagName ->
+              case tagValue of
+                LYT.TextValue v -> Just v
+                LYT.ArrayValue (v : _) -> Just v
+                _ -> Nothing
+          _ -> Nothing
+      )
+      validTags
+
+-- | Override each offer's @uiConfigs.autoApply@ to True when its offerCode is
+--   one the customer has an active AutoApplyOffer#<code> tag for. Applied inside
+--   offerListWithBasket / offerListCache so every downstream consumer sees it.
+overrideOfferListRespAutoApply :: [Text] -> Payment.OfferListResp -> Payment.OfferListResp
+overrideOfferListRespAutoApply [] resp = resp
+overrideOfferListRespAutoApply autoApplyOfferCodes resp =
+  resp {Payment.offerResp = map (applyAutoApplyOverride autoApplyOfferCodes) resp.offerResp}
+
+applyAutoApplyOverride :: [Text] -> Payment.OfferResp -> Payment.OfferResp
+applyAutoApplyOverride autoApplyOfferCodes offer
+  | offer.offerCode `elem` autoApplyOfferCodes = offer {Payment.uiConfigs = Just updatedUiConfigs}
+  | otherwise = offer
+  where
+    updatedUiConfigs = case offer.uiConfigs of
+      Just cfg -> cfg {Payment.autoApply = Just True}
+      Nothing ->
+        Payment.OfferUIConfigs
+          { Payment.offerDisplayPriority = Nothing,
+            Payment.autoApply = Just True,
+            Payment.shouldValidate = Nothing,
+            Payment.isHidden = Nothing
+          }
+
+listOffersForPerson ::
+  (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, BeamFlow m r) =>
+  Id Merchant.Merchant ->
+  Person.Person ->
+  Maybe HighPrecMoney ->
+  m [OfferRespAPIEntity]
+listOffersForPerson merchantId person mbAmount = do
+  let price = mkPrice (Just INR) (fromMaybe 1 mbAmount)
+  productOffers <- offerListWithBasket merchantId person.id person.merchantOperatingCityId DOrder.RideHailing [("offers-list", price)] Nothing Nothing Nothing
+  let offerResps = concatMap (\(_, resp) -> resp.offerResp) productOffers
+  mapM (mkOfferRespAPIEntity Nothing) offerResps
+
 mkOfferRespAPIEntity ::
   (MonadFlow m) =>
   OfferFareCtx ->
@@ -479,56 +537,59 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
   isMultipleOrNoDeviceIdExist <- mkIsMultipleOrNoDeviceIdExist person
   let isDriverNumberSameAsCustomer = mkIsDriverNumberSameAsCustomer person mbRide
   useDomainOffers <- TPayment.useDomainOffers merchantId merchantOperatingCityId Nothing paymentServiceType
-  if useDomainOffers
-    then do
-      let productsWithAmount = map (\(pid, p) -> (pid, p.amount)) products
-      staticPersonOfferStats <- do
-        personPhone <- mapM decrypt person.mobileNumber
-        case personPhone of
-          Just phone -> do
-            staticId <- SLUtils.getStaticCustomerId person phone
-            if staticId /= personId.getId
-              then QOfferStats.findAllByEntityIdAndEntityType staticId DOfferStats.StaticPerson
-              else pure []
-          Nothing -> pure []
-      deviceOfferStats <- case person.deviceId of
-        Just did | not (T.null did) -> QOfferStats.findAllByEntityIdAndEntityType did DOfferStats.Device
-        _ -> pure []
-      today <- utctDay <$> getCurrentTime
-      mbPersonDailyOfferStats <- QPersonDailyOfferStats.findByPersonIdAndDate personId.getId today
-      let domainContext =
-            Just $
-              A.toJSON
-                OfferEligibilityInput
-                  { personOfferStats = personOfferStats,
-                    staticPersonOfferStats = staticPersonOfferStats,
-                    deviceOfferStats = deviceOfferStats,
-                    personDailyOfferStats = mbPersonDailyOfferStats,
-                    personStats = mbPersonStats,
-                    serviceTierType = Nothing
-                  }
-          currency = maybe INR ((.currency) . snd) (listToMaybe products)
-      offersByProduct <- DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId productsWithAmount currency domainContext
-      let mbRideData = mkRideData <$> mbRide
-          mbBookingData = mkBookingData <$> mbBooking
-          mbSearchReqData = mkSearchRequestData <$> mbSearchReq
-      forM offersByProduct $ \(productId, offersForProduct) -> do
-        filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats person.hasTakenValidRide person.totalRidesCount
-        pure (productId, filteredOffers)
-    else do
-      let totalAmount = sum $ map ((.amount) . snd) products
-          currency = maybe INR ((.currency) . snd) (listToMaybe products)
-          basketItems = map (\(pid, p) -> Payment.Basket {id = pid, unitPrice = p.amount, quantity = 1}) products
-          productsWithAmount = map (\(pid, p) -> (pid, p.amount)) products
-      req <- mkOfferListReqWithBasket person totalAmount currency basketItems
-      resp <- TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType Nothing person.clientSdkVersion req
-      let offersByProduct = DPayment.splitOfferRespByProduct productsWithAmount resp
-          mbRideData = mkRideData <$> mbRide
-          mbBookingData = mkBookingData <$> mbBooking
-          mbSearchReqData = mkSearchRequestData <$> mbSearchReq
-      forM offersByProduct $ \(productId, offersForProduct) -> do
-        filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats person.hasTakenValidRide person.totalRidesCount
-        pure (productId, filteredOffers)
+  autoApplyOfferCodes <- getAutoApplyOfferCodes person.customerNammaTags
+  productOffers <-
+    if useDomainOffers
+      then do
+        let productsWithAmount = map (\(pid, p) -> (pid, p.amount)) products
+        staticPersonOfferStats <- do
+          personPhone <- mapM decrypt person.mobileNumber
+          case personPhone of
+            Just phone -> do
+              staticId <- SLUtils.getStaticCustomerId person phone
+              if staticId /= personId.getId
+                then QOfferStats.findAllByEntityIdAndEntityType staticId DOfferStats.StaticPerson
+                else pure []
+            Nothing -> pure []
+        deviceOfferStats <- case person.deviceId of
+          Just did | not (T.null did) -> QOfferStats.findAllByEntityIdAndEntityType did DOfferStats.Device
+          _ -> pure []
+        today <- utctDay <$> getCurrentTime
+        mbPersonDailyOfferStats <- QPersonDailyOfferStats.findByPersonIdAndDate personId.getId today
+        let domainContext =
+              Just $
+                A.toJSON
+                  OfferEligibilityInput
+                    { personOfferStats = personOfferStats,
+                      staticPersonOfferStats = staticPersonOfferStats,
+                      deviceOfferStats = deviceOfferStats,
+                      personDailyOfferStats = mbPersonDailyOfferStats,
+                      personStats = mbPersonStats,
+                      serviceTierType = Nothing
+                    }
+            currency = maybe INR ((.currency) . snd) (listToMaybe products)
+        offersByProduct <- DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId productsWithAmount currency domainContext
+        let mbRideData = mkRideData <$> mbRide
+            mbBookingData = mkBookingData <$> mbBooking
+            mbSearchReqData = mkSearchRequestData <$> mbSearchReq
+        forM offersByProduct $ \(productId, offersForProduct) -> do
+          filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats person.hasTakenValidRide person.totalRidesCount
+          pure (productId, filteredOffers)
+      else do
+        let totalAmount = sum $ map ((.amount) . snd) products
+            currency = maybe INR ((.currency) . snd) (listToMaybe products)
+            basketItems = map (\(pid, p) -> Payment.Basket {id = pid, unitPrice = p.amount, quantity = 1}) products
+            productsWithAmount = map (\(pid, p) -> (pid, p.amount)) products
+        req <- mkOfferListReqWithBasket person totalAmount currency basketItems
+        resp <- TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType Nothing person.clientSdkVersion req
+        let offersByProduct = DPayment.splitOfferRespByProduct productsWithAmount resp
+            mbRideData = mkRideData <$> mbRide
+            mbBookingData = mkBookingData <$> mbBooking
+            mbSearchReqData = mkSearchRequestData <$> mbSearchReq
+        forM offersByProduct $ \(productId, offersForProduct) -> do
+          filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats person.hasTakenValidRide person.totalRidesCount
+          pure (productId, filteredOffers)
+  pure $ map (\(productId, resp) -> (productId, overrideOfferListRespAutoApply autoApplyOfferCodes resp)) productOffers
 
 applyOffersFraudChecks :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> Maybe DRide.Ride -> Maybe DRB.Booking -> Maybe SSR.SearchRequest -> Maybe Y.RideData -> Maybe Y.BookingData -> Maybe Y.SearchRequestData -> Maybe Bool -> Bool -> [DOfferStats.OfferStats] -> Maybe DPS.PersonStats -> Bool -> Maybe Int -> m Payment.OfferListResp
 applyOffersFraudChecks merchantOperatingCityId offerListResp mbRideEntity mbBookingEntity mbSearchReqEntity mbRide mbBooking mbSearchReq isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats hasTakenValidRide totalRidesCount = do

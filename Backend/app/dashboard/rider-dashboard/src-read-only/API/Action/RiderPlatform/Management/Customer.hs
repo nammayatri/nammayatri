@@ -23,100 +23,116 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("customer" :> (GetCustomerList :<|> DeleteCustomerDelete :<|> PostCustomerBlock :<|> PostCustomerUnblock :<|> GetCustomerInfo :<|> PostCustomerCancellationDuesSync :<|> GetCustomerCancellationDuesDetails :<|> PostCustomerUpdateSafetyCenterBlocking :<|> PostCustomerPersonNumbers :<|> PostCustomerPersonId :<|> PostCustomerUpdatePaymentMode))
+type API = ("customer" :> (GetCustomerList :<|> DeleteCustomerDelete :<|> PostCustomerBlock :<|> PostCustomerUnblock :<|> GetCustomerInfo :<|> PostCustomerCancellationDuesSync :<|> GetCustomerCancellationDuesDetails :<|> PostCustomerUpdateSafetyCenterBlocking :<|> PostCustomerPersonNumbers :<|> PostCustomerPersonId :<|> PostCustomerUpdatePaymentMode :<|> PostCustomerOffersList :<|> PostCustomerApplyOffer))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getCustomerList merchantId city :<|> deleteCustomerDelete merchantId city :<|> postCustomerBlock merchantId city :<|> postCustomerUnblock merchantId city :<|> getCustomerInfo merchantId city :<|> postCustomerCancellationDuesSync merchantId city :<|> getCustomerCancellationDuesDetails merchantId city :<|> postCustomerUpdateSafetyCenterBlocking merchantId city :<|> postCustomerPersonNumbers merchantId city :<|> postCustomerPersonId merchantId city :<|> postCustomerUpdatePaymentMode merchantId city
+handler merchantId city = getCustomerList merchantId city :<|> deleteCustomerDelete merchantId city :<|> postCustomerBlock merchantId city :<|> postCustomerUnblock merchantId city :<|> getCustomerInfo merchantId city :<|> postCustomerCancellationDuesSync merchantId city :<|> getCustomerCancellationDuesDetails merchantId city :<|> postCustomerUpdateSafetyCenterBlocking merchantId city :<|> postCustomerPersonNumbers merchantId city :<|> postCustomerPersonId merchantId city :<|> postCustomerUpdatePaymentMode merchantId city :<|> postCustomerOffersList merchantId city :<|> postCustomerApplyOffer merchantId city
 
 type GetCustomerList =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.CUSTOMER) / ('API.Types.RiderPlatform.Management.Customer.GET_CUSTOMER_LIST))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.CUSTOMER / 'API.Types.RiderPlatform.Management.Customer.GET_CUSTOMER_LIST)
       :> API.Types.RiderPlatform.Management.Customer.GetCustomerList
   )
 
 type DeleteCustomerDelete =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.CUSTOMER) / ('API.Types.RiderPlatform.Management.Customer.DELETE_CUSTOMER_DELETE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.CUSTOMER / 'API.Types.RiderPlatform.Management.Customer.DELETE_CUSTOMER_DELETE)
       :> API.Types.RiderPlatform.Management.Customer.DeleteCustomerDelete
   )
 
 type PostCustomerBlock =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.CUSTOMER) / ('API.Types.RiderPlatform.Management.Customer.POST_CUSTOMER_BLOCK))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.CUSTOMER / 'API.Types.RiderPlatform.Management.Customer.POST_CUSTOMER_BLOCK)
       :> API.Types.RiderPlatform.Management.Customer.PostCustomerBlock
   )
 
 type PostCustomerUnblock =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.CUSTOMER) / ('API.Types.RiderPlatform.Management.Customer.POST_CUSTOMER_UNBLOCK))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.CUSTOMER / 'API.Types.RiderPlatform.Management.Customer.POST_CUSTOMER_UNBLOCK)
       :> API.Types.RiderPlatform.Management.Customer.PostCustomerUnblock
   )
 
 type GetCustomerInfo =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.CUSTOMER) / ('API.Types.RiderPlatform.Management.Customer.GET_CUSTOMER_INFO))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.CUSTOMER / 'API.Types.RiderPlatform.Management.Customer.GET_CUSTOMER_INFO)
       :> API.Types.RiderPlatform.Management.Customer.GetCustomerInfo
   )
 
 type PostCustomerCancellationDuesSync =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.CUSTOMER) / ('API.Types.RiderPlatform.Management.Customer.POST_CUSTOMER_CANCELLATION_DUES_SYNC))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.CUSTOMER / 'API.Types.RiderPlatform.Management.Customer.POST_CUSTOMER_CANCELLATION_DUES_SYNC)
       :> API.Types.RiderPlatform.Management.Customer.PostCustomerCancellationDuesSync
   )
 
 type GetCustomerCancellationDuesDetails =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.CUSTOMER) / ('API.Types.RiderPlatform.Management.Customer.GET_CUSTOMER_CANCELLATION_DUES_DETAILS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.CUSTOMER / 'API.Types.RiderPlatform.Management.Customer.GET_CUSTOMER_CANCELLATION_DUES_DETAILS)
       :> API.Types.RiderPlatform.Management.Customer.GetCustomerCancellationDuesDetails
   )
 
 type PostCustomerUpdateSafetyCenterBlocking =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.CUSTOMER) / ('API.Types.RiderPlatform.Management.Customer.POST_CUSTOMER_UPDATE_SAFETY_CENTER_BLOCKING))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.CUSTOMER / 'API.Types.RiderPlatform.Management.Customer.POST_CUSTOMER_UPDATE_SAFETY_CENTER_BLOCKING)
       :> API.Types.RiderPlatform.Management.Customer.PostCustomerUpdateSafetyCenterBlocking
   )
 
 type PostCustomerPersonNumbers =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.CUSTOMER) / ('API.Types.RiderPlatform.Management.Customer.POST_CUSTOMER_PERSON_NUMBERS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.CUSTOMER / 'API.Types.RiderPlatform.Management.Customer.POST_CUSTOMER_PERSON_NUMBERS)
       :> API.Types.RiderPlatform.Management.Customer.PostCustomerPersonNumbers
   )
 
 type PostCustomerPersonId =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.CUSTOMER) / ('API.Types.RiderPlatform.Management.Customer.POST_CUSTOMER_PERSON_ID))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.CUSTOMER / 'API.Types.RiderPlatform.Management.Customer.POST_CUSTOMER_PERSON_ID)
       :> API.Types.RiderPlatform.Management.Customer.PostCustomerPersonId
   )
 
 type PostCustomerUpdatePaymentMode =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.CUSTOMER) / ('API.Types.RiderPlatform.Management.Customer.POST_CUSTOMER_UPDATE_PAYMENT_MODE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.CUSTOMER / 'API.Types.RiderPlatform.Management.Customer.POST_CUSTOMER_UPDATE_PAYMENT_MODE)
       :> API.Types.RiderPlatform.Management.Customer.PostCustomerUpdatePaymentMode
   )
 
-getCustomerList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Customer) -> Environment.FlowHandler API.Types.RiderPlatform.Management.Customer.CustomerListRes)
+type PostCustomerOffersList =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.CUSTOMER / 'API.Types.RiderPlatform.Management.Customer.POST_CUSTOMER_OFFERS_LIST)
+      :> API.Types.RiderPlatform.Management.Customer.PostCustomerOffersList
+  )
+
+type PostCustomerApplyOffer =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.CUSTOMER / 'API.Types.RiderPlatform.Management.Customer.POST_CUSTOMER_APPLY_OFFER)
+      :> API.Types.RiderPlatform.Management.Customer.PostCustomerApplyOffer
+  )
+
+getCustomerList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Customer) -> Environment.FlowHandler API.Types.RiderPlatform.Management.Customer.CustomerListRes)
 getCustomerList merchantShortId opCity apiTokenInfo limit offset enabled blocked phone personId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.getCustomerList merchantShortId opCity apiTokenInfo limit offset enabled blocked phone personId
 
 deleteCustomerDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -148,3 +164,9 @@ postCustomerPersonId merchantShortId opCity apiTokenInfo req = withFlowHandlerAP
 
 postCustomerUpdatePaymentMode :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> API.Types.RiderPlatform.Management.Customer.UpdatePaymentModeReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postCustomerUpdatePaymentMode merchantShortId opCity apiTokenInfo customerId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.postCustomerUpdatePaymentMode merchantShortId opCity apiTokenInfo customerId req
+
+postCustomerOffersList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Customer.CustomerOffersListReq -> Environment.FlowHandler [API.Types.RiderPlatform.Management.Customer.CustomerOfferEntity])
+postCustomerOffersList merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.postCustomerOffersList merchantShortId opCity apiTokenInfo req
+
+postCustomerApplyOffer :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Customer.ApplyCustomerOfferReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postCustomerApplyOffer merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.postCustomerApplyOffer merchantShortId opCity apiTokenInfo req

@@ -35,11 +35,11 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.External.Maps.Interface.Types
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.External.MultiModal.Interface.Types
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude hiding (whenJust)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
