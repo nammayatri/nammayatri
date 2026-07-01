@@ -81,14 +81,19 @@ getcustomer person = do
     then
       return $
         TPayment.CreateCustomerResp
-          { customerId = customer.personId, -- in-app UPI requires customer.personId only
+          { customerId = person.id.getId, -- in-app UPI requires customer.personId only
             clientAuthToken = customer.clientAuthToken,
             clientAuthTokenExpiry = customer.clientAuthTokenExpiry
           }
     else do
       getCustomerResp <- TPayment.getCustomer person.merchantId person.merchantOperatingCityId person.paymentMode customer.customerId
       QPaymentCustomer.updateCATAndExipry getCustomerResp.clientAuthToken getCustomerResp.clientAuthTokenExpiry getCustomerResp.customerId (Just paymentMode)
-      return getCustomerResp {TPayment.customerId = customer.personId}
+      return $
+        TPayment.CreateCustomerResp
+          { customerId = person.id.getId, -- in-app UPI requires customer.personId only
+            clientAuthToken = getCustomerResp.clientAuthToken,
+            clientAuthTokenExpiry = getCustomerResp.clientAuthTokenExpiry
+          }
 
 buildCreateCustomer ::
   ( CacheFlow m r,
