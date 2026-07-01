@@ -74,7 +74,7 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantMerchantDocumentDelete,
     getMerchantMerchantMessageCatalog,
     postMerchantMerchantMessageUpsert,
-    postMerchantMerchantMessageDelete,
+    deleteMerchantMerchantMessage,
     filterUnboundedFareProducts,
     filterBoundedFareProductsFromSnapshot,
     buildFarePolicyUsageCount,
@@ -4832,18 +4832,19 @@ postMerchantMerchantMessageUpsert merchantShortId opCity req = do
         CQMM.clearCache merchantOpCity.id messageKey req.vehicleCategory
   pure Success
 
-postMerchantMerchantMessageDelete ::
+deleteMerchantMerchantMessage ::
   ShortId DM.Merchant ->
   Context.City ->
-  Common.DeleteMerchantMessageReq ->
+  Text ->
+  Maybe Common.VehicleCategory ->
   Flow APISuccess
-postMerchantMerchantMessageDelete merchantShortId opCity req = do
+deleteMerchantMerchantMessage merchantShortId opCity messageKeyText mbVehicleCategory = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  messageKey <- readMaybe (T.unpack req.messageKey) & fromMaybeM (InvalidRequest $ "Invalid messageKey: " <> req.messageKey)
-  _ <- CQMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCity.id messageKey req.vehicleCategory Nothing >>= fromMaybeM (InvalidRequest $ "MerchantMessage not found for messageKey: " <> show messageKey)
-  QMM.deleteByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCity.id messageKey req.vehicleCategory
-  CQMM.clearCache merchantOpCity.id messageKey req.vehicleCategory
+  messageKey <- readMaybe (T.unpack messageKeyText) & fromMaybeM (InvalidRequest $ "Invalid messageKey: " <> messageKeyText)
+  _ <- CQMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCity.id messageKey mbVehicleCategory Nothing >>= fromMaybeM (InvalidRequest $ "MerchantMessage not found for messageKey: " <> show messageKey)
+  QMM.deleteByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCity.id messageKey mbVehicleCategory
+  CQMM.clearCache merchantOpCity.id messageKey mbVehicleCategory
   pure Success
 
 getMerchantCityList ::
