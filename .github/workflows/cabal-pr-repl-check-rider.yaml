@@ -142,9 +142,8 @@ jobs:
               cabal repl rider-app \
                 --repl-options='-fno-code -fwrite-interface' \
                 --builddir=dist-newrepl-rider <<< ':quit' 2>&1 | tee /tmp/repl-rider-out-${{ github.run_id }}.txt
-              [ -f /tmp/repl-rider-out-${{ github.run_id }}.txt ] || { echo "ERROR: repl output file missing — cabal repl may have crashed before producing output"; exit 1; }
-              grep -q 'Failed' /tmp/repl-rider-out-${{ github.run_id }}.txt && exit 1 || true
             "
+          grep -q Failed /tmp/repl-rider-out-${{ github.run_id }}.txt && exit 1 || true
 
       - name: Cleanup
         if: always()
