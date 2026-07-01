@@ -332,7 +332,7 @@ trySyncSearch dSearchRes becknTaxiReqV2 = do
       case eProc of
         Right (Just onSearchResult) -> do
           let DOnSearch.OnSearchResult {searchRequest, estimates, quotes, riderConfig} = onSearchResult
-          eQuotes <- withTryCatch "getQuotesInline" $ DQuote.getQuotesFromInMemory searchRequest estimates quotes riderConfig
+          eQuotes <- withTryCatch "getQuotesInline" $ DQuote.getQuotesFromInMemory searchRequest estimates quotes riderConfig False
           case eQuotes of
             Right quotesRes -> pure (Just quotesRes)
             Left e -> do

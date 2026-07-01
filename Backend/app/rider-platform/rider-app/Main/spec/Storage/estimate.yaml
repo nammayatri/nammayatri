@@ -133,6 +133,7 @@ Estimate:
     insuredAmount: Maybe Text
     selectedOfferId: Maybe Text
     isMultimodalSearch: Maybe Bool
+    commissionCharges: Maybe HighPrecMoney
 
   constraints:
     id: PrimaryKey

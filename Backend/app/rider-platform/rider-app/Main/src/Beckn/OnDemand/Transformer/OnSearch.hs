@@ -110,6 +110,7 @@ tfQuotesInfo provider fulfillments validTill item = do
       let smartTipSuggestion = Beckn.OnDemand.Utils.OnSearch.getSmartTipSuggestion item
       let tipOptions = Beckn.OnDemand.Utils.OnSearch.getTipOptions item
       let smartTipReason = Beckn.OnDemand.Utils.OnSearch.getSmartTipReason item
+      let commissionCharges_ = Beckn.OnDemand.Utils.OnSearch.getCommissionCharges item
       pure $
         Left $
           Domain.Action.Beckn.OnSearch.EstimateInfo
@@ -146,7 +147,8 @@ tfQuotesInfo provider fulfillments validTill item = do
               tipOptions,
               smartTipSuggestion,
               qar = qar_,
-              smartTipReason
+              smartTipReason,
+              commissionCharges = commissionCharges_
             }
     QuoteBased _ -> do
       quoteBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildQuoteBreakupList item currency

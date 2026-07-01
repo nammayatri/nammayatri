@@ -19,4 +19,4 @@ getQuoteResult ::
   Environment.Flow Domain.Action.UI.Quote.GetQuotesRes
 getQuoteResult merchantShortId _opCity searchId personId = do
   m <- findMerchantByShortId merchantShortId
-  API.UI.Quote.getQuotes' searchId (personId, m.id) Nothing
+  API.UI.Quote.getQuotes' searchId (personId, m.id) Nothing True

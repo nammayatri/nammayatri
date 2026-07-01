@@ -233,6 +233,14 @@ getSmartTipSuggestion item = do
   parsedTagValue <- readMaybe tagValueStr :: Maybe HighPrecMoney
   return parsedTagValue
 
+-- | Commission is sent by our own BPP in on_search under the SETTLEMENT_DETAILS
+-- tag group (guarded to value-add NPs). Surfaced only on dashboard estimates.
+getCommissionCharges :: Spec.Item -> Maybe HighPrecMoney
+getCommissionCharges item = do
+  tagValueStr <- Utils.getTagV2 Tag.SETTLEMENT_DETAILS Tag.COMMISSION item.itemTags
+  parsedTagValue <- readMaybe tagValueStr :: Maybe HighPrecMoney
+  return parsedTagValue
+
 getQAR :: Spec.Item -> Maybe Double
 getQAR item = do
   tagValueStr <- Utils.getTagV2 Tag.INFO Tag.QAR item.itemTags

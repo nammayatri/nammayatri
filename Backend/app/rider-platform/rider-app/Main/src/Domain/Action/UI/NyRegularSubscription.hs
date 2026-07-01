@@ -181,7 +181,7 @@ getNyRegularSubscriptionsEstimate _auth searchRequestIdText = do
   let searchId = Id.Id searchRequestIdText
   -- The third parameter to getQuotes was for an optional BPPId, not subscriptionId.
   -- Passing Nothing as we don't have a specific BPPId to filter by here.
-  Domain.Action.UI.Quote.getQuotes searchId Nothing
+  Domain.Action.UI.Quote.getQuotes searchId Nothing False
 
 postNyRegularSubscriptionsConfirm ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

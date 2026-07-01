@@ -100,17 +100,32 @@ data EstimateBreakupAPIEntity = EstimateBreakupAPIEntity
 -- Use this when the caller has a preloaded provider lookup so per-estimate
 -- Redis hits (CQBppDetails.findBySubscriberIdAndDomain + QNP.isValueAddNP)
 -- can be skipped.
-mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Bool -> Maybe SOffer.CumulativeOfferResp -> BppDetails -> Bool -> Estimate -> m EstimateAPIEntity
-mkEstimateAPIEntity isReferredRide offer bppDetails valueAddNPRes (Estimate {..}) = do
+mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Bool -> Maybe SOffer.CumulativeOfferResp -> BppDetails -> Bool -> Bool -> Estimate -> m EstimateAPIEntity
+mkEstimateAPIEntity isReferredRide offer bppDetails valueAddNPRes isDashboardRequest (Estimate {..}) = do
   let mbBaseFareEB = find (\x -> x.title == show Enums.BASE_FARE) estimateBreakupList
       mbBaseDistanceFareEB = maybeToList $ addBaseDisatanceFareEB mbBaseFareEB -- TODO::Remove it after UI stops consuming it,
+      -- Commission is provider-side data. Surface it as a fare-breakup line only for
+      -- dashboard-originated requests; never for the customer app.
+      commissionBreakup =
+        if isDashboardRequest
+          then case commissionCharges of
+            Just c ->
+              let commissionPrice = mkPrice (Just estimatedFare.currency) c
+               in [ EstimateBreakupAPIEntity
+                      { title = "COMMISSION",
+                        price = commissionPrice.amountInt,
+                        priceWithCurrency = mkPriceAPIEntity commissionPrice
+                      }
+                  ]
+            Nothing -> []
+          else []
   return
     EstimateAPIEntity
       { agencyName = providerName,
         agencyNumber = providerMobileNumber,
         agencyCompletedRidesCount = providerCompletedRidesCount,
         tripTerms = [],
-        estimateFareBreakup = filter (not . isProjectedFareParamTag . (.title)) (mkEstimateBreakupAPIEntity <$> (estimateBreakupList <> mbBaseDistanceFareEB)),
+        estimateFareBreakup = filter (not . isProjectedFareParamTag . (.title)) (mkEstimateBreakupAPIEntity <$> (estimateBreakupList <> mbBaseDistanceFareEB)) <> commissionBreakup,
         driversLatLong = driversLocation,
         nightShiftRate = mkNightShiftRateAPIEntity <$> nightShiftInfo,
         providerId = providerId,

@@ -175,7 +175,8 @@ data EstimateInfo = EstimateInfo
     qar :: Maybe Double,
     -- petCharges :: Maybe Price,
     smartTipSuggestion :: Maybe HighPrecMoney,
-    smartTipReason :: Maybe Text
+    smartTipReason :: Maybe Text,
+    commissionCharges :: Maybe HighPrecMoney
   }
 
 data NightShiftInfo = NightShiftInfo
