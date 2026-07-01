@@ -13,6 +13,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo as ActorInfo
 
 type API =
   Capture "rideId" (Id Ride)
@@ -26,4 +27,4 @@ handler =
   populateTipAmount
 
 populateTipAmount :: Id Ride -> HighPrecMoney -> Maybe Text -> FlowHandler APISuccess
-populateTipAmount rideId tipAmount = withFlowHandlerAPI . Domain.populateTipAmount rideId tipAmount
+populateTipAmount rideId tipAmount = withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo . Domain.populateTipAmount rideId tipAmount

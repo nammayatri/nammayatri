@@ -78,6 +78,7 @@ import Lib.Finance
     runFinance,
     transfer,
   )
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntry
@@ -98,6 +99,7 @@ import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.WalletTransaction as QWalletTransaction
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as Payout
@@ -625,7 +627,7 @@ computePayoutFee (Just feeConfig) amount =
 initiateWalletPayout ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBFlow m r,
     BeamFlow m r,
     ServiceFlow m r,
@@ -704,7 +706,7 @@ postWalletTopup ::
     DriverWallet.TopUpRequest ->
     Environment.Flow PlanSubscribeRes
   )
-postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merchantId mocId
+postWalletTopup (mbPersonId, merchantId, mocId) = ActorInfo.withMbPersonIdActorInfo mbPersonId . doWalletTopup mbPersonId merchantId mocId
   where
     doWalletTopup mbP mId mocId0 r =
       do
@@ -826,7 +828,7 @@ recordAirportCashRecharge ::
   ( BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m
+    Finance.HasActorInfo m r
   ) =>
   (Id DP.Person, Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
   HighPrecMoney ->

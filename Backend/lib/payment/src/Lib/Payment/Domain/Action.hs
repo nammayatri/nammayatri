@@ -109,6 +109,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import Lib.Payment.Domain.Types.Common
 import qualified Lib.Payment.Domain.Types.Offer as DOffer
@@ -226,7 +227,8 @@ type BeamFlow m r = (FinanceBeamFlow.BeamFlow m r, PaymentBeamFlow.BeamFlow m r)
 cancelPaymentIntentService ::
   ( EncFlow m r,
     BeamFlow m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    Finance.HasActorInfo m r
   ) =>
   Id MerchantOperatingCity ->
   Id Ride ->
@@ -265,7 +267,8 @@ chargePaymentIntentService ::
   forall m r c.
   ( EncFlow m r,
     BeamFlow m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    Finance.HasActorInfo m r
   ) =>
   Id MerchantOperatingCity ->
   DOrder.PaymentServiceType ->
@@ -374,7 +377,8 @@ createPaymentService ::
   forall m r c.
   ( EncFlow m r,
     BeamFlow m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    Finance.HasActorInfo m r
   ) =>
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
@@ -611,7 +615,8 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
 refundPaymentService ::
   forall m r.
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   RefundPaymentServiceReq ->
   (PInterface.RefundPaymentReq -> m PInterface.RefundPaymentResp) ->
@@ -668,7 +673,8 @@ refundPaymentService req refundCall = do
 getRefundStatusService ::
   forall m r.
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id DOrder.PaymentOrder ->
   Id MerchantOperatingCity ->
@@ -713,7 +719,8 @@ updateShortId mbPaymentServiceType isTestTransaction shortId =
 
 createOrderService ::
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
@@ -816,7 +823,8 @@ buildSDKPayloadDetails req order = do
 
 buildPaymentOrder ::
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
@@ -1485,7 +1493,8 @@ buildOrderOffer paymentOrderId mbOffers merchantId merchantOperatingCityId = do
 
 orderStatusService ::
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id MerchantOperatingCity ->
   Id Person ->
@@ -1675,7 +1684,7 @@ data OrderTxn = OrderTxn
   }
 
 updateOrderTransaction ::
-  BeamFlow m r =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   Id MerchantOperatingCity ->
   DOrder.PaymentOrder ->
   OrderTxn ->
@@ -1767,7 +1776,7 @@ buildPaymentTransaction order OrderTxn {..} respDump = do
 -- juspay webhook ----------------------------------------------------------
 
 juspayWebhookService ::
-  BeamFlow m r =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   Id MerchantOperatingCity ->
   Payment.OrderStatusResp ->
   Text ->
@@ -1904,7 +1913,7 @@ mkStripeWebhookData = \case
   PEInterface.CustomEvent _event -> SkipWebhookData
 
 stripeWebhookService ::
-  BeamFlow m r =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   Id MerchantOperatingCity ->
   PEInterface.ServiceEventResp ->
   Text ->
@@ -2095,7 +2104,8 @@ mkChargeOrderTxn PEInterface.Charge {..} = do
 
 updateRefundsByWebhook ::
   forall m r.
-  ( BeamFlow m r
+  ( BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id MerchantOperatingCity ->
   PEInterface.Refund ->
@@ -2198,7 +2208,8 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
 
 createRefundService ::
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id MerchantOperatingCity ->
   ShortId DOrder.PaymentOrder ->
@@ -2301,7 +2312,7 @@ mkRefundsEntry merchantId requestId orderShortId amount refundStatus = do
         completedAt = Nothing
       }
 
-upsertRefundStatus :: BeamFlow m r => Id MerchantOperatingCity -> DOrder.PaymentOrder -> Payment.RefundsData -> m (Maybe Refunds)
+upsertRefundStatus :: (BeamFlow m r, Finance.HasActorInfo m r) => Id MerchantOperatingCity -> DOrder.PaymentOrder -> Payment.RefundsData -> m (Maybe Refunds)
 upsertRefundStatus merchantOpCityId order Payment.RefundsData {..} =
   do
     now <- getCurrentTime
@@ -2358,7 +2369,8 @@ mkCreatePayoutOrderReq mRoutingId mConnectedAccountId CreatePayoutServiceReq {..
 
 createPayoutService ::
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->

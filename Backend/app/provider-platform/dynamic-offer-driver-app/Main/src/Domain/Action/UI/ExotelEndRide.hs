@@ -34,6 +34,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler.Environment (JobCreator)
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -60,7 +61,8 @@ callBasedEndRide ::
     Redis.HedisLTSFlowEnv r,
     HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    JobCreator r m
+    JobCreator r m,
+    Finance.HasActorInfo m r
   ) =>
   EndRide.ServiceHandle m ->
   Id Merchant ->

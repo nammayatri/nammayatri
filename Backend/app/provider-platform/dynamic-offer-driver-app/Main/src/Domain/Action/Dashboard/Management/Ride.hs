@@ -42,6 +42,7 @@ import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.Prelude
@@ -57,6 +58,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.CallStatusExtra as QCallStatus
 import qualified Storage.Queries.DriverFee as QDriverFee
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 
 getRideList ::
@@ -103,8 +105,8 @@ getRideAgentList ::
   Flow Common.RideListRes
 getRideAgentList = DRide.getRideAgentList
 
-postRideEndMultiple :: ShortId DM.Merchant -> Context.City -> Common.MultipleRideEndReq -> Flow Common.MultipleRideEndResp
-postRideEndMultiple merchantShortId opCity req = do
+postRideEndMultiple :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Common.MultipleRideEndReq -> Flow Common.MultipleRideEndResp
+postRideEndMultiple merchantShortId opCity mbRequestorId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) $ do
   runRequestValidation Common.validateMultipleRideEndReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)

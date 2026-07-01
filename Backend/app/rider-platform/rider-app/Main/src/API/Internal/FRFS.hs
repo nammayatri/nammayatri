@@ -21,6 +21,7 @@ import Kernel.Types.APISuccess
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo as ActorInfo
 
 type API =
   "frfs"
@@ -33,4 +34,4 @@ handler =
   frfsStatusUpdate
 
 frfsStatusUpdate :: Domain.FRFSStatusUpdateReq -> FlowHandler APISuccess
-frfsStatusUpdate = withFlowHandlerAPI . Domain.frfsStatusUpdate
+frfsStatusUpdate = withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo . Domain.frfsStatusUpdate

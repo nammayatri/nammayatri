@@ -8,16 +8,17 @@ import qualified Database.Beam as B
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.AuditEntry
 import Tools.Beam.UtilsTH
 
 data AuditEntryT f = AuditEntryT
   { action :: (B.C f Lib.Finance.Domain.Types.AuditEntry.AuditAction),
     actorId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    actorType :: (B.C f Kernel.Prelude.Text),
+    actorType :: (B.C f Lib.Finance.Core.Types.ActorType),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     entityId :: (B.C f Kernel.Prelude.Text),
-    entityType :: (B.C f Kernel.Prelude.Text),
+    entityType :: (B.C f Lib.Finance.Domain.Types.AuditEntry.AuditEntityType),
     id :: (B.C f Kernel.Prelude.Text),
     ipAddress :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     merchantId :: (B.C f Kernel.Prelude.Text),

@@ -30,6 +30,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -49,7 +50,7 @@ import qualified UrlShortner.Common as UrlShortner
 paymentOrderStatusCheckJob ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBFlow m r,
     SchedulerFlow r,
     EsqDBReplicaFlow m r,
@@ -107,7 +108,7 @@ processPaymentOrder ::
   forall m r c.
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBFlow m r,
     SchedulerFlow r,
     EsqDBReplicaFlow m r,

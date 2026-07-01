@@ -15,12 +15,15 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Utils.TH
+import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.Invoice
 import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Tools.Beam.UtilsTH
 
 data SubscriptionPurchase = SubscriptionPurchase
-  { enableServiceUsageCharge :: Kernel.Prelude.Bool,
+  { createdBy :: Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType,
+    createdById :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    enableServiceUsageCharge :: Kernel.Prelude.Bool,
     expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     financeInvoiceId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice),
     id :: Kernel.Types.Id.Id Domain.Types.SubscriptionPurchase.SubscriptionPurchase,
@@ -38,6 +41,8 @@ data SubscriptionPurchase = SubscriptionPurchase
     serviceName :: Domain.Types.Extra.Plan.ServiceNames,
     startDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     status :: Domain.Types.SubscriptionPurchase.SubscriptionPurchaseStatus,
+    updatedBy :: Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType,
+    updatedById :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     waiveOfMode :: Domain.Types.DriverPlan.WaiveOffMode,
     waiveOffEnabledOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

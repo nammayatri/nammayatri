@@ -85,6 +85,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Kernel.Utils.Time as KUT
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -466,7 +467,8 @@ rideAssignedReqHandler ::
     HasKafkaProducer r,
     HasFlowEnv m r '["isMetroTestTransaction" ::: Bool],
     HasField "blackListedJobs" r [Text],
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   ValidatedRideAssignedReq ->
   m ()
@@ -512,7 +514,7 @@ rideAssignedReqHandler req = do
         HasField "storeRidesTimeLimit" r Int,
         CacheFlow m r,
         EsqDBFlow m r,
-        MonadFlow m,
+        Finance.HasActorInfo m r,
         EncFlow m r,
         EsqDBReplicaFlow m r,
         HasLongDurationRetryCfg r c,
@@ -853,7 +855,7 @@ rideCompletedReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     ClickhouseFlow m r,
@@ -1280,7 +1282,7 @@ cancellationTransaction ::
     CacheFlow m r,
     EsqDBFlow m r,
     ClickhouseFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
@@ -1698,7 +1700,7 @@ sendRideEndMessage bk = case bk.tripCategory of
 customerReferralPayout ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EncFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r

@@ -4,6 +4,7 @@
 imports:
   UTCTime: Kernel.Prelude
   Value: Data.Aeson
+  ActorType: Lib.Finance.Core.Types
 
 AuditEntry:
   tableName: finance_audit_entry
@@ -12,14 +13,17 @@ AuditEntry:
   types:
     AuditAction:
       enum: "Created,Updated,Reversed,StatusChanged"
-      derive: "ToParamSchema"
+      derive: "HttpInstance"
+    AuditEntityType:
+      enum: "LedgerEntry,Invoice,IndirectTaxTransaction,PgPaymentSettlementReport,SapJournalEntry"
+      derive: "HttpInstance"
 
   fields:
     id: Id AuditEntry
-    entityType: Text
+    entityType: AuditEntityType
     entityId: Text
     action: AuditAction
-    actorType: Text
+    actorType: ActorType
     actorId: Maybe Text
     previousState: Maybe Value
     newState: Maybe Value
@@ -52,6 +56,9 @@ AuditEntry:
       kvFunction: findAllWithKV
       where:
         and: [entityType, action]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

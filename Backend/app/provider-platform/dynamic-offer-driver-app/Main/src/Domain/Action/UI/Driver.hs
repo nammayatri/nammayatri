@@ -238,6 +238,7 @@ import qualified Lib.DriverCoins.Coins as Coins
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import qualified Lib.Finance.Account.Service as FAccount
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccountTypes
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -848,8 +849,7 @@ data ClearManualSelectedDues = ClearManualSelectedDues
   deriving (Generic, ToJSON, ToSchema, FromJSON, Show, Ord, Eq)
 
 getInformationV2 ::
-  ( MonadFlow m,
-    BeamFlow m r,
+  ( BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -859,7 +859,8 @@ getInformationV2 ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "cloudType" r (Maybe CloudType),
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Text ->
@@ -883,8 +884,7 @@ getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant
   getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context mbServiceName (Just driverInfo) mbFleetInfo
 
 getInformation ::
-  ( MonadFlow m,
-    BeamFlow m r,
+  ( BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -893,7 +893,8 @@ getInformation ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "cloudType" r (Maybe CloudType),
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Text ->
@@ -973,13 +974,13 @@ checkPrepaidGoOnlineEligibility personId transporterConfig ownerType ownerId mbC
     throwError (NoActivePrepaidPlan personId.getId)
 
 setActivity ::
-  ( MonadFlow m,
-    BeamFlow m r,
+  ( BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Bool ->
@@ -1211,8 +1212,7 @@ deleteHomeLocation (driverId, _, merchantOpCityId) driverHomeLocationId = do
   return APISuccess.Success
 
 buildDriverEntityRes ::
-  ( MonadFlow m,
-    BeamFlow m r,
+  ( BeamFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
     CacheFlow m r,
@@ -1220,7 +1220,8 @@ buildDriverEntityRes ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     Redis.HedisLTSFlowEnv r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   (SP.Person, DriverInformation, DStats.DriverStats, Id DMOC.MerchantOperatingCity, DIInfo.IdentityInfo) ->
   DM.Merchant ->
@@ -1402,8 +1403,7 @@ deleteDriver admin driverId = do
   return Success
 
 updateDriver ::
-  ( MonadFlow m,
-    BeamFlow m r,
+  ( BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -1414,7 +1414,8 @@ updateDriver ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "version" r DeploymentVersion,
     HasField "cloudType" r (Maybe CloudType),
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Version ->
@@ -2604,7 +2605,7 @@ getDriverPayments (personId, _, merchantOpCityId) mbFrom mbTo mbStatus mbLimit m
       ]
 
 clearDriverDues ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, EncFlow m r, HasField "smsCfg" r SmsConfig, MonadFlow m, HasKafkaProducer r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, EncFlow m r, HasField "smsCfg" r SmsConfig, MonadFlow m, HasKafkaProducer r, HasFlowEnv m r '["nwAddress" ::: BaseUrl], Finance.HasActorInfo m r) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ServiceNames ->
   Maybe ClearManualSelectedDues ->
@@ -3237,7 +3238,7 @@ acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId booking
   acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver clientId (Just booking)
 
 clearDriverFeeWithCreate ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig, HasKafkaProducer r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig, HasKafkaProducer r, HasFlowEnv m r '["nwAddress" ::: BaseUrl], Finance.HasActorInfo m r) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ServiceNames ->
   (HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney) ->
@@ -3388,7 +3389,7 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
 
     calcPercentage percentage = (percentage * fee') / 100.0
 
-verifyVpaStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r, HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl], HasKafkaProducer r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m APISuccess
+verifyVpaStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r, HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl], HasKafkaProducer r, Finance.HasActorInfo m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m APISuccess
 verifyVpaStatus (personId, _, opCityId) = do
   void $ QDriverInformation.updatePayoutVpaStatus (Just DriverInfo.VERIFIED_BY_USER) personId
   driverInfo <- QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
@@ -3578,13 +3579,13 @@ data DriverSpecificSubscriptionData = DriverSpecificSubscriptionData
   deriving (Generic, Show, Eq, Ord)
 
 getDriverSpecificSubscriptionDataWithSubsConfig ::
-  ( MonadFlow m,
-    BeamFlow m r,
+  ( BeamFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
     Redis.HedisFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    Finance.HasActorInfo m r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   TransporterConfig ->

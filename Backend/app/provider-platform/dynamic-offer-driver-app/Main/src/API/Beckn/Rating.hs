@@ -33,6 +33,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
+import qualified Tools.ActorInfo as ActorInfo
 import TransactionLogs.PushLogs
 
 type API =
@@ -48,7 +49,7 @@ rating ::
   SignatureAuthResult ->
   Rating.RatingReqV2 ->
   FlowHandler AckResponse
-rating merchantId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI $ do
+rating merchantId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.ratingReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "ratingAPIV2" $ "Received rating API call:-" <> show reqV2

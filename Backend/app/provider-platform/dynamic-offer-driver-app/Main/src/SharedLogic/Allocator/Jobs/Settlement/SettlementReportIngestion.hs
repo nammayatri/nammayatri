@@ -34,6 +34,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id (Id (..), ShortId (..))
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as PgDom
 import Lib.Finance.Settlement.Ingestion (ingestPaymentSettlementReport)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
@@ -68,7 +69,8 @@ runSettlementReportIngestionJob ::
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasField "blackListedJobs" r [Text],
     JobCreatorEnv r,
-    HasSchemaName SchedulerJobT
+    HasSchemaName SchedulerJobT,
+    Finance.HasActorInfo m r
   ) =>
   Job 'SettlementReportIngestion ->
   m ExecutionResult

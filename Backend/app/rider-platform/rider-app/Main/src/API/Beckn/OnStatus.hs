@@ -31,6 +31,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
+import qualified Tools.ActorInfo as ActorInfo
 import TransactionLogs.PushLogs
 
 type API = OnStatus.OnStatusAPIV2
@@ -42,7 +43,7 @@ onStatus ::
   SignatureAuthResult ->
   OnStatus.OnStatusReqV2 ->
   FlowHandler AckResponse
-onStatus _ reqV2 = withFlowHandlerBecknAPI $
+onStatus _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $
   withDynamicLogLevel "rider-onstatus-api" $ do
     transactionId <- Utils.getTransactionId reqV2.onStatusReqContext
     L.setOptionLocal TxnIdKey transactionId
