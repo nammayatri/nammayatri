@@ -81,6 +81,7 @@ handler hnd = do
             res <- measuringDuration (registerDuration jobType') $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
             registerExecutionResult hnd anyJob res
             releaseLock parentJobId
+            Hedis.unlockRedis (mkRunningJobKey id.getId)
 
     mkRunningJobKey jobId = "RunnningJob:" <> jobId
 
