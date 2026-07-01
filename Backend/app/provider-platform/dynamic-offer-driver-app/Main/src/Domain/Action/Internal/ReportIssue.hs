@@ -25,7 +25,6 @@ import qualified Domain.Types.TransporterConfig as DTC
 import Environment
 import qualified IssueManagement.Common as ICommon
 import Kernel.Beam.Functions
-import Kernel.External.Notification.FCM.Types (FCMOverlayReq)
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import Kernel.Types.APISuccess
@@ -44,7 +43,6 @@ import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
 import SharedLogic.DriverOnboarding
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as QM
-import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
@@ -189,9 +187,8 @@ handleUnhygienicVehicle ride =
     ((.unhygienicVehicleViolationCount))
     QDI.updateUnhygienicVehicleViolationCount
     "UNHYGIENIC_VEHICLE"
-    "UNHYGIENIC_VEHICLE_WARNING"
     LYT.UNHYGIENIC_VEHICLE_BEHAVIOR
-    (\person fcmOverlayReq -> Notify.unhygienicVehicleWarningOverlay ride.merchantOperatingCityId person fcmOverlayReq (Notify.UnhygienicVehicleWarningData {driverId = ride.driverId.getId}))
+    (\person -> Notify.unhygienicVehicleWarningNotify ride.merchantOperatingCityId person (Notify.UnhygienicVehicleWarningData {driverId = ride.driverId.getId}))
 
 handleVehicleUnsafe :: Ride -> Flow ()
 handleVehicleUnsafe ride =
@@ -200,20 +197,18 @@ handleVehicleUnsafe ride =
     ((.vehicleUnsafeViolationCount))
     QDI.updateVehicleUnsafeViolationCount
     "VEHICLE_UNSAFE"
-    "VEHICLE_UNSAFE_WARNING"
     LYT.VEHICLE_UNSAFE_BEHAVIOR
-    (\person fcmOverlayReq -> Notify.vehicleUnsafeWarningOverlay ride.merchantOperatingCityId person fcmOverlayReq (Notify.VehicleUnsafeWarningData {driverId = ride.driverId.getId}))
+    (\person -> Notify.vehicleUnsafeWarningNotify ride.merchantOperatingCityId person (Notify.VehicleUnsafeWarningData {driverId = ride.driverId.getId}))
 
 handleVehicleQualityViolation ::
   Ride ->
   (DI.DriverInformation -> Maybe Int) ->
   (Maybe Int -> Id DP.Person -> Flow ()) ->
   Text ->
-  Text ->
   LYT.LogicDomain ->
-  (DP.Person -> FCMOverlayReq -> Flow ()) ->
+  (DP.Person -> Flow ()) ->
   Flow ()
-handleVehicleQualityViolation ride getCount updateCount actionType overlayKey logicDomain sendNotification = do
+handleVehicleQualityViolation ride getCount updateCount actionType logicDomain sendNotification = do
   driverInfo <- QDI.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
   let violationCount = fromMaybe 0 (getCount driverInfo) + 1
   void $ updateCount (Just violationCount) ride.driverId
@@ -235,8 +230,7 @@ handleVehicleQualityViolation ride getCount updateCount actionType overlayKey lo
   unless handled $ do
     logInfo $ "No " <> show logicDomain <> " rules configured, using fallback for driver " <> ride.driverId.getId
     person <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-    mbOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory ride.merchantOperatingCityId overlayKey (fromMaybe ENGLISH person.language) Nothing Nothing Nothing
-    whenJust mbOverlay $ \overlay -> sendNotification person (Notify.mkOverlayReq overlay)
+    sendNotification person
 
 handleAcRestriction :: Ride -> DI.DriverInformation -> Flow ()
 handleAcRestriction ride driverInfo = do
