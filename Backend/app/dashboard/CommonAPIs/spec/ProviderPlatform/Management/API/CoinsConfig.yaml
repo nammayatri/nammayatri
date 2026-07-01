@@ -15,6 +15,8 @@ apis:
       query:
         - limit: Int
         - offset: Int
+        - eventName: Text
+        - vehicleCategory: VehicleCategory
       response:
         type: CoinsConfigListRes
   - PUT: # Updating Entries
