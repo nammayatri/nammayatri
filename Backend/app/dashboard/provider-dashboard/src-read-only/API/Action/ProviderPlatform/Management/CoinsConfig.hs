@@ -11,6 +11,7 @@ import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.CoinsConfig
 import qualified Domain.Action.ProviderPlatform.Management.CoinsConfig
 import qualified "lib-dashboard" Domain.Types.Merchant
+import qualified Domain.Types.VehicleCategory
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)
 import qualified Kernel.Prelude
@@ -51,8 +52,8 @@ type PostCoinsConfigCreate =
       :> API.Types.ProviderPlatform.Management.CoinsConfig.PostCoinsConfigCreate
   )
 
-getCoinsConfigList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.CoinsConfig.CoinsConfigListRes)
-getCoinsConfigList merchantShortId opCity apiTokenInfo limit offset = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.CoinsConfig.getCoinsConfigList merchantShortId opCity apiTokenInfo limit offset
+getCoinsConfigList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Environment.FlowHandler API.Types.ProviderPlatform.Management.CoinsConfig.CoinsConfigListRes)
+getCoinsConfigList merchantShortId opCity apiTokenInfo limit offset eventName vehicleCategory = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.CoinsConfig.getCoinsConfigList merchantShortId opCity apiTokenInfo limit offset eventName vehicleCategory
 
 putCoinsConfigUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.CoinsConfig.UpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 putCoinsConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.CoinsConfig.putCoinsConfigUpdate merchantShortId opCity apiTokenInfo req

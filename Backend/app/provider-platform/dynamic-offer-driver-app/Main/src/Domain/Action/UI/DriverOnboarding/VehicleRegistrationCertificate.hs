@@ -31,30 +31,12 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     LinkedRC (..),
     DeleteRCReq (..),
     convertTextToUTC,
-    mkIdfyVerificationEntity,
+    defaultAssociationEnd,
     mkHyperVergeVerificationEntity,
     mkMorthVerificationEntity,
     validateRCResponse,
     VerificationReqRecord (..),
-    DriverDocument (..),
-    checkPan,
-    checkDL,
-    checkAadhaar,
-    validateDocument,
-    compareDateOfBirth,
-    makeDocumentVerificationLockKey,
-    isNameCompareRequired,
-    inferPanTypeFromNumber,
-    isBusinessPan,
-    validateIndividualPANCheck,
-    getDriverDocumentInfo,
-    getDocumentImage,
-    isNameComparePercentageValid,
-    imageS3Lock,
-    getRegexRulesFromDocumentConfig,
-    matchesRegexSafely,
     normalizeDocumentNumber,
-    validateByRegex,
   )
 where
 
@@ -65,14 +47,13 @@ import Data.Aeson hiding (Success)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import qualified Data.Text as T hiding (elem, find, map, zip)
-import Data.Time (Day, utctDay)
+import Data.Time (Day)
 import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverInformation as DI
-import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.HyperVergeVerification as Domain
 import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Image as Image
@@ -91,7 +72,6 @@ import Kernel.Beam.Functions
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.External.Encryption
 import Kernel.External.Types (Language (..), SchedulerFlow, ServiceFlow, VerificationFlow)
-import qualified Kernel.External.Verification.Interface as VI
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude hiding (find)
 import qualified Kernel.Storage.Clickhouse.Config as CH
@@ -118,15 +98,10 @@ import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
-import qualified Storage.Queries.AadhaarCard as QAadhaarCard
-import qualified Storage.Queries.DriverGstin as DGQuery
 import qualified Storage.Queries.DriverInformation as DIQuery
-import qualified Storage.Queries.DriverLicense as DLQuery
-import qualified Storage.Queries.DriverPanCard as DPQuery
 import Storage.Queries.DriverRCAssociation (buildRcHM)
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.FleetDriverAssociationExtra as FDA
-import qualified Storage.Queries.FleetOwnerInformation as FOI
 import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
@@ -140,7 +115,6 @@ import qualified Storage.Queries.Vehicle as VQuery
 import qualified Storage.Queries.VehicleDetails as CQVD
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCExtra
-import Text.Regex.Posix ((=~))
 import Tools.Error
 import qualified Tools.Verification as Verification
 
@@ -203,14 +177,6 @@ data RCValidationReq = RCValidationReq
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-data DriverDocument = DriverDocument
-  { panNumber :: Maybe Text,
-    aadhaarNumber :: Maybe Text,
-    dlNumber :: Maybe Text,
-    gstNumber :: Maybe Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
 validateDriverRCReq :: Validate DriverRCReq
 validateDriverRCReq DriverRCReq {..} =
   sequenceA_
@@ -227,32 +193,6 @@ prefixMatchedResult rcNumber = DL.any (`T.isPrefixOf` rcNumber)
 normalizeDocumentNumber :: Text -> Text
 normalizeDocumentNumber = T.toUpper . removeSpaceAndDash
 
-getRegexRulesFromDocumentConfig :: ODC.DocumentVerificationConfig -> [Text]
-getRegexRulesFromDocumentConfig config = maybe [] (mapMaybe (.regexValidation)) config.documentFields
-
-matchesRegexSafely :: Text -> Text -> Text -> Flow (Maybe Bool)
-matchesRegexSafely documentType input regexPattern = do
-  result <- try @_ @SomeException $ do
-    let matched = (T.unpack input =~ T.unpack regexPattern :: Bool)
-    matched `seq` pure matched
-  case result of
-    Right matched -> pure (Just matched)
-    Left err -> do
-      logError $ "Invalid regex in DocumentVerificationConfig for " <> documentType <> " validation: " <> regexPattern <> ", error: " <> show err
-      pure Nothing
-
-validateByRegex :: Text -> ODC.DocumentVerificationConfig -> Text -> Flow Bool -> Flow Bool
-validateByRegex documentType config input fallback = do
-  let regexRules = getRegexRulesFromDocumentConfig config
-  if null regexRules
-    then fallback
-    else do
-      regexResults <- mapM (matchesRegexSafely documentType input) regexRules
-      let validRegexResults = mapMaybe (\x -> x) regexResults
-      if null validRegexResults
-        then fallback
-        else pure (or validRegexResults)
-
 isRCNumberFormatValid :: ODC.DocumentVerificationConfig -> Text -> Flow Bool
 isRCNumberFormatValid documentVerificationConfig normalizedRCNumber = do
   let normalizedPrefixList = normalizeDocumentNumber <$> documentVerificationConfig.rcNumberPrefixList
@@ -266,23 +206,6 @@ isRCNumberFormatValid documentVerificationConfig normalizedRCNumber = do
           (null normalizedPrefixList || prefixMatchedResult normalizedRCNumber normalizedPrefixList)
             && isLegacyCertNumFormatValid
   validateByRegex "RC" documentVerificationConfig normalizedRCNumber fallbackCheck
-
--- Define a common function to handle role-based decryption
-getDriverDocumentInfo :: Person.Person -> Flow (Bool, DriverDocument)
-getDriverDocumentInfo person = do
-  case person.role of
-    role | role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS] -> do
-      res <- FOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
-      decryptedPanNumber <- mapM decrypt res.panNumber
-      decryptedAadhaarNumber <- mapM decrypt res.aadhaarNumber
-      decryptedGstNumber <- mapM decrypt res.gstNumber
-      return (res.blocked, DriverDocument decryptedPanNumber decryptedAadhaarNumber Nothing decryptedGstNumber)
-    _ -> do
-      res <- DIQuery.findById person.id >>= fromMaybeM (PersonNotFound person.id.getId)
-      decryptedPanNumber <- mapM decrypt res.panNumber
-      decryptedAadhaarNumber <- mapM decrypt res.aadhaarNumber
-      decryptedDlNumber <- mapM decrypt res.dlNumber
-      return (res.blocked, DriverDocument decryptedPanNumber decryptedAadhaarNumber decryptedDlNumber Nothing)
 
 verifyRC ::
   Bool ->
@@ -323,6 +246,14 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
     rcs <- RCQuery.findAllById (map (.rcId) allLinkedRCs)
     let validLinkedRCs = Kernel.Prelude.filter (\rc -> rc.verificationStatus /= Documents.INVALID) rcs
     unless (length validLinkedRCs < (transporterConfig.rcLimit + (if isDashboard then 1 else 0))) $ throwError (RCLimitReached transporterConfig.rcLimit)
+  when
+    ( person.role == Person.DRIVER && isNothing mbFleetOwnerId
+        && transporterConfig.blockDriverOwnRCForFleetDrivers == Just True
+    )
+    $ do
+      mbFleetAssoc <- FDA.findByDriverId personId True
+      whenJust mbFleetAssoc $ \_ ->
+        throwError (InvalidRequest "Fleet drivers cannot register their own vehicle. Use a fleet vehicle.")
   let mbAirConditioned = maybe req.airConditioned (\category -> if category `elem` [DVC.CAR, DVC.AMBULANCE, DVC.BUS] then req.airConditioned else Just False) req.vehicleCategory
       (mbOxygen, mbVentilator) = maybe (req.oxygen, req.ventilator) (\category -> if category == DVC.AMBULANCE then (req.oxygen, req.ventilator) else (Just False, Just False)) req.vehicleCategory
 
@@ -426,36 +357,6 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
     makeVerifyRCHitsCountKey :: Text -> Text
     makeVerifyRCHitsCountKey rcNumber = "VerifyRC:rcNumberHits:" <> rcNumber <> ":hitsCount"
 
-imageS3Lock :: Text -> Text
-imageS3Lock path = "image-s3-lock-" <> path
-
-makeDocumentVerificationLockKey :: Text -> Text
-makeDocumentVerificationLockKey personId = "DocumentVerificationLock:" <> personId
-
-isNameComparePercentageValid :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Verification.NameCompareReq -> Flow Bool
-isNameComparePercentageValid merchantId merchantOpCityId req = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  case transporterConfig.validNameComparePercentage of
-    Just percentage -> do
-      resp <- Verification.nameCompare merchantId merchantOpCityId req
-      logDebug $ "Name compare percentage response: " <> show resp
-      case resp.nameComparedData of
-        Just percentageData -> return $ percentageData.match_output.name_match >= percentage
-        Nothing -> throwError $ InternalError "Name comparison service returned invalid response"
-    Nothing -> return True -- If percentage not configured, assume valid
-
-getDocumentImage :: Id Person.Person -> Text -> ODC.DocumentType -> Flow Text
-getDocumentImage personId imageId_ expectedDocType = do
-  imageMetadata <- ImageQuery.findById (Id imageId_) >>= fromMaybeM (ImageNotFound imageId_)
-  unless (imageMetadata.verificationStatus == Just Documents.VALID) $
-    throwError (ImageNotValid imageId_)
-  unless (imageMetadata.personId == personId) $
-    throwError (ImageNotFound imageId_)
-  unless (imageMetadata.imageType == expectedDocType) $
-    throwError (ImageInvalidType (show expectedDocType) "")
-  Redis.withLockRedisAndReturnValue (imageS3Lock (imageMetadata.s3Path)) 5 $
-    S3.get $ T.unpack imageMetadata.s3Path
-
 verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Domain.ImageExtractionValidation -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ()
 verifyRCFlow person merchantOpCityId useCategoryBasedPriority rcNumber imageId dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation mbUdinNumber mbEngineNumber mbChassisNumber = do
   now <- getCurrentTime
@@ -469,7 +370,7 @@ verifyRCFlow person merchantOpCityId useCategoryBasedPriority rcNumber imageId d
   case verifyRes.verifyRCResp of
     Verification.AsyncResp res -> do
       case res.requestor of
-        VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person res.requestId now imageExtractionValidation encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId Nothing Nothing
+        VT.Idfy -> IVQuery.create =<< mkRCIdfyVerificationEntity person res.requestId now imageExtractionValidation encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId Nothing Nothing
         VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person res.requestId now imageExtractionValidation encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId Nothing Nothing res.transactionId
         _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> (show res.requestor))
       CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
@@ -483,35 +384,6 @@ verifyRCFlow person merchantOpCityId useCategoryBasedPriority rcNumber imageId d
           MorthQuery.create morthEntity
         _ -> logError $ "Handle this case if we want to store the response in the database for provider: " <> show resp.requestor
       void $ onVerifyRC person Nothing resp.response (Just verifyRes.remPriorityList) (Just imageExtractionValidation) (Just encryptedRC) imageId Nothing Nothing (Just resp.requestor) mbVehicleCategory
-
-mkIdfyVerificationEntity :: MonadFlow m => Person.Person -> Text -> UTCTime -> Domain.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> m Domain.IdfyVerification
-mkIdfyVerificationEntity person requestId now imageExtractionValidation encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbStatus = do
-  id <- generateGUID
-  return $
-    Domain.IdfyVerification
-      { id,
-        driverId = person.id,
-        documentImageId1 = imageId,
-        documentImageId2 = Nothing,
-        requestId,
-        docType = ODC.VehicleRegistrationCertificate,
-        documentNumber = encryptedRC,
-        driverDateOfBirth = Nothing,
-        imageExtractionValidation = imageExtractionValidation,
-        issueDateOnDoc = dateOfRegistration,
-        status = fromMaybe "pending" mbStatus,
-        idfyResponse = Nothing,
-        vehicleCategory = mbVehicleCategory,
-        airConditioned = mbAirConditioned,
-        oxygen = mbOxygen,
-        ventilator = mbVentilator,
-        retryCount = Just $ fromMaybe 0 mbRetryCnt,
-        nameOnCard = Nothing,
-        merchantId = Just person.merchantId,
-        merchantOperatingCityId = Just person.merchantOperatingCityId,
-        createdAt = now,
-        updatedAt = now
-      }
 
 mkHyperVergeVerificationEntity :: MonadFlow m => Person.Person -> Text -> UTCTime -> Domain.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> Maybe Text -> m Domain.HyperVergeVerification
 mkHyperVergeVerificationEntity person requestId now imageExtractionValidation encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbStatus transactionId = do
@@ -637,7 +509,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
               case verifyRes.verifyRCResp of
                 Verification.AsyncResp res -> do
                   case res.requestor of
-                    VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person res.requestId now imageExtractionValidation encryptedRC mbDateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbReqStatus
+                    VT.Idfy -> IVQuery.create =<< mkRCIdfyVerificationEntity person res.requestId now imageExtractionValidation encryptedRC mbDateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbReqStatus
                     VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person res.requestId now imageExtractionValidation encryptedRC mbDateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbReqStatus res.transactionId
                     _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> T.pack (show res.requestor))
                   CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
@@ -1075,153 +947,3 @@ rcVerificationLockKey rcNumber = "VehicleRC::RCNumber-" <> rcNumber
 
 makeFleetOwnerKey :: Text -> Text
 makeFleetOwnerKey vehicleNo = "FleetOwnerId:PersonId-" <> removeSpaceAndDash vehicleNo
-
--- Common function for name comparison
-compareNames :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Id Person.Person -> Flow Bool
-compareNames merchantId merchantOpCityId mbExtractedName mbVerifiedName personId =
-  case (mbExtractedName, mbVerifiedName) of
-    (Just extractedName, Just verifiedName) -> do
-      let nameCompareReq =
-            Verification.NameCompareReq
-              { extractedName = extractedName,
-                verifiedName = verifiedName,
-                percentage = Just True,
-                driverId = personId.getId
-              }
-      isNameValid <- isNameComparePercentageValid merchantId merchantOpCityId nameCompareReq
-      unless isNameValid $ throwError (MismatchDataError "Name match failed with previously uploaded docs")
-      return True
-    _ -> do
-      logInfo "Name comparison checks not executed."
-      return False
-
-compareDateOfBirth :: Maybe UTCTime -> Maybe UTCTime -> Flow Bool
-compareDateOfBirth mbExtractedValue mbVerifiedValue = do
-  case (mbExtractedValue, mbVerifiedValue) of
-    (Just extractedValue, Just verifiedValue) -> do
-      let extractedDay = utctDay extractedValue
-          verifiedDay = utctDay verifiedValue
-      unless (extractedDay == verifiedDay) $ throwError (MismatchDataError $ "Date of birth mismatch: " <> show extractedDay <> " " <> show verifiedDay)
-      return True
-    _ -> do
-      logInfo "Date of birth checks not executed."
-      return False
-
-checkPan :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe UTCTime -> ODC.DocumentType -> Flow Bool
-checkPan merchantId merchantOpCityId personId mbExtractedValue mbDateOfBirthValue verifyingDocumentType = do
-  mdriverPanInformation <- DPQuery.findByDriverId personId
-  case mdriverPanInformation of
-    Just panData -> do
-      if verifyingDocumentType `elem` [ODC.AadhaarCard, ODC.DriverLicense]
-        then validateNameAndDOB merchantId merchantOpCityId mbExtractedValue panData.driverNameOnGovtDB mbDateOfBirthValue panData.driverDob personId
-        else return False
-    Nothing -> throwError $ InternalError "Pan not found"
-
-checkDL :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe UTCTime -> ODC.DocumentType -> Flow Bool
-checkDL merchantId merchantOpCityId personId mbExtractedValue mbDateOfBirthValue verifyingDocumentType = do
-  mdriverLicense <- DLQuery.findByDriverId personId
-  case mdriverLicense of
-    Just dlData -> do
-      if verifyingDocumentType `elem` [ODC.AadhaarCard, ODC.PanCard]
-        then validateNameAndDOB merchantId merchantOpCityId mbExtractedValue dlData.driverName mbDateOfBirthValue dlData.driverDob personId
-        else return False
-    Nothing -> throwError $ InternalError "DL not found"
-
-checkAadhaar :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe UTCTime -> ODC.DocumentType -> Flow Bool
-checkAadhaar merchantId merchantOpCityId personId mbExtractedValue mbDateOfBirthValue verifyingDocumentType = do
-  aadhaarInfo <- QAadhaarCard.findByPrimaryKey personId
-  case aadhaarInfo of
-    Just aadhaarData -> do
-      if verifyingDocumentType `elem` [ODC.PanCard, ODC.DriverLicense]
-        then validateNameAndDOB merchantId merchantOpCityId mbExtractedValue aadhaarData.nameOnCard mbDateOfBirthValue (parseDateTime =<< aadhaarData.dateOfBirth) personId
-        else return False
-    Nothing -> throwError $ InternalError "Aadhaar not found"
-
-checkGST :: Id Person.Person -> Maybe Text -> Flow ()
-checkGST personId mbPanNumber = do
-  mGstData <- DGQuery.findByDriverId personId
-  case mGstData of
-    Just gstData -> checkTwoPanNumber mbPanNumber gstData.panNumber
-    Nothing -> throwError $ InternalError "GST not found"
-
-validateDocument :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe Text -> Maybe Text -> ODC.DocumentType -> DriverDocument -> Flow ()
-validateDocument merchantId merchantOpCityId personId mbNameValue mbDateOfBirthValue mbPanNumber verifyingDocumentType DriverDocument {..} = do
-  let mbUtcDateOfBirthValue = parseDateTime =<< mbDateOfBirthValue
-  let skipPanAadhaarCrossCheck = isBusinessPan panNumber || isBusinessPan mbPanNumber
-  case verifyingDocumentType of
-    ODC.AadhaarCard -> do
-      panChecked <- case panNumber of
-        Just _
-          | not skipPanAadhaarCrossCheck ->
-            checkPan merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.AadhaarCard
-        _ -> pure False
-      unless panChecked $
-        whenJust dlNumber $ \_ ->
-          void $ checkDL merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.AadhaarCard
-    ODC.PanCard -> do
-      aadhaarChecked <- case aadhaarNumber of
-        Just _
-          | not skipPanAadhaarCrossCheck ->
-            checkAadhaar merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.PanCard
-        _ -> pure False
-      unless aadhaarChecked $ do
-        dlChecked <-
-          maybe
-            (pure False)
-            (\_ -> checkDL merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.PanCard)
-            dlNumber
-        unless dlChecked $
-          when (isJust gstNumber) $
-            checkGST personId mbPanNumber
-    ODC.DriverLicense -> do
-      aadhaarChecked <-
-        maybe
-          (pure False)
-          (\_ -> checkAadhaar merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.DriverLicense)
-          aadhaarNumber
-      unless aadhaarChecked $
-        whenJust panNumber $ \_ ->
-          void $ checkPan merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.DriverLicense
-    ODC.GSTCertificate -> checkTwoPanNumber mbPanNumber panNumber
-    _ -> return ()
-
-checkTwoPanNumber :: Maybe Text -> Maybe Text -> Flow ()
-checkTwoPanNumber mbExtractedValue mbVerifiedValue = do
-  case (mbExtractedValue, mbVerifiedValue) of
-    (Just extractedValue, Just verifiedValue) -> do
-      unless (extractedValue == verifiedValue) $ throwError (MismatchDataError "GST not linked with existing PAN")
-      return ()
-    _ -> return ()
-
-validateNameAndDOB :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Id Person.Person -> Flow Bool
-validateNameAndDOB merchantId merchantOpCityId mbExtractedName mbVerifiedName mbExtractedDOB mbVerifiedDOB personId = do
-  isNameValid <- compareNames merchantId merchantOpCityId mbExtractedName mbVerifiedName personId
-  isDateOfBirthValid <- compareDateOfBirth mbExtractedDOB mbVerifiedDOB
-  return (isNameValid && isDateOfBirthValid)
-
--- | Returns True if name compare is required for the given transporterConfig and verifyBy
-isNameCompareRequired :: DTC.TransporterConfig -> DPan.VerifiedBy -> Bool
-isNameCompareRequired transporterConfig verifyBy =
-  isJust transporterConfig.validNameComparePercentage && verifyBy /= DPan.DASHBOARD_ADMIN && verifyBy /= DPan.DASHBOARD_USER
-
--- (P = Individual, C = Company, H = HUF, F = Firm, A = AOP, T = Trust, B = BOI, L/J/G = others).
-inferPanTypeFromNumber :: Text -> Maybe DPan.PanType
-inferPanTypeFromNumber panNumber =
-  let upperPan = T.toUpper panNumber
-   in if T.length upperPan >= 4
-        then Just $ if T.index upperPan 3 == 'P' then DPan.INDIVIDUAL else DPan.BUSINESS
-        else Nothing
-
-isBusinessPan :: Maybe Text -> Bool
-isBusinessPan = maybe False ((== Just DPan.BUSINESS) . inferPanTypeFromNumber)
-
--- | When a merchant enables individualPANCheck, reject business PANs (4th char ≠ 'P')
--- for individual drivers (incl. fleet drivers) and individual fleet owners.
--- Business fleet owners and other roles are exempt, as they may hold a business PAN.
-validateIndividualPANCheck :: DTC.TransporterConfig -> Person.Person -> Text -> Flow ()
-validateIndividualPANCheck transporterConfig person panNumber =
-  when (transporterConfig.individualPANCheck == Just True && isIndividualRole person.role) $
-    when (inferPanTypeFromNumber (removeSpaceAndDash panNumber) /= Just DPan.INDIVIDUAL) $
-      throwError (InvalidRequest "Business PAN card not be accepted please upload individual PAN")
-  where
-    isIndividualRole role = role == Person.DRIVER || role == Person.FLEET_OWNER

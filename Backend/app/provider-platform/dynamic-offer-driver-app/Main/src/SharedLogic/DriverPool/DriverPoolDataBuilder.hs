@@ -51,11 +51,6 @@ getOrBuildDriverPoolDataBatch onlinePayment isPrepaidEnabled driverIds = do
   unless (null toPersist) $ do
     logInfo $ "DriverPoolData migrations: backfilled " <> show (length toPersist) <> " entries"
     mapM_ (setDriverPoolDataByCloud deploymentCloudType) toPersist
-    -- Clean up the other cloud's keys so the driver doesn't end up with keys in both clouds.
-    let primaryKeys = map (driverPoolDataKey . (.driverId)) $ filter (\e -> deploymentCloudType == e.cloudType) toPersist
-        secondaryKeys = map (driverPoolDataKey . (.driverId)) $ filter (\e -> deploymentCloudType /= e.cloudType) toPersist
-    unless (null primaryKeys) $ Redis.withSecondaryLTSRedis $ Redis.delStandalone primaryKeys
-    unless (null secondaryKeys) $ Redis.withLTSRedis $ Redis.delStandalone secondaryKeys
 
   builtFromDB <-
     if null missing

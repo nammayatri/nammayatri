@@ -24,9 +24,9 @@ import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
-import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import Tools.Error
 import "beckn-services" Tools.InvoicePdf (generateFinanceInvoicePdf)
 
@@ -147,8 +147,8 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
 
 fetchInvoicesByRideId :: Text -> Id DP.Person -> Maybe InvoiceType -> Flow [FInvoice.Invoice]
 fetchInvoicesByRideId rideId personId mbInvoiceType = do
-  ride <- QRide.findById (Id rideId) >>= fromMaybeM (RideNotFound rideId)
-  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  ride <- QRideLite.findByIdLite (Id rideId) >>= fromMaybeM (RideNotFound rideId)
+  booking <- QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   unless (booking.riderId == personId) $
     throwError $ InvalidRequest "Ride does not belong to this rider"
   QInvoiceExtra.findByReferenceIdWithOptions rideId mbInvoiceType [Draft, Issued, Paid] (Just 1) (Just 0)

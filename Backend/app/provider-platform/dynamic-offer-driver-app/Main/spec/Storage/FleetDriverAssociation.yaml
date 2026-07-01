@@ -33,6 +33,9 @@ FleetDriverAssociation:
     deleteByFleetOwnerId:
       kvFunction: deleteWithKV
       where: fleetOwnerId
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
 
   sqlType:
     id: text

@@ -42,7 +42,7 @@ module Domain.Action.RiderPlatform.Management.Merchant
     deleteMerchantTollDelete,
     getMerchantMerchantMessageCatalog,
     postMerchantMerchantMessageUpsert,
-    postMerchantMerchantMessageDelete,
+    deleteMerchantMerchantMessage,
   )
 where
 
@@ -357,16 +357,16 @@ deleteMerchantTollDelete merchantShortId opCity apiTokenInfo tollId = do
   transaction <- buildTransaction apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.deleteMerchantTollDelete) tollId
 
-getMerchantMerchantMessageCatalog :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.RiderMerchantMessageCatalogType -> Environment.Flow Common.RiderMerchantMessageCatalogResp
-getMerchantMerchantMessageCatalog merchantShortId opCity apiTokenInfo catalogType = do
+getMerchantMerchantMessageCatalog :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Environment.Flow Common.RiderMerchantMessageCatalogResp
+getMerchantMerchantMessageCatalog merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantMerchantMessageCatalog) catalogType
+  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantMerchantMessageCatalog)
 
-postMerchantMerchantMessageDelete :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.DeleteRiderMerchantMessageReq -> Environment.Flow APISuccess
-postMerchantMerchantMessageDelete merchantShortId opCity apiTokenInfo req = do
+deleteMerchantMerchantMessage :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Environment.Flow APISuccess
+deleteMerchantMerchantMessage merchantShortId opCity apiTokenInfo messageKey = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
-  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantMerchantMessageDelete) req
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing T.emptyRequest
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.deleteMerchantMerchantMessage) messageKey
 
 postMerchantMerchantMessageUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertRiderMerchantMessageReq -> Environment.Flow APISuccess
 postMerchantMerchantMessageUpsert merchantShortId opCity apiTokenInfo req = do

@@ -8,7 +8,7 @@ import Domain.Types.DriverOperatorAssociation
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleCategory as DVeh
-import Domain.Utils (convertTextToUTC)
+import Domain.Utils (defaultAssociationEnd)
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (getDbHash)
@@ -105,7 +105,7 @@ createDriverOperatorAssociationIfNotExists moc driverId operatorId onboardingVeh
       id <- generateGUID
       createWithKV $
         DriverOperatorAssociation
-          { associatedTill = convertTextToUTC (Just "2099-12-12"),
+          { associatedTill = defaultAssociationEnd,
             driverId = driverId,
             operatorId = operatorId.getId,
             associatedOn = Just now,
@@ -238,3 +238,14 @@ findActiveAssociationByOperatorId operatorId = do
 deleteByOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> m ()
 deleteByOperatorId operatorId = do
   deleteWithKV [Se.Is BeamDOA.operatorId $ Se.Eq (getId operatorId)]
+
+-- Mark the association ended (isActive=false, associatedTill=now). This UPDATE
+-- streams to ClickHouse (drainer -> Kafka) as the terminal history event; the
+-- caller then hard-deletes the row to keep the live table small. Hard deletes
+-- are NOT pushed to Kafka, so the end must be emitted as an update.
+endById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverOperatorAssociation -> m ()
+endById rowId = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set BeamDOA.isActive False, Se.Set BeamDOA.associatedTill (Just now), Se.Set BeamDOA.updatedAt now]
+    [Se.Is BeamDOA.id $ Se.Eq rowId.getId]

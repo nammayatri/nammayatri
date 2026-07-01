@@ -16,7 +16,16 @@ import Storage.Queries.OrphanInstances.DriverLicense ()
 -- Extra code goes here --
 upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverLicense -> m ()
 upsert a@DriverLicense {..} = do
-  res <- findOneWithKV [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
+  res <-
+    findOneWithKV
+      [ Se.And
+          [ Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash)),
+            Se.Or
+              [ Se.Is BeamDL.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
+                Se.Is BeamDL.verificationStatus $ Se.Not $ Se.Eq INVALID
+              ]
+          ]
+      ]
   case res of
     Just existingLicense -> do
       when (existingLicense.driverId /= driverId) $ do
@@ -38,6 +47,11 @@ findByDLNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Te
 findByDLNumber dlNumber = do
   dlNumberHash <- getDbHash dlNumber
   findOneWithKV [Se.Is BeamDL.licenseNumberHash $ Se.Eq dlNumberHash]
+
+findByDLNumberAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Text -> VerificationStatus -> m (Maybe DriverLicense)
+findByDLNumberAndStatus dlNumber verificationStatus = do
+  dlNumberHash <- getDbHash dlNumber
+  findOneWithKV [Se.And [Se.Is BeamDL.verificationStatus $ Se.Eq verificationStatus, Se.Is BeamDL.licenseNumberHash $ Se.Eq dlNumberHash]]
 
 findByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.DriverLicense.DriverLicense))
 findByImageId (Id imageId1) = findOneWithKV [Se.Or [Se.Is BeamDL.documentImageId1 $ Se.Eq imageId1, Se.Is BeamDL.documentImageId2 $ Se.Eq (Just imageId1)]]
