@@ -656,7 +656,11 @@ apis:
         type: SetJsonLogicDebugReq
       response:
         type: APISuccess
-
+  - GET:
+      endpoint: /cityList
+      auth: NoAuth
+      response:
+        type: CityListResp
 
 types:
   MerchantUpdateReq:
@@ -1232,6 +1236,8 @@ types:
     - state: IndianState
     - city: City
     - geom: Maybe Text
+  CityListResp:
+    - supportedCities: [City]
 extraOperations:
   - EXTRA_API_TYPES_FILE
   - EXTRA_API_COMMON_TYPES_FILE

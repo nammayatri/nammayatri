@@ -67,6 +67,7 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     getMerchantConfigTollList,
     postMerchantTollUpsert,
     deleteMerchantTollDelete,
+    getMerchantCityList,
   )
 where
 
@@ -637,3 +638,11 @@ postMerchantConfigFareProductSetEnabled merchantShortId opCity apiTokenInfo req 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigFareProductSetEnabled) req
+
+getMerchantCityList ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Flow Common.CityListResp
+getMerchantCityList merchantShortId opCity = do
+  let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
+  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantCityList)
