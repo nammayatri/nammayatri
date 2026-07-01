@@ -297,10 +297,17 @@ export interface PostmanStepResult extends ApiResult {
 
 /**
  * Execute a Postman collection step with variable substitution, script execution, and log capture.
+ *
+ * @param attachments  Files attached to this step's `formdata` file fields,
+ *                     keyed by the formdata field's `key`. When a step has
+ *                     `formdataFields` containing a `type: 'file'` entry and
+ *                     no attachment is provided for that key, the step
+ *                     self-skips (analogous to `pm.execution.skipRequest`).
  */
 export async function callPostmanStep(
   step: ParsedStep,
   stores: VariableStores,
+  attachments?: Record<string, File>,
 ): Promise<PostmanStepResult> {
   // 1. Execute prerequest script (variable init only, delays handled by test script)
   if (step.prereqScript) {
@@ -351,7 +358,45 @@ export async function callPostmanStep(
 
   // 6. Resolve body
   let body: any = undefined;
-  if (step.bodyTemplate) {
+  let isMultipart = false;
+  if (step.formdataFields && step.formdataFields.length > 0) {
+    // Any file field without an attachment => user did not opt in for this step;
+    // treat as a skip so the rest of the collection still runs.
+    const missingFile = step.formdataFields.find(
+      f => f.type === 'file' && !(attachments && attachments[f.key])
+    );
+    if (missingFile) {
+      return {
+        ok: true, status: 0, data: null, elapsed: 0, upstreamMs: 0,
+        assertions: [],
+        consoleLogs: [
+          `[skip] "${step.name}" — no file attached for formdata field "${missingFile.key}". Attach a file in the step's file picker to run this step.`,
+        ],
+        serviceLogs: {},
+        resolvedUrl: step.pathTemplate,
+        resolvedBody: undefined,
+        resolvedHeaders: {},
+        responseHeaders: {},
+        skipped: true,
+      };
+    }
+    const fd = new FormData();
+    for (const f of step.formdataFields) {
+      if (f.type === 'file') {
+        const file = attachments![f.key];
+        fd.append(f.key, file, file.name);
+      } else {
+        fd.append(f.key, resolveVariables(f.value ?? '', stores));
+      }
+    }
+    body = fd;
+    isMultipart = true;
+    // Let the browser set Content-Type (with correct boundary). If the caller
+    // already put a Content-Type header on the step, drop it so axios doesn't
+    // override the boundary.
+    delete headers['Content-Type'];
+    delete headers['content-type'];
+  } else if (step.bodyTemplate) {
     const resolvedBody = resolveVariables(step.bodyTemplate, stores);
     try { body = JSON.parse(resolvedBody); } catch { body = resolvedBody; }
   }
@@ -384,6 +429,7 @@ export async function callPostmanStep(
     data = err.response?.data ?? { error: err.message };
     responseHeaders = normalizeHeaders(err.response?.headers);
   }
+  void isMultipart;
 
   const elapsed = Math.round(performance.now() - start);
   // X-Upstream-Latency-Ms = time measured on context-api side for the upstream
