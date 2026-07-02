@@ -154,6 +154,7 @@ postOverlaySchedule merchantShortId opCity req@DAO.ScheduleOverlay {..} = do
         serviceName = Nothing,
         merchantOperatingCityId = Just merchantOpCityId,
         vehicleCategory = vehicleCategory,
+        shardNum = Nothing,
         ..
       }
   pure Success

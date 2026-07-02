@@ -98,6 +98,7 @@ data HandlerEnv = HandlerEnv
     coreMetrics :: CoreMetricsContainer,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
     maxShards :: Int,
+    activeDriversListKeyShards :: Int,
     maxNotificationShards :: Int,
     smsCfg :: SmsConfig,
     version :: DeploymentVersion,
