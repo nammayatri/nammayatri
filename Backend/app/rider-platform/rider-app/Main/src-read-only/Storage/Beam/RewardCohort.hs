@@ -19,6 +19,7 @@ data RewardCohortT f = RewardCohortT
     displayOrder :: (B.C f Kernel.Prelude.Int),
     eligibilityJsonLogic :: (B.C f Data.Aeson.Value),
     id :: (B.C f Kernel.Prelude.Text),
+    maxUnlocksPerCohort :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     name :: (B.C f Kernel.Prelude.Text),
     presentation :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     rewardImageUrl :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),

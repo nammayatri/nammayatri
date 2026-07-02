@@ -24,3 +24,8 @@ ALTER TABLE atlas_app.reward_unlock ADD PRIMARY KEY ( id);
 ALTER TABLE atlas_app.reward_unlock ALTER COLUMN status SET DEFAULT 'Active';
 ALTER TABLE atlas_app.reward_unlock ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_app.reward_unlock ADD COLUMN merchant_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.reward_unlock ADD COLUMN unlock_seq integer ;

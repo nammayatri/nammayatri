@@ -3,7 +3,8 @@
 
 module Storage.Queries.RewardUnlockExtra
   ( findByCampaignCohortAndCode,
-    createIfNoActive,
+    createNextUnlock,
+    nextUnlockDecision,
     updateViewAndClaimTimestamps,
     markRedeemed,
     markActiveAsExpiredIfValidityPassed,
@@ -40,24 +41,64 @@ findByCampaignCohortAndCode campaignId cohortId code =
         ]
     ]
 
-createIfNoActive ::
+-- | Decide whether a candidate unlock for this cohort should be created, and
+-- if so, at what 'unlockSeq'. Exported (and kept pure) so the cap/seq logic is
+-- directly unit testable without a DB, mirroring
+-- 'Domain.Action.Rewards.Evaluator.evaluateCohortsPure'.
+--
+-- 'existing' is the caller's already-fetched unlocks for this rider+campaign
+-- (all cohorts); this function filters down to the candidate's cohort.
+nextUnlockDecision ::
+  DRC.RewardCohort ->
+  [DRU.RewardUnlock] ->
+  DRU.RewardUnlock ->
+  Maybe Int
+nextUnlockDecision cohort existing unlock =
+  case cohort.maxUnlocksPerCohort of
+    Nothing ->
+      if not (null liveForCohort)
+        then Nothing
+        else Just 1
+    Just n ->
+      if length liveForCohort >= n
+        then Nothing
+        else Just (maximum (0 : map (fromMaybe 1 . (.unlockSeq)) forCohort) + 1)
+  where
+    forCohort = filter (\u -> u.cohortId == unlock.cohortId) existing
+    liveForCohort = filter (\u -> u.status /= DRU.Reclaimed) forCohort
+
+-- | Create the next unlock row for a rider+cohort, honoring the cohort's
+-- repeat cap ('maxUnlocksPerCohort'). Non-repeatable cohorts ('Nothing') keep
+-- today's one-shot sticky behavior: at most one non-'Reclaimed' row ever, at
+-- 'unlockSeq' 1. Repeatable cohorts ('Just n') allow up to 'n' non-'Reclaimed'
+-- rows, each with a fresh, never-reused 'unlockSeq'.
+--
+-- 'existing' is the caller's already-fetched existing unlocks for this
+-- rider+campaign (across all cohorts); 'unlock' is the candidate row, whose
+-- 'unlockSeq' is overwritten with the computed value before insert.
+--
+-- The 'try'/'createWithKV' pattern is the race-safety backstop against the
+-- partial unique index on (personId, campaignId, cohortId, unlockSeq).
+createNextUnlock ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  DRC.RewardCohort ->
+  [DRU.RewardUnlock] ->
   DRU.RewardUnlock ->
   m Bool
-createIfNoActive unlock = do
-  existing <-
-    findOneWithKV
-      [ Se.And
-          [ Se.Is Beam.personId (Se.Eq unlock.personId.getId),
-            Se.Is Beam.campaignId (Se.Eq unlock.campaignId.getId),
-            Se.Is Beam.cohortId (Se.Eq unlock.cohortId.getId),
-            Se.Is Beam.status (Se.Not (Se.Eq DRU.Reclaimed))
-          ]
-      ]
-  case existing of
-    Just _ -> pure False
+createNextUnlock cohort existing unlock =
+  case nextUnlockDecision cohort existing unlock of
     Nothing -> do
-      result <- try @_ @SomeException $ createWithKV unlock
+      whenJust cohort.maxUnlocksPerCohort $ \n ->
+        logInfo $
+          "rewards.unlock.cap_reached riderId="
+            <> unlock.personId.getId
+            <> " cohortId="
+            <> unlock.cohortId.getId
+            <> " maxUnlocksPerCohort="
+            <> show n
+      pure False
+    Just seqNo -> do
+      result <- try @_ @SomeException $ createWithKV unlock {DRU.unlockSeq = Just seqNo}
       case result of
         Right _ -> pure True
         Left _ -> pure False
