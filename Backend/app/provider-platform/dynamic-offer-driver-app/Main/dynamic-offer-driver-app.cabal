@@ -275,6 +275,7 @@ library
       Domain.Action.UI.DemandHotspots
       Domain.Action.UI.Driver
       Domain.Action.UI.DriverCoin
+      Domain.Action.UI.DriverDocument
       Domain.Action.UI.DriverGoHomeRequest
       Domain.Action.UI.DriverHomeLocation
       Domain.Action.UI.DriverOnboarding.AadhaarVerification
@@ -1012,6 +1013,7 @@ library
       API.Action.UI.CallFeedback
       API.Action.UI.CancellationReasonLookup
       API.Action.UI.DemandHotspots
+      API.Action.UI.DriverDocument
       API.Action.UI.DriverOnboardingV2
       API.Action.UI.DriverProfile
       API.Action.UI.DriverProfileQuestions

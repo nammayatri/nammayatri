@@ -331,6 +331,7 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: APISuccess
+  # DEPRECATED: Use POST /driver/document/register with PanData metadata instead.
   - POST:
       endpoint: /driver/register/pancard
       auth: TokenAuth PROVIDER_TYPE
@@ -360,7 +361,7 @@ apis:
       response:
         type: GetLiveSelfieResp
 
-  # POST /driver/register/aadhaarCard
+  # DEPRECATED: Use POST /driver/document/register with AadhaarData metadata instead.
   - POST:
       endpoint: /driver/register/aadhaarCard
       auth: TokenAuth PROVIDER_TYPE
@@ -376,6 +377,7 @@ apis:
         type: HVSdkCallLogReq
       response:
         type: APISuccess
+  # DEPRECATED: Use POST /driver/document/register with CommonData metadata instead.
   - POST:
       endpoint: /driver/register/commonDocument
       auth: TokenAuth PROVIDER_TYPE

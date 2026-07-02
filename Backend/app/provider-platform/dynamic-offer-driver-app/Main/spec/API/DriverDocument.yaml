@@ -1,0 +1,16 @@
+imports:
+  DocumentRegisterReq: API.Types.ProviderPlatform.Management.DriverRegistration
+  APISuccess: Kernel.Types.APISuccess
+
+module: DriverDocument
+
+types: {}
+
+apis:
+  - POST:
+      endpoint: /driver/document/register
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: DocumentRegisterReq
+      response:
+        type: APISuccess
