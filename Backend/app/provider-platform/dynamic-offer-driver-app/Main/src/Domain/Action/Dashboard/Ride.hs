@@ -844,7 +844,7 @@ rideSync merchantShortId opCity reqRideId = do
 
   logTagInfo "dashboard -> syncRide : " $ show rideId <> "; status: " <> show ride.status
 
-  SyncRide.rideSync Nothing (Just ride) booking merchant
+  SyncRide.rideSync Nothing (Just ride) booking merchant True
 
 ---------------------------------------------------------------------
 
@@ -863,7 +863,7 @@ multipleRideSync merchantShortId opCity rideSyncReq = do
       ( \(ride, booking) ->
           mapLeft show
             <$> ( withTryCatch "mkMultipleRideData:multipleRideSync" $
-                    mkMultipleRideData ride.id <$> SyncRide.rideSync Nothing (Just ride) booking merchant
+                    mkMultipleRideData ride.id <$> SyncRide.rideSync Nothing (Just ride) booking merchant True
                 )
       )
       ridesBookingsZip

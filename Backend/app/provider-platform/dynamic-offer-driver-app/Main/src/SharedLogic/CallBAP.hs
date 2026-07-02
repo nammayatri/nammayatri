@@ -92,12 +92,14 @@ import qualified Domain.Types.OnUpdate as DOU
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.RideDetails as DRD
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as DSRFD
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DST
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.VehicleVariant as Variant
 import qualified EulerHS.Types as Euler
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Beam.Functions
@@ -680,6 +682,40 @@ sendRideEstimatedEndTimeRangeUpdateToBAP booking ride = do
   endEstimateTimeRangeMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing endEstimateTimeRangeBuildReq
   void $ callOnUpdateV2 endEstimateTimeRangeMsgV2 retryConfig merchant.id
 
+buildVehicleFromRideDetailsSnapshot :: DRB.Booking -> SRide.Ride -> DRD.RideDetails -> DVeh.Vehicle
+buildVehicleFromRideDetailsSnapshot booking ride rideDetails =
+  DVeh.Vehicle
+    { driverId = ride.driverId,
+      merchantId = booking.providerId,
+      merchantOperatingCityId = Just booking.merchantOperatingCityId,
+      registrationNo = rideDetails.vehicleNumber,
+      color = fromMaybe "" rideDetails.vehicleColor,
+      model = fromMaybe "" rideDetails.vehicleModel,
+      vehicleClass = fromMaybe "" rideDetails.vehicleClass,
+      variant = fromMaybe (Variant.castServiceTierToVariant booking.vehicleServiceTier) rideDetails.vehicleVariant,
+      capacity = ride.vehicleServiceTierSeatingCapacity,
+      selectedServiceTiers = [booking.vehicleServiceTier],
+      airConditioned = Nothing,
+      category = Nothing,
+      downgradeReason = Nothing,
+      energyType = Nothing,
+      luggageCapacity = Nothing,
+      mYManufacturing = Nothing,
+      make = Nothing,
+      oxygen = Nothing,
+      registrationCategory = Nothing,
+      ruleBasedUpgradeTiers = Nothing,
+      size = Nothing,
+      vehicleImageId = Nothing,
+      vehicleName = Nothing,
+      vehicleRating = Nothing,
+      vehicleRatingRemark = Nothing,
+      vehicleTags = Nothing,
+      ventilator = Nothing,
+      createdAt = ride.createdAt,
+      updatedAt = ride.updatedAt
+    }
+
 sendRideCompletedUpdateToBAP ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -697,15 +733,24 @@ sendRideCompletedUpdateToBAP ::
   Maybe DMPM.PaymentMethodInfo ->
   Maybe Text ->
   Maybe Maps.LatLong ->
+  Bool ->
   m ()
-sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl tripEndLocation = do
+sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl tripEndLocation allowSnapshotVehicleFallback = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   merchant <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
-  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+  mbVehicle <- QVeh.findById ride.driverId
+  vehicle <- case mbVehicle of
+    Just v -> pure v
+    Nothing
+      | allowSnapshotVehicleFallback -> do
+        logWarning $ "Vehicle missing for driver " <> ride.driverId.getId <> " on completed ride " <> ride.id.getId <> "; using ride_details snapshot (ops/cron sync)"
+        rideDetails <- runInReplica $ QRideDetails.findById ride.id >>= fromMaybeM (RideNotFound ride.id.getId)
+        pure $ buildVehicleFromRideDetailsSnapshot booking ride rideDetails
+      | otherwise -> throwError (DriverWithoutVehicle ride.driverId.getId)
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
   riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)

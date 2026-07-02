@@ -93,7 +93,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
         then do
           logError $ "Completed booking cancel request received for ride id : " <> cancelRideReq.bookingId.getId
           mbRide <- QRide.findActiveByRBId booking.id
-          void $ rideSync Nothing mbRide booking merchant
+          void $ rideSync Nothing mbRide booking merchant False
           return Ack
         else do
           fork "cancel received pushing ondc logs" do
