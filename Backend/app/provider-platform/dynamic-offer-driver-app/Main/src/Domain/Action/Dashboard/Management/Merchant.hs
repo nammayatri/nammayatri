@@ -57,6 +57,7 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantConfigFailover,
     postMerchantPayoutConfigUpdate,
     postMerchantConfigUpsertPlanAndConfigSubscription,
+    getMerchantConfigVendorSplitDetailsList,
     postMerchantConfigOperatingCityWhiteList,
     postMerchantConfigMerchantCreate,
     getMerchantConfigVehicleServiceTier,
@@ -4256,6 +4257,26 @@ postMerchantConfigUpsertPlanAndConfigSubscription merchantShortId city req = do
     clearVendorSplitRowCache vendorSplit = do
       whenJust (Id <$> vendorSplit.dailyPlanId) $ \dailyPlanId -> Hedis.del (CQVSD.makeCityAndPlanKey vendorSplit.merchantOperatingCityId dailyPlanId)
       Hedis.del (CQVSD.makeRowAreaKey vendorSplit)
+
+getMerchantConfigVendorSplitDetailsList :: ShortId DM.Merchant -> Context.City -> Flow [Common.VendorSplitDetailsAPIEntity]
+getMerchantConfigVendorSplitDetailsList merchantShortId city = do
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+  vendorSplits <- QVSD.findAllByMerchantOperatingCityId merchantOperatingCity.id
+  pure $ map toVendorSplitDetailsAPIEntity vendorSplits
+  where
+    toVendorSplitDetailsAPIEntity vendorSplit =
+      Common.VendorSplitDetailsAPIEntity
+        { merchantOperatingCityId = getId vendorSplit.merchantOperatingCityId,
+          area = show vendorSplit.area,
+          vendorId = vendorSplit.vendorId,
+          vehicleVariant = show vendorSplit.vehicleVariant,
+          splitType = show vendorSplit.splitType,
+          splitValue = vendorSplit.splitValue,
+          maxVendorFeeAmount = vendorSplit.maxVendorFeeAmount,
+          dailyPlanId = vendorSplit.dailyPlanId
+        }
 
 jsonDiff :: Value -> Value -> Value
 jsonDiff (DAT.Object a) (DAT.Object b) =

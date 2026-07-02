@@ -51,6 +51,7 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     postMerchantPayoutConfigUpdate,
     postMerchantConfigSpecialLocationUpsert,
     postMerchantConfigUpsertPlanAndConfigSubscription,
+    getMerchantConfigVendorSplitDetailsList,
     postMerchantConfigOperatingCityWhiteList,
     postMerchantConfigMerchantCreate,
     getMerchantConfigVehicleServiceTier,
@@ -640,3 +641,8 @@ getMerchantCityList ::
 getMerchantCityList merchantShortId opCity = do
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantCityList)
+
+getMerchantConfigVendorSplitDetailsList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow [Common.VendorSplitDetailsAPIEntity])
+getMerchantConfigVendorSplitDetailsList merchantShortId opCity apiTokenInfo = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigVendorSplitDetailsList)
