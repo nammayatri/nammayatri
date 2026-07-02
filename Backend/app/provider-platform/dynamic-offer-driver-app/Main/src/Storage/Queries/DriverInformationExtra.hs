@@ -187,7 +187,8 @@ updateDynamicBlockedStateWithActivity driverId blockedReason blockedExpiryTime d
             blockedBy = blockedBy,
             requestorId = Just dashboardUserName,
             actionType = Just $ if isBlocked then DTDBT.BLOCK else DTDBT.UNBLOCK,
-            blockReasonFlag = Just blockReasonFlag
+            blockReasonFlag = Just blockReasonFlag,
+            specialZoneId = Nothing
           }
 
   QDBT.create driverBlockDetails
@@ -238,7 +239,8 @@ updateBlockedState driverId isBlocked blockStateModifier merchantId merchantOper
             merchantOperatingCityId = Just merchantOperatingCityId,
             blockedBy = blockedBy,
             actionType = Just $ if isBlocked then DTDBT.BLOCK else DTDBT.UNBLOCK,
-            requestorId = Nothing
+            requestorId = Nothing,
+            specialZoneId = Nothing
           }
 
   QDBT.create driverBlockDetails
@@ -671,16 +673,86 @@ updateRentalInterCityAndIntraCitySwitch canSwitchToRental canSwitchToInterCity c
         LTSSync.canSwitchToIntraCity = LTSSync.Set canSwitchToIntraCity
       }
 
-updateAirportSwitch :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r) => DriverInfo.AirportRestrictionType -> Id Person.Person -> m ()
-updateAirportSwitch enableForAirport driverId = do
+data AirportBlockLogInfo = AirportBlockLogInfo
+  { blockedBy :: DTDBT.BlockedBy,
+    reason :: Maybe Text,
+    specialZoneId :: Maybe Text,
+    requestorId :: Maybe Text,
+    merchantId :: Id Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+
+updateAirportSwitch :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r) => DriverInfo.AirportRestrictionType -> Maybe UTCTime -> Maybe AirportBlockLogInfo -> Id Person.Person -> m ()
+updateAirportSwitch enableForAirport mbBlockExpiryTime mbLogInfo driverId = do
   now <- getCurrentTime
+  let blockExpiryTime = case enableForAirport of
+        DriverInfo.BLOCKED -> mbBlockExpiryTime
+        _ -> Nothing
   updateOneWithKV
     [ Se.Set BeamDI.enableForAirport (Just enableForAirport),
+      Se.Set BeamDI.airportBlockExpiryTime blockExpiryTime,
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.enableForAirport = LTSSync.Set (Just enableForAirport)}
+  Kernel.Prelude.whenJust mbLogInfo $ \logCtx -> do
+    let mbAction = case enableForAirport of
+          DriverInfo.BLOCKED -> Just (DTDBT.BLOCK, logCtx.reason, blockExpiryTime)
+          DriverInfo.ENABLED -> Just (DTDBT.UNBLOCK, logCtx.reason, Nothing)
+          DriverInfo.DISABLED -> Nothing
+    Kernel.Prelude.whenJust mbAction $ \(actionType, logReason, logLiftTime) ->
+      logAirportBlockTransaction driverId actionType logReason logLiftTime logCtx.specialZoneId logCtx.blockedBy logCtx.requestorId logCtx.merchantId logCtx.merchantOperatingCityId
+
+logAirportBlockTransaction ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id Person.Person ->
+  DTDBT.ActionType ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Maybe Text ->
+  DTDBT.BlockedBy ->
+  Maybe Text ->
+  Id Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  m ()
+logAirportBlockTransaction driverId actionType mbReason mbBlockLiftTime mbSpecialZoneId blockedBy mbRequestorId merchantId merchantOperatingCityId = do
+  now <- getCurrentTime
+  uid <- generateGUID
+  let blockTimeInHours = mbBlockLiftTime <&> \liftTime -> max 0 (floor (diffUTCTime liftTime now / 3600))
+  QDBT.create $
+    DTDBT.DriverBlockTransactions
+      { blockLiftTime = mbBlockLiftTime,
+        blockReason = mbReason,
+        blockTimeInHours = blockTimeInHours,
+        driverId = driverId,
+        id = uid,
+        reasonCode = Nothing,
+        reportedAt = now,
+        merchantId = Just merchantId,
+        createdAt = now,
+        updatedAt = now,
+        merchantOperatingCityId = Just merchantOperatingCityId,
+        blockedBy = blockedBy,
+        requestorId = mbRequestorId,
+        actionType = Just actionType,
+        blockReasonFlag = Nothing,
+        specialZoneId = mbSpecialZoneId
+      }
+
+isAirportEligible :: UTCTime -> DriverInfo.DriverInformation -> Bool
+isAirportEligible now di = case di.enableForAirport of
+  DriverInfo.ENABLED -> True
+  DriverInfo.DISABLED -> False
+  DriverInfo.BLOCKED -> maybe False (now >=) di.airportBlockExpiryTime
+
+resolveAirportRestriction :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r) => UTCTime -> DriverInfo.DriverInformation -> m DriverInfo.AirportRestrictionType
+resolveAirportRestriction now di =
+  if di.enableForAirport == DriverInfo.BLOCKED && isAirportEligible now di
+    then do
+      updateAirportSwitch DriverInfo.ENABLED Nothing Nothing di.driverId
+      pure DriverInfo.ENABLED
+    else pure di.enableForAirport
 
 updateForwardBatchingEnabled :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> Id Person.Person -> m ()
 updateForwardBatchingEnabled forwardBatchingEnabled driverId = do

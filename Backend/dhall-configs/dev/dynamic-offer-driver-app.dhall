@@ -268,6 +268,7 @@ let registryMap =
 let AllocatorJobType =
       < SendSearchRequestToDriver
       | UnblockDriver
+      | UnblockAirportDriver
       | UnblockSoftBlockedDriver
       | SoftBlockNotifyDriver
       | SendPDNNotificationToDriver
@@ -314,6 +315,7 @@ let AllocatorJobType =
 let jobInfoMapx =
       [ { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
       , { mapKey = AllocatorJobType.UnblockDriver, mapValue = False }
+      , { mapKey = AllocatorJobType.UnblockAirportDriver, mapValue = False }
       , { mapKey = AllocatorJobType.UnblockSoftBlockedDriver, mapValue = False }
       , { mapKey = AllocatorJobType.SoftBlockNotifyDriver, mapValue = False }
       , { mapKey = AllocatorJobType.SupplyDemand, mapValue = True }
@@ -555,8 +557,6 @@ in  { esqDBCfg
     , emailServiceConfig
     , ttenTokenCacheExpiry = +86390
     , masterCloudProxyConfig =
-      { masterUrl = None Text
-      , masterSecret = Some "123"
-      }
+      { masterUrl = None Text, masterSecret = Some "123" }
     , enableLtsPoolDataForPooling = True
     }

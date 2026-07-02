@@ -172,7 +172,8 @@ postSpecialZoneQueueRequestRespond (mbPersonId, _merchantId, _merchantOpCityId) 
     case req.response of
       Domain.Types.SpecialZoneQueueRequest.Accept -> do
         driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
-        unless (driverInfo.enableForAirport == DI.ENABLED) $ throwError DriverNotEnabledForAirport
+        airportRestriction <- QDI.resolveAirportRestriction now driverInfo
+        unless (airportRestriction == DI.ENABLED) $ throwError DriverNotEnabledForAirport
         let timeoutSec = maybe 1200 (fromMaybe 1200 . (.pickupZoneArrivalTimeoutInSec)) mbGate
             arrivalDeadline = addUTCTime (fromIntegral timeoutSec) now
         QSZQR.updateToAcceptedWithArrivalDeadline requestId arrivalDeadline

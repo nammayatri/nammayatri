@@ -53,6 +53,7 @@ import qualified Tools.Notifications as Notify
 data AllocatorJobType
   = SendSearchRequestToDriver
   | UnblockDriver
+  | UnblockAirportDriver
   | UnblockSoftBlockedDriver
   | SoftBlockNotifyDriver
   | SupplyDemand
@@ -105,6 +106,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo :: Sing (e :: AllocatorJobType) -> Text -> Maybe (AnyJobInfo AllocatorJobType)
   restoreAnyJobInfo SSendSearchRequestToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendSearchRequestToDriver jobData
   restoreAnyJobInfo SUnblockDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockDriver jobData
+  restoreAnyJobInfo SUnblockAirportDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockAirportDriver jobData
   restoreAnyJobInfo SUnblockSoftBlockedDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockSoftBlockedDriver jobData
   restoreAnyJobInfo SSoftBlockNotifyDriver jobData = AnyJobInfo <$> restoreJobInfo SSoftBlockNotifyDriver jobData
   restoreAnyJobInfo SSupplyDemand jobData = AnyJobInfo <$> restoreJobInfo SSupplyDemand jobData
@@ -197,6 +199,16 @@ newtype UnblockDriverRequestJobData = UnblockDriverRequestJobData
 instance JobInfoProcessor 'UnblockDriver
 
 type instance JobContent 'UnblockDriver = UnblockDriverRequestJobData
+
+data UnblockAirportDriverRequestJobData = UnblockAirportDriverRequestJobData
+  { driverId :: Id DP.Driver,
+    specialZoneId :: Maybe Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'UnblockAirportDriver
+
+type instance JobContent 'UnblockAirportDriver = UnblockAirportDriverRequestJobData
 
 data FleetAlertJobData = FleetAlertJobData
   { fleetOwnerId :: Id DP.Driver,
