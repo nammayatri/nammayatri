@@ -19,8 +19,8 @@ module Tools.Rewards.RiderContextReader
 where
 
 import qualified Data.Aeson as A
-import qualified Data.Aeson.KeyMap as KM
 import qualified Domain.Types.Person as DP
+import Domain.Types.RewardContext (RewardContext (..), rewardContextToLogicInput)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
@@ -46,14 +46,17 @@ readRiderContext personId mbIsValidRide = do
   ridesLast7d <- CRWindow.getCompletedCount 7 personId
   ridesLast30d <- CRWindow.getCompletedCount 30 personId
   ridesLast90d <- CRWindow.getCompletedCount 90 personId
+  -- Build the typed context (all fields present) and serialize through the
+  -- shared serializer. On all-Just values this reproduces exactly the JSON this
+  -- reader has always emitted, so existing cohort logics are unaffected.
   pure $
-    A.Object $
-      KM.fromList
-        [ ("ridesLast1d", A.toJSON ridesLast1d),
-          ("ridesLast3d", A.toJSON ridesLast3d),
-          ("ridesLast7d", A.toJSON ridesLast7d),
-          ("ridesLast30d", A.toJSON ridesLast30d),
-          ("ridesLast90d", A.toJSON ridesLast90d),
-          ("hasTakenValidRide", A.toJSON person.hasTakenValidRide),
-          ("isValidRide", A.toJSON mbIsValidRide)
-        ]
+    rewardContextToLogicInput
+      RewardContext
+        { ridesLast1d = Just (fromIntegral ridesLast1d),
+          ridesLast3d = Just (fromIntegral ridesLast3d),
+          ridesLast7d = Just (fromIntegral ridesLast7d),
+          ridesLast30d = Just (fromIntegral ridesLast30d),
+          ridesLast90d = Just (fromIntegral ridesLast90d),
+          hasTakenValidRide = Just person.hasTakenValidRide,
+          isValidRide = mbIsValidRide
+        }

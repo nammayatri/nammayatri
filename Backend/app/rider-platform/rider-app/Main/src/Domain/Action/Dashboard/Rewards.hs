@@ -11,6 +11,7 @@ module Domain.Action.Dashboard.Rewards
     getRewardsCampaigns,
     getRewardsCampaignStats,
     postRewardsTriggerEval,
+    postRewardsCohortValidateEligibility,
   )
 where
 
@@ -27,14 +28,18 @@ import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv (HasHeader (..), decode)
+import Data.List (nub)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Vector as V
 import qualified Domain.Action.Rewards.Consumer as RewardsConsumer
+import qualified Domain.Action.Rewards.Evaluator as Evaluator
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.RewardCampaign as DRCmp
 import qualified Domain.Types.RewardCohort as DRC
+import Domain.Types.RewardContext (defaultRewardContext, rewardContextKeys, rewardContextToLogicInput)
+import qualified Domain.Types.RewardContext as DRewardContext
 import qualified Domain.Types.RewardCouponUploadBatch as DRUB
 import qualified Domain.Types.RewardUnlock as DRU
 import Environment
@@ -132,6 +137,8 @@ postRewardsCampaignCohort merchantShortId opCity campaignId req = do
   unless (c.status == DRCmp.Draft) $
     throwError (InvalidRequest "Cohorts can only be added to Draft campaigns")
   whenJust req.presentation validatePresentation
+  unless (maybe True (>= 1) req.maxUnlocksPerCohort) $
+    throwError (InvalidRequest "maxUnlocksPerCohort must be >= 1")
   cohortId <- generateGUID
   now <- getCurrentTime
   let cohort =
@@ -145,6 +152,7 @@ postRewardsCampaignCohort merchantShortId opCity campaignId req = do
             rewardTitle = req.rewardTitle,
             rewardImageUrl = req.rewardImageUrl,
             couponValidityDays = req.couponValidityDays,
+            maxUnlocksPerCohort = req.maxUnlocksPerCohort,
             presentation = req.presentation,
             merchantId = Nothing,
             merchantOperatingCityId = Nothing,
@@ -171,6 +179,8 @@ putRewardsCampaignCohort merchantShortId opCity campaignId cohortId req = do
   unless (cohort.campaignId == domainCampaignId) $
     throwError (InvalidRequest "Cohort does not belong to this campaign")
   whenJust req.presentation validatePresentation
+  unless (maybe True (>= 1) req.maxUnlocksPerCohort) $
+    throwError (InvalidRequest "maxUnlocksPerCohort must be >= 1")
   QRCE.updateEditableFields
     domainCohortId
     req.name
@@ -181,6 +191,7 @@ putRewardsCampaignCohort merchantShortId opCity campaignId cohortId req = do
     req.rewardImageUrl
     req.couponValidityDays
     req.presentation
+    (Just <$> req.maxUnlocksPerCohort)
   pure Success
 
 postRewardsCampaignCohortCodes ::
@@ -320,6 +331,62 @@ postRewardsTriggerEval merchantShortId opCity personId = do
     RewardsConsumer.evaluateRewardsIfEnabled (castId personId) merchantOpCity.id now Nothing
   pure Success
 
+-- | Validation tool for authoring/debugging cohort eligibility logic. Evaluates
+-- an eligibility JSON logic against a type-safe context and returns the verdict.
+-- The logic is taken from the request when supplied, otherwise loaded from the
+-- named cohort. A logic referencing a field outside the typed context is
+-- rejected (400) rather than silently evaluated against null; a malformed/failed
+-- logic is reported in 'errorMessage' (HTTP 200) so ops can see why a logic is
+-- bad rather than getting an opaque 500.
+postRewardsCohortValidateEligibility ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  API.ValidateCohortEligibilityReq ->
+  Flow API.ValidateCohortEligibilityResp
+postRewardsCohortValidateEligibility merchantShortId opCity req = do
+  _ <- loadMerchantContext merchantShortId opCity
+  (logic, usedStoredLogic) <- case req.eligibilityJsonLogic of
+    Just l -> pure (l, False)
+    Nothing -> do
+      cohortId <- fromMaybeM (InvalidRequest "Provide eligibilityJsonLogic or cohortId") req.cohortId
+      cohort <- QRC.findById (castId cohortId) >>= fromMaybeM (InvalidRequest "Cohort not found")
+      _ <- loadAuthorizedCampaign merchantShortId opCity cohort.campaignId
+      pure (cohort.eligibilityJsonLogic, True)
+  -- Reject logics referencing fields outside the typed context (typos / unpopulated
+  -- fields) instead of letting them silently resolve to null. Dotted paths (a.b)
+  -- validate on the top-level segment since the context is flat; whole-context
+  -- references ({"var":""}) come through as empty strings and are ignored.
+  let referencedFields = filter (not . T.null) (Evaluator.collectVarNames logic)
+      unknownFields = nub (filter (\v -> T.takeWhile (/= '.') v `notElem` rewardContextKeys) referencedFields)
+  unless (null unknownFields) $
+    throwError . InvalidRequest $
+      "Logic references unknown context field(s): " <> T.intercalate ", " unknownFields
+        <> ". Allowed fields: "
+        <> T.intercalate ", " rewardContextKeys
+  let ctxValue = rewardContextToLogicInput (maybe defaultRewardContext castRewardContext req.context)
+  pure $ case Evaluator.evalCohortLogic logic ctxValue of
+    Left err ->
+      API.ValidateCohortEligibilityResp {eligible = False, result = A.Null, errorMessage = Just (T.pack err), usedStoredLogic}
+    Right (result, eligible) ->
+      API.ValidateCohortEligibilityResp {eligible, result, errorMessage = Nothing, usedStoredLogic}
+
+-- | Map the dashboard DTO context (generated in CommonAPIs) to the shared domain
+-- 'DRewardContext.RewardContext'. CommonAPIs cannot depend on rider-app (that
+-- would cycle), so the wire type is generated there and cast here; the field
+-- names are identical, so this fails to compile if either side drifts. All
+-- defaulting/serialization stays single-source in 'Domain.Types.RewardContext'.
+castRewardContext :: API.RewardContext -> DRewardContext.RewardContext
+castRewardContext c =
+  DRewardContext.RewardContext
+    { ridesLast1d = c.ridesLast1d,
+      ridesLast3d = c.ridesLast3d,
+      ridesLast7d = c.ridesLast7d,
+      ridesLast30d = c.ridesLast30d,
+      ridesLast90d = c.ridesLast90d,
+      hasTakenValidRide = c.hasTakenValidRide,
+      isValidRide = c.isValidRide
+    }
+
 loadMerchantContext ::
   ShortId DM.Merchant ->
   Context.City ->
@@ -395,6 +462,7 @@ toApiCohort co =
       rewardImageUrl = co.rewardImageUrl,
       couponValidityDays = co.couponValidityDays,
       presentation = co.presentation,
+      maxUnlocksPerCohort = co.maxUnlocksPerCohort,
       createdAt = co.createdAt,
       updatedAt = co.updatedAt
     }

@@ -60,6 +60,7 @@ types:
     - rewardImageUrl: Maybe Text
     - couponValidityDays: Maybe Int
     - presentation: Maybe Value
+    - maxUnlocksPerCohort: Maybe Int
     - derive: "'HideSecrets"
 
   CreateCohortResp:
@@ -74,6 +75,7 @@ types:
     - rewardImageUrl: Maybe Text
     - couponValidityDays: Maybe Int
     - presentation: Maybe Value
+    - maxUnlocksPerCohort: Maybe Int
     - derive: "'HideSecrets"
 
   UploadCodesResp:
@@ -125,6 +127,7 @@ types:
     - rewardImageUrl: Maybe Text
     - couponValidityDays: Maybe Int
     - presentation: Maybe Value
+    - maxUnlocksPerCohort: Maybe Int
     - createdAt: UTCTime
     - updatedAt: UTCTime
 
@@ -138,6 +141,27 @@ types:
     - poolRemainingByCohort: "[CohortPoolRemaining]"
     - claimRate: Double
     - expiredUnredeemedCount: Int
+
+  RewardContext:
+    - ridesLast1d: Maybe Int
+    - ridesLast3d: Maybe Int
+    - ridesLast7d: Maybe Int
+    - ridesLast30d: Maybe Int
+    - ridesLast90d: Maybe Int
+    - hasTakenValidRide: Maybe Bool
+    - isValidRide: Maybe Bool
+
+  ValidateCohortEligibilityReq:
+    - cohortId: Maybe (Id RewardCohort)
+    - eligibilityJsonLogic: Maybe Value
+    - context: Maybe RewardContext
+    - derive: "'HideSecrets"
+
+  ValidateCohortEligibilityResp:
+    - eligible: Bool
+    - result: Value
+    - errorMessage: Maybe Text
+    - usedStoredLogic: Bool
 
 apis:
   - POST:
@@ -229,3 +253,11 @@ apis:
         personId: Id Person
       response:
         type: APISuccess
+
+  - POST:
+      endpoint: /cohort/validateEligibility
+      auth: ApiAuthV2
+      request:
+        type: ValidateCohortEligibilityReq
+      response:
+        type: ValidateCohortEligibilityResp
