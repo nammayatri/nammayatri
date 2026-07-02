@@ -17,6 +17,7 @@ import qualified Storage.CachedQueries.Exophone as SQ
 
 data ExophoneDimensions = ExophoneDimensions
   { merchantOperatingCityId :: Text,
+    phoneNumber :: Maybe Text,
     callService :: Maybe Kernel.External.Call.Types.CallService
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
@@ -31,11 +32,14 @@ instance ConfigDimensions ExophoneDimensions where
   type ConfigValueTypeOf ExophoneDimensions = [DT.Exophone]
   getConfigType _ = ExophoneRider
   getConfigList a =
-    LCP.resolveConfigList
-      a
-      (LYT.RIDER_CONFIG Exophone)
-      (Id a.merchantOperatingCityId)
-      (SQ.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId))
-      [ LCP.DimMatcher (.callService) (Just . (.callService)) (==)
-      ]
-      Nothing
+    let fetch = case a.phoneNumber of
+          Just pn -> maybeToList <$> SQ.findByPrimaryPhone pn
+          Nothing -> SQ.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId)
+     in LCP.resolveConfigList
+          a
+          (LYT.RIDER_CONFIG Exophone)
+          (Id a.merchantOperatingCityId)
+          fetch
+          [ LCP.DimMatcher (.callService) (Just . (.callService)) (==)
+          ]
+          Nothing

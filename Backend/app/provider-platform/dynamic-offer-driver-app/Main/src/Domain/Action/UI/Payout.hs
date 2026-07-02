@@ -79,6 +79,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
@@ -270,7 +271,7 @@ fetchPaymentServiceConfig merchantShortId mbOpCity mbServiceName service = do
         _ -> throwError $ InternalError "Unknown Payout Service"
     Nothing -> return $ DEMSC.PayoutService service
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity payoutServiceName' merchantOperatingCityId
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = Nothing, serviceName = Just payoutServiceName'}) (Just (maybeToList <$> CQMSC.findByServiceAndCity payoutServiceName' merchantOperatingCityId))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payout" (show service))
   psc <- case merchantServiceConfig.serviceConfig of
     DMSC.PayoutServiceConfig psc' -> pure psc'

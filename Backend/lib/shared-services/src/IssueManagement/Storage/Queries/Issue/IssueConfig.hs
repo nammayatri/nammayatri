@@ -16,6 +16,9 @@ create = createWithKV
 findByMerchantOpCityId :: BeamFlow m r => Id MerchantOperatingCity -> m (Maybe IssueConfig)
 findByMerchantOpCityId (Id merchantOpCityId) = findOneWithKV [Is BeamIC.merchantOperatingCityId $ Eq merchantOpCityId]
 
+findAllByMerchantOperatingCityId :: BeamFlow m r => Id MerchantOperatingCity -> m [IssueConfig]
+findAllByMerchantOperatingCityId (Id merchantOpCityId) = findAllWithKV [Is BeamIC.merchantOperatingCityId $ Eq merchantOpCityId]
+
 updateByPrimaryKey :: BeamFlow m r => IssueConfig -> m ()
 updateByPrimaryKey IssueConfig {..} =
   updateWithKV

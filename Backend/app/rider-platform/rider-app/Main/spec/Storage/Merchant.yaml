@@ -459,14 +459,8 @@ MerchantServiceUsageConfig:
     getMultimodalWalkDistance: "'OSRM'"
     insuranceService: "'Acko'"
 
-  configPilot:
-    configType: MerchantServiceUsageConfig
-    fetchQuery: findByMerchantOperatingCityId
-    returnType: Maybe
-    queryModule: Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
-
 MerchantPaymentMethod:
-  derives: "Generic,'UsageSafety"
+  derives: "Generic,Show,'UsageSafety"
   fields:
     id: Id MerchantPaymentMethod
     merchantId: Id Merchant
@@ -607,15 +601,6 @@ RideRelatedNotificationConfig:
     - MakeTableInstances
     - Custom Domain.Types.UtilsTH.mkCacParseInstance
 
-  configPilot:
-    configType: RideRelatedNotificationConfig
-    fetchQuery: findAllByMerchantOperatingCityId
-    fetchQueryArgs: "(Just [])"
-    returnType: List
-    queryModule: Storage.CachedQueries.RideRelatedNotificationConfig
-    filterDimensions:
-      - timeDiffEvent
-
 MerchantPushNotification:
   tableName: merchant_push_notification
   derives: "Generic,Show,ToJSON,FromJSON,Eq"
@@ -658,12 +643,6 @@ MerchantPushNotification:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, key, tripCategory]
-
-  configPilot:
-    configType: MerchantPushNotification
-    fetchQuery: findAllByMerchantOpCityId
-    returnType: List
-    queryModule: Storage.Queries.MerchantPushNotification
 
 PayoutConfig:
   tableName : payout_config
@@ -740,17 +719,6 @@ PayoutConfig:
   beamInstance:
     - MakeTableInstances
     - Custom Domain.Types.UtilsTH.mkCacParseInstance
-
-  configPilot:
-    configType: PayoutConfig
-    fetchQuery: findAllByMerchantOpCityId
-    fetchQueryArgs: "(Just [])"
-    returnType: List
-    queryModule: Storage.CachedQueries.Merchant.PayoutConfig
-    filterDimensions:
-      - vehicleCategory
-      - isPayoutEnabled
-      - payoutEntity
 
   types:
     PayoutEntity:

@@ -91,6 +91,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as QBV
@@ -133,8 +134,8 @@ mkDocumentVerificationConfigAPIEntity ::
   Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig ->
   Environment.Flow API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity
 mkDocumentVerificationConfigAPIEntity language verificationProvidersPriorityList Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..} = do
-  mbTitle <- MTQuery.findByErrorAndLanguage (show documentType <> "_Title") language
-  mbDescription <- MTQuery.findByErrorAndLanguage (show documentType <> "_Description") language
+  mbTitle <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOperatingCityId.getId, messageKey = show documentType <> "_Title", language = Just language}) (Just (MTQuery.findByErrorAndLanguage (show documentType <> "_Title") language))
+  mbDescription <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOperatingCityId.getId, messageKey = show documentType <> "_Description", language = Just language}) (Just (MTQuery.findByErrorAndLanguage (show documentType <> "_Description") language))
   return $
     API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity
       { title = maybe title (.message) mbTitle,
@@ -449,10 +450,10 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
       then do
         restrictionMessageItem <-
           if not isACAllowedForDriver
-            then MTQuery.findByErrorAndLanguage "AC_RESTRICTION_MESSAGE" personLanguage
+            then getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = "AC_RESTRICTION_MESSAGE", language = Just personLanguage}) (Just (MTQuery.findByErrorAndLanguage "AC_RESTRICTION_MESSAGE" personLanguage))
             else
               if isACWorkingForVehicle
-                then MTQuery.findByErrorAndLanguage "AC_WORKING_MESSAGE" personLanguage
+                then getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = "AC_WORKING_MESSAGE", language = Just personLanguage}) (Just (MTQuery.findByErrorAndLanguage "AC_WORKING_MESSAGE" personLanguage))
                 else return Nothing
         return $
           Just $

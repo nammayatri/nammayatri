@@ -48,11 +48,3 @@ Exophone:
 
   extraOperations:
     - EXTRA_QUERY_FILE
-
-  configPilot:
-    configType: Exophone
-    fetchQuery: findAllByMerchantOpCityId
-    returnType: List
-    queryModule: Storage.CachedQueries.Exophone
-    filterDimensions:
-      - callService

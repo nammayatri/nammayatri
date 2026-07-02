@@ -27,6 +27,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 
 createCandidate ::
@@ -68,10 +69,10 @@ runWithServiceConfig ::
   Id DMOC.MerchantOperatingCity ->
   req ->
   m resp
-runWithServiceConfig func _merchantId merchantOpCityId req = do
+runWithServiceConfig func merchantId merchantOpCityId req = do
   orgBackgroundVerificationsConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   orgBackgroundVerificationServiceConfig <-
-    CQMSC.findByServiceAndCity (DMSC.BackgroundVerificationService orgBackgroundVerificationsConfig.backgroundVerification) merchantOpCityId
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Just merchantId.getId, serviceName = Just (DMSC.BackgroundVerificationService orgBackgroundVerificationsConfig.backgroundVerification)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.BackgroundVerificationService orgBackgroundVerificationsConfig.backgroundVerification) merchantOpCityId))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "BackgroundVerifications" (show $ orgBackgroundVerificationsConfig.backgroundVerification))
   case orgBackgroundVerificationServiceConfig.serviceConfig of
     DMSC.BackgroundVerificationServiceConfig msc -> func msc req

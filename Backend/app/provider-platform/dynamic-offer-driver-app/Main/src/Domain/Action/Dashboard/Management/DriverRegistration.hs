@@ -127,11 +127,14 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BusinessLicense as QBL
@@ -144,7 +147,6 @@ import qualified Storage.Queries.DriverPanCard as QPan
 import qualified Storage.Queries.DriverRCAssociation as QRCAssoc
 import qualified Storage.Queries.DriverSSN as QSSN
 import qualified Storage.Queries.DriverUdyam as QUdyam
-import qualified Storage.Queries.FleetOwnerDocumentVerificationConfig as QFODVC
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
 import qualified Storage.Queries.HyperVergeVerificationExtra as HVQuery
@@ -727,7 +729,7 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
       -- isMandatory → verified, isMandatoryForEnabling → enabled (deliberately split).
       case person.role of
         role | DCommon.checkFleetOwnerRole role -> do
-          mbCfg <- QFODVC.findByPrimaryKey (mapDocumentType docType) merchantOpCityId person.role
+          mbCfg <- getOneConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just (mapDocumentType docType), role = Just person.role}) (Just (CQFODVC.findAllByMerchantOpCityId merchantOpCityId (Just [])))
           let blocksVerified = maybe False (.isMandatory) mbCfg
               blocksEnabled = maybe False (\c -> fromMaybe c.isMandatory c.isMandatoryForEnabling) mbCfg
           if enableBotFlow
@@ -2055,12 +2057,12 @@ replacePlaceholders translatedDocType reason template = T.replace "{#docType#}" 
 translateDocumentType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Lang.Language -> Text -> m Text
 translateDocumentType language docType = do
   let translationKey = "DOC_TYPE_" <> docType
-  mbTranslation <- QTranslations.findByErrorAndLanguage translationKey language
+  mbTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Nothing, messageKey = translationKey, language = Just language}) (Just (QTranslations.findByErrorAndLanguage translationKey language))
   case mbTranslation of
     Just trans -> pure trans.message
     Nothing
       | language /= Lang.ENGLISH -> do
-        mbEnglishTranslation <- QTranslations.findByErrorAndLanguage translationKey Lang.ENGLISH
+        mbEnglishTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Nothing, messageKey = translationKey, language = Just Lang.ENGLISH}) (Just (QTranslations.findByErrorAndLanguage translationKey Lang.ENGLISH))
         pure $ maybe docType (.message) mbEnglishTranslation
       | otherwise -> pure docType
 
@@ -2083,9 +2085,9 @@ fetchSmsTemplates merchantOpCityId language = do
     Nothing -> fetchFallbackTemplates merchantOpCityId language
 
 fetchFallbackTemplates :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Lang.Language -> m (Text, Text)
-fetchFallbackTemplates _merchantOpCityId language = do
-  mbTitleTranslation <- QTranslations.findByErrorAndLanguage "DOCUMENT_INVALID_TITLE" language
-  mbBodyTranslation <- QTranslations.findByErrorAndLanguage "DOCUMENT_INVALID_BODY" language
+fetchFallbackTemplates merchantOpCityId language = do
+  mbTitleTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = "DOCUMENT_INVALID_TITLE", language = Just language}) (Just (QTranslations.findByErrorAndLanguage "DOCUMENT_INVALID_TITLE" language))
+  mbBodyTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = "DOCUMENT_INVALID_BODY", language = Just language}) (Just (QTranslations.findByErrorAndLanguage "DOCUMENT_INVALID_BODY" language))
   case (mbTitleTranslation, mbBodyTranslation) of
     (Just titleTrans, Just bodyTrans) -> pure (titleTrans.message, bodyTrans.message)
     _ -> pure ("", "")

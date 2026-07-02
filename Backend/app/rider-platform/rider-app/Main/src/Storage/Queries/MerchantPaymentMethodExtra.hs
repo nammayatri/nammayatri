@@ -5,7 +5,7 @@ import Domain.Types.MerchantPaymentMethod
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantPaymentMethod as BeamMPM
 import Storage.Queries.OrphanInstances.MerchantPaymentMethod ()
@@ -16,3 +16,17 @@ findAllByMerchantOperatingCityId (Id merchantOperatingCityId) = findAllWithOptio
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantPaymentMethod -> m (Maybe MerchantPaymentMethod)
 findById (Id merchantPaymentMethodId) = findOneWithKV [Se.Is BeamMPM.id $ Se.Eq merchantPaymentMethodId]
+
+updateByPrimaryKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => MerchantPaymentMethod -> m ()
+updateByPrimaryKey MerchantPaymentMethod {..} = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamMPM.collectedBy collectedBy,
+      Se.Set BeamMPM.merchantId (getId merchantId),
+      Se.Set BeamMPM.merchantOperatingCityId (getId merchantOperatingCityId),
+      Se.Set BeamMPM.paymentInstrument paymentInstrument,
+      Se.Set BeamMPM.paymentType paymentType,
+      Se.Set BeamMPM.priority priority,
+      Se.Set BeamMPM.updatedAt now
+    ]
+    [Se.Is BeamMPM.id $ Se.Eq (getId id)]

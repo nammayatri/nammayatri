@@ -222,7 +222,11 @@ import qualified Storage.CachedQueries.PlanTranslation as SCQPT
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.DriverPoolConfig (DriverPoolConfigDimensions (..))
+import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
+import Storage.ConfigPilot.Config.IssueConfig (IssueConfigDimensions (..))
 import Storage.ConfigPilot.Config.LeaderBoardConfigs (LeaderBoardConfigsDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -514,8 +518,8 @@ getMerchantConfigDriverPool merchantShortId opCity reqTripDistance reqTripDistan
         distanceToMeters <$> (Distance <$> reqTripDistanceValue <*> reqDistanceUnit)
           <|> reqTripDistance
   configs <- case mbTripDistance of
-    Nothing -> CQDPC.findAllByMerchantOpCityId merchantOpCityId (Just []) Nothing
-    Just tripDistance -> maybeToList <$> CQDPC.findByMerchantOpCityIdAndTripDistance merchantOpCityId tripDistance (Just []) Nothing
+    Nothing -> getConfig (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Nothing, area = Nothing, vehicleVariant = Nothing, tripCategory = Nothing}) (Just (CQDPC.findAllByMerchantOpCityId merchantOpCityId (Just []) Nothing))
+    Just tripDistance -> getConfig (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Just tripDistance, area = Nothing, vehicleVariant = Nothing, tripCategory = Nothing}) (Just (maybeToList <$> CQDPC.findByMerchantOpCityIdAndTripDistance merchantOpCityId tripDistance (Just []) Nothing))
   pure $ mkDriverPoolConfigRes <$> configs
 
 mkDriverPoolConfigRes :: DDPC.DriverPoolConfig -> Common.DriverPoolConfigItem
@@ -538,7 +542,7 @@ getMerchantConfigDriverPoolList :: ShortId DM.Merchant -> Context.City -> Flow C
 getMerchantConfigDriverPoolList merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  configs <- CQDPC.findAllByMerchantOpCityId merchantOpCityId (Just []) Nothing
+  configs <- getConfig (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Nothing, area = Nothing, vehicleVariant = Nothing, tripCategory = Nothing}) (Just (CQDPC.findAllByMerchantOpCityId merchantOpCityId (Just []) Nothing))
   pure $ mkDriverPoolConfigListItem <$> configs
 
 mkDriverPoolConfigListItem :: DDPC.DriverPoolConfig -> Common.DriverPoolConfigListItem
@@ -587,7 +591,7 @@ postMerchantConfigDriverPoolUpdate merchantShortId opCity reqTripDistanceValue r
   let tripDistance = maybe reqTripDistance distanceToMeters (Distance <$> reqTripDistanceValue <*> reqDistanceUnit)
   let tripCategory = fromMaybe "All" mbTripCategory
   let serviceTier = DVeh.castVariantToServiceTier <$> mbVariant
-  config <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh merchantOpCityId tripDistance serviceTier tripCategory area (Just []) Nothing >>= fromMaybeM (DriverPoolConfigDoesNotExist merchantOpCityId.getId tripDistance)
+  config <- getOneConfig (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Just tripDistance, area = Just area, vehicleVariant = serviceTier, tripCategory = Just tripCategory}) (Just (maybeToList <$> CQDPC.findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh merchantOpCityId tripDistance serviceTier tripCategory area (Just []) Nothing)) >>= fromMaybeM (DriverPoolConfigDoesNotExist merchantOpCityId.getId tripDistance)
   let updConfig =
         config{minRadiusOfSearch = mkDistanceField config.minRadiusOfSearch req.minRadiusOfSearchWithUnit req.minRadiusOfSearch,
                maxRadiusOfSearch = mkDistanceField config.maxRadiusOfSearch req.maxRadiusOfSearchWithUnit req.maxRadiusOfSearch,
@@ -639,7 +643,7 @@ postMerchantConfigDriverPoolCreate merchantShortId opCity reqTripDistanceValue r
   let tripDistance = maybe reqTripDistance distanceToMeters (Distance <$> reqTripDistanceValue <*> reqDistanceUnit)
   let tripCategory = fromMaybe "All" mbTripCategory
   let serviceTier = DVeh.castVariantToServiceTier <$> mbVariant
-  mbConfig <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh merchantOpCityId tripDistance serviceTier tripCategory area (Just []) Nothing
+  mbConfig <- getOneConfig (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Just tripDistance, area = Just area, vehicleVariant = serviceTier, tripCategory = Just tripCategory}) (Just (maybeToList <$> CQDPC.findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh merchantOpCityId tripDistance serviceTier tripCategory area (Just []) Nothing))
   whenJust mbConfig $ \_ -> throwError (DriverPoolConfigAlreadyExists merchantOpCityId.getId tripDistance)
   newConfig <- buildDriverPoolConfig merchant.id merchantOpCityId tripDistance distanceUnit area serviceTier tripCategory req
   _ <- CQDPC.create newConfig
@@ -813,14 +817,9 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
     upsertDriverPoolConfig :: Id DMOC.MerchantOperatingCity -> DDPC.DriverPoolConfig -> Flow ()
     upsertDriverPoolConfig merchantOpCityId config = do
       mbExistingConfig <-
-        CQDPC.findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh
-          merchantOpCityId
-          config.tripDistance
-          config.vehicleVariant
-          config.tripCategory
-          config.area
-          (Just [])
-          Nothing
+        getOneConfig
+          (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Just config.tripDistance, area = Just config.area, vehicleVariant = config.vehicleVariant, tripCategory = Just config.tripCategory})
+          (Just (maybeToList <$> CQDPC.findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh merchantOpCityId config.tripDistance config.vehicleVariant config.tripCategory config.area (Just []) Nothing))
       case mbExistingConfig of
         Just existingConfig -> do
           let updatedConfig =
@@ -1348,7 +1347,7 @@ postMerchantServiceUsageConfigMapsUpdate merchantShortId opCity req = do
   forM_ Maps.availableMapsServices $ \service -> do
     when (Common.mapsServiceUsedInReq req service) $ do
       void $
-        CQMSC.findByServiceAndCity (DMSC.MapsService service) merchantOpCityId
+        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.MapsService service)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.MapsService service) merchantOpCityId))
           >>= fromMaybeM (InvalidRequest $ "Merchant config for maps service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
@@ -1381,7 +1380,7 @@ postMerchantServiceUsageConfigSmsUpdate merchantShortId opCity req = do
   forM_ SMS.availableSmsServices $ \service -> do
     when (Common.smsServiceUsedInReq req service) $ do
       void $
-        CQMSC.findByServiceAndCity (DMSC.SmsService service) merchantOpCityId
+        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.SmsService service)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.SmsService service) merchantOpCityId))
           >>= fromMaybeM (InvalidRequest $ "Merchant config for sms service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
@@ -3484,9 +3483,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- driver pool config
   mbDriverPoolConfigs <-
-    CQDPC.findAllByMerchantOpCityId newMerchantOperatingCityId (Just []) Nothing >>= \case
+    getConfig (DriverPoolConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, tripDistance = Nothing, area = Nothing, vehicleVariant = Nothing, tripCategory = Nothing}) (Just (CQDPC.findAllByMerchantOpCityId newMerchantOperatingCityId (Just []) Nothing)) >>= \case
       [] -> do
-        driverPoolConfigs <- CQDPC.findAllByMerchantOpCityId baseOperatingCityId (Just []) Nothing
+        driverPoolConfigs <- getConfig (DriverPoolConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, tripDistance = Nothing, area = Nothing, vehicleVariant = Nothing, tripCategory = Nothing}) (Just (CQDPC.findAllByMerchantOpCityId baseOperatingCityId (Just []) Nothing))
         newDriverPoolConfigs <- mapM (buildPoolConfig newMerchantId newMerchantOperatingCityId now) driverPoolConfigs
         return $ Just newDriverPoolConfigs
       _ -> return Nothing
@@ -3621,17 +3620,17 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- call ride exophone
   mbExophone <-
-    CQExophone.findAllCallExophoneByMerchantOpCityId newMerchantOperatingCityId >>= \case
+    getConfig (ExophoneDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing, exophoneType = Just DExophone.CALL_RIDE}) (Just (CQExophone.findAllCallExophoneByMerchantOpCityId newMerchantOperatingCityId)) >>= \case
       [] -> do
-        exophones <- CQExophone.findAllCallExophoneByMerchantOpCityId baseOperatingCityId
+        exophones <- getConfig (ExophoneDimensions {merchantOperatingCityId = baseOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing, exophoneType = Just DExophone.CALL_RIDE}) (Just (CQExophone.findAllCallExophoneByMerchantOpCityId baseOperatingCityId))
         return $ Just exophones
       _ -> return Nothing
 
   -- issue config
   mbIssueConfig <-
-    CQIssueConfig.findByMerchantOpCityId (cast newMerchantOperatingCityId) ICommon.DRIVER >>= \case
+    getConfig (IssueConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, identifier = show ICommon.DRIVER}) (Just (CQIssueConfig.findByMerchantOpCityId (cast newMerchantOperatingCityId) ICommon.DRIVER)) >>= \case
       Nothing -> do
-        issueConfig <- CQIssueConfig.findByMerchantOpCityId (cast baseOperatingCityId) ICommon.DRIVER >>= fromMaybeM (InvalidRequest "Issue Config not found")
+        issueConfig <- getConfig (IssueConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, identifier = show ICommon.DRIVER}) (Just (CQIssueConfig.findByMerchantOpCityId (cast baseOperatingCityId) ICommon.DRIVER)) >>= fromMaybeM (InvalidRequest "Issue Config not found")
         newIssueConfig <- buildIssueConfig newMerchantId newMerchantOperatingCityId now issueConfig
         return $ Just newIssueConfig
       _ -> return Nothing
@@ -3762,7 +3761,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         CPC.clearCacheById newMerchantOperatingCityId
         CQTC.clearCache newMerchantOperatingCityId
         CQIssueConfig.clearIssueConfigCache (cast newMerchantOperatingCityId) ICommon.DRIVER
-        exoPhone <- CQExophone.findAllCallExophoneByMerchantOpCityId newMerchantOperatingCityId
+        exoPhone <- getConfig (ExophoneDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing, exophoneType = Just DExophone.CALL_RIDE}) (Just (CQExophone.findAllCallExophoneByMerchantOpCityId newMerchantOperatingCityId))
         CQExophone.clearCache newMerchantOperatingCityId exoPhone
         whenJust mbAddCityReq $ \_ -> Hedis.del $ cacheRegistryKey <> lookupRequestToRedisKey lookupReq
     )

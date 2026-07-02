@@ -53,7 +53,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation as AggCommSched
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
@@ -66,6 +66,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as FODVC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverGstin as QGST
@@ -242,7 +243,7 @@ enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOpe
             Just FOI.BUSINESS_FLEET -> DP.FLEET_BUSINESS
             _ -> DP.FLEET_OWNER
 
-      mandatoryConfigs <- FODVC.findAllMandatoryByMerchantOpCityIdAndRole merchantOperatingCityId role (Just [])
+      mandatoryConfigs <- filter (.isMandatory) <$> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, documentType = Nothing, role = Just role}) (Just (FODVC.findAllMandatoryByMerchantOpCityIdAndRole merchantOperatingCityId role (Just [])))
 
       let isAadhaarMandatory = any (\cfg -> cfg.documentType == DVC.AadhaarCard) mandatoryConfigs
       let isPanMandatory = any (\cfg -> cfg.documentType == DVC.PanCard) mandatoryConfigs

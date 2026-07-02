@@ -67,7 +67,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as ACOverlay
 import SharedLogic.Analytics as Analytics
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
@@ -78,6 +78,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverGstin as DGQuery
@@ -100,7 +101,6 @@ import Tools.Error
 import qualified Tools.Ticket as TT
 import qualified Tools.Verification as Verification
 import qualified Tools.Whatsapp as Whatsapp
-import Utils.Common.Cac.KeyNameConstants
 
 defaultDriverDocumentTypes :: [DVC.DocumentType]
 defaultDriverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto, DVC.UploadProfile, DVC.SocialSecurityNumber, DVC.BackgroundVerification, DVC.GSTCertificate, DVC.BusinessLicense, DVC.LocalResidenceProof, DVC.PoliceVerificationCertificate, DVC.DrivingSchoolCertificate, DVC.TrainingForm, DVC.DriverInspectionHub, DVC.FinnishIDResidencePermit, DVC.TaxiDriverPermit]
@@ -194,7 +194,7 @@ enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verified =
 disableDriverWithAnalytics :: Id DMOC.MerchantOperatingCity -> Id Person -> Maybe Bool -> Flow ()
 disableDriverWithAnalytics merchantOpCityId personId mbVerified = do
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig personId False mbVerified
 
 checkAndUpdateAirConditioned :: Bool -> Bool -> Id Person -> Id DMOC.MerchantOperatingCity -> [DVST.VehicleServiceTier] -> Maybe Text -> Bool -> Flow ()
@@ -726,8 +726,8 @@ filterInCompatibleFlows makeSelfieAadhaarPanMandatory = filter (\doc -> not (fro
 
 mkFleetOwnerDocumentVerificationConfigAPIEntity :: Language -> Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity
 mkFleetOwnerDocumentVerificationConfigAPIEntity language Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig {..} = do
-  mbTitle <- MTQuery.findByErrorAndLanguage (show documentType <> "_Title") language
-  mbDescription <- MTQuery.findByErrorAndLanguage (show documentType <> "_Description") language
+  mbTitle <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOperatingCityId.getId, messageKey = show documentType <> "_Title", language = Just language}) (Just (MTQuery.findByErrorAndLanguage (show documentType <> "_Title") language))
+  mbDescription <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOperatingCityId.getId, messageKey = show documentType <> "_Description", language = Just language}) (Just (MTQuery.findByErrorAndLanguage (show documentType <> "_Description") language))
   return $
     API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity
       { title = maybe title (.message) mbTitle,

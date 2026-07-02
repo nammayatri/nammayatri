@@ -75,7 +75,7 @@ import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
-import Lib.ConfigPilot.Interface.Types (getConfig)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.MerchantPaymentMethod
 import qualified SharedLogic.Payment as SPayment
@@ -89,6 +89,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.ValueAddNP as CQVNP
+import Storage.ConfigPilot.Config.MerchantPaymentMethod (MerchantPaymentMethodDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverOffer as QDOffer
@@ -290,7 +291,7 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
       SPayment.updateDefaultPersonPaymentMethodId person pmId -- Make payment method as default payment method for customer
     SPayment.capturePendingPaymentIfExists person merchantOperatingCityId
 
-  merchantPaymentMethod <- maybe (return Nothing) (QMPM.findById . Id) req.paymentMethodId
+  merchantPaymentMethod <- maybe (return Nothing) (\pmId -> getOneConfig (MerchantPaymentMethodDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, configId = Just pmId}) (Just (maybeToList <$> QMPM.findById (Id pmId)))) req.paymentMethodId
   let paymentMethodInfo = mkPaymentMethodInfo <$> merchantPaymentMethod
   when (maybe False Trip.isDeliveryTrip (DEstimate.tripCategory estimate)) $ do
     validDeliveryDetails <- deliveryDetails & fromMaybeM (InvalidRequest "Delivery details not found for trip category Delivery")

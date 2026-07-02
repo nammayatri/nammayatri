@@ -1270,7 +1270,7 @@ FleetOwnerDocumentVerificationConfig:
     fetchQueryArgs: "(Just [])"
     returnType: List
     queryModule: Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
-    filterDimensions: [documentType]
+    filterDimensions: [documentType, role]
 
 AadhaarCard:
   tableName: aadhaar_card

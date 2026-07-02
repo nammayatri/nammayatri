@@ -35,6 +35,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id (Id (..), ShortId (..))
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as PgDom
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance.Settlement.Ingestion (ingestPaymentSettlementReport)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPO
@@ -45,6 +46,7 @@ import SharedLogic.Allocator (AllocatorJobType (..), SettlementReportIngestionJo
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.SubscriptionPurchase as QSP
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 
 -- | Lock TTL reduced from 3600s to 600s (10 minutes) to avoid long lock holds
 lockTTLSeconds :: Int
@@ -156,7 +158,7 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
     getSettlementConfigs _mId mOpCityId = do
       let allSettlementServices = [minBound .. maxBound] :: [SettlementService]
       configs <- forM allSettlementServices $ \service -> do
-        mbConfig <- CQMSC.findByServiceAndCity (DMSC.SettlementService service) mOpCityId
+        mbConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.SettlementService service)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.SettlementService service) mOpCityId))
         pure $ case mbConfig of
           Just cfg -> case cfg.serviceConfig of
             DMSC.SettlementServiceConfig settlementCfg -> Just settlementCfg
@@ -170,7 +172,7 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
       DMSC.ServiceName ->
       m (Maybe JuspayOrderStatusConfig)
     getJuspayOrderStatusConfig mOpCityId svcName = do
-      mbCfg <- CQMSC.findByServiceAndCity svcName mOpCityId
+      mbCfg <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mOpCityId.getId, merchantId = Nothing, serviceName = Just svcName}) (Just (maybeToList <$> CQMSC.findByServiceAndCity svcName mOpCityId))
       case mbCfg >>= extractPaymentServiceConfig . (.serviceConfig) of
         Just (Payment.JuspayConfig juspayCfg) ->
           pure . Just $

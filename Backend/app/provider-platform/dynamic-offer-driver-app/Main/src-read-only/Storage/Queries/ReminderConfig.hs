@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.ReminderConfig.ReminderConfig]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.ReminderConfig.ReminderConfig])
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]]
 
 findByMerchantOpCityIdAndDocumentType ::
@@ -37,6 +37,22 @@ findByMerchantOpCityIdAndDocumentType merchantOperatingCityId documentType = do
           Se.Is Beam.documentType $ Se.Eq documentType
         ]
     ]
+
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ReminderConfig.ReminderConfig -> m ())
+updateByPrimaryKey (Domain.Types.ReminderConfig.ReminderConfig {..}) = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.daysThreshold daysThreshold,
+      Se.Set Beam.enabled enabled,
+      Se.Set Beam.isMandatory isMandatory,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.reminderIntervals reminderIntervals,
+      Se.Set Beam.reminderOnRideRescheduleIntervalSeconds reminderOnRideRescheduleIntervalSeconds,
+      Se.Set Beam.reminderRescheduleIntervalSeconds reminderRescheduleIntervalSeconds,
+      Se.Set Beam.ridesThreshold ridesThreshold,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.And [Se.Is Beam.documentType $ Se.Eq documentType, Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]]
 
 instance FromTType' Beam.ReminderConfig Domain.Types.ReminderConfig.ReminderConfig where
   fromTType' (Beam.ReminderConfigT {..}) = do

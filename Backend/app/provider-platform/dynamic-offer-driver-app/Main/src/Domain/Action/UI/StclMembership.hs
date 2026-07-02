@@ -40,6 +40,7 @@ import qualified SharedLogic.Payment
 import Storage.Beam.Payment ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.StclMembership as QStclMembership
@@ -106,7 +107,7 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
 
   -- Fetch gatewayReferenceId from merchant service config
   mbGatewayReferenceId <- do
-    mbServiceConfig <- CQMSC.findByServiceAndCity (DMSC.MembershipPaymentService PaymentService.Juspay) merchantOperatingCityId
+    mbServiceConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.MembershipPaymentService PaymentService.Juspay)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.MembershipPaymentService PaymentService.Juspay) merchantOperatingCityId))
     case mbServiceConfig of
       Just serviceConfig -> case serviceConfig.serviceConfig of
         DMSC.MembershipPaymentServiceConfig paymentServiceConfig ->
@@ -270,7 +271,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
     decryptedMobile <- decrypt mbMobileNumber
 
     mbGatewayReferenceId <- do
-      mbServiceConfig <- CQMSC.findByServiceAndCity (DMSC.MembershipPaymentService PaymentService.Juspay) merchantOperatingCityId
+      mbServiceConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.MembershipPaymentService PaymentService.Juspay)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.MembershipPaymentService PaymentService.Juspay) merchantOperatingCityId))
       case mbServiceConfig of
         Just serviceConfig -> case serviceConfig.serviceConfig of
           DMSC.MembershipPaymentServiceConfig paymentServiceConfig ->
