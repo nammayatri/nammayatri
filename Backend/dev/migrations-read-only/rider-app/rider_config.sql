@@ -766,3 +766,10 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN non_allowed_override_fleet_no_serv
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN immediate_capture_rider_cancellation_fee boolean ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN immediate_capture_driver_cancellation_fee boolean ;

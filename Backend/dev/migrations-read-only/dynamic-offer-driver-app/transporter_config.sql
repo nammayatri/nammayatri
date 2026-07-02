@@ -989,3 +989,10 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_phone_numb
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_phone_number_count_window1 json;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_phone_number_count_threshold2 integer;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_phone_number_count_window2 json;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN valid_cancellation_penalty_reasons text[] ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_fee_payment_method_exceptions text[] ;

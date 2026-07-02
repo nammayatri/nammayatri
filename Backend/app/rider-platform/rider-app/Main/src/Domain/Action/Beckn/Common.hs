@@ -1382,10 +1382,18 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
                   _ -> return ()
                 syncCancellationLedger CallBPPInternal.OverdueCancellationLedger
             else do
-              let scheduleAfter = riderConfig.cancellationPaymentDelay
-                  cancelExecutePaymentIntentJobData = CancelExecutePaymentIntentJobData {bookingId = booking.id, personId = booking.riderId, cancellationAmount = fee, cancellationTax = cancellationTax, rideId = ride.id}
-              logDebug $ "Scheduling cancel execute payment intent job for order: " <> show scheduleAfter
-              createJobIn @_ @'CancelExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (cancelExecutePaymentIntentJobData :: CancelExecutePaymentIntentJobData)
+              -- Manual due: do NOT capture. Cancel/void the ride payment, create a pending
+              -- cancellation due and sync it to the BPP; the rider clears it before the next ride.
+              logDebug $ "[CancellationSettlement] immediateCharge=false, creating manual cancellation due for rideId=" <> ride.id.getId
+              if ride.onlinePayment
+                then void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
+                else void $ RidePaymentFinance.voidRidePaymentEntriesAndInvoice ride.id.getId
+              dueLedgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationBase cancellationTax
+              case dueLedgerResp of
+                Right (_mbInvoiceId, pendingEntryIds) ->
+                  RidePaymentFinance.markEntriesAsDue pendingEntryIds
+                _ -> return ()
+              syncCancellationLedger CallBPPInternal.OverdueCancellationLedger
         (_, Just ride) -> do
           when ride.onlinePayment $ do
             logInfo $ "Cancel payment intent due to rider configs: rideId: " <> ride.id.getId
@@ -1412,6 +1420,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
           let callAtemptByDriver = isJust mbCallStatus
               currentTime = floor $ utcTimeToPOSIXSeconds now
               rideCreatedTime = floor $ utcTimeToPOSIXSeconds ride.createdAt
+              bookingCreatedTime = floor $ utcTimeToPOSIXSeconds booking.createdAt
               driverArrivalTime = floor . utcTimeToPOSIXSeconds <$> ride.driverArrivalTime
               tagData =
                 Y.CancelRideTagData
@@ -1421,6 +1430,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
                     callAtemptByDriver,
                     currentTime,
                     rideCreatedTime,
+                    bookingCreatedTime,
                     merchantOperatingCityId = booking.merchantOperatingCityId,
                     driverArrivalTime
                   }
