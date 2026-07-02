@@ -102,15 +102,16 @@ getConfigImpl _dimensions wrappedConfig logicDomain merchantOpCityId = do
 configPilotInMemKey :: ConfigDimensions a => a -> [Text]
 configPilotInMemKey dims = ["ConfigPilot", show (getConfigType dims), dimensionsCacheKey dims]
 
--- | Invalidate the in-mem cache for a config type across all pods.
--- Sets a Redis key that the background cleanup thread reads to clear matching in-mem entries.
+-- | Invalidate both cache layers for a config type across all pods: the in-mem
+-- L1 (shudhi sidecar + Redis cleanup flag) and the Redis L2 hash bucket.
 invalidateConfigInMem :: (MonadFlow m, CacheFlow m r, CoreMetrics m, HasInMemEnv r) => ConfigType -> m ()
 invalidateConfigInMem cfgType = do
   let keyPrefix :: Text = "ConfigPilot:" <> show cfgType
   now <- getCurrentTime
   let val = A.object ["forceCleanupTimestamp" .= timeOfDayFromUTCTime now, "forceCleanupKeyPrefix" .= keyPrefix]
   Hedis.setExp "inmem:force:cleanup:timeofday" val 600
-  IM.refreshInMem keyPrefix -- This one does clear using the shudhi sidecar, above is a fallback for thread running in this project for cleanup after TTL
+  IM.refreshInMem keyPrefix -- L1: clear in-mem across pods via the shudhi sidecar (the Redis flag above is the TTL-based fallback)
+  Hedis.delRedisCacheBucket keyPrefix -- L2: drop the cross-pod Redis hash bucket for this config type in one DEL
   where
     timeOfDayFromUTCTime t =
       let dayTime = utctDayTime t
