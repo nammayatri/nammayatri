@@ -36,7 +36,7 @@ IdfyVerification:
     documentImageId2: Maybe (Id Image)
     driverId: Id Person
     requestId: Text
-    docType: DocumentType
+    docType: Text
     vehicleCategory: Maybe VehicleCategory
     status: Text
     issueDateOnDoc: Maybe UTCTime
@@ -56,6 +56,8 @@ IdfyVerification:
     id: PrimaryKey
     driverId: SecondaryKey
     requestId: SecondaryKey
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -71,6 +73,13 @@ IdfyVerification:
       kvFunction: findAllWithOptionsKV
       where:
         and: [driverId, docType]
+    findLatestByDocTypeAndDocumentImageId1:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [driverId, docType, documentImageId1]
+      orderBy:
+        field: createdAt
+        order: desc
     findByRequestId:
       kvFunction: findOneWithKV
       where: requestId

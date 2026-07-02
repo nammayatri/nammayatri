@@ -42,6 +42,7 @@ import Domain.Types.DocumentVerificationConfig (DocumentVerificationConfig)
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverPanCard as DPan
+import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant as DM
@@ -216,7 +217,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
               logInfo ("extractedNameOnCard: " <> show extractedNameOnCard)
               logInfo ("panName: " <> show panName)
               -- Reuse the category-aware documentVerificationConfig resolved in callIdfy (was a category-agnostic re-fetch).
-              fmOutcome <- runDocFaceMatch person documentVerificationConfig (Id req.imageId) (Just image1)
+              fmOutcome <- runDocFaceMatch person documentVerificationConfig (Id req.imageId) (Just image1) (Just req.panNumber)
               when (fmOutcome == FMFail) $ throwError FaceMatchFailed
               when (verifyBy /= DPan.FRONTEND_SDK) $ do
                 case (panName, extractedNameOnCard) of
@@ -236,14 +237,16 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
                   let parsedDob = extractedPan.date_of_birth >>= DVRC.parseDateTime
                   verifyPanFlow person merchantOpCityId documentVerificationConfig (fromMaybe "" extractedPanNo) (fromMaybe now parsedDob) (Id req.imageId) extractedNameOnCard
 
-              pure extractedPan
+              pure (extractedPan, fmOutcome)
             Nothing -> throwImageError (Id req.imageId) ImageExtractionFailed
 
       resp <- Verification.extractPanImage person.merchantId merchantOpCityId extractReq
-      extractedPan <- validateExtractedPan resp
+      (extractedPan, fmOutcome) <- validateExtractedPan resp
       when (isNameCompareRequired transporterConfig verifyBy) $
         validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
-      panCardDetails <- buildPanCard person extractedPan.pan_type extractedPan.name_on_card extractedPan.date_of_birth (Just verifyBy) (Id req.imageId) req.panNumber (if not documentVerificationConfig.doStrictVerifcation then Just Documents.VALID else Nothing)
+      -- Non-strict path writes the final status here (no webhook): face match deferred -> PENDING until the selfie arrives.
+      let nonStrictStatus = if fmOutcome == FMDeferred then Documents.PENDING else Documents.VALID
+      panCardDetails <- buildPanCard person extractedPan.pan_type extractedPan.name_on_card extractedPan.date_of_birth (Just verifyBy) (Id req.imageId) req.panNumber (if not documentVerificationConfig.doStrictVerifcation then Just nonStrictStatus else Nothing)
       DPQuery.upsertPanRecord panCardDetails mdriverPanInformation
       pure Success
 
@@ -317,7 +320,15 @@ onVerifyPanHandler person imageId1 imageId2 output = do
       (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
       -- Sticky INVALID: a face-match failure on the document image must not be overturned by a late 3P webhook.
       let docImageInvalid = (image1 >>= (.verificationStatus)) == Just Documents.INVALID
-      when (isvalid == Just True && not docImageInvalid) $ DPQuery.updateVerificationStatus Documents.VALID person.id
+      -- Promote non-terminal images before resolution so MANUAL_VERIFICATION_REQUIRED doesn't read as FMDeferred.
+      forM_ [(image1, Just imageId1), (image2, imageId2)] $ \(mbImg, mbImgId) ->
+        when ((mbImg >>= (.verificationStatus)) `notElem` [Just Documents.VALID, Just Documents.INVALID]) $
+          whenJust mbImgId $ ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard.")
+      when (isvalid == Just True && not docImageInvalid) $ do
+        panConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, documentType = Just DTO.PanCard, vehicleCategory = Just CAR}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId DTO.PanCard CAR Nothing)) >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show DTO.PanCard))
+        -- Record stays PENDING until the face match passes; reuses a recorded result when the match already ran.
+        finalStatus <- resolveFaceMatchVerificationStatus person panConfig imageId1 Nothing (Just details.inputPanNumber)
+        DPQuery.updateVerificationStatus finalStatus person.id
       when (isvalid == Just False) $ DPQuery.updateVerificationStatus Documents.INVALID person.id
       case person.role of
         role | DCommon.checkFleetOwnerRole role -> do
@@ -325,9 +336,6 @@ onVerifyPanHandler person imageId1 imageId2 output = do
         Person.DRIVER -> do
           DIQuery.updatePanNumber mEncryptedPanNumber person.id
         _ -> pure ()
-      forM_ [(image1, Just imageId1), (image2, imageId2)] $ \(mbImg, mbImgId) ->
-        when ((mbImg >>= (.verificationStatus)) `notElem` [Just Documents.VALID, Just Documents.INVALID]) $
-          whenJust mbImgId $ ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard.")
     _ -> pure ()
   materializeTdsRateFor person
 
@@ -374,7 +382,7 @@ mkIdfyVerificationEntity person imageId1 imageId2 driverDateOfBirth dateOfIssue 
         documentNumber = encryptedPan,
         issueDateOnDoc = dateOfIssue,
         driverDateOfBirth = Just driverDateOfBirth,
-        docType = DTO.PanCard,
+        docType = docTypeToText DTO.PanCard,
         status = "pending",
         idfyResponse = Nothing,
         retryCount = Just 0,
@@ -403,7 +411,7 @@ mkIdfyVerificationEntityPanAadhaarLink person imageId1 requestId now encryptedPa
         documentNumber = encryptedPan,
         issueDateOnDoc = Nothing,
         driverDateOfBirth = Nothing,
-        docType = ODC.PanAadhaarLinkage,
+        docType = docTypeToText ODC.PanAadhaarLinkage,
         status = "pending",
         idfyResponse = Nothing,
         retryCount = Just 0,

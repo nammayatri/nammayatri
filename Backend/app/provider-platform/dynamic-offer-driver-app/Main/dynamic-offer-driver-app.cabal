@@ -395,6 +395,7 @@ library
       Domain.Types.Extra.DriverFee
       Domain.Types.Extra.DriverHomeLocation
       Domain.Types.Extra.DriverPlan
+      Domain.Types.Extra.IdfyVerification
       Domain.Types.Extra.Location
       Domain.Types.Extra.MerchantClientConfig
       Domain.Types.Extra.MerchantMessage
