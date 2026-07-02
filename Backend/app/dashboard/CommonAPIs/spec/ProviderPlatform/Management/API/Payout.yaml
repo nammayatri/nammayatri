@@ -8,6 +8,7 @@ imports:
   RefundRegAmountReq: Lib.Payment.API.Payout.Types
   PayoutSuccess: Lib.Payment.API.Payout.Types
   PayoutHistoryRes: Lib.Payment.API.Payout.Types
+  PayoutOrderResp: Lib.Payment.API.Payout.Types
   EntityName: Lib.Payment.Domain.Types.Common
   VehicleCategory: Domain.Types.VehicleCategory
   Driver: Dashboard.Common
@@ -51,6 +52,14 @@ apis:
         to: UTCTime
       response:
         type: PayoutReferralHistoryRes
+
+  - GET:
+      endpoint: /payout/order/{payoutOrderId}
+      auth: ApiAuthV2
+      params:
+        payoutOrderId: Text
+      response:
+        type: PayoutOrderResp
 
   - GET:
       endpoint: /payout/{payoutRequestId}
