@@ -619,27 +619,22 @@ in
                   fi
                   echo "cache-restore: connected to MinIO at $MINIO_ENDPOINT"
 
-                  # ── Find nearest ancestor commit that has a cache in MinIO ──
-                  # Walk the user's git history and pick the first commit with a cache.
-                  # If no ancestor matches, skip and let cabal build from scratch.
-                  FOUND_SHA=""
-                  GIT_SHAS=$(git log --format='%H' -n 50 2>/dev/null || true)
-                  if [ -z "$GIT_SHAS" ]; then
-                    echo "cache-restore: no git history found (ensure .git is synced), skipping"
-                    exit 0
-                  fi
-                  for sha in $GIT_SHAS; do
-                    if mc stat "nycache/haskell-cache/cabal-build/$sha/dist-newstyle.tar.zst" >/dev/null 2>&1; then
-                      FOUND_SHA="$sha"
-                      break
-                    fi
-                  done
-
+                  # ── Pick the commit whose dist-newstyle cache to restore ──
+                  # The dev's Mac (which has .git) computes the single nearest
+                  # 'minio-pushed'-tagged commit and drops it in .ci-cache-sha.
+                  # This lets deploys skip .git entirely — no git history here.
+                  # Empty file (no tagged ancestor) or not-in-MinIO => build from
+                  # scratch.
+                  FOUND_SHA=$(tr -d '[:space:]' < .ci-cache-sha 2>/dev/null || true)
                   if [ -z "$FOUND_SHA" ]; then
-                    echo "cache-restore: no cached ancestor commit found in MinIO (checked last 50), skipping"
+                    echo "cache-restore: no minio-pushed cache commit in .ci-cache-sha, building from scratch"
                     exit 0
                   fi
-                  echo "cache-restore: found cache for ancestor commit $FOUND_SHA"
+                  if ! mc stat "nycache/haskell-cache/cabal-build/$FOUND_SHA/dist-newstyle.tar.zst" >/dev/null 2>&1; then
+                    echo "cache-restore: cache commit $FOUND_SHA not in MinIO, building from scratch"
+                    exit 0
+                  fi
+                  echo "cache-restore: found cache for commit $FOUND_SHA"
 
                   # ── Download and extract ──
                   TMPFILE=$(mktemp /tmp/dist-newstyle-XXXXXX.tar.zst)
