@@ -911,6 +911,7 @@ REMOTE_EXCLUDES = [
     "data", "node_modules", "dist-newstyle",
     "dist", ".direnv", "_build", "result", "result-*",
     ".cabal-dir",
+    ".git",
     "Frontend/android-native", "Frontend/ios",
     "Frontend/build", "Frontend/dist",
 ]
@@ -1387,6 +1388,56 @@ def _ssh_argv(user: str, host: str, port: int, identity: str | None, want_tty: b
     return argv
 
 
+def _compute_cache_commit(project_root: str, max_n: int = 30) -> str:
+    def _git(args, timeout=20):
+        return subprocess.run(
+            ["git", "-C", project_root, *args],
+            capture_output=True, text=True, timeout=timeout,
+        )
+
+    # 1. best-effort fetch (works offline with stale refs; failures are non-fatal)
+    for fetch_args in (
+        ["fetch", "--quiet", "origin",
+         "refs/tags/minio-pushed/*:refs/tags/minio-pushed/*"],
+        ["fetch", "--quiet", "origin", "main"],
+    ):
+        try:
+            _git(fetch_args, timeout=30)
+        except Exception:  # noqa: BLE001
+            pass
+
+    # 2. merge-base with main (fallback HEAD)
+    base = "HEAD"
+    try:
+        mb = _git(["merge-base", "origin/main", "HEAD"], timeout=15)
+        if mb.returncode == 0 and mb.stdout.strip():
+            base = mb.stdout.strip()
+    except Exception:  # noqa: BLE001
+        pass
+
+    # 3. walk back and return the NEAREST commit carrying a minio-pushed tag —
+    #    the single commit whose build cache cache-restore should pull. CI tags a
+    #    commit once its build is pushed to MinIO. If none of the recent ancestors
+    #    is tagged, return "" and cabal builds from scratch.
+    walk = []
+    try:
+        lg = _git(["log", "--format=%H", "-n", str(max_n), base], timeout=15)
+        if lg.returncode == 0:
+            walk = lg.stdout.split()
+    except Exception:  # noqa: BLE001
+        pass
+
+    for sha in walk:
+        try:
+            r = _git(["rev-parse", "-q", "--verify",
+                      f"refs/tags/minio-pushed/{sha}"], timeout=10)
+            if r.returncode == 0:
+                return sha
+        except Exception:  # noqa: BLE001
+            pass
+    return ""
+
+
 def remote_deploy(body: dict) -> dict:
     host = (body.get("host") or "localhost").strip()
     user = (body.get("user") or "").strip()
@@ -1466,14 +1517,34 @@ def remote_deploy(body: dict) -> dict:
         session["running"] = True
         session["buf"].append(f"[deploy] {' '.join(argv)}")
 
-    # After rsync, init a minimal git repo on the remote so Nix copies only
-    # tracked files (much faster than copying the entire untracked directory)
+    # Compute the single MinIO build-cache commit from the dev's LOCAL git (the
+    # Mac has .git; the devbox no longer does): the nearest minio-pushed-tagged
+    # ancestor. cache-restore on the devbox pulls exactly this commit's cache, or
+    # builds from scratch if it's empty / not in MinIO. Dropped as
+    # Backend/.ci-cache-sha in the post-rsync hook below.
+    cache_commit = _compute_cache_commit(str(PROJECT_ROOT))
+    with session["lock"]:
+        if cache_commit:
+            session["buf"].append(f"[deploy] minio cache commit: {cache_commit}")
+        else:
+            session["buf"].append(
+                "[deploy] no minio-pushed cache commit found — "
+                "cabal will build from scratch"
+            )
+
+    # After rsync, (re)create a minimal 1-commit git repo on the remote so Nix
+    # copies only tracked files (much faster than copying the whole tree). Since
+    # .git is no longer rsynced, `rm -rf .git` also reclaims any stale full-history
+    # .git left by earlier deploys. Then drop the single cache commit for
+    # cache-restore to consume (empty file => build from scratch).
     git_init_cmd = (
         f"cd {shlex.quote(remote_dir)} && "
-        f"git init -q && git add -A && "
+        f"rm -rf .git && git init -q && git add -A && "
         f"GIT_AUTHOR_NAME=deploy GIT_AUTHOR_EMAIL=deploy@deploy "
         f"GIT_COMMITTER_NAME=deploy GIT_COMMITTER_EMAIL=deploy@deploy "
-        f"git commit -q -m deploy --allow-empty 2>/dev/null || true"
+        f"git commit -q -m deploy --allow-empty 2>/dev/null || true; "
+        f"mkdir -p Backend && printf '%s' {shlex.quote(cache_commit)} "
+        f"> Backend/.ci-cache-sha"
     )
     ssh_base = [
         "ssh", "-o", "StrictHostKeyChecking=accept-new",
