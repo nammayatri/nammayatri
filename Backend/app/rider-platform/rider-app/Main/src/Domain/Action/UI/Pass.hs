@@ -615,9 +615,10 @@ buildPassAPIEntityFromPurchasedPass ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Maybe Lang.Language ->
   Id.Id DP.Person ->
+  Id.Id DPass.Pass ->
   DPurchasedPass.PurchasedPass ->
   m PassAPI.PassAPIEntity
-buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
+buildPassAPIEntityFromPurchasedPass mbLanguage _personId passId purchasedPass = do
   -- Reconstruct Pass.Benefit from flattened benefitType and benefitValue
   let benefit = case (purchasedPass.benefitType, purchasedPass.benefitValue) of
         (Nothing, _) -> Nothing
@@ -627,7 +628,6 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
         _ -> Nothing
 
   let language = fromMaybe Lang.ENGLISH mbLanguage
-  let passId = Id.cast purchasedPass.id :: Id.Id DPass.Pass
   let moid = purchasedPass.merchantOperatingCityId
   nameTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey passId "name", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey passId "name") language))
   benefitTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey passId "benefitDescription", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey passId "benefitDescription") language))
@@ -643,7 +643,7 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
         Nothing -> purchasedPass.passAmount
   return $
     PassAPI.PassAPIEntity
-      { id = Id.cast purchasedPass.id,
+      { id = passId,
         amount = originalAmount, -- Doing this so that UI it shows the original amount instead of the discounted amount.
         originalAmount = originalAmount,
         savings = Nothing,
@@ -703,7 +703,16 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         Just maxTrips -> Just $ max 0 (maxTrips - fromMaybe 0 purchasedPass.usedTripCount)
         Nothing -> Nothing
 
-  passAPIEntity <- buildPassAPIEntityFromPurchasedPass mbLanguage person.id purchasedPass
+  passes <- CQPass.findAllByPassTypeIdAndEnabled purchasedPass.passTypeId True
+  let findByCode ps = find (\p -> p.code == purchasedPass.passCode) ps
+  sourcePassId <- case findByCode passes of
+    Just p -> pure p.id
+    Nothing -> do
+      disabledPasses <- CQPass.findAllByPassTypeIdAndEnabled purchasedPass.passTypeId False
+      case findByCode disabledPasses of
+        Just p -> pure p.id
+        Nothing -> throwError $ PassNotFound $ "passTypeId=" <> purchasedPass.passTypeId.getId <> " code=" <> purchasedPass.passCode
+  passAPIEntity <- buildPassAPIEntityFromPurchasedPass mbLanguage person.id sourcePassId purchasedPass
   let passDetailsEntity =
         PassAPI.PassDetailsAPIEntity
           { category = buildPassCategoryAPIEntity passCategory,
@@ -713,7 +722,6 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
 
   let daysToExpire = fromIntegral $ DT.diffDays purchasedPass.endDate today
 
-  passes <- CQPass.findAllByPassTypeIdAndEnabled purchasedPass.passTypeId True
   let maxSwitchCount = case listToMaybe passes >>= (.passConfig) of
         Just pc -> pc.maxSwitchCount
         Nothing -> 1
