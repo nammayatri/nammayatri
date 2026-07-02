@@ -2,7 +2,7 @@
   "info": {
     "name": "FaceMatchOnboardingFlow - Deferred",
     "_postman_id": "facematch-deferred-flow",
-    "description": "DEFERRED face match via Aadhaar (synchronous -> AadhaarCard record reaches VALID without the async webhook). FLAT structure. Seed: face_match_source_doc='ProfilePhoto' on AadhaarCard. Deferred runs in a fork after selfie upload, so status checks wait ~2.5s.\n  G Aadhaar VALID -> NON-matching selfie -> AadhaarCard INVALID (deferred FAIL)\n  H Aadhaar VALID -> MATCHING selfie -> AadhaarCard stays VALID (deferred PASS)",
+    "description": "DEFERRED face match via Aadhaar (synchronous -> AadhaarCard record reaches VALID without the async webhook). FLAT structure. Seed: face_match_source_doc='ProfilePhoto' on AadhaarCard. Deferred runs in a fork after selfie upload, so status checks wait ~2.5s.\n  G Aadhaar VALID -> NON-matching selfie -> AadhaarCard INVALID (deferred FAIL)\n  H Aadhaar VALID -> MATCHING selfie -> AadhaarCard stays VALID (deferred PASS)\n\nPENDING-until-face-match model: sync Aadhaar (and non-strict flows) write PENDING when no selfie exists yet; the deferred run on selfie upload promotes PENDING->VALID on a match or flips INVALID on a mismatch. For strict PAN/DL with the 3P webhook still in flight (this harness never fires webhooks), the deferred run does NOTHING - the webhook handler resolves the face match itself on a positive verdict.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -178,7 +178,7 @@
       ]
     },
     {
-      "name": "G: Verify Aadhaar (-> VALID, no selfie)",
+      "name": "G: Verify Aadhaar (-> PENDING, no selfie)",
       "request": {
         "method": "POST",
         "header": [
@@ -219,7 +219,7 @@
       ]
     },
     {
-      "name": "G: Status (precondition Aadhaar VALID)",
+      "name": "G: Status (precondition Aadhaar PENDING)",
       "request": {
         "method": "GET",
         "header": [
@@ -245,7 +245,7 @@
           "listen": "test",
           "script": {
             "exec": [
-              "var aad=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='AadhaarCard')||{}; pm.test('precondition Aadhaar VALID',()=>pm.expect(aad.verificationStatus,'aadhaar '+JSON.stringify(aad)).to.eql('VALID'));"
+              "var aad=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='AadhaarCard')||{}; pm.test('precondition Aadhaar PENDING (face match deferred, no selfie)',()=>pm.expect(aad.verificationStatus,'aadhaar '+JSON.stringify(aad)).to.eql('PENDING'));"
             ]
           }
         }
@@ -502,7 +502,7 @@
       ]
     },
     {
-      "name": "H: Verify Aadhaar (-> VALID)",
+      "name": "H: Verify Aadhaar (-> PENDING, no selfie)",
       "request": {
         "method": "POST",
         "header": [
@@ -584,7 +584,7 @@
       ]
     },
     {
-      "name": "H: Status (Aadhaar still VALID)",
+      "name": "H: Status (Aadhaar promoted VALID)",
       "request": {
         "method": "GET",
         "header": [
@@ -610,7 +610,7 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('status ok',()=>pm.response.to.have.status(200)); var aad=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='AadhaarCard')||{}; pm.test('deferred PASS keeps Aadhaar VALID',()=>pm.expect(aad.verificationStatus,'aadhaar '+JSON.stringify(aad)).to.eql('VALID'));"
+              "pm.test('status ok',()=>pm.response.to.have.status(200)); var aad=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='AadhaarCard')||{}; pm.test('deferred PASS promotes Aadhaar PENDING -> VALID',()=>pm.expect(aad.verificationStatus,'aadhaar '+JSON.stringify(aad)).to.eql('VALID'));"
             ]
           }
         }
@@ -771,7 +771,7 @@
       ]
     },
     {
-      "name": "M: Status (precondition PAN not INVALID)",
+      "name": "M: Status (precondition PAN PENDING)",
       "request": {
         "method": "GET",
         "header": [
@@ -797,7 +797,7 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('status ok',()=>pm.response.to.have.status(200)); var doc=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='PanCard')||{}; pm.test('PanCard not INVALID',()=>pm.expect(doc.verificationStatus,'doc '+JSON.stringify(doc)).to.not.eql('INVALID'));"
+              "pm.test('status ok',()=>pm.response.to.have.status(200)); var doc=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='PanCard')||{}; pm.test('non-strict PAN PENDING while face match deferred (no selfie)',()=>pm.expect(doc.verificationStatus,'doc '+JSON.stringify(doc)).to.eql('PENDING'));"
             ]
           }
         }
@@ -881,7 +881,7 @@
       ]
     },
     {
-      "name": "M: Status (PAN flipped INVALID)",
+      "name": "M: Status (PAN PENDING -> INVALID + face-match message)",
       "request": {
         "method": "GET",
         "header": [
@@ -907,7 +907,7 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('status ok',()=>pm.response.to.have.status(200)); var doc=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='PanCard')||{}; pm.test('PanCard INVALID after mismatch',()=>pm.expect(['INVALID','FAILED'],'doc '+JSON.stringify(doc)).to.include(doc.verificationStatus));"
+              "pm.test('status ok',()=>pm.response.to.have.status(200)); var doc=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='PanCard')||{}; pm.test('non-strict PAN resolved at selfie time: PENDING -> INVALID (never VALID first)',()=>pm.expect(['INVALID','FAILED'],'doc '+JSON.stringify(doc)).to.include(doc.verificationStatus)); pm.test('FaceMatchFailed reason surfaced in verificationMessage',()=>pm.expect(doc.verificationMessage||'','msg').to.include('Face match failed'));"
             ]
           }
         }
@@ -991,7 +991,7 @@
       ]
     },
     {
-      "name": "M: Status (PAN STILL INVALID - fork never promotes)",
+      "name": "M: Status (PAN STILL INVALID - sticky, reupload required)",
       "request": {
         "method": "GET",
         "header": [
@@ -1017,7 +1017,7 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('status ok',()=>pm.response.to.have.status(200)); var doc=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='PanCard')||{}; pm.test('PanCard INVALID',()=>pm.expect(['INVALID','FAILED'],'doc '+JSON.stringify(doc)).to.include(doc.verificationStatus));"
+              "pm.test('status ok',()=>pm.response.to.have.status(200)); var doc=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='PanCard')||{}; pm.test('sticky INVALID: a later matching selfie never rescues; recovery is via re-upload',()=>pm.expect(['INVALID','FAILED'],'doc '+JSON.stringify(doc)).to.include(doc.verificationStatus));"
             ]
           }
         }

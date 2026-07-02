@@ -31,6 +31,7 @@ import qualified Domain.Types.DriverGstin as DGST
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPC
 import Domain.Types.DriverSSN
+import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import Domain.Types.FarePolicy
 import qualified Domain.Types.HyperVergeSdkLogs as DomainHVSdkLogs
 import qualified Domain.Types.IdfyVerification as DIV
@@ -1662,7 +1663,7 @@ mkIdfyVerificationEntityPanAadhaarLink person imageId1 requestId now encryptedPa
         documentNumber = encryptedPan,
         issueDateOnDoc = Nothing,
         driverDateOfBirth = Nothing,
-        docType = DTO.PanAadhaarLinkage,
+        docType = docTypeToText DTO.PanAadhaarLinkage,
         status = "pending",
         idfyResponse = Nothing,
         retryCount = Just 0,
