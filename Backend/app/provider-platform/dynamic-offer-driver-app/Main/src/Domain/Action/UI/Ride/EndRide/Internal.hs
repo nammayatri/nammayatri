@@ -29,7 +29,6 @@ module Domain.Action.UI.Ride.EndRide.Internal
     getDriverFeeBillNumberKey,
     mkDriverFeeBillNumberKey,
     mkDriverFee,
-    setDriverFeeBillNumberKey,
     getDriverFeeCalcJobCache,
     setDriverFeeCalcJobCache,
     makeDriverLeaderBoardKey,
@@ -102,6 +101,7 @@ import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import Lib.Types.SpecialLocation hiding (Merchant, MerchantOperatingCity)
 import qualified SharedLogic.AirportEntryFee as AirportEntryFee
+import qualified SharedLogic.ActiveDriversList as ADL
 import SharedLogic.Allocator
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
@@ -169,6 +169,7 @@ endRideTransaction ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
+    HasField "activeDriversListKeyShards" r Int,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasField "rideEventsPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
@@ -277,6 +278,7 @@ processEndRideFinance ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
+    HasField "activeDriversListKeyShards" r Int,
     Redis.HedisLTSFlowEnv r,
     BeamFlow m r
   ) =>
@@ -953,6 +955,7 @@ createDriverFee ::
     MonadFlow m,
     JobCreatorEnv r,
     HasField "schedulerType" r SchedulerType,
+    HasField "activeDriversListKeyShards" r Int,
     HasKafkaProducer r,
     Redis.HedisLTSFlowEnv r
   ) =>
@@ -1095,7 +1098,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
       let driverFeeToCreate = driverFee{siblingFeeId = elderSiblingId}
       QDF.create driverFeeToCreate
 
-scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Id MerchantOperatingCity -> UTCTime -> m ()
+scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType, HasField "activeDriversListKeyShards" r Int) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Id MerchantOperatingCity -> UTCTime -> m ()
 scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now = do
   logDebug $ "scheduleJobs: for driverFee" <> show driverFee
   void $
@@ -1109,22 +1112,24 @@ scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now = do
             ----- marker ---
             Nothing -> do
               logDebug $ "scheduleJobs: creating job for driverFee" <> show driverFee
-              createJobIn @_ @'CalculateDriverFees (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs $
-                CalculateDriverFeesJobData
-                  { merchantId = merchantId,
-                    merchantOperatingCityId = Just merchantOpCityId,
-                    startTime = driverFee.startTime,
-                    serviceName = Just (driverFee.serviceName),
-                    scheduleNotification = Just True,
-                    scheduleOverlay = Just True,
-                    scheduleManualPaymentLink = Just True,
-                    scheduleDriverFeeCalc = Just True,
-                    createChildJobs = Just True,
-                    recalculateManualReview = Nothing,
-                    endTime = driverFee.endTime
-                  }
+              shardNums <- ADL.getShardNumsForFanOut
+              forM_ shardNums $ \shardNum ->
+                createJobIn @_ @'CalculateDriverFees (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs $
+                  CalculateDriverFeesJobData
+                    { merchantId = merchantId,
+                      merchantOperatingCityId = Just merchantOpCityId,
+                      startTime = driverFee.startTime,
+                      serviceName = Just (driverFee.serviceName),
+                      scheduleNotification = Just True,
+                      scheduleOverlay = Just True,
+                      scheduleManualPaymentLink = Just True,
+                      scheduleDriverFeeCalc = Just True,
+                      createChildJobs = Just True,
+                      recalculateManualReview = Nothing,
+                      endTime = driverFee.endTime,
+                      shardNum = shardNum
+                    }
               setDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantOpCityId driverFee.serviceName dfCalculationJobTs
-              setDriverFeeBillNumberKey merchantOpCityId 1 36000 (driverFee.serviceName)
             _ -> do
               logDebug $ "scheduleJobs: job already scheduled for driverFee" <> show driverFee
               pure ()
@@ -1256,14 +1261,11 @@ setDriverFeeCalcJobCache startTime endTime merchantOpCityId serviceName expTime 
   Hedis.setExp (mkDriverFeeCalcJobFlagKey startTime endTime merchantOpCityId serviceName) True (round $ expTime + 86399)
   Hedis.setExp (mkDriverFeeCalcJobCacheKey startTime endTime merchantOpCityId serviceName) False (round $ expTime + 86399)
 
-mkDriverFeeBillNumberKey :: Id MerchantOperatingCity -> ServiceNames -> Text
-mkDriverFeeBillNumberKey merchantOpCityId service = "DriverFeeCalulation:BillNumber:Counter" <> merchantOpCityId.getId <> ":service:" <> show service
+mkDriverFeeBillNumberKey :: Id MerchantOperatingCity -> ServiceNames -> Text -> Text
+mkDriverFeeBillNumberKey merchantOpCityId service dateStr = "DriverFeeCalulation:BillNumber:Counter" <> merchantOpCityId.getId <> ":service:" <> show service <> ":" <> dateStr
 
-getDriverFeeBillNumberKey :: CacheFlow m r => Id MerchantOperatingCity -> ServiceNames -> m (Maybe Int)
-getDriverFeeBillNumberKey merchantOpCityId serviceName = Hedis.get (mkDriverFeeBillNumberKey merchantOpCityId serviceName)
-
-setDriverFeeBillNumberKey :: CacheFlow m r => Id MerchantOperatingCity -> Int -> NominalDiffTime -> ServiceNames -> m ()
-setDriverFeeBillNumberKey merchantOpCityId count expTime serviceName = Hedis.setExp (mkDriverFeeBillNumberKey merchantOpCityId serviceName) count (round expTime)
+getDriverFeeBillNumberKey :: CacheFlow m r => Id MerchantOperatingCity -> ServiceNames -> Text -> m (Maybe Int)
+getDriverFeeBillNumberKey merchantOpCityId serviceName dateStr = Hedis.get (mkDriverFeeBillNumberKey merchantOpCityId serviceName dateStr)
 
 mkLockKeyForDriverFeeCalculation :: UTCTime -> UTCTime -> Id MerchantOperatingCity -> Text
 mkLockKeyForDriverFeeCalculation startTime endTime merchantOpCityId = "DriverFeeCalculation:Lock:MerchantId:" <> merchantOpCityId.getId <> ":StartTime:" <> show startTime <> ":EndTime:" <> show endTime

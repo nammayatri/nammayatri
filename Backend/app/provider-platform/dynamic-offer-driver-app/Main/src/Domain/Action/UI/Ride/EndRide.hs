@@ -188,7 +188,7 @@ data ServiceHandle m = ServiceHandle
   }
 
 buildEndRideHandle ::
-  LocUpd.LocationUpdateFlow m r c =>
+  (LocUpd.LocationUpdateFlow m r c, HasField "activeDriversListKeyShards" r Int) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe (Id DRide.Ride) ->

@@ -101,7 +101,7 @@ import qualified Data.Text.Encoding as TEnc
 import Data.Time (DayOfWeek (..))
 import qualified Data.Vector as V
 import qualified Domain.Action.UI.MerchantServiceConfig as DMSC
-import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeBillNumberKey, setDriverFeeCalcJobCache)
+import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeCalcJobCache)
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import Domain.Types.CancellationFarePolicy as DTCFP
@@ -442,7 +442,6 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
                 SDF.setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId True
               createJobIn @_ @'CalculateDriverFees (Just merchant.id) (Just merchantOpCityId) diffTimeS (jobData :: CalculateDriverFeesJobData)
               setDriverFeeCalcJobCache jobData.startTime jobData.endTime merchantOpCityId serviceName diffTimeS
-              setDriverFeeBillNumberKey merchantOpCityId 1 36000 serviceName
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         Just Common.BadDebtCalculationTrigger -> do
