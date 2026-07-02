@@ -574,6 +574,11 @@ apis:
         type: UpsertPlanAndConfigResp
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_PLAN_AND_SUBSCRIPTION_CONFIG
+  - GET: # ListVendorSplitDetails for the operating city
+      endpoint: /config/vendorSplitDetails/list
+      auth: ApiAuthV2
+      response:
+        type: "[VendorSplitDetailsAPIEntity]"
   - POST: #ToggleConfigPriorityAPI
       endpoint: /config/{configName}/failover
       params:
@@ -1120,6 +1125,15 @@ types:
     - executedCommand: Command
     - error_resp : Maybe Text
     - diff : Maybe Value
+  VendorSplitDetailsAPIEntity:
+    - merchantOperatingCityId: Text
+    - area: Text
+    - vendorId: Text
+    - vehicleVariant: Text
+    - splitType: Text
+    - splitValue: Double
+    - maxVendorFeeAmount: Maybe HighPrecMoney
+    - dailyPlanId: Maybe Text
   VehicleServiceTierRes:
     - recordType: Type
     - type: [VehicleServiceTierItem]
