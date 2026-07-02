@@ -32,6 +32,7 @@ import Kernel.Types.Id (Id (..))
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import qualified Lib.Payment.Payout.Registration as Registration
@@ -50,6 +51,7 @@ import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QVeh
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as TP
@@ -164,7 +166,7 @@ postPayoutUpdateVpa ::
     API.Types.UI.ReferralPayout.UpdatePayoutVpaReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postPayoutUpdateVpa (mbPersonId, _merchantId, merchantOpCityId) req = do
+postPayoutUpdateVpa (mbPersonId, _merchantId, merchantOpCityId) req = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   mbVehicle <- QVeh.findById personId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
@@ -204,7 +206,17 @@ getPayoutRegistration ::
     ) ->
     Environment.Flow DD.ClearDuesRes
   )
-getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = do
+getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
+  getPayoutRegistrationWithActor (mbPersonId, merchantId, merchantOpCityId)
+
+getPayoutRegistrationWithActor ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Environment.Flow DD.ClearDuesRes
+  )
+getPayoutRegistrationWithActor (mbPersonId, merchantId, merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let isFleetOwner = DCommon.checkFleetOwnerRole person.role
@@ -263,7 +275,7 @@ postPayoutCreateOrder ::
     API.Types.UI.ReferralPayout.CreatePayoutOrderReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postPayoutCreateOrder (mbPersonId, merchantId, merchantOpCityId) req = do
+postPayoutCreateOrder (mbPersonId, merchantId, merchantOpCityId) req = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   void $ throwError $ InvalidRequest "You're Not Authorized To Use This API"
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
@@ -286,7 +298,7 @@ mkCreatePayoutServiceReq currency payoutServiceFlow API.Types.UI.ReferralPayout.
     }
 
 getPayoutOrderStatus ::
-  (EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m, HasShortDurationRetryCfg r c, ServiceFlow m r) =>
+  (EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, HasShortDurationRetryCfg r c, ServiceFlow m r, Finance.HasActorInfo m r) =>
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
@@ -294,7 +306,7 @@ getPayoutOrderStatus ::
     Data.Text.Text ->
     m Payout.PayoutOrderStatusResp
   )
-getPayoutOrderStatus (mbPersonId, _merchantId, merchantOpCityId) orderId = do
+getPayoutOrderStatus (mbPersonId, _merchantId, merchantOpCityId) orderId = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   payoutOrder <- QPayoutOrder.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId)

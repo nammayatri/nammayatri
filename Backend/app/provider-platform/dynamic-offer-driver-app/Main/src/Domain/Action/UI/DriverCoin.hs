@@ -43,6 +43,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverCoins.Coins as Coins
 import Lib.DriverCoins.Types
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPO
@@ -273,13 +274,13 @@ accumulateCoins targetAmount = takeCoinsRequired (targetAmount, []) False
         else takeCoinsRequired (afterTaking, (coinHis.id.getId, coinsTaken + afterTaking, coinStatus) : result) True []
 
 useCoinsHandler ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    PaymentBeamFlow.BeamFlow m r
+    PaymentBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ConvertCoinToCashReq ->
@@ -302,13 +303,13 @@ useCoinsHandler (driverId, merchantId, merchantOpCityId) ConvertCoinToCashReq {.
     mkLockKey = "ConvertCoinToCash:DriverId:" <> driverId.getId
 
 handler ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    PaymentBeamFlow.BeamFlow m r
+    PaymentBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ConvertCoinToCashReq ->
@@ -382,13 +383,13 @@ handler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {..} = do
     noDriverPlan driverId_ = isNothing <$> SQPlan.findByDriverIdAndServiceName driverId_ DPlan.YATRI_SUBSCRIPTION
 
 redeemCoins ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    PaymentBeamFlow.BeamFlow m r
+    PaymentBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id SP.Person ->
   Id DM.Merchant ->

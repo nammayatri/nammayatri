@@ -11,6 +11,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.Account
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import qualified Lib.Finance.Storage.Beam.BeamFlow
@@ -69,33 +70,53 @@ findReversalOf reversalOf = do findOneWithKV [Se.Is Beam.reversalOf $ Se.Eq (Ker
 
 updateSettled ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())
-updateSettled status settledAt id = do
+  (Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())
+updateSettled status settledAt updatedBy updatedById id = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.status status, Se.Set Beam.settledAt settledAt, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateWithKV
+    [ Se.Set Beam.status status,
+      Se.Set Beam.settledAt settledAt,
+      Se.Set Beam.updatedBy updatedBy,
+      Se.Set Beam.updatedById updatedById,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateSettlementStatus ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.SettlementStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())
-updateSettlementStatus settlementStatus settlementId settlementTimestamp id = do
+  (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.SettlementStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())
+updateSettlementStatus settlementStatus settlementId settlementTimestamp updatedBy updatedById id = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.settlementStatus settlementStatus,
       Se.Set Beam.settlementId settlementId,
       Se.Set Beam.settlementTimestamp settlementTimestamp,
+      Se.Set Beam.updatedBy updatedBy,
+      Se.Set Beam.updatedById updatedById,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateStatus :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())
-updateStatus status id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+updateStatus ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())
+updateStatus status updatedBy updatedById id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedBy updatedBy, Se.Set Beam.updatedById updatedById, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateVoided ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())
-updateVoided status voidReason id = do
+  (Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())
+updateVoided status voidReason updatedBy updatedById id = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.status status, Se.Set Beam.voidReason voidReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateWithKV
+    [ Se.Set Beam.status status,
+      Se.Set Beam.voidReason voidReason,
+      Se.Set Beam.updatedBy updatedBy,
+      Se.Set Beam.updatedById updatedById,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
@@ -108,6 +129,8 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry {..}) = do
   updateWithKV
     [ Se.Set Beam.amount amount,
       Se.Set Beam.concernedIndividualId concernedIndividualId,
+      Se.Set Beam.createdBy createdBy,
+      Se.Set Beam.createdById createdById,
       Se.Set Beam.currency currency,
       Se.Set Beam.entryType entryType,
       Se.Set Beam.fromAccountId (Kernel.Types.Id.getId fromAccountId),
@@ -129,6 +152,8 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry {..}) = do
       Se.Set Beam.toAccountId (Kernel.Types.Id.getId toAccountId),
       Se.Set Beam.toEndingBalance toEndingBalance,
       Se.Set Beam.toStartingBalance toStartingBalance,
+      Se.Set Beam.updatedBy updatedBy,
+      Se.Set Beam.updatedById updatedById,
       Se.Set Beam.voidReason voidReason,
       Se.Set Beam.updatedAt _now
     ]
@@ -142,6 +167,8 @@ instance FromTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.Ledger
           { amount = amount,
             concernedIndividualId = concernedIndividualId,
             createdAt = createdAt,
+            createdBy = createdBy,
+            createdById = createdById,
             currency = currency,
             entryType = entryType,
             fromAccountId = Kernel.Types.Id.Id fromAccountId,
@@ -164,6 +191,8 @@ instance FromTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.Ledger
             toAccountId = Kernel.Types.Id.Id toAccountId,
             toEndingBalance = toEndingBalance,
             toStartingBalance = toStartingBalance,
+            updatedBy = updatedBy,
+            updatedById = updatedById,
             voidReason = voidReason,
             updatedAt = updatedAt
           }
@@ -174,6 +203,8 @@ instance ToTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.LedgerEn
       { Beam.amount = amount,
         Beam.concernedIndividualId = concernedIndividualId,
         Beam.createdAt = createdAt,
+        Beam.createdBy = createdBy,
+        Beam.createdById = createdById,
         Beam.currency = currency,
         Beam.entryType = entryType,
         Beam.fromAccountId = Kernel.Types.Id.getId fromAccountId,
@@ -196,6 +227,8 @@ instance ToTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.LedgerEn
         Beam.toAccountId = Kernel.Types.Id.getId toAccountId,
         Beam.toEndingBalance = toEndingBalance,
         Beam.toStartingBalance = toStartingBalance,
+        Beam.updatedBy = updatedBy,
+        Beam.updatedById = updatedById,
         Beam.voidReason = voidReason,
         Beam.updatedAt = updatedAt
       }

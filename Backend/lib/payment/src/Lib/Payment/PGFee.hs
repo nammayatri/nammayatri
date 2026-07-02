@@ -11,6 +11,7 @@ where
 
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Account as Account
 import Lib.Finance.Domain.Types.IndirectTaxTransaction (GstCreditType (..))
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
@@ -56,7 +57,7 @@ computePGFee config =
 --
 --   The Liability account accumulates the total owed to the PG (baseFee + GST).
 recordPGFeeLedgerEntries ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   PGFeeType ->
   PGFeeConfig ->
   Text -> -- merchantId

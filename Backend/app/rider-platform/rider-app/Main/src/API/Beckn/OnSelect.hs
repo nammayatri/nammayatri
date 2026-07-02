@@ -29,6 +29,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo as ActorInfo
 import TransactionLogs.PushLogs
 
 type API = OnSelect.OnSelectAPIV2
@@ -40,7 +41,7 @@ onSelect ::
   SignatureAuthResult ->
   OnSelect.OnSelectReqV2 ->
   FlowHandler AckResponse
-onSelect _ reqV2 = withFlowHandlerBecknAPI do
+onSelect _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.onSelectReqContext
   L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do

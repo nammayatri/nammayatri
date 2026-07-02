@@ -6,11 +6,12 @@ module Lib.Finance.Domain.Types.StateTransition where
 import Data.Aeson
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Lib.Finance.Core.Types
 import qualified Tools.Beam.UtilsTH
 
 data StateTransition = StateTransition
   { actorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    actorType :: Kernel.Prelude.Text,
+    actorType :: Lib.Finance.Core.Types.ActorType,
     createdAt :: Kernel.Prelude.UTCTime,
     entityId :: Kernel.Prelude.Text,
     entityType :: Lib.Finance.Domain.Types.StateTransition.PaymentEntityType,

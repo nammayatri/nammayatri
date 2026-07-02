@@ -38,7 +38,10 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.SapJournalEntry as SJE
+import Lib.Finance.SapJournalEntry.Interface (SapJournalEntryInput (..))
+import qualified Lib.Finance.SapJournalEntry.Service as SapJournalEntryService
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.SapJournalEntry as QSJE
 import Lib.Scheduler
@@ -76,7 +79,7 @@ type SAPJobConstraints m r c =
     CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     MonadIO m,
     CoreMetrics m,
     L.MonadFlow m,
@@ -255,7 +258,7 @@ dispatchEntry ::
     EncFlow m r,
     CacheFlow m r,
     CoreMetrics m,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     HasRequestId r,
     MonadReader r m
   ) =>
@@ -525,9 +528,7 @@ dispatchSubscriptionPurchase ::
     EncFlow m r,
     CacheFlow m r,
     CoreMetrics m,
-    MonadFlow m,
-    HasRequestId r,
-    MonadReader r m
+    Finance.HasActorInfo m r
   ) =>
   SAPConfig.SAPServiceConfig ->
   Text ->
@@ -627,7 +628,7 @@ toTransactionType RefundEntry = SJE.Refund
 toTransactionType ChargebackEntry = SJE.Chargeback
 
 saveSapJournalEntries ::
-  (BeamFlow m r, MonadFlow m) =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   SAPJournalRequest ->
   Maybe SAPJournalResponse ->
   SJE.JournalEntryStatus ->
@@ -640,17 +641,14 @@ saveSapJournalEntries ::
   Maybe Text ->
   m ()
 saveSapJournalEntries req mbResp entryStatus txnType txnCount mId mocid periodStart periodEnd mbErrMsg = do
-  now <- getCurrentTime
   let reqHeaders = req.headers
       respHeaders = maybe [] (.responseHeaders) mbResp
   forM_ reqHeaders $ \reqHeader -> do
-    entryId <- generateGUID
     let mbRespHeader = find (\rh -> rh.batchId == Just reqHeader.batchId) respHeaders
     let (totalDebit, totalCredit) = computeDebitCreditTotals reqHeader.items
-    QSJE.create
-      SJE.SapJournalEntry
-        { id = Id entryId,
-          belnr = mbRespHeader >>= (.belnr),
+    SapJournalEntryService.createSapJournalEntry
+      SapJournalEntryInput
+        { belnr = mbRespHeader >>= (.belnr),
           batchId = reqHeader.batchId,
           blart = reqHeader.blart,
           transactionType = txnType,
@@ -670,10 +668,7 @@ saveSapJournalEntries req mbResp entryStatus txnType txnCount mId mocid periodSt
           periodEndTime = periodEnd,
           rawResponse = (.rawXml) <$> mbResp,
           merchantId = mId,
-          merchantOperatingCityId = mocid,
-          createdAt = now,
-          updatedAt = now,
-          createdBy = "System"
+          merchantOperatingCityId = mocid
         }
 
 filterZeroItems :: [SAPJournalItem] -> [SAPJournalItem]
@@ -760,7 +755,7 @@ hasErrorResponse :: SAPJournalResponse -> Bool
 hasErrorResponse resp = any (\hdr -> hdr.msgtyp == Just "E") resp.responseHeaders
 
 handleSAPResponse ::
-  (BeamFlow m r, MonadFlow m) =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   Text ->
   SAPJournalRequest ->
   Either Text SAPJournalResponse ->

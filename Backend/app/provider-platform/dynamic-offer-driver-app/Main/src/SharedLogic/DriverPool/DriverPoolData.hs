@@ -30,7 +30,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType (..), Device, Version)
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (ActorType (UNKNOWN))
 import qualified Lib.Yudhishthira.Types as LYT
 
 -- | The full driver pool data record stored in Redis (later LTS).

@@ -7,6 +7,7 @@ import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified Tools.Metrics as Metrics
@@ -37,5 +38,6 @@ type FRFSConfirmFlow m r c =
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasFlowEnv m r '["googleSAPrivateKey" ::: String],
-    HasField "ltsHedisEnv" r HedisEnv
+    HasField "ltsHedisEnv" r HedisEnv,
+    Finance.HasActorInfo m r
   )

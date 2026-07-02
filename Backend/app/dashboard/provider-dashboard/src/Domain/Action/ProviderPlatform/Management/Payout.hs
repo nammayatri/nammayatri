@@ -53,7 +53,7 @@ getPayoutPayout ::
   Environment.Flow PayoutTypes.PayoutRequestResp
 getPayoutPayout merchantShortId opCity apiTokenInfo payoutRequestId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayout) payoutRequestId
+  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayout) payoutRequestId (Just apiTokenInfo.personId.getId)
 
 getPayoutPayoutHistory ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -69,7 +69,7 @@ getPayoutPayoutHistory ::
   Environment.Flow PayoutTypes.PayoutHistoryRes
 getPayoutPayoutHistory merchantShortId opCity apiTokenInfo driverId driverPhoneNo from isFailedOnly limit offset to = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayoutHistory) driverId driverPhoneNo from isFailedOnly limit offset to
+  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayoutHistory) driverId driverPhoneNo from isFailedOnly limit offset to (Just apiTokenInfo.personId.getId)
 
 getPayoutPayoutReferralHistory ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -98,7 +98,7 @@ postPayoutPayoutRetry merchantShortId opCity apiTokenInfo payoutRequestId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildPayoutManagementServerTransaction apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $ do
-    ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutRetry) payoutRequestId
+    ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutRetry) payoutRequestId (Just apiTokenInfo.personId.getId)
 
 postPayoutPayoutCancel ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -111,7 +111,7 @@ postPayoutPayoutCancel merchantShortId opCity apiTokenInfo payoutRequestId req =
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildPayoutManagementServerTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ do
-    ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutCancel) payoutRequestId req
+    ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutCancel) payoutRequestId (Just apiTokenInfo.personId.getId) req
 
 postPayoutPayoutCash ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -124,7 +124,7 @@ postPayoutPayoutCash merchantShortId opCity apiTokenInfo payoutRequestId req = d
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildPayoutManagementServerTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ do
-    ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutCash) payoutRequestId req
+    ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutCash) payoutRequestId (Just apiTokenInfo.personId.getId) req
 
 postPayoutPayoutVpaDelete ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -136,7 +136,7 @@ postPayoutPayoutVpaDelete merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildPayoutManagementServerTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ do
-    ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutVpaDelete) req
+    ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutVpaDelete) (Just apiTokenInfo.personId.getId) req
 
 postPayoutPayoutVpaUpdate ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -148,7 +148,7 @@ postPayoutPayoutVpaUpdate merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildPayoutManagementServerTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ do
-    ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutVpaUpdate) req
+    ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutVpaUpdate) (Just apiTokenInfo.personId.getId) req
 
 postPayoutPayoutVpaRefundRegistration ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -160,7 +160,7 @@ postPayoutPayoutVpaRefundRegistration merchantShortId opCity apiTokenInfo req = 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildPayoutManagementServerTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ do
-    ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutVpaRefundRegistration) req
+    ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutVpaRefundRegistration) (Just apiTokenInfo.personId.getId) req
 
 postPayoutPayoutScheduledPayoutConfigUpsert ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

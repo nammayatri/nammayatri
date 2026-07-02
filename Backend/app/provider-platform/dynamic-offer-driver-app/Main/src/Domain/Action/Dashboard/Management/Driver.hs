@@ -181,6 +181,7 @@ import Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Status as QDocStatus
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
+import qualified Tools.ActorInfo as ActorInfo
 import qualified Tools.Auth as Auth
 import Tools.Error
 
@@ -926,8 +927,8 @@ postDriverUpdateDriverTag merchantShortId opCity driverId req = do
   pure Success
 
 ---------------------------------------------------------------------
-postDriverClearFee :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.ClearDriverFeeReq -> Flow APISuccess
-postDriverClearFee _merchantShortId _opCity driverId req = do
+postDriverClearFee :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Id Common.Driver -> Common.ClearDriverFeeReq -> Flow APISuccess
+postDriverClearFee _merchantShortId _opCity mbRequestorId driverId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) $ do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
   let personId = cast @Common.Driver @DP.Person driverId
@@ -1091,8 +1092,8 @@ postDriverUpdateVehicleManufacturing merchantShortId opCity reqDriverId Common.U
   pure Success
 
 ---------------------------------------------------------------------
-postDriverRefundByPayout :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RefundByPayoutReq -> Flow APISuccess
-postDriverRefundByPayout merchantShortId _opCity driverId req = do
+postDriverRefundByPayout :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Text -> Common.RefundByPayoutReq -> Flow APISuccess
+postDriverRefundByPayout merchantShortId _opCity driverId mbRequestorId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) $ do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
   let personId = cast @Common.Driver @DP.Person driverId

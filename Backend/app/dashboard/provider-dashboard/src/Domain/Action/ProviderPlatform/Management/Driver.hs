@@ -298,7 +298,7 @@ postDriverClearFee merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
   T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverClearFee) driverId req
+    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverClearFee) (Just apiTokenInfo.personId.getId) driverId req
 
 postDriverPersonNumbers :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.PersonIdsReq -> Environment.Flow [Common.PersonRes]
 postDriverPersonNumbers merchantShortId opCity apiTokenInfo req = do
@@ -334,7 +334,7 @@ postDriverRefundByPayout :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo ->
 postDriverRefundByPayout merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
-  T.withTransactionStoring transaction (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverRefundByPayout) driverId req)
+  T.withTransactionStoring transaction (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverRefundByPayout) driverId (Just apiTokenInfo.personId.getId) req)
 
 getDriverSecurityDepositStatus :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Common.ServiceNames -> Environment.Flow [Common.SecurityDepositDfStatusRes])
 getDriverSecurityDepositStatus merchantShortId opCity apiTokenInfo driverId mbServiceName = do
