@@ -44,7 +44,8 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
     tollNames :: B.C f (Maybe [Text]),
     createdAt :: B.C f LocalTime,
     updatedAt :: B.C f LocalTime,
-    merchantOperatingCityId :: B.C f (Maybe Text)
+    merchantOperatingCityId :: B.C f (Maybe Text),
+    commissionCharges :: B.C f (Maybe Common.HighPrecMoney)
   }
   deriving (Generic, B.Beamable)
 

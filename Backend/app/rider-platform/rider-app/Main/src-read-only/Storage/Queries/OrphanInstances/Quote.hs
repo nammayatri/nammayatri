@@ -16,7 +16,6 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Kernel.Utils.Version
 import qualified SharedLogic.Type
 import qualified Storage.Beam.Quote as Beam
-import Storage.Queries.Transformers.Quote
 import qualified Storage.Queries.Transformers.Quote
 
 instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
@@ -25,7 +24,7 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
     clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
     clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
     clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
-    merchantOperatingCityId' <- backfillMOCId merchantOperatingCityId merchantId
+    merchantOperatingCityId' <- Storage.Queries.Transformers.Quote.backfillMOCId merchantOperatingCityId merchantId
     providerUrl' <- Kernel.Prelude.parseBaseUrl providerUrl
     quoteBreakupList' <- Storage.Queries.Transformers.Quote.loadQuoteBreakupList quoteBreakupListJson id
     quoteDetails' <- Storage.Queries.Transformers.Quote.toQuoteDetails fareProductType tripCategory distanceToNearestDriver rentalDetailsId meterRideBppQuoteId staticBppQuoteId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue
@@ -40,6 +39,7 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
             clientConfigVersion = clientConfigVersion',
             clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer,
             clientSdkVersion = clientSdkVersion',
+            commissionCharges = commissionCharges,
             createdAt = createdAt,
             discount = Kernel.Types.Common.mkPrice currency <$> discount,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
@@ -65,7 +65,7 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
             specialLocationName = specialLocationName,
             specialLocationSupportNumber = specialLocationSupportNumber,
             specialLocationTag = specialLocationTag,
-            tollChargesInfo = mkTollChargesInfo tollCharges tollNames currency,
+            tollChargesInfo = Storage.Queries.Transformers.Quote.mkTollChargesInfo tollCharges tollNames currency,
             tripCategory = tripCategory,
             updatedAt = Kernel.Prelude.fromMaybe createdAt updatedAt,
             validTill = validTill,
@@ -88,6 +88,7 @@ instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
         Beam.clientOsType = clientDevice <&> (.deviceType),
         Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
+        Beam.commissionCharges = commissionCharges,
         Beam.createdAt = createdAt,
         Beam.currency = Just ((.currency) estimatedFare),
         Beam.discount = discount <&> (.amount),

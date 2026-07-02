@@ -244,7 +244,8 @@ data QuoteInfo = QuoteInfo
     tripCategory :: DT.TripCategory,
     -- petCharges :: Maybe Price,
     vehicleCategory :: Enums.VehicleCategory,
-    vehicleIconUrl :: Maybe BaseUrl
+    vehicleIconUrl :: Maybe BaseUrl,
+    commissionCharges :: Maybe HighPrecMoney
   }
 
 data QuoteDetails
@@ -567,6 +568,7 @@ buildQuote ::
   m DQuote.Quote
 buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo {..} = do
   uid <- generateGUID
+  logInfo $ "buildQuote: persisting quoteId=" <> uid.getId <> " requestId=" <> requestId.getId <> " with commissionCharges=" <> show commissionCharges
   quoteBreakupList' <- buildQuoteBreakUp quoteBreakupList uid searchRequest.merchantId searchRequest.merchantOperatingCityId
   quoteDetails' <- case quoteDetails of
     OneWayDetails oneWayDetails ->
