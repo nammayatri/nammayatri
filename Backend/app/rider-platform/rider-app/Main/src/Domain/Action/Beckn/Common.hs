@@ -893,6 +893,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
              rideEndTime,
              paymentStatus = if SPayment.isOnlinePayment mbMerchant booking then DRide.NotInitiated else DRide.Completed,
              endOdometerReading,
+             rideTags = ride.rideTags <> ((\valid -> ["ValidRide#" <> if valid then "Yes" else "No"] :: [Text]) <$> isValidRide),
              commission = rideCommission
             }
   -- Persist offer details in Ride OfferEntity table for fast lookup in rideList,
@@ -1066,6 +1067,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
       booking.riderId
       booking.merchantOperatingCityId
       (fromMaybe now rideEndTime)
+      isValidRide
   offerDiscountBreakup <-
     if rideDiscountAmount > 0
       then do
