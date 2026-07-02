@@ -809,7 +809,9 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
               QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
             when (passStatus `elem` activeLikeStatuses) $ do
               QPurchasedPass.updateProfilePictureById purchasedPassPayment.profilePicture purchasedPass.id
-              QPurchasedPass.updatePassPhotoMediaIdById purchasedPassPayment.passPhotoMediaId purchasedPass.id
+              -- Don't null out a media id attached by the async photo upload mid-payment.
+              whenJust purchasedPassPayment.passPhotoMediaId $ \paymentPhotoMediaId ->
+                QPurchasedPass.updatePassPhotoMediaIdById (Just paymentPhotoMediaId) purchasedPass.id
               when (passStatus == DPurchasedPass.Active && purchasedPassPayment.startDate <= today && purchasedPassPayment.endDate >= today) $
                 QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
           case purchasedPassPayment.status of
@@ -865,6 +867,17 @@ updatePurchasedPass ::
   DT.Day ->
   UTCTime ->
   m (DPurchasedPass.PurchasedPass, Maybe DPurchasedPassPayment.PurchasedPassPayment, Bool)
+-- Lazily activate a PhotoPending pass once its photo is attached (uploadProfilePicture is
+-- attach-only, so this read path owns the PhotoPending -> Active/PreBooked transition).
+-- Date-expired PhotoPending passes fall through to the expiry fallback below.
+updatePurchasedPass purchasedPass today now
+  | purchasedPass.status == DPurchasedPass.PhotoPending && isJust purchasedPass.passPhotoMediaId && purchasedPass.endDate >= today = do
+    let newStatus = if purchasedPass.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
+    photoPendingPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusStartDateGreaterThan Nothing Nothing purchasedPass.id DPurchasedPass.PhotoPending purchasedPass.startDate
+    return (purchasedPass {DPurchasedPass.status = newStatus, DPurchasedPass.updatedAt = now}, listToMaybe photoPendingPayments, True)
+  -- Photo-less PhotoPending passes wait for the upload; the fallback below must not expire them.
+  | purchasedPass.status == DPurchasedPass.PhotoPending && purchasedPass.endDate >= today =
+    return (purchasedPass, Nothing, False)
 updatePurchasedPass purchasedPass today now = do
   if diffUTCTime now purchasedPass.updatedAt <= 300
     then return (purchasedPass, Nothing, False)
@@ -1433,11 +1446,9 @@ postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) 
     QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus purchasedPass.benefitDescription purchasedPass.benefitType purchasedPass.benefitValue purchasedPass.passAmount
   return APISuccess.Success
 
--- | Upload a pass photo in one call: stream the image to S3 (reusing the
--- IssueManagement media-upload flow, stored under "pass-photo/<personId>/..."),
--- then attach the resulting media id to the (PhotoPending) pass and flip it to
--- Active/PreBooked. Returns the media id (fileId), which the client uses to
--- render the photo via GET /multimodal/pass/photo/{mediaId}.
+-- | Upload a pass photo to S3 and attach the media id to the pass. Attach-only: it can run
+-- concurrently with the payment webhook, so status transitions are owned elsewhere (payment
+-- handler for Pending, pass-list reconcile for PhotoPending).
 postMultimodalPassUploadProfilePicture ::
   ( ( Maybe (Id.Id DP.Person),
       Id.Id DM.Merchant
@@ -1447,34 +1458,27 @@ postMultimodalPassUploadProfilePicture ::
     IssueCommon.IssueMediaUploadReq ->
     Environment.Flow IssueCommon.IssueMediaUploadRes
   )
-postMultimodalPassUploadProfilePicture (mbCallerPersonId, merchantId) purchasedPassId mbImeiNumber req = do
+-- imeiNumber is accepted but unused: device binding is owned by select/switchDeviceId.
+postMultimodalPassUploadProfilePicture (mbCallerPersonId, merchantId) purchasedPassId _mbImeiNumber req = do
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
   purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
 
   unless (purchasedPass.personId == personId) $ throwError AccessDenied
 
-  unless (purchasedPass.status == DPurchasedPass.PhotoPending) $
-    throwError (InvalidRequest "Pass is not in PhotoPending status")
+  -- Allowed while a purchase is in flight (fresh buy, renewal on an Active pass, renewal of an
+  -- Expired pass) or a photo is owed — not as an anytime photo swap on a live pass.
+  let awaitingPhoto s = s `elem` [DPurchasedPass.Pending, DPurchasedPass.PhotoPending]
+  paymentRows <- QPurchasedPassPayment.findAllByPurchasedPassId purchasedPass.id
+  unless (awaitingPhoto purchasedPass.status || any (awaitingPhoto . (.status)) paymentRows) $
+    throwError (InvalidRequest "Pass has no purchase in progress and is not awaiting a photo")
 
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   uploadRes <- IssueAction.mediaUploadToS3 merchant.mediaFileSizeUpperLimit merchant.mediaFileUrlPattern req "pass-photo" personId.getId
   let mediaId = uploadRes.fileId
 
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = purchasedPass.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId purchasedPass.merchantOperatingCityId))
-  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
-  istTime <- getLocalCurrentTime timeDiffFromUtc
-  let today = DT.utctDay istTime
-  let newStatus = if purchasedPass.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
-  QPurchasedPass.updateStatusById newStatus purchasedPass.id
+  -- Payment rows carry the media id too, so passOrderStatusHandler's copy can't drop it.
   QPurchasedPass.updatePassPhotoMediaIdById (Just mediaId) purchasedPass.id
-  whenJust mbImeiNumber $ \imeiNumber ->
-    QPurchasedPass.updateDeviceIdById imeiNumber purchasedPass.deviceSwitchCount purchasedPass.id
-
-  -- Attach the media id to the still-PhotoPending payment rows, then flip their status.
-  QPurchasedPassPayment.updatePassPhotoMediaIdByPurchasedPassIdAndStatus (Just mediaId) purchasedPass.id [DPurchasedPass.PhotoPending]
-  purchasedPassPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusStartDateGreaterThan Nothing Nothing purchasedPass.id DPurchasedPass.PhotoPending purchasedPass.startDate
-  forM_ purchasedPassPayments $ \payment ->
-    QPurchasedPassPayment.updateStatusByOrderId newStatus payment.orderId
+  QPurchasedPassPayment.updatePassPhotoMediaIdByPurchasedPassIdAndStatus (Just mediaId) purchasedPass.id [DPurchasedPass.Pending, DPurchasedPass.PhotoPending]
 
   return uploadRes
 
