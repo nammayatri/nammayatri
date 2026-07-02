@@ -21,7 +21,7 @@ import Servant
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.ProviderPlatform.Management.PlanManagement.API)
-handler merchantId city = postPlanManagementCreate merchantId city :<|> postPlanManagementDeletePlan merchantId city :<|> postPlanManagementActivatePlan merchantId city :<|> getPlanManagementListPlans merchantId city
+handler merchantId city = postPlanManagementCreate merchantId city :<|> postPlanManagementDeletePlan merchantId city :<|> postPlanManagementActivatePlan merchantId city :<|> getPlanManagementListPlans merchantId city :<|> getPlanManagementPlanTranslations merchantId city
 
 postPlanManagementCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.PlanManagement.CreatePlanReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.PlanManagement.CreatePlanResp)
 postPlanManagementCreate a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.PlanManagement.postPlanManagementCreate a3 a2 a1
@@ -34,3 +34,6 @@ postPlanManagementActivatePlan a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.A
 
 getPlanManagementListPlans :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.PlanManagement.ListPlansResp)
 getPlanManagementListPlans a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.PlanManagement.getPlanManagementListPlans a3 a2 a1
+
+getPlanManagementPlanTranslations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.PlanManagement.PlanTranslationAPIEntity])
+getPlanManagementPlanTranslations a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.PlanManagement.getPlanManagementPlanTranslations a3 a2 a1
