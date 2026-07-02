@@ -677,7 +677,7 @@ refundPaymentService req refundCall = do
         Right response -> do
           now <- getCurrentTime
           let newCompletedAt = calculateCompletedAt response.status now
-          HQRefunds.updateRefundsEntryByStripeResponse req.merchantOpCityId (Just response.refundId) response.errorCode response.status (Just True) newCompletedAt refundsEntry mbAction
+          HQRefunds.updateRefundsEntryByStripeResponse req.merchantOpCityId (Just response.refundId) response.errorCode response.status (Just True) newCompletedAt response.amount refundsEntry mbAction
           -- refund_request.refunds_id — matching what the Stripe webhook looks up via metadata.
           pure $ Just response {PInterface.refundId = refundId}
         Left err -> do
@@ -716,7 +716,7 @@ getRefundStatusService orderId mbRefundsId merchantOpCityId getRefundStatusCall 
               Right result -> do
                 now <- getCurrentTime
                 let newCompletedAt = calculateCompletedAt result.status now
-                HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId (Just serviceProviderId) result.errorCode result.status refund.isApiCallSuccess newCompletedAt refund (Just "get refund status service")
+                HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId (Just serviceProviderId) result.errorCode result.status refund.isApiCallSuccess newCompletedAt result.amount refund (Just "get refund status service")
                 -- Return the internal refunds.id (matches refundPaymentService);
                 pure $ Just result {PInterface.refundId = refund.id.getId}
               Left err -> do
@@ -727,7 +727,7 @@ getRefundStatusService orderId mbRefundsId merchantOpCityId getRefundStatusCall 
       PInterface.RefundPaymentResp
         { refundId = refund.id.getId,
           status = refund.status,
-          amount = Nothing,
+          amount = refund.actualRefundedAmount,
           errorCode = refund.errorCode,
           errorMessage = refund.errorMessage
         }
@@ -2141,7 +2141,7 @@ updateRefundsByWebhook merchantOpCityId refundInfo = do
   when (refundInfo.errorCode /= refunds.errorCode || refundInfo.status /= refunds.status) $ do
     now <- getCurrentTime
     let newCompletedAt = calculateCompletedAt refundInfo.status now
-    HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId refunds.idAssignedByServiceProvider refundInfo.errorCode refundInfo.status refunds.isApiCallSuccess newCompletedAt refunds (Just "update refunds by webhook")
+    HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId refunds.idAssignedByServiceProvider refundInfo.errorCode refundInfo.status refunds.isApiCallSuccess newCompletedAt (Just refundInfo.amount) refunds (Just "update refunds by webhook")
 
 --- notification api ----------
 
@@ -2334,7 +2334,8 @@ mkRefundsEntry merchantId requestId orderShortId amount refundStatus = do
         createdAt = now,
         updatedAt = now,
         arn = Nothing,
-        completedAt = Nothing
+        completedAt = Nothing,
+        actualRefundedAmount = Nothing
       }
 
 upsertRefundStatus :: (BeamFlow m r, Finance.HasActorInfo m r) => Id MerchantOperatingCity -> DOrder.PaymentOrder -> Payment.RefundsData -> m (Maybe Refunds)
@@ -2348,8 +2349,8 @@ upsertRefundStatus merchantOpCityId order Payment.RefundsData {..} =
           HQRefunds.findById (Id requestId)
             >>= \case
               Just refundEntry -> do
-                HQRefunds.updateRefundsEntryByResponse merchantOpCityId initiatedBy idAssignedByServiceProvider errorMessage errorCode status arn newCompletedAt refundEntry mbAction
-                return $ refundEntry {status = status, initiatedBy = initiatedBy, idAssignedByServiceProvider = idAssignedByServiceProvider, errorMessage = errorMessage, errorCode = errorCode, arn = arn, completedAt = newCompletedAt}
+                HQRefunds.updateRefundsEntryByResponse merchantOpCityId initiatedBy idAssignedByServiceProvider errorMessage errorCode status arn newCompletedAt (Just amount) refundEntry mbAction
+                return $ refundEntry {status = status, initiatedBy = initiatedBy, idAssignedByServiceProvider = idAssignedByServiceProvider, errorMessage = errorMessage, errorCode = errorCode, arn = arn, completedAt = newCompletedAt, actualRefundedAmount = Just amount}
               Nothing -> do
                 refundEntry <- mkRefundsEntry order.merchantId requestId order.shortId order.amount status
                 HQRefunds.create merchantOpCityId refundEntry mbAction

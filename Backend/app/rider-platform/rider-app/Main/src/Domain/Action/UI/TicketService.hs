@@ -781,6 +781,7 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
             idAssignedByServiceProvider = Nothing,
             initiatedBy = Nothing,
             completedAt = Nothing,
+            actualRefundedAmount = Just amount,
             createdAt = now,
             updatedAt = now,
             ..
