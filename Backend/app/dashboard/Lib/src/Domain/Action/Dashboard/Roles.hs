@@ -15,6 +15,7 @@
 module Domain.Action.Dashboard.Roles where
 
 import Dashboard.Common
+import qualified Data.Text as T
 import qualified Domain.Types.AccessMatrix as DMatrix
 import Domain.Types.Role
 import qualified Domain.Types.Role as DRole
@@ -22,6 +23,7 @@ import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Common
@@ -29,6 +31,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.Queries.AccessMatrix as QMatrix
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth
 import Tools.Error (RoleError (..))
@@ -87,6 +90,7 @@ buildRole req = do
         name = req.name,
         dashboardAccessType = fromMaybe DRole.DASHBOARD_USER req.dashboardAccessType,
         description = req.description,
+        accessibleRoles = [],
         createdAt = now,
         updatedAt = now
       }
@@ -142,3 +146,36 @@ listRoles _ mbSearchString mbLimit mbOffset = do
   let count = length res
   let summary = Summary {totalCount = 10000, count}
   pure $ ListRoleRes {list = res, summary = summary}
+
+-- Single API that scopes by the viewer's tier:
+--   DASHBOARD_ADMIN → delegate to the existing paginated `listRoles`; no per-admin
+--                     accessible_roles maintenance (avoids the array growing forever)
+--   anyone else     → only the role ids listed in viewer.accessibleRoles
+listRolesV2 ::
+  ( BeamFlow m r,
+    EncFlow m r
+  ) =>
+  TokenInfo ->
+  Maybe Text ->
+  Maybe Integer ->
+  Maybe Integer ->
+  m ListRoleRes
+listRolesV2 tokenInfo mbSearchString mbLimit mbOffset = do
+  person <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonDoesNotExist tokenInfo.personId.getId)
+  viewer <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
+  case viewer.dashboardAccessType of
+    DRole.DASHBOARD_ADMIN -> listRoles tokenInfo mbSearchString mbLimit mbOffset
+    _ -> do
+      visible <- B.runInReplica $ QRole.findAllByIds viewer.accessibleRoles
+      -- Apply search/limit/offset in-memory: the visible set is bounded by
+      -- accessible_roles (small), so we skip the DB round-trip cost.
+      let filtered = case mbSearchString of
+            Nothing -> visible
+            Just s  -> filter (\r -> s `T.isInfixOf` r.name) visible
+          totalCount = length filtered
+          offset = fromIntegral $ fromMaybe 0 mbOffset
+          limit  = fromIntegral $ fromMaybe 10 mbLimit
+          paged  = take limit (drop offset filtered)
+          res    = map mkRoleAPIEntity paged
+          count  = length res
+      pure $ ListRoleRes {list = res, summary = Summary {totalCount = totalCount, count = count}}

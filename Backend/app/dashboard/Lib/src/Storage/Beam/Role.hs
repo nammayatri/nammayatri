@@ -25,6 +25,7 @@ data RoleT f = RoleT
     name :: B.C f Text,
     dashboardAccessType :: B.C f Domain.DashboardAccessType,
     description :: B.C f Text,
+    accessibleRoles :: B.C f [Text],
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }

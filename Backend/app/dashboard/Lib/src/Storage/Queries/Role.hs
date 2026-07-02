@@ -43,6 +43,10 @@ findAllInDashboardAccessType :: BeamFlow m r => [Role.DashboardAccessType] -> m 
 findAllInDashboardAccessType dashboardAccessTypes =
   findAllWithKV [Se.Is BeamR.dashboardAccessType $ Se.In dashboardAccessTypes]
 
+findAllByIds :: BeamFlow m r => [Id Role] -> m [Role]
+findAllByIds [] = pure []
+findAllByIds ids = findAllWithKV [Se.Is BeamR.id $ Se.In (map getId ids)]
+
 findAllByLimitOffset :: BeamFlow m r => Maybe Integer -> Maybe Integer -> m [Role]
 findAllByLimitOffset mbLimit mbOffset = do
   let limitVal = fromIntegral $ fromMaybe 10 mbLimit
@@ -83,6 +87,7 @@ instance FromTType' BeamR.Role Role.Role where
       Just
         Role.Role
           { id = Id id,
+            accessibleRoles = Id <$> accessibleRoles,
             ..
           }
 
@@ -90,5 +95,6 @@ instance ToTType' BeamR.Role Role.Role where
   toTType' Role.Role {..} =
     BeamR.RoleT
       { id = getId id,
+        accessibleRoles = getId <$> accessibleRoles,
         ..
       }
