@@ -44,6 +44,7 @@ updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do
       Se.Set Beam.clientOsVersion (clientDevice <&> (.deviceVersion)),
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
       Se.Set Beam.currency (Just ((.currency) estimatedFare)),
+      Se.Set Beam.commissionCharges commissionCharges,
       Se.Set Beam.discount (discount <&> (.amount)),
       Se.Set Beam.distanceToNearestDriver (Kernel.Types.Common.distanceToHighPrecMeters <$> Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)),
       Se.Set Beam.distanceToNearestDriverValue (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)),

@@ -48,6 +48,7 @@ data Quote = Quote
     tollNames :: Maybe [Text],
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
+    commissionCharges :: Maybe HighPrecMoney
   }
   deriving (Generic, Show)
