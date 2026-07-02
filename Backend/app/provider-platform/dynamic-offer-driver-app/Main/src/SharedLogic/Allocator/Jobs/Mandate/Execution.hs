@@ -23,11 +23,12 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
-import Kernel.Types.Id (Id, cast)
+import Kernel.Types.Id (Id (Id), cast)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Payment.Domain.Action as APayments
 import Lib.Scheduler
+import qualified SharedLogic.ActiveDriversList as ADL
 import SharedLogic.Allocator
 import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual, roundToHalf)
 import SharedLogic.Payment
@@ -53,7 +54,8 @@ startMandateExecutionForDriver ::
     Esq.EsqDBReplicaFlow m r,
     EncFlow m r,
     HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasField "activeDriversListKeyShards" r Int
   ) =>
   Job 'MandateExecution ->
   m ExecutionResult
@@ -74,7 +76,11 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
         >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
     let limit = transporterConfig.driverFeeMandateExecutionBatchSize
     executionDate' <- getCurrentTime
-    driverFees <- QDF.findDriverFeeInRangeWithOrderNotExecutedAndPendingByServiceName merchantId merchantOpCityId limit startTime endTime serviceName
+    driverFees <- case jobData.shardNum of
+      Nothing -> QDF.findDriverFeeInRangeWithOrderNotExecutedAndPendingByServiceName merchantId merchantOpCityId limit startTime endTime serviceName
+      Just shardNum -> do
+        driverIds <- ADL.getActiveDriversForShard shardNum startTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc)
+        QDF.findDriverFeeInRangeWithOrderNotExecutedAndPendingByServiceNameByDriverIds merchantId merchantOpCityId limit startTime endTime serviceName (Id <$> driverIds)
     if null driverFees
       then return Complete
       else do
