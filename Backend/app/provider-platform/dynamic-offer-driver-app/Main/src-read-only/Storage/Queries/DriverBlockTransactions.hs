@@ -30,6 +30,11 @@ blockCountByDriverId driverId actionType = do findAllWithKV [Se.And [Se.Is Beam.
 findByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.DriverBlockTransactions.DriverBlockTransactions])
 findByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+findByDriverIdAndSpecialZoneId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.DriverBlockTransactions.DriverBlockTransactions])
+findByDriverIdAndSpecialZoneId driverId specialZoneId = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.specialZoneId $ Se.Eq specialZoneId]]
+
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.DriverBlockTransactions.DriverBlockTransactions -> m (Maybe Domain.Types.DriverBlockTransactions.DriverBlockTransactions))
@@ -49,6 +54,7 @@ updateByPrimaryKey (Domain.Types.DriverBlockTransactions.DriverBlockTransactions
       Se.Set Beam.reasonCode reasonCode,
       Se.Set Beam.reportedAt reportedAt,
       Se.Set Beam.requestorId requestorId,
+      Se.Set Beam.specialZoneId specialZoneId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.updatedAt _now
@@ -71,6 +77,7 @@ instance FromTType' Beam.DriverBlockTransactions Domain.Types.DriverBlockTransac
             reasonCode = reasonCode,
             reportedAt = reportedAt,
             requestorId = requestorId,
+            specialZoneId = specialZoneId,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -91,6 +98,7 @@ instance ToTType' Beam.DriverBlockTransactions Domain.Types.DriverBlockTransacti
         Beam.reasonCode = reasonCode,
         Beam.reportedAt = reportedAt,
         Beam.requestorId = requestorId,
+        Beam.specialZoneId = specialZoneId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,

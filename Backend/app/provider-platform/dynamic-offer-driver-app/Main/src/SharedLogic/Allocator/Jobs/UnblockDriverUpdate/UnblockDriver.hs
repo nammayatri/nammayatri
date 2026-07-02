@@ -14,11 +14,13 @@
 
 module SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
   ( unblockDriver,
+    unblockAirportDriver,
     unblockSoftBlockedDriver,
   )
 where
 
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
+import qualified Domain.Types.DriverInformation as DI
 import Kernel.Beam.Functions as BF
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
@@ -53,6 +55,36 @@ unblockDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   whenJust mbMerchantPN $ \merchantPN -> do
     let entityData = NotifReq {entityId = driver.id.getId, title = merchantPN.title, message = merchantPN.body}
     notifyDriverOnEvents driver.merchantOperatingCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType
+  return Complete
+
+unblockAirportDriver ::
+  ( TranslateFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  Job 'UnblockAirportDriver ->
+  m ExecutionResult
+unblockAirportDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
+  let jobData = jobInfo.jobData
+  let driverId = jobData.driverId
+  driverInfo <- QDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+  now <- getCurrentTime
+  when (driverInfo.enableForAirport == DI.BLOCKED && QDriverInfo.isAirportEligible now driverInfo) $ do
+    let mbLogInfo = do
+          mId <- driverInfo.merchantId
+          moCityId <- driverInfo.merchantOperatingCityId
+          pure
+            QDriverInfo.AirportBlockLogInfo
+              { blockedBy = DTDBT.Application,
+                reason = Just "SCHEDULED_UNBLOCK",
+                specialZoneId = jobData.specialZoneId,
+                requestorId = Nothing,
+                merchantId = mId,
+                merchantOperatingCityId = moCityId
+              }
+    QDriverInfo.updateAirportSwitch DI.ENABLED Nothing mbLogInfo (cast driverId)
   return Complete
 
 unblockSoftBlockedDriver ::

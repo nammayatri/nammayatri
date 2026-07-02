@@ -268,6 +268,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.addressDocumentType addressDocumentType,
       Se.Set Beam.adminId (Kernel.Types.Id.getId <$> adminId),
       Se.Set Beam.airConditionScore airConditionScore,
+      Se.Set Beam.airportBlockExpiryTime airportBlockExpiryTime,
       Se.Set Beam.approved approved,
       Se.Set Beam.autoPayStatus autoPayStatus,
       Se.Set Beam.availableUpiApps availableUpiApps,
