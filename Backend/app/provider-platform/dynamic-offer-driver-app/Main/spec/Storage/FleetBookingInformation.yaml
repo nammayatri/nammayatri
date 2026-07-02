@@ -37,6 +37,7 @@ FleetBookingInformation:
 
   constraints:
     id: PrimaryKey
+    serviceId: SecondaryKey
 
   beamFields:
     customerMobileNumber:
