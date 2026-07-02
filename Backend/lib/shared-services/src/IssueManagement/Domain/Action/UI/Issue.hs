@@ -77,7 +77,23 @@ data ServiceHandle m = ServiceHandle
     -- | Optional hook: when a dashboard operator posts a chat message, rider-app
     -- wires this to its FCM notification helper. Driver-app currently passes
     -- @Nothing@ because live chat is not yet exposed there.
-    mbSendChatNotification :: Maybe (Id Person -> ChatNotifPayload -> m ())
+    mbSendChatNotification :: Maybe (Id Person -> ChatNotifPayload -> m ()),
+    -- | Optional gate: should a customer-side chat message be forwarded to the
+    -- configured ticket service as an @updateTicket@ call? Apps typically
+    -- return @True@ only when the merchant's primary is XyneSpaces — Xyne
+    -- appends the message on the existing thread via @threadId@, whereas
+    -- Zendesk/Kapture already receive out-of-band updates from the dashboard.
+    -- Returning @Nothing@ (or @Just (\_ _ -> False)@) leaves the chat write
+    -- as a purely local DB row with no upstream call.
+    mbShouldForwardChatToTicketService :: Maybe (Id Merchant -> Id MerchantOperatingCity -> m Bool),
+    -- | Optional S3-fetch for a MediaFile. Apps with @s3Env@ in their reader
+    -- wire this to 'AWS.S3.get' so the shared handler can emit a
+    -- @data:@ URI on outbound ticket requests instead of relying on a hosted
+    -- URL that may be authenticated (rider-app's @/v2/issue/media@). Returns
+    -- @Nothing@ when the MediaFile has no @s3FilePath@ or the app doesn't
+    -- support S3 fetches (e.g. Beckn IGM flow) — the shared handler then
+    -- falls back to @mediaFile.url@.
+    mbFetchMediaBase64 :: Maybe (D.MediaFile -> m (Maybe Text))
   }
 
 getLanguage :: EsqDBReplicaFlow m r => Id Person -> Maybe Language -> ServiceHandle m -> m Language
@@ -504,7 +520,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
       void $ L.runIO $ Slack.publishMessage slackConfig message
   _ <- QIR.create issueReport
   when shouldCreateTicket $ do
-    ticket <- buildTicket issueReport category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config now issueHandle
+    ticket <- buildTicket issueReport category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config now issueHandle uploadedMediaFiles
     ticketResponse <- withTryCatch "createTicket:issueReport" (issueHandle.createTicket merchantId mocId ticket)
     case ticketResponse of
       Right ticketResponse' -> do
@@ -620,8 +636,8 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
               <> show moCity.city
               <> "\n"
 
-    buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> MerchantOperatingCity -> MerchantConfig -> UTCTime -> ServiceHandle m -> m TIT.CreateTicketReq
-    buildTicket issue category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity merchantCfg now iHandle = do
+    buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> MerchantOperatingCity -> MerchantConfig -> UTCTime -> ServiceHandle m -> [D.MediaFile] -> m TIT.CreateTicketReq
+    buildTicket issue category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity merchantCfg now iHandle riderUploadedMediaFiles = do
       info <- buildRideInfo moCity now mbRide mbRideInfoRes mbFRFSTicketBooking person iHandle
       phoneNumber <- mapM decrypt person.mobileNumber
       let merchantShortId = moCity.merchantShortId.getShortId
@@ -630,6 +646,11 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
               A.String code -> code
               _ -> show moCity.city
           dashboardMediaFileUrls = maybe [] pure (generateDashboardRideInfoUrl merchantCfg mbRide merchantShortId dashboardCityCode)
+      -- The rider's actual uploaded media URIs come first so downstream
+      -- providers (Xyne's multipart appDeskInbound) see real files to attach;
+      -- the dashboard ride-info link is appended after as an operator
+      -- convenience for Zendesk/Kapture bodies.
+      riderMediaFileUrls <- traverse (mediaFileToTicketUri iHandle) riderUploadedMediaFiles
       return $
         TIT.CreateTicketReq
           { category = category.category,
@@ -638,7 +659,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             queue = merchantCfg.kaptureQueue,
             issueId = Just issue.id.getId,
             issueDescription = description,
-            mediaFiles = Just dashboardMediaFileUrls,
+            mediaFiles = Just (riderMediaFileUrls <> dashboardMediaFileUrls),
             name = Just $ fromMaybe "" person.firstName <> " " <> fromMaybe "" person.lastName,
             phoneNo = phoneNumber,
             personId = person.id.getId,
@@ -1232,19 +1253,53 @@ mkIssueChat :: ChatType -> Text -> UTCTime -> Chat
 mkIssueChat chatType chatId timestamp =
   Chat {..}
 
+-- | Convert a MediaFile into a payload usable by the outbound ticket
+-- interface. When the app wires @mbFetchMediaBase64@ and it returns a base64
+-- payload for this MediaFile, we emit a @data:@ URI (so downstream providers
+-- like Xyne can fetch bytes without authenticating to rider-app's
+-- @TokenAuth@-protected @/v2/issue/media@ endpoint). Otherwise — Beckn flow,
+-- or an inbound Xyne CDN attachment with no @s3FilePath@ — we fall back to
+-- @mediaFile.url@ and let the ticket interface do a plain HTTP fetch. The
+-- MIME hint on the data URI is best-effort; the Xyne interface re-detects
+-- the real MIME from the decoded bytes' magic before uploading.
+mediaFileToTicketUri :: Monad m => ServiceHandle m -> D.MediaFile -> m Text
+mediaFileToTicketUri iHandle mf = do
+  mbB64 <- case iHandle.mbFetchMediaBase64 of
+    Just fetch -> fetch mf
+    Nothing -> pure Nothing
+  case mbB64 of
+    Just b64 -> pure $ "data:" <> fileTypeToMime mf._type <> ";base64," <> b64
+    Nothing -> pure mf.url
+  where
+    fileTypeToMime :: S3.FileType -> Text
+    fileTypeToMime = \case
+      S3.Image -> "image/jpeg"
+      S3.Audio -> "audio/mpeg"
+      S3.Video -> "video/mp4"
+      S3.PDF -> "application/pdf"
+      _ -> "application/octet-stream"
+
 -------------------------------------------------------------------------
 -- Live chat (rider/driver-side) --------------------------------------
 
 -- | Rider (or driver) posts a chat message against an existing issue.
--- Enforces that the caller owns the issue before persisting.
+-- Enforces that the caller owns the issue before persisting. After the local
+-- ChatMessage row is written, the message is forwarded to the merchant's
+-- configured ticket service as an updateTicket call so the agent sees the
+-- reply on the same thread they see the original ticket in (Xyne appends via
+-- @threadId@; Zendesk/Kapture add a comment on the existing ticket).
+--
+-- Ticket-service forward is best-effort — a downstream failure is logged but
+-- does not fail the chat write, mirroring the createTicket path.
 createChatMessage ::
-  BeamFlow m r =>
+  (EncFlow m r, BeamFlow m r) =>
   Id Person ->
   Id D.IssueReport ->
   Identifier ->
+  ServiceHandle m ->
   Common.CreateChatMessageReq ->
   m Common.ChatMessageItem
-createChatMessage personId issueReportId identifier req = do
+createChatMessage personId issueReportId identifier issueHandle req = do
   issueReport <-
     QIR.findById issueReportId
       >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
@@ -1270,7 +1325,65 @@ createChatMessage personId issueReportId identifier req = do
             merchantId = issueReport.merchantId
           }
   QCM.create chatMsg
+  forwardChatToTicketService issueReport identifier issueHandle req.text mediaIds
   toChatMessageItem identifier chatMsg
+
+-- | Forward a customer-side chat message to the merchant's configured ticket
+-- service. Uses the original @IssueReport.id@ as the Xyne @threadId@ (via
+-- @issueDetails.issueId@) so agents see the message appended to the same
+-- Xyne desk thread; Zendesk/Kapture receive it as a comment on
+-- @issueReport.ticketId@. Attached MediaFile URLs flow through
+-- @issueDetails.mediaFiles@, which the Xyne interface uses to switch to the
+-- multipart appDeskInbound path.
+forwardChatToTicketService ::
+  (EncFlow m r, BeamFlow m r) =>
+  D.IssueReport ->
+  Identifier ->
+  ServiceHandle m ->
+  Text ->
+  [Id D.MediaFile] ->
+  m ()
+forwardChatToTicketService issueReport identifier issueHandle messageText mediaIds =
+  case (issueReport.merchantId, issueReport.merchantOperatingCityId) of
+    (Just merchantId, Just mocId) -> do
+      -- Only forward when the app opts in (typically: primary ticket service
+      -- is XyneSpaces). Without the gate, Zendesk/Kapture tickets would also
+      -- receive duplicate comments from every chat write.
+      shouldForward <- maybe (pure False) (\chk -> chk merchantId mocId) issueHandle.mbShouldForwardChatToTicketService
+      when shouldForward $ doForward merchantId mocId
+    _ -> pure ()
+  where
+    doForward merchantId mocId = do
+      mbCategory <- case issueReport.categoryId of
+        Just cid -> CQIC.findById cid identifier
+        Nothing -> pure Nothing
+      mediaUrls <- fmap catMaybes . forM mediaIds $ \mfId -> do
+        mbFile <- CQMF.findById mfId identifier
+        traverse (mediaFileToTicketUri issueHandle) mbFile
+      let ticketId = fromMaybe issueReport.id.getId issueReport.ticketId
+          ticketReq =
+            TIT.UpdateTicketReq
+              { comment = messageText,
+                ticketId = ticketId,
+                status = TIT.Pending,
+                rideDescription = Nothing,
+                issueDetails =
+                  Just
+                    TIT.UpdateIssueDetails
+                      { issueDescription = Nothing,
+                        issueId = Just issueReport.id.getId,
+                        mediaFiles = if null mediaUrls then Nothing else Just mediaUrls,
+                        subCategory = Nothing,
+                        vehicleCategory = Nothing,
+                        category = (.category) <$> mbCategory
+                      },
+                requesterId = Nothing,
+                ticketContext = Just TIT.IssueTicket
+              }
+      result <- withTryCatch "updateTicket:chatMessage" (issueHandle.updateTicket merchantId mocId ticketReq)
+      case result of
+        Right _ -> pure ()
+        Left err -> logTagInfo "Update Ticket (chat) failed - " (show err)
 
 -- | Fetches chat messages on an issue ordered by createdAt ascending.
 -- Optionally filters to messages strictly newer than @since@. Used by both
