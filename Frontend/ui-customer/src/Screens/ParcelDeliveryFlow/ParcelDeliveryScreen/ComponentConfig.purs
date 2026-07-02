@@ -272,6 +272,7 @@ chooseVehicleConfig state =
       , validTill = selectedParcelEstimate.validTill
       , hasTollCharges = selectedParcelEstimate.hasTollCharges
       , hasParkingCharges = selectedParcelEstimate.hasParkingCharges
+      , hasPetCharges = selectedParcelEstimate.hasPetCharges
       , singleVehicle = true
       }
   in chooseVehicleConfig'
