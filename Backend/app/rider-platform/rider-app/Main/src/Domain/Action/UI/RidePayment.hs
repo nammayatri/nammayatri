@@ -572,7 +572,7 @@ getPaymentRefundRequest (mbPersonId, _merchantId) rideId = do
         throwError $ InvalidRequest "Person is not the owner of the ride"
     items <- forM (sortOn (Down . (.createdAt)) rows) $ \rr -> do
       evidence <- fetchEvidenceFromS3 rr
-      pure $ mkRefundRequestResp rr evidence
+      pure $ mkRefundRequestResp rideId rr evidence
     pure $ API.Types.UI.RidePayment.RefundRequestListResp {refundRequests = items}
   case eResult of
     Left () -> do
@@ -581,12 +581,13 @@ getPaymentRefundRequest (mbPersonId, _merchantId) rideId = do
     Right result -> return result
 
 mkRefundRequestResp ::
+  Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
   DRefundRequest.RefundRequest ->
   Maybe Text ->
   API.Types.UI.RidePayment.RefundRequestResp
-mkRefundRequestResp DRefundRequest.RefundRequest {..} evidence =
+mkRefundRequestResp rideId DRefundRequest.RefundRequest {..} evidence =
   API.Types.UI.RidePayment.RefundRequestResp
-    { rideId = Kernel.Types.Id.cast @DPaymentOrder.PaymentOrder @Domain.Types.Ride.Ride orderId,
+    { rideId = rideId,
       refundsAmount = flip PriceAPIEntity currency <$> refundsAmount,
       requestedAmount = flip PriceAPIEntity currency <$> requestedAmount,
       transactionAmount = PriceAPIEntity transactionAmount currency,
@@ -615,7 +616,7 @@ fetchPaymentRefundRequestInfo h refreshRefunds refundRequest = do
     if refreshRefunds == Just True
       then do
         -- refresh is possible only if refund object already created on payment gateway side
-        let rideId = Kernel.Types.Id.cast @DPaymentOrder.PaymentOrder @Domain.Types.Ride.Ride orderId
+        rideId <- SPayment.getRideIdForOrder orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> orderId.getId)
         ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
         booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
         mbResult <- SPayment.getRefundStatusForOrder refundRequest.merchantId refundRequest.merchantOperatingCityId booking.paymentMode refundRequest.orderId refundRequest.refundsId
@@ -723,7 +724,7 @@ castRefundRequestStatus = \case
 --   and /initiate after the row's status flip.
 processRefundRaised :: DRefundRequest.RefundRequest -> Environment.Flow ()
 processRefundRaised refundRequest = do
-  let rideId = Kernel.Types.Id.cast @DPaymentOrder.PaymentOrder @Domain.Types.Ride.Ride refundRequest.orderId
+  rideId <- SPayment.getRideIdForOrder refundRequest.orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> refundRequest.orderId.getId)
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let amount = fromMaybe refundRequest.transactionAmount refundRequest.refundsAmount
@@ -753,7 +754,7 @@ processRefundRaised refundRequest = do
 --   when Stripe confirms success.
 processRefundSucceeded :: DRefundRequest.RefundRequest -> Environment.Flow ()
 processRefundSucceeded refundRequest = do
-  let rideId = Kernel.Types.Id.cast @DPaymentOrder.PaymentOrder @Domain.Types.Ride.Ride refundRequest.orderId
+  rideId <- SPayment.getRideIdForOrder refundRequest.orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> refundRequest.orderId.getId)
   -- Re-fire guard: the 3 status-refresh hooks can re-enter this REFUNDED transition, and the
   -- cumulative refund invoice would double-count, so gate every REFUNDED side-effect on the
   -- ledger dedup signal (the authoritative "already processed" marker).
@@ -789,7 +790,7 @@ processRefundSucceeded refundRequest = do
 --   success). Idempotent; processRefundResult only calls this on a genuine status transition.
 processRefundFailed :: DRefundRequest.RefundRequest -> Environment.Flow ()
 processRefundFailed refundRequest = do
-  let rideId = Kernel.Types.Id.cast @DPaymentOrder.PaymentOrder @Domain.Types.Ride.Ride refundRequest.orderId
+  rideId <- SPayment.getRideIdForOrder refundRequest.orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> refundRequest.orderId.getId)
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let amount = fromMaybe refundRequest.transactionAmount refundRequest.refundsAmount
@@ -817,7 +818,7 @@ processRefundResult refundRequest updStatus mbRefundsId =
     case mbRefundsId of
       Just rid -> QRefundRequest.updateRefundIdAndStatus (Just rid) updStatus refundRequest.id
       Nothing -> QRefundRequest.updateRefundStatus updStatus refundRequest.id
-    let rideId = Kernel.Types.Id.cast @DPaymentOrder.PaymentOrder @Domain.Types.Ride.Ride refundRequest.orderId
+    rideId <- SPayment.getRideIdForOrder refundRequest.orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> refundRequest.orderId.getId)
     QRide.updateRefundRequestStatus (Just updStatus) rideId
     let updRefundRequest = refundRequest{status = updStatus, refundsId = mbRefundsId <|> refundRequest.refundsId}
     Notify.notifyRefunds updRefundRequest

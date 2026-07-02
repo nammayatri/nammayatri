@@ -807,6 +807,15 @@ getOrderIdForRide rideId = do
   mbOrder <- QPaymentOrder.findByDomainEntityId rideId.getId
   pure $ (.id) <$> mbOrder
 
+-- | Inverse of getOrderIdForRide: a refund_request's orderId is a payment_order id, NOT a ride id.
+--   payment_order.id is an independently generated GUID; the rideId is stored on the order's
+--   domainEntityId at creation. Resolve the ride via domainEntityId instead of casting the order
+--   GUID to a ride GUID (the two are never equal on real rides — only coincided on synthetic seeds).
+getRideIdForOrder :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DOrder.PaymentOrder -> m (Maybe (Id Ride.Ride))
+getRideIdForOrder orderId = do
+  mbOrder <- QPaymentOrder.findById orderId
+  pure $ Id <$> ((.domainEntityId) =<< mbOrder)
+
 -- | Retrieve ALL payment orders for a ride (ride PI + tip PI).
 --   Useful for capture, refund, and status operations that need to act on all orders.
 getAllOrdersForRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Ride.Ride -> m [DOrder.PaymentOrder]
