@@ -8,7 +8,7 @@ import qualified Domain.Action.UI.XyneWebhook
 import Environment
 import EulerHS.Prelude
 import qualified IssueManagement.Domain.Action.UI.XyneWebhook as XyneShared
-import Kernel.External.Ticket.XyneSpaces.Webhook (RawByteString)
+import Kernel.External.Ticket.XyneSpaces.Webhook (RawByteString, RawJson)
 import qualified Kernel.Prelude
 import Kernel.Utils.Common
 import Servant
@@ -16,7 +16,7 @@ import Servant
 type API =
   "xyne" :> "webhook"
     :> Header "X-Xyne-Signature" Kernel.Prelude.Text
-    :> ReqBody '[OctetStream] RawByteString
+    :> ReqBody '[RawJson, OctetStream] RawByteString
     :> Post '[JSON] XyneShared.XyneWebhookAck
 
 handler :: FlowServer API
