@@ -20,6 +20,7 @@ where
 import Control.Applicative ((<|>))
 import Data.IORef (newIORef, readIORef, writeIORef)
 import qualified Data.Map.Strict as M
+import qualified Data.Set as Set
 import Data.Time.Calendar (addDays)
 import Data.Time.Clock (UTCTime (UTCTime), secondsToDiffTime, utctDay)
 import qualified Domain.Types.Booking as DB
@@ -387,13 +388,63 @@ doReconciliationPurchaseVsSubscriptionTransaction merchantId merchantOpCityId st
     QSubPurchase.updateReconciliationStatus (Just jsonValue) subscription.id
     pure $ Just entry
 
-  let validEntries = catMaybes entries
+  missingInSourceEntries <- findMissingInSourceSubscriptionTransactions merchantOpCityId subscriptions startTime endTime now
+
+  let validEntries = catMaybes entries <> missingInSourceEntries
   saveSummaryAndEntries ReconSummary.SUBSCRIPTION_PURCHASE_VS_SUBSCRIPTION_TRANSACTION validEntries startTime now merchantId.getId merchantOpCityId
 
   logInfo $
     "Subscription Purchase vs Subscription Transaction reconciliation completed. Total: "
       <> show (length validEntries)
   return Complete
+
+-- | Find settled subscription ledger transactions in range that have no matching subscription purchase.
+findMissingInSourceSubscriptionTransactions ::
+  ( BeamFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  [DSP.SubscriptionPurchase] ->
+  UTCTime ->
+  UTCTime ->
+  UTCTime ->
+  m [ReconEntry.ReconciliationEntry]
+findMissingInSourceSubscriptionTransactions merchantOpCityId purchases startTime endTime now = do
+  let referenceTypes = [subscriptionCreditReferenceType, expiryCreditTransferReferenceType]
+      purchaseIds = Set.fromList $ map (.id.getId) purchases
+  ledgerEntries <- QLedgerExtra.findByReferenceTypesAndDateRange referenceTypes merchantOpCityId.getId startTime endTime
+  fmap catMaybes $
+    forM ledgerEntries $ \ledgerEntry -> do
+      if ledgerEntry.status /= LedgerEntry.SETTLED || Set.member ledgerEntry.referenceId purchaseIds
+        then pure Nothing
+        else do
+          mbSubscription <- QSubPurchase.findByPrimaryKey (Id ledgerEntry.referenceId)
+          case mbSubscription of
+            Just _ -> pure Nothing
+            Nothing -> do
+              entryId <- generateGUID
+              let component =
+                    if ledgerEntry.referenceType == expiryCreditTransferReferenceType
+                      then ReconEntry.EXPIRY
+                      else ReconEntry.SUBSCRIPTION_PURCHASE
+                  inp =
+                    (DomainRecon.mkDefaultReconEntryInput ReconEntry.SUBSCRIPTION_PURCHASE_VS_SUBSCRIPTION_TRANSACTION)
+                      { DomainRecon.actual = ledgerEntry.amount,
+                        DomainRecon.reason = Just DomainRecon.reasonNoMatchingSubscription,
+                        DomainRecon.component = Just component,
+                        DomainRecon.sourceId = Nothing,
+                        DomainRecon.targetId = Just ledgerEntry.id.getId,
+                        DomainRecon.transactionDate = Just ledgerEntry.timestamp,
+                        DomainRecon.merchantId = Just ledgerEntry.merchantId,
+                        DomainRecon.merchantOperatingCityId = Just ledgerEntry.merchantOperatingCityId
+                      }
+                  entry =
+                    (DomainRecon.mkReconEntry inp now entryId)
+                      { ReconEntry.reconStatus = ReconEntry.MISSING_IN_SOURCE,
+                        ReconEntry.mismatchReason = Just DomainRecon.reasonNoMatchingSubscription
+                      }
+              pure $ Just entry
 
 -- 5. PG-Payment Settlement Report vs Subscription Purchase Reconciliation
 doReconciliationPgPaymentVsSubscription ::
@@ -755,7 +806,8 @@ processPurchaseVsSubscriptionTransaction subscription now = do
     if not hasCreditEntry
       then
         entry
-          { ReconEntry.reconStatus = ReconEntry.MISSING_IN_TARGET
+          { ReconEntry.reconStatus = ReconEntry.MISSING_IN_TARGET,
+            ReconEntry.mismatchReason = Just DomainRecon.reasonMissingSubscriptionTransaction
           }
       else entry
 
