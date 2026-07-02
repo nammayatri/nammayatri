@@ -41,7 +41,7 @@ findAllRequestsInRange ::
   Maybe Text ->
   Maybe Text ->
   Maybe (Id Person) ->
-  m [(OperationHubRequests, Person, DOH.OperationHub)]
+  m [(OperationHubRequests, Maybe Person, DOH.OperationHub)]
 findAllRequestsInRange from to limit offset mbMobileNumberHash mbDriverMobileNumberHash mbReqStatus mbReqType mbCreatorId mbOperationHubId mbOperationHubName mbRegistrationNo mbDriverId = do
   dbConf <- getReplicaBeamConfig
   res <- case mbDriverMobileNumberHash of
@@ -60,7 +60,7 @@ findAllRequestsInRange from to limit offset mbMobileNumberHash mbDriverMobileNum
                     do
                       operationHubRequests <- B.all_ (BeamCommon.operationHubRequests BeamCommon.atlasDB)
                       operationHub <- B.join_ (BeamCommon.operationHub BeamCommon.atlasDB) (\operationHub -> BeamOHR.operationHubId operationHubRequests B.==. BeamOH.id operationHub)
-                      creator <- B.join_ (BeamCommon.person BeamCommon.atlasDB) (\creator -> BeamOHR.creatorId operationHubRequests B.==. BeamP.id creator)
+                      creator <- B.leftJoin_' (B.all_ (BeamCommon.person BeamCommon.atlasDB)) (\creator -> B.sqlBool_ (BeamOHR.creatorId operationHubRequests B.==. BeamP.id creator))
                       driverPerson <- B.join_' (BeamCommon.person BeamCommon.atlasDB) (\dp -> BeamOHR.driverId operationHubRequests B.==?. B.just_ (BeamP.id dp) B.&&?. BeamP.mobileNumberHash dp B.==?. B.val_ (Just driverMobileNumberHash))
                       pure (operationHubRequests, creator, operationHub, driverPerson)
       pure $ fmap (map (\(a, b, c, _) -> (a, b, c))) r
@@ -78,15 +78,15 @@ findAllRequestsInRange from to limit offset mbMobileNumberHash mbDriverMobileNum
                   do
                     operationHubRequests <- B.all_ (BeamCommon.operationHubRequests BeamCommon.atlasDB)
                     operationHub <- B.join_ (BeamCommon.operationHub BeamCommon.atlasDB) (\operationHub -> BeamOHR.operationHubId operationHubRequests B.==. BeamOH.id operationHub)
-                    creator <- B.join_ (BeamCommon.person BeamCommon.atlasDB) (\creator -> BeamOHR.creatorId operationHubRequests B.==. BeamP.id creator)
+                    creator <- B.leftJoin_' (B.all_ (BeamCommon.person BeamCommon.atlasDB)) (\creator -> B.sqlBool_ (BeamOHR.creatorId operationHubRequests B.==. BeamP.id creator))
                     pure (operationHubRequests, creator, operationHub)
   case res of
     Right res' -> do
-      finalRes <- forM res' $ \(operationHubRequests, person, operationHub) -> runMaybeT $ do
+      finalRes <- forM res' $ \(operationHubRequests, mbPerson, operationHub) -> runMaybeT $ do
         ohr <- MaybeT $ fromTType' operationHubRequests
-        p <- MaybeT $ fromTType' person
         oh <- MaybeT $ fromTType' operationHub
-        pure (ohr, p, oh)
+        mbCreator <- lift $ maybe (pure Nothing) fromTType' mbPerson
+        pure (ohr, mbCreator, oh)
       pure $ catMaybes finalRes
     Left err -> do
       logError $ "Error in findAllRequestsInRange " <> show err
@@ -98,7 +98,7 @@ findAllRequestsInRange from to limit offset mbMobileNumberHash mbDriverMobileNum
         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\creatorId -> operationHubRequests.creatorId B.==?. B.val_ creatorId) mbCreatorId
         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\reqType -> operationHubRequests.requestType B.==?. B.val_ reqType) mbReqType
         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\reqStatus -> operationHubRequests.requestStatus B.==?. B.val_ reqStatus) mbReqStatus
-        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> creator.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberHash
+        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> B.maybe_ (B.sqlBool_ $ B.val_ False) (\creatorMobileHash -> B.sqlBool_ (creatorMobileHash B.==. B.val_ (Just mobileNumberSearchStringDB))) creator.mobileNumberHash) mbMobileNumberHash
         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\operationHubId -> operationHubRequests.operationHubId B.==?. B.val_ operationHubId.getId) mbOperationHubId
         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\registrationNo -> B.maybe_ (B.sqlBool_ $ B.val_ False) (\rcNo -> B.sqlBool_ (B.lower_ rcNo `B.like_` (B.val_ ("%" <> T.toLower registrationNo <> "%")))) operationHubRequests.registrationNo) mbRegistrationNo
         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\operationHubName -> B.sqlBool_ (B.lower_ operationHub.name `B.like_` (B.val_ ("%" <> T.toLower operationHubName <> "%")))) mbOperationHubName

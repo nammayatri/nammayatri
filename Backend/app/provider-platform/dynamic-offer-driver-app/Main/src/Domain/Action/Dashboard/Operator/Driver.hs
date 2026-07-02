@@ -394,9 +394,9 @@ opsHubRequestLockKey reqId = "opsHub:Request:Id-" <> reqId
 reviewRequestLockKey :: Text -> Text
 reviewRequestLockKey reqId = "ops:reviewQueue:Id-" <> reqId
 
-castHubRequests :: (OperationHubRequests, DP.Person, DOH.OperationHub) -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.OperationHubDriverRequest
-castHubRequests (hubReq, creator, hub) = do
-  creatorPhoneNo <- mapM decrypt creator.mobileNumber
+castHubRequests :: (OperationHubRequests, Maybe DP.Person, DOH.OperationHub) -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.OperationHubDriverRequest
+castHubRequests (hubReq, mbCreator, hub) = do
+  creatorPhoneNo <- maybe (pure Nothing) (\creator -> mapM decrypt creator.mobileNumber) mbCreator
   driverPhoneNo <- case hubReq.driverId of
     Just driverId -> do
       driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)

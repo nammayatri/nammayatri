@@ -581,4 +581,5 @@ in  { esqDBCfg
       { masterUrl = None Text, masterSecret = Some "123" }
     , enableLtsPoolDataForPooling = True
     , rideEventsPublisherCfg
+    , xyneWebhookSigningSecret = "<XYNE_WEBHOOK_SIGNING_SECRET>"
     }

@@ -1292,6 +1292,8 @@ data DriverOnboardingError
   | RCActivationFailedPaymentDue Text
   | RCDependentDocExpired Text
   | DLInvalid
+  | PanInvalid
+  | GstInvalid
   | VehicleServiceTierNotFound Text
   | DocumentUnderManualReview Text
   | DocumentAlreadyValidated Text
@@ -1382,6 +1384,8 @@ instance IsBaseError DriverOnboardingError where
     RCActivationFailedPaymentDue id_ -> Just $ "cannot activate RC for person \"" <> id_ <> "\" Due to paymentDue."
     RCDependentDocExpired detail -> Just $ "RC dependent doc not valid : " <> detail
     DLInvalid -> Just "Contact Customer Support, class of vehicles is not supported"
+    PanInvalid -> Just "Contact Customer Support, PAN card has been rejected"
+    GstInvalid -> Just "Contact Customer Support, GST certificate has been rejected"
     VehicleServiceTierNotFound serviceTier -> Just $ "Service tier config not found for vehicle service tier \"" <> serviceTier <> "\"."
     DocumentUnderManualReview docName -> Just $ "Your " <> docName <> " is under manual review."
     DocumentAlreadyValidated docName -> Just $ "Your " <> docName <> " is already validated."
@@ -1468,6 +1472,8 @@ instance IsHTTPError DriverOnboardingError where
     RCActivationFailedPaymentDue _ -> "RC_ACTIVATION_FAILED_PAYMENT_DUE"
     RCDependentDocExpired _ -> "RC_DEPENDENT_DOC_EXPIRED"
     DLInvalid -> "DL_INVALID"
+    PanInvalid -> "PAN_INVALID"
+    GstInvalid -> "GST_INVALID"
     VehicleServiceTierNotFound _ -> "VEHICLE_SERVICE_TIER_NOT_FOUND"
     DocumentUnderManualReview _ -> "DOCUMENT_UNDER_MANUAL_REVIEW"
     DocumentAlreadyValidated _ -> "DOCUMENT_ALREADY_VALIDATED"
@@ -1552,6 +1558,8 @@ instance IsHTTPError DriverOnboardingError where
     RCActivationFailedPaymentDue _ -> E400
     RCDependentDocExpired _ -> E400
     DLInvalid -> E400
+    PanInvalid -> E400
+    GstInvalid -> E400
     VehicleServiceTierNotFound _ -> E500
     DocumentUnderManualReview _ -> E400
     DocumentAlreadyValidated _ -> E400
