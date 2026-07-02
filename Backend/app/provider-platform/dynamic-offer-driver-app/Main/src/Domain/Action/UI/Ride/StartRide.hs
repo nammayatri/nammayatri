@@ -27,6 +27,7 @@ import Data.Maybe (listToMaybe)
 import qualified Data.Text as Text
 import qualified Domain.Action.Internal.StopDetection as StopDetection
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
+import qualified SharedLogic.ActiveDriversList as ADL
 import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverInformation as DDI
@@ -226,7 +227,8 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
 
       fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
       fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride booking
-      fork "startRide - Complete pickup zone request" $
+      fork "startRide - Complete pickup zone request and add driver to active list" $ do
+        ADL.addDriverToActiveList driverId (secondsToNominalDiffTime (toIntegral transporterConfig.timeDiffFromUtc))
         SpecialZoneDriverDemand.completePickupZoneRequestsForDriver driverId booking.id.getId booking.pickupGateId (show $ Veh.castServiceTierToVariant booking.vehicleServiceTier)
       if isInterCityTrip booking.tripCategory || isRentalTrip booking.tripCategory
         then logTagInfo "IffcoTokio driver insurance skipped" ("tripCategory=" <> show booking.tripCategory <> ", rideId=" <> ride.id.getId)
