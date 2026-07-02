@@ -47,8 +47,6 @@ types:
   NewCoinsConfigReq:
     - eventFunction: DriverCoinsFunctionType
     - eventName: Text
-    - merchantId: Text
-    - merchantOptCityId: Text
     - coins: Int
     - expirationAt: Maybe Int
     - active: Bool
