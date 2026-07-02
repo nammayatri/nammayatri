@@ -22,7 +22,6 @@ import Kernel.Utils.Common
 import "lib-dashboard" Storage.Beam.BeamFlow
 import qualified "lib-dashboard" Storage.Queries.Entity as QE
 import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
-import qualified "lib-dashboard" Storage.Queries.MerchantAccess as QAccess
 import qualified "lib-dashboard" Storage.Queries.Person as QP
 import qualified "lib-dashboard" Storage.Queries.Role as QRole
 import "lib-dashboard" Tools.Error
@@ -55,6 +54,26 @@ data BulkCreatePersonResp = BulkCreatePersonResp
 maxBulkPersons :: Int
 maxBulkPersons = 500
 
+-- Mirror of sanitizeLoginReq's semantics: strip every string field so what
+-- gets persisted matches what login-time lookup will search for. Also collapses
+-- email = Just "" to Nothing so blank emails don't participate in the dup check.
+sanitizeBulkPerson :: BulkCreatePerson -> BulkCreatePerson
+sanitizeBulkPerson p =
+  p
+    { firstName = T.strip p.firstName,
+      lastName = T.strip p.lastName,
+      mobileNumber = T.strip p.mobileNumber,
+      mobileCountryCode = T.strip p.mobileCountryCode,
+      email = p.email >>= nonBlank,
+      roleName = T.strip p.roleName,
+      entityId = T.strip p.entityId,
+      tokenNo = T.strip p.tokenNo
+    }
+  where
+    nonBlank t = case T.strip t of
+      "" -> Nothing
+      s -> Just s
+
 bulkCreate :: (BeamFlow m r, EncFlow m r) => Id DP.Person -> BulkCreatePersonReq -> m BulkCreatePersonResp
 bulkCreate actorPersonId req = do
   let total = length req.persons
@@ -62,48 +81,44 @@ bulkCreate actorPersonId req = do
     throwError (InvalidRequest "persons array is empty")
   when (total > maxBulkPersons) $
     throwError (InvalidRequest $ "persons exceeds per-request cap of " <> T.pack (show maxBulkPersons) <> " rows; split the CSV")
+  -- Strip whitespace on every string field so the persisted value matches what
+  -- sanitizeLoginReq will look up at login time. Reject rows whose critical
+  -- fields collapse to empty post-strip — otherwise they'd persist as
+  -- unreachable accounts.
+  persons <- forM (zip [0 :: Int ..] req.persons) $ \(idx, p) -> do
+    let p' = sanitizeBulkPerson p
+        rowTag = "Row " <> T.pack (show idx) <> ": "
+    when (T.null p'.mobileNumber) $ throwError (InvalidRequest $ rowTag <> "mobileNumber is empty after trim")
+    when (T.null p'.mobileCountryCode) $ throwError (InvalidRequest $ rowTag <> "mobileCountryCode is empty after trim")
+    when (T.null p'.tokenNo) $ throwError (InvalidRequest $ rowTag <> "tokenNo is empty after trim")
+    when (T.null p'.roleName) $ throwError (InvalidRequest $ rowTag <> "roleName is empty after trim")
+    when (T.null p'.entityId) $ throwError (InvalidRequest $ rowTag <> "entityId is empty after trim")
+    pure p'
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
-  let phoneKeys = map (\p -> (p.mobileCountryCode, p.mobileNumber)) req.persons
-      emails = mapMaybe (.email) req.persons
+  let phoneKeys = map (\p -> (p.mobileCountryCode, p.mobileNumber)) persons
+      emails = mapMaybe (.email) persons
   when (length phoneKeys /= length (nub phoneKeys)) $
     throwError (InvalidRequest "Duplicate mobileCountryCode+mobileNumber within the batch")
   when (length emails /= length (nub (map T.toLower emails))) $
     throwError (InvalidRequest "Duplicate email within the batch")
   now <- getCurrentTime
-  pairs <- forM (zip [0 :: Int ..] req.persons) $ \(idx, p) -> do
+  pairs <- forM (zip [0 :: Int ..] persons) $ \(idx, p) -> do
     person <- validateAndBuildPerson now idx p
     access <- buildMerchantAccess merchant req.operatingCity now person
     pure (person, access)
-  written <- writeWithRollback pairs
-  let ids = map fst written
+  -- One Postgres transaction covers all N person rows + N access rows.
+  -- Either every row lands or Postgres rolls the whole batch back — no orphan
+  -- rows are possible, no best-effort cleanup needed, no distinction between
+  -- "clean rollback" and "partial rollback" for the caller to worry about.
+  QP.createPersonsWithAccessAtomic pairs
+  let ids = map ((.id) . fst) pairs
   logInfo $
     "[PTEmployee.bulkCreate] actor=" <> actorPersonId.getId
       <> " merchant=" <> req.merchantId.getShortId
       <> " count=" <> T.pack (show (length ids))
   pure BulkCreatePersonResp {totalCount = length ids, createdPersonIds = ids}
-
--- KV/PG has no transaction primitive exposed at this layer; on a mid-batch
--- failure we undo every row already written so the admin can re-upload the
--- same CSV without a "mobile already registered" cleanup pass.
-writeWithRollback ::
-  BeamFlow m r =>
-  [(PT.Person, DAccess.MerchantAccess)] ->
-  m [(Id PT.Person, Id DAccess.MerchantAccess)]
-writeWithRollback = go []
-  where
-    go acc [] = pure (reverse acc)
-    go acc ((person, access) : rest) = do
-      catchAny (QP.create person >> QAccess.create access) $ \e -> do
-        logError $ "[PTEmployee.bulkCreate] write failed on personId=" <> person.id.getId <> "; rolling back " <> T.pack (show (length acc)) <> " prior rows"
-        forM_ acc $ \(pId, aId) -> do
-          catchAny (QAccess.deleteById aId) $ \de ->
-            logError $ "[PTEmployee.bulkCreate] rollback: failed to delete merchantAccess " <> aId.getId <> ": " <> T.pack (show de)
-          catchAny (QP.deletePerson pId) $ \de ->
-            logError $ "[PTEmployee.bulkCreate] rollback: failed to delete person " <> pId.getId <> ": " <> T.pack (show de)
-        throwM e
-      go ((person.id, access.id) : acc) rest
 
 buildMerchantAccess :: MonadFlow m => DMerchant.Merchant -> City.City -> UTCTime -> PT.Person -> m DAccess.MerchantAccess
 buildMerchantAccess merchant city now person = do
@@ -159,10 +174,10 @@ validateAndBuildPerson now idx p = do
         verified = Just True,
         rejectionReason = Nothing,
         rejectedAt = Nothing,
-        passwordUpdatedAt = Just now,
+        passwordUpdatedAt = Nothing,
         approvedBy = Nothing,
         rejectedBy = Nothing,
         language = Nothing,
-        tokenNo = Just tokenHash,
+        tokenNoHash = Just tokenHash,
         entityId = Just entityIdTyped
       }

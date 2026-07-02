@@ -46,7 +46,7 @@ data PersonT f = PersonT
     approvedBy :: B.C f (Maybe Text),
     rejectedBy :: B.C f (Maybe Text),
     language :: B.C f (Maybe KET.Language),
-    tokenNo :: B.C f (Maybe DbHash),
+    tokenNoHash :: B.C f (Maybe DbHash),
     entityId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)

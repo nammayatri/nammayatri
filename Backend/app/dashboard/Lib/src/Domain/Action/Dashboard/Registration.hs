@@ -186,11 +186,11 @@ login rawReq = do
       -- "phone not registered" from "wrong token".
       (Just mob, Just cc, Just tkn, _, _) -> do
         rateLimitOpts <- asks (.sendEmailRateLimitOptions)
-        checkSlidingWindowLimitWithOptions (makeMobileHitsCountKey mob) rateLimitOpts
+        checkSlidingWindowLimitWithOptions (makeMobileHitsCountKey cc mob) rateLimitOpts
         tokenDbHash <- getDbHash tkn
         mbPerson <- QP.findByMobileNumber mob cc
         case mbPerson of
-          Just p | p.tokenNo == Just tokenDbHash -> pure p
+          Just p | p.tokenNoHash == Just tokenDbHash -> pure p
           _ -> throwError (InvalidRequest "Invalid mobile number or token")
       (_, _, _, Just em, Just pwd) -> do
         sendEmailRateLimitOptions <- asks (.sendEmailRateLimitOptions)
@@ -226,8 +226,8 @@ login rawReq = do
 makeEmailHitsCountKey :: Maybe Text -> Text
 makeEmailHitsCountKey email = "Email:" <> fromMaybe "" email <> ":hitsCount"
 
-makeMobileHitsCountKey :: Text -> Text
-makeMobileHitsCountKey mobile = "MobileTokenLogin:" <> mobile <> ":hitsCount"
+makeMobileHitsCountKey :: Text -> Text -> Text
+makeMobileHitsCountKey cc mobile = "MobileTokenLogin:" <> cc <> ":" <> mobile <> ":hitsCount"
 
 -- Trims every field and collapses Just "" to Nothing so blank submissions
 -- don't slip into the lookup branches with empty credentials.
@@ -671,7 +671,7 @@ buildFleetOwner req pid roleId dashboardAccessType = do
         approvedBy = Nothing,
         rejectedBy = Nothing,
         language = Nothing,
-        tokenNo = Nothing,
+        tokenNoHash = Nothing,
         entityId = Nothing
       }
 

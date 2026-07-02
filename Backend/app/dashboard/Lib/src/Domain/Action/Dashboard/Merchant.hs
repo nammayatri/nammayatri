@@ -244,6 +244,6 @@ buildPersonCreateReq req role = do
         approvedBy = Nothing,
         rejectedBy = Nothing,
         language = Nothing,
-        tokenNo = Nothing,
+        tokenNoHash = Nothing,
         entityId = Nothing
       }

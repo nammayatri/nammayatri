@@ -46,7 +46,7 @@ data PersonE e = Person
     approvedBy :: Maybe (Id Person),
     rejectedBy :: Maybe (Id Person),
     language :: Maybe KET.Language,
-    tokenNo :: Maybe DbHash,
+    tokenNoHash :: Maybe DbHash,
     entityId :: Maybe (Id Entity.Entity)
   }
   deriving (Generic)

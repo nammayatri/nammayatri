@@ -51,6 +51,9 @@ type API =
     :<|> ( "roles"
              :> "listv2"
              :> DashboardAuth 'DASHBOARD_USER
+             :> QueryParam "searchString" Text
+             :> QueryParam "limit" Integer
+             :> QueryParam "offset" Integer
              :> Get '[JSON] DRoles.ListRoleRes
          )
 
@@ -74,6 +77,6 @@ listRoles :: BeamFlow' => TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Inte
 listRoles mbsearchstr mblimit mboffset =
   withFlowHandlerAPI' . DRoles.listRoles mbsearchstr mblimit mboffset
 
-listRolesV2 :: BeamFlow' => TokenInfo -> FlowHandler DRoles.ListRoleRes
-listRolesV2 tokenInfo =
-  withFlowHandlerAPI' (DRoles.listRolesV2 tokenInfo)
+listRolesV2 :: BeamFlow' => TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DRoles.ListRoleRes
+listRolesV2 tokenInfo mbSearchString mbLimit mbOffset =
+  withFlowHandlerAPI' (DRoles.listRolesV2 tokenInfo mbSearchString mbLimit mbOffset)

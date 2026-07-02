@@ -47,21 +47,6 @@ findAllByIds :: BeamFlow m r => [Id Role] -> m [Role]
 findAllByIds [] = pure []
 findAllByIds ids = findAllWithKV [Se.Is BeamR.id $ Se.In (map getId ids)]
 
-updateAccessibleRoles :: BeamFlow m r => Id Role -> [Id Role] -> m ()
-updateAccessibleRoles roleId accessibleRoles =
-  updateWithKV
-    [Se.Set BeamR.accessibleRoles (map getId accessibleRoles)]
-    [Se.Is BeamR.id $ Se.Eq (getId roleId)]
-
--- Keeps every DASHBOARD_ADMIN-tier role's `accessibleRoles` in sync with the
--- universe of roles; called from `createRole` so admins never go blind to a
--- freshly-created role. Read-modify-write per admin row (rare event, OK).
-appendToAccessibleRolesForAdmins :: BeamFlow m r => Id Role -> m ()
-appendToAccessibleRolesForAdmins newRoleId = do
-  admins <- findAllInDashboardAccessType [Role.DASHBOARD_ADMIN]
-  forM_ admins $ \admin ->
-    updateAccessibleRoles admin.id (admin.accessibleRoles <> [newRoleId])
-
 findAllByLimitOffset :: BeamFlow m r => Maybe Integer -> Maybe Integer -> m [Role]
 findAllByLimitOffset mbLimit mbOffset = do
   let limitVal = fromIntegral $ fromMaybe 10 mbLimit

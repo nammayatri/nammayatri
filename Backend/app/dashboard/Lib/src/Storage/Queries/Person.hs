@@ -32,6 +32,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Types as KET
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.City as City
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Sequelize as Se
@@ -45,6 +46,22 @@ import Storage.Queries.Role ()
 
 create :: BeamFlow m r => Person -> m ()
 create = createWithKV
+
+createPersonsWithAccessAtomic ::
+  BeamFlow m r =>
+  [(Person, MerchantAccess.MerchantAccess)] ->
+  m ()
+createPersonsWithAccessAtomic [] = pure ()
+createPersonsWithAccessAtomic pairs = do
+  let personRows = map (toTType' . fst) pairs
+      accessRows = map (toTType' . snd) pairs
+  dbConf <- getMasterBeamConfig
+  result <- L.runTransaction dbConf $ do
+    L.insertRows $ B.insert (SBC.person SBC.atlasDB) (B.insertValues personRows)
+    L.insertRows $ B.insert (SBC.merchantAccess SBC.atlasDB) (B.insertValues accessRows)
+  case result of
+    Left err -> throwError (InternalError $ "atomic bulk persist failed: " <> T.pack (show err))
+    Right _ -> pure ()
 
 findById ::
   BeamFlow m r =>
@@ -117,6 +134,7 @@ findAllByRoleWithType roleId =
 
 findAllByRole ::
   BeamFlow m r =>
+
   Id Role ->
   m [Person]
 findAllByRole roleId = findAllByRoleWithType @'DPT.DefaultDashboard roleId

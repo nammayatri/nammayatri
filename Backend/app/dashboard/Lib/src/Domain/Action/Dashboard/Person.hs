@@ -573,7 +573,7 @@ buildPerson req dashboardAccessType = do
         approvedBy = Nothing,
         rejectedBy = Nothing,
         language = Nothing,
-        tokenNo = Nothing,
+        tokenNoHash = Nothing,
         entityId = Nothing
       }
 

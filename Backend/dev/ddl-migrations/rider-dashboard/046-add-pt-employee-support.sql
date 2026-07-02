@@ -1,13 +1,13 @@
 -- PT employee (conductor / depot manager) login support.
--- Adds tokenNo (hashed) + entityId on the dashboard person row and introduces
+-- Adds token_no_hash (bytea) + entityId on the dashboard person row and introduces
 -- the entity table (depots / operators) referenced by person.entity_id.
 --
 -- Deploy order: APPLY THIS MIGRATION BEFORE the new rider-dashboard binary
--- ships. The binary's Beam SELECT lists `token_no` and `entity_id`; reading
+-- ships. The binary's Beam SELECT lists `token_no_hash` and `entity_id`; reading
 -- any existing row will 500 if the columns aren't present yet.
 
 ALTER TABLE atlas_bap_dashboard.person
-  ADD COLUMN token_no bytea;
+  ADD COLUMN token_no_hash bytea;
 
 ALTER TABLE atlas_bap_dashboard.person
   ADD COLUMN entity_id character varying(36);
