@@ -81,7 +81,10 @@ screen initialState rideListItem =
     globalOnScroll "RideHistoryScreen",
         ( \push -> do
             _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-              let date = if initialState.datePickerState.selectedItem.date == 0 then getcurrentdate "" else (convertUTCtoISC initialState.datePickerState.selectedItem.utcDate "YYYY-MM-DD" )
+              let selectedDate = convertUTCtoISC initialState.datePickerState.selectedItem.utcDate "YYYY-MM-DD"
+                  date = if initialState.datePickerState.selectedItem.date == 0 then getcurrentdate ""
+                         else if selectedDate == "" then getcurrentdate ""
+                         else selectedDate
               if initialState.currentTab == "COMPLETED" then do
                 (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "8" (show initialState.offsetValue) "false" "COMPLETED" date
                 lift $ lift $ doAff do liftEffect $ push $ RideHistoryAPIResponseAction rideHistoryResponse.list
@@ -260,7 +263,11 @@ calendarView push state =
           ][ textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , text $ if state.datePickerState.activeIndex == (tripDatesCount - 1) then getString TODAY else runFn1 getFormattedDate state.datePickerState.selectedItem.utcDate
+              , text $ if state.datePickerState.activeIndex == (tripDatesCount - 1) then getString TODAY
+                       else let formatted = runFn1 getFormattedDate state.datePickerState.selectedItem.utcDate
+                            in if formatted == ""
+                               then (show state.datePickerState.selectedItem.date) <> " " <> state.datePickerState.selectedItem.month
+                               else formatted
               , color Color.black800
               , margin $ MarginRight 12
               , padding $ PaddingBottom 2
