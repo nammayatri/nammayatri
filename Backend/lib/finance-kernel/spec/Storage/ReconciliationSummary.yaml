@@ -14,7 +14,7 @@ ReconciliationSummary:
   types:
     # Matches TypeScript ReconStatus
     ReconciliationStatus:
-      enum: "MATCHED, HIGHER_IN_TARGET, LOWER_IN_TARGET, MISSING_IN_TARGET"
+      enum: "MATCHED, HIGHER_IN_TARGET, LOWER_IN_TARGET, MISSING_IN_TARGET, MISSING_IN_SOURCE"
       derive: "ToParamSchema"
 
     # Reconciliation types

@@ -755,8 +755,7 @@ processPurchaseVsSubscriptionTransaction subscription now = do
     if not hasCreditEntry
       then
         entry
-          { ReconEntry.reconStatus = ReconEntry.MISSING_IN_TARGET,
-            ReconEntry.mismatchReason = Just DomainRecon.reasonMissingSubscriptionTransaction
+          { ReconEntry.reconStatus = ReconEntry.MISSING_IN_TARGET
           }
       else entry
 
@@ -776,6 +775,7 @@ toReconEntryStatus ReconSummary.MATCHED = ReconEntry.MATCHED
 toReconEntryStatus ReconSummary.HIGHER_IN_TARGET = ReconEntry.HIGHER_IN_TARGET
 toReconEntryStatus ReconSummary.LOWER_IN_TARGET = ReconEntry.LOWER_IN_TARGET
 toReconEntryStatus ReconSummary.MISSING_IN_TARGET = ReconEntry.MISSING_IN_TARGET
+toReconEntryStatus ReconSummary.MISSING_IN_SOURCE = ReconEntry.MISSING_IN_SOURCE
 
 -- Convert back for DB updates (Booking / SubscriptionPurchase store ReconSummary.ReconciliationStatus).
 toReconSummaryStatus :: ReconEntry.ReconciliationStatus -> ReconSummary.ReconciliationStatus
@@ -783,6 +783,7 @@ toReconSummaryStatus ReconEntry.MATCHED = ReconSummary.MATCHED
 toReconSummaryStatus ReconEntry.HIGHER_IN_TARGET = ReconSummary.HIGHER_IN_TARGET
 toReconSummaryStatus ReconEntry.LOWER_IN_TARGET = ReconSummary.LOWER_IN_TARGET
 toReconSummaryStatus ReconEntry.MISSING_IN_TARGET = ReconSummary.MISSING_IN_TARGET
+toReconSummaryStatus ReconEntry.MISSING_IN_SOURCE = ReconSummary.MISSING_IN_SOURCE
 
 createSummary :: ReconSummary.ReconciliationType -> [ReconEntry.ReconciliationEntry] -> UTCTime -> UTCTime -> Text -> Id DMOC.MerchantOperatingCity -> Id ReconSummary.ReconciliationSummary -> ReconSummary.ReconciliationSummary
 createSummary reconType entries startTime now merchantId merchantOpCityId summaryId =

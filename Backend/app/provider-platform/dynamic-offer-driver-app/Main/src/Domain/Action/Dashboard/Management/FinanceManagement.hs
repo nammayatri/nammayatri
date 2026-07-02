@@ -104,6 +104,7 @@ purchaseVsTxnMismatchCategory :: ReconciliationEntry.ReconciliationEntry -> Mayb
 purchaseVsTxnMismatchCategory entry = case entry.reconStatus of
   ReconciliationEntry.MATCHED -> Just "Matched"
   ReconciliationEntry.MISSING_IN_TARGET -> Just "Missing in Subscription Transactions"
+  ReconciliationEntry.MISSING_IN_SOURCE -> Just "Missing in Subscription Purchase"
   ReconciliationEntry.HIGHER_IN_TARGET -> Just "Over-consumption"
   ReconciliationEntry.LOWER_IN_TARGET -> Just "Partial consumption"
 

@@ -58,6 +58,5 @@ ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN pg_transaction_dat
 ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN pg_order_id text ;
 ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN payment_order_id text ;
 ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN gst_on_subscription double precision ;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN external_transaction_amount double precision ;
 ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN purchase_status text ;
 ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN plan_name text ;

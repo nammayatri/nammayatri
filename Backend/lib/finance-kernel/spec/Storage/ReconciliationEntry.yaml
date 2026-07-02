@@ -20,7 +20,7 @@ ReconciliationEntry:
 
     # Matches TypeScript ReconStatus
     ReconciliationStatus:
-      enum: "MATCHED, HIGHER_IN_TARGET, LOWER_IN_TARGET, MISSING_IN_TARGET"
+      enum: "MATCHED, HIGHER_IN_TARGET, LOWER_IN_TARGET, MISSING_IN_TARGET, MISSING_IN_SOURCE"
       derive: "ToParamSchema"
 
     # Matches JSON bookingId field
@@ -98,9 +98,6 @@ ReconciliationEntry:
     bookingId: "!SecondaryKey"
     dcoId: "!SecondaryKey"
     reconStatus: "!SecondaryKey"
-    pgOrderId: "!SecondaryKey"
-    utr: "!SecondaryKey"
-    paymentOrderId: "!SecondaryKey"
 
   queries:
     findById:

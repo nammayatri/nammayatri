@@ -59,6 +59,6 @@ instance B.Table ReconciliationEntryT where
 
 type ReconciliationEntry = ReconciliationEntryT Identity
 
-$(enableKVPG (''ReconciliationEntryT) [('id)] [[('bookingId)], [('dcoId)], [('paymentOrderId)], [('pgOrderId)], [('reconStatus)], [('summaryId)], [('utr)]])
+$(enableKVPG (''ReconciliationEntryT) [('id)] [[('bookingId)], [('dcoId)], [('reconStatus)], [('summaryId)]])
 
 $(mkTableInstancesGenericSchema (''ReconciliationEntryT) "finance_reconciliation_entry")
