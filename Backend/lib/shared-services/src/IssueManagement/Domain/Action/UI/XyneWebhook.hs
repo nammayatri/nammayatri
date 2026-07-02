@@ -185,10 +185,7 @@ xyneAttachmentToMediaFile att = do
             DMF._type = mimeTypeToFileType att.mimeType,
             DMF.url = att.url,
             DMF.s3FilePath = Nothing,
-            DMF.status = Just DMF.CONFIRMED,
-            DMF.fileHash = Nothing,
-            DMF.createdAt = now,
-            DMF.updatedAt = now
+            DMF.createdAt = now
           }
   QMF.create mf
   pure fid

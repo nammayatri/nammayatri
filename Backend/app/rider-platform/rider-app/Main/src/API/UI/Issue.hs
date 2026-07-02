@@ -60,9 +60,9 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQPerson
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Getter (getConfig)
 import qualified Storage.Queries.Booking as QB
@@ -151,7 +151,7 @@ fetchMediaBase64FromS3 mf = case mf.s3FilePath of
 -- duplicate content on every customer message.
 isXyneTicketService :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Flow Bool
 isXyneTicketService _merchantId mocId = do
-  mbUsage <- CQMSUC.findByMerchantOperatingCityId (cast mocId)
+  mbUsage <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId.getId})
   pure $ maybe False (\c -> c.issueTicketService == TicketTypes.XyneSpaces) mbUsage
 
 castFindFRFSTicketBookingById :: Id Common.FRFSTicketBooking -> Flow (Maybe Common.FRFSTicketBooking)

@@ -105,7 +105,7 @@ driverIssueHandle =
       findByMobileNumberAndMerchantId = castPersonByMobileNumberAndMerchant,
       mbFindFRFSTicketBookingById = Nothing,
       mbFindStationByIdWithContext = Nothing,
-      mbSendChatNotification = Just (\pid payload -> Notify.notifyOnIssueChatMessage (cast pid) payload),
+      mbSendChatNotification = Nothing,
       -- Nothing = never forward driver-side chat messages to the ticket
       -- service. Driver-app doesn't use XyneSpaces today; enable this by
       -- returning a check against MerchantServiceUsageConfig if that changes.

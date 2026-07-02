@@ -14,7 +14,8 @@ import qualified Kernel.Types.Id as KId
 import Kernel.Utils.Common
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getOneConfig)
 
 postXyneWebhook :: Maybe Text -> RawByteString -> Flow XyneShared.XyneWebhookAck
 postXyneWebhook mbSig rawBody = do
@@ -35,7 +36,7 @@ lookupXyneCfg merchantIdCommon mocIdCommon = do
   let merchantId = KId.cast merchantIdCommon
       mocId = KId.cast mocIdCommon
   msc <-
-    CQMSC.findByMerchantOpCityIdAndService merchantId mocId (DMSC.IssueTicketService Ticket.XyneSpaces)
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mocId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.IssueTicketService Ticket.XyneSpaces)})
       >>= fromMaybeM (InternalError $ "XyneSpaces config not found for mocId=" <> mocIdCommon.getId)
   case msc.serviceConfig of
     DMSC.IssueTicketServiceConfig (Ticket.XyneSpacesConfig cfg) -> pure cfg
