@@ -7,7 +7,6 @@ where
 import qualified Domain.Action.UI.Ride.EndRide as RideEnd
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Person as DP
-import qualified Kernel.External.Payout.Interface.Types as IPayout
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
@@ -19,7 +18,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DCommon
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Payment.Payout.Order as PayoutOrder
-import qualified Lib.Payment.Payout.Request as PayoutRequest
+import qualified Lib.Payment.Payout.RequestStatus as RequestStatus
 import qualified Lib.Payment.Payout.Status as PayoutStatus
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout as SpecialZonePayout
@@ -67,10 +66,8 @@ refreshPayoutRequestStatus payoutRequest = do
               createPayoutOrderStatusReq = DPayment.PayoutStatusServiceReq {orderId = payoutOrder.orderId, mbExpand = Nothing}
               createPayoutOrderStatusCall = Payout.payoutOrderStatus payoutServiceName opCityId (Id @DP.Person pr.beneficiaryId) mbPersonBankAccount
               shouldUpdate current new = current /= new && current `notElem` [DPR.CREDITED, DPR.CASH_PAID, DPR.CASH_PENDING]
-              onUpdate newStatus rawStatus = do
-                let statusMsg = "Order Status Updated: " <> show rawStatus
-                PayoutRequest.updateStatusWithHistoryById newStatus (Just statusMsg) pr
-                when (newStatus `elem` [DPR.CANCELLED, DPR.AUTO_PAY_FAILED, DPR.FAILED]) $ do
+              onUpdate newStatus _rawStatus =
+                when (newStatus `elem` [DPR.CANCELLED, DPR.AUTO_PAY_FAILED, DPR.FAILED]) $
                   SharedRide.safeRevertVehicleBalanceForPayout pr
           newStatus <-
             PayoutStatus.refreshPayoutStatus
@@ -79,7 +76,7 @@ refreshPayoutRequestStatus payoutRequest = do
               createPayoutOrderStatusReq
               createPayoutOrderStatusCall
               pr.status
-              castPayoutOrderStatusToPayoutRequestStatus
+              RequestStatus.castPayoutOrderStatusToPayoutRequestStatus
               shouldUpdate
               onUpdate
           pure pr {DPR.status = newStatus}
@@ -103,16 +100,3 @@ executeSpecialZonePayoutRequest payoutRequest = do
   SharedRide.safeApplyVehicleBalanceForPayout payoutRequest
   _ <- SpecialZonePayout.executeSpecialZonePayout payoutRequest
   pure ()
-
-castPayoutOrderStatusToPayoutRequestStatus :: IPayout.PayoutOrderStatus -> DPR.PayoutRequestStatus
-castPayoutOrderStatusToPayoutRequestStatus payoutOrderStatus =
-  case payoutOrderStatus of
-    IPayout.SUCCESS -> DPR.CREDITED
-    IPayout.FULFILLMENTS_SUCCESSFUL -> DPR.CREDITED
-    IPayout.ERROR -> DPR.AUTO_PAY_FAILED
-    IPayout.FAILURE -> DPR.AUTO_PAY_FAILED
-    IPayout.FULFILLMENTS_FAILURE -> DPR.AUTO_PAY_FAILED
-    IPayout.CANCELLED -> DPR.CANCELLED
-    IPayout.FULFILLMENTS_CANCELLED -> DPR.CANCELLED
-    IPayout.FULFILLMENTS_MANUAL_REVIEW -> DPR.PROCESSING
-    _ -> DPR.PROCESSING
