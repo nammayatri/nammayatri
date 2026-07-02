@@ -205,7 +205,7 @@ findFleetDocVerificationConfig :: Id DMOC.MerchantOperatingCity -> DVC.DocumentT
 findFleetDocVerificationConfig merchantOpCityId docType role = do
   configs <-
     getConfig
-      (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType})
+      (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType, role = Just role})
       (Just (filter (\c -> c.documentType == docType) <$> CQFODVC.findAllByMerchantOpCityId merchantOpCityId Nothing))
   pure $ findFleetConfigForRole docType role configs
 

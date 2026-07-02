@@ -370,10 +370,10 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       let reqUpdatedStatus = if allDriverDocsVerified then castReqStatusToDomain request.status else PENDING
       void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
 
-    -- True iff the inspection-hub config's dependency docs are all VALID. Drives APPROVED vs PENDING.
+    -- Returns the inspection-hub config's dependency docs that are NOT VALID (empty ⇒ all valid). Drives APPROVED vs PENDING.
     -- On the driver side a dep counts only if it applies per dvc `applicableTo` (a fleet driver skips
     -- INDIVIDUAL-only deps like OperatorPartnerCode); pass Nothing/[] for vehicle docs (no applicableTo split).
-    inspectionDependenciesValid merchantOpCityId inspectionHubDocType mbIsFleetDriver driverConfigs vehicleCategory docStatuses = do
+    inspectionInvalidDependencyDocs merchantOpCityId inspectionHubDocType mbIsFleetDriver driverConfigs vehicleCategory docStatuses = do
       mbInspectionCfg <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just inspectionHubDocType, vehicleCategory = Just vehicleCategory}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId inspectionHubDocType vehicleCategory Nothing))
       pure $ case mbInspectionCfg of
         Nothing -> []
