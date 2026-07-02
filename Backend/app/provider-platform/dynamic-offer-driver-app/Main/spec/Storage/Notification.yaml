@@ -32,6 +32,8 @@ Notification:
 
   constraints:
     id: PrimaryKey
+    shortId: SecondaryKey
+    driverFeeId: "!SecondaryKey"
 
   beamType:
     merchantOperatingCityId: Maybe Text
