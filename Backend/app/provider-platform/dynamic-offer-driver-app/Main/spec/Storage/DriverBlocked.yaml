@@ -25,6 +25,7 @@ DriverBlockTransactions:
     requestorId : Maybe Text
     blockReasonFlag: Maybe BlockReasonFlag
     actionType: Maybe ActionType
+    specialZoneId : Maybe Text
 
   constraints:
     id: PrimaryKey
@@ -38,3 +39,8 @@ DriverBlockTransactions:
       kvFunction: findAllWithKV
       where:
         and: [driverId , actionType]
+
+    findByDriverIdAndSpecialZoneId:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId , specialZoneId]

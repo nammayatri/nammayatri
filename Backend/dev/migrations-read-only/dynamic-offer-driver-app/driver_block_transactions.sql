@@ -24,3 +24,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_block_transactions ADD COLUMN block_re
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_block_transactions ADD COLUMN action_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_block_transactions ADD COLUMN special_zone_id text ;

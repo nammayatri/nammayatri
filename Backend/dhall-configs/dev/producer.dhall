@@ -99,9 +99,9 @@ in  { hedisCfg
     , waitTimeMilliSec = +1000.0
     , producerTimestampKey = "producerTimestampKey"
     , batchSize = +1
-    , streamName = "Available_Chakras"
+    , streamName = "Available_Jobs"
     , cacheConfig
-    , schedulerSetName = "Scheduled_Chakras"
+    , schedulerSetName = "Scheduled_Jobs"
     , entryId = "*"
     , reviverInterval = +2
     , reviveThreshold = +2
