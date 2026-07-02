@@ -40,8 +40,9 @@ buildRouteWithLiveVehicle ::
   [(BecknV2.FRFS.Enums.ServiceTierType, DFRFSVehicleServiceTier.FRFSVehicleServiceTier)] ->
   Maybe LatLong ->
   Int ->
+  Bool ->
   Flow (Maybe API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
-buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromStopCode toStopCode frfsTierMap mbSourceStopLatLong maxLiveVehicles = do
+buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromStopCode toStopCode frfsTierMap mbSourceStopLatLong maxLiveVehicles allowUpcomingTrips = do
   let vehicleNos = nub $ map (.vehicle_no) busScheduleDetails <> map (.vehicleNumber) routeInfo.buses
   seatLayoutMappings <-
     mapM
@@ -88,7 +89,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
       getBusScheduleInfo busScheduleDetails integratedBPPConfig routeInfo.routeId fromStopCode toStopCode frfsTierMap seatLayoutMappingByVehicleNo
   liveVehiclesFork <-
     awaitableFork "getLiveVehicles" $
-      getLiveVehicles routeInfo.buses integratedBPPConfig frfsTierMap mbSourceStopLatLong maxLiveVehicles seatLayoutMappingByVehicleNo activeTripIdByVehicleNo
+      getLiveVehicles routeInfo.buses integratedBPPConfig frfsTierMap mbSourceStopLatLong maxLiveVehicles seatLayoutMappingByVehicleNo activeTripIdByVehicleNo allowUpcomingTrips
   schedules <-
     L.await Nothing schedulesFork >>= \case
       Left err -> throwError $ InternalError $ "getBusScheduleInfo fork failed: " <> show err
@@ -192,7 +193,13 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
           )
           busScheduleDetails'
 
-    getLiveVehicles busesData integratedBPPConfig' frfsTierMap' mbSourceLatLong maxLiveCount seatLayoutMappingByVehicleNo' activeTripIdByVehicleNo' = do
+    getLiveVehicles busesData integratedBPPConfig' frfsTierMap' mbSourceLatLong maxLiveCount seatLayoutMappingByVehicleNo' activeTripIdByVehicleNo' allowUpcomingTrips' = do
+      -- When upcoming trips are not allowed, drop buses flagged as upcoming trips.
+      -- is_upcoming_trip may be absent in the live data, in which case the bus is kept.
+      let filteredBusesData =
+            if allowUpcomingTrips'
+              then busesData
+              else filter (\bus -> bus.busData.is_upcoming_trip /= Just True) busesData
       allVehicles <-
         catMaybes
           <$> mapM
@@ -230,13 +237,15 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                           currentTripId = Map.lookup bus.vehicleNumber activeTripIdByVehicleNo',
                           serviceSubTypes = mbServiceSubTypes,
                           vehicleTagNumber = mbVehicleTagNumber,
-                          seatSelectionType = seatSelType
+                          seatSelectionType = seatSelType,
+                          isUpcomingTrip = bus.busData.is_upcoming_trip,
+                          previousRouteId = bus.busData.previous_route_id
                         }
                   Nothing -> do
                     logError $ "Vehicle info not found for bus: " <> bus.vehicleNumber
                     return Nothing
             )
-            busesData
+            filteredBusesData
       -- Sort by Haversine distance to source stop (closest first) and take top 5
       let sorted = case mbSourceLatLong of
             Just sourceLatLong ->

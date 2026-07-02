@@ -82,7 +82,9 @@ data BusData = BusData
     eta_data :: Maybe [BusStopETA],
     route_id :: Text,
     route_state :: Maybe RouteState,
-    route_number :: Maybe Text
+    route_number :: Maybe Text,
+    is_upcoming_trip :: Maybe Bool,
+    previous_route_id :: Maybe Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
