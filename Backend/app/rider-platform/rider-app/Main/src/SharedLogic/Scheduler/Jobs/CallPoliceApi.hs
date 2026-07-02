@@ -56,7 +56,8 @@ sendCallPoliceApi Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   booking <- B.runInReplica $ QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let merchantOperatingCityId = booking.merchantOperatingCityId
       merchantId = booking.merchantId
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)ts <- Hedis.withCrossAppRedis $ Hedis.get (mkRideCallPoliceAPIKey rideId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  rideCallPoliceAPIKeyExists <- Hedis.withCrossAppRedis $ Hedis.get (mkRideCallPoliceAPIKey rideId)
   case rideCallPoliceAPIKeyExists of
     Nothing -> do
       logDebug $ "TimeValidation for this ride has been completed." <> show rideId <> "skipping calling police API"
