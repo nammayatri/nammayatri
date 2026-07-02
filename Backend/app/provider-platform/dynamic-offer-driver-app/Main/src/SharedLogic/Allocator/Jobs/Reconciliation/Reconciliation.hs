@@ -25,6 +25,7 @@ import Data.Time.Clock (UTCTime (UTCTime), secondsToDiffTime, utctDay)
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.ScheduledPayout as ScheduledPayout
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.TransporterConfig as DTC
@@ -55,7 +56,11 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator (AllocatorJobType (..), ReconciliationJobData (..))
-import SharedLogic.Finance.Prepaid (prepaidRideDebitReferenceType, subscriptionCreditReferenceType)
+import SharedLogic.Finance.Prepaid
+  ( expiryCreditTransferReferenceType,
+    prepaidRideDebitReferenceType,
+    subscriptionCreditReferenceType,
+  )
 import qualified SharedLogic.Finance.Reconciliation as DomainRecon
   ( ReconEntryInput (..),
     ReconciliationJobType (..),
@@ -69,10 +74,15 @@ import qualified SharedLogic.Finance.Reconciliation as DomainRecon
     mkReconciliationStatusValue,
     reasonAmountMismatch,
     reasonDriverTakeHomeMismatch,
+    reasonMissingSubscriptionTransaction,
     reasonNoMatchingPayoutRequest,
     reasonNoMatchingSubscription,
+    reasonOverSubscriptionConsumption,
+    reasonPartialSubscriptionConsumption,
     reasonSubscriptionCreditMismatch,
     runDsrVsLedgerComparison,
+    subscriptionIndirectTaxTxn,
+    subscriptionPurchaseGstAmounts,
     updateReconStatus,
   )
 import Storage.Beam.Payment ()
@@ -80,12 +90,15 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Plan as CQPlan
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareParameters as QFareParams
+import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.ScheduledPayout as QScheduledPayout
 import qualified Storage.Queries.SubscriptionPurchase as QSubPurchase
+import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubPurchaseExtra
 
 runReconciliationJob ::
   ( BeamFlow m r,
@@ -134,6 +147,7 @@ runReconciliationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       ReconSummary.DSR_VS_LEDGER -> doReconciliationDsrVsLedger merchantId merchantOpCityId startTime endTime now
       ReconSummary.DSR_VS_SUBSCRIPTION -> doReconciliationDsrVsSubscription merchantId merchantOpCityId startTime endTime now
       ReconSummary.DSSR_VS_SUBSCRIPTION -> doReconciliationDssrVsSubscription merchantId merchantOpCityId startTime endTime now
+      ReconSummary.SUBSCRIPTION_PURCHASE_VS_SUBSCRIPTION_TRANSACTION -> doReconciliationPurchaseVsSubscriptionTransaction merchantId merchantOpCityId startTime endTime now
       ReconSummary.PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION -> doReconciliationPgPaymentVsSubscription merchantId merchantOpCityId startTime endTime now
       ReconSummary.PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST -> doReconciliationPgPayoutVsPayoutRequest merchantId merchantOpCityId startTime endTime now
 
@@ -150,6 +164,7 @@ runReconciliationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
     parseReconciliationType "DSR_VS_LEDGER" = ReconSummary.DSR_VS_LEDGER
     parseReconciliationType "DSR_VS_SUBSCRIPTION" = ReconSummary.DSR_VS_SUBSCRIPTION
     parseReconciliationType "DSSR_VS_SUBSCRIPTION" = ReconSummary.DSSR_VS_SUBSCRIPTION
+    parseReconciliationType "SUBSCRIPTION_PURCHASE_VS_SUBSCRIPTION_TRANSACTION" = ReconSummary.SUBSCRIPTION_PURCHASE_VS_SUBSCRIPTION_TRANSACTION
     parseReconciliationType "PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION" = ReconSummary.PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION
     parseReconciliationType "PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST" = ReconSummary.PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST
     parseReconciliationType _ = ReconSummary.DSR_VS_LEDGER
@@ -342,7 +357,45 @@ doReconciliationDssrVsSubscription merchantId merchantOpCityId startTime endTime
   logInfo $ "DSSR vs Subscription reconciliation completed. Total: " <> show (length validEntries)
   return Complete
 
--- 4. PG-Payment Settlement Report vs Subscription Purchase Reconciliation
+-- 4. Subscription Purchase vs Subscription Transaction Reconciliation (Block 2)
+doReconciliationPurchaseVsSubscriptionTransaction ::
+  ( BeamFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m
+  ) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  UTCTime ->
+  m ExecutionResult
+doReconciliationPurchaseVsSubscriptionTransaction merchantId merchantOpCityId startTime endTime now = do
+  logInfo "Starting Subscription Purchase vs Subscription Transaction reconciliation"
+
+  subscriptions <- QSubPurchaseExtra.findPurchasedByDateRange merchantOpCityId startTime endTime
+
+  entries <- forM subscriptions $ \subscription -> do
+    entry <- processPurchaseVsSubscriptionTransaction subscription now
+    let existingStatusMap = DomainRecon.getReconciliationStatus subscription.reconciliationStatus
+        updatedMap =
+          DomainRecon.updateReconStatus
+            existingStatusMap
+            DomainRecon.PurchaseVsSubscriptionTransaction
+            (toReconSummaryStatus entry.reconStatus)
+        jsonValue = DomainRecon.mkReconciliationStatusValue updatedMap
+    QSubPurchase.updateReconciliationStatus (Just jsonValue) subscription.id
+    pure $ Just entry
+
+  let validEntries = catMaybes entries
+  saveSummaryAndEntries ReconSummary.SUBSCRIPTION_PURCHASE_VS_SUBSCRIPTION_TRANSACTION validEntries startTime now merchantId.getId merchantOpCityId
+
+  logInfo $
+    "Subscription Purchase vs Subscription Transaction reconciliation completed. Total: "
+      <> show (length validEntries)
+  return Complete
+
+-- 5. PG-Payment Settlement Report vs Subscription Purchase Reconciliation
 doReconciliationPgPaymentVsSubscription ::
   ( BeamFlow m r,
     CacheFlow m r,
@@ -387,14 +440,22 @@ doReconciliationPgPaymentVsSubscription merchantId merchantOpCityId startTime en
                   DomainRecon.targetId = Just report.id.getId,
                   DomainRecon.settlementDate = report.settlementDate,
                   DomainRecon.transactionDate = report.txnDate,
+                  DomainRecon.pgTransactionDate = report.txnDate,
                   DomainRecon.rrn = report.rrn,
+                  DomainRecon.utr = report.utr,
                   DomainRecon.settlementMode = fmap show report.paymentMethod,
+                  DomainRecon.pgOrderId = Just report.orderId,
+                  DomainRecon.pgTxnId = report.txnId,
                   DomainRecon.merchantId = Just merchantId.getId,
                   DomainRecon.merchantOperatingCityId = Just merchantOpCityId.getId
                 }
         return $ Just $ DomainRecon.mkReconEntry inp now entryId
       Just subscription -> do
-        let inp =
+        indirectTaxTxns <- QIndirectTax.findByReferenceId subscription.id.getId
+        let gstAmounts =
+              DomainRecon.subscriptionPurchaseGstAmounts subscription.planFee $
+                DomainRecon.subscriptionIndirectTaxTxn indirectTaxTxns
+            inp =
               (DomainRecon.mkDefaultReconEntryInput ReconEntry.PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION)
                 { DomainRecon.bookingId = Just subscription.id.getId,
                   DomainRecon.dcoId = Just subscription.ownerId,
@@ -408,8 +469,16 @@ doReconciliationPgPaymentVsSubscription merchantId merchantOpCityId startTime en
                   DomainRecon.targetId = Just report.id.getId,
                   DomainRecon.settlementDate = report.settlementDate,
                   DomainRecon.transactionDate = Just subscription.purchaseTimestamp,
+                  DomainRecon.pgTransactionDate = report.txnDate,
                   DomainRecon.rrn = report.rrn,
+                  DomainRecon.utr = report.utr,
                   DomainRecon.settlementMode = fmap show report.paymentMethod,
+                  DomainRecon.pgOrderId = Just report.orderId,
+                  DomainRecon.pgTxnId = report.txnId,
+                  DomainRecon.paymentOrderId = Just subscription.paymentOrderId.getId,
+                  DomainRecon.subscriptionAmountExclGst = Just gstAmounts.amountExclGst,
+                  DomainRecon.gstOnSubscription = Just gstAmounts.gst,
+                  DomainRecon.totalTransactionAmount = Just gstAmounts.totalInclGst,
                   DomainRecon.merchantId = Just merchantId.getId,
                   DomainRecon.merchantOperatingCityId = Just merchantOpCityId.getId
                 }
@@ -429,7 +498,7 @@ doReconciliationPgPaymentVsSubscription merchantId merchantOpCityId startTime en
   logInfo $ "PG-Payment Settlement vs Subscription reconciliation completed. Total: " <> show (length validEntries)
   return Complete
 
--- 5. PG-Payout Settlement Report vs Payout Request Reconciliation
+-- 6. PG-Payout Settlement Report vs Payout Request Reconciliation
 doReconciliationPgPayoutVsPayoutRequest ::
   ( BeamFlow m r,
     CacheFlow m r,
@@ -622,6 +691,84 @@ processDssrVsSubscription subscription ledgerEntry now = do
             DomainRecon.merchantOperatingCityId = Just subscription.merchantOperatingCityId.getId
           }
   return $ DomainRecon.mkReconEntry inp now entryId
+
+-- | Sum ride debits (linked bookings) and expiry transfers for a subscription purchase.
+calculateSubscriptionConsumedAmount ::
+  ( BeamFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    CacheFlow m r
+  ) =>
+  DSP.SubscriptionPurchase ->
+  m HighPrecMoney
+calculateSubscriptionConsumedAmount subscription = do
+  rides <- QRide.findAllBySubscriptionPurchaseId subscription.id
+  rideDebitAmount <-
+    fmap sum $
+      forM rides $ \ride -> do
+        entries <- QLedger.findByReference prepaidRideDebitReferenceType ride.bookingId.getId
+        pure $ sum $ map (.amount) $ filter ((== LedgerEntry.SETTLED) . (.status)) entries
+  expiryEntries <- QLedger.findByReference expiryCreditTransferReferenceType subscription.id.getId
+  let expiryAmount = sum $ map (.amount) $ filter ((== LedgerEntry.SETTLED) . (.status)) expiryEntries
+  pure (rideDebitAmount + expiryAmount)
+
+-- Process Subscription Purchase vs Subscription Transaction reconciliation
+processPurchaseVsSubscriptionTransaction ::
+  ( BeamFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    CacheFlow m r
+  ) =>
+  DSP.SubscriptionPurchase ->
+  UTCTime ->
+  m ReconEntry.ReconciliationEntry
+processPurchaseVsSubscriptionTransaction subscription now = do
+  entitled <- pure subscription.planRideCredit
+  consumed <- calculateSubscriptionConsumedAmount subscription
+  plan <- resolvePlanForSubscriptionPurchase subscription
+  creditEntries <- QLedger.findByReference subscriptionCreditReferenceType subscription.id.getId
+  let hasCreditEntry =
+        any ((== LedgerEntry.SETTLED) . (.status)) creditEntries
+      mismatchReason
+        | not hasCreditEntry = Just DomainRecon.reasonMissingSubscriptionTransaction
+        | consumed > entitled = Just DomainRecon.reasonOverSubscriptionConsumption
+        | consumed < entitled = Just DomainRecon.reasonPartialSubscriptionConsumption
+        | otherwise = Nothing
+  entryId <- generateGUID
+  let inp =
+        (DomainRecon.mkDefaultReconEntryInput ReconEntry.SUBSCRIPTION_PURCHASE_VS_SUBSCRIPTION_TRANSACTION)
+          { DomainRecon.bookingId = Just subscription.id.getId,
+            DomainRecon.dcoId = Just subscription.ownerId,
+            DomainRecon.expected = entitled,
+            DomainRecon.actual = consumed,
+            DomainRecon.reason = mismatchReason,
+            DomainRecon.component = Just ReconEntry.SUBSCRIPTION_PURCHASE,
+            DomainRecon.sourceId = Just subscription.id.getId,
+            DomainRecon.transactionDate = Just subscription.purchaseTimestamp,
+            DomainRecon.purchaseStatus = Just $ show subscription.status,
+            DomainRecon.planName = (.name) <$> plan,
+            DomainRecon.merchantId = Just subscription.merchantId.getId,
+            DomainRecon.merchantOperatingCityId = Just subscription.merchantOperatingCityId.getId
+          }
+      entry = DomainRecon.mkReconEntry inp now entryId
+  pure $
+    if not hasCreditEntry
+      then
+        entry
+          { ReconEntry.reconStatus = ReconEntry.MISSING_IN_TARGET,
+            ReconEntry.mismatchReason = Just DomainRecon.reasonMissingSubscriptionTransaction
+          }
+      else entry
+
+resolvePlanForSubscriptionPurchase ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  DSP.SubscriptionPurchase ->
+  m (Maybe DPlan.Plan)
+resolvePlanForSubscriptionPurchase subscription =
+  CQPlan.findByIdAndPaymentModeWithServiceName subscription.planId DPlan.MANUAL subscription.serviceName
+    >>= \case
+      Just plan -> pure (Just plan)
+      Nothing -> QPlan.findByPrimaryKey subscription.planId
 
 -- Helper: ReconSummary and ReconEntry both define ReconciliationStatus; convert for entry records.
 toReconEntryStatus :: ReconSummary.ReconciliationStatus -> ReconEntry.ReconciliationStatus
