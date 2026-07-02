@@ -20,6 +20,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
 import qualified API.Types.ProviderPlatform.Fleet.Onboarding
+import qualified API.Types.ProviderPlatform.Management.Endpoints.Account
 import qualified API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
 import AWS.S3 as S3
 import Control.Applicative ((<|>))
@@ -743,8 +744,16 @@ mkFleetOwnerDocumentVerificationConfigAPIEntity language Domain.Types.FleetOwner
         documentFlowGrouping = castDocumentFlowGrouping DVC.STANDARD,
         isReminderSupported = Nothing,
         isApprovalSupported = Nothing,
+        rolesAllowedToUploadDocument = fmap (mapMaybe castPersonRoleToDashboardAccessType) rolesAllowedToUploadDocument,
         ..
       }
+
+castPersonRoleToDashboardAccessType :: Role -> Maybe API.Types.ProviderPlatform.Management.Endpoints.Account.DashboardAccessType
+castPersonRoleToDashboardAccessType FLEET_OWNER = Just API.Types.ProviderPlatform.Management.Endpoints.Account.FLEET_OWNER
+castPersonRoleToDashboardAccessType FLEET_BUSINESS = Just API.Types.ProviderPlatform.Management.Endpoints.Account.FLEET_OWNER
+castPersonRoleToDashboardAccessType ADMIN = Just API.Types.ProviderPlatform.Management.Endpoints.Account.DASHBOARD_ADMIN
+castPersonRoleToDashboardAccessType OPERATOR = Just API.Types.ProviderPlatform.Management.Endpoints.Account.DASHBOARD_OPERATOR
+castPersonRoleToDashboardAccessType _ = Nothing
 
 castDocumentApplicableType :: Domain.Types.DocumentVerificationConfig.DocumentApplicableType -> API.Types.ProviderPlatform.Fleet.Onboarding.DocumentApplicableType
 castDocumentApplicableType = \case

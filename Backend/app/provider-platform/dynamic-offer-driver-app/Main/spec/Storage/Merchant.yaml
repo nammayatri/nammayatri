@@ -1349,6 +1349,7 @@ TransporterConfig:
     isGstPanLinkCheckRequired: Maybe Bool
     invoiceConfig: Maybe InvoiceConfig
     enableManualDocumentStatusCheck: Maybe Bool
+    enableDocumentMetadata: Maybe Bool # When True, document metadata (DL number, Aadhaar number, PAN, address proof details) is computed and returned in status responses.
     enableCourtRecordCheck: Maybe Bool # Gates the Idfy Court Record Check (CRC) on driver-inspection approval. Enabled per-merchant (e.g. MSIL).
     sendMembershipIdInProfile: Maybe Bool
     stclConfig: Maybe StclConfig # STCL membership tunables. Any field left as Nothing falls back to defaults in Domain.Action.UI.StclMembership.

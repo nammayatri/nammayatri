@@ -5,6 +5,7 @@ module API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration where
 
 import qualified API.Types.ProviderPlatform.Management.Endpoints.Account
 import qualified Dashboard.Common
+import qualified Dashboard.Common.Driver
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -16,6 +17,7 @@ import qualified Kernel.External.Verification.Interface.Types
 import qualified Kernel.External.Verification.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
@@ -25,6 +27,7 @@ import Servant.Client
 
 data AadhaarApproveDetails = AadhaarApproveDetails
   { documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image,
+    documentImageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
     aadhaarNumber :: Kernel.Prelude.Text,
     nameOnCard :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -74,11 +77,13 @@ data ApproveDetails
   | VehicleFrontInteriorImg (Kernel.Types.Id.Id Dashboard.Common.Image)
   | VehicleBackInteriorImg (Kernel.Types.Id.Id Dashboard.Common.Image)
   | OdometerImg (Kernel.Types.Id.Id Dashboard.Common.Image)
-  | LocalResidenceProofImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+  | LocalResidenceProofApprove LocalResidenceProofApproveDetails
   | PoliceVerificationCertificateImg (Kernel.Types.Id.Id Dashboard.Common.Image)
   | UDYAMApprove UDYAMApproveDetails
   | LDCApprove LDCApproveDetails
   | GSTApprove GSTApproveDetails
+  | DriverVehicleNOCImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+  | TANApprove TANApproveDetails
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -331,7 +336,19 @@ data ImageDocumentsRejectDetails = ImageDocumentsRejectDetails {reason :: Kernel
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data InspectionHubRejectDetails = InspectionHubRejectDetails {reason :: Kernel.Prelude.Text, requestId :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data LDCApproveDetails = LDCApproveDetails {documentId :: Kernel.Types.Id.Id Dashboard.Common.CommonDriverOnboardingDocuments, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data LocalResidenceProofApproveDetails = LocalResidenceProofApproveDetails
+  { documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image,
+    state :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState,
+    proofDocumentType :: Kernel.Prelude.Maybe Dashboard.Common.Driver.AddressDocumentType
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -392,7 +409,8 @@ data RCDetails = RCDetails
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     failedRules :: [Kernel.Prelude.Text],
-    verificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus
+    verificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
+    permitExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -439,7 +457,7 @@ data RejectDetails
   = SSNReject SSNRejectDetails
   | ImageDocuments ImageDocumentsRejectDetails
   | CommonDocumentReject CommonDocumentRejectDetails
-  | UDYAMReject UDYAMRejectDetails
+  | InspectionHubReject InspectionHubRejectDetails
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -464,6 +482,10 @@ data StatusRes = StatusRes
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data TANApproveDetails = TANApproveDetails {documentId :: Kernel.Types.Id.Id Dashboard.Common.CommonDriverOnboardingDocuments, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data TriggerReminderReq = TriggerReminderReq {documentType :: DocumentType, dueDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime, intervals :: Kernel.Prelude.Maybe [Kernel.Prelude.Int]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -471,11 +493,7 @@ data TriggerReminderReq = TriggerReminderReq {documentType :: DocumentType, dueD
 instance Kernel.Types.HideSecrets.HideSecrets TriggerReminderReq where
   hideSecrets = Kernel.Prelude.identity
 
-data UDYAMApproveDetails = UDYAMApproveDetails {udyamId :: Kernel.Types.Id.Id Dashboard.Common.DriverUdyam, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double, udyamNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data UDYAMRejectDetails = UDYAMRejectDetails {reason :: Kernel.Prelude.Text, udyamId :: Kernel.Types.Id.Id Dashboard.Common.DriverUdyam}
+data UDYAMApproveDetails = UDYAMApproveDetails {documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double, udyamNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
