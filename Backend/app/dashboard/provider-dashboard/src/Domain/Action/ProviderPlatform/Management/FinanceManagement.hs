@@ -9,6 +9,8 @@ module Domain.Action.ProviderPlatform.Management.FinanceManagement
     getFinanceManagementFinanceReconciliation,
     getFinanceManagementFinancePaymentGatewayTransactionList,
     getFinanceManagementFinanceInvoicePdf,
+    getFinanceManagementFinanceSapJournals,
+    getFinanceManagementFinanceSapJournalsTransactions,
   )
 where
 
@@ -129,3 +131,13 @@ getFinanceManagementFinanceInvoicePdf :: (Kernel.Types.Id.ShortId Domain.Types.M
 getFinanceManagementFinanceInvoicePdf merchantShortId opCity apiTokenInfo fleetOwnerOrDriverId from invoiceId invoiceNumber invoiceType issuedToType issuedToTypes language limit offset status to = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinanceInvoicePdf) fleetOwnerOrDriverId from invoiceId invoiceNumber invoiceType issuedToType issuedToTypes language limit offset status to
+
+getFinanceManagementFinanceSapJournals :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.SapJournalListRes)
+getFinanceManagementFinanceSapJournals merchantShortId opCity apiTokenInfo batchId belnr dateFrom dateTo limit offset status transactionType = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinanceSapJournals) batchId belnr dateFrom dateTo limit offset status transactionType
+
+getFinanceManagementFinanceSapJournalsTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.SapJournalTransactionsRes)
+getFinanceManagementFinanceSapJournalsTransactions merchantShortId opCity apiTokenInfo limit offset periodEndTime periodStartTime transactionType = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinanceSapJournalsTransactions) limit offset periodEndTime periodStartTime transactionType

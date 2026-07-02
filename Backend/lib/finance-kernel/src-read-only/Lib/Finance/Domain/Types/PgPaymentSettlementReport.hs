@@ -55,6 +55,7 @@ data PgPaymentSettlementReport = PgPaymentSettlementReport
     settlementId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     settlementMode :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.SettlementMode,
     settlementType :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.SettlementType,
+    subscriptionPurchaseId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     txnAmount :: Kernel.Types.Common.HighPrecMoney,
     txnDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     txnId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

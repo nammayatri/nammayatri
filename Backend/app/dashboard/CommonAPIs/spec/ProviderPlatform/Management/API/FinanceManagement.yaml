@@ -164,6 +164,36 @@ apis:
         type: ReconciliationTriggerRes
       userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FINANCE RECONCILIATION_TRIGGER
 
+  # ----- SAP Journal Entries -----
+  - GET: # SapJournalListAPI
+      endpoint: /finance/sapJournals
+      query:
+        dateFrom: UTCTime
+        dateTo: UTCTime
+        limit: Int
+        offset: Int
+        transactionType: Text
+        status: Text
+        batchId: Text
+        belnr: Text
+      auth: ApiAuthV2
+      response:
+        type: SapJournalListRes
+
+  # ----- SAP Journal Transactions (drill-down by transactionType + postingDate) -----
+  - GET: # SapJournalTransactionsAPI
+      endpoint: /finance/sapJournals/transactions
+      mandatoryQuery:
+        transactionType: Text
+        periodStartTime: UTCTime
+        periodEndTime: UTCTime
+      query:
+        limit: Int
+        offset: Int
+      auth: ApiAuthV2
+      response:
+        type: SapJournalTransactionsRes
+
 types:
   SubscriptionPurchaseStatus:
     - enum: "SubscriptionPending, SubscriptionActive, SubscriptionExpired, SubscriptionFailed, SubscriptionExhausted"
@@ -479,6 +509,47 @@ types:
     - totalTdsDeducted: HighPrecMoney
     - totalGstDeducted: HighPrecMoney
     - netEarnings: HighPrecMoney
+
+  # ----- SAP Journal Entries -----
+  SapJournalListRes:
+    - totalItems: Int
+    - summary: Summary
+    - journals: [SapJournalItem]
+  SapJournalItem:
+    - id: Text
+    - belnr: Maybe Text
+    - batchId: Text
+    - blart: Text
+    - transactionType: Text
+    - description: Text
+    - budat: Text
+    - bldat: Text
+    - gjahr: Maybe Text
+    - totalDebitAmount: HighPrecMoney
+    - totalCreditAmount: HighPrecMoney
+    - currency: Text
+    - transactionCount: Int
+    - glNumber: Maybe [Text]
+    - glName: Maybe [Text]
+    - sapMessage: Maybe Text
+    - status: Text
+    - merchantId: Text
+    - merchantOperatingCityId: Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  # ----- SAP Journal Transactions (drill-down) -----
+  SapJournalTransactionsRes:
+    - total: Int
+    - transactions: [SapJournalTransactionItem]
+  SapJournalTransactionItem:
+    - debitAmount: HighPrecMoney
+    - creditAmount: HighPrecMoney
+    - currency: Text
+    - description: Text
+    - subscriptionId: Maybe Text
+    - creationDate: UTCTime
+    - createdBy: Text
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

@@ -20,13 +20,13 @@ toPgPaymentSettlementReport ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
-  (Text -> m (Maybe Dom.OrderType, Maybe Bool)) ->
+  (Text -> m (Maybe Dom.OrderType, Maybe Bool, Maybe Text)) ->
   Ext.PaymentSettlementReport ->
   m Dom.PgPaymentSettlementReport
 toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId referenceType mbBankCode resolveOrderType report = do
   now <- getCurrentTime
   reportId <- generateGUID
-  (orderType, isValidSubscriptionPurchase) <- resolveOrderType report.orderId
+  (orderType, isValidSubscriptionPurchase, mbSubscriptionPurchaseId) <- resolveOrderType report.orderId
   let (chargebackId, chargebackReasonCode, chargebackStatus, chargebackAmount) = case report.txnType of
         Ext.CHARGEBACK ->
           ( report.disputeId,
@@ -84,6 +84,7 @@ toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId refer
         disputeType = mapDisputeType <$> report.disputeType,
         orderType = orderType,
         isValidSubscriptionPurchase = isValidSubscriptionPurchase,
+        subscriptionPurchaseId = mbSubscriptionPurchaseId,
         reconStatus = Dom.PENDING,
         reconMessage = Nothing,
         rawData = report.rawData,

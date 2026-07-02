@@ -57,6 +57,7 @@ data PgPaymentSettlementReportT f = PgPaymentSettlementReportT
     settlementId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     settlementMode :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.SettlementMode)),
     settlementType :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.SettlementType)),
+    subscriptionPurchaseId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     txnAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
     txnDate :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     txnId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),

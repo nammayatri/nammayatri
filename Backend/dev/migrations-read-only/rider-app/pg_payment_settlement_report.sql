@@ -122,3 +122,12 @@ ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN order_type text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN is_valid_subscription_purchase boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN subscription_purchase_id text ;
+
+
+------- SQL updates -------
+
