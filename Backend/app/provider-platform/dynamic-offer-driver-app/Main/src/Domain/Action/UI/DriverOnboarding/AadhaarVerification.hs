@@ -437,7 +437,7 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
                 person.id
               throwError $ DocumentAlreadyValidated "Aadhaar"
         aadhaarDocConfig <- listToMaybe <$> CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.AadhaarCard Nothing
-        faceMatchOutcome <- maybe (pure FMSkip) (\cfg -> runDocFaceMatch person cfg (Id req.aadhaarFrontImageId) (Just image1)) aadhaarDocConfig
+        faceMatchOutcome <- maybe (pure FMSkip) (\cfg -> runDocFaceMatch person cfg (Id req.aadhaarFrontImageId) (Just image1) req.aadhaarNumber) aadhaarDocConfig
         when (faceMatchOutcome == FMFail) $ throwError FaceMatchFailed
         resp <- Verification.extractAadhaarImage person.merchantId merchantOpCityId extractReq
         mbAadhaarNumber <- case resp.extractedAadhaar of
@@ -457,7 +457,8 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
               Nothing -> throwError (InvalidRequest "Aadhaar number is required")
             when (isNameCompareRequired transporterConfig verifyBy) $
               validateDocument person.merchantId merchantOpCityId person.id extractedAadhaarOutputData.name_on_card extractedAadhaarOutputData.date_of_birth Nothing ODC.AadhaarCard driverDocument
-            aadhaarCard <- makeAadhaarCardEntity person.id extractedAadhaarOutputData req
+            let aadhaarStatus = if faceMatchOutcome == FMDeferred then Documents.PENDING else Documents.VALID
+            aadhaarCard <- makeAadhaarCardEntity person.id extractedAadhaarOutputData req aadhaarStatus
             QAadhaarCard.upsertAadhaarRecord aadhaarCard
             return extractedAadhaarNumber
           Nothing -> throwImageError (Id req.aadhaarFrontImageId) ImageExtractionFailed
@@ -483,7 +484,7 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
     _ -> pure False
   pure res
   where
-    makeAadhaarCardEntity driverId extractedAadhaar aadhaarReq = do
+    makeAadhaarCardEntity driverId extractedAadhaar aadhaarReq aadhaarStatus = do
       currTime <- getCurrentTime
       (encryptedAadhaar, maskedAadhaarNumber) <- case aadhaarReq.aadhaarNumber of
         Just aadhaarNum -> do
@@ -502,7 +503,7 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
             aadhaarBackImageId = Id <$> aadhaarReq.aadhaarBackImageId,
             aadhaarFrontImageId = Just (Id aadhaarReq.aadhaarFrontImageId),
             address = extractedAadhaar.address,
-            verificationStatus = Documents.VALID,
+            verificationStatus = aadhaarStatus,
             consent = aadhaarReq.consent,
             consentTimestamp = currTime,
             driverImage = Nothing,

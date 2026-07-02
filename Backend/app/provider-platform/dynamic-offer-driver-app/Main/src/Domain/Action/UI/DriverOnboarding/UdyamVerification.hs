@@ -17,6 +17,7 @@ import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DFR
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverUdyam as DUdyam
+import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.IdfyVerification as DIdfy
 import qualified Domain.Types.Image as Image
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -183,7 +184,7 @@ mkIdfyVerificationEntityUdyam person imageId1 requestId now imageExtractionValid
         documentImageId1 = imageId1,
         documentImageId2 = Nothing,
         requestId,
-        docType = ODC.UDYAMCertificate,
+        docType = docTypeToText ODC.UDYAMCertificate,
         documentNumber = encryptedUam,
         driverDateOfBirth = Nothing,
         imageExtractionValidation = imageExtractionValidation,
