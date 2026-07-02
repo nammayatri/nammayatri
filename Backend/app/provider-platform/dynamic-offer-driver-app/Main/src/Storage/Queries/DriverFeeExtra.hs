@@ -136,6 +136,38 @@ findAllFeesInRangeWithStatusAndServiceName mbMerchantId merchantOperatingCityId 
     mbLimit
     Nothing
 
+findAllFeesInRangeWithStatusAndServiceNameByDriverIds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Maybe (Id Merchant) ->
+  Id MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  DriverFeeStatus ->
+  Maybe Int ->
+  ServiceNames ->
+  Bool ->
+  [Id Driver] ->
+  m [DriverFee]
+findAllFeesInRangeWithStatusAndServiceNameByDriverIds mbMerchantId merchantOperatingCityId startTime endTime status mbLimit serviceName enableCityBasedFeeSwitch driverIds
+  | null driverIds = pure []
+  | otherwise =
+    findAllWithOptionsKV
+      [ Se.And $
+          [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
+            Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
+            Se.Is BeamDF.status $ Se.Eq status,
+            Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+            Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
+            Se.Is BeamDF.feeType $ Se.In [RECURRING_EXECUTION_INVOICE, RECURRING_INVOICE],
+            Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds)
+          ]
+            <> [Se.Is BeamDF.merchantId $ Se.Eq $ getId (fromJust mbMerchantId) | isJust mbMerchantId]
+            <> [Se.Is BeamDF.siblingFeeId $ Se.Eq Nothing | enableCityBasedFeeSwitch]
+      ]
+      (Se.Desc BeamDF.endTime)
+      mbLimit
+      Nothing
+
 findFeeInRangeAndDriverIdAndServiceName ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   UTCTime ->
@@ -209,6 +241,39 @@ findWindowsAndServiceNameWithFeeTypeAndLimitAndServiceName merchantId merchantOp
     (Just limit)
     Nothing
 
+findWindowsAndServiceNameWithFeeTypeAndLimitAndServiceNameByDriverIds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  FeeType ->
+  Int ->
+  ServiceNames ->
+  [Id Driver] ->
+  m [DriverFee]
+findWindowsAndServiceNameWithFeeTypeAndLimitAndServiceNameByDriverIds merchantId merchantOpCityId from to feeType limit serviceName driverIds
+  | null driverIds = pure []
+  | otherwise =
+    findAllWithOptionsKV'
+      [ Se.And
+          [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq from,
+            Se.Is BeamDF.endTime $ Se.LessThanOrEq to,
+            Se.Is BeamDF.feeType $ Se.Eq feeType,
+            Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId,
+            Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOpCityId.getId),
+            Se.Is BeamDF.overlaySent $ Se.Eq False,
+            Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+            Se.Is BeamDF.platformFee $ Se.Not (Se.Eq 0.0),
+            Se.Is BeamDF.cgst $ Se.Not (Se.Eq 0.0),
+            Se.Is BeamDF.sgst $ Se.Not (Se.Eq 0.0),
+            Se.Is BeamDF.siblingFeeId $ Se.Eq Nothing,
+            Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds)
+          ]
+      ]
+      (Just limit)
+      Nothing
+
 findWindowsWithoutLimit :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> UTCTime -> UTCTime -> m [DriverFee]
 findWindowsWithoutLimit (Id driverId) from to = do
   findAllWithOptionsKV
@@ -251,6 +316,38 @@ findDriverFeeInRangeWithNotifcationNotSentServiceNameAndStatus merchantId mercha
     (Just limit)
     Nothing
 
+findDriverFeeInRangeWithNotifcationNotSentServiceNameAndStatusByDriverIds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  Int ->
+  UTCTime ->
+  UTCTime ->
+  Int ->
+  Domain.DriverFeeStatus ->
+  ServiceNames ->
+  [Id Driver] ->
+  m [DriverFee]
+findDriverFeeInRangeWithNotifcationNotSentServiceNameAndStatusByDriverIds merchantId merchantOperatingCityId limit startTime endTime retryCount status serviceName driverIds
+  | null driverIds = pure []
+  | otherwise =
+    findAllWithOptionsKV'
+      [ Se.And
+          [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
+            Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
+            Se.Is BeamDF.feeType $ Se.Eq RECURRING_EXECUTION_INVOICE,
+            Se.Is BeamDF.autopayPaymentStage $ Se.Eq (Just NOTIFICATION_SCHEDULED),
+            Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
+            Se.Is BeamDF.status $ Se.Eq status,
+            Se.Is BeamDF.notificationRetryCount $ Se.LessThanOrEq retryCount,
+            Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+            Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId,
+            Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds)
+          ]
+      ]
+      (Just limit)
+      Nothing
+
 findDriverFeeInRangeWithOrderNotExecutedAndPendingByServiceName ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id Merchant ->
@@ -275,6 +372,35 @@ findDriverFeeInRangeWithOrderNotExecutedAndPendingByServiceName merchantId merch
     ]
     (Just limit)
     Nothing
+
+findDriverFeeInRangeWithOrderNotExecutedAndPendingByServiceNameByDriverIds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  Int ->
+  UTCTime ->
+  UTCTime ->
+  ServiceNames ->
+  [Id Driver] ->
+  m [DriverFee]
+findDriverFeeInRangeWithOrderNotExecutedAndPendingByServiceNameByDriverIds merchantId merchantOperatingCityId limit startTime endTime serviceName driverIds
+  | null driverIds = pure []
+  | otherwise =
+    findAllWithOptionsKV'
+      [ Se.And
+          [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
+            Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
+            Se.Is BeamDF.feeType $ Se.Eq RECURRING_EXECUTION_INVOICE,
+            Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING,
+            Se.Is BeamDF.autopayPaymentStage $ Se.Eq (Just EXECUTION_SCHEDULED),
+            Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
+            Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+            Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId,
+            Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds)
+          ]
+      ]
+      (Just limit)
+      Nothing
 
 findMaxBillNumberInRangeForServiceName ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
