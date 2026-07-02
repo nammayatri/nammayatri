@@ -693,7 +693,7 @@ markEntriesAsPaidOut ::
 markEntriesAsPaidOut [] _ = pure ()
 markEntriesAsPaidOut entryIds payoutRequestId = do
   actorInfo <- asks (.actorInfo)
-  beforeEntries <- catMaybes <$> mapM QLedger.findById entryIds
+  beforeEntries <- QLedgerExtra.findByIds entryIds
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamLE.settlementStatus (Just PAID_OUT),
@@ -717,7 +717,7 @@ markEntriesAsProcessing ::
 markEntriesAsProcessing [] _ = pure ()
 markEntriesAsProcessing entryIds mbSettlementId = do
   actorInfo <- asks (.actorInfo)
-  beforeEntries <- catMaybes <$> mapM QLedger.findById entryIds
+  beforeEntries <- QLedgerExtra.findByIds entryIds
   now <- getCurrentTime
   updateWithKV
     ( [ Se.Set BeamLE.settlementStatus (Just PROCESSING),
@@ -749,7 +749,7 @@ markEntriesAsUnsettled ::
 markEntriesAsUnsettled [] = pure ()
 markEntriesAsUnsettled entryIds = do
   actorInfo <- asks (.actorInfo)
-  beforeEntries <- catMaybes <$> mapM QLedger.findById entryIds
+  beforeEntries <- QLedgerExtra.findByIds entryIds
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamLE.settlementStatus (Just UNSETTLED),
