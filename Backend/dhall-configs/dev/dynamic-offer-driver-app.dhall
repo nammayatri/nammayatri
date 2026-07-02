@@ -514,6 +514,7 @@ in  { esqDBCfg
     , maxShards = +5
     , maxNotificationShards = +128
     , gateNotifiedKeyShards = +16
+    , activeDriversListKeyShards = +16
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True
     , enableAPILatencyLogging = True
