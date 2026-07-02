@@ -13,6 +13,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
+import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Action as PayoutUpdates
 import Lib.Payment.Domain.Types.Common (Merchant, Person)
@@ -22,7 +23,8 @@ import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPO
 
 refreshPayoutStatus ::
   ( EncFlow m r,
-    BeamFlow.BeamFlow m r
+    BeamFlow.BeamFlow m r,
+    FinanceBeamFlow.BeamFlow m r
   ) =>
   Id Merchant ->
   Id Person ->
@@ -44,7 +46,8 @@ refreshPayoutStatus merchantId personId statusReq statusCall currentStatus mapSt
 
 refreshPayoutStatusWithResponse ::
   ( EncFlow m r,
-    BeamFlow.BeamFlow m r
+    BeamFlow.BeamFlow m r,
+    FinanceBeamFlow.BeamFlow m r
   ) =>
   Text ->
   DPayment.PayoutStatusServiceReq ->
