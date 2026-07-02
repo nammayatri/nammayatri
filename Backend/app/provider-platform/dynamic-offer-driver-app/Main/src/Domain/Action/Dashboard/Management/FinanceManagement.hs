@@ -97,6 +97,17 @@ mkPageLimit = min maxPageLimit . max 0 . fromMaybe defaultPageLimit
 mkPageOffset :: Maybe Int -> Int
 mkPageOffset = max 0 . fromMaybe 0
 
+subscriptionPurchaseIdFromReconEntry :: ReconciliationEntry.ReconciliationEntry -> Maybe Text
+subscriptionPurchaseIdFromReconEntry entry = entry.bookingId <|> entry.sourceId
+
+purchaseVsTxnMismatchCategory :: ReconciliationEntry.ReconciliationEntry -> Maybe Text
+purchaseVsTxnMismatchCategory entry = case entry.reconStatus of
+  ReconciliationEntry.MATCHED -> Just "Matched"
+  ReconciliationEntry.MISSING_IN_TARGET -> Just "Missing in Subscription Transactions"
+  ReconciliationEntry.MISSING_IN_SOURCE -> Just "Missing in Subscription Purchase"
+  ReconciliationEntry.HIGHER_IN_TARGET -> Just "Over-consumption"
+  ReconciliationEntry.LOWER_IN_TARGET -> Just "Partial consumption"
+
 -- | Get subscription purchase list with filters
 getFinanceManagementSubscriptionPurchaseList ::
   ShortId DM.Merchant ->
@@ -600,10 +611,9 @@ getFinanceManagementFinanceReconciliation merchantShortId opCity mbFromDate mbLi
       adjustedFromDate = addUTCTime (- istOffset) <$> mbFromDate
       adjustedToDate = addUTCTime (- istOffset) <$> mbToDate
 
-  summaries <- QReconSummaryExtra.findByDateRangeAndType adjustedFromDate adjustedToDate reconciliationType
+  latestSummary <- QReconSummaryExtra.findLatestByDateRangeAndType adjustedFromDate adjustedToDate reconciliationType
 
-  let latestSummary = listToMaybe summaries
-      summaryRes = maybe defaultSummary toSummary latestSummary
+  let summaryRes = maybe defaultSummary toSummary latestSummary
 
   entries <- case latestSummary of
     Just summary -> QReconEntryExtra.findBySummaryIdWithPagination summary.id limit offset
@@ -633,26 +643,60 @@ getFinanceManagementFinanceReconciliation merchantShortId opCity mbFromDate mbLi
 
     toReconEntry :: ReconciliationEntry.ReconciliationEntry -> API.ReconciliationEntry
     toReconEntry entry =
-      API.ReconciliationEntry
-        { bookingId = entry.bookingId,
-          dcoId = entry.dcoId,
-          status = show <$> entry.status,
-          mode = show <$> entry.mode,
-          expectedValue = Just entry.expectedDsrValue,
-          actualValue = Just entry.actualLedgerValue,
-          variance = Just entry.variance,
-          reconStatus = Just (show entry.reconStatus),
-          mismatchReason = entry.mismatchReason,
-          timestamp = Just entry.timestamp,
-          financeComponent = show <$> entry.financeComponent,
-          sourceId = entry.sourceId,
-          targetId = entry.targetId,
-          settlementId = entry.settlementId,
-          settlementDate = entry.settlementDate,
-          settlementMode = entry.settlementMode,
-          transactionDate = entry.transactionDate,
-          rrn = entry.rrn
-        }
+      let baseEntry =
+            API.ReconciliationEntry
+              { bookingId = entry.bookingId,
+                dcoId = entry.dcoId,
+                status = show <$> entry.status,
+                mode = show <$> entry.mode,
+                expectedValue = Just entry.expectedDsrValue,
+                actualValue = Just entry.actualLedgerValue,
+                variance = Just entry.variance,
+                reconStatus = Just (show entry.reconStatus),
+                mismatchReason = entry.mismatchReason,
+                timestamp = Just entry.timestamp,
+                financeComponent = show <$> entry.financeComponent,
+                sourceId = entry.sourceId,
+                targetId = entry.targetId,
+                settlementId = entry.settlementId,
+                settlementDate = entry.settlementDate,
+                settlementMode = entry.settlementMode,
+                transactionDate = entry.transactionDate,
+                pgTransactionDate = entry.pgTransactionDate,
+                rrn = entry.rrn,
+                utr = entry.utr,
+                pgOrderId = entry.pgOrderId,
+                pgTxnId = entry.pgTxnId,
+                paymentOrderId = entry.paymentOrderId,
+                subscriptionAmountExclGst = entry.subscriptionAmountExclGst,
+                gstOnSubscription = entry.gstOnSubscription,
+                totalTransactionAmount = entry.totalTransactionAmount,
+                subscriptionPurchaseId = Nothing,
+                purchaseTimestamp = Nothing,
+                purchaseStatus = Nothing,
+                planName = Nothing,
+                entitledAmount = Nothing,
+                consumedAmount = Nothing,
+                remainingAmount = Nothing,
+                transactionType = Nothing,
+                linkedEntityId = Nothing,
+                mismatchCategory = Nothing
+              }
+       in case reconciliationType of
+            ReconSummary.SUBSCRIPTION_PURCHASE_VS_SUBSCRIPTION_TRANSACTION ->
+              let mSubId = subscriptionPurchaseIdFromReconEntry entry
+               in baseEntry
+                    { API.subscriptionPurchaseId = mSubId,
+                      API.purchaseTimestamp = entry.transactionDate,
+                      API.purchaseStatus = entry.purchaseStatus,
+                      API.planName = entry.planName,
+                      API.entitledAmount = Just entry.expectedDsrValue,
+                      API.consumedAmount = Just entry.actualLedgerValue,
+                      API.remainingAmount = Just entry.variance,
+                      API.linkedEntityId = mSubId,
+                      API.mismatchCategory = purchaseVsTxnMismatchCategory entry
+                    }
+            _ -> baseEntry
 
 -- | Trigger a reconciliation job on-demand
 postFinanceManagementReconciliationTrigger ::
@@ -670,6 +714,7 @@ postFinanceManagementReconciliationTrigger merchantShortId opCity req = do
     "DSR_VS_LEDGER" -> pure ()
     "DSR_VS_SUBSCRIPTION" -> pure ()
     "DSSR_VS_SUBSCRIPTION" -> pure ()
+    "SUBSCRIPTION_PURCHASE_VS_SUBSCRIPTION_TRANSACTION" -> pure ()
     "PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION" -> pure ()
     "PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST" -> pure ()
     _ -> throwError $ InvalidRequest $ "Invalid reconciliation type: " <> reconciliationType
