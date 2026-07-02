@@ -44,6 +44,7 @@ library
       API.Dashboard.Fleet
       API.Dashboard.Fleet.Registration
       API.External.LiveEKD
+      API.FleetEngineToken
       API.IGM
       API.Internal
       API.Internal.Auth
@@ -306,6 +307,7 @@ library
       Domain.Action.UI.FeedbackForm
       Domain.Action.UI.FinanceInvoice
       Domain.Action.UI.FleetDriverAssociation
+      Domain.Action.UI.FleetEngineToken
       Domain.Action.UI.FleetOwnerList
       Domain.Action.UI.FRFSFleetOperator
       Domain.Action.UI.Insurance
@@ -541,6 +543,7 @@ library
       SharedLogic.Finance.Reconciliation
       SharedLogic.Finance.Wallet
       SharedLogic.Fleet
+      SharedLogic.FleetEngine
       SharedLogic.FleetOperatorStats
       SharedLogic.FleetVehicleStats
       SharedLogic.GoogleMaps
