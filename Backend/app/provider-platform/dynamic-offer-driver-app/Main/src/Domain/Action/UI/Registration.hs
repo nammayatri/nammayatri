@@ -381,6 +381,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             canSwitchToRental = transporterConfig.canSwitchToRental,
             canSwitchToInterCity = transporterConfig.canSwitchToInterCity,
             enableForAirport = DriverInfo.ENABLED,
+            airportBlockExpiryTime = Nothing,
             canSwitchToIntraCity = True,
             aadhaarVerified = False,
             blockedReason = Nothing,

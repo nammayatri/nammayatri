@@ -121,6 +121,7 @@ allocatorHandle flowRt env =
         emptyJobHandlerList
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSearchRequestToDrivers)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockDriver)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockAirportDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . softBlockNotifyDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockSoftBlockedDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . calculateSupplyDemand)

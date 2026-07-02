@@ -1040,7 +1040,8 @@ filterInBatches ::
     HasShortDurationRetryCfg r c,
     HasRequestId r,
     Forkable m,
-    HasField "gateNotifiedKeyShards" r Int
+    HasField "gateNotifiedKeyShards" r Int,
+    Redis.HedisLTSFlowEnv r
   ) =>
   Int -> -- batch size
   Int -> -- needed count
@@ -1076,7 +1077,8 @@ filterEligibleDrivers ::
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
     HasRequestId r,
-    HasField "gateNotifiedKeyShards" r Int
+    HasField "gateNotifiedKeyShards" r Int,
+    Redis.HedisLTSFlowEnv r
   ) =>
   Id DM.Merchant -> -- merchant (for manualQueueRemove of on-ride/offline drivers)
   Text -> -- specialLocationId
@@ -1114,6 +1116,10 @@ filterEligibleDrivers merchantId specialLocationId vehicleType gateId mbFilterAi
             busyRows
   -- Bulk DB: drivers currently on a ride.
   driverInfos <- measuringDurationToLog INFO ("filterEligibleDrivers.findDriverInfos n=" <> show (length driverIds)) $ QDI.findAllByDriverIds (map (.getId) driverIds)
+  airportRestrictions <-
+    forM driverInfos $ \info -> do
+      restriction <- QDI.resolveAirportRestriction now info
+      pure (info.driverId, restriction)
   let onRideDriversOrOfflineDrivers =
         Set.fromList
           [ info.driverId
@@ -1122,9 +1128,9 @@ filterEligibleDrivers merchantId specialLocationId vehicleType gateId mbFilterAi
           ]
       airportIneligibleDrivers =
         Set.fromList
-          [ info.driverId
-            | info <- driverInfos,
-              info.enableForAirport /= DDI.ENABLED
+          [ did
+            | (did, restriction) <- airportRestrictions,
+              restriction /= DDI.ENABLED
           ]
   -- Bulk DB: driver vehicles for service-tier and per-vehicle airport-switch filters.
   vehicles <- measuringDurationToLog INFO ("filterEligibleDrivers.findVehicles n=" <> show (length driverIds)) $ QV.findAllByDriverIds driverIds

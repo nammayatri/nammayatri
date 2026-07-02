@@ -408,10 +408,10 @@ postDriverTdsRateUpdate merchantShortId opCity apiTokenInfo req = do
   T.withTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverTdsRateUpdate) req
 
-getDriverAirportPreference :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Environment.Flow Common.AirportPreferenceRes)
-getDriverAirportPreference merchantShortId opCity apiTokenInfo mbPhoneNumber mbVehicleNumber = do
+getDriverAirportPreference :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Maybe Text -> Environment.Flow Common.AirportPreferenceRes)
+getDriverAirportPreference merchantShortId opCity apiTokenInfo mbPhoneNumber mbVehicleNumber mbSpecialZoneId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverAirportPreference) mbPhoneNumber mbVehicleNumber
+  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverAirportPreference) mbPhoneNumber mbVehicleNumber mbSpecialZoneId
 
 postDriverAirportPreference :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.AirportPreferenceReq -> Environment.Flow APISuccess)
 postDriverAirportPreference merchantShortId opCity apiTokenInfo driverId req = do
