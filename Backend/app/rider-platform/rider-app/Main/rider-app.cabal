@@ -394,6 +394,7 @@ library
       Domain.Types.LocationAddress
       Domain.Types.MerchantOnboarding.Handler
       Domain.Types.RentalsIntercityCache
+      Domain.Types.RewardContext
       Domain.Types.Route
       Domain.Types.RouteStopMapping
       Domain.Types.RouteStopTimeTable

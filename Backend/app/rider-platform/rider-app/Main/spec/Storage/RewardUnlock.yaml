@@ -19,6 +19,7 @@ RewardUnlock:
     couponSource: CouponSourceType
     couponValidTill: Maybe UTCTime
     status: UnlockStatus
+    unlockSeq: Maybe Int
     viewedAt: Maybe UTCTime
     claimedAt: Maybe UTCTime
     redeemedAt: Maybe UTCTime

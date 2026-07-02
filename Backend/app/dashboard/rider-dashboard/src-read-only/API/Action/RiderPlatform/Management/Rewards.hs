@@ -23,10 +23,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("rewards" :> (PostRewardsCampaign :<|> PutRewardsCampaign :<|> PostRewardsCampaignCohort :<|> PutRewardsCampaignCohort :<|> PostRewardsCampaignCohortCodes :<|> PostRewardsCampaignStatus :<|> GetRewardsCampaign :<|> GetRewardsCampaigns :<|> GetRewardsCampaignStats :<|> PostRewardsTriggerEval))
+type API = ("rewards" :> (PostRewardsCampaign :<|> PutRewardsCampaign :<|> PostRewardsCampaignCohort :<|> PutRewardsCampaignCohort :<|> PostRewardsCampaignCohortCodes :<|> PostRewardsCampaignStatus :<|> GetRewardsCampaign :<|> GetRewardsCampaigns :<|> GetRewardsCampaignStats :<|> PostRewardsTriggerEval :<|> PostRewardsCohortValidateEligibility))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = postRewardsCampaign merchantId city :<|> putRewardsCampaign merchantId city :<|> postRewardsCampaignCohort merchantId city :<|> putRewardsCampaignCohort merchantId city :<|> postRewardsCampaignCohortCodes merchantId city :<|> postRewardsCampaignStatus merchantId city :<|> getRewardsCampaign merchantId city :<|> getRewardsCampaigns merchantId city :<|> getRewardsCampaignStats merchantId city :<|> postRewardsTriggerEval merchantId city
+handler merchantId city = postRewardsCampaign merchantId city :<|> putRewardsCampaign merchantId city :<|> postRewardsCampaignCohort merchantId city :<|> putRewardsCampaignCohort merchantId city :<|> postRewardsCampaignCohortCodes merchantId city :<|> postRewardsCampaignStatus merchantId city :<|> getRewardsCampaign merchantId city :<|> getRewardsCampaigns merchantId city :<|> getRewardsCampaignStats merchantId city :<|> postRewardsTriggerEval merchantId city :<|> postRewardsCohortValidateEligibility merchantId city
 
 type PostRewardsCampaign =
   ( ApiAuth
@@ -108,6 +108,14 @@ type PostRewardsTriggerEval =
       :> API.Types.RiderPlatform.Management.Rewards.PostRewardsTriggerEval
   )
 
+type PostRewardsCohortValidateEligibility =
+  ( ApiAuth
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.REWARDS) / ('API.Types.RiderPlatform.Management.Rewards.POST_REWARDS_COHORT_VALIDATE_ELIGIBILITY))
+      :> API.Types.RiderPlatform.Management.Rewards.PostRewardsCohortValidateEligibility
+  )
+
 postRewardsCampaign :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Rewards.CreateCampaignReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.CreateCampaignResp)
 postRewardsCampaign merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Rewards.postRewardsCampaign merchantShortId opCity apiTokenInfo req
 
@@ -137,3 +145,6 @@ getRewardsCampaignStats merchantShortId opCity apiTokenInfo campaignId = withFlo
 
 postRewardsTriggerEval :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Person -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postRewardsTriggerEval merchantShortId opCity apiTokenInfo personId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Rewards.postRewardsTriggerEval merchantShortId opCity apiTokenInfo personId
+
+postRewardsCohortValidateEligibility :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Rewards.ValidateCohortEligibilityReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.ValidateCohortEligibilityResp)
+postRewardsCohortValidateEligibility merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Rewards.postRewardsCohortValidateEligibility merchantShortId opCity apiTokenInfo req
