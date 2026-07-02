@@ -36,6 +36,7 @@ import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverLicense as Domain
 import qualified Domain.Types.DriverPanCard as DPan
+import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.HyperVergeVerification as Domain
 import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Image as Image
@@ -204,7 +205,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             return ()
   let runDlFaceMatch = do
         -- Reuse the category-aware documentVerificationConfig resolved above (was a category-agnostic lookup).
-        dlFaceOutcome <- runDocFaceMatch person documentVerificationConfig imageId1 Nothing
+        dlFaceOutcome <- runDocFaceMatch person documentVerificationConfig imageId1 Nothing (Just driverLicenseNumber)
         when (dlFaceOutcome == FMFail) $ throwError FaceMatchFailed
   let runBody = do
         when (isNameCompareRequired transporterConfig verifyBy) $
@@ -341,7 +342,7 @@ mkIdfyVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOf
         documentNumber = encryptedDL,
         issueDateOnDoc = dateOfIssue,
         driverDateOfBirth = Just driverDateOfBirth,
-        docType = DTO.DriverLicense,
+        docType = docTypeToText DTO.DriverLicense,
         status = "pending",
         idfyResponse = Nothing,
         retryCount = Just 0,
@@ -425,16 +426,22 @@ onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificat
   case mDriverLicense of
     Just driverLicense -> do
       (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
-      Query.upsert driverLicense
+      -- Promote non-terminal images before resolution so MANUAL_VERIFICATION_REQUIRED doesn't read as FMDeferred.
+      forM_ [(image1, Just imageId1), (image2, imageId2)] $ \(mbImg, mbImgId) ->
+        when ((mbImg >>= (.verificationStatus)) `notElem` [Just Documents.VALID, Just Documents.INVALID]) $
+          whenJust mbImgId $ ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard.")
+      -- Record stays PENDING until the face match passes; reuses a recorded result when the match already ran.
+      finalStatus <-
+        if driverLicense.verificationStatus == Documents.VALID
+          then resolveFaceMatchVerificationStatus person documentVerificationConfig imageId1 Nothing dlNumber
+          else pure driverLicense.verificationStatus
+      Query.upsert driverLicense {Domain.verificationStatus = finalStatus}
       let docImageInvalid = any (\mbImg -> (mbImg >>= (.verificationStatus)) == Just Documents.INVALID) [image1, image2]
       when docImageInvalid $ Query.updateVerificationStatus Documents.INVALID imageId1
       case person.role of
         Person.DRIVER -> do
           DriverInfo.updateDlNumber mEncryptedDL person.id
         _ -> pure ()
-      forM_ [(image1, Just imageId1), (image2, imageId2)] $ \(mbImg, mbImgId) ->
-        when ((mbImg >>= (.verificationStatus)) `notElem` [Just Documents.VALID, Just Documents.INVALID]) $
-          whenJust mbImgId $ ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard.")
       case driverLicense.driverName of
         Just name_ -> void $ Person.updateName name_ person.id
         Nothing -> pure ()

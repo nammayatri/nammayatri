@@ -29,6 +29,7 @@ import qualified Domain.Action.UI.DriverOnboarding.PanVerification as PanCard
 import qualified Domain.Action.UI.DriverOnboarding.UdyamVerification as UdyamCard
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as RC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.IdfyVerification as DIdfyVerification
 import qualified Domain.Types.IdfyVerification as IV
 import qualified Domain.Types.Merchant as DM
@@ -188,7 +189,7 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
             <> " driverId="
             <> verificationReq.driverId.getId
             <> " docType="
-            <> show verificationReq.docType
+            <> verificationReq.docType
             <> " status="
             <> verificationReq.status
         IVQuery.updateResponse rsp.status (Just respDump) rsp.request_id
@@ -216,12 +217,13 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
         Just (Idfy.UdyamAadhaarResult (Idfy.SourceOutput o)) -> o.status
         Just (Idfy.RCResult (Idfy.ExtractionOutput o)) -> o.status
         _ -> Nothing
-    verifyDocument person verificationReq rslt mbRemPriorityList =
+    verifyDocument person verificationReq rslt mbRemPriorityList = do
+      verificationReqRecord <- fromMaybeM (InternalError $ "Non-document idfy_verification row routed to webhook, requestId=" <> verificationReq.requestId <> ", docType=" <> verificationReq.docType) (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
       case rslt of
         Idfy.RCResult resExtOp ->
           RC.onVerifyRC
             person
-            (Just (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq))
+            (Just verificationReqRecord)
             (Idfy.convertRCOutputToRCVerificationResponse resExtOp.extraction_output)
             mbRemPriorityList
             (Just verificationReq.imageExtractionValidation)
@@ -233,12 +235,12 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
             Nothing
         Idfy.DLResult resSrcOp ->
           DL.onVerifyDL
-            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            verificationReqRecord
             (Idfy.convertDLOutputToDLVerificationOutput resSrcOp.source_output)
             VT.Idfy
         Idfy.PanResult resSrcOp ->
           PanCard.onVerifyPan
-            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            verificationReqRecord
             (Idfy.convertPanOutputToPanVerification resSrcOp.source_output)
             VT.Idfy
         Idfy.GstResult resSrcOp -> do
@@ -249,25 +251,25 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
               <> " sourceOutputStatus="
               <> show (resSrcOp.source_output.status)
           GstCard.onVerifyGst
-            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            verificationReqRecord
             (Idfy.convertGstOutputToGstVerification resSrcOp.source_output)
             VT.Idfy
         Idfy.BankAccountResult _ -> pure Ack
         Idfy.PanAadhaarLinkResult resSrcOp ->
           PanCard.onVerifyPanAadhaarLink
-            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            verificationReqRecord
             (Idfy.convertPanAadhaarLinkOutputToPanAadhaarLinkVerification resSrcOp.source_output)
             VT.Idfy
         Idfy.UdyamAadhaarResult resSrcOp ->
           UdyamCard.onVerifyUdyam
-            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            verificationReqRecord
             (Idfy.convertUdyamAadhaarOutputToUdyamAadhaarVerification resSrcOp.source_output)
             VT.Idfy
         _ -> pure Ack
 
 handleIdfySourceDown :: DP.Person -> (IV.IdfyVerification -> Flow ()) -> DIdfyVerification.IdfyVerification -> Flow ()
 handleIdfySourceDown person retryFunc verificationReq = do
-  unless (verificationReq.docType == DVC.VehicleRegistrationCertificate) $ retryFunc verificationReq
+  unless (verificationReq.docType == docTypeToText DVC.VehicleRegistrationCertificate) $ retryFunc verificationReq
   mbRemPriorityList <- CQO.getVerificationPriorityList verificationReq.driverId >>= \mbpl -> if mbpl == Just [] then return Nothing else return mbpl
   rcNum <- decrypt verificationReq.documentNumber
   flip (maybe (retryFunc verificationReq)) mbRemPriorityList $
