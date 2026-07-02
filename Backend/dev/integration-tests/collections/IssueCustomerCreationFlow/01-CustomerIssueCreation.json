@@ -1,0 +1,518 @@
+{
+  "info": {
+    "name": "Customer-Side Issue Creation Flow (BAP)",
+    "description": "Focused rider-app customer journey for reporting an issue: browse categories -> drill into an option -> (optional) attach media -> create IssueReport -> verify -> post a chat message. Setup + cleanup steps create/delete a fresh test category+option per run so the collection is safe to run concurrently. IssueReport is created with createTicket: true so the outbound ticket path is exercised; a downstream ticket-service failure is swallowed by IssueManagement's withTryCatch and does not fail the API call, so this test passes regardless of external-provider availability.\n\n== Attachment flow ==\n\nThe \"(Optional) Rider UI: Upload media file\" step is a multipart/form-data POST. In the test-dashboard UI, a paperclip file picker is rendered inline in the step header — attach a PNG/JPG there and the runner builds a FormData and sends it via axios. If nothing is attached the step self-skips, and the next Create IssueReport step sends `mediaFiles: []`. When a file IS attached and Xyne is the primary ticket service, this exercises the multipart appDeskInbound path (rider-app fetches the resulting S3 URL and streams it as a `files` form part on the Xyne outbound call).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-skip mock-server requests when envType is not Local.",
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') pm.execution.skipRequest();",
+          "  }",
+          "})();",
+          "",
+          "// Fresh rider phone + per-run suffix ONCE per collection run.",
+          "if (!pm.collectionVariables.get('_test_rider_number')) {",
+          "    var rNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    pm.collectionVariables.set('_test_rider_number', rNum);",
+          "    console.log('[customer-issue-flow] generated rider number ' + rNum);",
+          "}",
+          "if (!pm.collectionVariables.get('_test_run_suffix')) {",
+          "    pm.collectionVariables.set('_test_run_suffix', Math.floor(Math.random() * 1000000).toString());",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Rider Auth (sendOTP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{rider_merchant_id}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["auth"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_authId', d.authId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('authId present', function () { pm.expect(d.authId).to.be.a('string'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider Auth Verify",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"customer-issue-flow-rider\",\n    \"whatsappNotificationEnroll\": \"OPT_OUT\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["auth", "{{rider_authId}}", "verify"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_token', d.token);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('rider token present', function () { pm.expect(d.token).to.be.a('string'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Setup: BAP Dashboard creates test IssueCategory",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"category\": \"CustFlowTest_{{_test_run_suffix}}\",\n    \"logoUrl\": \"https://example.com/logo.png\",\n    \"priority\": 999,\n    \"categoryType\": \"Category\",\n    \"isRideRequired\": false,\n    \"isTicketRequired\": true,\n    \"isActive\": true,\n    \"translations\": [\n      { \"language\": \"ENGLISH\", \"translation\": \"Customer Flow Test Category\" }\n    ],\n    \"messages\": [\n      {\n        \"message\": \"Please describe your issue in detail\",\n        \"messageTitle\": \"How can we help?\",\n        \"priority\": 1,\n        \"messageTranslations\": [ { \"language\": \"ENGLISH\", \"translation\": \"Please describe your issue in detail\" } ],\n        \"titleTranslations\": [],\n        \"actionTranslations\": [],\n        \"options\": [],\n        \"isActive\": true\n      }\n    ],\n    \"label\": \"CUST_FLOW_TEST_{{_test_run_suffix}}\",\n    \"enableKapture\": false,\n    \"showInDefault\": true\n}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_merchant_short_id}}/{{city}}/issueV2/category/create",
+          "host": ["{{bap_dashboard_url}}"],
+          "path": ["bap", "{{bap_merchant_short_id}}", "{{city}}", "issueV2", "category", "create"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('categoryId returned', function () { pm.expect(d.categoryId).to.be.a('string'); });",
+              "pm.environment.set('issue_category_id', d.categoryId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Setup: BAP Dashboard fetches category detail (capture messageId)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_merchant_short_id}}/{{city}}/issueV2/category/{{issue_category_id}}/detail",
+          "host": ["{{bap_dashboard_url}}"],
+          "path": ["bap", "{{bap_merchant_short_id}}", "{{city}}", "issueV2", "category", "{{issue_category_id}}", "detail"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var msgs = d.messages || [];",
+              "pm.test('At least 1 message on the category', function () { pm.expect(msgs.length).to.be.at.least(1); });",
+              "if (msgs.length > 0) pm.environment.set('issue_message_id', msgs[0].messageId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Setup: BAP Dashboard creates test IssueOption",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"option\": \"CustFlowOpt_{{_test_run_suffix}}\",\n    \"priority\": 1,\n    \"isActive\": true,\n    \"translations\": [ { \"language\": \"ENGLISH\", \"translation\": \"Customer Flow Option\" } ],\n    \"messages\": [\n      {\n        \"message\": \"Thanks, our team will get back to you soon\",\n        \"messageTitle\": \"Received\",\n        \"priority\": 1,\n        \"messageTranslations\": [ { \"language\": \"ENGLISH\", \"translation\": \"Thanks, our team will get back to you soon\" } ],\n        \"titleTranslations\": [],\n        \"actionTranslations\": [],\n        \"options\": [],\n        \"isActive\": true\n      }\n    ],\n    \"label\": \"CUST_FLOW_OPT_{{_test_run_suffix}}\"\n}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_merchant_short_id}}/{{city}}/issueV2/option/create?issueCategoryId={{issue_category_id}}&issueMessageId={{issue_message_id}}",
+          "host": ["{{bap_dashboard_url}}"],
+          "path": ["bap", "{{bap_merchant_short_id}}", "{{city}}", "issueV2", "option", "create"],
+          "query": [
+            { "key": "issueCategoryId", "value": "{{issue_category_id}}" },
+            { "key": "issueMessageId", "value": "{{issue_message_id}}" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('optionId returned', function () { pm.expect(d.optionId).to.be.a('string'); });",
+              "pm.environment.set('issue_option_id', d.optionId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider UI: List IssueCategories",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/issue/category",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["issue", "category"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Categories array present', function () { pm.expect(d.categories).to.be.an('array'); });",
+              "// NOTE: we do NOT assert the freshly-created test category is in this list.",
+              "// The category-list query is cached in Redis by (mocId, language, identifier)",
+              "// and the dashboard's category-create action does not invalidate that cache,",
+              "// so a newly-seeded category surfaces only after the cache TTL. See",
+              "// findAllActiveByMerchantOpCityIdAndLanguage in Storage/CachedQueries/Issue/IssueCategory.hs."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider UI: List IssueOptions for category",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/issue/option?categoryId={{issue_category_id}}",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["issue", "option"],
+          "query": [
+            { "key": "categoryId", "value": "{{issue_category_id}}" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Options payload returned', function () { pm.expect(d).to.be.ok; });",
+              "// See note on the categories step: option-list is likewise cached; we do not",
+              "// assert the freshly-created option is present on first call."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "(Optional) Rider UI: Upload media file",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('fileId returned', function () { pm.expect(d.fileId).to.be.a('string'); });",
+              "pm.collectionVariables.set('uploaded_media_file_id', d.fileId);",
+              "console.log('[customer-issue-flow] uploaded media fileId=' + d.fileId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "fileType", "value": "Image", "type": "text" },
+            { "key": "file", "src": [], "type": "file", "description": "Attach a PNG/JPG via the paperclip picker on the step header. When empty this step is skipped and Create IssueReport sends mediaFiles: []. Allowed content-types: image/png, image/jpeg, image/gif, image/webp, image/heic — see IssueManagement.Domain.Action.UI.Issue.validateContentType." }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/issue/upload",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["issue", "upload"]
+        }
+      }
+    },
+    {
+      "name": "Rider UI: Create IssueReport (customer-side createTicket path)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Thread the uploaded fileId into mediaFiles when the previous step ran.",
+              "// When the upload step was skipped (default / test-dashboard), mediaFiles = [].",
+              "var uploadedId = pm.collectionVariables.get('uploaded_media_file_id') || '';",
+              "var mediaFilesJson = uploadedId ? ('[\"' + uploadedId + '\"]') : '[]';",
+              "pm.variables.set('_media_files_json', mediaFilesJson);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('[customer-issue-flow] Create resp:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('issueReportId returned', function () { pm.expect(d.issueReportId).to.be.a('string'); });",
+              "pm.test('issueReportShortId is a string or null', function () { pm.expect(d.issueReportShortId === null || typeof d.issueReportShortId === 'string').to.equal(true); });",
+              "pm.environment.set('issue_report_id', d.issueReportId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mediaFiles\": {{_media_files_json}},\n    \"optionId\": \"{{issue_option_id}}\",\n    \"categoryId\": \"{{issue_category_id}}\",\n    \"description\": \"Customer flow test report {{_test_run_suffix}} — refund for booking\",\n    \"chats\": null,\n    \"createTicket\": true\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/issue",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["issue"]
+        }
+      }
+    },
+    {
+      "name": "Rider UI: Get IssueInfo (verify created)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/issue/{{issue_report_id}}/info",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["issue", "{{issue_report_id}}", "info"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('issueReportId matches', function () { pm.expect(d.issueReportId).to.eql(pm.environment.get('issue_report_id')); });",
+              "pm.test('status set (OPEN or NOT_APPLICABLE)', function () { pm.expect(['OPEN','NOT_APPLICABLE','PENDING_INTERNAL','PENDING_EXTERNAL']).to.include(d.status); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider UI: List rider's IssueReports (verify appears)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/issue/list",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["issue", "list"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var issues = d.issues || d;",
+              "pm.test('Returns array-ish payload', function () { pm.expect(issues, JSON.stringify(d)).to.be.an('array'); });",
+              "var target = pm.environment.get('issue_report_id');",
+              "var found = issues.some(function (i) { return i.issueReportId === target; });",
+              "pm.test('Newly created issue appears in list', function () { pm.expect(found, 'expected ' + target).to.equal(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider UI: Post initial chat message",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"text\": \"Hi, this is a test message from rider {{_test_run_suffix}}\",\n    \"mediaFileIds\": null\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/issue/{{issue_report_id}}/chat/message",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["issue", "{{issue_report_id}}", "chat", "message"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('messageId returned', function () { pm.expect(d.messageId).to.be.a('string'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider UI: List chat messages (verify)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/issue/{{issue_report_id}}/chat/messages",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["issue", "{{issue_report_id}}", "chat", "messages"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Returns array', function () { pm.expect(d).to.be.an('array'); });",
+              "pm.test('At least 1 chat message present', function () { pm.expect(d.length).to.be.at.least(1); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cleanup: BAP Dashboard deletes test IssueOption",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "token", "value": "{{rider_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_merchant_short_id}}/{{city}}/issueV2/option/{{issue_option_id}}",
+          "host": ["{{bap_dashboard_url}}"],
+          "path": ["bap", "{{bap_merchant_short_id}}", "{{city}}", "issueV2", "option", "{{issue_option_id}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200/204', function () { pm.expect([200, 204]).to.include(pm.response.code); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cleanup: BAP Dashboard deletes test IssueCategory",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "token", "value": "{{rider_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_merchant_short_id}}/{{city}}/issueV2/category/{{issue_category_id}}",
+          "host": ["{{bap_dashboard_url}}"],
+          "path": ["bap", "{{bap_merchant_short_id}}", "{{city}}", "issueV2", "category", "{{issue_category_id}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200/204', function () { pm.expect([200, 204]).to.include(pm.response.code); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

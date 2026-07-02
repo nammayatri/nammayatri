@@ -148,16 +148,18 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
             (Just offset)
 
   -- Build response items (use each subscription's serviceName for plan lookup)
-  items <- mapM (\sub -> buildSubscriptionPurchaseItem sub limit offset) subscriptions
+  results <- mapM (\sub -> tryBuildSubscriptionPurchaseItem sub limit offset) subscriptions
 
-  let totalItems = length items
+  let (failedOwnerIds, items) = partitionEithers results
+      totalItems = length items
       summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
 
   pure $
     API.SubscriptionPurchaseListRes
       { totalItems,
         summary,
-        subscriptions = items
+        subscriptions = items,
+        failedOwnerIds
       }
   where
     parseServiceName :: Text -> Maybe DPlan.ServiceNames
@@ -188,6 +190,15 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
         mbAmountMax
         (Just limit)
         (Just offset)
+
+    tryBuildSubscriptionPurchaseItem :: DSP.SubscriptionPurchase -> Int -> Int -> Flow (Either Text API.SubscriptionPurchaseListItem)
+    tryBuildSubscriptionPurchaseItem subscription limit' offset' = do
+      result <- withTryCatch ("buildSubscriptionPurchaseItem:" <> subscription.ownerId) $ buildSubscriptionPurchaseItem subscription limit' offset'
+      case result of
+        Right item -> pure $ Right item
+        Left err -> do
+          logError $ "Failed to build subscription item for ownerId: " <> subscription.ownerId <> ", error: " <> show err
+          pure $ Left subscription.ownerId
 
     buildSubscriptionPurchaseItem :: DSP.SubscriptionPurchase -> Int -> Int -> Flow API.SubscriptionPurchaseListItem
     buildSubscriptionPurchaseItem subscription _limit _offset = do

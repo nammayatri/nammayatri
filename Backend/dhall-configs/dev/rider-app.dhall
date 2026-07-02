@@ -539,4 +539,5 @@ in  { esqDBCfg
       , masterSecret = Some "123"
       }
     , bapHostRedirectMap = [] : List { mapKey : Text, mapValue : Optional Text }
+    , xyneWebhookSigningSecret = "<XYNE_WEBHOOK_SIGNING_SECRET>"
     }
