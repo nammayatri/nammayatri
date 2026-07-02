@@ -54,7 +54,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
-import qualified Lib.Payment.Payout.Request as PayoutRequest
+import qualified Lib.Payment.Payout.RequestStatus as RequestStatus
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant (BasicAuthData)
@@ -304,7 +304,11 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
 
     callPayoutServiceForCoinsRedemption driverId payoutConfig payoutOrderId merchantOperatingCityId merchantId = do
       driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-      (_payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- Payout.getPayoutStatusServiceFlow Payout.MerchantServiceUsageConfigOption DEMSC.PayoutService driver.clientSdkVersion driver.merchantOperatingCityId driverId
+      payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
+      let payoutServiceNameCons = case payoutOrder.entityName of
+            Just DPayment.SPECIAL_ZONE_PAYOUT -> DEMSC.RidePayoutService
+            _ -> DEMSC.PayoutService
+      (_payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- Payout.getPayoutStatusServiceFlow Payout.MerchantServiceUsageConfigOption payoutServiceNameCons driver.clientSdkVersion driver.merchantOperatingCityId driverId
       let createPayoutOrderStatusReq = DPayment.PayoutStatusServiceReq {orderId = payoutOrderId, mbExpand = payoutConfig.expand}
           createPayoutOrderStatusCall = Payout.payoutOrderStatus payoutServiceName driver.merchantOperatingCityId driverId mbPersonBankAccount
       payoutStatusResp <- DPayment.payoutStatusService (cast driver.merchantId) (cast driver.id) createPayoutOrderStatusReq createPayoutOrderStatusCall
@@ -336,19 +340,6 @@ castPayoutOrderStatus payoutOrderStatus =
     Payout.FULFILLMENTS_CANCELLED -> DS.ManualReview
     Payout.FULFILLMENTS_MANUAL_REVIEW -> DS.ManualReview
     _ -> DS.Processing
-
-castPayoutOrderStatusToPayoutRequestStatus :: Payout.PayoutOrderStatus -> DPR.PayoutRequestStatus
-castPayoutOrderStatusToPayoutRequestStatus payoutOrderStatus =
-  case payoutOrderStatus of
-    Payout.SUCCESS -> DPR.CREDITED
-    Payout.FULFILLMENTS_SUCCESSFUL -> DPR.CREDITED
-    Payout.ERROR -> DPR.AUTO_PAY_FAILED
-    Payout.FAILURE -> DPR.AUTO_PAY_FAILED
-    Payout.FULFILLMENTS_FAILURE -> DPR.AUTO_PAY_FAILED
-    Payout.CANCELLED -> DPR.CANCELLED
-    Payout.FULFILLMENTS_CANCELLED -> DPR.CANCELLED
-    Payout.FULFILLMENTS_MANUAL_REVIEW -> DPR.PROCESSING
-    _ -> DPR.PROCESSING
 
 casPayoutOrderStatusToDFeeStatus :: Payout.PayoutOrderStatus -> DDF.DriverFeeStatus
 casPayoutOrderStatusToDFeeStatus payoutOrderStatus =
