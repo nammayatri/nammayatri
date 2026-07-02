@@ -343,6 +343,7 @@ updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig = 
       currentTime = floor $ utcTimeToPOSIXSeconds now
       rideCreatedTime = floor $ utcTimeToPOSIXSeconds ride.createdAt
       driverArrivalTime = floor . utcTimeToPOSIXSeconds <$> (ride.driverArrivalTime)
+      bookingCreatedTime = floor $ utcTimeToPOSIXSeconds booking.createdAt
       tagData =
         TY.CancelRideTagData
           { ride = ride{status = DRide.CANCELLED},
@@ -472,7 +473,8 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
   let isCashPayment = case mbPaymentMethod of
         Nothing -> True
         Just pm -> pm.paymentInstrument == DMPM.Cash
-  let logicInput =
+  let timeSinceBooking = round $ diffUTCTime now booking.createdAt
+      logicInput =
         UserCancellationDues.UserCancellationDuesData
           { cancelledBy = cancellationType,
             timeOfDriverCancellation = timeOfCancellation,
@@ -493,7 +495,8 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
             tripCategory = booking.tripCategory,
             cancellationReasonSelected = reasonCode,
             userSdkVersion = userSdkVersionText,
-            isCashPayment = isCashPayment
+            isCashPayment = isCashPayment,
+            timeSinceBooking = timeSinceBooking
           }
   if transporterConfig.canAddCancellationFee
     then do

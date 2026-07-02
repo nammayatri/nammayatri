@@ -1454,6 +1454,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
           let callAtemptByDriver = isJust mbCallStatus
               currentTime = floor $ utcTimeToPOSIXSeconds now
               rideCreatedTime = floor $ utcTimeToPOSIXSeconds ride.createdAt
+              bookingCreatedTime = floor $ utcTimeToPOSIXSeconds booking.createdAt
               driverArrivalTime = floor . utcTimeToPOSIXSeconds <$> ride.driverArrivalTime
               tagData =
                 Y.CancelRideTagData
@@ -1463,6 +1464,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
                     callAtemptByDriver,
                     currentTime,
                     rideCreatedTime,
+                    bookingCreatedTime,
                     merchantOperatingCityId = booking.merchantOperatingCityId,
                     driverArrivalTime
                   }
