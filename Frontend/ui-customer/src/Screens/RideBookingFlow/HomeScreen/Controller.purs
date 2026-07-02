@@ -71,10 +71,11 @@ import Data.Lens ((^.), view)
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe , isNothing)
 import Data.Number (fromString, round) as NUM
 import Data.String as STR
+import Data.Traversable (traverse)
 import Debug (spy)
 import Data.Boolean(otherwise)
 import Effect (Effect)
-import Effect.Aff (launchAff)
+import Effect.Aff (launchAff, makeAff, nonCanceler)
 import Effect.Unsafe (unsafePerformEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn9, runEffectFn2, runEffectFn6)
 import Engineering.Helpers.Commons
@@ -84,6 +85,7 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
 import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp,openUrlInMailApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, setKeyInSharedPref, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker, removeAllMarkers, renderBase64Image, checkAndAskMicrophonePermission ,cleverTapCustomEventWithParams)
+import JBridge as JB
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, getCityConfig, getCurrentDatev2, getDateAfterNDaysv2, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime, shuffle, getUTCDay, getUTCMonth , getUTCFullYear, getUTCDate, getUTCHours, getUTCMinutes, getUTCSeconds , getISTDate, getISTMonth, getISTFullYear, getISTHours, getISTMinutes, getISTSeconds,formatMonth,calculateDateInfo)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -603,6 +605,41 @@ eval (UpdateNextIssueBanneerSwipe index) state = update state --{data {rideCompl
 
 ------------------------------- ChatService - Start --------------------------
 
+translateChatMessages currentUser suggestionKey targetLanguage messages =
+  traverse (translateChatMessage currentUser suggestionKey targetLanguage) messages
+
+translateChatMessage currentUser suggestionKey targetLanguage message =
+  if message.sentBy == currentUser || isKnownChatSuggestion suggestionKey message.message then
+    pure $ toTranslatedChatComponent message Nothing
+  else do
+    translated <- doAff $ makeAff \cb -> do
+      JB.translateStringWithTimeout (cb <<< Right) identity 700 message.message
+      pure nonCanceler
+    pure $ toTranslatedChatComponent (message { message = translated }) $ if translated == message.message then Nothing else Just message.message
+
+toTranslatedChatComponent { message, sentBy, timeStamp, type: type_, delay } originalMessage =
+  { message, originalMessage, sentBy, timeStamp, type: type_, delay}
+
+toChatComponentConfig { message, originalMessage, sentBy, timeStamp, type: type_, delay } =
+  { message, messageTitle: originalMessage, messageAction: Nothing, messageLabel: Nothing, sentBy, timeStamp, type: type_, delay}
+
+toChatComponent { message, sentBy, timeStamp, type: type_, delay } =
+  { message, sentBy, timeStamp, type: type_, delay}
+
+chatMessagesSnapshot messages =
+  { count: length messages
+  , lastTimeStamp: case last messages of
+      Just value -> value.timeStamp
+      Nothing -> ""
+  }
+
+isCurrentChatSnapshot count lastTimeStamp messages =
+  let snapshot = chatMessagesSnapshot messages
+  in snapshot.count == count && snapshot.lastTimeStamp == lastTimeStamp
+
+isKnownChatSuggestion suggestionKey message =
+  getMessageFromKey suggestionKey message "EN_US" /= message || not (null (getSuggestionsfromKey suggestionKey message))
+
 eval (UpdateMessages message sender timeStamp size) state = do
   if not state.props.chatcallbackInitiated then continue state else do
     continueWithCmd state{data{messagesSize = size}} [do
@@ -611,22 +648,33 @@ eval (UpdateMessages message sender timeStamp size) state = do
 
 eval LoadMessages state = do
   let allMessages = getChatMessages FunctionCall
-      toChatComponentConfig { message, sentBy, timeStamp, type: type_, delay } =
-        { message, messageTitle: Nothing, messageAction: Nothing, messageLabel: Nothing, sentBy, timeStamp, type: type_, delay}
-      transformedMessages = map toChatComponentConfig allMessages
-  case last allMessages of
+      currentUser = if state.props.isChatWithEMEnabled then (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) else "Customer"
+      suggestionKey = if state.props.isChatWithEMEnabled then emChatSuggestion else chatSuggestion
+      snapshot = chatMessagesSnapshot allMessages
+      transformedMessages = map (\message -> toChatComponentConfig $ toTranslatedChatComponent message Nothing) allMessages
+  if isCurrentChatSnapshot snapshot.count snapshot.lastTimeStamp state.data.messages then continue state {props {canSendSuggestion = true}}
+  else continueWithCmd state {data {messages = transformedMessages}} [do
+      translatedMessages <- translateChatMessages currentUser suggestionKey (getLanguageLocale languageKey) allMessages
+      pure $ LoadTranslatedMessages snapshot.count snapshot.lastTimeStamp translatedMessages
+    ]
+
+eval (LoadTranslatedMessages requestCount requestLastTimeStamp translatedMessages) state = do
+  let allMessages = getChatMessages FunctionCall
+      transformedMessages = map toChatComponentConfig translatedMessages
+      currentUser = if state.props.isChatWithEMEnabled then (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) else "Customer"
+      suggestionKey = if state.props.isChatWithEMEnabled then emChatSuggestion else chatSuggestion
+  if not $ isCurrentChatSnapshot requestCount requestLastTimeStamp allMessages then continue state
+  else case last translatedMessages of
       Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true, isChatNotificationDismissed = false}}
                       else do
-                        let currentUser = if state.props.isChatWithEMEnabled then (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) else "Customer"
-                        if value.sentBy == currentUser then updateMessagesWithCmd state {data {messages = transformedMessages, chatSuggestionsList = if state.props.isChatWithEMEnabled then getSuggestionsfromKey emChatSuggestion emergencyContactInitialChatSuggestionId else [], lastMessage = toChatComponentConfig value, lastSentMessage = value}, props {canSendSuggestion = true,  isChatNotificationDismissed = false}}
+                        if value.sentBy == currentUser then updateMessagesWithCmd state {data {messages = transformedMessages, chatSuggestionsList = if state.props.isChatWithEMEnabled then getSuggestionsfromKey emChatSuggestion emergencyContactInitialChatSuggestionId else [], lastMessage = toChatComponentConfig value, lastSentMessage = toChatComponent value}, props {canSendSuggestion = true,  isChatNotificationDismissed = false}}
                         else do
                           let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
                               unReadMessages = if readMessages == 0 && state.props.currentStage /= ChatWithDriver then true else (readMessages < (length transformedMessages) && state.props.currentStage /= ChatWithDriver)
-                              suggestionKey = if state.props.isChatWithEMEnabled then emChatSuggestion else chatSuggestion
                               suggestions = getSuggestionsfromKey suggestionKey value.message
                               isChatNotificationDismissed = not state.props.isChatNotificationDismissed || state.data.lastMessage.message /= value.message
                               showNotification = isChatNotificationDismissed && unReadMessages
-                          updateMessagesWithCmd state {data {messages = transformedMessages, chatSuggestionsList = suggestions, lastMessage = toChatComponentConfig value, lastSentMessage = MessagingView.dummyChatComponent, lastReceivedMessage = value}, props {unReadMessages = unReadMessages, showChatNotification = showNotification, canSendSuggestion = true, isChatNotificationDismissed = false, removeNotification = not showNotification, enableChatWidget = showNotification}}
+                          updateMessagesWithCmd state {data {messages = transformedMessages, chatSuggestionsList = suggestions, lastMessage = toChatComponentConfig value, lastSentMessage = MessagingView.dummyChatComponent, lastReceivedMessage = toChatComponent value}, props {unReadMessages = unReadMessages, showChatNotification = showNotification, canSendSuggestion = true, isChatNotificationDismissed = false, removeNotification = not showNotification, enableChatWidget = showNotification}}
 
       Nothing ->  continue state {props {canSendSuggestion = true}}
 
@@ -729,13 +777,25 @@ eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) s
       _ <- pure $ updateLocalStage ChatWithDriver
       _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
       let allMessages = getChatMessages FunctionCall
-          toChatComponentConfig { message, sentBy, timeStamp, type: type_, delay } =
-            { message, messageTitle: Nothing, messageAction: Nothing, messageLabel: Nothing, sentBy, timeStamp, type: type_, delay}
-          transformedMessages = map toChatComponentConfig allMessages
-      continueWithCmd state {data{messages = transformedMessages}, props {currentStage = ChatWithDriver, stageBeforeChatScreen = if state.props.currentStage /= ChatWithDriver then state.props.currentStage else state.props.stageBeforeChatScreen, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}}  [ do pure $ UpdateSheetState COLLAPSED]
+          currentUser = if state.props.isChatWithEMEnabled then (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) else "Customer"
+          suggestionKey = if state.props.isChatWithEMEnabled then emChatSuggestion else chatSuggestion
+          snapshot = chatMessagesSnapshot allMessages
+      continueWithCmd state [do
+        translatedMessages <- translateChatMessages currentUser suggestionKey (getLanguageLocale languageKey) allMessages
+        pure $ OpenChatWithTranslatedMessages snapshot.count snapshot.lastTimeStamp translatedMessages
+      ]
   else continueWithCmd state[ do
         pure $ DriverInfoCardActionController (DriverInfoCardController.CallDriver)
       ]
+
+eval (OpenChatWithTranslatedMessages requestCount requestLastTimeStamp translatedMessages) state = do
+  let allMessages = getChatMessages FunctionCall
+      transformedMessages = map toChatComponentConfig translatedMessages
+  if not $ isCurrentChatSnapshot requestCount requestLastTimeStamp allMessages then continue state
+  else continueWithCmd state {data{messages = transformedMessages}, props {currentStage = ChatWithDriver, stageBeforeChatScreen = if state.props.currentStage /= ChatWithDriver then state.props.currentStage else state.props.stageBeforeChatScreen, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}}  [ do
+    _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length transformedMessages))
+    pure $ UpdateSheetState COLLAPSED
+  ]
 
 eval (UpdateSheetState sheetState) state = continue state {props {sheetState = Nothing, currentSheetState = sheetState}}
 
