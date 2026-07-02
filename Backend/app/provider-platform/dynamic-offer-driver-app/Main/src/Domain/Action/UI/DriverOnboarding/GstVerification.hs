@@ -258,6 +258,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
                 <> " requestedGstin="
                 <> maskText req.gstin
             throwError (DriverGstAlreadyVerified person.id.getId)
+          when (verificationStatus == Documents.INVALID && transporterConfig.enableBotFlow == Just True) $ DGQuery.updateVerificationStatus Documents.PENDING person.id
 
           resp <- Verification.extractGSTImage person.merchantId merchantOpCityId extractReq
           extractedGst <- validateExtractedGst resp

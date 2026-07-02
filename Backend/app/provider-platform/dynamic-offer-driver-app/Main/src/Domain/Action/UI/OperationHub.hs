@@ -116,9 +116,9 @@ validateDriverOperationHubRequest DriverOperationHubRequest {..} =
           LengthInRange 1 11 `And` star (P.latinUC \/ P.digit)
     ]
 
-castHubRequests :: (OperationHubRequests, Person, OperationHub) -> Flow OperationHubDriverRequest
-castHubRequests (hubReq, person, hub) = do
-  driverPhoneNo <- mapM decrypt person.mobileNumber
+castHubRequests :: (OperationHubRequests, Maybe Person, OperationHub) -> Flow OperationHubDriverRequest
+castHubRequests (hubReq, mbPerson, hub) = do
+  driverPhoneNo <- maybe (pure Nothing) (\person -> mapM decrypt person.mobileNumber) mbPerson
   pure $
     OperationHubDriverRequest
       { id = hubReq.id.getId,
