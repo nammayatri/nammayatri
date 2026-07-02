@@ -329,7 +329,6 @@ RiderConfig:
     externalSOSConfig: Maybe Value
     invoiceConfig: Maybe Value
     syncSearchDispatchConfig: Maybe Value
-
   constraints:
     merchantOperatingCityId: PrimaryKey
     frfsMetricsApiKey: "!SecondaryKey"
