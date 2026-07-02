@@ -190,6 +190,7 @@ types:
     - totalItems: Int
     - summary: Summary
     - subscriptions: [SubscriptionPurchaseListItem]
+    - failedOwnerIds: [Text]
   SubscriptionPurchaseListItem:
     - subscriptionPurchaseId: Maybe Text
     - purchasedAt: Maybe UTCTime

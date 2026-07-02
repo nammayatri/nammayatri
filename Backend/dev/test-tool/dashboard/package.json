@@ -30,6 +30,9 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
+  "overrides": {
+    "core-js-pure": "3.34.0"
+  },
   "eslintConfig": {
     "extends": [
       "react-app",

@@ -107,6 +107,7 @@ import Data.List.NonEmpty (fromList, toList)
 import qualified Data.List.NonEmpty as NE
 import Data.List.Split (chunksOf)
 import qualified Data.Map.Strict as Map
+import Data.Ord (comparing)
 import qualified Data.Set as Set
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
@@ -150,6 +151,7 @@ import qualified Domain.Types.FleetConfig as DFC
 import Domain.Types.FleetDriverAssociation
 import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.FleetOwnerInformation as DFOI
+import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -346,12 +348,12 @@ postDriverFleetAddVehicleHelper isBulkUpload merchantShortId opCity reqDriverPho
       pure Success
     _ -> throwError (InvalidRequest "Invalid Data")
 
-mapInspectionHubRequestStatusToDashboard :: Maybe DOHR.RequestStatus -> Common.VerificationStatus
+mapInspectionHubRequestStatusToDashboard :: Maybe DOHR.RequestStatus -> DC.VerificationStatus
 mapInspectionHubRequestStatusToDashboard mbRequestStatus = case mbRequestStatus of
-  Just DOHR.APPROVED -> Common.VALID
-  Just DOHR.PENDING -> Common.PENDING
-  Just DOHR.REJECTED -> Common.INVALID
-  Nothing -> Common.INVALID
+  Just DOHR.APPROVED -> DC.VALID
+  Just DOHR.PENDING -> DC.PENDING
+  Just DOHR.REJECTED -> DC.INVALID
+  Nothing -> DC.INVALID
 
 checkRCAssociationForDriver :: Id DP.Person -> Maybe DVRC.VehicleRegistrationCertificate -> Bool -> Flow Bool
 checkRCAssociationForDriver driverId mbVehicleRC checkFleet = maybe checkAssociationWithDriver checkAssociationWithDriverAndVehicle mbVehicleRC
@@ -1597,8 +1599,8 @@ buildFleetOwnerNameMap currentMap ownerIds = do
 
 ---------------------------------------------------------------------
 
-getDriverFleetDriverAssociation :: ShortId DM.Merchant -> Context.City -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Common.DocsVerificationStatus -> Maybe Text -> Flow Common.DrivertoVehicleAssociationResT
-getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName mbSearchString mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner mbHasRequestReason mbServiceTier mbEnabled mbApproved mbDriverDocsVerificationStatus mbDriverId = do
+getDriverFleetDriverAssociation :: ShortId DM.Merchant -> Context.City -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Common.DocsVerificationStatus -> Maybe Text -> Maybe Bool -> Flow Common.DrivertoVehicleAssociationResT
+getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName mbSearchString mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner mbHasRequestReason mbServiceTier mbEnabled mbApproved mbDriverDocsVerificationStatus mbDriverId mbPickLatestDoc = do
   requestorId <- mbRequestorId & fromMaybeM (InvalidRequest "Requestor ID is required")
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
@@ -1691,30 +1693,31 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
             Just dl -> do
               let dlStatus = DCommon.castVerificationStatus dl.verificationStatus
               pure dlStatus
-            Nothing -> pure Common.PENDING
+            Nothing -> pure DC.PENDING
         panCardStatus <- do
           mbPan <- B.runInReplica $ QPanCard.findByDriverId driver.id
           case mbPan of
             Just pan -> do
               let panStatus = DCommon.castVerificationStatus pan.verificationStatus
               pure panStatus
-            Nothing -> pure Common.PENDING
+            Nothing -> pure DC.PENDING
         aadhaarStatus <- do
           mbAadhaar <- B.runInReplica $ QAadhaarCard.findByPrimaryKey driver.id
           case mbAadhaar of
             Just aadhaar -> do
               let aadhaarStatus = DCommon.castVerificationStatus aadhaar.verificationStatus
               pure aadhaarStatus
-            Nothing -> pure Common.PENDING
+            Nothing -> pure DC.PENDING
         driverImages <- do
           transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId driver.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
           QImage.findAllByPersonId transporterConfig driver.id
         driverInspectionHubStatus <- do
           mbRequestStatus <- SStatus.checkInspectionHubRequestCreated DOHR.DRIVER_ONBOARDING_INSPECTION (Just driver.id) Nothing
           pure $ mapInspectionHubRequestStatusToDashboard mbRequestStatus
-        let policeVerificationCertificateStatus = if any (\img -> img.imageType == DDoc.PoliceVerificationCertificate && img.verificationStatus == Just Documents.VALID) driverImages then Common.VALID else Common.PENDING
-        let localResidenceProofStatus = if any (\img -> img.imageType == DDoc.LocalResidenceProof && img.verificationStatus == Just Documents.VALID) driverImages then Common.VALID else Common.PENDING
-        let drivingSchoolCertificateStatus = if any (\img -> img.imageType == DDoc.DrivingSchoolCertificate && img.verificationStatus == Just Documents.VALID) driverImages then Common.VALID else Common.PENDING
+        let isPickLatest = fromMaybe False mbPickLatestDoc
+        let policeVerificationCertificateStatus = getDocStatus isPickLatest DDoc.PoliceVerificationCertificate driverImages
+        let localResidenceProofStatus = getDocStatus isPickLatest DDoc.LocalResidenceProof driverImages
+        let drivingSchoolCertificateStatus = getDocStatus isPickLatest DDoc.DrivingSchoolCertificate driverImages
         (completedRides, earning) <- case mbStats of
           Just True -> do
             rides <- CQRide.totalRidesByFleetOwnerPerDriver (Just fleetOwnerId) driver.id from to
@@ -1829,9 +1832,26 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
           vehicleYear = vrc.vehicleModelYear <|> ((\(y, _, _) -> fromInteger y) <$> (toGregorian <$> vrc.mYManufacturing))
       pure (Just decryptedVehicleRC, vehicleType, Just vrc.id.getId, vrc.vehicleColor, vrc.vehicleManufacturer, vrc.vehicleModel, vehicleYear, castDocsVerificationStatus <$> vrc.docsVerificationStatus, Just vrc.failedRules, isRcActive)
 
+getDocStatus :: Bool -> DDoc.DocumentType -> [DImage.Image] -> DC.VerificationStatus
+getDocStatus isPickLatest docType images =
+  let filtered = filter (\img -> img.imageType == docType) images
+   in if null filtered
+        then DC.PENDING
+        else
+          if isPickLatest
+            then
+              let latestImg = maximumBy (comparing (.createdAt)) filtered
+               in case latestImg.verificationStatus of
+                    Just status -> DCommon.castVerificationStatus status
+                    Nothing -> DC.PENDING
+            else
+              if any (\img -> img.verificationStatus == Just Documents.VALID) filtered
+                then DC.VALID
+                else DC.PENDING
+
 ---------------------------------------------------------------------
-getDriverFleetVehicleAssociation :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.FleetVehicleStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Common.DocsVerificationStatus -> Flow Common.DrivertoVehicleAssociationResT
-getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehicleNumber mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner mbApproved mbVehicleDocsVerificationStatus = do
+getDriverFleetVehicleAssociation :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.FleetVehicleStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Common.DocsVerificationStatus -> Maybe Bool -> Flow Common.DrivertoVehicleAssociationResT
+getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehicleNumber mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner mbApproved mbVehicleDocsVerificationStatus mbPickLatestDoc = do
   requestorId <- mbRequestorId & fromMaybeM (InvalidRequest "Requestor ID is required")
   let effectiveFleetOwnerId =
         if isRequestorFleerOwner == Just True
@@ -1953,20 +1973,21 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
         inspectionHubStatus <- do
           mbRequestStatus <- SStatus.checkInspectionHubRequestCreated DOHR.ONBOARDING_INSPECTION Nothing (Just decryptedVehicleRC)
           pure $ mapInspectionHubRequestStatusToDashboard mbRequestStatus
+        let isPickLatest = fromMaybe False mbPickLatestDoc
         let verificationDocs =
               Common.VerificationDocsStatus
                 { vehicleRegistrationCertificate = Just $ DCommon.castVerificationStatus vrc.verificationStatus,
-                  vehiclePermit = Just $ if any (\img -> img.imageType == DDoc.VehiclePermit && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING, ------ currently we are not verifying these docs therefore
-                  vehicleInsurance = Just $ if any (\img -> img.imageType == DDoc.VehicleInsurance && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
-                  vehicleFitness = Just $ if any (\img -> img.imageType == DDoc.VehicleFitnessCertificate && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
-                  vehiclePUC = Just $ if any (\img -> img.imageType == DDoc.VehiclePUC && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
-                  vehicleFront = Just $ if any (\img -> img.imageType == DDoc.VehicleFront && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
-                  vehicleBack = Just $ if any (\img -> img.imageType == DDoc.VehicleBack && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
-                  vehicleFrontInterior = Just $ if any (\img -> img.imageType == DDoc.VehicleFrontInterior && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
-                  vehicleBackInterior = Just $ if any (\img -> img.imageType == DDoc.VehicleBackInterior && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
-                  vehicleLeft = Just $ if any (\img -> img.imageType == DDoc.VehicleLeft && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
-                  vehicleRight = Just $ if any (\img -> img.imageType == DDoc.VehicleRight && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
-                  odometer = Just $ if any (\img -> img.imageType == DDoc.Odometer && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
+                  vehiclePermit = Just $ getDocStatus isPickLatest DDoc.VehiclePermit vehicleImages,
+                  vehicleInsurance = Just $ getDocStatus isPickLatest DDoc.VehicleInsurance vehicleImages,
+                  vehicleFitness = Just $ getDocStatus isPickLatest DDoc.VehicleFitnessCertificate vehicleImages,
+                  vehiclePUC = Just $ getDocStatus isPickLatest DDoc.VehiclePUC vehicleImages,
+                  vehicleFront = Just $ getDocStatus isPickLatest DDoc.VehicleFront vehicleImages,
+                  vehicleBack = Just $ getDocStatus isPickLatest DDoc.VehicleBack vehicleImages,
+                  vehicleFrontInterior = Just $ getDocStatus isPickLatest DDoc.VehicleFrontInterior vehicleImages,
+                  vehicleBackInterior = Just $ getDocStatus isPickLatest DDoc.VehicleBackInterior vehicleImages,
+                  vehicleLeft = Just $ getDocStatus isPickLatest DDoc.VehicleLeft vehicleImages,
+                  vehicleRight = Just $ getDocStatus isPickLatest DDoc.VehicleRight vehicleImages,
+                  odometer = Just $ getDocStatus isPickLatest DDoc.Odometer vehicleImages,
                   driverLicense = Nothing,
                   panCard = Nothing,
                   aadhaarCard = Nothing,
