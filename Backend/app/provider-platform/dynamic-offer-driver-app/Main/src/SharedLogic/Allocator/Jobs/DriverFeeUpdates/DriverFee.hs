@@ -30,7 +30,7 @@ import Data.Ord
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Domain.Action.UI.Driver as DDriver
-import Domain.Action.UI.Ride.EndRide.Internal (getDriverFeeBillNumberKey, getDriverFeeCalcJobCache, getPlan, mkDriverFee, mkDriverFeeBillNumberKey, setDriverFeeBillNumberKey, setDriverFeeCalcJobCache)
+import Domain.Action.UI.Ride.EndRide.Internal (getDriverFeeBillNumberKey, getDriverFeeCalcJobCache, getPlan, mkDriverFee, mkDriverFeeBillNumberKey, setDriverFeeCalcJobCache)
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverPlan as DPlan
 import qualified Domain.Types.Invoice as INV
@@ -58,6 +58,7 @@ import Kernel.Types.Id (Id (Id), cast)
 import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import qualified SharedLogic.ActiveDriversList as ADL
 import SharedLogic.Allocator
 import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as SLOSO
 import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, jobDuplicationPreventionKey, roundToHalf, setCoinToCashUsedAmount, setCreateDriverFeeForServiceInSchedulerKey, toCreateDriverFeeForService)
@@ -78,12 +79,14 @@ import qualified Storage.Queries.Person as QP
 import Storage.Queries.VendorFee as QVF
 
 calculateDriverFeeForDrivers ::
+  forall m r c.
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
     MonadFlow m,
     HasShortDurationRetryCfg r c,
     HasField "maxShards" r Int,
+    HasField "activeDriversListKeyShards" r Int,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
@@ -111,8 +114,11 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
     merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
     transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
-    driverFees <- getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOpCityId transporterConfig recalculateManualReview subscriptionConfigs
-    updateCancellationPenaltyAccumulationFees serviceName transporterConfig merchant.id merchantOpCityId
+    driverFees <- getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOpCityId transporterConfig recalculateManualReview subscriptionConfigs jobData.shardNum
+    -- runs unconditionally on (serviceName, merchantId, merchantOpCityId) & `now`, unrelated to the driver-fee batch/shard;
+    -- gate to a single designated shard so it runs exactly once per cycle instead of once per shard
+    when (jobData.shardNum == Just 0 || isNothing jobData.shardNum) $
+      updateCancellationPenaltyAccumulationFees serviceName transporterConfig merchant.id merchantOpCityId
     let threshold = transporterConfig.driverFeeRetryThresholdConfig
     driverFeesToProccess <-
       mapMaybeM
@@ -213,15 +219,29 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                   SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "BlockedDrivers") nonEmptyDriverId
               else do
                 unless ((totalFee == 0 || coinCashLeft >= totalFee) && totalCancellationPenalty == 0) $ processDriverFee paymentMode driverFeeWithPenalties subscriptionConfigs transporterConfig
-            updateSerialOrderForInvoicesInWindow driverFee.id merchantOpCityId startTime endTime serviceName
+            updateSerialOrderForInvoicesInWindow driverFee.id merchantOpCityId startTime endTime serviceName transporterConfig.timeDiffFromUtc
 
+    let closeOutWindow =
+          Hedis.setNxExpire (jobDuplicationPreventionKey hashedJobData "DriverFeeCalc") (3600 * 12) True -- 12 hours
+            >>= \duplicationKey ->
+              when duplicationKey do
+                scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId serviceName subscriptionConfigs jobData
     case listToMaybe driverFees of
-      Nothing -> do
-        Hedis.del (mkDriverFeeBillNumberKey merchantOpCityId serviceName)
-        duplicationKey <- Hedis.setNxExpire (jobDuplicationPreventionKey hashedJobData "DriverFeeCalc") (3600 * 12) True -- 12 hours
-        when duplicationKey do
-          scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId serviceName subscriptionConfigs jobData
-        return Complete
+      Nothing -> case jobData.shardNum of
+        Nothing -> do
+          -- unsharded fallback: single job, its own empty batch is the whole window's signal
+          closeOutWindow
+          return Complete
+        Just shardNum -> do
+          -- one shard's batch being empty doesn't mean the window is drained; only the shard whose
+          -- sAdd completes the set (i.e. every shard has reported in) is allowed to close the window out
+          let shardsCompletedKey = mkShardsCompletedKey merchantOpCityId serviceName startTime endTime
+          void $ Hedis.sAdd shardsCompletedKey [shardNum]
+          Hedis.expire shardsCompletedKey (2 * 24 * 3600) -- safety net so the key can't leak forever
+          completedShards <- length <$> Hedis.sMembers @Int shardsCompletedKey
+          totalShards <- asks @r (.activeDriversListKeyShards)
+          when (completedShards >= totalShards) closeOutWindow
+          return Complete
       _ -> ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
 
   case lockResult of
@@ -396,7 +416,7 @@ processRestFee paymentMode DriverFee {..} vendorFees subscriptionConfig _ _ tran
   QDF.create driverFee
   when (fromMaybe False subscriptionConfig.isVendorSplitEnabled) $ mapM_ (QVF.create) vendorFees
   processDriverFee paymentMode driverFee subscriptionConfig transporterConfig
-  updateSerialOrderForInvoicesInWindow driverFee.id merchantOperatingCityId startTime endTime driverFee.serviceName
+  updateSerialOrderForInvoicesInWindow driverFee.id merchantOperatingCityId startTime endTime driverFee.serviceName transporterConfig.timeDiffFromUtc
 
 makeOfferReq :: HighPrecMoney -> Person -> Plan -> UTCTime -> UTCTime -> Int -> TransporterConfig -> Maybe Bool -> Payment.OfferListReq
 makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transporterConfig isMember =
@@ -546,6 +566,13 @@ driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandate
 getRescheduledTime :: (MonadFlow m) => NominalDiffTime -> m UTCTime
 getRescheduledTime gap = addUTCTime gap <$> getCurrentTime
 
+-- | Completion barrier for sharded CalculateDriverFees: each shard SADDs its own shardNum when its
+--   batch is empty (idempotent, safe against job retries); once every shard has reported in, the
+--   window is genuinely drained city-wide and it's safe to close it out.
+mkShardsCompletedKey :: Id MerchantOperatingCity -> ServiceNames -> UTCTime -> UTCTime -> Text
+mkShardsCompletedKey merchantOpCityId serviceName startTime endTime =
+  "CalcDriverFees:ShardsCompleted:" <> merchantOpCityId.getId <> ":" <> show serviceName <> ":" <> show startTime <> ":" <> show endTime
+
 updateSerialOrderForInvoicesInWindow ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Id DriverFee ->
@@ -553,15 +580,20 @@ updateSerialOrderForInvoicesInWindow ::
   UTCTime ->
   UTCTime ->
   ServiceNames ->
+  Seconds ->
   m ()
-updateSerialOrderForInvoicesInWindow driverFeeId merchantOpCityId startTime endTime serviceName = do
-  Hedis.whenWithLockRedis (billNumberGenerationLockKey driverFeeId.getId) 60 $ do
-    --- change lock based on mechantId --
-    counter <- getDriverFeeBillNumberKey merchantOpCityId serviceName
+updateSerialOrderForInvoicesInWindow driverFeeId merchantOpCityId startTime endTime serviceName timeDiffFromUtc = do
+  let dateStr = ADL.localDateStr startTime (secondsToNominalDiffTime timeDiffFromUtc)
+      billNumberKey = mkDriverFeeBillNumberKey merchantOpCityId serviceName dateStr
+  -- locked on the window's own bill-number key (not driverFeeId) so the "check missing -> seed -> increment"
+  -- sequence is a single atomic critical section across every shard/row racing for this window's counter
+  Hedis.whenWithLockRedis (billNumberGenerationLockKey billNumberKey) 60 $ do
+    counter <- getDriverFeeBillNumberKey merchantOpCityId serviceName dateStr
     when (isNothing counter) $ do
       count <- listToMaybe <$> QDF.findMaxBillNumberInRangeForServiceName merchantOpCityId startTime endTime serviceName
-      void $ Hedis.incrby (mkDriverFeeBillNumberKey merchantOpCityId serviceName) (maybe 0 toInteger (count >>= (.billNumber)))
-    billNumber' <- Hedis.incr (mkDriverFeeBillNumberKey merchantOpCityId serviceName)
+      void $ Hedis.incrby billNumberKey (maybe 0 toInteger (count >>= (.billNumber)))
+    billNumber' <- Hedis.incr billNumberKey
+    Hedis.expire billNumberKey (24 * 3600)
     QDF.updateBillNumberById (Just (fromInteger billNumber')) driverFeeId
 
 getOrGenerateDriverFeeDataBasedOnServiceName ::
@@ -574,14 +606,19 @@ getOrGenerateDriverFeeDataBasedOnServiceName ::
   TransporterConfig ->
   Bool ->
   SubscriptionConfig ->
+  Maybe Int ->
   m [DriverFee]
-getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOperatingCityId transporterConfig recalculateManualReview subsConfig = do
+getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOperatingCityId transporterConfig recalculateManualReview subsConfig shardNum = do
   now <- getCurrentTime
   let statusToCheck = if recalculateManualReview then MANUAL_REVIEW_NEEDED else ONGOING
   let enableCityBasedFeeSwitch = subsConfig.enableCityBasedFeeSwitch
   case serviceName of
     YATRI_SUBSCRIPTION -> do
-      driverFeeElderSiblings <- QDF.findAllFeesInRangeWithStatusAndServiceName (Just merchantId) merchantOperatingCityId startTime endTime statusToCheck transporterConfig.driverFeeCalculatorBatchSize serviceName enableCityBasedFeeSwitch
+      driverFeeElderSiblings <- case shardNum of
+        Nothing -> QDF.findAllFeesInRangeWithStatusAndServiceName (Just merchantId) merchantOperatingCityId startTime endTime statusToCheck transporterConfig.driverFeeCalculatorBatchSize serviceName enableCityBasedFeeSwitch
+        Just shard -> do
+          activeDriverIds <- ADL.getActiveDriversForShard shard startTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc)
+          QDF.findAllFeesInRangeWithStatusAndServiceNameByDriverIds (Just merchantId) merchantOperatingCityId startTime endTime statusToCheck transporterConfig.driverFeeCalculatorBatchSize serviceName enableCityBasedFeeSwitch (Id <$> activeDriverIds)
       --- here we are only finding siblings of that particular city due to disablement of city based fee switch we need to do nub as duplicate entries can be there ----
       driverFeeRestSiblings <- QDF.findAllChildsOFDriverFee merchantOperatingCityId startTime endTime statusToCheck serviceName (map (.id) $ filter (\dfee -> dfee.hasSibling == Just True) driverFeeElderSiblings) True
       return $ filter (\dfee -> dfee.merchantOperatingCityId == merchantOperatingCityId) $ nubBy (\x y -> x.id == y.id) $ driverFeeElderSiblings <> driverFeeRestSiblings
@@ -596,7 +633,11 @@ getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merch
       mbtoCreateDriverFeeForService <- toCreateDriverFeeForService serviceName merchantOperatingCityId
       if fromMaybe True mbtoCreateDriverFeeForService
         then do
-          driverEligibleForRentals <- findAllDriversEligibleForService serviceName merchantId merchantOperatingCityId endTime (fromMaybe 0 transporterConfig.driverFeeCalculatorBatchSize)
+          driverEligibleForRentals <- case shardNum of
+            Nothing -> findAllDriversEligibleForService serviceName merchantId merchantOperatingCityId endTime (fromMaybe 0 transporterConfig.driverFeeCalculatorBatchSize)
+            Just shard -> do
+              activeDriverIds <- ADL.getActiveDriversForShard shard startTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc)
+              findAllDriversEligibleForServiceByDriverIds serviceName merchantId merchantOperatingCityId endTime (fromMaybe 0 transporterConfig.driverFeeCalculatorBatchSize) (Id <$> activeDriverIds)
           driverFees <-
             mapMaybeM
               ( \dPlan -> do
@@ -612,7 +653,11 @@ getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merch
               )
               driverEligibleForRentals
           return $ maybe driverFees (\limit -> take limit driverFees) transporterConfig.driverFeeCalculatorBatchSize
-        else QDF.findAllFeesInRangeWithStatusAndServiceName (Just merchantId) merchantOperatingCityId startTime endTime ONGOING transporterConfig.driverFeeCalculatorBatchSize serviceName enableCityBasedFeeSwitch
+        else case shardNum of
+          Nothing -> QDF.findAllFeesInRangeWithStatusAndServiceName (Just merchantId) merchantOperatingCityId startTime endTime ONGOING transporterConfig.driverFeeCalculatorBatchSize serviceName enableCityBasedFeeSwitch
+          Just shard -> do
+            activeDriverIds <- ADL.getActiveDriversForShard shard startTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc)
+            QDF.findAllFeesInRangeWithStatusAndServiceNameByDriverIds (Just merchantId) merchantOperatingCityId startTime endTime ONGOING transporterConfig.driverFeeCalculatorBatchSize serviceName enableCityBasedFeeSwitch (Id <$> activeDriverIds)
 
 mkInvoiceAgainstDriverFee ::
   ( MonadFlow m
@@ -645,7 +690,7 @@ mkInvoiceAgainstDriverFee driverFee (isCoinCleared, isAutoPay) = do
       }
 
 scheduleJobs ::
-  (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType) =>
+  (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType, HasField "activeDriversListKeyShards" r Int) =>
   TransporterConfig ->
   UTCTime ->
   UTCTime ->
@@ -667,55 +712,61 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId ser
       scheduleOverlay = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleOverlay
       scheduleManualPaymentLink = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleManualPaymentLink
       scheduleDriverFeeCalc = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleDriverFeeCalc
+  shardNums <- ADL.getShardNumsForFanOut
   when scheduleNotification $
     Redis.runInMasterCloudRedisCell $
-      createJobIn @_ @'SendPDNNotificationToDriver (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs $
-        SendPDNNotificationToDriverJobData
-          { merchantId = merchantId,
-            merchantOperatingCityId = Just merchantOpCityId,
-            startTime = startTime,
-            endTime = endTime,
-            retryCount = Just 0,
-            serviceName = Just serviceName
-          }
+      forM_ shardNums $ \shardNum ->
+        createJobIn @_ @'SendPDNNotificationToDriver (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs $
+          SendPDNNotificationToDriverJobData
+            { merchantId = merchantId,
+              merchantOperatingCityId = Just merchantOpCityId,
+              startTime = startTime,
+              endTime = endTime,
+              retryCount = Just 0,
+              serviceName = Just serviceName,
+              shardNum = shardNum
+            }
   when (subscriptionConfigs.useOverlayService && scheduleOverlay) $
-    Redis.runInMasterCloudRedisCell $ do
-      createJobIn @_ @'SendOverlay (Just merchantId) (Just merchantOpCityId) (dfCalculationJobTs + 5400) $
-        SendOverlayJobData
-          { merchantId = merchantId,
-            rescheduleInterval = Nothing,
-            overlayKey = manualInvoiceGeneratedNudgeKey,
-            udf1 = Just $ show MANUAL,
-            condition = InvoiceGenerated MANUAL,
-            scheduledTime = TimeOfDay 0 0 0, -- won't be used as rescheduleInterval is Nothing
-            freeTrialDays = transporterConfig.freeTrialDays,
-            timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
-            driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
-            driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
-            driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
-            merchantOperatingCityId = Just merchantOpCityId,
-            overlayBatchSize = transporterConfig.overlayBatchSize,
-            serviceName = Just serviceName,
-            vehicleCategory = Nothing
-          }
-      createJobIn @_ @'SendOverlay (Just merchantId) (Just merchantOpCityId) (dfCalculationJobTs + 5400) $
-        SendOverlayJobData
-          { merchantId = merchantId,
-            rescheduleInterval = Nothing,
-            overlayKey = autopayInvoiceGeneratedNudgeKey,
-            udf1 = Just $ show AUTOPAY,
-            condition = InvoiceGenerated AUTOPAY,
-            scheduledTime = TimeOfDay 0 0 0, -- won't be used as rescheduleInterval is Nothing
-            freeTrialDays = transporterConfig.freeTrialDays,
-            timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
-            driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
-            driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
-            merchantOperatingCityId = Just merchantOpCityId,
-            driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
-            overlayBatchSize = transporterConfig.overlayBatchSize,
-            serviceName = Just serviceName,
-            vehicleCategory = Nothing
-          }
+    Redis.runInMasterCloudRedisCell $
+      forM_ shardNums $ \shardNum -> do
+        createJobIn @_ @'SendOverlay (Just merchantId) (Just merchantOpCityId) (dfCalculationJobTs + 5400) $
+          SendOverlayJobData
+            { merchantId = merchantId,
+              rescheduleInterval = Nothing,
+              overlayKey = manualInvoiceGeneratedNudgeKey,
+              udf1 = Just $ show MANUAL,
+              condition = InvoiceGenerated MANUAL,
+              scheduledTime = TimeOfDay 0 0 0, -- won't be used as rescheduleInterval is Nothing
+              freeTrialDays = transporterConfig.freeTrialDays,
+              timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
+              driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
+              driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
+              driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
+              merchantOperatingCityId = Just merchantOpCityId,
+              overlayBatchSize = transporterConfig.overlayBatchSize,
+              serviceName = Just serviceName,
+              vehicleCategory = Nothing,
+              shardNum = shardNum
+            }
+        createJobIn @_ @'SendOverlay (Just merchantId) (Just merchantOpCityId) (dfCalculationJobTs + 5400) $
+          SendOverlayJobData
+            { merchantId = merchantId,
+              rescheduleInterval = Nothing,
+              overlayKey = autopayInvoiceGeneratedNudgeKey,
+              udf1 = Just $ show AUTOPAY,
+              condition = InvoiceGenerated AUTOPAY,
+              scheduledTime = TimeOfDay 0 0 0, -- won't be used as rescheduleInterval is Nothing
+              freeTrialDays = transporterConfig.freeTrialDays,
+              timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
+              driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
+              driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
+              merchantOperatingCityId = Just merchantOpCityId,
+              driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
+              overlayBatchSize = transporterConfig.overlayBatchSize,
+              serviceName = Just serviceName,
+              vehicleCategory = Nothing,
+              shardNum = shardNum
+            }
   when (subscriptionConfigs.allowManualPaymentLinks && scheduleManualPaymentLink) $
     Redis.runInMasterCloudRedisCell $
       createJobIn @_ @'SendManualPaymentLink (Just merchantId) (Just merchantOpCityId) paymentLinkSendJobTs $
@@ -740,23 +791,24 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId ser
           case isDfCaclculationJobScheduled of
             ----- marker ---
             Nothing -> do
-              createJobIn @_ @'CalculateDriverFees (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs' $
-                CalculateDriverFeesJobData
-                  { merchantId = merchantId,
-                    merchantOperatingCityId = Just merchantOpCityId,
-                    startTime = startTime',
-                    serviceName = Just serviceName,
-                    endTime = endTime',
-                    scheduleNotification = Just True,
-                    scheduleOverlay = Just True,
-                    scheduleManualPaymentLink = Just True,
-                    scheduleDriverFeeCalc = Just True,
-                    recalculateManualReview = Nothing,
-                    createChildJobs = Just True
-                  }
+              forM_ shardNums $ \shardNum ->
+                createJobIn @_ @'CalculateDriverFees (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs' $
+                  CalculateDriverFeesJobData
+                    { merchantId = merchantId,
+                      merchantOperatingCityId = Just merchantOpCityId,
+                      startTime = startTime',
+                      serviceName = Just serviceName,
+                      endTime = endTime',
+                      scheduleNotification = Just True,
+                      scheduleOverlay = Just True,
+                      scheduleManualPaymentLink = Just True,
+                      scheduleDriverFeeCalc = Just True,
+                      recalculateManualReview = Nothing,
+                      createChildJobs = Just True,
+                      shardNum = shardNum
+                    }
               setDriverFeeCalcJobCache startTime endTime' merchantOpCityId serviceName dfCalculationJobTs
               setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId True
-              setDriverFeeBillNumberKey merchantOpCityId 1 36000 serviceName
             _ -> pure ()
 
 calcFinalOrderAmounts ::

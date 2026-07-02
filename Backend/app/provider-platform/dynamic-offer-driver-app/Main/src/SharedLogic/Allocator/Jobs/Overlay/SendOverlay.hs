@@ -2,7 +2,7 @@ module SharedLogic.Allocator.Jobs.Overlay.SendOverlay where
 
 import Data.List (nub)
 import qualified Data.Text as T
-import Data.Time hiding (getCurrentTime)
+import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.DriverInformation as DTDI
 import qualified Domain.Types.Merchant as DM
@@ -21,6 +21,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
+import qualified SharedLogic.ActiveDriversList as ADL
 import qualified SharedLogic.Allocator as SAllocator
 import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -77,7 +78,7 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOperatingCityId merchant Nothing
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY jobData.vehicleCategory
-  driverIds <- nub <$> getBatchedDriverIds merchantId merchantOpCityId jobId jobData.condition jobData.freeTrialDays jobData.timeDiffFromUtc jobData.driverPaymentCycleDuration jobData.driverPaymentCycleStartTime jobData.overlayBatchSize serviceName vehicleCategory
+  driverIds <- nub <$> getBatchedDriverIds merchantId merchantOpCityId jobId jobData.condition jobData.shardNum jobData.freeTrialDays jobData.timeDiffFromUtc jobData.driverPaymentCycleDuration jobData.driverPaymentCycleStartTime jobData.overlayBatchSize serviceName vehicleCategory
   logInfo $ "The Job " <> jobId.getId <> " is scheduled for following driverIds " <> show driverIds
   let (conditionKey, isVehCatBased) = castConditionsToSchedulerTypeAndIsVehCatBased jobData.condition
   driverIdsLength <- getSendOverlaySchedulerDriverIdsLength merchantOpCityId (if isVehCatBased then Just vehicleCategory else Nothing) (Just conditionKey)
@@ -207,6 +208,7 @@ getBatchedDriverIds ::
   Id DMOC.MerchantOperatingCity ->
   Id AnyJob ->
   DOverlay.OverlayCondition ->
+  Maybe Int ->
   Int ->
   Seconds ->
   NominalDiffTime ->
@@ -215,14 +217,18 @@ getBatchedDriverIds ::
   DPlan.ServiceNames ->
   DVC.VehicleCategory ->
   m [Id DP.Person]
-getBatchedDriverIds merchantId merchantOperatingCityId _ condition freeTrialDays timeDiffFromUtc driverPaymentCycleDuration driverPaymentCycleStartTime overlayBatchSize serviceName vehicleCategory = do
+getBatchedDriverIds merchantId merchantOperatingCityId _ condition shardNum freeTrialDays timeDiffFromUtc driverPaymentCycleDuration driverPaymentCycleStartTime overlayBatchSize serviceName vehicleCategory = do
   case condition of
     DOverlay.InvoiceGenerated paymentMode -> do
       now <- getLocalCurrentTime timeDiffFromUtc
       let potentialStartToday = addUTCTime driverPaymentCycleStartTime (UTCTime (utctDay now) (secondsToDiffTime 0))
           startTime = addUTCTime (-1 * driverPaymentCycleDuration) potentialStartToday
           endTime = addUTCTime 120 potentialStartToday
-      driverFees <- QDF.findWindowsAndServiceNameWithFeeTypeAndLimitAndServiceName merchantId merchantOperatingCityId startTime endTime (getFeeType paymentMode) overlayBatchSize serviceName
+      driverFees <- case shardNum of
+        Nothing -> QDF.findWindowsAndServiceNameWithFeeTypeAndLimitAndServiceName merchantId merchantOperatingCityId startTime endTime (getFeeType paymentMode) overlayBatchSize serviceName
+        Just shard -> do
+          activeDriverIds <- ADL.getActiveDriversForShard shard startTime (secondsToNominalDiffTime timeDiffFromUtc)
+          QDF.findWindowsAndServiceNameWithFeeTypeAndLimitAndServiceNameByDriverIds merchantId merchantOperatingCityId startTime endTime (getFeeType paymentMode) overlayBatchSize serviceName (Id <$> activeDriverIds)
       let driverIds = driverFees <&> (.driverId)
       void $ QDF.updateDriverFeeOverlayScheduledByServiceName driverIds True startTime endTime serviceName
       return driverIds

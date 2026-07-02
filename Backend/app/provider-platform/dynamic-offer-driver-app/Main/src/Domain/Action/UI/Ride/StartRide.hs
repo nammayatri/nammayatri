@@ -128,7 +128,7 @@ buildStartRideHandle merchantId merchantOpCityId rideId = do
 type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], Redis.HedisLTSFlowEnv r)
 
 driverStartRide ::
-  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text]) =>
+  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text], HasField "activeDriversListKeyShards" r Int) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverStartRideReq ->
@@ -139,7 +139,7 @@ driverStartRide handle rideId req =
     pure result
 
 dashboardStartRide ::
-  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text]) =>
+  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text], HasField "activeDriversListKeyShards" r Int) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardStartRideReq ->
@@ -150,7 +150,7 @@ dashboardStartRide handle rideId req =
     $ DashboardReq req
 
 startRide ::
-  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, Redis.HedisLTSFlowEnv r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text]) =>
+  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, Redis.HedisLTSFlowEnv r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text], HasField "activeDriversListKeyShards" r Int) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   StartRideReq ->
@@ -228,7 +228,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
       fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
       fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride booking
       fork "startRide - Complete pickup zone request and add driver to active list" $ do
-        ADL.addDriverToActiveList driverId (secondsToNominalDiffTime (toIntegral transporterConfig.timeDiffFromUtc))
+        ADL.addDriverToActiveList driverId (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc)
         SpecialZoneDriverDemand.completePickupZoneRequestsForDriver driverId booking.id.getId booking.pickupGateId (show $ Veh.castServiceTierToVariant booking.vehicleServiceTier)
       if isInterCityTrip booking.tripCategory || isRentalTrip booking.tripCategory
         then logTagInfo "IffcoTokio driver insurance skipped" ("tripCategory=" <> show booking.tripCategory <> ", rideId=" <> ride.id.getId)

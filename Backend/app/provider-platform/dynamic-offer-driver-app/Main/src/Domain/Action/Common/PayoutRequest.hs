@@ -95,7 +95,8 @@ executeSpecialZonePayoutRequest ::
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     RideEnd.EndRideFlow m r,
-    LocationUpdateFlow m r c
+    LocationUpdateFlow m r c,
+    HasField "activeDriversListKeyShards" r Int
   ) =>
   DPR.PayoutRequest ->
   m ()

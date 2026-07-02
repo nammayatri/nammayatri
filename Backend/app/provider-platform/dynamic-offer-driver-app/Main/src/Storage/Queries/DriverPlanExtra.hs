@@ -132,6 +132,29 @@ findAllDriversEligibleForService serviceName merchantId merchantOperatingCity en
     (Just limit)
     Nothing
 
+findAllDriversEligibleForServiceByDriverIds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  DPlan.ServiceNames ->
+  Id Merchant ->
+  Id MOC.MerchantOperatingCity ->
+  UTCTime ->
+  Int ->
+  [Id Person] ->
+  m [DriverPlan]
+findAllDriversEligibleForServiceByDriverIds serviceName merchantId merchantOperatingCity endTime limit driverIds = do
+  findAllWithOptionsKV'
+    [ Se.And
+        [ Se.Is BeamDF.merchantId $ Se.Eq (Just merchantId.getId),
+          Se.Is BeamDF.merchantOpCityId $ Se.Eq (Just merchantOperatingCity.getId),
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.enableServiceUsageCharge $ Se.Eq (Just True),
+          Se.Or [Se.Is BeamDF.lastBillGeneratedAt $ Se.LessThan (Just endTime), Se.Is BeamDF.lastBillGeneratedAt $ Se.Eq Nothing],
+          Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds)
+        ]
+    ]
+    (Just limit)
+    Nothing
+
 updatePlanIdByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id DPlan.Plan -> DPlan.ServiceNames -> Maybe VC.VehicleCategory -> Id MOC.MerchantOperatingCity -> m () -- ned DSL Fix
 updatePlanIdByDriverIdAndServiceName (Id driverId) (Id planId) serviceName mbVehicleCategory merchantOperatingCity = do
   now <- getCurrentTime
