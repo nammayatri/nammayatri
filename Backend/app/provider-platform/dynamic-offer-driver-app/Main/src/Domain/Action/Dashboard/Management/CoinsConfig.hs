@@ -79,11 +79,13 @@ postCoinsConfigCreate ::
   Kernel.Types.Beckn.Context.City ->
   Common.CreateCoinsConfigReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postCoinsConfigCreate _merchantShortId _opCity req = do
+postCoinsConfigCreate merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   uuid <- UC.generateGUIDText
   (newCoinsConfig, eventMessageLs) <- case req of
     Common.NewCoinsConfig (Common.NewCoinsConfigReq {..}) ->
-      let newConfig = DTCC.CoinsConfig {id = ID.Id uuid, vehicleCategory = Just vehicleCategory, ..}
+      let newConfig = DTCC.CoinsConfig {id = ID.Id uuid, merchantId = merchant.id.getId, merchantOptCityId = merchantOpCityId.getId, vehicleCategory = Just vehicleCategory, ..}
        in pure (newConfig, eventMessages)
     Common.DuplicateCoinsConfig (Common.DuplicateCoinsConfigsReq {..}) -> do
       let findCoinsConfig = QConfig.findById $ ID.cast entriesId
