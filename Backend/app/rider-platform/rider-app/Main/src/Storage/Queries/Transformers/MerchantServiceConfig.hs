@@ -30,6 +30,8 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.JSON (valueToMaybe)
+import qualified PartnerAuth.Interface.Types as PartnerAuth
+import qualified PartnerAuth.Types as PartnerAuth
 import qualified Utils.Common.JWT.Config as GW
 
 getServiceConfigFromDomain :: (MonadFlow m) => Domain.ServiceName -> A.Value -> m Domain.ServiceConfig
@@ -95,6 +97,7 @@ getServiceConfigFromDomain serviceName configJSON = do
       Just cfg | cfg.settlementService == svc -> Just $ Domain.SettlementServiceConfig cfg
       _ -> Nothing
     Domain.EventTrackingService EventTracking.Moengage -> Domain.EventTrackingServiceConfig . EventTrackingInterface.MoengageConfig <$> valueToMaybe configJSON
+    Domain.PartnerAuthService PartnerAuth.BHIM -> Domain.PartnerAuthServiceConfig . PartnerAuth.BHIMConfig <$> valueToMaybe configJSON
 
 mkPaymentServiceConfig :: A.Value -> Payment.PaymentService -> Maybe Payment.PaymentServiceConfig
 mkPaymentServiceConfig configJSON = \case
@@ -190,6 +193,8 @@ getServiceNameConfigJson = \case
   Domain.SettlementServiceConfig cfg -> (Domain.SettlementService cfg.settlementService, toJSON cfg)
   Domain.EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
     EventTrackingInterface.MoengageConfig cfg -> (Domain.EventTrackingService EventTracking.Moengage, toJSON cfg)
+  Domain.PartnerAuthServiceConfig partnerAuthCfg -> case partnerAuthCfg of
+    PartnerAuth.BHIMConfig cfg -> (Domain.PartnerAuthService PartnerAuth.BHIM, toJSON cfg)
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> (Payment.PaymentService, A.Value)
 getPaymentServiceConfigJson = \case
