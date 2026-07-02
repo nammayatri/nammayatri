@@ -101,6 +101,7 @@ import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.MultiModal as TMultiModal
+import qualified Tools.Notifications as Notifications
 
 filterTransitRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv), HasField "cloudType" r (Maybe CloudType)) => Domain.Types.RiderConfig.RiderConfig -> [MultiModalRoute] -> m [MultiModalRoute]
 filterTransitRoutes riderConfig routes = do
@@ -333,7 +334,13 @@ checkAndMarkTerminalJourneyStatus journey allLegStates = do
       | not isSingleTaxiJourneyLeg && allTrackingFinished flattenedLegStates =
         if any (isCancelled isSingleTaxiJourneyLeg) flattenedLegStates
           then updateJourneyStatus journey DJourney.CANCELLED
-          else updateJourneyStatus journey DJourney.FEEDBACK_PENDING
+          else do
+            updateJourneyStatus journey DJourney.FEEDBACK_PENDING
+            unless (journey.status `elem` [DJourney.FEEDBACK_PENDING, DJourney.COMPLETED, DJourney.CANCELLED]) $ do
+              lockAcquired <- Redis.tryLockRedis ("journeyStatusNotify:" <> journey.id.getId <> ":" <> show DJourney.FEEDBACK_PENDING) 86400
+              when lockAcquired $
+                fork "notify journey status" $
+                  Notifications.notifyJourneyStatus journey.riderId journey.id DJourney.FEEDBACK_PENDING
       | otherwise = pure ()
 
 getAllLegsStatus ::

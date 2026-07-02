@@ -72,10 +72,10 @@ processOnConfirm req = do
     dOnConfirmReq <- ACL.buildOnConfirmReq fromStationProviderCode toStationProviderCode req
     case dOnConfirmReq of
       Just onConfirmReq -> do
-        (merchant, booking, quoteCategories) <- DOnConfirm.validateRequest onConfirmReq
+        (merchant, booking, quoteCategories, bookingPayment) <- DOnConfirm.validateRequest onConfirmReq
         fork "onConfirm request processing" $
           Redis.whenWithLockRedis (onConfirmProcessingLockKey onConfirmReq.bppOrderId) 60 $
-            DOnConfirm.onConfirm merchant booking quoteCategories onConfirmReq
+            DOnConfirm.onConfirm merchant booking quoteCategories bookingPayment onConfirmReq
         fork "FRFS onConfirm received pushing ondc logs" do
           void $ pushLogs "on_confirm" (toJSON req) merchant.id.getId "PUBLIC_TRANSPORT"
       Nothing -> DOnConfirm.onConfirmFailure bapConfig ticketBooking
