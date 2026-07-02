@@ -762,3 +762,7 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN special_location_tier_order_config
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN non_allowed_override_fleet_no_service_tiers json ;
+
+
+------- SQL updates -------
+

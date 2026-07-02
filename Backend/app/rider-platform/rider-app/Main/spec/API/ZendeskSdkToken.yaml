@@ -1,0 +1,12 @@
+imports: {}
+
+module: ZendeskSdkToken
+
+types: {}
+
+apis:
+  - GET:
+      endpoint: /profile/zendeskSdkToken
+      auth: TokenAuth
+      response:
+        type: Text
