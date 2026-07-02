@@ -281,7 +281,8 @@ data SendPDNNotificationToDriverJobData = SendPDNNotificationToDriverJobData
     merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     retryCount :: Maybe Int,
-    serviceName :: Maybe Plan.ServiceNames
+    serviceName :: Maybe Plan.ServiceNames,
+    shardNum :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -294,7 +295,8 @@ data MandateExecutionInfo = MandateExecutionInfo
     endTime :: UTCTime,
     merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
-    serviceName :: Maybe Plan.ServiceNames
+    serviceName :: Maybe Plan.ServiceNames,
+    shardNum :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -313,7 +315,8 @@ data CalculateDriverFeesJobData = CalculateDriverFeesJobData
     scheduleManualPaymentLink :: Maybe Bool,
     scheduleDriverFeeCalc :: Maybe Bool,
     createChildJobs :: Maybe Bool,
-    recalculateManualReview :: Maybe Bool
+    recalculateManualReview :: Maybe Bool,
+    shardNum :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -355,7 +358,8 @@ data SendOverlayJobData = SendOverlayJobData
     overlayBatchSize :: Int,
     serviceName :: Maybe Plan.ServiceNames,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
-    vehicleCategory :: Maybe DVC.VehicleCategory
+    vehicleCategory :: Maybe DVC.VehicleCategory,
+    shardNum :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -379,7 +383,8 @@ data SendManualPaymentLinkJobData = SendManualPaymentLinkJobData
     serviceName :: Plan.ServiceNames,
     startTime :: UTCTime,
     endTime :: UTCTime,
-    channel :: MediaChannel
+    channel :: MediaChannel,
+    shardNum :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
