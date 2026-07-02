@@ -27,6 +27,6 @@ instance B.Table FleetRouteAssociationT where
 
 type FleetRouteAssociation = FleetRouteAssociationT Identity
 
-$(enableKVPG ''FleetRouteAssociationT ['id] [])
+$(enableKVPG ''FleetRouteAssociationT ['id] [['fleetOwnerId]])
 
 $(mkTableInstances ''FleetRouteAssociationT "fleet_route_association")

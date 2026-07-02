@@ -42,6 +42,6 @@ instance B.Table NotificationT where
 
 type Notification = NotificationT Identity
 
-$(enableKVPG ''NotificationT ['id] [])
+$(enableKVPG ''NotificationT ['id] [['driverFeeId], ['shortId]])
 
 $(mkTableInstances ''NotificationT "notification")
