@@ -298,6 +298,13 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   // Expanded steps for viewing details
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
+  // Files attached by the user for steps whose Postman body is `mode: 'formdata'`
+  // and has one or more `type: 'file'` fields (e.g. media upload). Keyed by
+  // stepId -> formdata field key -> File. When absent for a file field, the
+  // runner treats the step as skipped so the rest of the collection continues.
+  const [stepFiles, setStepFiles] = useState<Record<string, Record<string, File>>>({});
+  const stepFilesRef = useRef(stepFiles);
+  useEffect(() => { stepFilesRef.current = stepFiles; }, [stepFiles]);
 
   // JSON viewer modal state
   const [modalData, setModalData] = useState<any>(null);
@@ -541,7 +548,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       // they capture async fan-out (beckn callbacks, BPP juspay session,
       // rider-app forks) that lands after the HTTP response.
       const capture = await startStepCapture(selectedEnvType);
-      const result = await callPostmanStep(step, storesRef.current);
+      const result = await callPostmanStep(step, storesRef.current, stepFilesRef.current[step.id]);
       capture.done();
       // Latency excludes pre/post-request script time — only the upstream HTTP call.
       const durationMs = result.upstreamMs;
@@ -695,7 +702,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         const step = parsed.steps[stepIdx];
 
         const capture = await startStepCapture(env.envType);
-        const result = await callPostmanStep(step, stores);
+        const result = await callPostmanStep(step, stores, stepFilesRef.current[step.id]);
         capture.done();
         const durationMs = result.upstreamMs;
         const { serviceLogs } = await capture.result;
@@ -840,7 +847,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     onLog('req', `[Step ${visibleSteps.findIndex(s => s.id === stepId) + 1}] ${step.method} ${step.name}`);
 
     const start = performance.now();
-    const result = await callPostmanStep(step, storesRef.current);
+    const result = await callPostmanStep(step, storesRef.current, stepFilesRef.current[step.id]);
     const durationMs = Math.round(performance.now() - start);
 
     if (result.skipped) {
@@ -903,7 +910,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
 
     const start = performance.now();
     const capture = await startStepCapture(selectedEnvType);
-    const result = await callPostmanStep(step, storesRef.current);
+    const result = await callPostmanStep(step, storesRef.current, stepFilesRef.current[step.id]);
     capture.done();
     // Latency excludes pre/post-request script time — only the upstream HTTP call.
     const durationMs = result.upstreamMs;
@@ -978,7 +985,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       onLog('req', `${step.method} ${step.name}`);
 
       const capture = await startStepCapture(selectedEnvType);
-      const result = await callPostmanStep(step, storesRef.current);
+      const result = await callPostmanStep(step, storesRef.current, stepFilesRef.current[step.id]);
       capture.done();
       const durationMs = result.upstreamMs;
       const { mockHits, serviceLogs } = await capture.result;
@@ -1171,6 +1178,57 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
                     {node.prefixGroup && <span className={`cr-tag cr-tag-${step.tag}`}>{step.tag}</span>}
                     <span className="cr-step-method">{step.method}</span>
                     <span className="cr-step-name">{step.name}</span>
+                    {step.formdataFields?.some(f => f.type === 'file') && (
+                      <span
+                        className="cr-file-picker-wrap"
+                        onClick={e => e.stopPropagation()}
+                        style={{ marginLeft: 6, display: 'inline-flex', gap: 4, alignItems: 'center', fontSize: '0.8em' }}
+                        title="Attach a file for the formdata file field. Leave empty to skip this step."
+                      >
+                        {step.formdataFields.filter(f => f.type === 'file').map(f => {
+                          const attached = stepFiles[stepId]?.[f.key];
+                          return (
+                            <label
+                              key={f.key}
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 4,
+                                padding: '1px 6px', borderRadius: 4,
+                                background: attached ? '#e8f4ff' : '#f5f5f5',
+                                border: '1px solid ' + (attached ? '#9ec5fe' : '#ccc'),
+                                cursor: 'pointer',
+                              }}
+                            >
+                              📎 {attached ? `${f.key}: ${attached.name}` : `attach ${f.key}`}
+                              <input
+                                type="file"
+                                style={{ display: 'none' }}
+                                onChange={ev => {
+                                  const file = ev.target.files?.[0];
+                                  setStepFiles(prev => {
+                                    const next = { ...prev, [stepId]: { ...(prev[stepId] || {}) } };
+                                    if (file) next[stepId][f.key] = file;
+                                    else delete next[stepId][f.key];
+                                    return next;
+                                  });
+                                }}
+                              />
+                            </label>
+                          );
+                        })}
+                        {stepFiles[stepId] && Object.keys(stepFiles[stepId]).length > 0 && (
+                          <button
+                            style={{
+                              padding: '0 4px', border: 'none', background: 'transparent',
+                              cursor: 'pointer', color: '#666',
+                            }}
+                            onClick={() => setStepFiles(prev => { const c = { ...prev }; delete c[stepId]; return c; })}
+                            title="Clear all attached files for this step"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </span>
+                    )}
                     {runningStepId === stepId && <span className="cr-spinner" />}
                     {state?.durationMs != null && <span className="cr-duration">{state.durationMs}ms</span>}
                     {state?.result && <span className={`cr-status-code ${(state.result.status >= 400) ? 'cr-status-error' : ''}`}>{state.result.status}</span>}

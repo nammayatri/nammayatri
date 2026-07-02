@@ -119,11 +119,13 @@ import qualified Lib.Payment.Domain.Types.PaymentOrderOffer as DPaymentOrderOffe
 import qualified Lib.Payment.Domain.Types.PaymentOrderSplit as DPaymentOrderSplit
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
 import qualified Lib.Payment.Domain.Types.PayoutOrder as Payment
+import qualified Lib.Payment.Domain.Types.PayoutRequest as DPayoutRequest
 import qualified Lib.Payment.Domain.Types.PayoutTransaction as PT
 import qualified Lib.Payment.Domain.Types.PersonDailyOfferStats as DPersonDailyOfferStats
 import Lib.Payment.Domain.Types.Refunds (Refunds (..))
 import qualified Lib.Payment.Domain.Types.WalletRewardPosting as DWalletRewardPosting
 import Lib.Payment.PGFee (PGFeeConfig (..), PGFeeType (..), recordPGFeeLedgerEntries)
+import qualified Lib.Payment.Payout.RequestStatus as RequestStatus
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQTransaction
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
@@ -134,6 +136,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrderOffer as QPaymentOrderOffer
 import qualified Lib.Payment.Storage.Queries.PaymentOrderSplit as QPaymentOrderSplit
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
+import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPayoutRequest
 import qualified Lib.Payment.Storage.Queries.PayoutTransaction as QPayoutTransaction
 import qualified Lib.Payment.Storage.Queries.PersonDailyOfferStats as QPersonDailyOfferStats
 import qualified Lib.Yudhishthira.Tools.Utils as LYUtils
@@ -1957,7 +1960,8 @@ mkPayoutStripeWebhookData = \case
 
 stripePayoutWebhookService ::
   ( EncFlow m r,
-    PaymentBeamFlow.BeamFlow m r
+    PaymentBeamFlow.BeamFlow m r,
+    FinanceBeamFlow.BeamFlow m r
   ) =>
   Id MerchantOperatingCity ->
   PayoutEvents.PayoutServiceEventResp ->
@@ -2460,7 +2464,8 @@ mkPayoutOrderStatusReq payoutOrder mRoutingId mConnectedAccountId PayoutStatusSe
 
 payoutStatusService ::
   ( EncFlow m r,
-    PaymentBeamFlow.BeamFlow m r
+    PaymentBeamFlow.BeamFlow m r,
+    FinanceBeamFlow.BeamFlow m r
   ) =>
   Id Merchant ->
   Id Person ->
@@ -2473,7 +2478,7 @@ payoutStatusService _merchantId _personId payoutStatusServiceReq createPayoutOrd
   payoutStatusUpdates payoutStatusServiceReq.orderId statusResp
   pure $ PayoutPaymentStatus {status = statusResp.status, transferStatus = statusResp.transferStatus, orderId = statusResp.orderId, accountDetailsType = show <$> ((.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< statusResp.fulfillments)}
 
-payoutStatusUpdates :: (EncFlow m r, PaymentBeamFlow.BeamFlow m r) => Text -> PT.PayoutOrderStatusResp -> m ()
+payoutStatusUpdates :: (EncFlow m r, PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r) => Text -> PT.PayoutOrderStatusResp -> m ()
 payoutStatusUpdates orderId statusResp = do
   order <- QPayoutOrder.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId)
   case statusResp.transferStatus of
@@ -2485,6 +2490,7 @@ payoutStatusUpdates orderId statusResp = do
       txns = (.transactions) =<< mbFulfillment
       mbTxn = listToMaybe <$> sortBy (comparing (.updatedAt)) =<< txns
   QPayoutOrder.updatePayoutOrderTxnRespInfo ((.responseCode) =<< mbTxn) ((.responseMessage) =<< mbTxn) orderId
+  updatePayoutRequestStatusFromOrder order statusResp.status
   whenJust mbTxn $ \JuspayPayout.Transaction {amount = amount_txn, ..} -> do
     findTransaction <- QPayoutTransaction.findByTransactionRef transactionRef
     let mbBeneficiaryDetails = (.beneficiaryDetails) =<< mbFulfillment
@@ -2512,6 +2518,21 @@ payoutStatusUpdates orderId statusResp = do
                   updatedAt = now
                 }
         QPayoutTransaction.create payoutTransaction
+
+updatePayoutRequestStatusFromOrder ::
+  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r) =>
+  Payment.PayoutOrder ->
+  JuspayPayout.PayoutOrderStatus ->
+  m ()
+updatePayoutRequestStatusFromOrder order orderStatus = do
+  let newStatus = RequestStatus.castPayoutOrderStatusToPayoutRequestStatus orderStatus
+      protectedStatuses = [DPayoutRequest.CREDITED, DPayoutRequest.CASH_PAID, DPayoutRequest.CASH_PENDING]
+  when (newStatus /= DPayoutRequest.PROCESSING) $
+    forM_ (fromMaybe [] order.entityIds) $ \entityId -> do
+      mbPayoutRequest <- QPayoutRequest.findById (Id entityId)
+      whenJust mbPayoutRequest $ \payoutRequest ->
+        when (payoutRequest.status /= newStatus && payoutRequest.status `notElem` protectedStatuses) $
+          RequestStatus.updatePayoutRequestStatusWithHistory newStatus (Just $ "Payout order status: " <> show orderStatus) payoutRequest
 
 mkCreatePayoutServiceReq ::
   Text ->

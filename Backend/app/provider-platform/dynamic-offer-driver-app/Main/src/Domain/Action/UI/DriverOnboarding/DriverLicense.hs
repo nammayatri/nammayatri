@@ -244,7 +244,10 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             runDlFaceMatch
             if documentVerificationConfig.doStrictVerifcation
               then do
-                when (driverLicense.verificationStatus == Documents.INVALID) $ throwError DLInvalid
+                when (driverLicense.verificationStatus == Documents.INVALID) $
+                  if transporterConfig.enableBotFlow == Just True
+                    then Query.updateVerificationStatus Documents.PENDING driverLicense.documentImageId1
+                    else throwError DLInvalid
                 verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
               else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
           Nothing -> do
