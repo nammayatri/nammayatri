@@ -255,6 +255,50 @@
       }
     },
     {
+      "name": "Top Up Driver Prepaid Wallet",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Bharat Taxi Delhi requires prepaidSubscriptionThreshold (100.0) to be covered",
+              "// by the driver's prepaid finance_account balance before they're eligible for",
+              "// any ride request (filterByWalletBalance in GetNearestDrivers.hs). A freshly",
+              "// onboarded driver has no finance_account row at all, which silently excludes",
+              "// them from the driver pool with no error logged anywhere. Seed one directly.",
+              "pm.test('Wallet top-up inserted', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().ok).to.eql(true); });",
+              "console.log('TopUpWallet:', pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"finance_account\", \"values\": {\"id\": \"{{driver_id}}\", \"account_type\": \"RideCredit\", \"balance\": 200.0, \"counterparty_id\": \"{{driver_id}}\", \"counterparty_type\": \"DRIVER\", \"currency\": \"INR\", \"merchant_id\": \"{{driver_merchant_id}}\", \"merchant_operating_city_id\": \"ef75e743-53a6-4040-af57-a6036ab091ab\", \"status\": \"Active\"}, \"touch_timestamps\": true, \"on_conflict_do_nothing\": true}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/insert",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "insert"
+          ]
+        }
+      }
+    },
+    {
       "name": "Subscribe Plan",
       "event": [
         {
@@ -595,7 +639,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"fareProductType\": \"ONE_WAY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Test Origin\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"destination\": {\"address\": {\"area\": \"Test Destination\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}}}"
+          "raw": "{\"fareProductType\": \"ONE_WAY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Test Origin\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"destination\": {\"address\": {\"area\": \"Test Destination\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}, \"quotesUnifiedFlow\": true}}"
         },
         "url": {
           "raw": "{{baseUrl_app}}/rideSearch",
@@ -604,6 +648,43 @@
           ],
           "path": [
             "rideSearch"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Register Cashback Offer Mock",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Override registered', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"service\": \"juspay\", \"extract\": \"path.1\", \"value\": \"offers\", \"match\": \"/offers/list\", \"response\": {\"best_offer_combinations\": [], \"offers\": [{\"offer_id\": \"offer-del-cash-10pct-first-ride\", \"status\": \"ELIGIBLE\", \"offer_code\": \"OFFER10PCTDELHI\", \"offer_description\": {\"sponsored_by\": \"BHARAT_TAXI\", \"title\": \"First Ride Cashback\", \"description\": \"Get 10% cashback on your first ride! Maximum cashback of ₹50.\", \"tnc\": null}, \"ui_configs\": {\"offer_display_priority\": 1, \"auto_apply\": true, \"should_validate\": false, \"is_hidden\": false}, \"offer_rules\": {\"amount\": {\"currency\": \"INR\", \"min_order_amount\": \"0\"}, \"payment_instrument\": []}, \"order_breakup\": {\"order_amount\": \"100\", \"final_order_amount\": \"90\", \"discount_amount\": \"10\", \"merchant_discount_amount\": \"10\", \"cashback_amount\": \"0\", \"offer_amount\": \"10\", \"benefits\": [], \"product_discounts\": null}}]}}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/override",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "override"
           ]
         }
       }
@@ -626,7 +707,16 @@
             "exec": [
               "var d = pm.response.json();",
               "if (d.estimates && d.estimates.length > 0) {",
-              "    var est = d.estimates[0];",
+              "    // Multiple BPPs can share a vehicleServiceTierType (e.g. TAXI), and the",
+              "    // cashback offer applies per-tier, not per-provider — so several providers'",
+              "    // estimates can carry the same offer. Only Bharat Taxi Partner has an online",
+              "    // driver in this suite, and that driver is registered as AUTO_RICKSHAW (see",
+              "    // 'Add Vehicle (Dashboard)' step), so the estimate must match that vehicle",
+              "    // type too — a TAXI/car estimate would never find this driver in the pool.",
+              "    var est = d.estimates.find(function(e) { return e.offer && e.agencyName === 'Bharat Taxi Partner' && e.vehicleVariant === 'AUTO_RICKSHAW'; })",
+              "        || d.estimates.find(function(e) { return e.offer && e.agencyName === 'Bharat Taxi Partner'; })",
+              "        || d.estimates.find(function(e) { return e.offer; })",
+              "        || d.estimates[0];",
               "    pm.environment.set('estimateId', est.id);",
               "    console.log('Estimate:', est.id, est.vehicleServiceTierType, est.estimatedFare);",
               "    if (est.offer) {",
@@ -693,7 +783,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true, \"selectedOfferId\": \"{{selected_offer_id}}\", \"paymentInstrument\": {\"tag\": \"Cash\"}}"
+          "raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true, \"selectedOfferId\": \"{{selected_offer_id}}\", \"paymentInstrument\": {\"instrumentType\": \"Cash\"}}"
         },
         "url": {
           "raw": "{{baseUrl_app}}/estimate/{{estimateId}}/select2",
@@ -830,7 +920,12 @@
               "if (d.list && d.list.length > 0) {",
               "    var booking = d.list[0];",
               "    pm.environment.set('customer_bookingId', booking.id);",
-              "    console.log('Booking:', booking.id, 'status:', booking.status);",
+              "    var otp = booking.rideOtp;",
+              "    if (!otp && booking.rideList && booking.rideList.length > 0) {",
+              "        otp = booking.rideList[0].rideOtp;",
+              "    }",
+              "    pm.environment.set('ride_otp', otp);",
+              "    console.log('Booking:', booking.id, 'OTP:', otp, 'status:', booking.status);",
               "    if (booking.offer) {",
               "        console.log('Booking has cashback offer:', booking.offer.offerTitle);",
               "        pm.test('Active booking has cashback offer', function () {",
@@ -1122,7 +1217,7 @@
         }
       ],
       "request": {
-        "method": "GET",
+        "method": "POST",
         "header": [
           {
             "key": "token",
