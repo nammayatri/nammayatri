@@ -45,8 +45,8 @@ data EncryptedRes = EncryptedRes
   deriving (Generic, Show, ToJSON, FromJSON)
 
 data GetFareItem = GetFareItem
-  { fromStationId :: T.Text,
-    toStationId :: T.Text,
+  { fromStationId :: Maybe T.Text,
+    toStationId :: Maybe T.Text,
     fareBeforeDiscount :: Double,
     discountAmount :: Double,
     fareAfterDiscount :: Double,
