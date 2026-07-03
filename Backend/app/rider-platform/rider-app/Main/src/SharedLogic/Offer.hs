@@ -463,10 +463,12 @@ listOffersForPerson ::
   Id Merchant.Merchant ->
   Person.Person ->
   Maybe HighPrecMoney ->
+  Maybe Text ->
   m [OfferRespAPIEntity]
-listOffersForPerson merchantId person mbAmount = do
+listOffersForPerson merchantId person mbAmount mbServiceTierType = do
   let price = mkPrice (Just INR) (fromMaybe 1 mbAmount)
-  productOffers <- offerListWithBasket merchantId person.id person.merchantOperatingCityId DOrder.RideHailing [("offers-list", price)] Nothing Nothing Nothing
+      productId = fromMaybe "offers-list" mbServiceTierType
+  productOffers <- offerListWithBasket merchantId person.id person.merchantOperatingCityId DOrder.RideHailing [(productId, price)] Nothing Nothing Nothing
   let offerResps = concatMap (\(_, resp) -> resp.offerResp) productOffers
   mapM (mkOfferRespAPIEntity Nothing) offerResps
 
@@ -574,6 +576,9 @@ offerListWithBasket ::
   m [(Text, Payment.OfferListResp)]
 offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceType products mbRide mbBooking mbSearchReq = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  let mbServiceTierType = case products of
+        [(productId, _)] -> Just productId
+        _ -> Nothing
   personOfferStats <- QOfferStats.findAllByEntityIdAndEntityType personId.getId DOfferStats.Person
   mbPersonStats <- QPersonStats.findByPersonId personId
   isMultipleOrNoDeviceIdExist <- mkIsMultipleOrNoDeviceIdExist person
@@ -607,7 +612,7 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
                       deviceOfferStats = deviceOfferStats,
                       personDailyOfferStats = mbPersonDailyOfferStats,
                       personStats = mbPersonStats,
-                      serviceTierType = Nothing
+                      serviceTierType = mbServiceTierType
                     }
             currency = maybe INR ((.currency) . snd) (listToMaybe products)
         offersByProduct <- DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId productsWithAmount currency domainContext

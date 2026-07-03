@@ -322,13 +322,13 @@ findCustomerByMobile merchantShortId opCity mbCountryCode mobileNumber = do
 postCustomerOffersList :: ShortId DM.Merchant -> Context.City -> Common.CustomerOffersListReq -> Flow [Common.CustomerOfferEntity]
 postCustomerOffersList merchantShortId opCity req = do
   (merchant, person) <- findCustomerByMobile merchantShortId opCity req.mobileCountryCode req.mobileNumber
-  offers <- SOffer.listOffersForPerson merchant.id person req.amount
+  offers <- SOffer.listOffersForPerson merchant.id person req.amount req.serviceTierType
   pure $ map mkCustomerOfferEntity offers
 
 postCustomerApplyOffer :: ShortId DM.Merchant -> Context.City -> Common.ApplyCustomerOfferReq -> Flow APISuccess
 postCustomerApplyOffer merchantShortId opCity req = do
   (merchant, person) <- findCustomerByMobile merchantShortId opCity req.mobileCountryCode req.mobileNumber
-  offers <- SOffer.listOffersForPerson merchant.id person req.amount
+  offers <- SOffer.listOffersForPerson merchant.id person req.amount req.serviceTierType
   unless (any ((== req.offerCode) . (.offerCode)) offers) $
     throwError (InvalidRequest $ "Offer code " <> req.offerCode <> " is not eligible for customer")
   now <- getCurrentTime

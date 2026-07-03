@@ -184,6 +184,7 @@ types:
     - mobileNumber: Text
     - mobileCountryCode: Maybe Text
     - amount: Maybe HighPrecMoney
+    - serviceTierType: Maybe Text
     - derive: "'HideSecrets"
   ApplyCustomerOfferReq:
     - mobileNumber: Text
@@ -191,4 +192,5 @@ types:
     - offerCode: Text
     - validityHours: Int
     - amount: Maybe HighPrecMoney
+    - serviceTierType: Maybe Text
     - derive: "'HideSecrets"

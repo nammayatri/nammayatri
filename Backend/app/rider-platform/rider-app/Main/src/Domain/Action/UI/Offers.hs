@@ -20,4 +20,4 @@ getOffersList ::
 getOffersList (mbPersonId, merchantId) mbAmount = do
   personId <- mbPersonId & fromMaybeM (PersonDoesNotExist "personId missing from token")
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  SOffer.listOffersForPerson merchantId person mbAmount
+  SOffer.listOffersForPerson merchantId person mbAmount Nothing
