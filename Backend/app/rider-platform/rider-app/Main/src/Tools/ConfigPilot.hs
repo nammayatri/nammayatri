@@ -176,8 +176,12 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
           ( \c@(LYTU.Config _ ed identifier) -> do
               logicRanResp <- LYTU.runLogics baseLogics c
               case (A.fromJSON (logicRanResp.result) :: A.Result (LYTU.Config b)) of
-                A.Success nCfg -> pure $ LYTU.Config nCfg.config ed identifier -- identifier is in JSON logic as well, need to handle that properly (it shouldn't be there, thats just placeholder) its used only for figuring our which particular rows of a config are updated using a rule
-                A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to the config. " <> show e
+                A.Success nCfg -> do
+                  logDebug $ "ConfigPilot write path: successfully applied JSON patch to config for identifier: " <> show identifier <> ". Output: " <> (cs (A.encode nCfg.config) :: Text)
+                  pure $ LYTU.Config nCfg.config ed identifier -- identifier is in JSON logic as well, need to handle that properly (it shouldn't be there, thats just placeholder) its used only for figuring our which particular rows of a config are updated using a rule
+                A.Error e -> do
+                  logDebug $ "ConfigPilot write path: error applying JSON patch to config for identifier: " <> show identifier <> ". Error: " <> show e
+                  throwError $ InvalidRequest $ "Error occurred while applying JSON patch to the config. " <> show e
           )
           configWrapper
       pure patchedConfigs
