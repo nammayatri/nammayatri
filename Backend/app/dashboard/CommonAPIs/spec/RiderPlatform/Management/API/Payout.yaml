@@ -1,0 +1,18 @@
+imports:
+  PayoutOrderResp: Lib.Payment.API.Payout.Types
+
+importPackageOverrides:
+  Lib.Payment.API.Payout.Types: payment
+
+module: Payout
+
+types: {}
+
+apis:
+  - GET:
+      endpoint: /payout/order/{payoutOrderId}
+      auth: ApiAuthV2
+      params:
+        payoutOrderId: Text
+      response:
+        type: PayoutOrderResp
