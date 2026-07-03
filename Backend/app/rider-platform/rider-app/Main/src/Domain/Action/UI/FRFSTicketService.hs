@@ -585,10 +585,14 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
   bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory vehicleType_)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType_))) >>= fromMaybeM (InternalError "Beckn Config not found")
   cloudType <- asks (.cloudType)
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  (fromStation, toStation) <- do
-    fromStationInfo <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "Invalid from station id: " <> fromStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-    toStationInfo <- OTPRest.getStationByGtfsIdAndStopCode toStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "Invalid to station id: " <> toStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-    return (fromStationInfo, toStationInfo)
+  (fromStation, toStation) <-
+    JMU.measureLatency
+      ( do
+          fromStationInfo <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "Invalid from station id: " <> fromStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+          toStationInfo <- OTPRest.getStationByGtfsIdAndStopCode toStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "Invalid to station id: " <> toStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+          return (fromStationInfo, toStationInfo)
+      )
+      "getStations postFrfsSearchHandler"
   route <-
     maybe
       (pure Nothing)
@@ -633,9 +637,9 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
           }
   upsertJourneyLegAction searchReqId.getId
   QFRFSSearch.create searchReq
-  CallExternalBPP.search merchant merchantOperatingCity bapConfig searchReq mbFare frfsRouteDetails integratedBPPConfig blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId
+  JMU.measureLatency (CallExternalBPP.search merchant merchantOperatingCity bapConfig searchReq mbFare frfsRouteDetails integratedBPPConfig blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId) "CallExternalBPP.search postFrfsSearchHandler"
   quotes <-
-    withTryCatch "getFrfsSearchQuote" (getFrfsSearchQuote (Just personId, merchantId) searchReqId)
+    JMU.measureLatency (withTryCatch "getFrfsSearchQuote" (getFrfsSearchQuote (Just personId, merchantId) searchReqId)) "getFrfsSearchQuote postFrfsSearchHandler"
       >>= \case
         Right frfsQuotes -> return frfsQuotes
         Left _ -> return []
