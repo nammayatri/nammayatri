@@ -194,8 +194,11 @@ runAction journeyId action = do
   if journeyId.getId == ""
     then action
     else do
-      Redis.withWaitAndLockRedis lockKey 10 100 $
-        action
+      JMU.measureLatency
+        ( Redis.withWaitAndLockRedis lockKey 10 100 $
+            action
+        )
+        ("runAction withWaitAndLockRedis journeyId: " <> journeyId.getId)
   where
     lockKey = "infoLock-" <> journeyId.getId
 

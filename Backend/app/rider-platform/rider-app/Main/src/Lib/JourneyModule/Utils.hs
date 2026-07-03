@@ -1237,7 +1237,7 @@ getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid m
             (rD : _) -> do
               currentTime <- getCurrentTime
               let (_, currentTimeIST) = getISTTimeInfo currentTime
-              mbPreliminaryLeg <- getPreliminaryLeg (rD.fromStopDetails >>= (.name)) rD.startLocation
+              mbPreliminaryLeg <- measureLatency (getPreliminaryLeg (rD.fromStopDetails >>= (.name)) rD.startLocation) "getPreliminaryLeg getSubwayValidRoutes"
               return $ Just $ mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode (NonEmpty.fromList updateRouteDetails) (Just routeDistance) (Just viaRoute.routeCode)
         else return Nothing
     go [] = return ([], [])
