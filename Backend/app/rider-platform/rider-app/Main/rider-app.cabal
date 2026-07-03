@@ -207,6 +207,7 @@ library
       Domain.Action.Dashboard.Merchant
       Domain.Action.Dashboard.NammaTag
       Domain.Action.Dashboard.Offer
+      Domain.Action.Dashboard.Payout
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.RideBooking.AddBaggage
       Domain.Action.Dashboard.RideBooking.Booking
@@ -309,6 +310,7 @@ library
       Domain.Action.UI.Pass
       Domain.Action.UI.PassDetails
       Domain.Action.UI.Payment
+      Domain.Action.UI.Payout
       Domain.Action.UI.Person
       Domain.Action.UI.PersonDefaultEmergencyNumber
       Domain.Action.UI.PersonStats
@@ -813,6 +815,7 @@ library
       API.Action.Dashboard.Management.Merchant
       API.Action.Dashboard.Management.NammaTag
       API.Action.Dashboard.Management.Offer
+      API.Action.Dashboard.Management.Payout
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.Sos
       API.Action.Dashboard.Management.SosMedia

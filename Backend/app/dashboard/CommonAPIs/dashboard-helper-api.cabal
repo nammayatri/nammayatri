@@ -149,6 +149,7 @@ library
       API.Types.RiderPlatform.Management.Endpoints.Merchant
       API.Types.RiderPlatform.Management.Endpoints.NammaTag
       API.Types.RiderPlatform.Management.Endpoints.Offer
+      API.Types.RiderPlatform.Management.Endpoints.Payout
       API.Types.RiderPlatform.Management.Endpoints.Ride
       API.Types.RiderPlatform.Management.Endpoints.Sos
       API.Types.RiderPlatform.Management.Endpoints.SosMedia
@@ -160,6 +161,7 @@ library
       API.Types.RiderPlatform.Management.Merchant
       API.Types.RiderPlatform.Management.NammaTag
       API.Types.RiderPlatform.Management.Offer
+      API.Types.RiderPlatform.Management.Payout
       API.Types.RiderPlatform.Management.Ride
       API.Types.RiderPlatform.Management.Sos
       API.Types.RiderPlatform.Management.SosMedia
