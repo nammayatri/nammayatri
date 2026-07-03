@@ -968,6 +968,7 @@ convertQuoteToPricing specialLocationName specialLocationSupportNumber (DQuote.Q
       qar = Nothing,
       businessDiscount = fareParams.businessDiscount,
       personalDiscount = fareParams.personalDiscount,
+      commissionCharges = Nothing,
       ..
     }
 
