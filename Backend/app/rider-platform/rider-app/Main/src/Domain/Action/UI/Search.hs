@@ -59,7 +59,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.Version
-import Lib.ConfigPilot.Interface.Types (getConfig)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
 import Lib.Yudhishthira.Tools.Utils as Yudhishthira
@@ -78,6 +78,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.MerchantConfig as CQMerchantCfg
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedReqLocation as CSavedLocation
+import Storage.ConfigPilot.Config.HotSpotConfig (HotSpotConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
@@ -643,7 +644,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     updateRideSearchHotSpot :: SearchRequestFlow m r => DPerson.Person -> SearchReqLocation -> Merchant -> Maybe Bool -> Maybe Bool -> m ()
     updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation = do
       fork "ride search geohash frequencyUpdater" $ do
-        HotSpotConfig {..} <- QHotSpotConfig.findConfigByMerchantId merchant.id >>= fromMaybeM (InternalError "config not found for merchant")
+        HotSpotConfig {..} <- getOneConfig (HotSpotConfigDimensions {merchantOperatingCityId = "", merchantId = merchant.id.getId}) (Just (QHotSpotConfig.findConfigByMerchantId merchant.id)) >>= fromMaybeM (InternalError "config not found for merchant")
         when (shouldSaveSearchHotSpot && shouldTakeHotSpot) do
           let mbHotSpotConfig = Just $ HotSpotConfig {..}
           mbFavourite <- CSavedLocation.findByLatLonAndRiderId person.id origin.gps

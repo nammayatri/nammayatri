@@ -27,8 +27,10 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 
 reportNavBillableEvent ::
   ( MonadFlow m,
@@ -54,11 +56,11 @@ reportNavBillableEvent booking ride = do
       GoogleBilling.reportBillableEvent googleCfg.mobilityBillingUrl (toRegionCode merchantOpCity.country) apiKey ride.id.getId
 
 getMerchantGoogleMapsCfg ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   m (Maybe GoogleCfg)
 getMerchantGoogleMapsCfg merchantOpCityId = do
-  mbServiceConfig <- QOMSC.findByServiceAndCity (DOSC.MapsService MapsTypes.Google) merchantOpCityId
+  mbServiceConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DOSC.MapsService MapsTypes.Google)}) (Just (maybeToList <$> QOMSC.findByServiceAndCity (DOSC.MapsService MapsTypes.Google) merchantOpCityId))
   pure $ case mbServiceConfig of
     Just sc -> case sc.serviceConfig of
       DOSC.MapsServiceConfig (MapsIface.GoogleConfig googleCfg) -> Just googleCfg

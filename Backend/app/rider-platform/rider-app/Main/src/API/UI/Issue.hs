@@ -35,6 +35,7 @@ import qualified IssueManagement.Domain.Types.Issue.IssueOption as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as Domain
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueCategory as QIC
+import qualified IssueManagement.Storage.CachedQueries.Issue.IssueConfig as CQIssueConfig
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueOption as QIO
 import qualified IssueManagement.Storage.Queries.Issue.IGMConfig as QIGMConfig
 import qualified IssueManagement.Storage.Queries.Issue.IGMIssue as QIGM
@@ -65,6 +66,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQ
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQPerson
+import Storage.ConfigPilot.Config.IssueConfig (IssueConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingExtra as QBE
@@ -131,7 +133,9 @@ customerIssueHandle =
       mbFindStationByIdWithContext = Just castFindStationByIdWithContext,
       mbSendChatNotification = Just (\pid payload -> Notify.notifyOnIssueChatMessage (cast pid) payload),
       mbShouldForwardChatToTicketService = Just isXyneTicketService,
-      mbFetchMediaBase64 = Just fetchMediaBase64FromS3
+      mbFetchMediaBase64 = Just fetchMediaBase64FromS3,
+      findIssueConfig = \mocId issueIdentifier ->
+        getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId.getId, identifier = show issueIdentifier}) (Just (CQIssueConfig.findByMerchantOpCityId mocId Common.CUSTOMER))
     }
 
 -- | Fetch a MediaFile's bytes directly from S3 (returning the base64 payload

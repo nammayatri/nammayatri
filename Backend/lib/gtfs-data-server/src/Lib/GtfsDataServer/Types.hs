@@ -253,7 +253,8 @@ instance ToJSON GimsTripActionReq where
 
 data GimsCurrentOperationResp = GimsCurrentOperationResp
   { waybill_no :: Text,
-    number_of_trips :: Int
+    number_of_trips :: Int,
+    trip_numbers :: Maybe [Int]
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 

@@ -92,6 +92,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Storage.Beam.GovtDataRC ()
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
@@ -234,9 +235,7 @@ verifyRC _ merchantOptCityId useCategoryBasedPriority mbRemPriorityList mbVehicl
     getTtenTokenizationServiceConfig :: (ServiceFlow m r, CoreMetrics m) => Id DMOC.MerchantOperatingCity -> m TIFT.TokenizationServiceConfig
     getTtenTokenizationServiceConfig mocid = do
       merchantServiceConfig <-
-        CQMSC.findByServiceAndCity
-          (DMSC.TokenizationService TT.Tten)
-          mocid
+        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mocid.getId, merchantId = Nothing, serviceName = Just (DMSC.TokenizationService TT.Tten)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.TokenizationService TT.Tten) mocid))
           >>= fromMaybeM
             ( MerchantServiceConfigNotFound mocid.getId "tokenization" $
                 show (DMSC.TokenizationService TT.Tten)
@@ -266,7 +265,7 @@ getServiceConfig :: ServiceFlow m r => Id DMOC.MerchantOperatingCity -> Verifica
 getServiceConfig merchantOptCityId cfg = case cfg of
   GovtData -> return $ GovtDataConfig {}
   _ -> do
-    merchantServiceConfig <- CQMSC.findByServiceAndCity (DMSC.VerificationService cfg) merchantOptCityId >>= fromMaybeM (MerchantServiceConfigNotFound merchantOptCityId.getId "verification" $ show cfg)
+    merchantServiceConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOptCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.VerificationService cfg)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.VerificationService cfg) merchantOptCityId)) >>= fromMaybeM (MerchantServiceConfigNotFound merchantOptCityId.getId "verification" $ show cfg)
     case merchantServiceConfig.serviceConfig of
       DMSC.VerificationServiceConfig vsc -> return vsc
       _ -> throwError $ InternalError "Unknown Service Config"
@@ -360,7 +359,7 @@ getTask ::
   m GetTaskResp
 getTask merchantOpCityId config req updateResp = do
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity (DMSC.VerificationService config) merchantOpCityId
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.VerificationService config)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.VerificationService config) merchantOpCityId))
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId <> " Service : " <> T.pack (show config))
   case merchantServiceConfig.serviceConfig of
     DMSC.VerificationServiceConfig vsc -> Verification.getTask vsc req updateResp
@@ -383,7 +382,7 @@ runWithServiceConfig func getCfg _merchantId merchantOpCityId req = do
 callService :: ServiceFlow m r => Id DMOC.MerchantOperatingCity -> VerificationService -> (VerificationServiceConfig -> req -> m resp) -> req -> m resp
 callService merchantOpCityId vsc func req = do
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity (DMSC.VerificationService vsc) merchantOpCityId
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.VerificationService vsc)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.VerificationService vsc) merchantOpCityId))
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId <> " Service : " <> T.pack (show vsc))
   case merchantServiceConfig.serviceConfig of
     DMSC.VerificationServiceConfig vsc' -> func vsc' req

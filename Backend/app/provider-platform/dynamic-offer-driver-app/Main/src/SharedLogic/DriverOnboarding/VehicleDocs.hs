@@ -29,9 +29,12 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error hiding (Unauthorized)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.DriverOnboarding as SDO
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import qualified Storage.Queries.DriverPlan as QDPlan
 import qualified Storage.Queries.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
@@ -99,7 +102,7 @@ validateMandatoryVehicleDocsForRC transporterConfig rc =
         language = merchantOperatingCity.language
         onlyMandatoryDocs = Just True
         skipMessages = True
-    allDocumentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId merchantOperatingCity.id Nothing
+    allDocumentVerificationConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, documentType = Nothing, vehicleCategory = Nothing}) (Just (CQDVC.findAllByMerchantOpCityId merchantOperatingCity.id Nothing))
     vehicleDocuments <- fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language (Just registrationNo) onlyMandatoryDocs skipMessages
     let status =
           case find (\vehicleDoc -> vehicleDoc.registrationNo == registrationNo) vehicleDocuments of
@@ -692,12 +695,12 @@ data VerificationMessage
 
 translateDynamicKey :: Text -> Language -> Flow Text
 translateDynamicKey key lang = do
-  mTranslation <- MTQuery.findByErrorAndLanguage key lang
+  mTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Nothing, messageKey = key, language = Just lang}) (Just (MTQuery.findByErrorAndLanguage key lang))
   return $ fromMaybe key (mTranslation <&> (.message))
 
 toVerificationMessage :: VerificationMessage -> Language -> Flow Text
 toVerificationMessage msg lang = do
-  errorTranslations <- MTQuery.findByErrorAndLanguage (T.pack (show msg)) lang
+  errorTranslations <- getConfig (TranslationDimensions {merchantOperatingCityId = Nothing, messageKey = T.pack (show msg), language = Just lang}) (Just (MTQuery.findByErrorAndLanguage (T.pack (show msg)) lang))
   case errorTranslations of
     Just errorTranslation -> return $ errorTranslation.message
     Nothing -> return "Something went wrong"

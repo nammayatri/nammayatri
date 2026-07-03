@@ -260,6 +260,11 @@ jobs:
           mc cp cache-root.txt "minio/haskell-cache/cabal-repl/${{ github.sha }}/cache-root.txt"
           rm -f cache-root.txt
 
+      - name: Mark commit as minio-pushed
+        run: |
+          git tag "minio-pushed/${{ github.sha }}"
+          git push origin "minio-pushed/${{ github.sha }}"
+
       - name: Cleanup staging dir
         if: always()
         run: rm -rf $HOME/ny-staging/${{ github.run_id }}

@@ -210,13 +210,14 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
         when (isNameCompareRequired transporterConfig verifyBy) $
           validateDocument merchantId merchantOpCityId person.id nameOnTheCard dateOfBirth Nothing DTO.DriverLicense DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
         mbExistingLicense <- Query.findByDLNumber driverLicenseNumber
-        let mdriverLicense =
-              mbExistingLicense >>= \dl ->
-                if dl.verificationStatus == Documents.INVALID
-                  then Nothing
-                  else Just dl
-        case mdriverLicense of
+        -- let mdriverLicense =
+        --       mbExistingLicense >>= \dl ->
+        --         if dl.verificationStatus == Documents.INVALID
+        --           then Nothing
+        --           else Just dl
+        case mbExistingLicense of
           Just driverLicense -> do
+            logTagInfo "verifyDL" $ "found existing DL record | dlNumber=" <> maskText driverLicenseNumber <> " | id=" <> driverLicense.id.getId <> " | verificationStatus=" <> show driverLicense.verificationStatus
             when (driverLicense.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $
               throwError $ DocumentUnderManualReview "DL"
             when (driverLicense.driverId /= personId) $

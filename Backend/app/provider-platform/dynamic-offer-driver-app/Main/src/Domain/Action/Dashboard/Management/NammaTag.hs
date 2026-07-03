@@ -54,13 +54,22 @@ import Data.Singletons
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as TE
 import Data.Time (UTCTime (..), fromGregorian)
+import qualified Domain.Types.Coins.CoinsConfig as DCC
+import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DriverPoolConfig as DTD
+import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as DFODVC
+import qualified Domain.Types.GoHomeConfig as DGHC
 import qualified "beckn-spec" Domain.Types.Invoice as DTI
+import qualified Domain.Types.LeaderBoardConfigs as DLBC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantMessage as DTM
 import qualified Domain.Types.MerchantPushNotification as DTPN
+import qualified Domain.Types.MerchantServiceConfig as DMSC
+import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.PayoutConfig as DTP
+import qualified Domain.Types.ReminderConfig as DRMC
 import qualified Domain.Types.RideRelatedNotificationConfig as DTRN
+import qualified Domain.Types.ScheduledPayoutConfig as DSPC
 import qualified Domain.Types.TransporterConfig as DTT
 import Domain.Types.UiDriverConfig (UiDriverConfig (..))
 import qualified Domain.Types.UiDriverConfig as DTDC
@@ -90,6 +99,7 @@ import qualified Lib.Yudhishthira.Storage.Queries.NammaTagV2 as QNammaTagV2
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types.Common as C
 import qualified Lib.Yudhishthira.Types.NammaTagV2
+import qualified Lib.Yudhishthira.Types.TagActionNotificationConfig as DTANC
 import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.BehaviourManagement.Visibility as BehaviorVisibility
@@ -116,11 +126,36 @@ $(YTH.generateGenericDefault ''DTM.MerchantMessage) -- TODO ERROR
 $(YTH.generateGenericDefault ''DTPN.MerchantPushNotification)
 
 $(YTH.generateGenericDefault ''DTD.DriverPoolConfig)
+$(YTH.generateGenericDefault ''DMSUC.MerchantServiceUsageConfig)
+$(YTH.generateGenericDefault ''DDVC.DocumentVerificationConfig)
+$(YTH.generateGenericDefault ''DGHC.GoHomeConfig)
+$(YTH.generateGenericDefault ''DLBC.LeaderBoardConfigs)
+$(YTH.generateGenericDefault ''DRMC.ReminderConfig)
+$(YTH.generateGenericDefault ''DSPC.ScheduledPayoutConfig)
+$(YTH.generateGenericDefault ''DTANC.TagActionNotificationConfig)
+$(YTH.generateGenericDefault ''DFODVC.FleetOwnerDocumentVerificationConfig)
+
+-- MerchantServiceConfig has secret EncryptedField sub-types that cannot be auto-defaulted;
+-- stub genDef to []. Its ConfigPilot read/write work via ToJSON/FromJSON; only the domain
+-- schema (which needs ToSchema) is skipped. Mirrors rider IntegratedBPPConfig.
+instance YTH.GenericDefaults DMSC.MerchantServiceConfig where
+  genDef _ = []
+
+$(YTH.generateGenericDefault ''DCC.CoinsConfig)
 
 $(genToSchema ''DTP.PayoutConfig)
 $(genToSchema ''DTRN.RideRelatedNotificationConfig)
 $(genToSchema ''DTPN.MerchantPushNotification)
 $(genToSchema ''DTD.DriverPoolConfig)
+$(genToSchema ''DMSUC.MerchantServiceUsageConfig)
+$(genToSchema ''DDVC.DocumentVerificationConfig)
+$(genToSchema ''DGHC.GoHomeConfig)
+$(genToSchema ''DLBC.LeaderBoardConfigs)
+$(genToSchema ''DRMC.ReminderConfig)
+$(genToSchema ''DSPC.ScheduledPayoutConfig)
+$(genToSchema ''DTANC.TagActionNotificationConfig)
+$(genToSchema ''DFODVC.FleetOwnerDocumentVerificationConfig)
+$(genToSchema ''DCC.CoinsConfig)
 $(genToSchema ''TaggedDriverPoolInput)
 $(genToSchema ''CancellationCoinData)
 $(genToSchema ''DynamicPricingData)
@@ -367,6 +402,56 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     LYT.INVOICE_TEMPLATE _scope -> do
       logicData :: FRT.InvoiceContext <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy A.Value) transporterConfig.referralLinkPassword req logicData
+    LYT.DRIVER_CONFIG LYT.MerchantServiceUsageConfigDriver -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "MerchantServiceUsageConfig config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DMSUC.MerchantServiceUsageConfig))
+      let configWrap = LYT.Config defaultConfig Nothing 1
+      logicData :: (LYT.Config DMSUC.MerchantServiceUsageConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DMSUC.MerchantServiceUsageConfig)) transporterConfig.referralLinkPassword req logicData
+    LYT.DRIVER_CONFIG LYT.DocumentVerificationConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "DocumentVerificationConfig config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DDVC.DocumentVerificationConfig))
+      let configWrap = LYT.Config defaultConfig Nothing 1
+      logicData :: (LYT.Config DDVC.DocumentVerificationConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DDVC.DocumentVerificationConfig)) transporterConfig.referralLinkPassword req logicData
+    LYT.DRIVER_CONFIG LYT.GoHomeConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "GoHomeConfig config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DGHC.GoHomeConfig))
+      let configWrap = LYT.Config defaultConfig Nothing 1
+      logicData :: (LYT.Config DGHC.GoHomeConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DGHC.GoHomeConfig)) transporterConfig.referralLinkPassword req logicData
+    LYT.DRIVER_CONFIG LYT.LeaderBoardConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "LeaderBoardConfigs config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DLBC.LeaderBoardConfigs))
+      let configWrap = LYT.Config defaultConfig Nothing 1
+      logicData :: (LYT.Config DLBC.LeaderBoardConfigs) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DLBC.LeaderBoardConfigs)) transporterConfig.referralLinkPassword req logicData
+    LYT.DRIVER_CONFIG LYT.ReminderConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "ReminderConfig config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DRMC.ReminderConfig))
+      let configWrap = LYT.Config defaultConfig Nothing 1
+      logicData :: (LYT.Config DRMC.ReminderConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DRMC.ReminderConfig)) transporterConfig.referralLinkPassword req logicData
+    LYT.DRIVER_CONFIG LYT.ScheduledPayoutConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "ScheduledPayoutConfig config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DSPC.ScheduledPayoutConfig))
+      let configWrap = LYT.Config defaultConfig Nothing 1
+      logicData :: (LYT.Config DSPC.ScheduledPayoutConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DSPC.ScheduledPayoutConfig)) transporterConfig.referralLinkPassword req logicData
+    LYT.DRIVER_CONFIG LYT.TagActionNotificationConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "TagActionNotificationConfig config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTANC.TagActionNotificationConfig))
+      let configWrap = LYT.Config defaultConfig Nothing 1
+      logicData :: (LYT.Config DTANC.TagActionNotificationConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DTANC.TagActionNotificationConfig)) transporterConfig.referralLinkPassword req logicData
+    LYT.DRIVER_CONFIG LYT.FleetOwnerDocumentVerificationConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "FleetOwnerDocumentVerificationConfig config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DFODVC.FleetOwnerDocumentVerificationConfig))
+      let configWrap = LYT.Config defaultConfig Nothing 1
+      logicData :: (LYT.Config DFODVC.FleetOwnerDocumentVerificationConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DFODVC.FleetOwnerDocumentVerificationConfig)) transporterConfig.referralLinkPassword req logicData
+    LYT.DRIVER_CONFIG LYT.MerchantServiceConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "MerchantServiceConfig config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DMSC.MerchantServiceConfig))
+      let configWrap = LYT.Config defaultConfig Nothing 1
+      logicData :: (LYT.Config DMSC.MerchantServiceConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DMSC.MerchantServiceConfig)) transporterConfig.referralLinkPassword req logicData
+    LYT.DRIVER_CONFIG LYT.CoinsConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "CoinsConfig config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DCC.CoinsConfig))
+      let configWrap = LYT.Config defaultConfig Nothing 1
+      logicData :: (LYT.Config DCC.CoinsConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DCC.CoinsConfig)) transporterConfig.referralLinkPassword req logicData
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
 getNammaTagAppDynamicLogic :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Int -> LYT.LogicDomain -> Environment.Flow [LYT.GetLogicsResp]
@@ -572,6 +657,69 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
         LYT.DomainSchemaResp
           { LYT.defaultValue = A.toJSON (def :: FRT.InvoiceContext),
             LYT.schema = toInlinedSchemaValue (Proxy @FRT.InvoiceContext)
+          }
+    LYT.DRIVER_CONFIG LYT.MerchantServiceUsageConfigDriver -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "MerchantServiceUsageConfig default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DMSUC.MerchantServiceUsageConfig))
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
+            LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DMSUC.MerchantServiceUsageConfig))
+          }
+    LYT.DRIVER_CONFIG LYT.DocumentVerificationConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "DocumentVerificationConfig default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DDVC.DocumentVerificationConfig))
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
+            LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DDVC.DocumentVerificationConfig))
+          }
+    LYT.DRIVER_CONFIG LYT.GoHomeConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "GoHomeConfig default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DGHC.GoHomeConfig))
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
+            LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DGHC.GoHomeConfig))
+          }
+    LYT.DRIVER_CONFIG LYT.LeaderBoardConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "LeaderBoardConfigs default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DLBC.LeaderBoardConfigs))
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
+            LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DLBC.LeaderBoardConfigs))
+          }
+    LYT.DRIVER_CONFIG LYT.ReminderConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "ReminderConfig default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DRMC.ReminderConfig))
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
+            LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DRMC.ReminderConfig))
+          }
+    LYT.DRIVER_CONFIG LYT.ScheduledPayoutConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "ScheduledPayoutConfig default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DSPC.ScheduledPayoutConfig))
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
+            LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DSPC.ScheduledPayoutConfig))
+          }
+    LYT.DRIVER_CONFIG LYT.TagActionNotificationConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "TagActionNotificationConfig default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTANC.TagActionNotificationConfig))
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
+            LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DTANC.TagActionNotificationConfig))
+          }
+    LYT.DRIVER_CONFIG LYT.FleetOwnerDocumentVerificationConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "FleetOwnerDocumentVerificationConfig default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DFODVC.FleetOwnerDocumentVerificationConfig))
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
+            LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DFODVC.FleetOwnerDocumentVerificationConfig))
+          }
+    LYT.DRIVER_CONFIG LYT.CoinsConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "CoinsConfig default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DCC.CoinsConfig))
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
+            LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DCC.CoinsConfig))
           }
     _ -> throwError $ InvalidRequest "Domain schema not available"
 

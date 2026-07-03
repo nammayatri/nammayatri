@@ -25,6 +25,8 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.CancellationReason (CancellationReasonDimensions (..))
 import qualified Storage.Queries.CancellationReason as QCR
 
 data CancellationReasonAPIEntity = CancellationReasonAPIEntity
@@ -39,4 +41,4 @@ makeCancellationReasonAPIEntity DCR.CancellationReason {..} =
 
 list :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => DCR.CancellationStage -> m [CancellationReasonAPIEntity]
 list cancStage = do
-  map makeCancellationReasonAPIEntity <$> runInReplica (QCR.findAll cancStage)
+  map makeCancellationReasonAPIEntity <$> getConfig (CancellationReasonDimensions {merchantOperatingCityId = "", cancellationStage = Just cancStage}) (Just (runInReplica (QCR.findAll cancStage)))

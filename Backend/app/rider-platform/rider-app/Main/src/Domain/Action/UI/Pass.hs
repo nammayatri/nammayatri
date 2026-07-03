@@ -68,7 +68,7 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getConfig)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.JourneyLeg.Common.FRFSJourneyUtils as FRFSJourneyUtils
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -90,7 +90,9 @@ import qualified Storage.CachedQueries.Pass as CQPass
 import qualified Storage.CachedQueries.PassCategory as CQPassCategory
 import qualified Storage.CachedQueries.PassType as CQPassType
 import qualified Storage.CachedQueries.Translations as QT
+import Storage.ConfigPilot.Config.PassCategory (PassCategoryDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import qualified Storage.Queries.PassCategoryExtra as QPassCategory
 import qualified Storage.Queries.PassDetails as QPassDetails
 import qualified Storage.Queries.PassExtra as QPass
@@ -118,7 +120,7 @@ getMultimodalPassAvailablePasses (mbPersonId, _merchantId) mbLanguage = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
-  passCategories <- CQPassCategory.findAllByMerchantOperatingCityId person.merchantOperatingCityId
+  passCategories <- getConfig (PassCategoryDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, configId = Nothing}) (Just (CQPassCategory.findAllByMerchantOperatingCityId person.merchantOperatingCityId))
   when (null passCategories) $
     logError $ "getMultimodalPassAvailablePasses: no pass categories for mocId " <> person.merchantOperatingCityId.getId
 
@@ -564,9 +566,9 @@ buildPassAPIEntity mbLanguage person pass = do
 
   let language = fromMaybe Lang.ENGLISH mbLanguage
   let moid = person.merchantOperatingCityId
-  nameTranslation <- QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "name") language
-  benefitTranslation <- QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "benefitDescription") language
-  descriptionTranslation <- QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "description") language
+  nameTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey pass.id "name", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "name") language))
+  benefitTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey pass.id "benefitDescription", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "benefitDescription") language))
+  descriptionTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey pass.id "description", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "description") language))
   let name = maybe pass.name (Just . (.message)) nameTranslation
   let benefitDescription = maybe pass.benefitDescription (.message) benefitTranslation
   let description = maybe pass.description (Just . (.message)) descriptionTranslation
@@ -627,9 +629,9 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
   let language = fromMaybe Lang.ENGLISH mbLanguage
   let passId = Id.cast purchasedPass.id :: Id.Id DPass.Pass
   let moid = purchasedPass.merchantOperatingCityId
-  nameTranslation <- QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey passId "name") language
-  benefitTranslation <- QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey passId "benefitDescription") language
-  descriptionTranslation <- QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey passId "description") language
+  nameTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey passId "name", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey passId "name") language))
+  benefitTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey passId "benefitDescription", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey passId "benefitDescription") language))
+  descriptionTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey passId "description", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey passId "description") language))
 
   let name = maybe purchasedPass.passName (Just . (.message)) nameTranslation
   let benefitDescription = maybe purchasedPass.benefitDescription (.message) benefitTranslation
@@ -694,7 +696,7 @@ buildPurchasedPassAPIEntity ::
 buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = do
   let deviceMismatch = maybe False (\deviceId -> purchasedPass.deviceId /= deviceId && purchasedPass.deviceId /= defaultDashboardDeviceId) mbDeviceId -- Nothing only for dashboard
   passType <- B.runInReplica $ QPassType.findById purchasedPass.passTypeId >>= fromMaybeM (PassTypeNotFound purchasedPass.passTypeId.getId)
-  passCategory <- B.runInReplica $ QPassCategory.findById passType.passCategoryId >>= fromMaybeM (PassCategoryNotFound passType.passCategoryId.getId)
+  passCategory <- getOneConfig (PassCategoryDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, configId = Just passType.passCategoryId.getId}) (Just (maybeToList <$> B.runInReplica (QPassCategory.findById passType.passCategoryId))) >>= fromMaybeM (PassCategoryNotFound passType.passCategoryId.getId)
   futureRenewals <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusStartDateGreaterThan Nothing Nothing purchasedPass.id DPurchasedPass.PreBooked purchasedPass.endDate
 
   let tripsLeft = case purchasedPass.maxValidTrips of
@@ -1310,13 +1312,18 @@ getMultimodalPassTransactions ::
     ) ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Environment.Flow [PassAPI.PurchasedPassTransactionAPIEntity]
   )
-getMultimodalPassTransactions (mbCallerPersonId, _) mbLimitParam mbOffsetParam = do
+getMultimodalPassTransactions (mbCallerPersonId, _) mbLimitParam mbOffsetParam mbStatusParam = do
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
   let limit = fromMaybe 10 mbLimitParam
   let offset = fromMaybe 0 mbOffsetParam
-  allPurchasedPassTransactions <- QPurchasedPassPayment.findAllWithPersonId (Just limit) (Just offset) personId
+  -- status is a comma-separated list (e.g. "Active,PreBooked"); unparseable tokens are dropped.
+  let statuses = maybe [] (mapMaybe (readMaybe . T.unpack . T.strip) . T.splitOn ",") mbStatusParam
+  allPurchasedPassTransactions <- case statuses of
+    [] -> QPurchasedPassPayment.findAllWithPersonId (Just limit) (Just offset) personId
+    _ -> QPurchasedPassPayment.findAllByPersonIdAndStatuses (Just limit) (Just offset) personId statuses
   return $ map buildPurchasedPassPaymentAPIEntity allPurchasedPassTransactions
 
 buildPurchasedPassPaymentAPIEntity :: DPurchasedPassPayment.PurchasedPassPayment -> PassAPI.PurchasedPassTransactionAPIEntity

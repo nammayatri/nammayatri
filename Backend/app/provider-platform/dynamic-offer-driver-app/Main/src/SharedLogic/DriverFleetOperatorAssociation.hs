@@ -213,15 +213,16 @@ makeDriverOperatorAssociation ::
   Id DP.Person ->
   Text ->
   Maybe UTCTime ->
+  Bool ->
   m DDOA.DriverOperatorAssociation
-makeDriverOperatorAssociation merchantId merchantOperatingCityId driverId operatorId end = do
+makeDriverOperatorAssociation merchantId merchantOperatingCityId driverId operatorId end isActive = do
   id <- generateGUID
   now <- getCurrentTime
   return $
     DDOA.DriverOperatorAssociation
       { id = id,
         driverId = driverId,
-        isActive = True,
+        isActive = isActive,
         operatorId = operatorId,
         associatedOn = Just now,
         associatedTill = end,

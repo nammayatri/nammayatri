@@ -54,6 +54,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Error
@@ -192,7 +193,7 @@ snapToRoadWithFallback rectifyDistantPointsFailureUsing _merchantId merchantOper
 
     getProviderConfig provider = do
       merchantMapsServiceConfig <-
-        QOMSC.findByServiceAndCity (DOSC.MapsService provider) merchantOperatingCityId
+        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = Nothing, serviceName = Just (DOSC.MapsService provider)}) (Just (maybeToList <$> QOMSC.findByServiceAndCity (DOSC.MapsService provider) merchantOperatingCityId))
           >>= fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCityId.getId "Maps" (show provider))
       case merchantMapsServiceConfig.serviceConfig of
         DOSC.MapsServiceConfig msc -> pure msc
@@ -209,7 +210,7 @@ getServiceConfigForRectifyingSnapToRoadDistantPointsFailure ::
 getServiceConfigForRectifyingSnapToRoadDistantPointsFailure _merchantId merchantOpCityId = do
   orgMapsConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   orgMapsServiceConfig <-
-    QOMSC.findByServiceAndCity (DOSC.MapsService orgMapsConfig.rectifyDistantPointsFailure) merchantOpCityId
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DOSC.MapsService orgMapsConfig.rectifyDistantPointsFailure)}) (Just (maybeToList <$> QOMSC.findByServiceAndCity (DOSC.MapsService orgMapsConfig.rectifyDistantPointsFailure) merchantOpCityId))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Maps" (show orgMapsConfig.rectifyDistantPointsFailure))
   case orgMapsServiceConfig.serviceConfig of
     DOSC.MapsServiceConfig msc -> return msc
@@ -227,7 +228,7 @@ runWithServiceConfig ::
 runWithServiceConfig func getCfg _merchantId merchantOpCityId entityId req = do
   orgMapsConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   orgMapsServiceConfig <-
-    QOMSC.findByServiceAndCity (DOSC.MapsService $ getCfg orgMapsConfig) merchantOpCityId
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DOSC.MapsService $ getCfg orgMapsConfig)}) (Just (maybeToList <$> QOMSC.findByServiceAndCity (DOSC.MapsService $ getCfg orgMapsConfig) merchantOpCityId))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Maps" (show $ getCfg orgMapsConfig))
   case orgMapsServiceConfig.serviceConfig of
     DOSC.MapsServiceConfig msc -> func entityId msc req

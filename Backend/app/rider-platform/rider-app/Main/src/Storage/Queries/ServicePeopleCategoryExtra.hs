@@ -8,8 +8,10 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.TimeBound
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Sequelize as Se
 import qualified Storage.Beam.ServicePeopleCategory as BeamR
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Storage.Queries.OrphanInstances.ServicePeopleCategory ()
 import qualified Storage.Queries.RiderConfig as QRiderConfig
 
@@ -17,7 +19,9 @@ import qualified Storage.Queries.RiderConfig as QRiderConfig
 findServicePeopleCategoryById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id ServicePeopleCategory -> Day -> m (Maybe ServicePeopleCategory)
 findServicePeopleCategoryById id day = do
   servicePeopleCategories :: [ServicePeopleCategory] <- findAllWithKV [Se.Is BeamR.id $ Se.Eq $ getId id]
-  mbRiderConfig <- maybe (pure Nothing) QRiderConfig.findByMerchantOperatingCityId ((.merchantOperatingCityId) =<< listToMaybe servicePeopleCategories)
+  mbRiderConfig <- case (.merchantOperatingCityId) =<< listToMaybe servicePeopleCategories of
+    Nothing -> pure Nothing
+    Just mocId -> getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (QRiderConfig.findByMerchantOperatingCityId mocId))
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
   let currentLocalTime = UTCTime day $ secondsToDiffTime (fromIntegral timeDiffFromUtc.getSeconds)
   now <- getLocalCurrentTime timeDiffFromUtc

@@ -13,7 +13,9 @@ import qualified Kernel.External.Types as Language
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import qualified Storage.Queries.MessageDictionary as QMD
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -61,7 +63,7 @@ getRideGetCancellationReasons (mbDriverId, _merchantId, _merchantOpCityId) rideI
 
   -- For each message key, look up the translation in driver's language (falls back to ENGLISH)
   forM visibleEntries $ \entry -> do
-    mbTranslation <- QTranslation.findByErrorAndLanguage entry.messageKey driverLanguage
+    mbTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = entry.messageKey, language = Just driverLanguage}) (Just (QTranslation.findByErrorAndLanguage entry.messageKey driverLanguage))
     let reasonMessage = maybe entry.messageKey (.message) mbTranslation
     pure $
       API.Types.UI.CancellationReasonLookup.CancellationReasonResp

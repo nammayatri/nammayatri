@@ -20,6 +20,7 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Queries.GateInfo as QGateInfo
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Queries.SpecialLocationPriority as QSpecialLocationPriority
@@ -28,6 +29,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import Storage.Beam.SpecialZone ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.FareProduct as QFareProduct
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
 data FareProducts = FareProducts
   { fareProducts :: [DFareProduct.FareProduct],
@@ -204,7 +206,7 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
 getBoundedFareProduct :: (CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> [DFareProduct.SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> m (Maybe DFareProduct.FareProduct)
 getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTier area = do
   fareProducts <- QFareProduct.findAllBoundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area
-  mbTransporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbTransporterConfig
   currentIstTime <- getLocalCurrentTime timeDiffFromUtc
   case listToMaybe (DTB.findBoundedDomain fareProducts currentIstTime) of

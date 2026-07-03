@@ -147,7 +147,11 @@ import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CQMP
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
+import Storage.ConfigPilot.Config.IssueConfig (IssueConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantPaymentMethod (MerchantPaymentMethodDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.BusinessHour as SQBH
@@ -237,7 +241,7 @@ getMerchantServiceUsageConfig ::
   Flow Common.ServiceUsageConfigRes
 getMerchantServiceUsageConfig merchantShortId city = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
-  config <- CQMSUC.findByMerchantOperatingCityId merchantOperatingCity.id >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCity.id.getId)
+  config <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCity.id)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCity.id.getId)
   pure $ mkServiceUsageConfigRes config
 
 mkServiceUsageConfigRes :: DMSUC.MerchantServiceUsageConfig -> Common.ServiceUsageConfigRes
@@ -573,27 +577,27 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- merchant payment method
   mbMerchantPaymentMethods <-
-    CQMPM.findAllByMerchantOperatingCityId newMerchantOperatingCityId >>= \case
+    getConfig (MerchantPaymentMethodDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, configId = Nothing}) (Just (CQMPM.findAllByMerchantOperatingCityId newMerchantOperatingCityId)) >>= \case
       [] -> do
-        merchantPaymentMethods <- CQMPM.findAllByMerchantOperatingCityId baseOperatingCityId
+        merchantPaymentMethods <- getConfig (MerchantPaymentMethodDimensions {merchantOperatingCityId = baseOperatingCityId.getId, configId = Nothing}) (Just (CQMPM.findAllByMerchantOperatingCityId baseOperatingCityId))
         newMerchantPaymentMethods <- mapM (buildMerchantPaymentMethod newMerchantId newMerchantOperatingCityId now) merchantPaymentMethods
         return $ Just newMerchantPaymentMethods
       _ -> return Nothing
 
   -- merchant service usage config
   mbMerchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOperatingCityId newMerchantOperatingCityId >>= \case
+    getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId newMerchantOperatingCityId)) >>= \case
       Nothing -> do
-        merchantServiceUsageConfig <- CQMSUC.findByMerchantOperatingCityId baseOperatingCityId >>= fromMaybeM (InvalidRequest "Merchant Service Usage Config not found")
+        merchantServiceUsageConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId baseOperatingCityId)) >>= fromMaybeM (InvalidRequest "Merchant Service Usage Config not found")
         let newMerchantServiceUsageConfig = buildMerchantServiceUsageConfig newMerchantId newMerchantOperatingCityId now merchantServiceUsageConfig
         return $ Just newMerchantServiceUsageConfig
       _ -> return Nothing
 
   -- merchant service config
   mbMerchantServiceConfig <-
-    SQMSC.findAllByMerchantOperatingCityId newMerchantOperatingCityId >>= \case
+    getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, merchantId = newMerchantId.getId, serviceName = Nothing}) (Just (SQMSC.findAllByMerchantOperatingCityId newMerchantOperatingCityId)) >>= \case
       [] -> do
-        merchantServiceConfigs <- SQMSC.findAllByMerchantOperatingCityId baseOperatingCityId
+        merchantServiceConfigs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, merchantId = baseRequestedCityMerchant.id.getId, serviceName = Nothing}) (Just (SQMSC.findAllByMerchantOperatingCityId baseOperatingCityId))
         let newMerchantServiceConfigs = map (buildMerchantServiceConfigs newMerchantId newMerchantOperatingCityId now) merchantServiceConfigs
         return $ Just newMerchantServiceConfigs
       _ -> return Nothing
@@ -633,17 +637,17 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- exophone
   mbExophone <-
-    CQExophone.findAllByMerchantOperatingCityId newMerchantOperatingCityId >>= \case
+    getConfig (ExophoneDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing}) (Just (CQExophone.findAllByMerchantOperatingCityId newMerchantOperatingCityId)) >>= \case
       [] -> do
-        exophones <- CQExophone.findAllByMerchantOperatingCityId baseOperatingCityId
+        exophones <- getConfig (ExophoneDimensions {merchantOperatingCityId = baseOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing}) (Just (CQExophone.findAllByMerchantOperatingCityId baseOperatingCityId))
         return $ Just exophones
       _ -> return Nothing
 
   -- issue config
   mbIssueConfig <-
-    CQIssueConfig.findByMerchantOpCityId (cast newMerchantOperatingCityId) ICommon.CUSTOMER >>= \case
+    getConfig (IssueConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, identifier = show ICommon.CUSTOMER}) (Just (CQIssueConfig.findByMerchantOpCityId (cast newMerchantOperatingCityId) ICommon.CUSTOMER)) >>= \case
       Nothing -> do
-        issueConfig <- CQIssueConfig.findByMerchantOpCityId (cast baseOperatingCityId) ICommon.CUSTOMER >>= fromMaybeM (InvalidRequest "Issue Config not found")
+        issueConfig <- getConfig (IssueConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, identifier = show ICommon.CUSTOMER}) (Just (CQIssueConfig.findByMerchantOpCityId (cast baseOperatingCityId) ICommon.CUSTOMER)) >>= fromMaybeM (InvalidRequest "Issue Config not found")
         newIssueConfig <- buildIssueConfig newMerchantId newMerchantOperatingCityId now issueConfig
         return $ Just newIssueConfig
       _ -> return Nothing
@@ -784,7 +788,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         QRC.clearCache newMerchantOperatingCityId
         CADLR.clearDomainCache (cast newMerchantOperatingCityId) LYT.CANCELLATION_REASONS
         CQIssueConfig.clearIssueConfigCache (cast newMerchantOperatingCityId) ICommon.CUSTOMER
-        exoPhone <- CQExophone.findAllByMerchantOperatingCityId newMerchantOperatingCityId
+        exoPhone <- getConfig (ExophoneDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing}) (Just (CQExophone.findAllByMerchantOperatingCityId newMerchantOperatingCityId))
         CQExophone.clearCache newMerchantOperatingCityId exoPhone
         whenJust mbAddCityReq $ \_ -> Redis.del $ cacheRegistryKey <> lookupRequestToRedisKey lookupReq
     )
