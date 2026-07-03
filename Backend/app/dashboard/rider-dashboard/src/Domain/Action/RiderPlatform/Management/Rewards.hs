@@ -11,6 +11,7 @@ module Domain.Action.RiderPlatform.Management.Rewards
     getRewardsCampaigns,
     getRewardsCampaignStats,
     postRewardsTriggerEval,
+    postRewardsCohortValidateEligibility,
   )
 where
 
@@ -110,3 +111,9 @@ postRewardsTriggerEval merchantShortId opCity apiTokenInfo personId = do
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   SharedLogic.Transaction.withTransactionStoring transaction $
     API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rewardsDSL.postRewardsTriggerEval) personId
+
+-- Non-mutating validation/eval — no transaction storing.
+postRewardsCohortValidateEligibility :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Rewards.ValidateCohortEligibilityReq -> Environment.Flow API.Types.RiderPlatform.Management.Rewards.ValidateCohortEligibilityResp)
+postRewardsCohortValidateEligibility merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rewardsDSL.postRewardsCohortValidateEligibility) req

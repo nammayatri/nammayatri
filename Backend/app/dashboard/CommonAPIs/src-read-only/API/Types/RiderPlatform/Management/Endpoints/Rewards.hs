@@ -80,7 +80,8 @@ data CreateCohortReq = CreateCohortReq
     rewardTitle :: Kernel.Prelude.Text,
     rewardImageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     couponValidityDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    presentation :: Kernel.Prelude.Maybe Data.Aeson.Value
+    presentation :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    maxUnlocksPerCohort :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -121,7 +122,8 @@ data EditCohortReq = EditCohortReq
     rewardTitle :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rewardImageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     couponValidityDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    presentation :: Kernel.Prelude.Maybe Data.Aeson.Value
+    presentation :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    maxUnlocksPerCohort :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -166,8 +168,21 @@ data RewardCohort = RewardCohort
     rewardImageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     couponValidityDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     presentation :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    maxUnlocksPerCohort :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RewardContext = RewardContext
+  { ridesLast1d :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    ridesLast3d :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    ridesLast7d :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    ridesLast30d :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    ridesLast90d :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    hasTakenValidRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isValidRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -183,7 +198,22 @@ data UploadCodesResp = UploadCodesResp {uploadBatchId :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("rewards" :> (PostRewardsCampaign :<|> PutRewardsCampaign :<|> PostRewardsCampaignCohort :<|> PutRewardsCampaignCohort :<|> PostRewardsCampaignCohortCodes :<|> PostRewardsCampaignStatus :<|> GetRewardsCampaign :<|> GetRewardsCampaigns :<|> GetRewardsCampaignStats :<|> PostRewardsTriggerEval))
+data ValidateCohortEligibilityReq = ValidateCohortEligibilityReq
+  { cohortId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id RewardCohort),
+    eligibilityJsonLogic :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    context :: Kernel.Prelude.Maybe RewardContext
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets ValidateCohortEligibilityReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data ValidateCohortEligibilityResp = ValidateCohortEligibilityResp {eligible :: Kernel.Prelude.Bool, result :: Data.Aeson.Value, errorMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text, usedStoredLogic :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+type API = ("rewards" :> (PostRewardsCampaign :<|> PutRewardsCampaign :<|> PostRewardsCampaignCohort :<|> PutRewardsCampaignCohort :<|> PostRewardsCampaignCohortCodes :<|> PostRewardsCampaignStatus :<|> GetRewardsCampaign :<|> GetRewardsCampaigns :<|> GetRewardsCampaignStats :<|> PostRewardsTriggerEval :<|> PostRewardsCohortValidateEligibility))
 
 type PostRewardsCampaign = ("campaign" :> ReqBody ('[JSON]) CreateCampaignReq :> Post ('[JSON]) CreateCampaignResp)
 
@@ -228,6 +258,8 @@ type GetRewardsCampaignStats = ("campaign" :> Capture "campaignId" (Kernel.Types
 
 type PostRewardsTriggerEval = ("triggerEval" :> Capture "personId" (Kernel.Types.Id.Id Dashboard.Common.Person) :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
+type PostRewardsCohortValidateEligibility = ("cohort" :> "validateEligibility" :> ReqBody ('[JSON]) ValidateCohortEligibilityReq :> Post ('[JSON]) ValidateCohortEligibilityResp)
+
 data RewardsAPIs = RewardsAPIs
   { postRewardsCampaign :: (CreateCampaignReq -> EulerHS.Types.EulerClient CreateCampaignResp),
     putRewardsCampaign :: (Kernel.Types.Id.Id RewardCampaign -> EditCampaignReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
@@ -245,13 +277,14 @@ data RewardsAPIs = RewardsAPIs
     getRewardsCampaign :: (Kernel.Types.Id.Id RewardCampaign -> EulerHS.Types.EulerClient CampaignDetails),
     getRewardsCampaigns :: (EulerHS.Types.EulerClient [CampaignDetails]),
     getRewardsCampaignStats :: (Kernel.Types.Id.Id RewardCampaign -> EulerHS.Types.EulerClient CampaignStats),
-    postRewardsTriggerEval :: (Kernel.Types.Id.Id Dashboard.Common.Person -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
+    postRewardsTriggerEval :: (Kernel.Types.Id.Id Dashboard.Common.Person -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postRewardsCohortValidateEligibility :: (ValidateCohortEligibilityReq -> EulerHS.Types.EulerClient ValidateCohortEligibilityResp)
   }
 
 mkRewardsAPIs :: (Client EulerHS.Types.EulerClient API -> RewardsAPIs)
 mkRewardsAPIs rewardsClient = (RewardsAPIs {..})
   where
-    postRewardsCampaign :<|> putRewardsCampaign :<|> postRewardsCampaignCohort :<|> putRewardsCampaignCohort :<|> postRewardsCampaignCohortCodes :<|> postRewardsCampaignStatus :<|> getRewardsCampaign :<|> getRewardsCampaigns :<|> getRewardsCampaignStats :<|> postRewardsTriggerEval = rewardsClient
+    postRewardsCampaign :<|> putRewardsCampaign :<|> postRewardsCampaignCohort :<|> putRewardsCampaignCohort :<|> postRewardsCampaignCohortCodes :<|> postRewardsCampaignStatus :<|> getRewardsCampaign :<|> getRewardsCampaigns :<|> getRewardsCampaignStats :<|> postRewardsTriggerEval :<|> postRewardsCohortValidateEligibility = rewardsClient
 
 data RewardsUserActionType
   = POST_REWARDS_CAMPAIGN
@@ -264,6 +297,7 @@ data RewardsUserActionType
   | GET_REWARDS_CAMPAIGNS
   | GET_REWARDS_CAMPAIGN_STATS
   | POST_REWARDS_TRIGGER_EVAL
+  | POST_REWARDS_COHORT_VALIDATE_ELIGIBILITY
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

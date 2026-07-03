@@ -90,7 +90,8 @@ evaluateRewardsForRider riderId moCityId completedAt mbIsValidRide = do
         existing <- QRU.findByPersonAndCampaign riderId campaign.id
         let existingNonReclaimed = [u.cohortId | u <- existing, u.status /= DRU.Reclaimed]
         matched <- Eval.evaluateCohorts context cohorts
-        let toUnlock = filter (`notElem` existingNonReclaimed) matched
+        let isRepeatableCohortId cid = maybe False (isJust . (.maxUnlocksPerCohort)) (find (\c -> c.id == cid) cohorts)
+        let toUnlock = filter (\cid -> cid `notElem` existingNonReclaimed || isRepeatableCohortId cid) matched
         when (not (null cohorts)) $
           logInfo $
             "rewards.eval.campaign riderId="
@@ -107,66 +108,86 @@ evaluateRewardsForRider riderId moCityId completedAt mbIsValidRide = do
                 case filter (\c -> c.id == cohortId) cohorts of
                   (x : _) -> pure x
                   _ -> throwError $ InternalError "Consumer: matched cohort not in cohorts list"
-              mCode <- Coupon.claimCoupon campaign cohort riderId
-              case mCode of
+              now <- getCurrentTime
+              uid <- generateGUID
+              let candidate =
+                    DRU.RewardUnlock
+                      { id = uid,
+                        personId = riderId,
+                        campaignId = campaign.id,
+                        cohortId = cohortId,
+                        merchantId = Just campaign.merchantId,
+                        merchantOperatingCityId = Just campaign.merchantOperatingCityId,
+                        unlockedAt = now,
+                        couponCode = Nothing,
+                        couponSource = campaign.couponSourceType,
+                        couponValidTill =
+                          case cohort.couponValidityDays of
+                            Just days -> Just $ addUTCTime (fromIntegral (days * 86400)) now
+                            Nothing -> campaign.endsAt,
+                        status = DRU.Active,
+                        unlockSeq = Nothing,
+                        viewedAt = Nothing,
+                        claimedAt = Nothing,
+                        redeemedAt = Nothing,
+                        reclaimedAt = Nothing,
+                        createdAt = now,
+                        updatedAt = now
+                      }
+              -- Gate on nextUnlockDecision (pure, no I/O) before claiming a
+              -- coupon: a repeatable cohort that has already hit its cap would
+              -- otherwise claim (and immediately have to return) a coupon on
+              -- every matching evaluation. createNextUnlock still re-checks
+              -- and inserts, as the race-safety backstop against the unique
+              -- index.
+              case QRUE.nextUnlockDecision cohort existing candidate of
                 Nothing -> do
-                  logInfo $
-                    "rewards.claim.empty riderId="
-                      <> riderId.getId
-                      <> " campaignId="
-                      <> campaign.id.getId
-                      <> " cohortId="
-                      <> cohortId.getId
-                      <> " couponSource="
-                      <> show campaign.couponSourceType
+                  whenJust cohort.maxUnlocksPerCohort $ \n ->
+                    logInfo $
+                      "rewards.unlock.cap_reached riderId="
+                        <> riderId.getId
+                        <> " cohortId="
+                        <> cohortId.getId
+                        <> " maxUnlocksPerCohort="
+                        <> show n
                   pure sentSoFar
-                Just code -> do
-                  now <- getCurrentTime
-                  uid <- generateGUID
-                  let unlock =
-                        DRU.RewardUnlock
-                          { id = uid,
-                            personId = riderId,
-                            campaignId = campaign.id,
-                            cohortId = cohortId,
-                            merchantId = Just campaign.merchantId,
-                            merchantOperatingCityId = Just campaign.merchantOperatingCityId,
-                            unlockedAt = now,
-                            couponCode = Just code,
-                            couponSource = campaign.couponSourceType,
-                            couponValidTill =
-                              case cohort.couponValidityDays of
-                                Just days -> Just $ addUTCTime (fromIntegral (days * 86400)) now
-                                Nothing -> campaign.endsAt,
-                            status = DRU.Active,
-                            viewedAt = Nothing,
-                            claimedAt = Nothing,
-                            redeemedAt = Nothing,
-                            reclaimedAt = Nothing,
-                            createdAt = now,
-                            updatedAt = now
-                          }
-                  inserted <- QRUE.createIfNoActive unlock
-                  if inserted
-                    then do
-                      Coupon.finalizeClaim campaign cohort code
-                      if sentSoFar < maxPushesPerMessage
-                        then do
-                          sendUnlockPush riderId campaign cohort code
-                          pure (sentSoFar + 1)
-                        else pure sentSoFar
-                    else do
+                Just _ -> do
+                  mCode <- Coupon.claimCoupon campaign cohort riderId
+                  case mCode of
+                    Nothing -> do
                       logInfo $
-                        "rewards.unlock.skipped.duplicate riderId="
+                        "rewards.claim.empty riderId="
                           <> riderId.getId
                           <> " campaignId="
                           <> campaign.id.getId
                           <> " cohortId="
                           <> cohortId.getId
-                      when (campaign.couponSourceType == DRCmp.Pool) $ do
-                        Pool.pushBackToPool campaign.id cohort.id code
-                        Pool.removeFromInflight campaign.id cohort.id code
+                          <> " couponSource="
+                          <> show campaign.couponSourceType
                       pure sentSoFar
+                    Just code -> do
+                      let unlock = candidate {DRU.couponCode = Just code}
+                      inserted <- QRUE.createNextUnlock cohort existing unlock
+                      if inserted
+                        then do
+                          Coupon.finalizeClaim campaign cohort code
+                          if sentSoFar < maxPushesPerMessage
+                            then do
+                              sendUnlockPush riderId campaign cohort code
+                              pure (sentSoFar + 1)
+                            else pure sentSoFar
+                        else do
+                          logInfo $
+                            "rewards.unlock.skipped.duplicate riderId="
+                              <> riderId.getId
+                              <> " campaignId="
+                              <> campaign.id.getId
+                              <> " cohortId="
+                              <> cohortId.getId
+                          when (campaign.couponSourceType == DRCmp.Pool) $ do
+                            Pool.pushBackToPool campaign.id cohort.id code
+                            Pool.removeFromInflight campaign.id cohort.id code
+                          pure sentSoFar
           )
           pushesSoFar
           toUnlock
