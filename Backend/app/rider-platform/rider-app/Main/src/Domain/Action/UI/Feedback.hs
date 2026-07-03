@@ -162,7 +162,7 @@ feedback request personId = do
       createTicketResp <- withTryCatch "createTicket:feedback" $ Ticket.createTicket merchant.id merchantOperatingCityId ticketReq
       case createTicketResp of
         Left err -> logTagError "Create Ticket API failed - " $ show err
-        Right resp -> logTagInfo "Created Ticket for Customer L0 Feedback : TicketId - " resp.ticketId
+        Right (primaryResp, _) -> logTagInfo "Created Ticket for Customer L0 Feedback : TicketId - " primaryResp.ticketId
       slackConfig <- asks (.slackNotificationConfig)
       desc <- generateSlackMessage person ride unencryptedMobileNumber (T.pack $ show city) request.rating feedbackDetails
       let message = createJsonMessage desc

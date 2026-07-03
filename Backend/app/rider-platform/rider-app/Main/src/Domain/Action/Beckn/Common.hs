@@ -836,7 +836,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
                     withTryCatch "createTicket:autoConvertSos" $
                       Ticket.createTicket person.merchantId person.merchantOperatingCityId $
                         SIVR.mkTicket person phoneNumber [trackLink] (Just rideInfo) SafetyDSos.SafetyFlow riderConfig.kaptureConfig.disposition kaptureQueue
-                  whenJust (either (const Nothing) (Just . (.ticketId)) ticketResponse) $ \newTicketId ->
+                  whenJust (either (const Nothing) (Just . (.ticketId) . fst) ticketResponse) $ \newTicketId ->
                     void $ SafetySos.updateSosTicketId sos (Just newTicketId)
           Just SafetyDSos.LiveTracking -> do
             SafetyQSos.updateStatus SafetyDSos.Resolved sos.id

@@ -2,6 +2,9 @@
 
 module IssueManagement.Storage.Queries.Issue.IssueReport where
 
+import qualified Data.Aeson as A
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Text.Encoding as TE
 import qualified Data.Time as T
 import IssueManagement.Common
 import IssueManagement.Domain.Types.Issue.IssueCategory
@@ -118,6 +121,30 @@ updateTicketId issueId ticketId = do
     [Set BeamIR.ticketId (Just ticketId), Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
     [Is BeamIR.id (Eq $ getId issueId)]
 
+-- | Persists the primary ticketId and (when the merchant fans out to
+-- additional providers) each secondary provider's ticketId in one write.
+-- 'additionalTicketIds' is stored as a JSON blob so we can round-trip it via
+-- Aeson without adding beam typeclass instances for the record.
+updateTicketIds :: BeamFlow m r => Id IssueReport -> Text -> Maybe [AdditionalTicketId] -> m ()
+updateTicketIds issueId ticketId additionalTicketIds = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Set BeamIR.ticketId (Just ticketId),
+      Set BeamIR.additionalTicketIds (encodeAdditionalTicketIds additionalTicketIds),
+      Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now
+    ]
+    [Is BeamIR.id (Eq $ getId issueId)]
+
+encodeAdditionalTicketIds :: Maybe [AdditionalTicketId] -> Maybe Text
+encodeAdditionalTicketIds = \case
+  Nothing -> Nothing
+  Just [] -> Nothing
+  Just xs -> Just . TE.decodeUtf8 . BSL.toStrict . A.encode $ xs
+
+decodeAdditionalTicketIds :: Maybe Text -> Maybe [AdditionalTicketId]
+decodeAdditionalTicketIds =
+  (>>= A.decode . BSL.fromStrict . TE.encodeUtf8)
+
 findByTicketId :: BeamFlow m r => Text -> m (Maybe IssueReport)
 findByTicketId ticketId = findOneWithKV [Is BeamIR.ticketId $ Eq (Just ticketId)]
 
@@ -152,6 +179,7 @@ instance FromTType' BeamIR.IssueReport IssueReport where
             becknIssueId = becknIssueId,
             reopenedCount = fromMaybe 0 reopenedCount,
             customerResponse = customerResponse,
+            additionalTicketIds = decodeAdditionalTicketIds additionalTicketIds,
             ..
           }
 
@@ -173,6 +201,7 @@ instance ToTType' BeamIR.IssueReport IssueReport where
         BeamIR.deleted = deleted,
         BeamIR.mediaFiles = getId <$> mediaFiles,
         BeamIR.ticketId = ticketId,
+        BeamIR.additionalTicketIds = encodeAdditionalTicketIds additionalTicketIds,
         BeamIR.createdAt = T.utcToLocalTime T.utc createdAt,
         BeamIR.updatedAt = T.utcToLocalTime T.utc updatedAt,
         BeamIR.chats = chats,
