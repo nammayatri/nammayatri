@@ -21,10 +21,14 @@ import qualified Domain.Types.RiderPreferredOption as DRPO
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.Trip as DTrip
 import Kernel.External.Maps
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context (City)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
+import Kernel.Utils.Common (CacheFlow)
+import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
+import qualified SharedLogic.LocationAddressEnrichment as LocationAddressEnrichment
 import Storage.Beam.SystemConfigs ()
 import qualified Tools.JSON as J
 import qualified Tools.Maps as Maps
@@ -246,12 +250,13 @@ data SearchReqLocation = SearchReqLocation
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 buildSearchReqLoc ::
-  MonadFlow m =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, ServiceFlow m r, EventStreamFlow m r) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   SearchReqLocation ->
   m Location.Location
 buildSearchReqLoc merchantId merchantOperatingCityId SearchReqLocation {..} = do
+  enrichedAddress <- LocationAddressEnrichment.enrichLocationAddress merchantId merchantOperatingCityId gps address
   now <- getCurrentTime
   locId <- generateGUID
   return
@@ -259,7 +264,7 @@ buildSearchReqLoc merchantId merchantOperatingCityId SearchReqLocation {..} = do
       { id = locId,
         lat = gps.lat,
         lon = gps.lon,
-        address = address,
+        address = enrichedAddress,
         merchantId = Just merchantId,
         merchantOperatingCityId = Just merchantOperatingCityId,
         createdAt = now,
