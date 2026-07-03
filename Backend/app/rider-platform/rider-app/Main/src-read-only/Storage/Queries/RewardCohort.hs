@@ -41,6 +41,7 @@ updateByPrimaryKey (Domain.Types.RewardCohort.RewardCohort {..}) = do
       Se.Set Beam.description description,
       Se.Set Beam.displayOrder displayOrder,
       Se.Set Beam.eligibilityJsonLogic (Kernel.Prelude.identity eligibilityJsonLogic),
+      Se.Set Beam.maxUnlocksPerCohort maxUnlocksPerCohort,
       Se.Set Beam.name name,
       Se.Set Beam.presentation (Kernel.Prelude.identity presentation),
       Se.Set Beam.rewardImageUrl rewardImageUrl,
