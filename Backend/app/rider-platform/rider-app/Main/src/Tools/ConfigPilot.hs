@@ -53,7 +53,6 @@ import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.HotSpotConfig as SQHSC
-import qualified Storage.Queries.IntegratedBPPConfig as SQIBC
 import qualified Storage.Queries.MerchantPaymentMethod as SQMPM
 import qualified Storage.Queries.MerchantServiceConfig as SQMSC
 import qualified Storage.Queries.PassCategory as SQPC
@@ -151,8 +150,6 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       handleConfigUpdateViaJson SQMPM.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.MerchantPaymentMethod) >> invalidateConfigInMem LYTU.MerchantPaymentMethod) SQMPM.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.RIDER_CONFIG LYTU.Translation -> do
       handleConfigUpdateViaJson SQTL.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.Translation) >> invalidateConfigInMem LYTU.Translation) SQTL.updateByPrimaryKey (cast merchantOpCityId)
-    LYTU.RIDER_CONFIG LYTU.IntegratedBPPConfig -> do
-      handleConfigUpdateViaJson SQIBC.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.IntegratedBPPConfig) >> invalidateConfigInMem LYTU.IntegratedBPPConfig) SQIBC.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.RIDER_CONFIG LYTU.IssueConfig -> do
       handleConfigUpdateViaJson (SQIC.findAllByMerchantOperatingCityId . cast) (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.IssueConfig) >> invalidateConfigInMem LYTU.IssueConfig) SQIC.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.RIDER_CONFIG LYTU.PassCategory -> do

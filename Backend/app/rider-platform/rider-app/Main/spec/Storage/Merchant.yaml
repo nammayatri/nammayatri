@@ -460,7 +460,7 @@ MerchantServiceUsageConfig:
     insuranceService: "'Acko'"
 
 MerchantPaymentMethod:
-  derives: "Generic,Show,'UsageSafety"
+  derives: "Generic,Show,ToJSON,FromJSON,ToSchema"
   fields:
     id: Id MerchantPaymentMethod
     merchantId: Id Merchant

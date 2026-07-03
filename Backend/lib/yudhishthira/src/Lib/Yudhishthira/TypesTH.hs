@@ -193,6 +193,11 @@ generateGenericDefaultDefaultForType fieldType = do
       fieldGenericDefaults <- getFieldDefaultValues typeOfConstructor
       let fieldDefaultValues = fst fieldGenericDefaults
       pure (fieldDefaultValues, snd fieldGenericDefaults)
+    -- List of ids, e.g. `[Id IssueMessage]`. The element is an applied `Id X`, not a bare
+    -- `ConT`, so it isn't caught by the plain `[X]` case below; default it to a single-id list.
+    AppT ListT (AppT (ConT idCon) (ConT _)) | idCon == ''Kernel.Types.Id.Id -> do
+      fieldGenericDefaults <- getFieldDefaultValues idCon
+      pure (ListE [fst fieldGenericDefaults], snd fieldGenericDefaults)
     AppT ListT (ConT rawFieldType) -> do
       fieldGenericDefaults <- getFieldDefaultValues rawFieldType
       let fieldDefaultValues = fst fieldGenericDefaults

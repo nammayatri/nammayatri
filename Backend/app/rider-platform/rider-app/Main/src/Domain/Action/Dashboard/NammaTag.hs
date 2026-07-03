@@ -65,7 +65,6 @@ import qualified Domain.Types.CancellationReason as DCR
 import qualified Domain.Types.Exophone as DTE
 import qualified Domain.Types.FRFSConfig as DFRFS
 import qualified Domain.Types.HotSpotConfig as DHSC
-import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified "beckn-spec" Domain.Types.Invoice as DTI
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantConfig as DTM
@@ -174,18 +173,11 @@ $(YTH.generateGenericDefault ''DFRFS.FRFSConfig)
 $(YTH.generateGenericDefault ''DTBC.BecknConfig)
 $(YTH.generateGenericDefault ''DTE.Exophone)
 $(YTH.generateGenericDefault ''DHSC.HotSpotConfig)
-
-instance YTH.GenericDefaults DMPM.MerchantPaymentMethod where
-  genDef _ = []
-
+$(YTH.generateGenericDefault ''DMPM.MerchantPaymentMethod)
 $(YTH.generateGenericDefault ''DCR.CancellationReason)
 $(YTH.generateGenericDefault ''DTL.Translations)
 
-instance YTH.GenericDefaults DIBC.IntegratedBPPConfig where
-  genDef _ = []
-
-instance YTH.GenericDefaults DIC.IssueConfig where
-  genDef _ = []
+$(YTH.generateGenericDefault ''DIC.IssueConfig)
 
 $(YTH.generateGenericDefault ''DPC.PassCategory)
 $(YTH.generateGenericDefault ''DSF.StopFare)
@@ -201,9 +193,6 @@ $(genToSchema ''DFRFS.FRFSConfig)
 $(genToSchema ''DTBC.BecknConfig)
 $(genToSchema ''DTE.Exophone)
 $(genToSchema ''DHSC.HotSpotConfig)
-
-deriving instance ToSchema DMPM.MerchantPaymentMethod
-
 $(genToSchema ''DCR.CancellationReason)
 $(genToSchema ''DTL.Translations)
 
@@ -442,11 +431,6 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTL.Translations) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTL.Translations)) _riderConfig.dynamicLogicUpdatePassword req logicData
-    LYTU.RIDER_CONFIG LYTU.IntegratedBPPConfig -> do
-      def' <- fromMaybeM (InvalidRequest "IntegratedBPPConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DIBC.IntegratedBPPConfig))
-      let configWrap = LYTU.Config def' Nothing 1
-      logicData :: (LYTU.Config DIBC.IntegratedBPPConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DIBC.IntegratedBPPConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.RIDER_CONFIG LYTU.IssueConfig -> do
       def' <- fromMaybeM (InvalidRequest "IssueConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DIC.IssueConfig))
       let configWrap = LYTU.Config def' Nothing 1
@@ -1026,10 +1010,6 @@ postNammaTagConfigPilotCreateRow merchantShortId opCity req = do
       cfg :: DTL.Translations <- parseConfigData req.configData
       SQTL.create cfg
       invalidateConfigInMem LYTU.Translation
-    LYTU.IntegratedBPPConfig -> do
-      cfg :: DIBC.IntegratedBPPConfig <- parseConfigData req.configData
-      SQIBC.create cfg
-      invalidateConfigInMem LYTU.IntegratedBPPConfig
     LYTU.IssueConfig -> do
       cfg :: DIC.IssueConfig <- parseConfigData req.configData
       SQIC.create cfg
