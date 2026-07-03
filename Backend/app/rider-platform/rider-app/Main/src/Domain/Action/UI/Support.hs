@@ -105,8 +105,8 @@ sendIssue (personId, merchantId) request = do
   ticketRequest <- mkTicket newIssue person phoneNumber merchant.kaptureDisposition riderConfig.kaptureQueue riderConfig.kaptureConfig.deleteAccountCategory
   ticketResponse <- withTryCatch "createTicket:sendIssue" (createTicket person.merchantId person.merchantOperatingCityId ticketRequest)
   case ticketResponse of
-    Right ticketResponse' -> do
-      Queries.updateTicketId newIssue.id ticketResponse'.ticketId
+    Right (primaryResp, _) -> do
+      Queries.updateTicketId newIssue.id primaryResp.ticketId
     Left err -> do
       logTagInfo "Create Ticket API failed - " $ show err
   return Success

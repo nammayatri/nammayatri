@@ -110,7 +110,8 @@ driverIssueHandle =
       -- service. Driver-app doesn't use XyneSpaces today; enable this by
       -- returning a check against MerchantServiceUsageConfig if that changes.
       mbShouldForwardChatToTicketService = Nothing,
-      mbFetchMediaBase64 = Just fetchMediaBase64FromS3
+      mbFetchMediaBase64 = Just fetchMediaBase64FromS3,
+      mbUpdateTicketOnService = Nothing
     }
 
 -- | Fetch a MediaFile's bytes directly from S3 (returning the base64 payload
@@ -299,11 +300,16 @@ castRideInfo merchantId merchantOpCityId rideId = do
       let shouldCacheRideInfo = elem (rideInfoRes.bookingStatus) [PPMR.COMPLETED, PPMR.CANCELLED]
       bool (return ()) (Redis.setExp makeRideInfoCacheKey rideInfoRes 259200) shouldCacheRideInfo
 
-castCreateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> Flow TIT.CreateTicketResp
-castCreateTicket merchantId merchantOpCityId = TT.createTicket (cast merchantId) (cast merchantOpCityId)
+-- Driver-app does not fan out ticket writes across multiple third-party
+-- providers, so the create returns the primary response paired with an empty
+-- 'AdditionalTicketId' list and the update ignores the trailing fan-out list.
+castCreateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> Flow (TIT.CreateTicketResp, [Common.AdditionalTicketId])
+castCreateTicket merchantId merchantOpCityId req = do
+  resp <- TT.createTicket (cast merchantId) (cast merchantOpCityId) req
+  pure (resp, [])
 
-castUpdateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketReq -> Flow TIT.UpdateTicketResp
-castUpdateTicket merchantId merchantOperatingCityId = TT.updateTicket (cast merchantId) (cast merchantOperatingCityId)
+castUpdateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> [Common.AdditionalTicketId] -> TIT.UpdateTicketReq -> Flow TIT.UpdateTicketResp
+castUpdateTicket merchantId merchantOperatingCityId _additionalTicketIds = TT.updateTicket (cast merchantId) (cast merchantOperatingCityId)
 
 buildMerchantConfig :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Maybe (Id Common.Person) -> Flow Common.MerchantConfig
 buildMerchantConfig _merchantId merchantOpCityId mbPersonId = do

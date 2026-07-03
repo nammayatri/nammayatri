@@ -30,6 +30,13 @@ data IssueReport = IssueReport
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     ticketId :: Maybe Text,
+    -- | Ticket identifiers issued by secondary third-party providers when the
+    -- merchant is configured to fan out create/update ticket calls across
+    -- several services (e.g. primary Zendesk + mirrored XyneSpaces). The
+    -- primary provider's ticketId stays in 'ticketId' so existing callers are
+    -- unaffected; downstream status updates iterate this list to keep every
+    -- provider in sync.
+    additionalTicketIds :: Maybe [AdditionalTicketId],
     chats :: [Chat],
     merchantId :: Maybe (Id Merchant),
     becknIssueId :: Maybe Text,

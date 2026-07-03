@@ -105,10 +105,10 @@ createSafetyTicket person ride = do
   ticketResponse <- withTryCatch "createTicket:safetyCSAlert" (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber mediaLinks (Just rideInfo) SafetyDSos.CSAlertSosTicket riderConfig.kaptureConfig.disposition kaptureQueue))
   ticketId <- do
     case ticketResponse of
-      Right ticketResponse' -> do
+      Right (primaryResp, _) -> do
         void $ QR.updateSafetyJourneyStatus ride.id DRide.CSAlerted
-        logDebug $ "Ticket created when rider didn't picked up call : " <> show (Just ticketResponse'.ticketId)
-        return (Just ticketResponse'.ticketId)
+        logDebug $ "Ticket created when rider didn't picked up call : " <> show (Just primaryResp.ticketId)
+        return (Just primaryResp.ticketId)
       Left err -> do
         logError $ "Ticket didn't created when rider didn't picked up call with error : " <> show err
         return Nothing
