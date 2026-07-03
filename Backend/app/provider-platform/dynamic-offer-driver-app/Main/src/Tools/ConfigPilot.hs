@@ -163,8 +163,12 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       mapM
         ( \resp ->
             case (A.fromJSON (resp.result) :: A.Result (LYT.Config b)) of
-              A.Success cfg -> pure cfg
-              A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to the config. " <> show e
+              A.Success cfg -> do
+                logDebug $ "ConfigPilot write path: successfully applied JSON patch to config. Output: " <> decodeUtf8 (A.encode cfg.config)
+                pure cfg
+              A.Error e -> do
+                logDebug $ "ConfigPilot write path: error applying JSON patch to config. Error: " <> show e
+                throwError $ InvalidRequest $ "Error occurred while applying JSON patch to the config. " <> show e
         )
         patchedConfigs
 
