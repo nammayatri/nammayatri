@@ -211,6 +211,7 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
             isSafetyPlus = quoteDetails.isSafetyPlus,
             billingCategory = billingCategory,
             selectedOfferId = estimate.selectedOfferId,
+            commissionCharges = Nothing,
             ..
           }
   pure quote

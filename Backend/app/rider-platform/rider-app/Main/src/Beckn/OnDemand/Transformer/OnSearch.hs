@@ -11,6 +11,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.App
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common (logInfo)
 import Kernel.Utils.Error
 import Tools.Error
 
@@ -150,6 +151,8 @@ tfQuotesInfo provider fulfillments validTill item = do
             }
     QuoteBased _ -> do
       quoteBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildQuoteBreakupList item currency
+      let commissionCharges_ = Beckn.OnDemand.Utils.OnSearch.getCommissionCharges item
+      logInfo $ "tfQuotesInfo: parsed commissionCharges=" <> show commissionCharges_ <> " from on_search item, itemId=" <> itemId_
       quoteDetails_ <-
         case tripCategory of
           Rental _ -> do
@@ -190,7 +193,8 @@ tfQuotesInfo provider fulfillments validTill item = do
               quoteBreakupList = quoteBreakupList_,
               tripCategory = tripCategory,
               vehicleCategory,
-              vehicleIconUrl = vehicleIconUrl
+              vehicleIconUrl = vehicleIconUrl,
+              commissionCharges = commissionCharges_
             }
 
 getCurrency :: Kernel.Types.App.MonadFlow m => BecknV2.OnDemand.Types.Item -> m Currency

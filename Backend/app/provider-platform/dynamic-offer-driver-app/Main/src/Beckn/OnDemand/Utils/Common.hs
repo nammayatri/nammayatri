@@ -106,6 +106,7 @@ data Pricing = Pricing
     smartTipReason :: Maybe Text,
     businessDiscount :: Maybe HighPrecMoney,
     personalDiscount :: Maybe HighPrecMoney,
+    commissionCharges :: Maybe HighPrecMoney,
     qar :: Maybe Double
   }
 
@@ -995,6 +996,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       qar = Nothing,
       businessDiscount = fareParams.businessDiscount,
       personalDiscount = fareParams.personalDiscount,
+      commissionCharges = Nothing,
       ..
     }
 
@@ -1007,6 +1009,7 @@ mkGeneralInfoTagGroup pricing isValueAddNP =
           Tags.SPECIAL_LOCATION_SUPPORT_NUMBER Tags.~=? pricing.specialLocationSupportNumber,
           Tags.BUSINESS_DISCOUNT Tags.~=? (guardVNP (show <$> pricing.businessDiscount)),
           Tags.PERSONAL_DISCOUNT Tags.~=? (guardVNP (show <$> pricing.personalDiscount)),
+          Tags.COMMISSION Tags.~=? (guardVNP (show <$> pricing.commissionCharges)),
           Tags.DISTANCE_TO_NEAREST_DRIVER_METER Tags.~=? (show . double2Int . realToFrac <$> pricing.distanceToNearestDriver),
           Tags.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE Tags.~=? (guardVNP (show <$> pricing.isCustomerPrefferedSearchRoute)),
           Tags.IS_BLOCKED_SEARCH_ROUTE Tags.~=? (guardVNP (show <$> pricing.isBlockedRoute)),

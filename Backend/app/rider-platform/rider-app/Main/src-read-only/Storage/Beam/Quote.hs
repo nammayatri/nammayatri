@@ -29,6 +29,7 @@ data QuoteT f = QuoteT
     clientOsVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
+    commissionCharges :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     discount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     distanceToNearestDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),

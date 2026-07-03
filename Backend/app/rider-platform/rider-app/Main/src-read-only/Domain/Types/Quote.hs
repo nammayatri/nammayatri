@@ -31,6 +31,7 @@ data Quote = Quote
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    commissionCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,
     discount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
@@ -65,7 +66,7 @@ data Quote = Quote
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleServiceTierType :: Domain.Types.ServiceTierType.ServiceTierType
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
 
 data MeterRideQuoteAPIDetails = MeterRideQuoteAPIDetails {quoteId :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -106,4 +107,4 @@ data QuoteDetails
   | MeterRideDetails Domain.Types.Quote.MeterRideQuoteDetails
   deriving (Generic, Show)
 
-data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, Show)
+data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, (Show))
