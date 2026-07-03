@@ -59,7 +59,7 @@ notificationAndOrderStatusUpdate (Job {id, jobInfo}) = withLogTag ("JobId-" <> i
   QNTF.updatePendingToFailed merchantOpCityId
   allPendingOrders <- nubBy ((==) `on` (.id)) <$> QINV.findAllByStatusWithLimit INV.ACTIVE_INVOICE merchantOpCityId batchSizeOfOrderStatus
   QINV.updateLastCheckedOn ((.id) <$> allPendingOrders)
-  updateInvoicesPendingToFailedAfterRetry transporterConfig
+  staleInvoiceCleanupPending <- updateInvoicesPendingToFailedAfterRetry transporterConfig
   forM_ allPendingNotification $ \notification -> do
     fork ("notification status call for notification id : " <> notification.id.getId) $ do
       driverFee <- QDF.findById notification.driverFeeId >>= fromMaybeM (InternalError "Fee not found")
@@ -69,7 +69,7 @@ notificationAndOrderStatusUpdate (Job {id, jobInfo}) = withLogTag ("JobId-" <> i
       let driverId = invoice.driverId
       void $ SharedPayment.getStatus (driverId, jobData.merchantId, merchantOpCityId) (cast invoice.id)
 
-  if null allPendingNotification && null allPendingOrders
+  if null allPendingNotification && null allPendingOrders && not staleInvoiceCleanupPending
     then do
       return Complete
     else do
@@ -78,10 +78,16 @@ notificationAndOrderStatusUpdate (Job {id, jobInfo}) = withLogTag ("JobId-" <> i
 getRescheduledTime :: (MonadTime m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.mandateNotificationRescheduleInterval <$> getCurrentTime
 
-updateInvoicesPendingToFailedAfterRetry :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m ()
+-- processes one batch of stale active invoices per run; returns True when a full
+-- batch was processed, so more stale invoices may remain and the job should reschedule
+updateInvoicesPendingToFailedAfterRetry :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m Bool
 updateInvoicesPendingToFailedAfterRetry transporterConfig = do
   let timeCheckLimit = transporterConfig.orderAndNotificationStatusCheckTimeLimit
       opCityId = transporterConfig.merchantOperatingCityId
-  activeExecutionInvoices <- QINV.findAllAutoPayInvoicesActiveOlderThanProvidedDuration timeCheckLimit opCityId
-  QINV.updatePendingToFailed timeCheckLimit opCityId
-  mapM_ QDF.updateAutoPayToManual (activeExecutionInvoices <&> (.driverFeeId))
+      batchSize = transporterConfig.updateOrderStatusBatchSize
+  staleActiveInvoices <- QINV.findAllAutoPayInvoicesActiveOlderThanProvidedDuration timeCheckLimit opCityId batchSize
+  unless (null staleActiveInvoices) $ do
+    let activeExecutionInvoices = filter ((== INV.AUTOPAY_INVOICE) . (.paymentMode)) staleActiveInvoices
+    mapM_ QDF.updateAutoPayToManual (activeExecutionInvoices <&> (.driverFeeId))
+    QINV.updatePendingToFailed ((.id) <$> staleActiveInvoices) opCityId
+  pure $ length staleActiveInvoices >= batchSize
