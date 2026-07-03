@@ -1799,6 +1799,8 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
                         },
                   selectedServiceTiers = [],
                   enabled = Just driverInfo'.enabled,
+                  verified = Just driverInfo'.verified,
+                  approved = driverInfo'.approved,
                   driverId = driverId,
                   driverName = driverName,
                   firstName = firstName,
@@ -1948,7 +1950,7 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
             return (completedRides, earning)
           Nothing -> return (0, 0) ------------ when we are not including stats then we will return 0
         let rcActiveAssociation = mbActiveAssoc
-        ((driverName, middleName, conductorName, driverId, driverPhoneNo, driverStatus, isDriverOnPickup, isDriverOnRide, routeCode, enabled, driverDocsVerificationStatus), mbAssociatedOn) <- case rcActiveAssociation of
+        ((driverName, middleName, conductorName, driverId, driverPhoneNo, driverStatus, isDriverOnPickup, isDriverOnRide, routeCode, enabled, verified, approved, driverDocsVerificationStatus), mbAssociatedOn) <- case rcActiveAssociation of
           Just activeAssociation -> do
             driverInfo <- getFleetDriverInfo fleetOwnerId activeAssociation.driverId False
             return (driverInfo, Just activeAssociation.associatedOn)
@@ -1958,7 +1960,7 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
               Just latestAssoc -> do
                 driverInfo <- getFleetDriverInfo fleetOwnerId latestAssoc.driverId False
                 return (driverInfo, Just latestAssoc.associatedOn)
-              Nothing -> pure ((Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Just False, Just False, Nothing, Nothing, Nothing), Nothing) -------- when vehicle is unAssigned
+              Nothing -> pure ((Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Just False, Just False, Nothing, Nothing, Nothing, Nothing, Nothing), Nothing) -------- when vehicle is unAssigned
         (driverMobileCountryCodeValue, driverEmailValue, firstName, lastName) <- case driverId of
           Just driverIdText -> do
             let mbDriver = Map.lookup (Id @DP.Person driverIdText) personMap
@@ -2043,6 +2045,8 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
                   updatedAt = Just vrc.updatedAt,
                   selectedServiceTiers = selectedServiceTiers,
                   enabled = enabled,
+                  verified = verified,
+                  approved = approved,
                   driverId = driverId,
                   driverName = driverName,
                   firstName = firstName,
@@ -2353,7 +2357,7 @@ validateDriverAssociationWithOperator driverId operatorId = do
       mbFOA <- B.runInReplica $ QFleetOperatorAssociation.findByFleetOwnerIdAndOperatorId (Id foId) opId True
       pure $ isJust mbFOA
 
-getFleetDriverInfo :: Text -> Id DP.Person -> Bool -> Flow (Maybe Text, Maybe Text, Maybe Text, Maybe Text, Maybe Text, Maybe DrInfo.DriverMode, Maybe Bool, Maybe Bool, Maybe Text, Maybe Bool, Maybe DDVS.DocsVerificationStatus)
+getFleetDriverInfo :: Text -> Id DP.Person -> Bool -> Flow (Maybe Text, Maybe Text, Maybe Text, Maybe Text, Maybe Text, Maybe DrInfo.DriverMode, Maybe Bool, Maybe Bool, Maybe Text, Maybe Bool, Maybe Bool, Maybe Bool, Maybe DDVS.DocsVerificationStatus)
 getFleetDriverInfo fleetOwnerId driverId isDriver = do
   mbDriver <- QPerson.findById driverId
   mbDriverInfo' <- QDriverInfo.findById driverId
@@ -2372,8 +2376,8 @@ getFleetDriverInfo fleetOwnerId driverId isDriver = do
               Nothing -> return (False, True, Nothing)
           else return (False, False, Nothing)
       mobileNumber <- mapM decrypt driver.mobileNumber
-      return (Just driver.firstName, driver.middleName, driver.lastName, Just driver.id.getId, mobileNumber, mode, Just isDriverOnPickup, Just isDriverOnRide, routeCode, Just driverInfo'.enabled, driverInfo'.docsVerificationStatus)
-    (_, _) -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+      return (Just driver.firstName, driver.middleName, driver.lastName, Just driver.id.getId, mobileNumber, mode, Just isDriverOnPickup, Just isDriverOnRide, routeCode, Just driverInfo'.enabled, Just driverInfo'.verified, driverInfo'.approved, driverInfo'.docsVerificationStatus)
+    (_, _) -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
 
 ---------------------------------------------------------------------
 postDriverFleetVehicleDriverRcStatus ::
