@@ -38,6 +38,7 @@ imports:
   VehicleServiceTierOrderConfig: Dashboard.Common
   ServiceTierType: Dashboard.Common
   SetJsonLogicDebugReq: Lib.Yudhishthira.Tools.DebugLog
+  Value: Data.Aeson
 
 module: Merchant
 
@@ -306,6 +307,28 @@ apis:
         type: SetJsonLogicDebugReq
       response:
         type: APISuccess
+  - GET: # RiderMerchantMessageCatalogAPI
+      endpoint: /merchantMessage/catalog
+      auth: ApiAuthV2
+      response:
+        type: RiderMerchantMessageCatalogResp
+      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT GET_RIDER_MERCHANT_MESSAGE_CATALOG
+  - POST: # RiderMerchantMessageUpsertAPI
+      endpoint: /merchantMessage/upsert
+      auth: ApiAuthV2
+      request:
+        type: UpsertRiderMerchantMessageReq
+      response:
+        type: APISuccess
+      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_RIDER_MERCHANT_MESSAGE
+  - DELETE: # RiderMerchantMessageDeleteAPI
+      endpoint: /merchantMessage/{messageKey}
+      auth: ApiAuthV2
+      params:
+        messageKey: Text
+      response:
+        type: APISuccess
+      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT DELETE_RIDER_MERCHANT_MESSAGE
 
 types:
   MerchantUpdateReq:
@@ -353,6 +376,17 @@ types:
     - userServiceTierOrderConfig: "Maybe [VehicleServiceTierOrderConfig]"
     - defaultServiceTierOrderConfig: "Maybe [ServiceTierType]"
     - noOfRideRequestsConfig: Maybe Int
+    - derive: "'HideSecrets"
+  RiderMerchantMessageCatalogResp:
+    - values: "[Text]"
+  UpsertRiderMerchantMessageReq:
+    - messageKey: Text
+    - message: Text
+    - templateId: Text
+    - containsUrlButton: Bool
+    - jsonData: Maybe Value
+    - messageType: Maybe Text
+    - senderHeader: Maybe Text
     - derive: "'HideSecrets"
 
 extraOperations:
