@@ -205,7 +205,7 @@ findFleetDocVerificationConfig :: Id DMOC.MerchantOperatingCity -> DVC.DocumentT
 findFleetDocVerificationConfig merchantOpCityId docType role = do
   configs <-
     getConfig
-      (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType})
+      (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType, role = Just role})
       (Just (filter (\c -> c.documentType == docType) <$> CQFODVC.findAllByMerchantOpCityId merchantOpCityId Nothing))
   pure $ findFleetConfigForRole docType role configs
 
@@ -530,7 +530,7 @@ buildVehicleDocsContext person entityImagesInfo language onlyMandatoryDocs skipM
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
   allDocVerificationConfigs <-
     if isFleetRole person.role
-      then Left <$> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing}) (Just (CQFODVC.findAllByMerchantOpCityId merchantOpCityId Nothing))
+      then Left <$> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, role = Nothing}) (Just (CQFODVC.findAllByMerchantOpCityId merchantOpCityId Nothing))
       else Right <$> getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, vehicleCategory = Nothing}) (Just (CQDVC.findAllByMerchantOpCityId merchantOpCityId Nothing))
   let driverDocConfigs = fromRight [] allDocVerificationConfigs :: [DVC.DocumentVerificationConfig]
   vehicleDocumentsUnverified <-

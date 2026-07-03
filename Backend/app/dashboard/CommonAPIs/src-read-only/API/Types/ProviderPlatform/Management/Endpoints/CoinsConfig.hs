@@ -57,8 +57,6 @@ data EventMessage = EventMessage {message :: Kernel.Prelude.Text, language :: Ke
 data NewCoinsConfigReq = NewCoinsConfigReq
   { eventFunction :: Dashboard.Common.DriverCoins.DriverCoinsFunctionType,
     eventName :: Kernel.Prelude.Text,
-    merchantId :: Kernel.Prelude.Text,
-    merchantOptCityId :: Kernel.Prelude.Text,
     coins :: Kernel.Prelude.Int,
     expirationAt :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     active :: Kernel.Prelude.Bool,

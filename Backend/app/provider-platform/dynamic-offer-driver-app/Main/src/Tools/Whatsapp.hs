@@ -38,6 +38,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 
 whatsAppOptAPI :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Whatsapp.OptApiReq -> m APISuccess
@@ -56,7 +57,7 @@ whatsAppOptAPI _merchantId merchantOpCityId req = do
 
     getProviderConfig provider = do
       merchantWhatsappServiceConfig <-
-        QMSC.findByServiceAndCity (DMSC.WhatsappService provider) merchantOpCityId
+        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.WhatsappService provider)}) (Just (maybeToList <$> QMSC.findByServiceAndCity (DMSC.WhatsappService provider) merchantOpCityId))
           >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
       logDebug $ "merchantWhatsappServiceConfig.serviceConfig: " <> show merchantWhatsappServiceConfig
       case merchantWhatsappServiceConfig.serviceConfig of
@@ -76,7 +77,7 @@ whatsAppOtpApi merchantOpCityId = Whatsapp.whatsAppOtpApi handler
 
     getProviderConfig provider = do
       merchantWhatsappServiceConfig <-
-        QMSC.findByServiceAndCity (DMSC.WhatsappService provider) merchantOpCityId
+        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.WhatsappService provider)}) (Just (maybeToList <$> QMSC.findByServiceAndCity (DMSC.WhatsappService provider) merchantOpCityId))
           >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
       case merchantWhatsappServiceConfig.serviceConfig of
         DMSC.WhatsappServiceConfig msc -> pure msc
@@ -95,7 +96,7 @@ whatsAppSendMessageWithTemplateIdAPI merchantId merchantOpCityId = Whatsapp.what
 
     getProviderConfig provider = do
       merchantWhatsappServiceConfig <-
-        QMSC.findByServiceAndCity (DMSC.WhatsappService provider) merchantOpCityId
+        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.WhatsappService provider)}) (Just (maybeToList <$> QMSC.findByServiceAndCity (DMSC.WhatsappService provider) merchantOpCityId))
           >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
       case merchantWhatsappServiceConfig.serviceConfig of
         DMSC.WhatsappServiceConfig msc -> pure msc

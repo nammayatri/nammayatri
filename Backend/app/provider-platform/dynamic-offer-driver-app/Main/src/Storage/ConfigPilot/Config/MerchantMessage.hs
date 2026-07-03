@@ -4,8 +4,11 @@
 
 module Storage.ConfigPilot.Config.MerchantMessage (MerchantMessageDimensions (..)) where
 
+import qualified Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantMessage as DT
+import qualified Domain.Types.VehicleCategory
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Id
 import qualified Lib.ConfigPilot.Interface.Getter as LCP
 import Lib.ConfigPilot.Interface.Types
@@ -15,7 +18,9 @@ import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as SQ
 
 data MerchantMessageDimensions = MerchantMessageDimensions
-  { merchantOperatingCityId :: Text
+  { merchantOperatingCityId :: Text,
+    messageKey :: Maybe Domain.Types.MerchantMessage.MessageKey,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -34,5 +39,7 @@ instance ConfigDimensions MerchantMessageDimensions where
       (LYT.DRIVER_CONFIG MerchantMessage)
       (Id a.merchantOperatingCityId)
       (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId) (Just []))
-      ([] :: [LCP.DimMatcher MerchantMessageDimensions DT.MerchantMessage])
+      [ LCP.DimMatcher (.messageKey) (Just . (.messageKey)) (==),
+        LCP.DimMatcher (.vehicleCategory) (.vehicleCategory) (==)
+      ]
       Nothing

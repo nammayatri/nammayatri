@@ -1041,8 +1041,10 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
                 mbFleetSub <- QSPE.findLatestActiveByOwnerAndServiceName (\_ -> pure ()) fda.fleetOwnerId DSP.FLEET_OWNER Plan.PREPAID_SUBSCRIPTION Nothing
                 unless (isJust mbFleetSub) $
                   throwError $ InvalidRequest "Cannot go online: fleet subscription is not active"
-              Nothing ->
-                unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
+              Nothing -> do
+                mbDriverSub <- QSPE.findLatestActiveByOwnerAndServiceName (\_ -> pure ()) driverId.getId DSP.DRIVER Plan.PREPAID_SUBSCRIPTION Nothing
+                unless (isJust mbDriverSub) $
+                  throwError $ InvalidRequest "Cannot go online: driver subscription is not active"
           when driverInfo.blocked $ do
             case driverInfo.blockExpiryTime of
               Just expiryTime -> do

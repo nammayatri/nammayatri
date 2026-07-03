@@ -105,6 +105,22 @@ findAllByMerchantOptCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id 
 findAllByMerchantOptCityId (Id merchantOptCityId) =
   findAllWithKV [Se.Is BeamDC.merchantOptCityId $ Se.Eq merchantOptCityId]
 
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => CoinsConfig -> m ()
+updateByPrimaryKey CoinsConfig {..} =
+  updateWithKV
+    [ Se.Set BeamDC.eventName eventName,
+      Se.Set BeamDC.eventFunction eventFunction,
+      Se.Set BeamDC.merchantId merchantId,
+      Se.Set BeamDC.merchantOptCityId merchantOptCityId,
+      Se.Set BeamDC.coins coins,
+      Se.Set BeamDC.expirationAt expirationAt,
+      Se.Set BeamDC.active active,
+      Se.Set BeamDC.vehicleCategory vehicleCategory,
+      Se.Set BeamDC.tripCategoryType tripCategoryType,
+      Se.Set BeamDC.serviceTierType serviceTierType
+    ]
+    [Se.Is BeamDC.id $ Se.Eq (getId id)]
+
 getActiveCoinConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> m [CoinsConfig]
 getActiveCoinConfigs (Id merchantId) (Id merchantOptCityId) vehicleCategory = do
   findAllWithKV

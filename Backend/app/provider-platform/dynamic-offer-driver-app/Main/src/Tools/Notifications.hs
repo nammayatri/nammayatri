@@ -68,6 +68,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
@@ -1588,7 +1589,7 @@ notifyWithGRPCProvider ::
   m ()
 notifyWithGRPCProvider merchantOpCityId category title body clientId mbTtl entityData = do
   merchantNotificationServiceConfig <-
-    QMSC.findByServiceAndCity (DMSC.NotificationService Notification.GRPC) merchantOpCityId
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.NotificationService Notification.GRPC)}) (Just (maybeToList <$> QMSC.findByServiceAndCity (DMSC.NotificationService Notification.GRPC) merchantOpCityId))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Notification" "GRPC")
   case merchantNotificationServiceConfig.serviceConfig of
     DMSC.NotificationServiceConfig (Notification.GRPCConfig cfg) -> do
@@ -1658,14 +1659,14 @@ runWithServiceConfigForProviders merchantOpCityId clientId clientDevice req iosM
             Just clientConfig -> let (DMCC.ClientFCMServiceConfig fcmCfg) = clientConfig.clientServiceConfig in pure $ Notification.FCMConfig fcmCfg
             Nothing -> do
               merchantNotificationServiceConfig <-
-                QMSC.findByServiceAndCity (DMSC.NotificationService FCM) merchantOpCityId
+                getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.NotificationService FCM)}) (Just (maybeToList <$> QMSC.findByServiceAndCity (DMSC.NotificationService FCM) merchantOpCityId))
                   >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Notification" (show FCM))
               case merchantNotificationServiceConfig.serviceConfig of
                 DMSC.NotificationServiceConfig nsc -> pure nsc
                 _ -> throwError $ InternalError "Unknow Service Config"
         getServiceConfig service = do
           merchantNotificationServiceConfig <-
-            QMSC.findByServiceAndCity (DMSC.NotificationService service) merchantOpCityId
+            getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.NotificationService service)}) (Just (maybeToList <$> QMSC.findByServiceAndCity (DMSC.NotificationService service) merchantOpCityId))
               >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Notification" (show service))
           case merchantNotificationServiceConfig.serviceConfig of
             DMSC.NotificationServiceConfig nsc -> pure nsc

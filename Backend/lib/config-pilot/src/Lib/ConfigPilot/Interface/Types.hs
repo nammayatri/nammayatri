@@ -97,6 +97,7 @@ data SConfigType (cfg :: ConfigType) where
   SSurgePricing :: SConfigType 'SurgePricing
   SBecknConfig :: SConfigType 'BecknConfig
   SMerchantServiceConfig :: SConfigType 'MerchantServiceConfig
+  SMerchantServiceConfigDriver :: SConfigType 'MerchantServiceConfigDriver
   SExophone :: SConfigType 'Exophone
   SInsuranceConfig :: SConfigType 'InsuranceConfig
   SVehicleConfig :: SConfigType 'VehicleConfig
@@ -107,6 +108,16 @@ data SConfigType (cfg :: ConfigType) where
   SScheduledPayoutConfig :: SConfigType 'ScheduledPayoutConfig
   SReminderConfig :: SConfigType 'ReminderConfig
   STagActionNotificationConfig :: SConfigType 'TagActionNotificationConfig
+  SUiDriverConfig :: SConfigType 'UiDriverConfig
+  STranslationDriver :: SConfigType 'TranslationDriver
+  STranslationRider :: SConfigType 'TranslationRider
+  SCancellationReason :: SConfigType 'CancellationReason
+  SMerchantPaymentMethod :: SConfigType 'MerchantPaymentMethod
+  SPassCategory :: SConfigType 'PassCategory
+  SIntegratedBPPConfig :: SConfigType 'IntegratedBPPConfig
+  SIssueConfigRider :: SConfigType 'IssueConfigRider
+  SIssueConfigDriver :: SConfigType 'IssueConfigDriver
+  SMonetaryRewardConfig :: SConfigType 'MonetaryRewardConfig
 
 deriving instance Show (SConfigType cfg)
 
@@ -125,9 +136,6 @@ class (Show a, ConfigTypeInfo (ConfigTypeOf a)) => ConfigDimensions a where
   type ConfigValueTypeOf a :: Type
   getConfigType :: a -> ConfigType
 
-  -- | Generate cache key from non-Maybe dimension fields. Adding a new non-Maybe
-  -- field to the dimensions record automatically includes it in the key via Generics.
-  -- Maybe fields are excluded since they are used for filtering, not cache partitioning.
   dimensionsCacheKey :: a -> Text
   default dimensionsCacheKey :: (Generic a, GNonMaybeFields (Rep a)) => a -> Text
   dimensionsCacheKey = T.intercalate ":" . gNonMaybeFields . from

@@ -46,6 +46,7 @@ import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverBankAccount as QDBA
@@ -87,7 +88,7 @@ runWithServiceConfigAndName ::
   m resp
 runWithServiceConfigAndName func mkReq payoutServiceName merchantOperatingCityId personId mbPersonBankAccount serviceReq = do
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity payoutServiceName merchantOperatingCityId
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = Nothing, serviceName = Just payoutServiceName}) (Just (maybeToList <$> CQMSC.findByServiceAndCity payoutServiceName merchantOperatingCityId))
       >>= fromMaybeM (uncurry (MerchantServiceConfigNotFound merchantOperatingCityId.getId) (showPayoutServiceType payoutServiceName))
   case merchantServiceConfig.serviceConfig of
     DMSC.PayoutServiceConfig vsc -> callFunc vsc
@@ -146,7 +147,7 @@ getPayoutServiceFlowForMerchant ::
 getPayoutServiceFlowForMerchant getCfg payoutServiceNameOption serviceType merchantOperatingCityId = do
   payoutServiceNameRaw <- case payoutServiceNameOption of
     MerchantServiceUsageConfigOption -> do
-      orgPaymentsConfig <- CMSUC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+      orgPaymentsConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
       pure $ serviceType (getCfg orgPaymentsConfig)
     SubscriptionConfigOption serviceName -> do
       subscriptionConfig <- do

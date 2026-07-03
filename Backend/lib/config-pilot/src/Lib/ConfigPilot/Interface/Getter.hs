@@ -10,6 +10,7 @@ module Lib.ConfigPilot.Interface.Getter
 where
 
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
 import Lib.ConfigPilot.Config.GetterInternal (PersonIdKey (..), TxnIdKey (..), configPilotInMemKey, getConfigImpl, invalidateConfigInMem)
@@ -65,14 +66,21 @@ resolveConfigList ::
   Maybe [DimMatcher dims cfg] ->
   m [cfg]
 resolveConfigList dims logicDomain mocId fetch matchers fallback =
-  IM.withInMemCache (configPilotInMemKey dims) 3600 $ do
-    cfgs <- fetch
-    let applyMatchers ms = filter (\c -> all (matchesDim dims c) ms) cfgs
-    let filtered = case (applyMatchers matchers, fallback) of
-          ([], Just fb) -> applyMatchers fb
-          (results, _) -> results
-    let wrappers = map (\c -> LYT.Config {config = c, extraDimensions = Nothing, identifier = 0}) filtered
-    mapM (\w -> getConfigImpl dims w logicDomain mocId) wrappers
+  -- Two-layer cache: per-pod in-mem (L1) wraps a cross-pod Redis hash (L2).
+  -- L2 hash prefix mirrors 'configPilotInMemKey' ("ConfigPilot:<configType>");
+  -- the dimensions form the hash field and 'withRedisCache' appends the cached
+  -- type name. L2 currently relies on its TTL; explicit invalidation is TODO.
+  IM.withInMemCache cacheKey 3600 $
+    Hedis.withRedisCache redisHashPrefix [dimensionsCacheKey dims] 1800 $ do
+      cfgs <- fetch
+      let applyMatchers ms = filter (\c -> all (matchesDim dims c) ms) cfgs
+      let filtered = case (applyMatchers matchers, fallback) of
+            ([], Just fb) -> applyMatchers fb
+            (results, _) -> results
+      let wrappers = map (\c -> LYT.Config {config = c, extraDimensions = Nothing, identifier = 0}) filtered
+      mapM (\w -> getConfigImpl dims w logicDomain mocId) wrappers
   where
+    cacheKey = configPilotInMemKey dims
+    redisHashPrefix = "ConfigPilot:" <> show (getConfigType dims)
     matchesDim dims' c (DimMatcher getDimVal getCfgVal eqFn) =
       maybe True (\dv -> maybe False (eqFn dv) (getCfgVal c)) (getDimVal dims')

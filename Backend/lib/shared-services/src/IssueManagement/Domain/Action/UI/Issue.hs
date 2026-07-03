@@ -25,7 +25,6 @@ import qualified IssueManagement.Domain.Types.Issue.IssueTranslation as D
 import qualified IssueManagement.Domain.Types.MediaFile as D
 import IssueManagement.Storage.BeamFlow
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueCategory as CQIC
-import qualified IssueManagement.Storage.CachedQueries.Issue.IssueConfig as CQI
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueMessage as CQIM
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueOption as CQIO
 import qualified IssueManagement.Storage.CachedQueries.MediaFile as CQMF
@@ -93,7 +92,8 @@ data ServiceHandle m = ServiceHandle
     -- @Nothing@ when the MediaFile has no @s3FilePath@ or the app doesn't
     -- support S3 fetches (e.g. Beckn IGM flow) — the shared handler then
     -- falls back to @mediaFile.url@.
-    mbFetchMediaBase64 :: Maybe (D.MediaFile -> m (Maybe Text))
+    mbFetchMediaBase64 :: Maybe (D.MediaFile -> m (Maybe Text)),
+    findIssueConfig :: Id MerchantOperatingCity -> Identifier -> m (Maybe D.IssueConfig)
   }
 
 getLanguage :: EsqDBReplicaFlow m r => Id Person -> Maybe Language -> ServiceHandle m -> m Language
@@ -176,7 +176,7 @@ getIssueOption (personId, merchantId, merchantOpCityId) issueCategoryId issueOpt
     _ -> return ()
   let adjMerchantOpCityId = maybe merchantOpCityId Id ((.merchantOperatingCityId) =<< mbRideInfoRes)
   language <- getLanguage personId mbLanguage issueHandle
-  issueConfig <- CQI.findByMerchantOpCityId adjMerchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound adjMerchantOpCityId.getId)
+  issueConfig <- issueHandle.findIssueConfig adjMerchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound adjMerchantOpCityId.getId)
   let mbIssueReportType = mbIssueOption >>= (.label) >>= A.decode . A.encode
   processIssueReportTypeActions (personId, merchantId) mbIssueReportType Nothing Nothing False identifier issueHandle
   issueMessageTranslationList <- case issueOptionId of
@@ -249,7 +249,7 @@ issueReportList (personId, _, merchantOpCityId) mbLanguage issueHandle identifie
   language <- getLanguage personId mbLanguage issueHandle
   issueReports <- QIR.findAllByPerson personId
   let validIssueReports = filter (isJust . (.categoryId)) issueReports
-  issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
+  issueConfig <- issueHandle.findIssueConfig merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
   now <- getCurrentTime
   issues <- mapM (processIssueReport issueConfig now language issueHandle) validIssueReports
   return $ Common.IssueReportListRes {issues}
@@ -498,7 +498,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
     issueHandle.findMOCityById mocId
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "MerchantOpCityId - " <> show mocId)
   language <- getLanguage personId mbLanguage issueHandle
-  issueConfig <- CQI.findByMerchantOpCityId mocId identifier >>= fromMaybeM (IssueConfigNotFound mocId.getId)
+  issueConfig <- issueHandle.findIssueConfig mocId identifier >>= fromMaybeM (IssueConfigNotFound mocId.getId)
   let shouldCreateTicket = isNothing createTicket || fromJust createTicket
       onCreateIssueMsgs = if shouldCreateTicket then issueConfig.onCreateIssueMsgs else []
   issueMessageTranslationList <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) onCreateIssueMsgs
@@ -826,7 +826,7 @@ issueInfo issueReportId (personId, merchantId, merchantOpCityId) mbLanguage issu
   mbRideInfoRes <- mapM (issueHandle.getRideInfo merchantId merchantOpCityId) issueReport.rideId
   let adjMerchantOpCityId = maybe merchantOpCityId Id ((.merchantOperatingCityId) =<< mbRideInfoRes)
   issueConfig <-
-    CQI.findByMerchantOpCityId adjMerchantOpCityId identifier
+    issueHandle.findIssueConfig adjMerchantOpCityId identifier
       >>= fromMaybeM (IssueConfigNotFound adjMerchantOpCityId.getId)
   (categoryLabel, categoryId) <- case issueReport.categoryId of
     Nothing -> pure (Nothing, Nothing)
@@ -912,7 +912,7 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
         -- same answer just re-fetches the same messages without growing the chat.
         (RESOLVED, Just Common.ESCALATE) -> do
           QIR.updateCustomerResponse issueReportId Common.ESCALATE
-          issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
+          issueConfig <- issueHandle.findIssueConfig merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
           issueMessageTranslation <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) issueConfig.onCustomerNotSatisfiedMsgs
           let issueMessages = mkIssueMessageList (sequence issueMessageTranslation) language issueConfig mbRideInfoRes
           now <- getCurrentTime
@@ -937,7 +937,7 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
           QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
           whenJust customerResponse $ QIR.updateCustomerResponse issueReportId
           updateTicketStatus issueReport TIT.Reopened merchantId merchantOpCityId issueHandle "Ticket reopened"
-          issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
+          issueConfig <- issueHandle.findIssueConfig merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
           issueMessageTranslation <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) issueConfig.onIssueReopenMsgs
           let issueMessages = mkIssueMessageList (sequence issueMessageTranslation) language issueConfig mbRideInfoRes
           now <- getCurrentTime

@@ -302,6 +302,9 @@ MerchantMessage:
     fetchQueryArgs: "(Just [])"
     returnType: List
     queryModule: Storage.CachedQueries.Merchant.MerchantMessage
+    filterDimensions:
+      - messageKey
+      - vehicleCategory
 
 LlmPrompt:
   derives: Generic,Show,'UsageSafety
@@ -560,6 +563,11 @@ Overlay:
     fetchQueryArgs: "(Just [])"
     returnType: List
     queryModule: Storage.CachedQueries.Merchant.Overlay
+    filterDimensions:
+      - overlayKey
+      - language
+      - udf1
+      - vehicleCategory
 
 # LeaderBoardConfigs:
 #   derives: "Generic,ToJSON,FromJSON,ToSchema"
@@ -779,12 +787,6 @@ MerchantServiceUsageConfig:
       kvFunction: updateWithKV
       where: merchantOperatingCityId
       params: [ snapToRoadProvidersList ]
-
-  configPilot:
-    configType: MerchantServiceUsageConfig
-    fetchQuery: findByMerchantOpCityId
-    returnType: Maybe
-    queryModule: Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
 
 DriverIntelligentPoolConfig:
   derives: Generic,Show,'UsageSafety
@@ -1355,6 +1357,7 @@ TransporterConfig:
     useCategoryBasedVerificationPriorityList: Maybe Bool
     supportedMapProviders: "Maybe [MapProvider]" # Merchant-level allowlist constraining driver-selectable map providers; Nothing = allow all.
     blockDriverOwnRCForFleetDrivers: Maybe Bool # When True, fleet-linked drivers cannot onboard/activate their own (non-fleet) RC
+    overrideOperatorDriverJoiningWithDeepLink: Maybe Bool
 
   beamType:
     currency: Maybe Currency
@@ -2068,6 +2071,9 @@ MerchantPushNotification:
     fetchQueryArgs: "(Just [])"
     returnType: List
     queryModule: Storage.CachedQueries.Merchant.MerchantPushNotification
+    filterDimensions:
+      - key
+      - tripCategory
 
 RideRelatedNotificationConfig:
   tableName: ride_related_notification_config

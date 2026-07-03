@@ -33,6 +33,8 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Storage.ConfigPilot.Config.IntegratedBPPConfig (IntegratedBPPConfigDimensions (..))
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.IntegratedBPPConfig as QIBC
 
@@ -75,7 +77,7 @@ buildOnSearchReq onSearchReq = do
   let bppDelayedInterest = listToMaybe interestTags
 
   -- Get IntegratedBPPConfig to check mergeQuoteCriteria
-  integratedBPPConfig <- QIBC.findById frfsSearch.integratedBppConfigId >>= fromMaybeM (InvalidRequest "IntegratedBPPConfig not found")
+  integratedBPPConfig <- getOneConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = "", configId = Just frfsSearch.integratedBppConfigId.getId, agencyKey = Nothing, domain = Nothing, vehicleCategory = Nothing, platformType = Nothing}) (Just (maybeToList <$> QIBC.findById frfsSearch.integratedBppConfigId)) >>= fromMaybeM (InvalidRequest "IntegratedBPPConfig not found")
 
   quotes <- mkQuotes items fulfillments integratedBPPConfig
   return
