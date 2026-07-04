@@ -606,6 +606,7 @@ apis:
       query:
         - phoneNumber: Text
         - vehicleNumber: Text
+        - specialZoneId: Text
       response:
         type: AirportPreferenceRes
 
@@ -947,8 +948,19 @@ types:
     - driverId: Id Driver
     - driverName: Text
     - enableForAirport: AirportRestrictionType
+    - blockExpiryTime: Maybe UTCTime
+    - blockHistory: Maybe [AirportBlockHistoryItem]
+  AirportBlockHistoryItem:
+    - blockReason: Maybe Text
+    - blockLiftTime: Maybe UTCTime
+    - blockedBy: Maybe Text
+    - actionType: Maybe Text
+    - reportedAt: UTCTime
   AirportPreferenceReq:
     - enableForAirport: AirportRestrictionType
+    - blockReason: Maybe Text
+    - blockExpiryTime: Maybe UTCTime
+    - specialZoneId: Maybe Text
     - derive: "'HideSecrets"
   SearchRequestForDriverResponse:
     - enum: "Accept, Reject, Pulled"

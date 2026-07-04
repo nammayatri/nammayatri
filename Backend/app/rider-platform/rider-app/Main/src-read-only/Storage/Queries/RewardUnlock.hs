@@ -51,6 +51,7 @@ updateByPrimaryKey (Domain.Types.RewardUnlock.RewardUnlock {..}) = do
       Se.Set Beam.reclaimedAt reclaimedAt,
       Se.Set Beam.redeemedAt redeemedAt,
       Se.Set Beam.status status,
+      Se.Set Beam.unlockSeq unlockSeq,
       Se.Set Beam.unlockedAt unlockedAt,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.viewedAt viewedAt,

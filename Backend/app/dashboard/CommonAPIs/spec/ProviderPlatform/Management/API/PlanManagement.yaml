@@ -1,4 +1,5 @@
-imports: {}
+imports:
+  Language: Kernel.External.Types
 
 module: PlanManagement
 
@@ -38,6 +39,15 @@ apis:
         - serviceName: Text
       response:
         type: ListPlansResp
+
+  - GET: # ListPlanTranslations
+      endpoint: /{planId}/translations
+      name: GetPlanManagementPlanTranslations
+      auth: ApiAuthV2
+      params:
+        planId: Text
+      response:
+        type: "[PlanTranslationAPIEntity]"
 
 types:
   PlanPaymentMode:
@@ -124,3 +134,8 @@ types:
     - isFleetOwnerPlan: Maybe Bool
   ListPlansResp:
     - plans: "[PlanAPIEntity]"
+  PlanTranslationAPIEntity:
+    - planId: Text
+    - language: Language
+    - name: Text
+    - description: Text

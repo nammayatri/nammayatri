@@ -143,8 +143,6 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       handleConfigUpdateViaJson SQRMC.findAllByMerchantOpCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.ReminderConfig)) SQRMC.updateByPrimaryKey (cast merchantOpCityId)
     LYT.DRIVER_CONFIG LYT.CoinsConfig -> do
       handleConfigUpdateViaJson SQCC.findAllByMerchantOptCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.CoinsConfig)) SQCC.updateByPrimaryKey (cast merchantOpCityId)
-    LYT.DRIVER_CONFIG LYT.MerchantServiceConfig -> do
-      handleConfigUpdateViaJson SQMSCE.findAllMerchantOpCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.MerchantServiceConfig)) (\cfg -> SQMSCE.upsertMerchantServiceConfig cfg (cast merchantOpCityId)) (cast merchantOpCityId)
     LYT.UI_DRIVER dt pt -> do
       let uiConfigReq = LYT.UiConfigRequest {os = dt, platform = pt, merchantId = maybe "" getId mbMerchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
       handleConfigUpdateWithExtraDimensionsUi SQU.findUIConfig (SCU.clearCache (cast merchantOpCityId) dt pt) SCU.updateByPrimaryKey (cast merchantOpCityId) uiConfigReq concludeReq.version concludeReq.domain
@@ -163,8 +161,12 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       mapM
         ( \resp ->
             case (A.fromJSON (resp.result) :: A.Result (LYT.Config b)) of
-              A.Success cfg -> pure cfg
-              A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to the config. " <> show e
+              A.Success cfg -> do
+                logDebug $ "ConfigPilot write path: successfully applied JSON patch to config. Output: " <> decodeUtf8 (A.encode cfg.config)
+                pure cfg
+              A.Error e -> do
+                logDebug $ "ConfigPilot write path: error applying JSON patch to config. Error: " <> show e
+                throwError $ InvalidRequest $ "Error occurred while applying JSON patch to the config. " <> show e
         )
         patchedConfigs
 

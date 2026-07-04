@@ -6,6 +6,7 @@ module Domain.Action.Dashboard.Management.PlanManagement
     postPlanManagementDeletePlan,
     postPlanManagementActivatePlan,
     getPlanManagementListPlans,
+    getPlanManagementPlanTranslations,
   )
 where
 
@@ -14,6 +15,7 @@ import qualified Domain.Types.Extra.Plan as DExtra
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Plan as DPlan
+import qualified Domain.Types.PlanTranslation as DPT
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as DVV
 import Environment
@@ -29,6 +31,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PlanExtra as CQPlan
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.PlanExtra as QPlanExtra
+import qualified Storage.Queries.PlanTranslation as QPlanTranslation
 
 postPlanManagementCreate ::
   ShortId DM.Merchant ->
@@ -75,7 +78,7 @@ postPlanManagementCreate merchantShortId opCity req = do
             isFleetOwnerPlan = req.isFleetOwnerPlan
           }
   QPlan.create plan
-  CQPlan.clearPlanCacheByCity merchantOpCityId plan.serviceName
+  CQPlan.clearPlanCacheForPlan plan
   pure $ Common.CreatePlanResp {planId = planId.getId}
 
 postPlanManagementDeletePlan ::
@@ -87,7 +90,7 @@ postPlanManagementDeletePlan _merchantShortId _opCity planIdText = do
   let planId = Id planIdText
   plan <- QPlan.findByPrimaryKey planId >>= fromMaybeM (InvalidRequest "Plan not found")
   QPlanExtra.markAsDeprecated planId
-  CQPlan.clearPlanCacheByCity plan.merchantOpCityId plan.serviceName
+  CQPlan.clearPlanCacheForPlan plan
   pure Success
 
 postPlanManagementActivatePlan ::
@@ -99,7 +102,7 @@ postPlanManagementActivatePlan _merchantShortId _opCity planIdText = do
   let planId = Id planIdText
   plan <- QPlan.findByPrimaryKey planId >>= fromMaybeM (InvalidRequest "Plan not found")
   QPlanExtra.markAsActive planId
-  CQPlan.clearPlanCacheByCity plan.merchantOpCityId plan.serviceName
+  CQPlan.clearPlanCacheForPlan plan
   pure Success
 
 getPlanManagementListPlans ::
@@ -113,6 +116,24 @@ getPlanManagementListPlans merchantShortId opCity mbServiceNameText = do
   let mbServiceName = read . toString <$> mbServiceNameText
   allPlans <- QPlanExtra.fetchAllPlanByMerchantOperatingCityMbServiceName merchantOpCityId mbServiceName
   pure $ Common.ListPlansResp {plans = map toPlanAPIEntity allPlans}
+
+getPlanManagementPlanTranslations ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Flow [Common.PlanTranslationAPIEntity]
+getPlanManagementPlanTranslations _merchantShortId _opCity planId = do
+  translations <- QPlanTranslation.findAllByPlanId (Id planId)
+  pure $ map toPlanTranslationAPIEntity translations
+
+toPlanTranslationAPIEntity :: DPT.PlanTranslation -> Common.PlanTranslationAPIEntity
+toPlanTranslationAPIEntity planTranslation =
+  Common.PlanTranslationAPIEntity
+    { planId = getId planTranslation.planId,
+      language = planTranslation.language,
+      name = planTranslation.name,
+      description = planTranslation.description
+    }
 
 -- Conversion helpers
 

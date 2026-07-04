@@ -19,6 +19,7 @@ data RewardCohort = RewardCohort
     displayOrder :: Kernel.Prelude.Int,
     eligibilityJsonLogic :: Data.Aeson.Value,
     id :: Kernel.Types.Id.Id Domain.Types.RewardCohort.RewardCohort,
+    maxUnlocksPerCohort :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     name :: Kernel.Prelude.Text,
     presentation :: Kernel.Prelude.Maybe Data.Aeson.Value,
     rewardImageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

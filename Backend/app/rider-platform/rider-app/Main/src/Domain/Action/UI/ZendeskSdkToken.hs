@@ -1,25 +1,24 @@
-module Domain.Action.UI.ZendeskSdkToken (getProfileZendeskSdkToken) where
+module Domain.Action.UI.ZendeskSdkToken (postProfileZendeskSdkToken) where
 
+import qualified API.Types.UI.ZendeskSdkToken as Types
 import qualified Data.Map.Strict as M
-import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
-import Domain.Types.Merchant
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Types.MerchantServiceConfig
-import Domain.Types.Person
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
-import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.Person as QPerson
+import Tools.Auth (verifyPerson)
 import Tools.Error
 import Web.JWT (Algorithm (HS256), ClaimsMap (..), JOSEHeader (..), JWTClaimsSet (..), encodeSigned, hmacSecret, numericDate, stringOrURI)
 
-getProfileZendeskSdkToken :: (Maybe (Id Person), Id Merchant) -> Flow Text
-getProfileZendeskSdkToken (mbPersonId, merchantId) = do
-  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+postProfileZendeskSdkToken :: Types.ZendeskJwtReq -> Flow Types.ZendeskJwtResp
+postProfileZendeskSdkToken req = do
+  (personId, merchantId) <- verifyPerson req.user_token
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchantServiceConfig <-
     CQMSC.findByMerchantOpCityIdAndService merchantId person.merchantOperatingCityId (IssueTicketService Ticket.Zendesk)
@@ -32,26 +31,29 @@ getProfileZendeskSdkToken (mbPersonId, merchantId) = do
   mbEmail <- mapM decrypt person.email
   now <- getCurrentTime
   let externalId = person.id.getId
-      jtiText = externalId <> "-" <> (show . (round :: POSIXTime -> Int) $ utcTimeToPOSIXSeconds now)
+      nowSecsInt = floor (utcTimeToPOSIXSeconds now) :: Int
+      nowSecs = fromIntegral nowSecsInt
+      expSecs = fromIntegral (nowSecsInt + 3600)
+      jtiText = externalId <> "-" <> show nowSecsInt
       name = fromMaybe "NY User" $ do
         fn <- person.firstName
         ln <- person.lastName
         pure $ fn <> " " <> ln
-      expTime = addUTCTime (secondsToNominalDiffTime 3600) now
+      email = fromMaybe ("user_" <> externalId <> "@nammayatri.in") mbEmail
       claimsMap =
-        M.fromList $
+        M.fromList
           [ ("name", toJSON name),
-            ("external_id", toJSON externalId)
+            ("external_id", toJSON externalId),
+            ("email", toJSON email)
           ]
-            <> maybe [] (\email -> [("email", toJSON email)]) mbEmail
       claims =
         JWTClaimsSet
           { iss = Nothing,
             sub = Nothing,
             aud = Nothing,
-            exp = numericDate $ utcTimeToPOSIXSeconds expTime,
+            exp = numericDate expSecs,
             nbf = Nothing,
-            iat = numericDate $ utcTimeToPOSIXSeconds now,
+            iat = numericDate nowSecs,
             jti = stringOrURI jtiText,
             unregisteredClaims = ClaimsMap claimsMap
           }
@@ -63,4 +65,5 @@ getProfileZendeskSdkToken (mbPersonId, merchantId) = do
             kid = Nothing
           }
       key = hmacSecret jwtSecret
-  return $ encodeSigned key header claims
+      signedJwt = encodeSigned key header claims
+  return $ Types.ZendeskJwtResp {jwt = signedJwt}

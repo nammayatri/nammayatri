@@ -35,14 +35,35 @@ data AadharPanSyncReq = AadharPanSyncReq {phoneNo :: Kernel.Prelude.Text, countr
 instance Kernel.Types.HideSecrets.HideSecrets AadharPanSyncReq where
   hideSecrets = Kernel.Prelude.identity
 
-data AirportPreferenceReq = AirportPreferenceReq {enableForAirport :: AirportRestrictionType}
+data AirportBlockHistoryItem = AirportBlockHistoryItem
+  { blockReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    blockLiftTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    blockedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    actionType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    reportedAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data AirportPreferenceReq = AirportPreferenceReq
+  { enableForAirport :: AirportRestrictionType,
+    blockReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    blockExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    specialZoneId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance Kernel.Types.HideSecrets.HideSecrets AirportPreferenceReq where
   hideSecrets = Kernel.Prelude.identity
 
-data AirportPreferenceRes = AirportPreferenceRes {driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver, driverName :: Kernel.Prelude.Text, enableForAirport :: AirportRestrictionType}
+data AirportPreferenceRes = AirportPreferenceRes
+  { driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver,
+    driverName :: Kernel.Prelude.Text,
+    enableForAirport :: AirportRestrictionType,
+    blockExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    blockHistory :: Kernel.Prelude.Maybe [AirportBlockHistoryItem]
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -751,7 +772,13 @@ type PostDriverUpdateMerchant =
            Kernel.Types.APISuccess.APISuccess
   )
 
-type GetDriverAirportPreference = ("airportPreference" :> QueryParam "phoneNumber" Kernel.Prelude.Text :> QueryParam "vehicleNumber" Kernel.Prelude.Text :> Get '[JSON] AirportPreferenceRes)
+type GetDriverAirportPreference =
+  ( "airportPreference" :> QueryParam "phoneNumber" Kernel.Prelude.Text :> QueryParam "vehicleNumber" Kernel.Prelude.Text
+      :> QueryParam
+           "specialZoneId"
+           Kernel.Prelude.Text
+      :> Get '[JSON] AirportPreferenceRes
+  )
 
 type PostDriverAirportPreference =
   ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "airportPreference" :> ReqBody '[JSON] AirportPreferenceReq
@@ -855,7 +882,7 @@ data DriverAPIs = DriverAPIs
     getDriverEarnings :: Data.Time.Day -> Data.Time.Day -> Dashboard.Common.Driver.EarningType -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient EarningPeriodStatsRes,
     postDriverTdsRateUpdate :: UpdateTdsRateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverUpdateMerchant :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateDriverMerchantReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverAirportPreference :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient AirportPreferenceRes,
+    getDriverAirportPreference :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient AirportPreferenceRes,
     postDriverAirportPreference :: Kernel.Types.Id.Id Dashboard.Common.Driver -> AirportPreferenceReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverSearchRequestStats :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Data.Time.Day -> Kernel.Prelude.Maybe Data.Time.Day -> EulerHS.Types.EulerClient DriverSearchRequestStatsRes,
     getDriverIdentityInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverIdentityInfoRes,

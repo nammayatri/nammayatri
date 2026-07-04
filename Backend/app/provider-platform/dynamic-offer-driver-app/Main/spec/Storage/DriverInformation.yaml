@@ -97,6 +97,7 @@ DriverInformation:
     canSwitchToInterCity: Bool
     canSwitchToIntraCity: Bool
     enableForAirport: AirportRestrictionType
+    airportBlockExpiryTime: Maybe UTCTime
     mode: Maybe DriverMode
     aadhaarVerified: Bool
     autoPayStatus: Maybe DriverAutoPayStatus

@@ -183,7 +183,7 @@ init journeyReq userPreferences blacklistedServiceTiers blacklistedFareQuoteType
   if not riderConfig.multimodalTesting && any (\(isFareMandatory, mbLegFare) -> isFareMandatory && isNothing mbLegFare) mbTotalFares
     then do return Nothing
     else do
-      forM_ journeyLeg QJourneyLeg.create
+      measureLatency (forM_ journeyLeg QJourneyLeg.create) "QJourneyLeg.create all legs"
       hasUserPreferredTransitTypesFlag <- hasUserPreferredTransitTypes journeyLeg userPreferences
       hasUserPreferredTransitModesFlag <- hasUserPreferredTransitModes journeyLeg userPreferences
       journey <- JL.mkJourney journeyReq.isSingleMode searchReq.riderId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance (searchReq.recentLocationId) journeyReq.relevanceScore hasUserPreferredTransitTypesFlag hasUserPreferredTransitModesFlag fromLocation toLocation
@@ -245,7 +245,7 @@ getAllLegsInfo' ::
 getAllLegsInfo' personId journeyId checkSearch = do
   whenJourneyUpdateInProgress journeyId $ do
     allLegs <- QJourneyLeg.getJourneyLegs journeyId
-    mapMaybeM (getLegInfo personId checkSearch allLegs) allLegs
+    mapMaybeM (\leg -> measureLatency (getLegInfo personId checkSearch allLegs leg) ("getLegInfo leg: " <> show leg.sequenceNumber <> " mode: " <> show leg.mode)) allLegs
 
 getLegInfo ::
   JL.GetStateFlow m r c =>
@@ -572,7 +572,7 @@ addAllLegs journey mbOldJourneyLegs newJourneyLegs blacklistedServiceTiers black
         DTrip.Metro -> do
           void $ addMetroLeg journey journeyLeg (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes
         DTrip.Subway -> do
-          void $ addSubwayLeg journey journeyLeg (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes
+          void $ measureLatency (addSubwayLeg journey journeyLeg (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes) ("addSubwayLeg leg: " <> show journeyLeg.sequenceNumber)
         DTrip.Walk ->
           upsertJourneyLegAction journeyLeg journeyLeg.id.getId
         DTrip.Bus -> do

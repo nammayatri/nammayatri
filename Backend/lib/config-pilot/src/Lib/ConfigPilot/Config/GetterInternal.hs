@@ -21,7 +21,7 @@ import Kernel.Tools.Metrics.CoreMetrics.Types (CoreMetrics)
 import Kernel.Types.CacheFlow (HasInMemEnv)
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, MonadFlow, getCurrentTime, throwError)
+import Kernel.Utils.Common (CacheFlow, MonadFlow, getCurrentTime, logDebug, throwError)
 import Lib.ConfigPilot.Interface.Types (ConfigDimensions (..))
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
@@ -64,8 +64,12 @@ getConfigImpl _dimensions wrappedConfig logicDomain merchantOpCityId = do
   let baseLogics = map (.logic) allActiveElements
   resp <- LYTU.runLogics baseLogics wrappedConfig
   case A.fromJSON resp.result of
-    A.Success (cfg :: LYT.Config b) -> pure cfg.config
-    A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to the config. " <> show e
+    A.Success (cfg :: LYT.Config b) -> do
+      logDebug $ "ConfigPilot read path: successfully applied JSON patch to config for logicDomain: " <> show logicDomain <> ", merchantOpCityId: " <> merchantOpCityId.getId <> ". Output: " <> decodeUtf8 (A.encode cfg.config)
+      pure cfg.config
+    A.Error e -> do
+      logDebug $ "ConfigPilot read path: error applying JSON patch to config for logicDomain: " <> show logicDomain <> ", merchantOpCityId: " <> merchantOpCityId.getId <> ". Error: " <> show e
+      throwError $ InvalidRequest $ "Error occurred while applying JSON patch to the config. " <> show e
   where
     mkTxnIdConfigStickyKey txnId = "sticky_config_versions:" <> txnId <> ":" <> show logicDomain
 

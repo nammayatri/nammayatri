@@ -64,7 +64,6 @@ import qualified Domain.Types.LeaderBoardConfigs as DLBC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantMessage as DTM
 import qualified Domain.Types.MerchantPushNotification as DTPN
-import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.PayoutConfig as DTP
 import qualified Domain.Types.ReminderConfig as DRMC
@@ -134,13 +133,6 @@ $(YTH.generateGenericDefault ''DRMC.ReminderConfig)
 $(YTH.generateGenericDefault ''DSPC.ScheduledPayoutConfig)
 $(YTH.generateGenericDefault ''DTANC.TagActionNotificationConfig)
 $(YTH.generateGenericDefault ''DFODVC.FleetOwnerDocumentVerificationConfig)
-
--- MerchantServiceConfig has secret EncryptedField sub-types that cannot be auto-defaulted;
--- stub genDef to []. Its ConfigPilot read/write work via ToJSON/FromJSON; only the domain
--- schema (which needs ToSchema) is skipped. Mirrors rider IntegratedBPPConfig.
-instance YTH.GenericDefaults DMSC.MerchantServiceConfig where
-  genDef _ = []
-
 $(YTH.generateGenericDefault ''DCC.CoinsConfig)
 
 $(genToSchema ''DTP.PayoutConfig)
@@ -442,11 +434,6 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let configWrap = LYT.Config defaultConfig Nothing 1
       logicData :: (LYT.Config DFODVC.FleetOwnerDocumentVerificationConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DFODVC.FleetOwnerDocumentVerificationConfig)) transporterConfig.referralLinkPassword req logicData
-    LYT.DRIVER_CONFIG LYT.MerchantServiceConfig -> do
-      defaultConfig <- fromMaybeM (InvalidRequest "MerchantServiceConfig config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DMSC.MerchantServiceConfig))
-      let configWrap = LYT.Config defaultConfig Nothing 1
-      logicData :: (LYT.Config DMSC.MerchantServiceConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DMSC.MerchantServiceConfig)) transporterConfig.referralLinkPassword req logicData
     LYT.DRIVER_CONFIG LYT.CoinsConfig -> do
       defaultConfig <- fromMaybeM (InvalidRequest "CoinsConfig config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DCC.CoinsConfig))
       let configWrap = LYT.Config defaultConfig Nothing 1

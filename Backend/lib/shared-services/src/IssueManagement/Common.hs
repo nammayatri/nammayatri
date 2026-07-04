@@ -26,6 +26,7 @@ import Domain.Types.VehicleVariant
 import EulerHS.Prelude hiding (any, elem, id, map, state)
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForEnumAndList)
 import Kernel.External.Encryption
+import qualified Kernel.External.Ticket.Types as Ticket
 import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
@@ -256,6 +257,19 @@ data Chat = Chat
     timestamp :: UTCTime
   }
   deriving (Show, Generic, Read, Eq, Ord, ToJSON, FromJSON, ToSchema)
+
+-- | Per-provider ticket identifier used when a merchant fans out create/update
+-- calls across multiple third-party ticket services (e.g. primary Zendesk with
+-- a mirrored XyneSpaces write). Stored on 'IssueReport' as a JSON blob so the
+-- shared library never needs a Beam typeclass instance for it. The primary
+-- provider's ticketId keeps living on 'IssueReport.ticketId'; the list here
+-- holds only the secondaries so downstream updates can target each service
+-- with its own ticketId.
+data AdditionalTicketId = AdditionalTicketId
+  { service :: Ticket.IssueTicketService,
+    ticketId :: Text
+  }
+  deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be Value => HasSqlValueSyntax be Chat where
   sqlValueSyntax = sqlValueSyntax . toJSON
