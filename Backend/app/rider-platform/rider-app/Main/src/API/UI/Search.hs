@@ -394,7 +394,7 @@ multimodalSearchHandler (personId, _merchantId) req mbInitiateJourney mbBundleVe
     whenJust mbImeiNumber $ \imeiNumber -> do
       encryptedImeiNumber <- encrypt imeiNumber
       Person.updateImeiNumber (Just encryptedImeiNumber) personId
-    dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) True Nothing
+    dSearchRes <- JMU.measureLatency (DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) True Nothing) "DSearch.search multimodalSearchHandler"
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId dSearchRes.searchRequest.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     let initiateJourney = fromMaybe False mbInitiateJourney
     JMU.measureLatency (multiModalSearch dSearchRes.searchRequest riderConfig initiateJourney False req personId mbDepartureTime mbFilterServiceAndJrnyType mbNewServiceTiers) "multiModalSearch"
@@ -656,15 +656,18 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
             then do
               -- Call OSRM for taxi/auto (car) distance/duration, fallback to proportional duration if it fails
               res <-
-                withTryCatch "getMultimodalWalkDistance:calculateLegProportionalDuration" $
-                  Maps.getMultimodalWalkDistance searchRequest.merchantId searchRequest.merchantOperatingCityId (Just searchRequest.id.getId) $
-                    Maps.GetDistanceReq
-                      { origin = Maps.LatLong {lat = leg.startLocation.latLng.latitude, lon = leg.startLocation.latLng.longitude},
-                        destination = Maps.LatLong {lat = leg.endLocation.latLng.latitude, lon = leg.endLocation.latLng.longitude},
-                        travelMode = Just Maps.CAR,
-                        sourceDestinationMapping = Nothing,
-                        distanceUnit = Meter
-                      }
+                JMU.measureLatency
+                  ( withTryCatch "getMultimodalWalkDistance:calculateLegProportionalDuration" $
+                      Maps.getMultimodalWalkDistance searchRequest.merchantId searchRequest.merchantOperatingCityId (Just searchRequest.id.getId) $
+                        Maps.GetDistanceReq
+                          { origin = Maps.LatLong {lat = leg.startLocation.latLng.latitude, lon = leg.startLocation.latLng.longitude},
+                            destination = Maps.LatLong {lat = leg.endLocation.latLng.latitude, lon = leg.endLocation.latLng.longitude},
+                            travelMode = Just Maps.CAR,
+                            sourceDestinationMapping = Nothing,
+                            distanceUnit = Meter
+                          }
+                  )
+                  "getMultimodalWalkDistance calculateLegProportionalDuration"
               case res of
                 Right distResp -> do
                   let newDistance = if distResp.distance > 0 then convertMetersToDistance Meter distResp.distance else leg.distance

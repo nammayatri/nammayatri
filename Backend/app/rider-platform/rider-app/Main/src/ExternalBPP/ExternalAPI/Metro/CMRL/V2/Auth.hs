@@ -106,7 +106,7 @@ resetAuthToken config retriesLeft = do
                 password <- decrypt config.password
                 let authReq = AuthReq config.operatorNameId config.username password "password" config.merchantId
                 authRes <-
-                  runThroughMasterCloud config.networkHostUrl (ET.client authAPI authReq) "authCMRLV2"
+                  runThroughMasterCloud config.networkHostUrl (ET.client authAPI authReq) "authCMRLV2" True
                     >>= fromEitherM (ExternalAPICallError (Just "CMRL_V2_AUTH_API") config.networkHostUrl)
                 logInfo $ "[CMRLV2:Auth] Successfully obtained auth token, expires_in: " <> show authRes.expires_in <> "s, key_index: " <> show authRes.key_index
                 let tokenExpiry = authRes.expires_in * 90 `div` 100
@@ -165,7 +165,7 @@ callCMRLV2APIWithRetries ::
 callCMRLV2APIWithRetries config eulerClientFunc description _proxy authRetriesLeft = do
   logInfo $ "[CMRLV2:API] Calling API: " <> description <> " at " <> showBaseUrl config.networkHostUrl
   token <- getAuthToken config
-  result <- runThroughMasterCloud config.networkHostUrl (eulerClientFunc token) description
+  result <- runThroughMasterCloud config.networkHostUrl (eulerClientFunc token) description True
   case result of
     Right resp -> do
       logInfo $ "[CMRLV2:API] API call successful: " <> description

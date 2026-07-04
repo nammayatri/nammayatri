@@ -220,6 +220,7 @@ FleetRouteAssociation:
 
   constraints:
     id: PrimaryKey
+    fleetOwnerId: SecondaryKey
   queries:
     findAllByFleetOwnerIdAndCityId:
       kvFunction: findAllWithKV

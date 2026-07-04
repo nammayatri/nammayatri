@@ -35,6 +35,7 @@ import IssueManagement.Tools.Error
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (DbHash, decrypt)
 import qualified Kernel.External.Ticket.Interface.Types as TIT
+import qualified Kernel.External.Ticket.Types as TicketTypes
 import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -58,8 +59,20 @@ data ServiceHandle m = ServiceHandle
     findMOCityById :: Id MerchantOperatingCity -> m (Maybe MerchantOperatingCity),
     findMOCityByMerchantShortIdAndCity :: ShortId Merchant -> Context.City -> m (Maybe MerchantOperatingCity),
     getRideInfo :: Id Merchant -> Id MerchantOperatingCity -> Id Ride -> m RideInfoRes,
-    createTicket :: Id Merchant -> Id MerchantOperatingCity -> TIT.CreateTicketReq -> m TIT.CreateTicketResp,
-    updateTicket :: Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp,
+    -- | Create a ticket on the primary provider and (rider-app only) fan out
+    -- to any 'additionalIssueTicketServices' configured on the merchant. The
+    -- returned tuple pairs the primary provider's response with the list of
+    -- @(service, ticketId)@ pairs produced by successful secondary calls;
+    -- failures on secondaries are logged and dropped. Driver-app returns an
+    -- empty list for the secondary component.
+    createTicket :: Id Merchant -> Id MerchantOperatingCity -> TIT.CreateTicketReq -> m (TIT.CreateTicketResp, [AdditionalTicketId]),
+    -- | Update the primary provider's ticket (using 'req.ticketId') and, when
+    -- the extra @additionalTicketIds@ list is non-empty, best-effort update
+    -- each secondary provider's mirrored ticket using its own ticketId. Pass
+    -- @[]@ to update only the primary — that is the driver-app default and
+    -- the correct choice for chat forwarding, which targets Xyne directly via
+    -- 'mbUpdateTicketOnService' rather than fanning out.
+    updateTicket :: Id Merchant -> Id MerchantOperatingCity -> [AdditionalTicketId] -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp,
     kaptureGetTicket :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.GetTicketReq -> m [TIT.GetTicketResp]),
     getTicketStatus :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.SearchTicketByIdReq -> m [TIT.GetTicketStatusResp]),
     findMerchantConfig :: Id Merchant -> Id MerchantOperatingCity -> Maybe (Id Person) -> m MerchantConfig,
@@ -93,7 +106,14 @@ data ServiceHandle m = ServiceHandle
     -- support S3 fetches (e.g. Beckn IGM flow) — the shared handler then
     -- falls back to @mediaFile.url@.
     mbFetchMediaBase64 :: Maybe (D.MediaFile -> m (Maybe Text)),
-    findIssueConfig :: Id MerchantOperatingCity -> Identifier -> m (Maybe D.IssueConfig)
+    findIssueConfig :: Id MerchantOperatingCity -> Identifier -> m (Maybe D.IssueConfig),
+    -- | Optional target-a-specific-service updateTicket. Used by the chat
+    -- forwarding path so we can push the comment to XyneSpaces even when
+    -- Xyne runs as a secondary provider alongside a primary Zendesk (which
+    -- receives dashboard-side updates and does not want duplicate comments).
+    -- Bypasses the merchant's primary/secondary dispatch and calls the named
+    -- service directly. Rider-app wires this; driver-app leaves it @Nothing@.
+    mbUpdateTicketOnService :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.IssueTicketService -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp)
   }
 
 getLanguage :: EsqDBReplicaFlow m r => Id Person -> Maybe Language -> ServiceHandle m -> m Language
@@ -523,8 +543,11 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
     ticket <- buildTicket issueReport category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config now issueHandle uploadedMediaFiles
     ticketResponse <- withTryCatch "createTicket:issueReport" (issueHandle.createTicket merchantId mocId ticket)
     case ticketResponse of
-      Right ticketResponse' -> do
-        QIR.updateTicketId issueReport.id ticketResponse'.ticketId
+      Right (primaryResp, additionalIds) -> do
+        -- Persist the primary provider's ticketId plus any secondary providers
+        -- the rider-app dispatcher fanned out to; the write collapses to the
+        -- old single-ticket behaviour when 'additionalIds' is empty.
+        QIR.updateTicketIds issueReport.id primaryResp.ticketId (if null additionalIds then Nothing else Just additionalIds)
       Left err -> do
         logTagInfo "Create Ticket API failed - " $ show err
   pure $ Common.IssueReportRes {issueReportId = issueReport.id, issueReportShortId = issueReport.shortId, messages}
@@ -548,6 +571,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             status = if shouldCreateTicket then OPEN else NOT_APPLICABLE,
             deleted = False,
             ticketId = Nothing,
+            additionalTicketIds = Nothing,
             createdAt = now,
             updatedAt = now,
             description,
@@ -967,7 +991,12 @@ updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHa
       ticketResponse <-
         withTryCatch
           "updateTicket:updateIssue"
-          (issueHandle.updateTicket merchantId merchantOperatingCityId TIT.UpdateTicketReq {comment = comment, ticketId = ticketId, status = status, rideDescription = Nothing, issueDetails = Nothing, requesterId = Nothing, ticketContext = Nothing})
+          -- Pass the primary provider's ticketId in the request and the
+          -- secondary providers' ticketIds as the leading list; the rider-app
+          -- dispatcher fans out to each secondary and logs their failures
+          -- separately without affecting this Right/Left outcome (which reflects
+          -- only the primary update).
+          (issueHandle.updateTicket merchantId merchantOperatingCityId (fromMaybe [] issueReport.additionalTicketIds) TIT.UpdateTicketReq {comment = comment, ticketId = ticketId, status = status, rideDescription = Nothing, issueDetails = Nothing, requesterId = Nothing, ticketContext = Nothing})
       case ticketResponse of
         Left err -> logTagInfo "Update Ticket API failed - " $ show err
         Right _ -> return ()
@@ -1360,11 +1389,19 @@ forwardChatToTicketService issueReport identifier issueHandle messageText mediaI
       mediaUrls <- fmap catMaybes . forM mediaIds $ \mfId -> do
         mbFile <- CQMF.findById mfId identifier
         traverse (mediaFileToTicketUri issueHandle) mbFile
-      let ticketId = fromMaybe issueReport.id.getId issueReport.ticketId
+      -- When Xyne runs as a secondary its ticketId is in additionalTicketIds;
+      -- when it runs as the primary its ticketId is in 'ticketId'. Falling back
+      -- to 'issueReport.id.getId' preserves the historical behaviour of using
+      -- the internal issueReportId as the Xyne threadId when no ticket has
+      -- been created yet (e.g. Beckn IGM flows).
+      let xyneTicketId =
+            case find (\e -> e.service == TicketTypes.XyneSpaces) (fromMaybe [] issueReport.additionalTicketIds) of
+              Just entry -> entry.ticketId
+              Nothing -> fromMaybe issueReport.id.getId issueReport.ticketId
           ticketReq =
             TIT.UpdateTicketReq
               { comment = messageText,
-                ticketId = ticketId,
+                ticketId = xyneTicketId,
                 status = TIT.Pending,
                 rideDescription = Nothing,
                 issueDetails =
@@ -1380,7 +1417,13 @@ forwardChatToTicketService issueReport identifier issueHandle messageText mediaI
                 requesterId = Nothing,
                 ticketContext = Just TIT.IssueTicket
               }
-      result <- withTryCatch "updateTicket:chatMessage" (issueHandle.updateTicket merchantId mocId ticketReq)
+      -- Prefer the targeted-service handle so we hit Xyne regardless of
+      -- whether it is the primary or a secondary. Fall back to the general
+      -- 'updateTicket' (no fanout) when the handle is not wired.
+      let call = case issueHandle.mbUpdateTicketOnService of
+            Just onService -> onService merchantId mocId TicketTypes.XyneSpaces ticketReq
+            Nothing -> issueHandle.updateTicket merchantId mocId [] ticketReq
+      result <- withTryCatch "updateTicket:chatMessage" call
       case result of
         Right _ -> pure ()
         Left err -> logTagInfo "Update Ticket (chat) failed - " (show err)

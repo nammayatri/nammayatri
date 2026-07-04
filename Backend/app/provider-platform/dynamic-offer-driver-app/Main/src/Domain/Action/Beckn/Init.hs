@@ -386,8 +386,7 @@ validateRequest ::
   Id DM.Merchant ->
   InitReq ->
   m ValidatedInitReq
-validateRequest merchantId req = do
-  void $ QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+validateRequest _merchantId req = do
   now <- getCurrentTime
   case req.fulfillmentId of
     DriverQuoteId driverQuoteId -> do

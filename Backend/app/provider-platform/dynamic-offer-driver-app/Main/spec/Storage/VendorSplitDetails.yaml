@@ -41,3 +41,7 @@ VendorSplitDetails:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, dailyPlanId]
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        eq: [merchantOperatingCityId]

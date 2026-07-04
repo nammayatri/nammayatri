@@ -36,6 +36,9 @@ data IssueReportT f = IssueReportT
     deleted :: B.C f Bool,
     mediaFiles :: B.C f [Text],
     ticketId :: B.C f (Maybe Text),
+    -- | JSON-encoded [AdditionalTicketId] persisted as text; NULL when the
+    -- merchant only writes to a single ticket provider.
+    additionalTicketIds :: B.C f (Maybe Text),
     createdAt :: B.C f Time.LocalTime,
     updatedAt :: B.C f Time.LocalTime,
     chats :: B.C f [Domain.Chat],

@@ -17,6 +17,7 @@ module Tools.Ticket
     updateSosTicket,
     createSosTicket,
     updateTicket,
+    updateTicketOnService,
     addAndUpdateKaptureCustomer,
     kaptureEncryption,
     kapturePullTicket,
@@ -30,9 +31,10 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import EulerHS.Prelude
+import qualified IssueManagement.Common as ICommon
 import qualified Kernel.External.Ticket.Interface as TI
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
-import qualified Kernel.External.Ticket.Types
+import qualified Kernel.External.Ticket.Types as TicketTypes
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -43,17 +45,73 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQ
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 
-createTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.CreateTicketReq -> m Ticket.CreateTicketResp
-createTicket = resolveAndCallTicketService (.issueTicketService) TI.createTicket
+-- | Regular-issue create-ticket entry point. Calls the primary provider
+-- (blocking) and, when the merchant is configured with
+-- @additionalIssueTicketServices@, also fans out to every secondary provider
+-- best-effort. Returns the primary provider's response paired with the list
+-- of @(service, ticketId)@ pairs produced by successful secondary calls so
+-- the caller (shared 'createIssueReport') can persist the mapping for future
+-- update-ticket calls. Secondary failures are logged and never propagate.
+createTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.CreateTicketReq -> m (Ticket.CreateTicketResp, [ICommon.AdditionalTicketId])
+createTicket merchantId mocId req = do
+  merchantConfig <- fetchUsageConfig mocId
+  let primary = merchantConfig.issueTicketService
+      secondaries = filter (/= primary) . fromMaybe [] $ merchantConfig.additionalIssueTicketServices
+  -- Primary failure must not swallow the secondary fan-out. If the primary
+  -- provider is broken (e.g. Kapture returning 404) but the merchant has
+  -- XyneSpaces configured as secondary, we still want the ticket to land on
+  -- Xyne and be persisted as the effective 'issueReport.ticketId' so the
+  -- chat-forwarding path can then update the SAME Xyne thread instead of
+  -- opening a new one on every message.
+  primaryResult <- withTryCatch "createTicket:primary" (callCreateTicket merchantId mocId primary req)
+  secondaryResults <- fanOutCreates merchantId mocId secondaries req
+  case primaryResult of
+    Right primaryResp -> do
+      let asAdditional = [ICommon.AdditionalTicketId {service = svc, ticketId = r.ticketId} | (svc, r) <- secondaryResults]
+      pure (primaryResp, asAdditional)
+    Left primaryErr -> case secondaryResults of
+      ((promotedSvc, promotedResp) : rest) -> do
+        logError $ "createTicket:primary " <> show primary <> " failed, promoting secondary " <> show promotedSvc <> " as effective ticket. err=" <> show primaryErr
+        let asAdditional = [ICommon.AdditionalTicketId {service = svc, ticketId = r.ticketId} | (svc, r) <- rest]
+        pure (promotedResp, asAdditional)
+      [] -> do
+        logError $ "createTicket:primary failed and no secondaries configured/succeeded. err=" <> show primaryErr
+        -- Re-throw as an InternalError so the shared 'withTryCatch' at the
+        -- call site sees it as a normal failure; SomeException isn't a
+        -- Kernel error type accepted by 'throwError'.
+        throwError $ InternalError $ "createTicket failed: " <> show primaryErr
 
+-- | SOS create-ticket entry point. Deliberately does NOT fan out — the SOS
+-- flow was scoped to the single-provider behavior when this fan-out was
+-- introduced. If the fan-out should later apply to SOS as well, extend
+-- 'MerchantServiceUsageConfig' with an @additionalSosTicketServices@ list.
 createSosTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.CreateTicketReq -> m Ticket.CreateTicketResp
 createSosTicket = resolveAndCallTicketService (\cfg -> fromMaybe cfg.issueTicketService cfg.sosTicketService) TI.createTicket
 
-updateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.UpdateTicketReq -> m Ticket.UpdateTicketResp
-updateTicket = resolveAndCallTicketService (.issueTicketService) TI.updateTicket
+-- | Regular-issue update-ticket entry point. Updates the primary provider's
+-- ticket (using 'req.ticketId') and, when @additionalTicketIds@ is non-empty,
+-- also updates every secondary provider's mirrored ticket best-effort. The
+-- caller (shared 'updateTicketStatus') is expected to pass through the
+-- 'additionalTicketIds' persisted at create time on 'IssueReport'; pass @[]@
+-- to hit the primary only (e.g. the chat-forwarding path targets Xyne
+-- directly via 'updateTicketOnService' instead).
+updateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [ICommon.AdditionalTicketId] -> Ticket.UpdateTicketReq -> m Ticket.UpdateTicketResp
+updateTicket merchantId mocId additionalTicketIds req = do
+  merchantConfig <- fetchUsageConfig mocId
+  let primary = merchantConfig.issueTicketService
+  primaryResp <- callUpdateTicket merchantId mocId primary req
+  fanOutUpdates merchantId mocId primary additionalTicketIds req
+  pure primaryResp
 
 updateSosTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.UpdateTicketReq -> m Ticket.UpdateTicketResp
 updateSosTicket = resolveAndCallTicketService (\cfg -> fromMaybe cfg.issueTicketService cfg.sosTicketService) TI.updateTicket
+
+-- | Update a ticket on a specific configured provider, bypassing the
+-- primary/secondary dispatch. Used by the shared chat-forwarding path to
+-- target XyneSpaces even when it runs as a secondary alongside a primary
+-- Zendesk (which does not want duplicate comments).
+updateTicketOnService :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> TicketTypes.IssueTicketService -> Ticket.UpdateTicketReq -> m Ticket.UpdateTicketResp
+updateTicketOnService = callUpdateTicket
 
 addAndUpdateKaptureCustomer :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.KaptureCustomerReq -> m Ticket.KaptureCustomerResp
 addAndUpdateKaptureCustomer = resolveAndCallTicketService (.issueTicketService) TI.addAndUpdateKaptureCustomer
@@ -70,24 +128,110 @@ kaptureGetTicket = resolveAndCallTicketService (.issueTicketService) TI.kaptureG
 getTicketStatus :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.SearchTicketByIdReq -> m [Ticket.GetTicketStatusResp]
 getTicketStatus = resolveAndCallTicketService (.issueTicketService) TI.getTicketStatus
 
+-- | Iterates over secondary services and calls 'TI.createTicket' on each,
+-- returning full '(service, response)' pairs so 'createTicket' can promote
+-- the first success as the effective ticket when the primary fails.
+-- Individual failures are swallowed with a log line so a flaky provider
+-- cannot break the fan-out.
+fanOutCreates ::
+  (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  [TicketTypes.IssueTicketService] ->
+  Ticket.CreateTicketReq ->
+  m [(TicketTypes.IssueTicketService, Ticket.CreateTicketResp)]
+fanOutCreates merchantId mocId services req = fmap catMaybes . forM services $ \svc -> do
+  result <- withTryCatch "createTicket:secondary" (callCreateTicket merchantId mocId svc req)
+  case result of
+    Right resp -> do
+      logInfo $ "createTicket:secondary success service=" <> show svc <> " ticketId=" <> resp.ticketId
+      pure $ Just (svc, resp)
+    Left err -> do
+      logError $ "createTicket:secondary failed service=" <> show svc <> " mocId=" <> mocId.getId <> " err=" <> show err
+      pure Nothing
+
+-- | Iterates over the ticketIds captured at create time and updates each
+-- secondary provider's mirrored ticket. Skips any entry whose service equals
+-- the primary (already updated by the caller). Failures are swallowed.
+fanOutUpdates ::
+  (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  TicketTypes.IssueTicketService ->
+  [ICommon.AdditionalTicketId] ->
+  Ticket.UpdateTicketReq ->
+  m ()
+fanOutUpdates merchantId mocId primary additionalTicketIds req =
+  forM_ additionalTicketIds $ \entry ->
+    when (entry.service /= primary) $ do
+      -- Retarget the update request at this provider's own ticketId; the
+      -- comment, status, media, etc. stay the same across providers.
+      let secondaryReq = (req :: Ticket.UpdateTicketReq) {Ticket.ticketId = entry.ticketId}
+      result <- withTryCatch "updateTicket:secondary" (callUpdateTicket merchantId mocId entry.service secondaryReq)
+      case result of
+        Right _ -> logInfo $ "updateTicket:secondary success service=" <> show entry.service <> " ticketId=" <> entry.ticketId
+        Left err -> logError $ "updateTicket:secondary failed service=" <> show entry.service <> " ticketId=" <> entry.ticketId <> " err=" <> show err
+
+callCreateTicket ::
+  (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  TicketTypes.IssueTicketService ->
+  Ticket.CreateTicketReq ->
+  m Ticket.CreateTicketResp
+callCreateTicket = callServiceSpecific TI.createTicket
+
+callUpdateTicket ::
+  (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  TicketTypes.IssueTicketService ->
+  Ticket.UpdateTicketReq ->
+  m Ticket.UpdateTicketResp
+callUpdateTicket = callServiceSpecific TI.updateTicket
+
+-- | Looks up a specific provider's config in 'MerchantServiceConfig' (by
+-- 'IssueTicketService' enum) and invokes the provider implementation. Used
+-- for both primary and secondary calls in the fan-out — the choice of which
+-- service to hit is made by the caller, not by 'MerchantServiceUsageConfig'.
+callServiceSpecific ::
+  (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  (Ticket.IssueTicketServiceConfig -> req -> m resp) ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  TicketTypes.IssueTicketService ->
+  req ->
+  m resp
+callServiceSpecific func merchantId merchantOperatingCityId service req = do
+  merchantIssueTicketServiceConfig <-
+    getOneConfig
+      (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.IssueTicketService service)})
+      (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.IssueTicketService service)))
+      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  case merchantIssueTicketServiceConfig.serviceConfig of
+    DMSC.IssueTicketServiceConfig msc -> func msc req
+    _ -> throwError $ InternalError "Unknown Service Config"
+
+fetchUsageConfig ::
+  (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  m DMSUC.MerchantServiceUsageConfig
+fetchUsageConfig merchantOperatingCityId =
+  getConfig
+    (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+    (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId))
+    >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+
 resolveAndCallTicketService ::
   (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
-  (DMSUC.MerchantServiceUsageConfig -> Kernel.External.Ticket.Types.IssueTicketService) ->
+  (DMSUC.MerchantServiceUsageConfig -> TicketTypes.IssueTicketService) ->
   (Ticket.IssueTicketServiceConfig -> req -> m resp) ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   req ->
   m resp
 resolveAndCallTicketService selectService func merchantId merchantOperatingCityId req = do
-  merchantConfig <-
-    getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId))
-      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+  merchantConfig <- fetchUsageConfig merchantOperatingCityId
   let service = selectService merchantConfig
   logDebug $ "resolveAndCallTicketService: service=" <> show service <> " mocId=" <> merchantOperatingCityId.getId
-  merchantIssueTicketServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.IssueTicketService service)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.IssueTicketService service)))
-      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
-  logDebug $ "resolveAndCallTicketService: serviceConfig resolved, calling provider"
-  case merchantIssueTicketServiceConfig.serviceConfig of
-    DMSC.IssueTicketServiceConfig msc -> func msc req
-    _ -> throwError $ InternalError "Unknown Service Config"
+  callServiceSpecific func merchantId merchantOperatingCityId service req

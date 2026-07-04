@@ -94,7 +94,7 @@ resetAuthToken config retriesLeft = do
                 logInfo $ "[CMRL:Auth] Requesting new auth token from: " <> showBaseUrl config.networkHostUrl
                 password <- decrypt config.password
                 authRes <-
-                  runThroughMasterCloud config.networkHostUrl (ET.client authAPI $ AuthReq config.username password cmrlAppType) "authCMRL"
+                  runThroughMasterCloud config.networkHostUrl (ET.client authAPI $ AuthReq config.username password cmrlAppType) "authCMRL" True
                     >>= fromEitherM (ExternalAPICallError (Just "CMRL_AUTH_API") config.networkHostUrl)
                 logInfo "[CMRL:Auth] Successfully obtained auth token"
                 let tokenExpiry = 2 * 3600
@@ -150,7 +150,7 @@ callCMRLAPIWithRetries ::
   m res
 callCMRLAPIWithRetries config eulerClientFunc description _proxy authRetriesLeft = do
   token <- getAuthToken config
-  result <- runThroughMasterCloud config.networkHostUrl (eulerClientFunc token) description
+  result <- runThroughMasterCloud config.networkHostUrl (eulerClientFunc token) description True
   case result of
     Right resp -> return resp
     Left clientErr -> case clientErr of

@@ -40,6 +40,7 @@ import qualified Data.Time
 import qualified Data.Time.Calendar as Cal
 import Domain.Action.UI.Plan hiding (mkDriverFee)
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
+import Domain.Types.DriverInformation as DI
 import Domain.Types.Extra.Plan
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import qualified Domain.Types.Merchant
@@ -826,7 +827,8 @@ recordAirportCashRecharge ::
   ( BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m
+    MonadFlow m,
+    Redis.HedisLTSFlowEnv r
   ) =>
   (Id DP.Person, Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
   HighPrecMoney ->
@@ -835,6 +837,9 @@ recordAirportCashRecharge ::
 recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
   when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))
+  now <- getCurrentTime
+  effectiveAirport <- QDI.resolveAirportRestriction now driverInfo
+  when (effectiveAirport == DI.BLOCKED) $ throwError DriverNotEnabledForAirport
   when (amount <= 0) $ throwError $ InvalidRequest "Cash recharge amount must be greater than zero"
   existing <- getEntriesByReference walletReferenceAirportCashRecharge referenceId
   when (null existing) $ do

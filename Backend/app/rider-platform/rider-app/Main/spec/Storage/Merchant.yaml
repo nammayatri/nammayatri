@@ -329,6 +329,7 @@ MerchantServiceUsageConfig:
     whatsappProvidersPriorityList: "[WhatsappService]"
     issueTicketService: IssueTicketService
     sosTicketService: Maybe IssueTicketService
+    additionalIssueTicketServices: Maybe [IssueTicketService]
     useFraudDetection: Bool
     enableDashboardSms: Bool
     getExophone: CallService
@@ -365,6 +366,7 @@ MerchantServiceUsageConfig:
     createPayoutOrder: Maybe PayoutService
     payoutOrderStatus: Maybe PayoutService
     eventTrackingProviders: Maybe [EventTrackingService]
+    additionalIssueTicketServices: Maybe [IssueTicketService]
   fromTType:
     cancelPaymentIntent: fromMaybe (Kernel.External.Payment.Types.Stripe) cancelPaymentIntent|E
     getFrfsAutocompleteDistances: fromMaybe (Kernel.External.Maps.Types.OSRM)|I
@@ -429,6 +431,7 @@ MerchantServiceUsageConfig:
     initiateCall: character varying(30)
     issueTicketService: character varying(30)
     sosTicketService: character varying(30)
+    additionalIssueTicketServices: "text[]"
     getExophone: character varying (255)
     aadhaarVerificationService: character varying(30)
     insuranceService: character varying(30)
@@ -460,7 +463,7 @@ MerchantServiceUsageConfig:
     insuranceService: "'Acko'"
 
 MerchantPaymentMethod:
-  derives: "Generic,Show,'UsageSafety"
+  derives: "Generic,Show,ToJSON,FromJSON,ToSchema"
   fields:
     id: Id MerchantPaymentMethod
     merchantId: Id Merchant

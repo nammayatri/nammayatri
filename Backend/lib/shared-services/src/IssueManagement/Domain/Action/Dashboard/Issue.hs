@@ -272,6 +272,7 @@ createIssueReportV2 _merchantShortId _city Common.IssueReportReqV2 {..} issueHan
             reopenedCount = 0,
             becknIssueId = Nothing,
             customerResponse = Nothing,
+            additionalTicketIds = Nothing,
             ..
           }
 

@@ -135,7 +135,8 @@ customerIssueHandle =
       mbShouldForwardChatToTicketService = Just isXyneTicketService,
       mbFetchMediaBase64 = Just fetchMediaBase64FromS3,
       findIssueConfig = \mocId issueIdentifier ->
-        getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId.getId, identifier = show issueIdentifier}) (Just (CQIssueConfig.findByMerchantOpCityId mocId Common.CUSTOMER))
+        getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId.getId, identifier = show issueIdentifier}) (Just (CQIssueConfig.findByMerchantOpCityId mocId Common.CUSTOMER)),
+      mbUpdateTicketOnService = Just castUpdateTicketOnService
     }
 
 -- | Fetch a MediaFile's bytes directly from S3 (returning the base64 payload
@@ -150,14 +151,20 @@ fetchMediaBase64FromS3 mf = case mf.s3FilePath of
   Just s3Key -> Just <$> S3.get (T.unpack s3Key)
   Nothing -> pure Nothing
 
--- | Forward customer chat messages to the ticket service only when the
--- merchant's primary is XyneSpaces. Zendesk / Kapture already receive
--- dashboard-side updates, and doubling up on their comment threads would
--- duplicate content on every customer message.
+-- | Forward customer chat messages to the ticket service whenever XyneSpaces
+-- is part of the merchant's issue-ticket fan-out (primary OR secondary).
+-- Zendesk / Kapture receive dashboard-side updates and doubling up their
+-- comment threads would duplicate content on every customer message, but
+-- Xyne always needs the message appended via its threadId API, even when it
+-- is running alongside another provider as a secondary.
 isXyneTicketService :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Flow Bool
 isXyneTicketService _merchantId mocId = do
   mbUsage <- CQMSUC.findByMerchantOperatingCityId (cast mocId)
-  pure $ maybe False (\c -> c.issueTicketService == TicketTypes.XyneSpaces) mbUsage
+  pure $ maybe False xyneInUse mbUsage
+  where
+    xyneInUse c =
+      c.issueTicketService == TicketTypes.XyneSpaces
+        || TicketTypes.XyneSpaces `elem` fromMaybe [] c.additionalIssueTicketServices
 
 castFindFRFSTicketBookingById :: Id Common.FRFSTicketBooking -> Flow (Maybe Common.FRFSTicketBooking)
 castFindFRFSTicketBookingById ticketBookingId = do
@@ -407,11 +414,14 @@ castRideInfo merchantId _ rideId = do
       let shouldCacheRideInfo = elem (rideInfoRes.rideStatus) [DRR.COMPLETED, DRR.CANCELLED]
       bool (return ()) (Redis.setExp makeRideInfoCacheKey rideInfoRes 259200) shouldCacheRideInfo
 
-castCreateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> Flow TIT.CreateTicketResp
+castCreateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> Flow (TIT.CreateTicketResp, [Common.AdditionalTicketId])
 castCreateTicket merchantId merchantOperatingCityId = TT.createTicket (cast merchantId) (cast merchantOperatingCityId)
 
-castUpdateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketReq -> Flow TIT.UpdateTicketResp
+castUpdateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> [Common.AdditionalTicketId] -> TIT.UpdateTicketReq -> Flow TIT.UpdateTicketResp
 castUpdateTicket merchantId merchantOperatingCityId = TT.updateTicket (cast merchantId) (cast merchantOperatingCityId)
+
+castUpdateTicketOnService :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TicketTypes.IssueTicketService -> TIT.UpdateTicketReq -> Flow TIT.UpdateTicketResp
+castUpdateTicketOnService merchantId merchantOperatingCityId = TT.updateTicketOnService (cast merchantId) (cast merchantOperatingCityId)
 
 castKaptureGetTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.GetTicketReq -> Flow [TIT.GetTicketResp]
 castKaptureGetTicket merchantId merchantOperatingCityId = TT.kaptureGetTicket (cast merchantId) (cast merchantOperatingCityId)
