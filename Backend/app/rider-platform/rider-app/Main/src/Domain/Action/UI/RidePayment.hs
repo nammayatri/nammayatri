@@ -33,6 +33,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.Finance (FinanceCtx)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
@@ -454,7 +455,9 @@ postPaymentRefundRequestCreate (mbPersonId, _) rideId req = do
               personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
               unless (booking.riderId == personId) $ throwError $ InvalidRequest "Person is not the owner of the ride",
             mkRefundRequestRow = \ctx -> do
-              validateRefundAmount ctx.existingRequests req.requestedAmount ctx.transaction
+              -- Component-wise only — refundComponents required, no whole-amount fallback.
+              when (null req.refundComponents) $ throwError (InvalidRequest "refundComponents required")
+              validateRefundComponents rideId ctx.booking req.refundComponents
               personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
               evidenceS3Path <- forM req.evidence $ \evidence -> do
                 imageExtension <- validateContentType req
@@ -463,11 +466,13 @@ postPaymentRefundRequestCreate (mbPersonId, _) rideId req = do
                   Redis.withLockRedis (imageS3Lock path) 5 $
                     S3.put (Text.unpack path) evidence
                 pure path
-              let requestedAmount = req.requestedAmount <&> (.amount)
+              let requestedAmount = Just (sum (map (\c -> c.amount.amount) req.refundComponents))
                   refundsAmount = Nothing -- admin sets at /respond/approve
                   refundsTries = 0 -- no Stripe attempts yet
                   deductFromDriver = Nothing -- admin chooses absorb-vs-clawback at /respond/approve
-              buildRefundRequestRow ctx evidenceS3Path req.code req.description requestedAmount refundsAmount refundsTries DRefundRequest.OPEN deductFromDriver,
+                  requestedRefundComponents = Just (map (\c -> DRefundRequest.RefundComponentAmount {amount = c.amount.amount, component = c.component}) req.refundComponents)
+              -- admin fixes the approved breakdown at /respond/approve; create leaves it unset.
+              buildRefundRequestRow ctx evidenceS3Path req.code req.description requestedAmount refundsAmount refundsTries DRefundRequest.OPEN deductFromDriver requestedRefundComponents Nothing,
             postCreate = \_ -> pure Success
           }
   createPaymentRefundRequest h rideId
@@ -501,8 +506,10 @@ buildRefundRequestRow ::
   Kernel.Prelude.Int ->
   DRefundRequest.RefundRequestStatus ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe [DRefundRequest.RefundComponentAmount] ->
+  Kernel.Prelude.Maybe [DRefundRequest.RefundComponentAmount] ->
   Environment.Flow DRefundRequest.RefundRequest
-buildRefundRequestRow ctx evidenceS3Path code description requestedAmount refundsAmount refundsTries status deductFromDriver = do
+buildRefundRequestRow ctx evidenceS3Path code description requestedAmount refundsAmount refundsTries status deductFromDriver requestedRefundComponents approvedRefundedComponents = do
   newId <- generateGUID
   now <- getCurrentTime
   pure
@@ -523,12 +530,50 @@ buildRefundRequestRow ctx evidenceS3Path code description requestedAmount refund
         code,
         description,
         deductFromDriver,
+        requestedRefundComponents,
+        approvedRefundedComponents,
         evidenceS3Path,
         responseDescription = Nothing,
         refundsId = Nothing,
         createdAt = now,
         updatedAt = now
       }
+
+-- | Build per-component refund splits from the row's approved components, each split into fare + VAT
+--   by the ride's breakup ratio. Returns the ride-fare total (the BPP commission-slice denominator).
+--   Throws if the ride has no structured fare breakup, or if approved components are absent (approve always sets them).
+computeRefundSplits ::
+  Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+  DRefundRequest.RefundRequest ->
+  FinanceCtx ->
+  Environment.Flow (Kernel.Types.Common.HighPrecMoney, [RidePaymentFinance.RefundComponentSplit])
+computeRefundSplits rideId refundRequest ctx = do
+  mbOfferEntity <- QOfferEntity.findByEntityIdAndEntityType rideId.getId DOfferEntity.RIDE
+  let discount = maybe 0 (.discountAmount) mbOfferEntity
+  fareBreakups <-
+    SFareBreakupInfo.getFareBreakupsWithFallback
+      rideId.getId
+      Domain.Types.FareBreakup.RIDE
+      (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE)
+  mbLi <- SPayment.buildLedgerInfoFromBreakups fareBreakups discount 0 0 0 ctx
+  li <- mbLi & fromMaybeM (InvalidRequest $ "Refund requires a structured fare breakup; ride " <> rideId.getId <> " has none")
+  case refundRequest.approvedRefundedComponents of
+    Just comps@(_ : _) -> pure (li.rideFare, map (splitComponent li) comps)
+    _ -> throwError (InternalError $ "Refund splits require approved components; refundRequest for ride " <> rideId.getId <> " has none")
+  where
+    splitComponent li comp =
+      let (fareTot, vatTot) = case comp.component of
+            Domain.Types.FareBreakup.RIDE_FARE -> (li.rideFare, li.gstAmount)
+            Domain.Types.FareBreakup.TOLL -> (li.tollFare, li.tollVatAmount)
+            Domain.Types.FareBreakup.PARKING -> (li.parkingCharge, li.parkingChargeVat)
+          tot = fareTot + vatTot
+          fareAmt = if tot > 0 then comp.amount * fareTot / tot else comp.amount
+       in RidePaymentFinance.RefundComponentSplit comp.component fareAmt (comp.amount - fareAmt)
+
+-- | Build the per-component refund DTOs the BPP consumes (FareComponent → its Text tag).
+mkRefundLedgerComponents :: [RidePaymentFinance.RefundComponentSplit] -> [CallBPPInternal.RefundLedgerComponent]
+mkRefundLedgerComponents =
+  map (\s -> CallBPPInternal.RefundLedgerComponent {component = s.component, fareAmount = s.fareAmount, vatAmount = s.vatAmount})
 
 createPath ::
   (MonadTime m, MonadReader r m, HasField "s3Env" r (S3Env m)) =>
@@ -579,6 +624,63 @@ getPaymentRefundRequest (mbPersonId, _merchantId) rideId = do
       logError $ "Order refund locked: " <> orderId.getId
       throwError (InvalidRequest "Order refund locked")
     Right result -> return result
+
+-- | Per-component fare+tax breakdown for a ride — the refundable options feeding
+--   refundRequest/create. Reuses 'buildLedgerInfoFromBreakups' with appFee=0, so RideFare is the
+--   FULL customer-paid fare (commission embedded); 'components = Nothing' for legacy rides
+--   whose breakup has no structured tags.
+getPaymentFareBreakup ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+    Environment.Flow API.Types.UI.RidePayment.FareBreakupRes
+  )
+getPaymentFareBreakup (mbPersonId, _merchantId) rideId = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  unless (booking.riderId == personId) $ throwError $ InvalidRequest "Person is not the owner of the ride"
+  mbOfferEntity <- QOfferEntity.findByEntityIdAndEntityType rideId.getId DOfferEntity.RIDE
+  let discount = maybe 0 (.discountAmount) mbOfferEntity
+      currency = booking.estimatedFare.currency
+  fareBreakups <-
+    SFareBreakupInfo.getFareBreakupsWithFallback
+      rideId.getId
+      Domain.Types.FareBreakup.RIDE
+      (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE)
+  let ctx =
+        RidePaymentFinance.buildRiderFinanceCtx
+          booking.merchantId.getId
+          booking.merchantOperatingCityId.getId
+          currency
+          True
+          personId.getId
+          rideId.getId
+          Nothing
+          Nothing
+          (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
+  mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups fareBreakups discount 0 0 0 ctx
+  let toPrice amt = mkPriceAPIEntity (mkPrice (Just currency) amt)
+      mkComp c excl tax =
+        let tot = excl + tax
+         in if tot > 0
+              then Just $ API.Types.UI.RidePayment.FareBreakupComponent {component = c, exclTax = toPrice excl, tax = toPrice tax, total = toPrice tot}
+              else Nothing
+  case mbLedgerInfo of
+    Nothing -> pure $ API.Types.UI.RidePayment.FareBreakupRes {components = Nothing, totalAmount = toPrice 0}
+    Just li ->
+      pure $
+        API.Types.UI.RidePayment.FareBreakupRes
+          { components =
+              Just $
+                catMaybes
+                  [ mkComp Domain.Types.FareBreakup.RIDE_FARE li.rideFare li.gstAmount,
+                    mkComp Domain.Types.FareBreakup.TOLL li.tollFare li.tollVatAmount,
+                    mkComp Domain.Types.FareBreakup.PARKING li.parkingCharge li.parkingChargeVat
+                  ],
+            totalAmount = toPrice (li.rideFare + li.gstAmount + li.tollFare + li.tollVatAmount + li.parkingCharge + li.parkingChargeVat)
+          }
 
 mkRefundRequestResp ::
   Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
@@ -690,26 +792,51 @@ createPaymentRefundRequest h rideId = do
       throwError (InvalidRequest "Order refund already in progress")
     Right result -> return result
 
--- | Cumulative-budget check across REFUNDED siblings(partial refunds). APPROVED never appears here:
---   the single-in-flight guard at the create/retry sites runs first and rejects it.
-validateRefundAmount ::
-  [DRefundRequest.RefundRequest] ->
-  Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity ->
-  DPaymentTransaction.PaymentTransaction ->
+-- | Per-component ledger-driven cap check: for each requested component, already-refunded
+--   (SETTLED legs) + requested must not exceed the component's total (fare + VAT) from the
+--   ride fare-breakup. Used instead of the cumulative-total check for per-component requests.
+validateRefundComponents ::
+  Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+  Domain.Types.Booking.Booking ->
+  [API.Types.UI.RidePayment.RefundComponentReq] ->
   Environment.Flow ()
-validateRefundAmount existingRequests mbRequestedAmount transaction =
-  whenJust mbRequestedAmount $ \requestedAmount -> do
-    unless (requestedAmount.currency == transaction.currency) $
-      throwError (InvalidRequest "Invalid currency")
-    let countedSum = sum $ mapMaybe (.refundsAmount) $ filter (\r -> r.status == DRefundRequest.REFUNDED) existingRequests
-        newTotal = countedSum + requestedAmount.amount
-    when (newTotal > transaction.amount) $
-      throwError
-        ( InvalidRequest $
-            "Cumulative refund total " <> show newTotal
-              <> " exceeds transaction amount "
-              <> show transaction.amount
-        )
+validateRefundComponents rideId booking comps = do
+  let ctx =
+        RidePaymentFinance.buildRiderFinanceCtx
+          booking.merchantId.getId
+          booking.merchantOperatingCityId.getId
+          booking.estimatedFare.currency
+          True
+          booking.riderId.getId
+          rideId.getId
+          Nothing
+          Nothing
+          (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
+  mbOfferEntity <- QOfferEntity.findByEntityIdAndEntityType rideId.getId DOfferEntity.RIDE
+  let discount = maybe 0 (.discountAmount) mbOfferEntity
+  fareBreakups <-
+    SFareBreakupInfo.getFareBreakupsWithFallback
+      rideId.getId
+      Domain.Types.FareBreakup.RIDE
+      (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE)
+  mbLi <- SPayment.buildLedgerInfoFromBreakups fareBreakups discount 0 0 0 ctx
+  whenJust mbLi $ \li ->
+    forM_ comps $ \c -> do
+      let cap = componentTotal li c.component
+          requested = c.amount.amount
+      already <- RidePaymentFinance.getSettledRefundByComponent rideId.getId c.component
+      when (already + requested > cap) $
+        throwError
+          ( InvalidRequest $
+              "Refund for " <> show c.component <> " (already " <> show already <> " + requested " <> show requested
+                <> ") exceeds the refundable cap "
+                <> show cap
+          )
+  where
+    componentTotal li component = case component of
+      Domain.Types.FareBreakup.RIDE_FARE -> li.rideFare + li.gstAmount
+      Domain.Types.FareBreakup.TOLL -> li.tollFare + li.tollVatAmount
+      Domain.Types.FareBreakup.PARKING -> li.parkingCharge + li.parkingChargeVat
 
 castRefundRequestStatus :: TPayment.RefundStatus -> DRefundRequest.RefundRequestStatus
 castRefundRequestStatus = \case
@@ -739,15 +866,17 @@ processRefundRaised refundRequest = do
           Nothing
           Nothing
           (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
-  void $ RidePaymentFinance.createRefundRaisedLedger ctx refundRequest.id amount
+  (rideFareTotal, splits) <- computeRefundSplits rideId refundRequest ctx
+  void $ RidePaymentFinance.createRefundRaisedLedger ctx refundRequest.id splits
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   CallBPPInternal.refundLedger merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId $
     CallBPPInternal.RefundLedgerReq
       { refundRequestId = refundRequest.id.getId,
         refundsAmount = amount,
-        transactionAmount = refundRequest.transactionAmount,
         deductFromDriver = refundRequest.deductFromDriver,
-        refundRequestStatus = CallBPPInternal.APPROVED
+        refundRequestStatus = CallBPPInternal.APPROVED,
+        refundComponents = Just (mkRefundLedgerComponents splits),
+        rideFareComponentTotal = Just rideFareTotal
       }
 
 -- | Side-effects for the APPROVED→REFUNDED transition. Dispatched by processRefundResult
@@ -775,15 +904,17 @@ processRefundSucceeded refundRequest = do
             Nothing
             (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
     void $ RidePaymentFinance.createRefundSucceededLedger ctx refundRequest.id
-    RidePaymentFinance.regenerateRefundInvoice rideId.getId amount
+    (rideFareTotal, splits) <- computeRefundSplits rideId refundRequest ctx
+    RidePaymentFinance.createRefundInvoice rideId.getId refundRequest.id.getId splits
     merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
     CallBPPInternal.refundLedger merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId $
       CallBPPInternal.RefundLedgerReq
         { refundRequestId = refundRequest.id.getId,
           refundsAmount = amount,
-          transactionAmount = refundRequest.transactionAmount,
           deductFromDriver = refundRequest.deductFromDriver,
-          refundRequestStatus = CallBPPInternal.REFUNDED
+          refundRequestStatus = CallBPPInternal.REFUNDED,
+          refundComponents = Just (mkRefundLedgerComponents splits), -- BPP builds its per-component refund + negative Commission invoices from these
+          rideFareComponentTotal = Just rideFareTotal
         }
 
 -- | APPROVED→FAILED: void the pending refund legs on both BAP and BPP (no invoice — none until
@@ -800,9 +931,10 @@ processRefundFailed refundRequest = do
     CallBPPInternal.RefundLedgerReq
       { refundRequestId = refundRequest.id.getId,
         refundsAmount = amount,
-        transactionAmount = refundRequest.transactionAmount,
         deductFromDriver = refundRequest.deductFromDriver,
-        refundRequestStatus = CallBPPInternal.FAILED
+        refundRequestStatus = CallBPPInternal.FAILED,
+        refundComponents = Nothing,
+        rideFareComponentTotal = Nothing
       }
 
 -- | Apply an async Stripe result to an APPROVED refund_request: update status + notify, then

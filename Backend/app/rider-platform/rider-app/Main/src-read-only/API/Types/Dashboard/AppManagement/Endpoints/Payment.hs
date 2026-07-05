@@ -6,6 +6,7 @@ module API.Types.Dashboard.AppManagement.Endpoints.Payment where
 import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
+import qualified "this" Domain.Types.FareBreakup
 import qualified "this" Domain.Types.Person
 import qualified "this" Domain.Types.RefundRequest
 import qualified "this" Domain.Types.Ride
@@ -21,6 +22,10 @@ import qualified "payment" Lib.Payment.Domain.Types.PaymentOrder
 import qualified "payment" Lib.Payment.Domain.Types.Refunds
 import Servant
 import Servant.Client
+
+data RefundComponentItem = RefundComponentItem {component :: Domain.Types.FareBreakup.FareComponent, amount :: Kernel.Types.Common.PriceAPIEntity}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RefundRequestInfoResp = RefundRequestInfoResp
   { orderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
@@ -43,11 +48,7 @@ data RefundRequestInfoResp = RefundRequestInfoResp
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RefundRequestInitiateReq = RefundRequestInitiateReq
-  { requestedAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
-    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    deductFromDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
-  }
+data RefundRequestInitiateReq = RefundRequestInitiateReq {refundComponents :: [RefundComponentItem], description :: Kernel.Prelude.Maybe Kernel.Prelude.Text, deductFromDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -80,7 +81,7 @@ data RefundRequestResp = RefundRequestResp {summary :: Dashboard.Common.Summary,
 data RefundRequestRespondReq = RefundRequestRespondReq
   { approve :: Kernel.Prelude.Bool,
     responseDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    approvedAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    refundComponents :: Kernel.Prelude.Maybe [RefundComponentItem],
     retryRefunds :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     deductFromDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }

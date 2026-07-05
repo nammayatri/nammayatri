@@ -663,7 +663,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               issuedToAddress = booking.fromLocation.address.fullAddress,
               lineItems = mkRideLineItems False CUSTOMER,
               gstBreakdown = rideGstBreakdown,
-              referenceId = Nothing,
+              referenceId = Just booking.id.getId,
               isVat = isVat,
               issuedToTaxNo = Nothing,
               issuedByTaxNo = Nothing,
@@ -687,7 +687,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               issuedToAddress = Nothing,
               lineItems = mkRideLineItems driverClubVatInclusive (if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER),
               gstBreakdown = rideGstBreakdown,
-              referenceId = Nothing,
+              referenceId = Just booking.id.getId,
               isVat = isVat,
               issuedToTaxNo = Nothing,
               issuedByTaxNo = Nothing,
@@ -780,7 +780,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 issuedToId = driverOrFleetPersonId.getId,
                 issuedToName = mbDriver <&> (.firstName),
                 issuedToAddress = Nothing,
-                referenceId = Nothing,
+                referenceId = Just booking.id.getId,
                 lineItems =
                   catMaybes
                     [ Just InvoiceLineItem {description = "Platform Commission", descriptionType = Just PlatformCommission, quantity = 1, unitPrice = commissionAmount, lineTotal = commissionAmount, isExternalCharge = False, groupId = Just "g-commission", itemType = Just Fare}

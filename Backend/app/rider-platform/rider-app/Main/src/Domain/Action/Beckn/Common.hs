@@ -642,7 +642,7 @@ rideAssignedReqHandler req = do
                       financeCtx = ledgerCtx
                     }
                   mbLedgerInfo
-          result <- RidePaymentFinance.createRidePaymentLedger ledgerCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.tollFare ledgerInfo.tollVatAmount ledgerInfo.platformFee ledgerInfo.offerDiscountAmount ledgerInfo.cashbackPayoutAmount ledgerInfo.rideVatAbsorbedOnDiscount
+          result <- RidePaymentFinance.createRidePaymentLedger ledgerCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.tollFare ledgerInfo.tollVatAmount ledgerInfo.parkingCharge ledgerInfo.parkingChargeVat ledgerInfo.platformFee ledgerInfo.offerDiscountAmount ledgerInfo.cashbackPayoutAmount ledgerInfo.rideVatAbsorbedOnDiscount
           case result of
             Right _ -> logInfo $ "Cash ride assigned: created PENDING BAP ledger + invoice for ride: " <> ride.id.getId
             Left err -> logError $ "Cash ride ledger create failed at assign: " <> show err
@@ -995,6 +995,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           cashLedgerInfo.gstAmount
           cashLedgerInfo.tollFare
           cashLedgerInfo.tollVatAmount
+          cashLedgerInfo.parkingCharge
+          cashLedgerInfo.parkingChargeVat
           cashLedgerInfo.platformFee
           cashLedgerInfo.offerDiscountAmount
           cashLedgerInfo.cashbackPayoutAmount

@@ -808,9 +808,8 @@ getOrderIdForRide rideId = do
   pure $ (.id) <$> mbOrder
 
 -- | Inverse of getOrderIdForRide: a refund_request's orderId is a payment_order id, NOT a ride id.
---   payment_order.id is an independently generated GUID; the rideId is stored on the order's
---   domainEntityId at creation. Resolve the ride via domainEntityId instead of casting the order
---   GUID to a ride GUID (the two are never equal on real rides — only coincided on synthetic seeds).
+--   payment_order.id is an independently generated GUID; the rideId lives on the order's
+--   domainEntityId — never cast the order GUID to a ride GUID.
 getRideIdForOrder :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DOrder.PaymentOrder -> m (Maybe (Id Ride.Ride))
 getRideIdForOrder orderId = do
   mbOrder <- QPaymentOrder.findById orderId
@@ -923,6 +922,8 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
             ledgerInfo.gstAmount
             ledgerInfo.tollFare
             ledgerInfo.tollVatAmount
+            ledgerInfo.parkingCharge
+            ledgerInfo.parkingChargeVat
             ledgerInfo.platformFee
             ledgerInfo.offerDiscountAmount
             ledgerInfo.cashbackPayoutAmount
@@ -1437,6 +1438,8 @@ zeroEffectivePaymentDueToOffer merchantId merchantOperatingCityId rideId person 
         li.gstAmount
         li.tollFare
         li.tollVatAmount
+        li.parkingCharge
+        li.parkingChargeVat
         li.platformFee
         discountAmount
         li.rideVatAbsorbedOnDiscount

@@ -7,6 +7,7 @@ module Domain.Action.Dashboard.AppManagement.Payment
 where
 
 import qualified API.Types.Dashboard.AppManagement.Payment as Common
+import qualified API.Types.UI.RidePayment
 import Control.Applicative ((<|>))
 import qualified Dashboard.Common as Common
 import qualified Domain.Action.UI.RidePayment as DRidePayment
@@ -27,13 +28,11 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified "payment" Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
-import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
-import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -120,13 +119,6 @@ postPaymentRefundRequestRespond merchantShortId opCity refundRequestId req = do
     merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
     merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
     unless (refundRequest.merchantOperatingCityId == merchantOpCity.id) $ throwError (RefundRequestDoesNotExist refundRequestId.getId)
-    -- Currency-only check here; the amount bound is enforced cumulatively inside initiateRefunds.
-    whenJust req.approvedAmount $ \approvedAmount -> do
-      unless (approvedAmount.currency == refundRequest.currency) $
-        throwError (InvalidRequest "Invalid currency")
-      unless req.approve $
-        throwError (InvalidRequest "Approved amount not required if refund request wasn't approved")
-
     case (refundRequest.status, req.approve) of
       (DRefundRequest.OPEN, True) -> initiateRefunds refundRequest
       (DRefundRequest.OPEN, False) -> rejectRefunds refundRequest
@@ -150,35 +142,30 @@ postPaymentRefundRequestRespond merchantShortId opCity refundRequestId req = do
 
     initiateRefunds refundRequest = do
       logInfo $ "Refund request approved by admin: orderId: " <> refundRequest.orderId.getId <> ". Initiate refunds: refundsTries: " <> show (refundRequest.refundsTries + 1)
-      let updRefundsAmount = (req.approvedAmount <&> (.amount)) <|> refundRequest.requestedAmount <|> Just refundRequest.transactionAmount
-
-      -- amount can be updated only for retry case, because new Stripe refund object will be created
-      when (refundRequest.refundsTries > 0 && req.retryRefunds /= Just True) $
-        whenJust refundRequest.refundsAmount $ \existingRefundsAmount -> do
-          unless (updRefundsAmount == Just existingRefundsAmount) $
-            throwError (InvalidRequest $ "Could not change refunds amount, as refund already was initiated: current refunds amount: " <> show existingRefundsAmount)
-
-      -- Fetch siblings once for both checks below (single-in-flight + cumulative).
+      -- Approved breakdown: admin's override if supplied, else the prior approval (retry) or the customer's requested set.
+      let approvedComps = req.refundComponents <&> map (\c -> DRefundRequest.RefundComponentAmount {amount = c.amount.amount, component = c.component})
+          -- like the components, fall back to the prior approval on retry so an omitted flag can't flip absorb->clawback
+          deductFromDriver = req.deductFromDriver <|> refundRequest.deductFromDriver
+      comps <- (approvedComps <|> refundRequest.approvedRefundedComponents <|> refundRequest.requestedRefundComponents) & fromMaybeM (InvalidRequest "No refund components to approve")
+      when (null comps) $ throwError (InvalidRequest "No refund components to approve")
+      rideId <- SPayment.getRideIdForOrder refundRequest.orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> refundRequest.orderId.getId)
+      ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+      booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+      -- Component-wise ledger cap — same basis as customer create / admin initiate.
+      DRidePayment.validateRefundComponents rideId booking (map (\c -> API.Types.UI.RidePayment.RefundComponentReq {component = c.component, amount = PriceAPIEntity c.amount refundRequest.currency}) comps)
       existingRequests <- QRefundRequest.findAllByOrderId refundRequest.orderId
       when (any (\r -> r.status == DRefundRequest.APPROVED && r.id /= refundRequest.id) existingRequests) $
         throwError (InvalidRequest $ "Another refund request is in flight for order: " <> refundRequest.orderId.getId)
-      whenJust updRefundsAmount $ \amt -> do
-        transaction <-
-          HQPaymentTransaction.findEarliestChargedTransactionByOrderId refundRequest.orderId
-            >>= fromMaybeM (InvalidRequest "No transaction found for refund")
-        DRidePayment.validateRefundAmount existingRequests (Just (PriceAPIEntity amt refundRequest.currency)) transaction
-
-      QRefundRequest.updateRefundDetails DRefundRequest.APPROVED req.responseDescription updRefundsAmount (refundRequest.refundsTries + 1) req.deductFromDriver refundRequest.id
-
-      -- pass already updated refundRequest entry
+      let updRefundsAmount = Just (sum (map (.amount) comps))
+      QRefundRequest.updateRefundDetails DRefundRequest.APPROVED req.responseDescription updRefundsAmount (refundRequest.refundsTries + 1) deductFromDriver (Just comps) refundRequest.id
       let updRefundRequest =
             refundRequest{status = DRefundRequest.APPROVED,
                           responseDescription = req.responseDescription,
                           refundsAmount = updRefundsAmount,
                           refundsTries = refundRequest.refundsTries + 1,
-                          deductFromDriver = req.deductFromDriver
+                          deductFromDriver = deductFromDriver,
+                          approvedRefundedComponents = Just comps
                          }
-      rideId <- SPayment.getRideIdForOrder updRefundRequest.orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> updRefundRequest.orderId.getId)
       QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
       Notify.notifyRefunds updRefundRequest
       DRidePayment.processRefundRaised updRefundRequest
@@ -186,7 +173,7 @@ postPaymentRefundRequestRespond merchantShortId opCity refundRequestId req = do
 
     rejectRefunds refundRequest = do
       logInfo $ "Refund request rejected by admin: orderId: " <> refundRequest.orderId.getId
-      QRefundRequest.updateRefundDetails DRefundRequest.REJECTED req.responseDescription refundRequest.refundsAmount refundRequest.refundsTries Nothing refundRequest.id
+      QRefundRequest.updateRefundDetails DRefundRequest.REJECTED req.responseDescription refundRequest.refundsAmount refundRequest.refundsTries Nothing Nothing refundRequest.id
       let updRefundRequest = refundRequest{status = DRefundRequest.REJECTED, responseDescription = req.responseDescription}
       rideId <- SPayment.getRideIdForOrder updRefundRequest.orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> updRefundRequest.orderId.getId)
       QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
@@ -210,7 +197,6 @@ submitRefundToPaymentService refundRequest retryIfFailed = do
             driverAccountId = Just driverAccountId,
             email = Nothing,
             amount = refundRequest.refundsAmount,
-            deductFromDriver = refundRequest.deductFromDriver,
             retryIfFailed = retryIfFailed,
             -- targets THIS refund, so the payment lib's latest-by-order lookup doesn't
             -- no-op the attempt when a prior sibling on the order already succeeded.
@@ -241,13 +227,20 @@ postPaymentRefundRequestInitiate merchantShortId opCity rideId req = do
           { validateRefundRequester = \booking ->
               unless (booking.merchantOperatingCityId == merchantOpCity.id) $ throwError (RideNotFound rideId.getId),
             mkRefundRequestRow = \ctx -> do
-              DRidePayment.validateRefundAmount ctx.existingRequests req.requestedAmount ctx.transaction
-              let requestedAmount = req.requestedAmount <&> (.amount)
-                  refundsAmount = requestedAmount <|> Just ctx.transaction.amount
+              -- Admin /initiate is component-wise only (same as customer create) + auto-approved.
+              -- refundComponents required, total = component sum, no whole-amount fallback.
+              when (null req.refundComponents) $ throwError (InvalidRequest "refundComponents required")
+              let uiComps = map (\c -> API.Types.UI.RidePayment.RefundComponentReq {component = c.component, amount = c.amount}) req.refundComponents
+              DRidePayment.validateRefundComponents rideId ctx.booking uiComps
+              let total = sum (map (\c -> c.amount.amount) req.refundComponents)
+                  requestedAmount = Just total
+                  refundsAmount = Just total -- auto-approved: this is what gets sent to Stripe
                   refundsTries = 1 -- row is born post-approval, matching /respond's increment
                   evidenceS3Path = Nothing -- no need as initiated by admin
                   code = DRefundRequest.RefundRequestCode "ADMIN_INITIATED"
                   description = fromMaybe "Admin-initiated refund" req.description
+                  comps = Just (map (\c -> DRefundRequest.RefundComponentAmount {amount = c.amount.amount, component = c.component}) req.refundComponents)
+              -- initiate = create + approve: requested and approved components are the same.
               DRidePayment.buildRefundRequestRow
                 ctx
                 evidenceS3Path
@@ -257,7 +250,9 @@ postPaymentRefundRequestInitiate merchantShortId opCity rideId req = do
                 refundsAmount
                 refundsTries
                 DRefundRequest.APPROVED
-                req.deductFromDriver,
+                req.deductFromDriver
+                comps
+                comps,
             postCreate = \refundRequest -> do
               Notify.notifyRefunds refundRequest
               DRidePayment.processRefundRaised refundRequest

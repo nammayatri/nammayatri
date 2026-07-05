@@ -7,6 +7,7 @@ module Domain.Types.RefundRequest (module Domain.Types.RefundRequest, module ReE
 import Data.Aeson
 import Domain.Types.Extra.RefundRequest as ReExport
 import qualified Domain.Types.Extra.RefundRequest
+import qualified Domain.Types.FareBreakup
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -21,7 +22,8 @@ import qualified Lib.Payment.Domain.Types.Refunds
 import qualified Tools.Beam.UtilsTH
 
 data RefundRequest = RefundRequest
-  { code :: Domain.Types.Extra.RefundRequest.RefundRequestCode,
+  { approvedRefundedComponents :: Kernel.Prelude.Maybe [Domain.Types.RefundRequest.RefundComponentAmount],
+    code :: Domain.Types.Extra.RefundRequest.RefundRequestCode,
     currency :: Kernel.Utils.Common.Currency,
     deductFromDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     description :: Kernel.Prelude.Text,
@@ -36,6 +38,7 @@ data RefundRequest = RefundRequest
     refundsId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Refunds.Refunds),
     refundsTries :: Kernel.Prelude.Int,
     requestedAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    requestedRefundComponents :: Kernel.Prelude.Maybe [Domain.Types.RefundRequest.RefundComponentAmount],
     responseDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Domain.Types.RefundRequest.RefundRequestStatus,
     transactionAmount :: Kernel.Types.Common.HighPrecMoney,
@@ -44,6 +47,9 @@ data RefundRequest = RefundRequest
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data RefundComponentAmount = RefundComponentAmount {amount :: Kernel.Types.Common.HighPrecMoney, component :: Domain.Types.FareBreakup.FareComponent}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data RefundPurpose = RIDE_FARE | CANCELLATION_FEE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

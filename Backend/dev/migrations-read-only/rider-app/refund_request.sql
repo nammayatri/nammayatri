@@ -33,3 +33,13 @@ ALTER TABLE atlas_app.refund_request ADD COLUMN deduct_from_driver boolean ;
 
 CREATE INDEX CONCURRENTLY refund_request_idx_order_id ON atlas_app.refund_request USING btree (order_id);
 CREATE INDEX CONCURRENTLY refund_request_idx_refunds_id ON atlas_app.refund_request USING btree (refunds_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.refund_request ADD COLUMN requested_refund_components json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.refund_request ADD COLUMN approved_refunded_components json ;

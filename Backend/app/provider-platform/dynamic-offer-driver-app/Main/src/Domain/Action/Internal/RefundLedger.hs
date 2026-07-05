@@ -48,13 +48,28 @@ import Tools.Error
 data RefundLedgerStatus = APPROVED | REFUNDED | FAILED
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
+-- | Per-component refund breakdown (BAP-split). 'component' is the FareComponent enum
+--   (Generic JSON: "RIDE_FARE"/"TOLL"/"PARKING"). Field names byte-identical to BAP.
+data RefundLedgerComponent = RefundLedgerComponent
+  { component :: RefundFareComponent,
+    fareAmount :: HighPrecMoney,
+    vatAmount :: HighPrecMoney
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+-- | Mirrors rider-app's Domain.Types.FareBreakup.FareComponent (can't be cross-imported) with
+--   identical constructors, so the Generic JSON wire is byte-compatible and FromJSON rejects any
+--   unknown tag at decode.
+data RefundFareComponent = RIDE_FARE | TOLL | PARKING deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+
 -- | Field names must match the BAP-side request verbatim (Generic JSON wire).
 data RefundLedgerReq = RefundLedgerReq
   { refundRequestId :: Text,
     refundsAmount :: HighPrecMoney,
-    transactionAmount :: HighPrecMoney, -- original charge; the clawback-split denominator
     deductFromDriver :: Maybe Bool,
-    refundRequestStatus :: RefundLedgerStatus
+    refundRequestStatus :: RefundLedgerStatus,
+    refundComponents :: Maybe [RefundLedgerComponent], -- per-component split (always present for APPROVED/REFUNDED; Nothing only on FAILED, which just voids)
+    rideFareComponentTotal :: Maybe HighPrecMoney -- commission-slice denominator (BAP-supplied)
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -72,7 +87,7 @@ refundLedger rideId req apiKey = do
     transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
     mbDriver <- QPerson.findById ride.driverId
     mbDriverInfo <- QDI.findById (cast ride.driverId)
-    -- online cab only; the clawback leg debits OwnerExpense (driver's share).
+    -- online cab only; Case-2 clawback legs debit OwnerLiability (the driver wallet), reducing payout.
     ctx <- Wallet.buildFinanceCtx booking ride mbDriver Nothing mbDriverInfo transporterConfig True
     let referenceId = booking.id.getId
         deductFromDriver = fromMaybe True req.deductFromDriver -- default: clawback
@@ -92,12 +107,14 @@ refundLedger rideId req apiKey = do
                 || (not (null approvedEntries) && not (any (\e -> e.status == LE.PENDING) approvedEntries))
         if not (null approvedEntries)
           then forM_ (filter (\e -> e.status == LE.PENDING) approvedEntries) $ \e -> LedgerSvc.settleEntry e.id
-          else -- refund APPROVED internal bpp call miss. creating settled leg entries directly with metadata status REFUNDED.
+          else -- the APPROVED call was missed; post the legs directly as SETTLED with REFUNDED metadata.
 
             unless (any (entryMatchesRefundStatus req.refundRequestId REFUNDED) existing) $
               postLegs ctx Settled (mkRefundMetadata req.refundRequestId REFUNDED) legs req.refundRequestId
-        -- regenerate the fleet/driver-visible cumulative refund invoice, once per refund
-        unless alreadyDone $ regenerateRefundInvoice ctx booking req.refundsAmount
+        -- the fleet/driver-visible refund invoice + (Case-2) the negative Commission invoice, once per refund
+        unless alreadyDone $ do
+          createRefundInvoice ctx booking req.refundRequestId (fromMaybe [] req.refundComponents)
+          when deductFromDriver $ createCommissionRefundInvoice ctx req ride
       FAILED ->
         -- Failed: void the pending APPROVED leg(s). Only PENDING → idempotent.
         forM_ (filter (\e -> e.status == LE.PENDING && entryMatchesRefundStatus req.refundRequestId APPROVED e) existing) $ \e ->
@@ -118,31 +135,63 @@ postLegs ctx mode meta legs refundRequestId = do
     Left err -> throwError $ InternalError $ "Refund ledger write failed for " <> refundRequestId <> ": " <> show err
     Right _ -> pure ()
 
--- | Case 1 (platform absorbs) = one leg; Case 2 (clawback) = driver + commission shares.
---   driverShare derived by subtraction so the two shares sum exactly to the refund.
+-- | Per-component refund legs. Case 1 (platform absorbs) posts every component on
+--   SellerExpense→BuyerExternal. Case 2 (clawback) posts driver legs on OwnerLiability→BuyerExternal
+--   (reducing the next payout) plus, for ride-fare only, a SellerExpense→BuyerExternal commission
+--   slice the platform bears; toll/parking are 100% driver.
 refundLegs :: Bool -> RefundLedgerReq -> Ride -> [(AccountRole, AccountRole, HighPrecMoney, Text)]
-refundLegs deductFromDriver req ride
-  | deductFromDriver =
-    let commission = fromMaybe 0 ride.commission
-        platformShare =
-          if req.transactionAmount > 0
-            then roundAmountByCurrency' ride.currency (commission * req.refundsAmount / req.transactionAmount)
-            else 0
-        driverShare = roundAmountByCurrency' ride.currency (req.refundsAmount - platformShare)
-     in [ (OwnerExpense, BuyerExternal, driverShare, Wallet.walletReferenceRideRefundDriverShare),
-          (SellerExpense, BuyerExternal, platformShare, Wallet.walletReferenceRideRefundCommissionShare)
-        ]
-  | otherwise = [(SellerExpense, BuyerExternal, req.refundsAmount, Wallet.walletReferenceRideRefund)]
+refundLegs deductFromDriver req ride =
+  concatMap componentLegs (fromMaybe [] req.refundComponents)
+  where
+    commission = fromMaybe 0 ride.commission
+    rideFareTotal = fromMaybe 0 req.rideFareComponentTotal
+    componentLegs comp =
+      let (baseRef, vatRef) = refundRefTypesForComponent comp.component
+       in if not deductFromDriver
+            then -- Case 1: platform absorbs the whole component
 
--- | All refund ledger entries for a booking, across the single + the two split refTypes.
+              [ (SellerExpense, BuyerExternal, comp.fareAmount, baseRef),
+                (SellerExpense, BuyerExternal, comp.vatAmount, vatRef)
+              ]
+            else
+              if comp.component == RIDE_FARE
+                then -- Case 2 ride-fare: driver bears all but the prorated commission slice
+
+                  let commissionSlice =
+                        if rideFareTotal > 0
+                          then roundAmountByCurrency' ride.currency (commission * comp.fareAmount / rideFareTotal)
+                          else 0
+                      driverBase = roundAmountByCurrency' ride.currency (comp.fareAmount - commissionSlice)
+                   in [ (OwnerLiability, BuyerExternal, driverBase, baseRef),
+                        (OwnerLiability, BuyerExternal, comp.vatAmount, vatRef),
+                        (SellerExpense, BuyerExternal, commissionSlice, Wallet.walletReferenceRideFareRefundCommission)
+                      ]
+                else -- Case 2 toll/parking: 100% driver
+
+                  [ (OwnerLiability, BuyerExternal, comp.fareAmount, baseRef),
+                    (OwnerLiability, BuyerExternal, comp.vatAmount, vatRef)
+                  ]
+
+-- | (base refType, VAT refType) for a refunded component — exhaustive over the enum.
+refundRefTypesForComponent :: RefundFareComponent -> (Text, Text)
+refundRefTypesForComponent fc = case fc of
+  RIDE_FARE -> (Wallet.walletReferenceRideFareRefund, Wallet.walletReferenceRideFareRefundVAT)
+  TOLL -> (Wallet.walletReferenceTollRefund, Wallet.walletReferenceTollRefundVAT)
+  PARKING -> (Wallet.walletReferenceParkingRefund, Wallet.walletReferenceParkingRefundVAT)
+
+-- | All refund ledger entries for a booking, across the 7 refund refTypes.
 getRefundEntries :: Text -> Flow [LE.LedgerEntry]
 getRefundEntries referenceId =
   concat
     <$> mapM
       (`LedgerSvc.getEntriesByReference` referenceId)
-      [ Wallet.walletReferenceRideRefund,
-        Wallet.walletReferenceRideRefundDriverShare,
-        Wallet.walletReferenceRideRefundCommissionShare
+      [ Wallet.walletReferenceRideFareRefund,
+        Wallet.walletReferenceRideFareRefundVAT,
+        Wallet.walletReferenceTollRefund,
+        Wallet.walletReferenceTollRefundVAT,
+        Wallet.walletReferenceParkingRefund,
+        Wallet.walletReferenceParkingRefundVAT,
+        Wallet.walletReferenceRideFareRefundCommission
       ]
 
 mkRefundMetadata :: Text -> RefundLedgerStatus -> Aeson.Value
@@ -156,40 +205,29 @@ entryMatchesRefundStatus refundRequestId status entry =
 refundLedgerLockKey :: Text -> RefundLedgerStatus -> Text
 refundLedgerLockKey refundRequestId status = "refundLedger:" <> refundRequestId <> ":" <> show status
 
--- | Running-cumulative or first-time BPP refund invoice — the fleet/driver-visible
---   copy (the rider's copy is the BAP one). Reads the latest non-voided Refund
---   invoice for the booking, adds this refund to the running total, mints a new
---   single-line Paid invoice, voids the prior. issuedTo follows the ride's
---   CUSTOMER copy (issued to the rider, mirroring the customer ride invoice) so it
---   surfaces on the dashboard Refunds tab. Header from the caller's ctx; no linked entries
---   (no tax). Caller gates against re-fires.
-regenerateRefundInvoice ::
+-- | One BPP (fleet/driver-visible) refund invoice per refund request — no void-prior, no cumulation.
+--   Per-component negative line items (Fare + inline Tax via a shared groupId); issuedTo follows the
+--   ride's CUSTOMER copy so it surfaces on the dashboard Refunds tab. Caller gates against re-fires.
+createRefundInvoice ::
   FinanceCtx ->
   DBooking.Booking ->
-  HighPrecMoney -> -- this refund's GROSS amount (rider-POV; NOT the ledger split)
+  Text -> -- refundsRequestId
+  [RefundLedgerComponent] -> -- per-component split (always present; caller guarantees it)
   Flow ()
-regenerateRefundInvoice ctx booking refundAmount = do
+createRefundInvoice ctx booking refundsRequestId comps = do
   let referenceId = ctx.referenceId -- booking.id
-      activeStatuses = [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid]
-  mbPriorRefund <- listToMaybe <$> QFinanceInvoiceExtra.findByReferenceIdWithOptions referenceId (Just BeckInvoice.Refund) activeStatuses (Just 1) (Just 0)
-  let priorCumulative = maybe 0 (.totalAmount) mbPriorRefund
-      newCumulative = priorCumulative + refundAmount
-      refundLineItem =
-        InvoiceI.InvoiceLineItem
-          { description = "Refund",
-            descriptionType = Just InvoiceI.RideRefund,
-            quantity = 1,
-            unitPrice = newCumulative,
-            lineTotal = newCumulative,
-            isExternalCharge = False,
-            groupId = Just "g-refund",
-            itemType = Just InvoiceI.Fare
-          }
+      lineItems = concatMap mkRefundInvoiceLineItems comps
+      anyVat = any (\c -> c.vatAmount > 0) comps
+  -- Parent = the ride's CUSTOMER invoice (keyed by bookingId); Nothing if none found.
+  mbParentRideInvoice <-
+    listToMaybe . filter (\inv -> inv.issuedToType == CUSTOMER)
+      <$> QFinanceInvoiceExtra.findByReferenceIdWithOptions referenceId (Just BeckInvoice.Ride) [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid] (Just 10) (Just 0)
   createRes <-
     InvoiceSvc.createInvoice
       InvoiceI.InvoiceInput
         { invoiceType = BeckInvoice.Refund,
-          paymentOrderId = Nothing,
+          entityReferenceId = Just refundsRequestId,
+          referenceInvoiceNumber = (\inv -> inv.invoiceNumber) <$> mbParentRideInvoice,
           issuedToType = CUSTOMER,
           issuedToId = maybe "" (.getId) booking.riderId,
           issuedToName = booking.riderName,
@@ -211,7 +249,7 @@ regenerateRefundInvoice ctx booking refundAmount = do
           counterpartyId = ctx.counterpartyId,
           tdsRateReason = Nothing,
           tanOfDeductee = Nothing,
-          lineItems = [refundLineItem],
+          lineItems = lineItems,
           gstBreakdown = Nothing,
           currency = ctx.currency,
           dueAt = Nothing,
@@ -220,15 +258,106 @@ regenerateRefundInvoice ctx booking refundAmount = do
           merchantId = ctx.merchantId,
           merchantOperatingCityId = ctx.merchantOpCityId,
           merchantShortId = fromMaybe ctx.merchantId ctx.merchantShortId,
-          isVat = False,
+          isVat = anyVat,
           issuedToTaxNo = Nothing,
           issuedByTaxNo = Nothing,
           paymentMode = Nothing
         }
       []
   case createRes of
-    Left err -> logError $ "regenerateRefundInvoice: failed to create BPP refund invoice for booking " <> referenceId <> ": " <> show err
+    Left err -> logError $ "createRefundInvoice: failed to create BPP refund invoice for booking " <> referenceId <> ": " <> show err
     Right newInv -> do
-      whenJust mbPriorRefund $ \priorRefund -> InvoiceSvc.updateInvoiceStatus priorRefund.id FInvoice.Voided
       InvoiceSvc.updateInvoiceStatus newInv.id FInvoice.Paid
-      logInfo $ "regenerateRefundInvoice: created BPP cumulative refund invoice " <> newInv.id.getId <> " (total " <> show newCumulative <> ") for booking " <> referenceId
+      logInfo $ "createRefundInvoice: created BPP refund invoice " <> newInv.id.getId <> " for booking " <> referenceId <> " refundRequest " <> refundsRequestId
+
+-- | Per-component BPP refund invoice lines (negative Fare + inline Tax, shared groupId).
+--   Toll/Parking are flagged external (mirrors the ride invoice); only Ride Fare is taxable.
+mkRefundInvoiceLineItems :: RefundLedgerComponent -> [InvoiceI.InvoiceLineItem]
+mkRefundInvoiceLineItems c =
+  let (fareDesc, fareType, taxDesc, taxType, gId) = refundInvoiceLineMeta c.component
+      isExt = case c.component of RIDE_FARE -> False; _ -> True
+      mkNeg desc dtype amt typ =
+        if amt > 0
+          then Just InvoiceI.InvoiceLineItem {description = desc, descriptionType = Just dtype, quantity = 1, unitPrice = negate amt, lineTotal = negate amt, isExternalCharge = isExt, groupId = Just gId, itemType = Just typ}
+          else Nothing
+   in catMaybes [mkNeg fareDesc fareType c.fareAmount InvoiceI.Fare, mkNeg taxDesc taxType c.vatAmount InvoiceI.Tax]
+
+refundInvoiceLineMeta :: RefundFareComponent -> (Text, InvoiceI.LineItemDescription, Text, InvoiceI.LineItemDescription, Text)
+refundInvoiceLineMeta fc = case fc of
+  RIDE_FARE -> ("Ride Fare Refund", InvoiceI.RideFareRefund, "Ride Fare Refund VAT", InvoiceI.RideFareRefundTax, "g-refund-ridefare")
+  TOLL -> ("Toll Refund", InvoiceI.TollRefund, "Toll Refund VAT", InvoiceI.TollRefundTax, "g-refund-toll")
+  PARKING -> ("Parking Refund", InvoiceI.ParkingRefund, "Parking Refund VAT", InvoiceI.ParkingRefundTax, "g-refund-parking")
+
+-- | On a Case-2 ride-fare refund, record the returned commission slice as a NEGATIVE Commission
+--   invoice, left Draft so the agg-commission scheduler nets it in. A record, not a second cash
+--   movement (the cash is the RideFareRefundCommission ledger leg); issuedTo mirrors the per-ride
+--   Commission invoice so it aggregates against the same recipient.
+createCommissionRefundInvoice :: FinanceCtx -> RefundLedgerReq -> Ride -> Flow ()
+createCommissionRefundInvoice ctx req ride = do
+  let commission = fromMaybe 0 ride.commission
+      rideFareTotal = fromMaybe 0 req.rideFareComponentTotal
+      rideFareRefundedFare = maybe 0 (sum . map (.fareAmount) . filter (\c -> c.component == RIDE_FARE)) req.refundComponents
+      commissionSlice = if rideFareTotal > 0 then roundAmountByCurrency' ride.currency (commission * rideFareRefundedFare / rideFareTotal) else 0
+  when (commissionSlice > 0) $ do
+    let issuedToType' = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER
+        issuedToId' = maybe ride.driverId.getId (.getId) ride.fleetOwnerId
+        commissionRefundLine =
+          InvoiceI.InvoiceLineItem
+            { description = "Commission Refund",
+              descriptionType = Just InvoiceI.CommissionRefund,
+              quantity = 1,
+              unitPrice = negate commissionSlice,
+              lineTotal = negate commissionSlice,
+              isExternalCharge = False,
+              groupId = Just "g-commission-refund",
+              itemType = Just InvoiceI.Fare
+            }
+    -- Parent = the per-ride Commission invoice (keyed by bookingId; refund-commissions are keyed
+    -- by refundRequestId, so they don't collide here); Nothing if none found.
+    mbParentCommissionInvoice <-
+      listToMaybe <$> QFinanceInvoiceExtra.findByReferenceIdWithOptions ride.bookingId.getId (Just BeckInvoice.Commission) [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid] (Just 10) (Just 0)
+    createRes <-
+      InvoiceSvc.createInvoice
+        InvoiceI.InvoiceInput
+          { invoiceType = BeckInvoice.Commission,
+            entityReferenceId = Nothing,
+            referenceInvoiceNumber = (\inv -> inv.invoiceNumber) <$> mbParentCommissionInvoice,
+            issuedToType = issuedToType',
+            issuedToId = issuedToId',
+            issuedToName = Nothing,
+            issuedToAddress = Nothing,
+            issuedByType = "BUYER",
+            issuedById = ctx.merchantId,
+            issuedByName = ctx.merchantName,
+            issuedByAddress = ctx.issuedByAddress,
+            supplierName = ctx.supplierName,
+            supplierAddress = ctx.issuedByAddress,
+            supplierGSTIN = ctx.supplierGSTIN,
+            supplierTaxNo = Nothing,
+            supplierId = ctx.supplierId,
+            merchantGstin = ctx.merchantGstin,
+            referenceId = Just req.refundRequestId,
+            gstinOfParty = Nothing,
+            panOfParty = Nothing,
+            panType = Nothing,
+            counterpartyId = issuedToId',
+            tdsRateReason = Nothing,
+            tanOfDeductee = Nothing,
+            lineItems = [commissionRefundLine],
+            gstBreakdown = Nothing,
+            currency = ctx.currency,
+            dueAt = Nothing,
+            periodStart = Nothing,
+            periodEnd = Nothing,
+            merchantId = ctx.merchantId,
+            merchantOperatingCityId = ctx.merchantOpCityId,
+            merchantShortId = fromMaybe ctx.merchantId ctx.merchantShortId,
+            isVat = False,
+            issuedToTaxNo = Nothing,
+            issuedByTaxNo = Nothing,
+            paymentMode = Nothing
+          }
+        []
+    case createRes of
+      Left err -> logError $ "createCommissionRefundInvoice: failed for refundRequest " <> req.refundRequestId <> ": " <> show err
+      Right newInv -> logInfo $ "createCommissionRefundInvoice: created negative Commission invoice " <> newInv.id.getId <> " (slice " <> show commissionSlice <> ") for refundRequest " <> req.refundRequestId

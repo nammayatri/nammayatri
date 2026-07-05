@@ -367,7 +367,6 @@ data RefundPaymentServiceReq = RefundPaymentServiceReq
     driverAccountId :: Maybe Payment.AccountId,
     email :: Maybe Text,
     amount :: Maybe HighPrecMoney,
-    deductFromDriver :: Maybe Bool,
     retryIfFailed :: Bool,
     -- Nothing = fresh attempt; Just rid = retry that specific Refunds row (only when FAILED).
     refundsId :: Maybe (Id Refunds)
@@ -669,7 +668,6 @@ refundPaymentService req refundCall = do
                 paymentIntentId = Just order.paymentServiceOrderId,
                 driverAccountId = req.driverAccountId,
                 email = req.email,
-                deductFromDriver = req.deductFromDriver,
                 splitSettlementDetails = Nothing -- TODO: build from PaymentOrderSplit if needed
               }
       resp <- withTryCatch "refundCall:refundPaymentService" (refundCall refundReq)
@@ -678,14 +676,25 @@ refundPaymentService req refundCall = do
           now <- getCurrentTime
           let newCompletedAt = calculateCompletedAt response.status now
           HQRefunds.updateRefundsEntryByStripeResponse req.merchantOpCityId (Just response.refundId) response.errorCode response.status (Just True) newCompletedAt response.amount refundsEntry mbAction
-          -- refund_request.refunds_id — matching what the Stripe webhook looks up via metadata.
+          -- Return the internal refunds.id (not Stripe's) so the caller links refund_request.refunds_id —
+          -- the same id the Stripe webhook looks up via metadata.
           pure $ Just response {PInterface.refundId = refundId}
         Left err -> do
           logError $ "Refund API Call Failure with Error: " <> show err
           HQRefunds.updateIsApiCallSuccess req.merchantOpCityId (Just False) refundsEntry mbAction
-          -- Flip status to REFUND_FAILURE so processRefund's so retry works, else the row is stuck at REFUND_PENDING forever).
+          -- Flip status to REFUND_FAILURE so retry works (else the row is stuck at REFUND_PENDING forever).
           HQRefunds.updateRefundStatus req.merchantOpCityId PInterface.REFUND_FAILURE refundsEntry mbAction
-          pure Nothing
+          -- Surface the failed attempt so the caller links refund_request.refunds_id — the
+          -- dashboard reads status/errorCode off that link, and a retry targets this row via it.
+          pure $
+            Just
+              PInterface.RefundPaymentResp
+                { refundId = refundId,
+                  status = PInterface.REFUND_FAILURE,
+                  amount = Nothing,
+                  errorCode = Nothing,
+                  errorMessage = Nothing
+                }
 
 -- | Refresh status from the payment gateway for a specific Stripe attempt.
 --   Caller passes the Refunds row id; Nothing means no attempt yet → no refresh.
@@ -717,7 +726,7 @@ getRefundStatusService orderId mbRefundsId merchantOpCityId getRefundStatusCall 
                 now <- getCurrentTime
                 let newCompletedAt = calculateCompletedAt result.status now
                 HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId (Just serviceProviderId) result.errorCode result.status refund.isApiCallSuccess newCompletedAt result.amount refund (Just "get refund status service")
-                -- Return the internal refunds.id (matches refundPaymentService);
+                -- Return the internal refunds.id (matches refundPaymentService).
                 pure $ Just result {PInterface.refundId = refund.id.getId}
               Left err -> do
                 logError $ "Get refund status failed: " <> show err

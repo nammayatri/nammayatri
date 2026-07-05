@@ -4,6 +4,7 @@
 
 module Storage.Queries.RefundRequest (module Storage.Queries.RefundRequest, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Domain.Types.RefundRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -38,8 +39,8 @@ findByRefundsId refundsId = do findOneWithKV [Se.Is Beam.refundsId $ Se.Eq (Kern
 
 updateRefundDetails ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.RefundRequest.RefundRequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RefundRequest.RefundRequest -> m ())
-updateRefundDetails status responseDescription refundsAmount refundsTries deductFromDriver id = do
+  (Domain.Types.RefundRequest.RefundRequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe [Domain.Types.RefundRequest.RefundComponentAmount] -> Kernel.Types.Id.Id Domain.Types.RefundRequest.RefundRequest -> m ())
+updateRefundDetails status responseDescription refundsAmount refundsTries deductFromDriver approvedRefundedComponents id = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.status status,
@@ -47,6 +48,7 @@ updateRefundDetails status responseDescription refundsAmount refundsTries deduct
       Se.Set Beam.refundsAmount refundsAmount,
       Se.Set Beam.refundsTries refundsTries,
       Se.Set Beam.deductFromDriver deductFromDriver,
+      Se.Set Beam.approvedRefundedComponents (approvedRefundedComponents >>= Just . Data.Aeson.toJSON),
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

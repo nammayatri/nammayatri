@@ -16,6 +16,7 @@ module SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.Aggregated
   )
 where
 
+import qualified Data.Aeson as A
 import qualified Data.Map.Strict as M
 import Data.Time.Calendar (Day, addDays, fromGregorian, gregorianMonthLength, toGregorian)
 import Data.Time.Calendar.WeekDate (toWeekDate)
@@ -213,7 +214,8 @@ emitInvoice merchant sellerName sellerAddress currency mocId info recipientId re
           input =
             InvoiceI.InvoiceInput
               { invoiceType = BeckInvoice.AggregatedCommission,
-                paymentOrderId = Nothing,
+                entityReferenceId = Nothing,
+                referenceInvoiceNumber = Nothing,
                 issuedToType = recipientType,
                 issuedToId = recipientId,
                 issuedToName = info.riName,
@@ -254,20 +256,28 @@ emitInvoice merchant sellerName sellerAddress currency mocId info recipientId re
         Left err -> throwError $ InternalError $ "AggCom: createInvoice failed for " <> show recipientType <> " " <> recipientId <> " [" <> show pStart <> ", " <> show pEnd <> "]: " <> show err
         Right inv -> logInfo $ "AggCom: " <> inv.invoiceNumber <> " for " <> show recipientType <> " " <> recipientId <> " [" <> show pStart <> ", " <> show pEnd <> "]"
 
--- | Per-ride line item persisted to the DB for audit. The PDF for
--- AggregatedCommission renders one consolidated row (see PdfService), summing these all.
+-- | One agg line per underlying Commission invoice. Propagates the Fare line's
+-- description/descriptionType/groupId so the agg_comm JL groups by type.
 mkLineItem :: FInvoice.Invoice -> InvoiceI.InvoiceLineItem
 mkLineItem inv =
-  InvoiceI.InvoiceLineItem
-    { description = "Platform commission - " <> fromMaybe inv.invoiceNumber inv.referenceId,
-      descriptionType = Nothing,
-      quantity = 1,
-      unitPrice = inv.totalAmount,
-      lineTotal = inv.totalAmount,
-      isExternalCharge = False,
-      groupId = Just "g-commission",
-      itemType = Just InvoiceI.Fare
-    }
+  let mbParsedFareLineItem = parseInvoiceLineItem inv
+   in InvoiceI.InvoiceLineItem
+        { description = maybe "Platform commission" (\li -> li.description) mbParsedFareLineItem <> " - " <> fromMaybe inv.invoiceNumber inv.referenceId,
+          descriptionType = mbParsedFareLineItem >>= (\li -> li.descriptionType),
+          quantity = 1,
+          unitPrice = inv.totalAmount,
+          lineTotal = inv.totalAmount,
+          isExternalCharge = False,
+          groupId = maybe (Just "g-commission") (\li -> li.groupId) mbParsedFareLineItem,
+          itemType = Just InvoiceI.Fare
+        }
+
+-- | The underlying invoice's Fare line — source of the type-specific description/descriptionType/groupId.
+parseInvoiceLineItem :: FInvoice.Invoice -> Maybe InvoiceI.InvoiceLineItem
+parseInvoiceLineItem inv =
+  case (A.fromJSON inv.lineItems :: A.Result [InvoiceI.InvoiceLineItem]) of
+    A.Success items -> listToMaybe (filter (\li -> li.itemType == Just InvoiceI.Fare) items)
+    A.Error _ -> Nothing
 
 -- | Page through Commission rows for [from, to] in chunks of @batchSize@.
 -- Terminates on empty page (codebase null-termination convention).

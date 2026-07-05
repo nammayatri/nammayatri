@@ -63,7 +63,13 @@ data LineItemDescription
   | CashbackOffer
   | VatInput
   | OfferDiscount
-  | RideRefund
+  | RideFareRefund
+  | RideFareRefundTax
+  | TollRefund
+  | TollRefundTax
+  | ParkingRefund
+  | ParkingRefundTax
+  | CommissionRefund
   deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON)
 
 -- | groupId is required for Fare/Tax (pairing); Nothing for Adjustment.
@@ -82,7 +88,7 @@ data InvoiceLineItem = InvoiceLineItem
 -- | Input for creating an invoice
 data InvoiceInput = InvoiceInput
   { invoiceType :: InvoiceType,
-    paymentOrderId :: Maybe Text,
+    entityReferenceId :: Maybe Text, -- source entity ref: payment-order id (rides) / refund-request id (refunds)
     issuedToType :: IssuedToType,
     issuedToId :: Text,
     issuedToName :: Maybe Text,
@@ -98,6 +104,7 @@ data InvoiceInput = InvoiceInput
     supplierId :: Maybe Text,
     merchantGstin :: Maybe Text,
     referenceId :: Maybe Text,
+    referenceInvoiceNumber :: Maybe Text, -- parent/original ride-invoice number (refund invoices)
     gstinOfParty :: Maybe Text,
     panOfParty :: Maybe Text,
     panType :: Maybe Text,

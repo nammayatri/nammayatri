@@ -122,9 +122,13 @@ module SharedLogic.Finance.Wallet
     walletReferenceDiscountsOnline,
     walletReferenceDiscountsCash,
     walletReferenceDeductedAtPaymentByPlatform,
-    walletReferenceRideRefund,
-    walletReferenceRideRefundDriverShare,
-    walletReferenceRideRefundCommissionShare,
+    walletReferenceRideFareRefund,
+    walletReferenceRideFareRefundVAT,
+    walletReferenceTollRefund,
+    walletReferenceTollRefundVAT,
+    walletReferenceParkingRefund,
+    walletReferenceParkingRefundVAT,
+    walletReferenceRideFareRefundCommission,
     getRedeemableEntryIds,
     settleWalletEntries,
     getPayoutEligibilityData,
@@ -273,16 +277,30 @@ walletReferenceAirportEntryFee = "AirportEntryFee"
 walletReferenceWalletIncentive :: Text
 walletReferenceWalletIncentive = "WalletIncentive"
 
--- | Refund reference types: Case 1 (platform absorbs) uses 'RideRefund';
---   Case 2 (clawback) splits into driver + commission shares.
-walletReferenceRideRefund :: Text
-walletReferenceRideRefund = "RideRefund"
+-- Per-component refund refTypes. Same string values as the BAP side
+-- (SharedLogic.Finance.RidePayment) so cap/settlement reconcile across BAP+BPP.
+-- All-caps VAT matches the ride-side 'TollVAT'.
+walletReferenceRideFareRefund :: Text
+walletReferenceRideFareRefund = "RideFareRefund"
 
-walletReferenceRideRefundDriverShare :: Text
-walletReferenceRideRefundDriverShare = "RideRefundDriverShare"
+walletReferenceRideFareRefundVAT :: Text
+walletReferenceRideFareRefundVAT = "RideFareRefundVAT"
 
-walletReferenceRideRefundCommissionShare :: Text
-walletReferenceRideRefundCommissionShare = "RideRefundCommissionShare"
+walletReferenceTollRefund :: Text
+walletReferenceTollRefund = "TollRefund"
+
+walletReferenceTollRefundVAT :: Text
+walletReferenceTollRefundVAT = "TollRefundVAT"
+
+walletReferenceParkingRefund :: Text
+walletReferenceParkingRefund = "ParkingRefund"
+
+walletReferenceParkingRefundVAT :: Text
+walletReferenceParkingRefundVAT = "ParkingRefundVAT"
+
+-- BPP-only: the platform's commission slice on a Case-2 ride-fare refund.
+walletReferenceRideFareRefundCommission :: Text
+walletReferenceRideFareRefundCommission = "RideFareRefundCommission"
 
 -- | Single source of truth: all wallet reference types that represent
 --   redeemable credit entries (i.e. entries that increase driver wallet balance

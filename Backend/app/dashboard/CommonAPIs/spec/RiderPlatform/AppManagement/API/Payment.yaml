@@ -9,11 +9,13 @@ imports:
   RefundRequestCode: Domain.Types.RefundRequest
   RefundPurpose: Domain.Types.RefundRequest
   Ride: Domain.Types.Ride
+  FareComponent: Domain.Types.FareBreakup
 
 importPackageOverrides:
   Domain.Types.Ride: "rider-app"
   Domain.Types.RefundRequest: "rider-app"
   Domain.Types.Person: "rider-app"
+  Domain.Types.FareBreakup: "rider-app"
   Lib.Payment.Domain.Types.PaymentOrder: "payment"
   Lib.Payment.Domain.Types.Refunds: "payment"
 
@@ -101,17 +103,20 @@ types:
   RefundRequestRespondReq:
     - approve: Bool
     - responseDescription: Maybe Text
-    - approvedAmount: Maybe PriceAPIEntity
+    - refundComponents: "Maybe [RefundComponentItem]" # approve: admin's per-component breakdown (modify/add/zero); null = approve as-requested / retry prior approval; component-wise cap
     - retryRefunds: Maybe Bool # in case if previous refund was failed
-    - deductFromDriver: Maybe Bool # required when approve=true; drives Stripe reverse_transfer
+    - deductFromDriver: Maybe Bool # required when approve=true; false = platform absorbs, true = clawback from driver — ledger-based (no Stripe reverse_transfer)
     - derive: "'HideSecrets"
   RefundRequestRespondResp:
     - status: RefundRequestStatus
     - refundStatus: Maybe RefundStatus
     - errorCode: Maybe Text
     - derive: "'HideSecrets"
+  RefundComponentItem:
+    - component: FareComponent
+    - amount: PriceAPIEntity
   RefundRequestInitiateReq:
-    - requestedAmount: Maybe PriceAPIEntity # null = full ride
-    - description: Maybe Text               # admin notes; null = handler default
-    - deductFromDriver: Maybe Bool          # drives Stripe reverse_transfer
+    - refundComponents: "[RefundComponentItem]"  # per-component amounts (required) — same as customer create; component-wise cap; total = sum
+    - description: Maybe Text                     # admin notes; null = handler default
+    - deductFromDriver: Maybe Bool                # false = platform absorbs, true = clawback from driver — ledger-based (no Stripe reverse_transfer)
     - derive: "'HideSecrets"
