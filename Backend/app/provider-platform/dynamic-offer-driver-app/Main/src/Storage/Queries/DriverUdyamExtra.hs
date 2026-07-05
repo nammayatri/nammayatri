@@ -43,3 +43,23 @@ findValidUdyamByDriverId driverId =
           Se.Is Beam.verificationStatus $ Se.Eq Documents.VALID
         ]
     ]
+
+upsert :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DriverUdyam -> m ()
+upsert a@DriverUdyam {..} =
+  findOneWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)] >>= \case
+    Just _ ->
+      updateOneWithKV
+        [ Se.Set Beam.documentImageId (Kernel.Types.Id.getId <$> documentImageId),
+          Se.Set Beam.udyamNumberEncrypted (udyamNumber & unEncrypted . encrypted),
+          Se.Set Beam.udyamNumberHash (udyamNumber & hash),
+          Se.Set Beam.verificationStatus verificationStatus,
+          Se.Set Beam.rejectReason rejectReason,
+          Se.Set Beam.verifiedBy verifiedBy,
+          Se.Set Beam.updatedAt updatedAt
+        ]
+        [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+    Nothing -> createWithKV a
+
+deleteByDriverIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> Documents.VerificationStatus -> m ()
+deleteByDriverIdAndStatus driverId status =
+  deleteWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.verificationStatus $ Se.Eq status]]
