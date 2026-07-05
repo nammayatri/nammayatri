@@ -9,6 +9,7 @@ module Domain.Action.Dashboard.EmailVerification
   )
 where
 
+import qualified Data.Text as T
 import qualified Data.HashMap.Strict as HM
 import Domain.Types.Person as DP
 import qualified Domain.Types.ServerName as DTServer
@@ -61,7 +62,8 @@ sendEmailVerificationOtp ::
     CoreMetrics m,
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["sendEmailRateLimitOptions" ::: APIRateLimitOptions]
+    HasFlowEnv m r '["sendEmailRateLimitOptions" ::: APIRateLimitOptions],
+    HasFlowEnv m r '["twoFaOtpTTLInSecs" ::: Maybe Int]
   ) =>
   TokenInfo ->
   EmailOtpSendReq ->
@@ -77,7 +79,8 @@ sendEmailVerificationOtp tokenInfo req = do
           else InternalClient.callBPPInternalSendEmailOTP
   emailRes <- callInternalSendEmailOTP (getShortId merchant.shortId) tokenInfo.city (InternalClient.SendEmailOTPReq {email = req.email})
   otpCode <- emailRes.otp & fromMaybeM (InternalError "OTP not returned from internal email service")
-  let otpTTL = fromMaybe 300 merchant.emailOtpTTLInSecs
+  envOtpTTL <- asks (.twoFaOtpTTLInSecs)
+  let otpTTL = fromMaybe 300 envOtpTTL
   Redis.setExp (makeEmailOtpKey tokenInfo.personId req.email) otpCode otpTTL
   pure Success
 
@@ -87,7 +90,9 @@ verifyEmailOtp ::
     EncFlow m r,
     CoreMetrics m,
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["twoFaOtpTTLInSecs" ::: Maybe Int],
+    HasFlowEnv m r '["twoFaMaxOtpVerifyAttempts" ::: Maybe Int]
   ) =>
   TokenInfo ->
   EmailOtpVerifyReq ->
@@ -95,10 +100,13 @@ verifyEmailOtp ::
 verifyEmailOtp tokenInfo req = do
   runRequestValidation validateEmailOtpVerifyReq req
   merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantDoesNotExist tokenInfo.merchantId.getId)
-  let maxAttempts = fromMaybe 5 merchant.emailMaxOtpVerifyAttempts
-      otpTTL = fromMaybe 300 merchant.emailOtpTTLInSecs
-      key = makeEmailOtpKey tokenInfo.personId req.email
-      attemptsKey = makeEmailOtpVerifyHitsCountKey tokenInfo.personId req.email
+  envMaxAttempts <- asks (.twoFaMaxOtpVerifyAttempts)
+  envOtpTTL <- asks (.twoFaOtpTTLInSecs)
+  let maxAttempts = fromMaybe 5 envMaxAttempts
+      otpTTL = fromMaybe 300 envOtpTTL
+      email = T.toLower req.email
+      key = makeEmailOtpKey tokenInfo.personId email
+      attemptsKey = makeEmailOtpVerifyHitsCountKey tokenInfo.personId email
   attempts <- fromMaybe 0 <$> Redis.get @Int attemptsKey
   when (attempts >= maxAttempts) $ do
     Redis.del key

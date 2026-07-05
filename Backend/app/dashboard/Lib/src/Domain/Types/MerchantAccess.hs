@@ -25,8 +25,6 @@ data MerchantAccess = MerchantAccess
     merchantId :: Id DMerchant.Merchant,
     merchantShortId :: ShortId DMerchant.Merchant,
     personId :: Id DPerson.Person,
-    secretKey :: Maybe Text,
-    is2faEnabled :: Bool,
     createdAt :: UTCTime,
     operatingCity :: City.City
   }

@@ -488,7 +488,6 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           defaultOperatingCity = req.city,
           supportedOperatingCities = [req.city],
           serverNames = baseMerchant.serverNames,
-          is2faMandatory = baseMerchant.is2faMandatory,
           domain = baseMerchant.domain,
           website = baseMerchant.website,
           authToken = baseMerchant.authToken,
@@ -499,14 +498,7 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           hasFleetMemberHierarchy = baseMerchant.hasFleetMemberHierarchy,
           isStrongNameCheckRequired = baseMerchant.isStrongNameCheckRequired,
           singleActiveSessionOnly = baseMerchant.singleActiveSessionOnly,
-          trackLoginLogoutForRoles = baseMerchant.trackLoginLogoutForRoles,
-          twoFactorMandatoryForRoles = baseMerchant.twoFactorMandatoryForRoles,
-          twoFaOtpTTLInSecs = baseMerchant.twoFaOtpTTLInSecs,
-          twoFaMaxOtpVerifyAttempts = baseMerchant.twoFaMaxOtpVerifyAttempts,
-          totpStepSize = baseMerchant.totpStepSize,
-          totpClockSkew = baseMerchant.totpClockSkew,
-          emailOtpTTLInSecs = baseMerchant.emailOtpTTLInSecs,
-          emailMaxOtpVerifyAttempts = baseMerchant.emailMaxOtpVerifyAttempts
+          trackLoginLogoutForRoles = baseMerchant.trackLoginLogoutForRoles
         }
 
 postMerchantConfigMerchantCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> Flow Common.CreateMerchantOperatingCityRes
