@@ -22,6 +22,7 @@ where
 
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Utils.Common (CacheFlow)
 import Toll.Domain.Types.Toll
 import Toll.Storage.BeamFlow (BeamFlow)
@@ -33,9 +34,10 @@ import qualified Toll.Storage.Queries.Toll as Queries
 --   each app satisfies via the orphan instance in @Storage.Beam.Toll@.
 findAllTollsByMerchantOperatingCity :: BeamFlow m r => Text -> m [Toll]
 findAllTollsByMerchantOperatingCity merchantOpCityId =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeTollsKeyByMerchantOperatingCityId merchantOpCityId) >>= \case
-    Just a -> pure a
-    Nothing -> cacheAllTollsByMerchantOperatingCity merchantOpCityId /=<< Queries.findAllTollsByMerchantOperatingCity (Just merchantOpCityId)
+  IM.withInMemCache ["TollTable", merchantOpCityId.getId] 3600 $
+    (Hedis.safeGet $ makeTollsKeyByMerchantOperatingCityId merchantOpCityId) >>= \case
+      Just a -> pure a
+      Nothing -> cacheAllTollsByMerchantOperatingCity merchantOpCityId /=<< Queries.findAllTollsByMerchantOperatingCity (Just merchantOpCityId)
 
 cacheAllTollsByMerchantOperatingCity :: (CacheFlow m r) => Text -> [Toll] -> m ()
 cacheAllTollsByMerchantOperatingCity merchantOpCityId tolls = do
@@ -47,7 +49,8 @@ makeTollsKeyByMerchantOperatingCityId :: Text -> Text
 makeTollsKeyByMerchantOperatingCityId merchantOpCityId = "CachedQueries:Toll:MerchantOpCityId-" <> merchantOpCityId
 
 clearCache :: Hedis.HedisFlow m r => Text -> m ()
-clearCache merchantOpCityId =
+clearCache merchantOpCityId = do
+  IM.refreshInMem "TollTable"
   Hedis.runInMultiCloudRedisWrite $
     Hedis.withCrossAppRedis $
       Hedis.del $ makeTollsKeyByMerchantOperatingCityId merchantOpCityId

@@ -16,6 +16,7 @@ module Lib.Queries.SpecialLocationPriority where
 
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.InMem as IM
 import Lib.Tabular.SpecialLocationPriority
 import qualified Lib.Types.SpecialLocationPriority as SpecialLocationPriorityD
 
@@ -24,7 +25,7 @@ findByMerchantOpCityIdAndCategory ::
   Text ->
   Text ->
   m (Maybe SpecialLocationPriorityD.SpecialLocationPriority)
-findByMerchantOpCityIdAndCategory merchantOpCityId category = do
+findByMerchantOpCityIdAndCategory merchantOpCityId category = IM.withInMemCache ["SpecialLocationPriorityTable", merchantOpCityId.getId, category] 3600 $ do
   Esq.runInReplica $
     Esq.findOne $ do
       specialLocationPriority <- from $ table @SpecialLocationPriorityT
