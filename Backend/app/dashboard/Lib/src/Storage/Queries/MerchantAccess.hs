@@ -81,23 +81,6 @@ findAllByPersonId personId = do
 deleteById :: BeamFlow m r => Id DAccess.MerchantAccess -> m ()
 deleteById merchantAccessId = deleteWithKV [Se.Is BeamMA.id $ Se.Eq $ getId merchantAccessId]
 
-updatePerson2faForMerchant ::
-  BeamFlow m r =>
-  Id DP.Person ->
-  Id DMerchant.Merchant ->
-  Text ->
-  m ()
-updatePerson2faForMerchant personId merchantId secretKey =
-  updateWithKV
-    [ Se.Set BeamMA.secretKey $ Just secretKey,
-      Se.Set BeamMA.is2faEnabled True
-    ]
-    [ Se.And
-        [ Se.Is BeamMA.personId $ Se.Eq $ getId personId,
-          Se.Is BeamMA.merchantId $ Se.Eq $ getId merchantId
-        ]
-    ]
-
 deleteAllByPersonId :: BeamFlow m r => Id DP.Person -> m ()
 deleteAllByPersonId personId = deleteWithKV [Se.Is BeamMA.personId $ Se.Eq $ getId personId]
 

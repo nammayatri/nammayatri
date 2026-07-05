@@ -15,13 +15,11 @@
 module Domain.Action.Dashboard.Registration where
 
 import qualified Data.HashMap.Strict as HM
-import Data.List (groupBy, sortOn)
-import qualified Data.Map.Strict as Map
+import Data.List (groupBy, sort, sortOn)
 import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Person as DP
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
-import qualified Domain.Types.MerchantAccess as DMerchantAccess
 import Domain.Types.Person as DP
 import qualified Domain.Types.Person.Type as PT
 import qualified Domain.Types.RegistrationToken as DR
@@ -47,7 +45,6 @@ import Kernel.Utils.Validation
 import qualified SharedLogic.Transaction as STransaction
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Merchant as QMerchant
-import qualified Storage.Queries.MerchantAccess as MA
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
@@ -79,7 +76,7 @@ data Enable2FAReq = Enable2FAReq
 data Initiate2FASetupReq = Initiate2FASetupReq
   { email :: Maybe Text,
     password :: Maybe Text,
-    merchantId :: ShortId DMerchant.Merchant,
+    merchantId :: Maybe (ShortId DMerchant.Merchant), -- Optional when token is provided
     city :: Maybe City.City,
     otp :: Maybe Text, -- Existing authenticator TOTP for re-setup (skip phone OTP)
     token :: Maybe Text -- Auth token for logged-in users (e.g., during merchant switch)
@@ -121,7 +118,17 @@ data LoginRes = LoginRes
     is2faEnabled :: Bool,
     message :: Text,
     city :: City.City,
-    merchantId :: ShortId DMerchant.Merchant
+    merchantId :: ShortId DMerchant.Merchant,
+    enforcementDeadline :: Maybe UTCTime
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+data TwoFaStatusRes = TwoFaStatusRes
+  { is2faRequired :: Bool,
+    is2faEnabled :: Bool,
+    enforcementDeadline :: Maybe UTCTime,
+    daysRemaining :: Maybe Int,
+    mustEnrollNow :: Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -163,6 +170,10 @@ login ::
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
     HasFlowEnv m r '["sendEmailRateLimitOptions" ::: APIRateLimitOptions],
     HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int],
+    HasFlowEnv m r '["is2faMandatory" ::: Bool],
+    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
+    HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
+    HasFlowEnv m r '["totpClockSkew" ::: Maybe Int],
     EncFlow m r
   ) =>
   LoginReq ->
@@ -203,6 +214,10 @@ switchMerchant ::
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
+    HasFlowEnv m r '["is2faMandatory" ::: Bool],
+    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
+    HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
+    HasFlowEnv m r '["totpClockSkew" ::: Maybe Int],
     EncFlow m r
   ) =>
   TokenInfo ->
@@ -219,6 +234,10 @@ switchMerchantAndCity ::
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
+    HasFlowEnv m r '["is2faMandatory" ::: Bool],
+    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
+    HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
+    HasFlowEnv m r '["totpClockSkew" ::: Maybe Int],
     EncFlow m r
   ) =>
   TokenInfo ->
@@ -236,6 +255,10 @@ generateLoginRes ::
   ( BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
+    HasFlowEnv m r '["is2faMandatory" ::: Bool],
+    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
+    HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
+    HasFlowEnv m r '["totpClockSkew" ::: Maybe Int],
     EncFlow m r
   ) =>
   DP.Person ->
@@ -245,18 +268,21 @@ generateLoginRes ::
   m LoginRes
 generateLoginRes person merchant otp city = do
   _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city >>= fromMaybeM AccessDenied
-  let twoFaRequired = is2FARequiredForPerson person merchant
-  (isToken, msg) <- check2FA _merchantAccess merchant twoFaRequired otp
+  twoFaRequired <- is2FARequired
+  deadline <- asks (.twoFaEnforcementDeadline)
+  (isToken, msg) <- check2FA person twoFaRequired otp
   token <-
     if isToken
       then generateToken person.id merchant city
       else pure ""
-  pure $ LoginRes token twoFaRequired _merchantAccess.is2faEnabled msg city merchant.shortId
+  pure $ LoginRes token twoFaRequired person.is2faEnabled msg city merchant.shortId deadline
 
 generateLoginResWithoutOtp ::
   ( BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
+    HasFlowEnv m r '["is2faMandatory" ::: Bool],
+    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
     EncFlow m r
   ) =>
   DP.Person ->
@@ -266,35 +292,96 @@ generateLoginResWithoutOtp ::
 generateLoginResWithoutOtp person merchant city = do
   _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city >>= fromMaybeM AccessDenied
   token <- generateToken person.id merchant city
-  pure $ LoginRes token (is2FARequiredForPerson person merchant) _merchantAccess.is2faEnabled "Logged in successfully" city merchant.shortId
+  twoFaRequired <- is2FARequired
+  deadline <- asks (.twoFaEnforcementDeadline)
+  pure $ LoginRes token twoFaRequired person.is2faEnabled "Logged in successfully" city merchant.shortId deadline
 
-is2FARequiredForPerson :: DP.Person -> DMerchant.Merchant -> Bool
-is2FARequiredForPerson person merchant =
-  DMerchant.is2faMandatory merchant
-    || maybe False (`elem` DMerchant.twoFactorMandatoryForRoles merchant) person.dashboardAccessType
+is2FARequired ::
+  (HasFlowEnv m r '["is2faMandatory" ::: Bool]) =>
+  m Bool
+is2FARequired = asks (.is2faMandatory)
 
-check2FA :: (EncFlow m r) => DMerchantAccess.MerchantAccess -> DMerchant.Merchant -> Bool -> Maybe Text -> m (Bool, Text)
-check2FA merchantAccess merchant twoFaRequired otp =
-  case (twoFaRequired, DMerchantAccess.is2faEnabled merchantAccess) of
-    (True, True) -> handle2FA merchant merchantAccess.secretKey otp
-    (True, False) -> pure (False, "2 Factor authentication is not enabled, it is mandatory for this merchant")
+check2FA ::
+  ( EncFlow m r,
+    Redis.HedisFlow m r,
+    MonadFlow m,
+    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
+    HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
+    HasFlowEnv m r '["totpClockSkew" ::: Maybe Int]
+  ) =>
+  DP.Person ->
+  Bool ->
+  Maybe Text ->
+  m (Bool, Text)
+check2FA person twoFaRequired otp =
+  case (twoFaRequired, person.is2faEnabled) of
+    (True, True) -> handle2FA person.id person.secretKey otp
+    (True, False) -> do
+      -- Grace period: if the enforcement deadline is still in the future, let
+      -- the user log in without 2FA. Frontend will route them into the setup
+      -- flow (skippable). After the deadline (or if no deadline is set), block.
+      now <- getCurrentTime
+      deadline <- asks (.twoFaEnforcementDeadline)
+      let inGrace = maybe False (>= now) deadline
+      if inGrace
+        then pure (True, "Two-factor authentication not yet enabled. Please enrol before the enforcement date.")
+        else pure (False, "2 Factor authentication is not enabled, it is mandatory for this deployment")
     _ -> pure (True, "Logged in successfully")
 
+-- 2FA verify rate limit: 5 failed attempts in 5 min, then locked out for 15 min.
+twoFaVerifyMaxFailures :: Int
+twoFaVerifyMaxFailures = 5
+
+twoFaVerifyFailureWindowSecs :: Int
+twoFaVerifyFailureWindowSecs = 300
+
+twoFaVerifyLockoutSecs :: Int
+twoFaVerifyLockoutSecs = 900
+
+make2FAVerifyFailKey :: Id DP.Person -> Text
+make2FAVerifyFailKey personId = "Dashboard:2FA:Verify:Fail:" <> personId.getId
+
+make2FAVerifyLockKey :: Id DP.Person -> Text
+make2FAVerifyLockKey personId = "Dashboard:2FA:Verify:Lock:" <> personId.getId
+
 handle2FA ::
-  ( EncFlow m r
+  ( EncFlow m r,
+    Redis.HedisFlow m r,
+    MonadFlow m,
+    HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
+    HasFlowEnv m r '["totpClockSkew" ::: Maybe Int]
   ) =>
-  DMerchant.Merchant ->
+  Id DP.Person ->
   Maybe Text ->
   Maybe Text ->
   m (Bool, Text)
-handle2FA merchant secretKey otp = case (secretKey, otp) of
-  (Just key, Just userOtp) -> do
-    isValid <- Utils.verifyTOTP merchant.totpStepSize merchant.totpClockSkew key userOtp
-    if isValid
-      then pure (True, "Logged in successfully")
-      else pure (False, "Authenticator OTP does not match")
-  (_, Nothing) -> pure (False, "Authenticator OTP is required")
-  (Nothing, _) -> pure (False, "Secret key not found for 2FA")
+handle2FA personId secretKey otp = do
+  stepSize <- asks (.totpStepSize)
+  clockSkew <- asks (.totpClockSkew)
+  -- Check lockout first
+  locked <- Redis.get @Bool (make2FAVerifyLockKey personId)
+  case locked of
+    Just True -> pure (False, "Too many failed attempts. Try again in a few minutes.")
+    _ -> case (secretKey, otp) of
+      (Just key, Just userOtp) -> do
+        isValid <- Utils.verifyTOTP stepSize clockSkew key userOtp
+        if isValid
+          then do
+            Redis.del (make2FAVerifyFailKey personId)
+            pure (True, "Logged in successfully")
+          else do
+            failCount <- fromMaybe 0 <$> Redis.get @Int (make2FAVerifyFailKey personId)
+            let newCount = failCount + 1
+            if newCount >= twoFaVerifyMaxFailures
+              then do
+                Redis.setExp (make2FAVerifyLockKey personId) True twoFaVerifyLockoutSecs
+                Redis.del (make2FAVerifyFailKey personId)
+                pure (False, "Too many failed attempts. Try again in a few minutes.")
+              else do
+                Redis.setExp (make2FAVerifyFailKey personId) newCount twoFaVerifyFailureWindowSecs
+                pure (False, "Authenticator OTP does not match")
+      (_, Nothing) -> pure (False, "Authenticator OTP is required")
+      (Nothing, _) -> pure (False, "Secret key not found for 2FA")
 
 -- Redis keys for 2FA setup flow
 make2FASetupKey :: Text -> Text
@@ -310,6 +397,8 @@ enable2fa ::
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
+    HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
+    HasFlowEnv m r '["twoFaIssuerName" ::: Text],
     EncFlow m r
   ) =>
   Enable2FAReq ->
@@ -320,8 +409,10 @@ enable2fa Enable2FAReq {..} = do
   let city' = fromMaybe merchant.defaultOperatingCity city
   _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city' >>= fromMaybeM AccessDenied
   key <- L.runIO Utils.generateSecretKey
-  MA.updatePerson2faForMerchant person.id merchant.id key
-  let qrCodeUri = Utils.generateAuthenticatorURI merchant.totpStepSize key email merchant.shortId
+  QP.updatePerson2FaSecret person.id key
+  stepSize <- asks (.totpStepSize)
+  issuer <- asks (.twoFaIssuerName)
+  let qrCodeUri = Utils.generateAuthenticatorURI stepSize key email issuer
   pure $ Enable2FARes qrCodeUri
 
 -- | Validate credentials and either:
@@ -334,60 +425,65 @@ initiate2FASetup ::
     HasFlowEnv m r '["sendEmailRateLimitOptions" ::: APIRateLimitOptions],
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
+    HasFlowEnv m r '["totpClockSkew" ::: Maybe Int],
+    HasFlowEnv m r '["twoFaOtpTTLInSecs" ::: Maybe Int],
+    HasFlowEnv m r '["twoFaIssuerName" ::: Text],
     EncFlow m r
   ) =>
   Initiate2FASetupReq ->
   m Initiate2FASetupRes
 initiate2FASetup Initiate2FASetupReq {..} = do
-  person <- case token of
+  -- Resolve person + (merchantId, city) hint from token or credentials.
+  (person, tokenMerchantId, tokenCity) <- case token of
     Just authToken -> do
-      (personId, _merchantId, _city) <- Auth.verifyPerson authToken
-      QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      (personId, tokMerchId, tokCity) <- Auth.verifyPerson authToken
+      p <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      pure (p, Just tokMerchId, Just tokCity)
     Nothing -> do
       email_ <- email & fromMaybeM (InvalidRequest "Email is required when token is not provided")
       password_ <- password & fromMaybeM (InvalidRequest "Password is required when token is not provided")
       sendEmailRateLimitOptions <- asks (.sendEmailRateLimitOptions)
       checkSlidingWindowLimitWithOptions (makeEmailHitsCountKey (Just email_)) sendEmailRateLimitOptions
-      QP.findByEmailAndPassword email_ password_ >>= fromMaybeM (PersonDoesNotExist email_)
+      p <- QP.findByEmailAndPassword email_ password_ >>= fromMaybeM (PersonDoesNotExist email_)
+      pure (p, Nothing, Nothing)
   personEmail <- case email of
     Just e -> pure e
     Nothing -> do
       encEmail <- person.email & fromMaybeM (InvalidRequest "Person does not have an email set")
       decrypt encEmail
-  merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
-  let city' = fromMaybe merchant.defaultOperatingCity city
-  merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city' >>= fromMaybeM AccessDenied
+  -- Resolve merchant only for BAP-vs-BPP routing hint on internal email OTP call;
+  -- 2FA state itself lives on Person (deployment-wide, not per-merchant).
+  merchant <- case merchantId of
+    Just msid -> QMerchant.findByShortId msid >>= fromMaybeM (MerchantDoesNotExist msid.getShortId)
+    Nothing -> case tokenMerchantId of
+      Just mid -> QMerchant.findById mid >>= fromMaybeM (MerchantDoesNotExist mid.getId)
+      Nothing -> throwError $ InvalidRequest "merchantId is required when token is not provided"
+  let city' = fromMaybe merchant.defaultOperatingCity (maybe tokenCity Just city)
+  stepSize <- asks (.totpStepSize)
+  clockSkew <- asks (.totpClockSkew)
   -- If user has existing authenticator and provides valid TOTP, re-setup directly
-  case (merchantAccess.secretKey, otp) of
+  case (person.secretKey, otp) of
     (Just existingKey, Just userOtp) -> do
-      isValid <- Utils.verifyTOTP merchant.totpStepSize merchant.totpClockSkew existingKey userOtp
+      isValid <- Utils.verifyTOTP stepSize clockSkew existingKey userOtp
       if isValid
         then do
-          -- TOTP valid, generate new secret directly
           newKey <- L.runIO Utils.generateSecretKey
-          MA.updatePerson2faForMerchant person.id merchant.id newKey
-          let qrCodeUri = Utils.generateAuthenticatorURI merchant.totpStepSize newKey personEmail merchant.shortId
+          QP.updatePerson2FaSecret person.id newKey
+          issuer <- asks (.twoFaIssuerName)
+          let qrCodeUri = Utils.generateAuthenticatorURI stepSize newKey personEmail issuer
           pure $ Initiate2FASetupRes {requestId = Nothing, qrcode = Just qrCodeUri, message = "2FA re-setup successful"}
         else throwError (InvalidRequest "Invalid authenticator code")
     _ -> do
-      -- No existing authenticator or no TOTP provided: phone OTP flow
-      decryptedMobileNumber <- decrypt person.mobileNumber
-      let phoneNumber = person.mobileCountryCode <> decryptedMobileNumber
+      -- No existing authenticator or no TOTP provided: email OTP flow
       reqId <- generateGUID
-      -- Send OTP via internal SMS API (BPP or BAP generates the OTP)
-      let smsReq =
-            InternalClient.SendSMSReq
-              { phoneNumber = phoneNumber,
-                messageKey = "SEND_TOTP",
-                templateVars = Map.empty,
-                isOtp = Just True
-              }
-      let callInternalSendSMS =
+      let emailReq = InternalClient.SendEmailOTPReq {email = personEmail}
+      let callInternalSendEmailOTP =
             if DTServer.APP_BACKEND `elem` merchant.serverNames
-              then InternalClient.callBAPInternalSendSMS
-              else InternalClient.callBPPInternalSendSMS
-      smsRes <- callInternalSendSMS (getShortId merchantId) city' smsReq
-      otpCode <- smsRes.otp & fromMaybeM (InternalError "OTP not returned from internal SMS service")
+              then InternalClient.callBAPInternalSendEmailOTP
+              else InternalClient.callBPPInternalSendEmailOTP
+      emailRes <- callInternalSendEmailOTP (getShortId merchant.shortId) city' emailReq
+      otpCode <- emailRes.otp & fromMaybeM (InternalError "OTP not returned from internal email service")
       let pendingData =
             Pending2FASetupData
               { personId = person.id,
@@ -397,16 +493,21 @@ initiate2FASetup Initiate2FASetupReq {..} = do
                 otp = otpCode,
                 email = personEmail
               }
-      let otpTTL = fromMaybe 300 merchant.twoFaOtpTTLInSecs
+      envOtpTTL <- asks (.twoFaOtpTTLInSecs)
+      let otpTTL = fromMaybe 900 envOtpTTL
       Redis.setExp (make2FASetupKey reqId) pendingData otpTTL
-      logInfo $ "2FA setup OTP sent for person: " <> person.id.getId
-      pure $ Initiate2FASetupRes {requestId = Just reqId, qrcode = Nothing, message = "OTP sent to registered mobile number"}
+      logInfo $ "2FA setup email OTP sent for person: " <> person.id.getId
+      pure $ Initiate2FASetupRes {requestId = Just reqId, qrcode = Nothing, message = "Reset code sent to registered email"}
 
 -- | Step 2: Verify phone OTP, generate TOTP secret, return QR code.
 -- Works for both first-time setup and reset.
 verify2FASetup ::
   ( BeamFlow m r,
     Redis.HedisFlow m r,
+    HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
+    HasFlowEnv m r '["twoFaOtpTTLInSecs" ::: Maybe Int],
+    HasFlowEnv m r '["twoFaMaxOtpVerifyAttempts" ::: Maybe Int],
+    HasFlowEnv m r '["twoFaIssuerName" ::: Text],
     EncFlow m r
   ) =>
   Verify2FASetupReq ->
@@ -415,9 +516,12 @@ verify2FASetup Verify2FASetupReq {..} = do
   let redisKey = make2FASetupKey requestId
       attemptsKey = make2FASetupAttemptsKey requestId
   pendingData <- Redis.get @Pending2FASetupData redisKey >>= fromMaybeM (InvalidRequest "2FA setup request expired or not found")
-  merchant <- QMerchant.findById pendingData.merchantId >>= fromMaybeM (MerchantDoesNotExist pendingData.merchantId.getId)
-  let maxAttempts = fromMaybe 5 merchant.twoFaMaxOtpVerifyAttempts
-      otpTTL = fromMaybe 300 merchant.twoFaOtpTTLInSecs
+  envMaxAttempts <- asks (.twoFaMaxOtpVerifyAttempts)
+  envOtpTTL <- asks (.twoFaOtpTTLInSecs)
+  stepSize <- asks (.totpStepSize)
+  issuer <- asks (.twoFaIssuerName)
+  let maxAttempts = fromMaybe 5 envMaxAttempts
+      otpTTL = fromMaybe 900 envOtpTTL
   -- Check attempt limit
   attempts <- fromMaybe 0 <$> Redis.get @Int attemptsKey
   when (attempts >= maxAttempts) $ do
@@ -430,10 +534,10 @@ verify2FASetup Verify2FASetupReq {..} = do
       -- Clean up Redis
       Redis.del redisKey
       Redis.del attemptsKey
-      -- Generate TOTP secret and enable 2FA
+      -- Generate TOTP secret and enable 2FA on the Person row
       key <- L.runIO Utils.generateSecretKey
-      MA.updatePerson2faForMerchant pendingData.personId pendingData.merchantId key
-      let qrCodeUri = Utils.generateAuthenticatorURI merchant.totpStepSize key pendingData.email pendingData.merchantShortId
+      QP.updatePerson2FaSecret pendingData.personId key
+      let qrCodeUri = Utils.generateAuthenticatorURI stepSize key pendingData.email issuer
       pure $ Enable2FARes qrCodeUri
     else do
       Redis.setExp attemptsKey (attempts + 1) otpTTL
@@ -589,7 +693,9 @@ buildFleetOwner req pid roleId dashboardAccessType = do
         passwordUpdatedAt = Just now,
         approvedBy = Nothing,
         rejectedBy = Nothing,
-        language = Nothing
+        language = Nothing,
+        secretKey = Nothing,
+        is2faEnabled = False
       }
 
 validateFleetOwner :: Validate FleetRegisterReq
@@ -626,3 +732,151 @@ createFleetOwnerDashboardOnly fleetOwnerRole merchant req personId = do
   let mbBoolVerified = Just (not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding) && (merchant.verifyFleetWhileLogin == Just True))
   QP.create fleetOwner{verified = mbBoolVerified}
   QAccess.create merchantAccess
+
+-- 2FA status endpoint - used by frontend banner + post-login modal to show
+-- countdown and route to enrollment.
+
+getTwoFaStatus ::
+  ( BeamFlow m r,
+    EncFlow m r,
+    HasFlowEnv m r '["is2faMandatory" ::: Bool],
+    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime]
+  ) =>
+  TokenInfo ->
+  m TwoFaStatusRes
+getTwoFaStatus tokenInfo = do
+  person <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
+  is2faRequired <- asks (.is2faMandatory)
+  enforcementDeadline <- asks (.twoFaEnforcementDeadline)
+  now <- getCurrentTime
+  let daysRemaining =
+        enforcementDeadline <&> \deadline ->
+          floor (realToFrac (diffUTCTime deadline now) / 86400 :: Double) :: Int
+      pastGrace = maybe True (< now) enforcementDeadline
+      is2faEnabled = person.is2faEnabled
+      mustEnrollNow = is2faRequired && pastGrace && not is2faEnabled
+  pure TwoFaStatusRes {..}
+
+-- Admin reset - lets a DASHBOARD_ADMIN invalidate someone else's TOTP so they
+-- can re-enroll. Force-logs the target out and audit-logs the action.
+
+data TwoFaAdminResetReq = TwoFaAdminResetReq
+  { targetPersonId :: Id DP.Person
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+newtype TwoFaAdminResetRes = TwoFaAdminResetRes
+  { message :: Text
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+adminResetTwoFa ::
+  ( BeamFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
+    EncFlow m r
+  ) =>
+  TokenInfo ->
+  TwoFaAdminResetReq ->
+  m TwoFaAdminResetRes
+adminResetTwoFa tokenInfo TwoFaAdminResetReq {..} = do
+  requestor <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
+  unless (requestor.dashboardAccessType == Just DRole.DASHBOARD_ADMIN) $
+    throwError AccessDenied
+  target <- QP.findById targetPersonId >>= fromMaybeM (PersonNotFound targetPersonId.getId)
+  merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantDoesNotExist tokenInfo.merchantId.getId)
+  -- Clear TOTP secret and disable 2FA on the Person row
+  QP.clearPerson2Fa target.id
+  -- Force logout across all sessions
+  Auth.cleanCachedTokens target.id
+  QR.deleteAllByPersonId target.id
+  -- Audit log
+  transaction <- STransaction.buildDashboardAuthTransaction DTransaction.DashboardTwoFactorAdminReset requestor.id merchant.id
+  QT.create transaction
+  logInfo $ "2FA admin reset: requestor=" <> requestor.id.getId <> " target=" <> target.id.getId
+  pure $ TwoFaAdminResetRes "2FA reset for target user. They must re-enroll on next login."
+
+-- Deadline notification dispatch. Cron-triggered (external scheduler hits the
+-- admin-authenticated endpoint below). Sends email nudges at 30/14/7/2/1 days
+-- before the merchant's enforcementDeadline. Idempotent per (person, bucket)
+-- via a Redis key that lives until the deadline passes.
+
+data DispatchNotificationsRes = DispatchNotificationsRes
+  { emailsSent :: Int,
+    skipped :: Int
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+-- Buckets we dispatch at (days before deadline). Ordered largest-first so
+-- if a user has been skipped, they get the tightest applicable warning today.
+twoFaNotificationBuckets :: [Int]
+twoFaNotificationBuckets = [30, 14, 7, 2, 1]
+
+make2FANotifyKey :: Id DP.Person -> Int -> Text
+make2FANotifyKey personId bucket = "Dashboard:2FA:Notify:" <> personId.getId <> ":" <> show bucket
+
+pickBucket :: Int -> Maybe Int
+pickBucket daysRemaining = find (\b -> daysRemaining <= b) (reverse (sort twoFaNotificationBuckets))
+
+dispatchTwoFaDeadlineNotifications ::
+  ( BeamFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["is2faMandatory" ::: Bool],
+    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
+    EncFlow m r
+  ) =>
+  TokenInfo ->
+  m DispatchNotificationsRes
+dispatchTwoFaDeadlineNotifications tokenInfo = do
+  requestor <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
+  unless (requestor.dashboardAccessType == Just DRole.DASHBOARD_ADMIN) $
+    throwError AccessDenied
+  is2faMandatory <- asks (.is2faMandatory)
+  enforcementDeadline <- asks (.twoFaEnforcementDeadline)
+  unless is2faMandatory $ pure ()
+  case enforcementDeadline of
+    Nothing -> pure $ DispatchNotificationsRes {emailsSent = 0, skipped = 0}
+    Just deadline -> do
+      now <- getCurrentTime
+      let daysRemaining = floor (realToFrac (diffUTCTime deadline now) / 86400 :: Double) :: Int
+      case pickBucket daysRemaining of
+        Nothing -> pure $ DispatchNotificationsRes {emailsSent = 0, skipped = 0}
+        Just bucket -> do
+          -- Any merchant will do for BAP-vs-BPP routing on the internal SendEmailOTP
+          -- call — 2FA state is deployment-wide, but the internal email endpoint
+          -- lives on a specific downstream service.
+          merchants <- QMerchant.findAllMerchants
+          case find (\m -> m.enabled == Just True) merchants of
+            Nothing -> pure $ DispatchNotificationsRes {emailsSent = 0, skipped = 0}
+            Just anyMerchant -> do
+              accessRows <- QAccess.findAllUserAccountForMerchant anyMerchant.id
+              foldM
+                ( \acc access -> do
+                    mbPerson <- QP.findById access.personId
+                    case mbPerson of
+                      Nothing -> pure acc
+                      Just person
+                        | person.is2faEnabled -> pure acc
+                        | otherwise -> do
+                          let notifyKey = make2FANotifyKey person.id bucket
+                          alreadyNotified <- Redis.get @Bool notifyKey
+                          case alreadyNotified of
+                            Just True -> pure acc {skipped = acc.skipped + 1}
+                            _ -> case person.email of
+                              Nothing -> pure acc {skipped = acc.skipped + 1}
+                              Just encEmail -> do
+                                email <- decrypt encEmail
+                                let emailReq = InternalClient.SendEmailOTPReq {email = email}
+                                let callInternalSendEmail =
+                                      if DTServer.APP_BACKEND `elem` anyMerchant.serverNames
+                                        then InternalClient.callBAPInternalSendEmailOTP
+                                        else InternalClient.callBPPInternalSendEmailOTP
+                                _ <- callInternalSendEmail (getShortId anyMerchant.shortId) access.operatingCity emailReq
+                                Redis.setExp notifyKey True (86400 * 35)
+                                logInfo $ "2FA deadline notification sent: person=" <> person.id.getId <> " bucket=" <> show bucket
+                                pure acc {emailsSent = acc.emailsSent + 1}
+                )
+                (DispatchNotificationsRes 0 0)
+                accessRows
