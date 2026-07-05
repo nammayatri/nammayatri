@@ -633,7 +633,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
           let invoiceInput =
                 InvoiceInput
                   { invoiceType = SubscriptionPurchase,
-                    paymentOrderId = Just invoiceParams.paymentOrderId,
+                    entityReferenceId = Just invoiceParams.paymentOrderId,
+                    referenceInvoiceNumber = Nothing,
                     issuedToType = invoiceParams.issuedToType,
                     issuedToId = ownerId,
                     issuedToName = invoiceParams.issuedToName,

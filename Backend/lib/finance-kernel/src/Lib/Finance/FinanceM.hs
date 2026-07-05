@@ -771,7 +771,8 @@ invoiceInner ctx config = do
   let invoiceInput =
         InvoiceInput
           { invoiceType = config.invoiceType,
-            paymentOrderId = Nothing,
+            entityReferenceId = Nothing,
+            referenceInvoiceNumber = Nothing,
             issuedToType = config.issuedToType,
             issuedToId = config.issuedToId,
             issuedToName = config.issuedToName,

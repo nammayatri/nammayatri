@@ -209,6 +209,7 @@ instance Default FRT.InvoiceContext where
   def =
     FRT.InvoiceContext
       { invoiceNumber = "",
+        referenceInvoiceNumber = Nothing,
         issuedAt = UTCTime (fromGregorian 1970 1 1) 0,
         dueAt = Nothing,
         invoiceType = DTI.Ride,

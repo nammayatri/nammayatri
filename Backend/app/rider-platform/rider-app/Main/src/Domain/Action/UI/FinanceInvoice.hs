@@ -96,7 +96,7 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
       let items = parseLineItems inv.lineItems
       taxTxns <- QIndirectTaxExtra.findByInvoiceNumber (Just inv.invoiceNumber)
       let mbTaxTxn = Kernel.Prelude.listToMaybe taxTxns
-      (mbPayType, mbBrand, mbLast4) <- case inv.paymentOrderId of
+      (mbPayType, mbBrand, mbLast4) <- case inv.entityReferenceId of
         Just orderId -> do
           txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
           let mbTxn = Kernel.Prelude.listToMaybe txns

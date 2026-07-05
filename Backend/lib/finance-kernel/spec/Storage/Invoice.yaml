@@ -24,7 +24,7 @@ Invoice:
     id: Id Invoice
     invoiceNumber: Text
     invoiceType: InvoiceType
-    paymentOrderId: Maybe Text
+    entityReferenceId: Maybe Text
     issuedToType: IssuedToType
     issuedToId: Text
     issuedToName: Maybe Text
@@ -40,6 +40,7 @@ Invoice:
     supplierId: Maybe Text
     merchantGstin: Maybe Text
     referenceId: Maybe Text
+    referenceInvoiceNumber: Maybe Text
     lineItems: Value
     subtotal: HighPrecMoney
     taxBreakdown: Maybe Value
@@ -70,7 +71,7 @@ Invoice:
     id: PrimaryKey
     invoiceNumber: "!SecondaryKey"
     issuedToId: "!SecondaryKey"
-    paymentOrderId: "!SecondaryKey"
+    entityReferenceId: "!SecondaryKey"
     supplierId: "!SecondaryKey"
     referenceId: "!SecondaryKey"
 
