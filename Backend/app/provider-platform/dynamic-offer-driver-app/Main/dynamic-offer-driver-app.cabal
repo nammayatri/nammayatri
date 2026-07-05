@@ -746,6 +746,7 @@ library
       Storage.Queries.BookingCancellationReasonExtra
       Storage.Queries.BookingExtra
       Storage.Queries.BusinessEventExtra
+      Storage.Queries.BusinessLicenseExtra
       Storage.Queries.CallStatusExtra
       Storage.Queries.CancellationDuesDetailsExtra
       Storage.Queries.Coins.CoinHistory

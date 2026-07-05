@@ -1386,14 +1386,12 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
       mbIdentityInfo <- QDII.findByDriverId driverId
       let hasAddressDetails =
             maybe False (\info -> isJust info.address && isJust info.addressDocumentType && isJust info.addressState) mbIdentityInfo
-      mbLocalMetadata <-
-        if enableMetadata
-          then do
-            mbIdentityInfo <- QDII.findByDriverId driverId
-            pure $
-              mbIdentityInfo <&> \info ->
-                LocalAddressProofMetadata LocalAddressProofDocumentMetadata {state = info.addressState, proofDocumentType = info.addressDocumentType}
-          else pure Nothing
+      let mbLocalMetadata =
+            if enableMetadata
+              then
+                mbIdentityInfo <&> \info ->
+                  LocalAddressProofMetadata LocalAddressProofDocumentMetadata {state = info.addressState, proofDocumentType = info.addressDocumentType}
+              else Nothing
       return (if hasAddressDetails then status else Just NO_DOC_AVAILABLE, reason, url, Nothing, mbS3Path, mbImageId, Nothing, mbLocalMetadata)
     DVC.DriverVehicleNOC -> do
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.DriverVehicleNOC
