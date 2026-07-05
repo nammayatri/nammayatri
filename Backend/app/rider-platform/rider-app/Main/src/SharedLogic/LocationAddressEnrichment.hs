@@ -5,6 +5,7 @@ where
 
 import qualified Data.Geohash as DG
 import Data.Text (pack)
+import qualified Data.Text as T
 import qualified Domain.Types.Extra.PlaceNameCache as DTM
 import Domain.Types.LocationAddress
 import Domain.Types.Merchant as DM
@@ -29,7 +30,8 @@ enrichLocationAddress ::
   LatLong ->
   LocationAddress ->
   m LocationAddress
-enrichLocationAddress _ _ _ address@LocationAddress {areaCode = Just _} = pure address
+enrichLocationAddress _ _ _ address
+  | isJust (nonEmptyAreaCode address.areaCode) = pure address
 enrichLocationAddress merchantId merchantOperatingCityId gps address = do
   eAreaCode <- withTryCatch "enrichLocationAddress" $ resolveAreaCode merchantId merchantOperatingCityId gps address
   mbAreaCode <- case eAreaCode of
@@ -38,8 +40,14 @@ enrichLocationAddress merchantId merchantOperatingCityId gps address = do
       logWarning $ "enrichLocationAddress: area-code enrichment failed, proceeding without it: " <> show err
       pure Nothing
   case mbAreaCode of
-    Just areaCode -> pure address {areaCode = Just areaCode}
-    Nothing -> pure address
+    Just areaCode -> pure address {areaCode = nonEmptyAreaCode (Just areaCode)}
+    Nothing -> pure address {areaCode = Nothing}
+
+nonEmptyAreaCode :: Maybe Text -> Maybe Text
+nonEmptyAreaCode = \case
+  Nothing -> Nothing
+  Just t | T.null (T.strip t) -> Nothing
+  Just t -> Just t
 
 resolveAreaCode ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, ServiceFlow m r, EventStreamFlow m r) =>

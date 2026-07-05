@@ -298,6 +298,26 @@ updatePersonRole personId role = do
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
 
+updatePerson2FaSecret :: BeamFlow m r => Id Person -> Text -> m ()
+updatePerson2FaSecret personId secretKey = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.secretKey $ Just secretKey,
+      Se.Set BeamP.is2faEnabled True,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id $ Se.Eq $ getId personId]
+
+clearPerson2Fa :: BeamFlow m r => Id Person -> m ()
+clearPerson2Fa personId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.secretKey Nothing,
+      Se.Set BeamP.is2faEnabled False,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id $ Se.Eq $ getId personId]
+
 updatePersonPassword :: BeamFlow m r => Id Person -> DbHash -> m ()
 updatePersonPassword personId newPasswordHash = do
   now <- getCurrentTime
