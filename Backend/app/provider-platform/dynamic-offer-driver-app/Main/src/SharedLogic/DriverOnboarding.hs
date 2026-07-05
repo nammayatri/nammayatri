@@ -1195,3 +1195,41 @@ endFleetRCAssociationIfPossible fleetOwnerId rcId = do
   now <- getCurrentTime
   mbFleetRc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId fleetOwnerId rcId now
   whenJust mbFleetRc $ \fleetRc -> FRCAssoc.endById fleetRc.id
+
+checkAadhaarDuplicate ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
+  Person ->
+  DTC.TransporterConfig ->
+  Maybe Text ->
+  m ()
+checkAadhaarDuplicate person transporterConfig mbAadhaarNumber = do
+  case (transporterConfig.allowDuplicateAadhaar, mbAadhaarNumber) of
+    (Just False, Just aadhaarNumber) -> do
+      aadhaarHash <- getDbHash aadhaarNumber
+      aadhaarInfoList <- QAadhaarCard.findAllByAadhaarHashAndMerchantId (Just aadhaarHash) person.merchantId.getId
+      let otherDriverIds = filter (/= person.id) (map (.driverId) aadhaarInfoList)
+      unless (null otherDriverIds) $ throwError AadhaarAlreadyLinked
+      when (not (fromMaybe False transporterConfig.allowAadhaarReupload)) $ do
+        aadhaarPersonDetails <- QP.getDriversByIdIn (map (.driverId) aadhaarInfoList)
+        let getRoles = map (.role) aadhaarPersonDetails
+        when (person.role `elem` getRoles) $ throwError AadhaarAlreadyLinked
+    _ -> pure ()
+
+checkPanDuplicate ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
+  Person ->
+  DTC.TransporterConfig ->
+  Text ->
+  m ()
+checkPanDuplicate person transporterConfig panNumber = do
+  case transporterConfig.allowDuplicatePan of
+    Just False -> do
+      panHash <- getDbHash panNumber
+      panInfoList <- DPQuery.findAllByPanHashAndMerchantId panHash person.merchantId.getId
+      let otherDriverIds = filter (/= person.id) (map (.driverId) panInfoList)
+      unless (null otherDriverIds) $ throwError PanAlreadyLinked
+      when (not (fromMaybe False transporterConfig.allowPanReupload)) $ do
+        panPersonDetails <- QP.getDriversByIdIn (map (.driverId) panInfoList)
+        let getRoles = map (.role) panPersonDetails
+        when (person.role `elem` getRoles) $ throwError PanAlreadyLinked
+    _ -> pure ()

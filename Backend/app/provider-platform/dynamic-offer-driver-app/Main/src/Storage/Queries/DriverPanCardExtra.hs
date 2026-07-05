@@ -30,6 +30,15 @@ findAllByEncryptedPanNumber panNumberHash = do
   findAllWithKV
     [Se.Is Beam.panCardNumberHash $ Se.Eq panNumberHash]
 
+findAllByPanHashAndMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> Text -> m [DriverPanCard]
+findAllByPanHashAndMerchantId panNumberHash merchantId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.panCardNumberHash $ Se.Eq panNumberHash,
+          Se.Is Beam.merchantId $ Se.Eq (Just merchantId)
+        ]
+    ]
+
 findByPanNumberAndNotInValid :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe DriverPanCard)
 findByPanNumberAndNotInValid personId = do
   findOneWithKV

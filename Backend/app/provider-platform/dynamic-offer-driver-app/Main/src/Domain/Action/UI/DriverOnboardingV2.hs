@@ -698,18 +698,20 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
   let mbPanVerificationService =
         (if isDashboard then merchantServiceUsageConfig.dashboardPanVerificationService else merchantServiceUsageConfig.panVerificationService)
 
-  mbPanInfo <- QDPC.findUnInvalidByPanNumber req.panNumber
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+
+  -- Own-row status guards
+  mbPanInfo <- QDPC.findByDriverId personId
   whenJust mbPanInfo $ \panInfo -> do
-    when (panInfo.driverId /= personId) $ do
-      ImageQuery.deleteById req.imageId1
-      throwError $ DocumentAlreadyLinkedToAnotherDriver "PAN"
     when (panInfo.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $ do
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentUnderManualReview "PAN"
     when (panInfo.verificationStatus == Documents.VALID) $ do
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentAlreadyValidated "PAN"
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+
+  -- Cross-driver duplicate check (config-gated, merchant-scoped)
+  SDO.checkPanDuplicate person transporterConfig req.panNumber
   SDO.validateIndividualPANCheck transporterConfig person req.panNumber
   (verificationStatus, mbNameFromGovtDB) <-
     if isDigiLockerFlow
@@ -993,6 +995,7 @@ postDriverRegisterAadhaarCard ::
   )
 postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
   -- SDK validation (HyperVerge-specific)
   checkIfGenuineReq req
@@ -1000,11 +1003,14 @@ postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) 
   -- Duplicate/status checks
   validateAadhaarChecks personId
 
+  -- Cross-driver duplicate check (config-gated, merchant-scoped)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  SDO.checkAadhaarDuplicate person transporterConfig req.maskedAadhaarNumber
+
   -- Create and store Aadhaar record
   createAadhaarRecord personId merchantId merchantOperatingCityId req
 
   -- Trigger PAN-Aadhaar linkage if PAN card already exists
-  person <- PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbAadhaarCard <- QAadhaarCard.findByPrimaryKey personId
   mbAadhaarNumber <- traverse decrypt (mbAadhaarCard >>= (.aadhaarNumber))
   when (isNothing mbAadhaarNumber) $
@@ -1012,7 +1018,6 @@ postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) 
       "PanAadhaarLink postDriverRegisterAadhaarCard: skipped (no aadhaarNumber after upsert) driverId="
         <> personId.getId
   whenJust mbAadhaarNumber $ \aadhaarNumber -> do
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
     let allowPanAadhaarLink = fromMaybe True transporterConfig.allowPanAadhaarLinkage
     unless allowPanAadhaarLink $
       logInfo $

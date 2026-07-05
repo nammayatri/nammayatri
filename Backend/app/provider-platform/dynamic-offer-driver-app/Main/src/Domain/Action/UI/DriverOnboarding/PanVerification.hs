@@ -123,19 +123,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
   when blocked $ throwError AccountBlocked
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   validateIndividualPANCheck transporterConfig person req.panNumber
-  case transporterConfig.allowDuplicatePan of
-    Just False -> do
-      panHash <- getDbHash req.panNumber
-      panInfoList <- DPQuery.findAllByEncryptedPanNumber panHash
-      let otherDriverIds = filter (/= person.id) (map (.driverId) panInfoList)
-      unless (Kernel.Prelude.null otherDriverIds) $ do
-        Utils.cleanupUploadedImages [Id req.imageId] person.id
-        throwError PanAlreadyLinked
-      when (not (fromMaybe False transporterConfig.allowPanReupload)) $ do
-        panPersonDetails <- Person.getDriversByIdIn (map (.driverId) panInfoList)
-        let getRoles = map (.role) panPersonDetails
-        when (person.role `elem` getRoles) $ throwError PanAlreadyLinked
-    _ -> pure ()
+  checkPanDuplicate person transporterConfig req.panNumber
 
   merchantServiceUsageConfig <-
     getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))

@@ -42,6 +42,15 @@ findAllByEncryptedAadhaarNumber mbAadhaarNumberHash = do
   findAllWithKV
     [Se.Is Beam.aadhaarNumberHash $ Se.Eq mbAadhaarNumberHash]
 
+findAllByAadhaarHashAndMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DbHash -> Text -> m [Domain.AadhaarCard]
+findAllByAadhaarHashAndMerchantId mbAadhaarNumberHash merchantId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.aadhaarNumberHash $ Se.Eq mbAadhaarNumberHash,
+          Se.Is Beam.merchantId $ Se.Eq merchantId
+        ]
+    ]
+
 upsertAadhaarRecord :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.AadhaarCard -> m ()
 upsertAadhaarRecord a@Domain.AadhaarCard {..} =
   findOneWithKV [Se.Is Beam.driverId $ Se.Eq driverId.getId] >>= \case
