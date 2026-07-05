@@ -99,7 +99,6 @@ instance FromTType' BeamM.Merchant Domain.Merchant where
               (Just token, Just hash) -> Just $ EncryptedHashed (Encrypted token) hash
               _ -> Nothing,
             trackLoginLogoutForRoles = mapMaybe parseDashboardAccessType trackLoginLogoutForRoles,
-            twoFactorMandatoryForRoles = mapMaybe parseDashboardAccessType twoFactorMandatoryForRoles,
             ..
           }
 
@@ -111,7 +110,6 @@ instance ToTType' BeamM.Merchant Domain.Merchant where
         authTokenEncrypted = authToken <&> (unEncrypted . (.encrypted)),
         authTokenHash = authToken <&> (.hash),
         trackLoginLogoutForRoles = showDashboardAccessType <$> trackLoginLogoutForRoles,
-        twoFactorMandatoryForRoles = showDashboardAccessType <$> twoFactorMandatoryForRoles,
         ..
       }
 
