@@ -45,7 +45,6 @@ import Tools.Error
 
 data CreateMerchantWithAdminReq = CreateMerchantWithAdminReq
   { shortId :: Text,
-    is2faMandatory :: Bool,
     defaultOperatingCity :: City.City,
     supportedOperatingCities :: [City.City],
     domain :: Text,
@@ -62,7 +61,6 @@ data CreateMerchantWithAdminReq = CreateMerchantWithAdminReq
 
 data CreateMerchantReq = CreateMerchantReq
   { shortId :: Text,
-    is2faMandatory :: Bool,
     defaultOperatingCity :: City.City,
     supportedOperatingCities :: [City.City],
     domain :: Text,
@@ -100,7 +98,7 @@ createMerchantWithAdmin tokenInfo req = do
   person <- buildPersonCreateReq req role
   decPerson <- decrypt person
   QP.create person
-  merchant <- buildMerchant CreateMerchantReq {shortId = req.shortId, is2faMandatory = req.is2faMandatory, defaultOperatingCity = req.defaultOperatingCity, supportedOperatingCities = req.supportedOperatingCities, domain = req.domain, website = req.website}
+  merchant <- buildMerchant CreateMerchantReq {shortId = req.shortId, defaultOperatingCity = req.defaultOperatingCity, supportedOperatingCities = req.supportedOperatingCities, domain = req.domain, website = req.website}
   QMerchant.create merchant
   merchantAccess <- DPerson.buildMerchantAccess person.id merchant.id merchant.shortId tokenInfo.city
   QAccess.create merchantAccess
@@ -134,7 +132,6 @@ buildMerchant req = do
       { id = uid,
         shortId = ShortId req.shortId :: ShortId DMerchant.Merchant,
         serverNames = [],
-        is2faMandatory = req.is2faMandatory,
         defaultOperatingCity = req.defaultOperatingCity,
         supportedOperatingCities = req.supportedOperatingCities,
         domain = Just req.domain,
@@ -147,14 +144,7 @@ buildMerchant req = do
         hasFleetMemberHierarchy = Just True,
         isStrongNameCheckRequired = Just True,
         singleActiveSessionOnly = Just False,
-        trackLoginLogoutForRoles = [],
-        twoFactorMandatoryForRoles = [],
-        twoFaOtpTTLInSecs = Nothing,
-        twoFaMaxOtpVerifyAttempts = Nothing,
-        totpStepSize = Nothing,
-        totpClockSkew = Nothing,
-        emailOtpTTLInSecs = Nothing,
-        emailMaxOtpVerifyAttempts = Nothing
+        trackLoginLogoutForRoles = []
       }
 
 changeMerchantEnableState ::
@@ -243,5 +233,7 @@ buildPersonCreateReq req role = do
         passwordUpdatedAt = Just now,
         approvedBy = Nothing,
         rejectedBy = Nothing,
-        language = Nothing
+        language = Nothing,
+        secretKey = Nothing,
+        is2faEnabled = False
       }

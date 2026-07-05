@@ -35,19 +35,19 @@ WHERE m.short_id = 'NAMMA_YATRI_PARTNER'
 ON CONFLICT DO NOTHING;
 
 -- Grant the FLEET dev token cross-merchant + cross-city dashboard access.
+-- (2FA columns moved from merchant_access to person after the refactor; access
+-- rows carry no per-merchant 2FA state anymore.)
 DO $$
 DECLARE
     fleet_person_id TEXT := 'f1eef1ee-f1ee-f1ee-f1ee-f1eef1eef1ee';
 BEGIN
     INSERT INTO atlas_bpp_dashboard.merchant_access
-        (id, person_id, merchant_id, merchant_short_id, operating_city, secret_key, is2fa_enabled, created_at)
+        (id, person_id, merchant_id, merchant_short_id, operating_city, created_at)
     SELECT gen_random_uuid()::text,
            fleet_person_id,
            m.id,
            m.short_id,
            c.city,
-           '',
-           false,
            now()
     FROM atlas_bpp_dashboard.merchant m
     CROSS JOIN LATERAL unnest(m.supported_operating_cities) AS c(city)
@@ -65,14 +65,12 @@ DECLARE
     admin_person_id TEXT := '3680f4b5-dce4-4d03-aa8c-5405690e87bd';
 BEGIN
     INSERT INTO atlas_bpp_dashboard.merchant_access
-        (id, person_id, merchant_id, merchant_short_id, operating_city, secret_key, is2fa_enabled, created_at)
+        (id, person_id, merchant_id, merchant_short_id, operating_city, created_at)
     SELECT gen_random_uuid()::text,
            admin_person_id,
            m.id,
            m.short_id,
            c.city,
-           '',
-           false,
            now()
     FROM atlas_bpp_dashboard.merchant m
     CROSS JOIN LATERAL unnest(m.supported_operating_cities) AS c(city)

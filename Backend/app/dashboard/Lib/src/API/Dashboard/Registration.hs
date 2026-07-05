@@ -42,6 +42,16 @@ type API =
            :<|> "verify2FaSetup"
              :> ReqBody '[JSON] DReg.Verify2FASetupReq
              :> Post '[JSON] DReg.Enable2FARes
+           :<|> "twoFaStatus"
+             :> DashboardAuth 'DASHBOARD_USER
+             :> Get '[JSON] DReg.TwoFaStatusRes
+           :<|> "twoFaAdminReset"
+             :> DashboardAuth 'DASHBOARD_USER
+             :> ReqBody '[JSON] DReg.TwoFaAdminResetReq
+             :> Post '[JSON] DReg.TwoFaAdminResetRes
+           :<|> "twoFaDispatchDeadlineNotifications"
+             :> DashboardAuth 'DASHBOARD_USER
+             :> Post '[JSON] DReg.DispatchNotificationsRes
            :<|> "switchMerchant"
              :> DashboardAuth 'DASHBOARD_USER
              :> ReqBody '[JSON] DReg.SwitchMerchantReq
@@ -60,6 +70,9 @@ handler =
     :<|> enable2fa
     :<|> initiate2FASetup
     :<|> verify2FASetup
+    :<|> twoFaStatus
+    :<|> twoFaAdminReset
+    :<|> twoFaDispatchDeadlineNotifications
     :<|> switchMerchant
     :<|> switchMerchantAndCity
 
@@ -80,6 +93,15 @@ initiate2FASetup = withFlowHandlerAPI' . DReg.initiate2FASetup
 
 verify2FASetup :: BeamFlow' => DReg.Verify2FASetupReq -> FlowHandler DReg.Enable2FARes
 verify2FASetup = withFlowHandlerAPI' . DReg.verify2FASetup
+
+twoFaStatus :: BeamFlow' => TokenInfo -> FlowHandler DReg.TwoFaStatusRes
+twoFaStatus = withFlowHandlerAPI' . DReg.getTwoFaStatus
+
+twoFaAdminReset :: BeamFlow' => TokenInfo -> DReg.TwoFaAdminResetReq -> FlowHandler DReg.TwoFaAdminResetRes
+twoFaAdminReset token = withFlowHandlerAPI' . DReg.adminResetTwoFa token
+
+twoFaDispatchDeadlineNotifications :: BeamFlow' => TokenInfo -> FlowHandler DReg.DispatchNotificationsRes
+twoFaDispatchDeadlineNotifications = withFlowHandlerAPI' . DReg.dispatchTwoFaDeadlineNotifications
 
 switchMerchant :: BeamFlow' => TokenInfo -> DReg.SwitchMerchantReq -> FlowHandler DReg.LoginRes
 switchMerchant token = withFlowHandlerAPI' . DReg.switchMerchant token

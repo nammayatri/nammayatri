@@ -27,11 +27,6 @@ data MerchantE e = Merchant
   { id :: Id Merchant,
     shortId :: ShortId Merchant,
     serverNames :: [DSN.ServerName],
-    is2faMandatory :: Bool,
-    twoFaOtpTTLInSecs :: Maybe Int,
-    twoFaMaxOtpVerifyAttempts :: Maybe Int,
-    totpStepSize :: Maybe Int,
-    totpClockSkew :: Maybe Int,
     defaultOperatingCity :: City.City,
     supportedOperatingCities :: [City.City],
     domain :: Maybe Text,
@@ -44,10 +39,7 @@ data MerchantE e = Merchant
     hasFleetMemberHierarchy :: Maybe Bool,
     isStrongNameCheckRequired :: Maybe Bool,
     singleActiveSessionOnly :: Maybe Bool,
-    trackLoginLogoutForRoles :: [DRole.DashboardAccessType],
-    twoFactorMandatoryForRoles :: [DRole.DashboardAccessType],
-    emailOtpTTLInSecs :: Maybe Int,
-    emailMaxOtpVerifyAttempts :: Maybe Int
+    trackLoginLogoutForRoles :: [DRole.DashboardAccessType]
   }
   deriving (Generic)
 
