@@ -17,15 +17,16 @@ module Lib.Queries.SpecialLocationPriority where
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.InMem as IM
+import Kernel.Utils.Common (CacheFlow)
 import Lib.Tabular.SpecialLocationPriority
 import qualified Lib.Types.SpecialLocationPriority as SpecialLocationPriorityD
 
 findByMerchantOpCityIdAndCategory ::
-  (Transactionable m, EsqDBReplicaFlow m r) =>
+  (Transactionable m, EsqDBReplicaFlow m r, CacheFlow m r) =>
   Text ->
   Text ->
   m (Maybe SpecialLocationPriorityD.SpecialLocationPriority)
-findByMerchantOpCityIdAndCategory merchantOpCityId category = IM.withInMemCache ["SpecialLocationPriorityTable", merchantOpCityId.getId, category] 3600 $ do
+findByMerchantOpCityIdAndCategory merchantOpCityId category = IM.withInMemCache ["SpecialLocationPriorityTable", merchantOpCityId, category] 3600 $ do
   Esq.runInReplica $
     Esq.findOne $ do
       specialLocationPriority <- from $ table @SpecialLocationPriorityT

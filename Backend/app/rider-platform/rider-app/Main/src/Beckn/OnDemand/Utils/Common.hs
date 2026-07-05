@@ -42,7 +42,6 @@ import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
-import SharedLogic.Search as SLS
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
 import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import Storage.ConfigPilot.Config.VehicleConfig (VehicleConfigDimensions (..))
@@ -52,10 +51,10 @@ import Tools.Error
 mkBapUri :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Id DM.Merchant -> m KP.BaseUrl
 mkBapUri merchantId = asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId.getId)
 
-mkStops :: SLS.SearchReqLocation -> [SLS.SearchReqLocation] -> UTCTime -> Maybe T.Text -> Maybe [Spec.Stop]
+mkStops :: DLoc.Location -> [DLoc.Location] -> UTCTime -> Maybe T.Text -> Maybe [Spec.Stop]
 mkStops origin stops startTime mbScheduledPickupDuration =
-  let originGps = Gps.Gps {lat = origin.gps.lat, lon = origin.gps.lon}
-      destinationGps dest = Gps.Gps {lat = dest.gps.lat, lon = dest.gps.lon}
+  let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
+      destinationGps dest = Gps.Gps {lat = dest.lat, lon = dest.lon}
       destination = [KP.last stops | not (null stops)]
       intermediateStops = KP.safeInit stops
    in Just
@@ -345,9 +344,9 @@ mkIntermediateStop stop id parentStopId =
           Spec.stopParentStopId = Just $ show parentStopId
         }
 
-mkIntermediateStopSearch :: SLS.SearchReqLocation -> Int -> Int -> Spec.Stop
+mkIntermediateStopSearch :: DLoc.Location -> Int -> Int -> Spec.Stop
 mkIntermediateStopSearch stop id parentStopId =
-  let gps = Gps.Gps {lat = stop.gps.lat, lon = stop.gps.lon}
+  let gps = Gps.Gps {lat = stop.lat, lon = stop.lon}
    in emptyStop
         { Spec.stopLocation =
             Just $
