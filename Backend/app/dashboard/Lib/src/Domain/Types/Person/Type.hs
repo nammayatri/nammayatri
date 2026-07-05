@@ -44,7 +44,9 @@ data PersonE e = Person
     passwordUpdatedAt :: Maybe UTCTime,
     approvedBy :: Maybe (Id Person),
     rejectedBy :: Maybe (Id Person),
-    language :: Maybe KET.Language
+    language :: Maybe KET.Language,
+    secretKey :: Maybe Text,
+    is2faEnabled :: Bool
   }
   deriving (Generic)
 

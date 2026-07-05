@@ -1354,7 +1354,10 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
       return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing)
     DVC.LocalResidenceProof -> do
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.LocalResidenceProof
-      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing)
+      mbIdentityInfo <- QDII.findByDriverId driverId
+      let hasAddressDetails =
+            maybe False (\info -> isJust info.address && isJust info.addressDocumentType && isJust info.addressState) mbIdentityInfo
+      return (if hasAddressDetails then status else Just NO_DOC_AVAILABLE, reason, url, Nothing, mbS3Path, mbImageId, Nothing)
     DVC.DriverVehicleNOC -> do
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.DriverVehicleNOC
       return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing)

@@ -115,7 +115,7 @@ let cacConfig =
       , enableCac = False
       }
 
-let sendEmailRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
+let sendEmailRateLimitOptions = { limit = +100, limitResetTimeInSec = +600 }
 
 let inMemConfig = { enableInMem = False, maxInMemSize = +100000000 }
 
@@ -175,4 +175,11 @@ in  { esqDBCfg
     , inMemConfig
     , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9992)
     , incomingAPIResponseTimeout = +15
+    , is2faMandatory = True
+    , twoFaEnforcementDeadlineText = Some "2026-08-04T00:00:00Z"
+    , twoFaOtpTTLInSecs = Some +900
+    , twoFaMaxOtpVerifyAttempts = Some +5
+    , totpStepSize = Some +30
+    , totpClockSkew = Some +2
+    , twoFaIssuerName = "Control Centre"
     }
