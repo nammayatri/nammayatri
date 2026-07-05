@@ -26,8 +26,6 @@ data MerchantAccessT f = MerchantAccessT
     merchantId :: B.C f Text,
     merchantShortId :: B.C f Text,
     operatingCity :: B.C f City,
-    secretKey :: B.C f (Maybe Text),
-    is2faEnabled :: B.C f Bool,
     createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
