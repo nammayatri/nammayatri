@@ -251,6 +251,13 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
       when (imageType == DVC.ProfilePhoto) $
         fork "deferred face match on selfie upload" $
           runDeferredFaceMatchOnSelfie person imageEntity.createdAt
+      when (imageType == DVC.LocalResidenceProof) $
+        mapM_
+          ( \staleImg -> do
+              _ <- withTryCatch "S3:delete:staleLocalResidenceProof" $ S3.delete (T.unpack staleImg.s3Path)
+              Query.deleteById staleImg.id
+          )
+          (filter (\staleImg -> staleImg.id /= imageEntity.id) allImages)
       return $ ImageValidateResponse {imageId = imageEntity.id}
   where
     checkErrors id_ _ Nothing = throwImageError id_ ImageValidationFailed

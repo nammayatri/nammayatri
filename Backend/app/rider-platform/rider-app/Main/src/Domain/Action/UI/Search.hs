@@ -386,6 +386,12 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   (RouteDetails {..}, mbDiscoveredSpecialLocId) <- getRouteDetails person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip originCity riderCfg isMeterRide req
   fromLocation <- buildSearchReqLoc merchant.id merchantOperatingCityId origin
   stopLocations <- buildSearchReqLoc merchant.id merchantOperatingCityId `mapM` stops
+  let enrichedOrigin = SearchReqLocation {gps = origin.gps, address = fromLocation.address}
+      enrichedStops =
+        zipWith
+          (\stopLoc loc -> SearchReqLocation {gps = stopLoc.gps, address = loc.address})
+          stops
+          stopLocations
   let driverIdentifier' = driverIdentifier_ <|> (person.referralCode >>= \refCode -> bool Nothing (mkDriverIdentifier refCode) $ shouldPriortiseDriver person riderCfg refCode)
   searchRequest <-
     buildSearchRequest
@@ -473,6 +479,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         duration = shortestRouteDuration,
         taggings = getTags tag searchRequest reservePricingTag updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide phoneNumber numberOfLuggages (searchRequest.fromSpecialLocationId) (searchRequest.toSpecialLocationId) emailDomain businessEmailDomain,
         riderGender = Just (show person.gender),
+        origin = enrichedOrigin,
+        stops = enrichedStops,
         ..
       }
   where
