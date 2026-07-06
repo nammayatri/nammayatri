@@ -1394,7 +1394,8 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
                 mbIdentityInfo <&> \info ->
                   LocalAddressProofMetadata LocalAddressProofDocumentMetadata {state = info.addressState, proofDocumentType = info.addressDocumentType, address = info.address}
               else Nothing
-      return (if hasAddressDetails then status else Just NO_DOC_AVAILABLE, reason, url, Nothing, mbS3Path, mbImageId, Nothing, mbLocalMetadata)
+      let statusWithoutAddress = if isJust mbImageId then Just INVALID else Just NO_DOC_AVAILABLE
+      return (if hasAddressDetails then status else statusWithoutAddress, reason, url, Nothing, mbS3Path, mbImageId, Nothing, mbLocalMetadata)
     DVC.DriverVehicleNOC -> do
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.DriverVehicleNOC
       return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
