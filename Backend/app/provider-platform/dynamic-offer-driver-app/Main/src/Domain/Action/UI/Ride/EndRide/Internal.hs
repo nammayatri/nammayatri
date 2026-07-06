@@ -101,8 +101,8 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import Lib.Types.SpecialLocation hiding (Merchant, MerchantOperatingCity)
-import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import qualified SharedLogic.ActiveDriversList as ADL
+import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import SharedLogic.Allocator
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
