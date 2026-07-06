@@ -13,6 +13,7 @@ where
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Types.Id
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import Lib.Payment.Domain.Types.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
@@ -28,7 +29,7 @@ import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 type BeamFlow m r = (FinanceBeamFlow.BeamFlow m r, PaymentBeamFlow.BeamFlow m r)
 
 create ::
-  BeamFlow m r =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   Id MerchantOperatingCity ->
   DRefunds.Refunds ->
   Maybe Text ->
@@ -60,7 +61,7 @@ findByShortId ::
 findByShortId = QRefunds.findByShortId
 
 updateIsApiCallSuccess ::
-  BeamFlow m r =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   Id MerchantOperatingCity ->
   Maybe Bool ->
   DRefunds.Refunds ->
@@ -75,7 +76,7 @@ updateIsApiCallSuccess merchantOpCityId isApiCallSuccess refunds mbAction = do
   RefundsHistory.recordRefundsHistory merchantOpCityId (Just refunds.status) refunds.status (Just historyMessage) refunds
 
 updateRefundsEntryByResponse ::
-  BeamFlow m r =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   Id MerchantOperatingCity ->
   Maybe Text ->
   Maybe Text ->
@@ -98,7 +99,7 @@ updateRefundsEntryByResponse merchantOpCityId initiatedBy idAssignedByServicePro
   RefundsHistory.recordRefundsHistory merchantOpCityId (Just refunds.status) status (Just historyMessage) refunds
 
 updateRefundsEntryByStripeResponse ::
-  BeamFlow m r =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   Id MerchantOperatingCity ->
   Maybe Text ->
   Maybe Text ->

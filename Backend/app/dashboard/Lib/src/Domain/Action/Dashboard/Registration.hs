@@ -172,6 +172,7 @@ login ::
     HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int],
     HasFlowEnv m r '["is2faMandatory" ::: Bool],
     HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
+    HasFlowEnv m r '["twoFaExemptRoles" ::: [Text]],
     HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
     HasFlowEnv m r '["totpClockSkew" ::: Maybe Int],
     EncFlow m r
@@ -216,6 +217,7 @@ switchMerchant ::
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
     HasFlowEnv m r '["is2faMandatory" ::: Bool],
     HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
+    HasFlowEnv m r '["twoFaExemptRoles" ::: [Text]],
     HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
     HasFlowEnv m r '["totpClockSkew" ::: Maybe Int],
     EncFlow m r
@@ -236,6 +238,7 @@ switchMerchantAndCity ::
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
     HasFlowEnv m r '["is2faMandatory" ::: Bool],
     HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
+    HasFlowEnv m r '["twoFaExemptRoles" ::: [Text]],
     HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
     HasFlowEnv m r '["totpClockSkew" ::: Maybe Int],
     EncFlow m r
@@ -257,6 +260,7 @@ generateLoginRes ::
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     HasFlowEnv m r '["is2faMandatory" ::: Bool],
     HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
+    HasFlowEnv m r '["twoFaExemptRoles" ::: [Text]],
     HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
     HasFlowEnv m r '["totpClockSkew" ::: Maybe Int],
     EncFlow m r
@@ -268,7 +272,7 @@ generateLoginRes ::
   m LoginRes
 generateLoginRes person merchant otp city = do
   _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city >>= fromMaybeM AccessDenied
-  twoFaRequired <- is2FARequired
+  twoFaRequired <- is2FARequired person
   deadline <- asks (.twoFaEnforcementDeadline)
   (isToken, msg) <- check2FA person twoFaRequired otp
   token <-
@@ -283,6 +287,7 @@ generateLoginResWithoutOtp ::
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     HasFlowEnv m r '["is2faMandatory" ::: Bool],
     HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
+    HasFlowEnv m r '["twoFaExemptRoles" ::: [Text]],
     EncFlow m r
   ) =>
   DP.Person ->
@@ -292,14 +297,34 @@ generateLoginResWithoutOtp ::
 generateLoginResWithoutOtp person merchant city = do
   _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city >>= fromMaybeM AccessDenied
   token <- generateToken person.id merchant city
-  twoFaRequired <- is2FARequired
+  twoFaRequired <- is2FARequired person
   deadline <- asks (.twoFaEnforcementDeadline)
   pure $ LoginRes token twoFaRequired person.is2faEnabled "Logged in successfully" city merchant.shortId deadline
 
+-- 2FA is required for a person when the deployment enforces it AND the
+-- person's role name isn't in the deployment-configured exempt list
+-- (twoFaExemptRoles). We compare against Role.name (e.g. "JUSPAY_ADMIN",
+-- "FLEET"), NOT DashboardAccessType — the latter is a coarser bucket and
+-- would exempt more users than intended.
 is2FARequired ::
-  (HasFlowEnv m r '["is2faMandatory" ::: Bool]) =>
+  ( BeamFlow m r,
+    HasFlowEnv m r '["is2faMandatory" ::: Bool],
+    HasFlowEnv m r '["twoFaExemptRoles" ::: [Text]]
+  ) =>
+  DP.Person ->
   m Bool
-is2FARequired = asks (.is2faMandatory)
+is2FARequired person = do
+  mandatory <- asks (.is2faMandatory)
+  if not mandatory
+    then pure False
+    else do
+      exempt <- asks (.twoFaExemptRoles)
+      if null exempt
+        then pure True
+        else do
+          mbRole <- QRole.findById person.roleId
+          let roleName = maybe "" (.name) mbRole
+          pure $ roleName `notElem` exempt
 
 check2FA ::
   ( EncFlow m r,
@@ -740,13 +765,14 @@ getTwoFaStatus ::
   ( BeamFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["is2faMandatory" ::: Bool],
-    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime]
+    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
+    HasFlowEnv m r '["twoFaExemptRoles" ::: [Text]]
   ) =>
   TokenInfo ->
   m TwoFaStatusRes
 getTwoFaStatus tokenInfo = do
   person <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
-  is2faRequired <- asks (.is2faMandatory)
+  is2faRequired <- is2FARequired person
   enforcementDeadline <- asks (.twoFaEnforcementDeadline)
   now <- getCurrentTime
   let daysRemaining =

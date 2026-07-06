@@ -14,6 +14,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FRFSCancel as FRFSCancel
 import SharedLogic.FRFSUtils as FRFSUtils
@@ -23,8 +24,7 @@ import qualified Tools.Metrics as Metrics
 import qualified UrlShortner.Common as UrlShortner
 
 onCancelCore ::
-  ( MonadFlow m,
-    CacheFlow m r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
@@ -38,7 +38,8 @@ onCancelCore ::
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text],
     HasShortDurationRetryCfg r c,
-    HasLongDurationRetryCfg r c
+    HasLongDurationRetryCfg r c,
+    Finance.HasActorInfo m r
   ) =>
   Merchant ->
   Booking.FRFSTicketBooking ->

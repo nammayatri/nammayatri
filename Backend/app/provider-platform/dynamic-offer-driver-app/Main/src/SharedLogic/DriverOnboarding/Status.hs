@@ -58,6 +58,7 @@ import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLicense as DL
+import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as FODVC
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Merchant as DM
@@ -1671,7 +1672,7 @@ addVerificationReasons language mbReasons msg = do
 checkIfInVerification :: Id DP.Person -> IQuery.EntityImagesInfo -> DVC.DocumentType -> Language -> Flow (ResponseStatus, Text)
 checkIfInVerification driverId entityImagesInfo docType language = do
   let onboardingTryLimit = entityImagesInfo.transporterConfig.onboardingTryLimit
-  idfyVerificationReq <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing driverId docType
+  idfyVerificationReq <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing driverId (docTypeToText docType)
   hvVerificationReq <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing driverId docType
   let mbVerificationReqRecord = getLatestVerificationRecord idfyVerificationReq hvVerificationReq
   let images = IQuery.filterRecentByEntityIdAndImageType entityImagesInfo docType

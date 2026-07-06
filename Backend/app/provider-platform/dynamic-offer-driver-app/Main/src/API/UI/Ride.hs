@@ -62,6 +62,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Auth
 import Tools.Error
 
@@ -196,7 +197,7 @@ handler =
          )
 
 startRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> StartRideReq -> FlowHandler APISuccess
-startRide (requestorId, merchantId, merchantOpCityId) rideId = withFlowHandlerAPI . startRide' (requestorId, merchantId, merchantOpCityId) rideId
+startRide (requestorId, merchantId, merchantOpCityId) rideId = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo requestorId . startRide' (requestorId, merchantId, merchantOpCityId) rideId
 
 startRide' :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> StartRideReq -> Flow APISuccess
 startRide' (requestorId, merchantId, merchantOpCityId) rideId StartRideReq {..} = do
@@ -206,7 +207,7 @@ startRide' (requestorId, merchantId, merchantOpCityId) rideId StartRideReq {..} 
   withTimeAPI "startRide" "driverStartRide" $ RideStart.driverStartRide shandle rideId driverReq
 
 otpRideCreateAndStart :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> DRide.OTPRideReq -> FlowHandler RideCommon.DriverRideRes
-otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide.OTPRideReq {..} = withFlowHandlerAPI $ do
+otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide.OTPRideReq {..} = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo requestorId $ do
   requestor <- findPerson requestorId
   now <- getCurrentTime
   driverInfo <- QDI.findById (cast requestor.id) >>= fromMaybeM (PersonNotFound requestor.id.getId)
@@ -253,14 +254,14 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide
     mkOtpRideLockKey bookingId = "OtpRideCreate:BookingId:" <> bookingId.getId
 
 endRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> EndRideReq -> FlowHandler RideEnd.EndRideResp
-endRide (requestorId, merchantId, merchantOpCityId) rideId EndRideReq {..} = withFlowHandlerAPI $ do
+endRide (requestorId, merchantId, merchantOpCityId) rideId EndRideReq {..} = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo requestorId $ do
   requestor <- findPerson requestorId
   let driverReq = RideEnd.DriverEndRideReq {..}
   shandle <- withTimeAPI "endRide" "buildEndRideHandle" $ RideEnd.buildEndRideHandle merchantId merchantOpCityId (Just rideId)
   withTimeAPI "endRide" "driverEndRide" $ RideEnd.driverEndRide shandle rideId driverReq
 
 cancelRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> CancelRideReq -> FlowHandler RideCancel.CancelRideResp
-cancelRide (personId, _, _) rideId CancelRideReq {reasonCode, additionalInfo, doCancellationRateBasedBlocking} = withFlowHandlerAPI $ do
+cancelRide (personId, _, _) rideId CancelRideReq {reasonCode, additionalInfo, doCancellationRateBasedBlocking} = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ do
   let driverReq = RideCancel.CancelRideReq {reasonCode, additionalInfo, doCancellationRateBasedBlocking}
   RideCancel.driverCancelRideHandler RideCancel.cancelRideHandle personId rideId driverReq
 

@@ -21,6 +21,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Action as DP
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -32,6 +33,7 @@ import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPayoutCfg
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as PStats
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as TPayout
@@ -93,7 +95,7 @@ getReferralPayoutHistory (mbPersonId, _mbMerchantId) = do
         }
 
 postPayoutVpaUpsert :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> UpdatePayoutVpaReq -> Flow APISuccess
-postPayoutVpaUpsert (mbPersonId, _mbMerchantId) req = do
+postPayoutVpaUpsert (mbPersonId, _mbMerchantId) req = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   QPerson.updatePayoutVpa (Just req.vpa) personId
@@ -104,7 +106,7 @@ postPayoutVpaUpsert (mbPersonId, _mbMerchantId) req = do
 processBacklogReferralPayout ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EncFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r

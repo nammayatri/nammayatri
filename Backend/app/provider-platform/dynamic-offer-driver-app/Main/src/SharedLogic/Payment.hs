@@ -45,6 +45,7 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
@@ -110,7 +111,8 @@ createOrder ::
     CoreMetrics m,
     MonadFlow m,
     HasKafkaProducer r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    Finance.HasActorInfo m r
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DMSC.ServiceName ->
@@ -399,7 +401,7 @@ createOrderV2 ::
     EsqDBFlow m r,
     EncFlow m r,
     CoreMetrics m,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     ServiceFlow m r
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -454,7 +456,7 @@ createWalletTopupOrder ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     ServiceFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>

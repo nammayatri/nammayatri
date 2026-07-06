@@ -44,6 +44,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.Queries.FRFSQuote as QQuote
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Auth
 import Tools.Error
 
@@ -201,7 +202,7 @@ getFareV2 partnerOrg mbIntegratedBPPConfigId req = withFlowHandlerAPI . withLogT
     getFareV2HitsCountKey = "BAP:FRFS:PartnerOrgId:" <> partnerOrg.orgId.getId <> ":GetFareV2:hitsCount"
 
 upsertPersonAndQuoteConfirm :: PartnerOrganization -> DPOFRFS.UpsertPersonAndQuoteConfirmReq -> FlowHandler DPOFRFS.UpsertPersonAndQuoteConfirmRes
-upsertPersonAndQuoteConfirm partnerOrg req = withFlowHandlerAPI . withLogTag $ do
+upsertPersonAndQuoteConfirm partnerOrg req = withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo . withLogTag $ do
   checkRateLimit partnerOrg.orgId partnerQuoteConfirmHitsCountKey
   quote <- QQuote.findById req.quoteId >>= fromMaybeM (FRFSQuoteNotFound req.quoteId.getId)
   let merchantId = quote.merchantId

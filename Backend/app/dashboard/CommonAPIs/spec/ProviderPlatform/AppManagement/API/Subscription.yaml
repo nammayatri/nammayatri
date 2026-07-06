@@ -21,6 +21,7 @@ importPackageOverrides:
   Domain.Action.UI.Plan: "dynamic-offer-driver-app"
   Domain.Action.UI.Payment: "dynamic-offer-driver-app"
   Domain.Types.SubscriptionPurchase: "dynamic-offer-driver-app"
+  Domain.Types.Invoice: "dynamic-offer-driver-app"
 
 module: Subscription
 apiPrefix: plan
@@ -34,6 +35,17 @@ apis:
         driverId: Id Driver
       response:
         type: PlanListAPIRes
+      helperApi:
+        - GET:
+            endpoint: /{driverId}/list
+            name: GetSubscriptionListPlan
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            query:
+              - requestorId: Text
+            response:
+              type: PlanListAPIRes
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION LIST_PLAN
   - PUT: # SelectPlan
@@ -45,6 +57,18 @@ apis:
         planId: Id Plan
       response:
         type: APISuccess
+      helperApi:
+        - PUT:
+            endpoint: /{driverId}/{planId}/select
+            name: PutSubscriptionSelectPlan
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              planId: Id Plan
+            query:
+              - requestorId: Text
+            response:
+              type: APISuccess
       migrate:
         endpoint: SubscriptionAPI SelectPlanEndpoint
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION SELECT_PLAN
@@ -56,6 +80,17 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
+      helperApi:
+        - PUT:
+            endpoint: /{driverId}/suspend
+            name: PutSubscriptionSuspendPlan
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            query:
+              - requestorId: Text
+            response:
+              type: APISuccess
       migrate:
         endpoint: SubscriptionAPI SuspendPlanEndpoint
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION SUSPEND_PLAN
@@ -68,6 +103,18 @@ apis:
         planId: Id Plan
       response:
         type: PlanSubscribeRes
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/{planId}/subscribe
+            name: PostSubscriptionSubscribePlan
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              planId: Id Plan
+            query:
+              - requestorId: Text
+            response:
+              type: PlanSubscribeRes
       migrate:
         endpoint: SubscriptionAPI SubscribePlanEndpoint
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION SUBSCRIBE_PLAN
@@ -79,6 +126,17 @@ apis:
         driverId: Id Driver
       response:
         type: CurrentPlanRes
+      helperApi:
+        - GET:
+            endpoint: /{driverId}
+            name: GetSubscriptionCurrentPlan
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            query:
+              - requestorId: Text
+            response:
+              type: CurrentPlanRes
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION CURRENT_PLAN
   - GET: # ListPlanV2
@@ -90,6 +148,18 @@ apis:
         serviceName: ServiceNames
       response:
         type: PlanListAPIRes
+      helperApi:
+        - GET:
+            endpoint: /{driverId}/{serviceName}/v2/list
+            name: GetSubscriptionListPlanV2
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              serviceName: ServiceNames
+            query:
+              - requestorId: Text
+            response:
+              type: PlanListAPIRes
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION LIST_PLAN_V2
   - PUT: # SelectPlanV2
@@ -102,6 +172,19 @@ apis:
         serviceName: ServiceNames
       response:
         type: APISuccess
+      helperApi:
+        - PUT:
+            endpoint: /{driverId}/{planId}/{serviceName}/v2/select
+            name: PutSubscriptionSelectPlanV2
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              planId: Id Plan
+              serviceName: ServiceNames
+            query:
+              - requestorId: Text
+            response:
+              type: APISuccess
       migrate:
         endpoint: SubscriptionAPI SelectPlanEndpoint
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION SELECT_PLAN_V2
@@ -114,6 +197,18 @@ apis:
         serviceName: ServiceNames
       response:
         type: APISuccess
+      helperApi:
+        - PUT:
+            endpoint: /{driverId}/{serviceName}/v2/suspend
+            name: PutSubscriptionSuspendPlanV2
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              serviceName: ServiceNames
+            query:
+              - requestorId: Text
+            response:
+              type: APISuccess
       migrate:
         endpoint: SubscriptionAPI SuspendPlanEndpoint
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION SUSPEND_PLAN_V2
@@ -129,6 +224,21 @@ apis:
         type: PlanSubscribeReq
       response:
         type: PlanSubscribeRes
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/{planId}/{serviceName}/v2/subscribe
+            name: PostSubscriptionSubscribePlanV2
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              planId: Id Plan
+              serviceName: ServiceNames
+            query:
+              - requestorId: Text
+            request:
+              type: PlanSubscribeReq
+            response:
+              type: PlanSubscribeRes
       migrate:
         endpoint: SubscriptionAPI SubscribePlanEndpoint
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION SUBSCRIBE_PLAN_V2
@@ -141,6 +251,18 @@ apis:
         serviceName: ServiceNames
       response:
         type: CurrentPlanRes
+      helperApi:
+        - GET:
+            endpoint: /{driverId}/{serviceName}
+            name: GetSubscriptionCurrentPlanV2
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              serviceName: ServiceNames
+            query:
+              - requestorId: Text
+            response:
+              type: CurrentPlanRes
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION CURRENT_PLAN_V2
   - GET: # OrderStatus = (PaymentStatus)
@@ -152,6 +274,18 @@ apis:
         orderId: Id Invoice
       response:
         type: PaymentStatusResp
+      helperApi:
+        - GET:
+            endpoint: /{driverId}/{orderId}/status
+            name: GetSubscriptionOrderStatus
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              orderId: Id Invoice
+            query:
+              - requestorId: Text
+            response:
+              type: PaymentStatusResp
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION PAYMENT_STATUS
   - GET: # DriverPaymentHistoryAPIV2
@@ -167,6 +301,21 @@ apis:
         - offset: Int
       response:
         type: HistoryEntityV2
+      helperApi:
+        - GET:
+            endpoint: /{driverId}/payments/history/v2/{serviceName}
+            name: GetSubscriptionDriverPaymentHistoryAPIV2
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              serviceName: ServiceNames
+            query:
+              - paymentMode: InvoicePaymentMode
+              - limit: Int
+              - offset: Int
+              - requestorId: Text
+            response:
+              type: HistoryEntityV2
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION PAYMENT_HISTORY_V2
   - GET: # DriverPaymentHistoryEntityDetailsAPIV2
@@ -179,6 +328,19 @@ apis:
         invoiceId: Id Invoice
       response:
         type: HistoryEntryDetailsEntityV2
+      helperApi:
+        - GET:
+            endpoint: /{driverId}/payments/history/v2/{serviceName}/{invoiceId}/entity
+            name: GetSubscriptionDriverPaymentHistoryEntityDetailsV2
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              serviceName: ServiceNames
+              invoiceId: Id Invoice
+            query:
+              - requestorId: Text
+            response:
+              type: HistoryEntryDetailsEntityV2
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION PAYMENT_HISTORY_ENTITY_DETAILS_V2
   - POST: # CollectManualPayments
@@ -192,6 +354,20 @@ apis:
         type: CollectManualPaymentsReq
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/{serviceName}/collect
+            name: PostSubscriptionCollectManualPayments
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              serviceName: ServiceNames
+            query:
+              - requestorId: Text
+            request:
+              type: CollectManualPaymentsReq
+            response:
+              type: APISuccess
       migrate:
         endpoint: SubscriptionAPI CollectPaymentsEndPoint
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION COLLECT_MANUAL_PAYMENTS
@@ -203,6 +379,17 @@ apis:
         type: WaiveOffReq
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /waiveOff/fee
+            name: PostSubscriptionFeeWaiveOff
+            auth: ApiAuthV2
+            query:
+              - requestorId: Text
+            request:
+              type: WaiveOffReq
+            response:
+              type: APISuccess
       migrate:
         endpoint: SubscriptionAPI FeeWaiveOffEndPoint
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION FEE_WAIVE_OFF
@@ -218,6 +405,20 @@ apis:
         - status: SubscriptionPurchaseStatus
       response:
         type: SubscriptionPurchaseListRes
+      helperApi:
+        - GET:
+            endpoint: /{driverId}/subscriptionPurchases
+            name: GetSubscriptionPurchaseList
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            query:
+              - limit: Int
+              - offset: Int
+              - status: SubscriptionPurchaseStatus
+              - requestorId: Text
+            response:
+              type: SubscriptionPurchaseListRes
 
 types:
   PlanSubscribeReq:

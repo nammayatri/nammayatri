@@ -69,6 +69,7 @@ import qualified Kernel.Types.Id as Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.JourneyLeg.Common.FRFSJourneyUtils as FRFSJourneyUtils
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -101,6 +102,7 @@ import qualified Storage.Queries.PassVerifyTransaction as QPassVerifyTransaction
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Payment as TPayment
 import Tools.SMS as Sms hiding (Success)
@@ -188,7 +190,8 @@ purchasePassWithPayment ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     EsqDBReplicaFlow m r,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    Finance.HasActorInfo m r
   ) =>
   Bool ->
   DP.Person ->
@@ -416,8 +419,8 @@ postMultimodalPassSelect ::
     Maybe DT.Day ->
     Environment.Flow PassAPI.PassSelectionAPIEntity
   )
-postMultimodalPassSelect ids passId mbDeviceIdParam mbImeiParam mbPassPhotoMediaIdParam mbProfilePicture mbStartDay =
-  postMultimodalPassSelectUtil False ids passId mbDeviceIdParam mbImeiParam mbProfilePicture (Id.Id <$> mbPassPhotoMediaIdParam) mbStartDay
+postMultimodalPassSelect (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbPassPhotoMediaIdParam mbProfilePicture =
+  ActorInfo.withMbPersonIdActorInfo mbPersonId . postMultimodalPassSelectUtil False (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture (Id.Id <$> mbPassPhotoMediaIdParam)
 
 postMultimodalPassV2Select ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
