@@ -7,6 +7,12 @@ import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler
 
+withMbActorInfo :: (HasCallStack, Finance.HasActorInfo m r) => Maybe ActorInfo -> m a -> m a
+withMbActorInfo (Just ActorInfo {actorType, actorId}) action = Finance.withActorInfo actorType actorId action
+withMbActorInfo Nothing action = do
+  logWarning "ActorInfo not found"
+  action
+
 withJobIdActorInfoWrapper :: Finance.HasActorInfo m r => (Job e -> m a) -> (Job e -> m a)
 withJobIdActorInfoWrapper jobHandler job@Job {id} = Finance.withActorInfo Finance.JOB (Just id.getId) $ jobHandler job
 
@@ -33,4 +39,4 @@ withDashboardMbPersonIdActorInfo :: (Finance.HasActorInfo m r, Log m) => Maybe (
 withDashboardMbPersonIdActorInfo (Just personId) action = withDashboardPersonIdActorInfo personId action
 withDashboardMbPersonIdActorInfo Nothing action = do
   logWarning "DashboardPersonId not found for actor info, using Unknown as default"
-  action
+  action -- keep `Unknown requestId` as default
