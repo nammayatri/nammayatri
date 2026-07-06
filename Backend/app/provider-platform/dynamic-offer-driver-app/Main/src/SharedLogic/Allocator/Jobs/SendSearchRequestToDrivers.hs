@@ -39,6 +39,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Allocator (AllocatorJobType (..))
@@ -75,8 +76,6 @@ sendSearchRequestToDrivers ::
     Metrics.HasSendSearchRequestToDriverMetrics m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Log m,
-    MonadFlow m,
     LT.HasLocationService m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasField "maxShards" r Int,
@@ -103,7 +102,8 @@ sendSearchRequestToDrivers ::
     HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
     HasField "ltsHedisEnv" r Redis.HedisEnv,
     HasField "enableLtsPoolDataForPooling" r Bool,
-    HasField "cloudType" r (Maybe CloudType)
+    HasField "cloudType" r (Maybe CloudType),
+    Finance.HasActorInfo m r
   ) =>
   Job 'SendSearchRequestToDriver ->
   m ExecutionResult
@@ -197,7 +197,7 @@ sendSearchRequestToDrivers' ::
     Metrics.HasSendSearchRequestToDriverMetrics m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Log m,
+    Finance.HasActorInfo m r,
     LT.HasLocationService m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasField "maxShards" r Int,

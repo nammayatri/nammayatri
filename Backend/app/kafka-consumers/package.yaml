@@ -106,6 +106,7 @@ dependencies:
   - async
   - unliftio
   - utils
+  - finance-kernel
 
 ghc-options:
   - -Wall

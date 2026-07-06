@@ -118,7 +118,7 @@ data UpsertRouteFareResp = UpsertRouteFareResp {success :: Data.Text.Text, unpro
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("fRFSTicket" :> (GetFRFSTicketFrfsRoutes :<|> GetFRFSTicketFrfsRouteFareList :<|> PutFRFSTicketFrfsRouteFareUpsert :<|> GetFRFSTicketFrfsRouteStations :<|> PostFRFSTicketFrfsStatusUpdate))
+type API = ("fRFSTicket" :> (GetFRFSTicketFrfsRoutes :<|> GetFRFSTicketFrfsRouteFareList :<|> PutFRFSTicketFrfsRouteFareUpsert :<|> GetFRFSTicketFrfsRouteStations :<|> PostFRFSTicketFrfsStatusUpdateHelper))
 
 type GetFRFSTicketFrfsRoutes =
   ( "frfs" :> "routes" :> QueryParam "searchStr" Data.Text.Text :> MandatoryQueryParam "limit" Kernel.Prelude.Int
@@ -169,6 +169,13 @@ type GetFRFSTicketFrfsRouteStations =
 
 type PostFRFSTicketFrfsStatusUpdate = ("frfs" :> "statusUpdate" :> ReqBody '[JSON] FRFSStatusUpdateReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
+type PostFRFSTicketFrfsStatusUpdateHelper =
+  ( "frfs" :> "statusUpdate" :> QueryParam "requestorId" Data.Text.Text :> ReqBody '[JSON] FRFSStatusUpdateReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
 data FRFSTicketAPIs = FRFSTicketAPIs
   { getFRFSTicketFrfsRoutes :: Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient [FRFSDashboardRouteAPI],
     getFRFSTicketFrfsRouteFareList :: Data.Text.Text -> Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient FRFSRouteFareAPI,
@@ -181,7 +188,7 @@ data FRFSTicketAPIs = FRFSTicketAPIs
       ) ->
       EulerHS.Types.EulerClient UpsertRouteFareResp,
     getFRFSTicketFrfsRouteStations :: Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient [FRFSStationAPI],
-    postFRFSTicketFrfsStatusUpdate :: FRFSStatusUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postFRFSTicketFrfsStatusUpdate :: Kernel.Prelude.Maybe Data.Text.Text -> FRFSStatusUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkFRFSTicketAPIs :: (Client EulerHS.Types.EulerClient API -> FRFSTicketAPIs)

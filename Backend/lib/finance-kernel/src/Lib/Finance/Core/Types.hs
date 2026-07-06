@@ -11,11 +11,16 @@ module Lib.Finance.Core.Types
 
     -- * Common Types
     TimeRange (..),
+    -- Reexport (can be removed, and used directly from Kernel.Utils.Common)
+    ActorType (..),
+    ActorInfo (..),
+    HasActorInfo,
+    withActorInfo,
   )
 where
 
-import Data.Aeson (Value)
 import Kernel.Prelude
+import Kernel.Utils.Common
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Finance Environment (Domain provides config)

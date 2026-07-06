@@ -18,6 +18,7 @@ where
 
 import Kernel.Prelude
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Invoice.Service as InvoiceSvc
@@ -35,7 +36,7 @@ data PriorInvoiceContext = PriorInvoiceContext
 --   Returns the voided invoice and its linked entries so the caller can build a new invoice
 --   that re-links the same entries (plus any new ones).
 voidPriorRideInvoice ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Text -> -- referenceId (booking.id.getId)
   m (Maybe PriorInvoiceContext)
 voidPriorRideInvoice refId = do

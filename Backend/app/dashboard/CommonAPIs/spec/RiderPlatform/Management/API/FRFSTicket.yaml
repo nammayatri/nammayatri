@@ -147,6 +147,16 @@ apis:
         type: FRFSStatusUpdateReq
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /frfs/statusUpdate
+            auth: ApiAuthV2
+            query:
+              - requestorId: Text
+            request:
+              type: FRFSStatusUpdateReq
+            response:
+              type: APISuccess
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

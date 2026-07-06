@@ -30,6 +30,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo as ActorInfo
 import TransactionLogs.PushLogs
 
 type API =
@@ -45,7 +46,7 @@ select ::
   SignatureAuthResult ->
   Select.SelectReqV2 ->
   FlowHandler AckResponse
-select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI $ do
+select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.selectReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "SelectV2 API Flow" "Reached"

@@ -53,6 +53,7 @@ getSubscriptionListPlan merchantShortId opCity apiTokenInfo driverId = do
     opCity
     (.subscriptionDSL.getSubscriptionListPlan)
     driverId
+    (Kernel.Prelude.Just apiTokenInfo.personId.getId)
 
 putSubscriptionSelectPlan ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -78,6 +79,7 @@ putSubscriptionSelectPlan merchantShortId opCity apiTokenInfo driverId planId = 
       (.subscriptionDSL.putSubscriptionSelectPlan)
       driverId
       planId
+      (Kernel.Prelude.Just apiTokenInfo.personId.getId)
 
 putSubscriptionSuspendPlan ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -101,6 +103,7 @@ putSubscriptionSuspendPlan merchantShortId opCity apiTokenInfo driverId = do
       opCity
       (.subscriptionDSL.putSubscriptionSuspendPlan)
       driverId
+      (Kernel.Prelude.Just apiTokenInfo.personId.getId)
 
 postSubscriptionSubscribePlan ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -126,6 +129,7 @@ postSubscriptionSubscribePlan merchantShortId opCity apiTokenInfo driverId planI
       (.subscriptionDSL.postSubscriptionSubscribePlan)
       driverId
       planId
+      (Kernel.Prelude.Just apiTokenInfo.personId.getId)
 
 getSubscriptionCurrentPlan ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -140,6 +144,7 @@ getSubscriptionCurrentPlan merchantShortId opCity apiTokenInfo driverId = do
     opCity
     (.subscriptionDSL.getSubscriptionCurrentPlan)
     driverId
+    (Kernel.Prelude.Just apiTokenInfo.personId.getId)
 
 getSubscriptionListPlanV2 ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -156,6 +161,7 @@ getSubscriptionListPlanV2 merchantShortId opCity apiTokenInfo driverId serviceNa
     (.subscriptionDSL.getSubscriptionListPlanV2)
     driverId
     serviceName
+    (Kernel.Prelude.Just apiTokenInfo.personId.getId)
 
 putSubscriptionSelectPlanV2 ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -183,6 +189,7 @@ putSubscriptionSelectPlanV2 merchantShortId opCity apiTokenInfo driverId planId 
       driverId
       planId
       serviceName
+      (Kernel.Prelude.Just apiTokenInfo.personId.getId)
 
 putSubscriptionSuspendPlanV2 ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -208,6 +215,7 @@ putSubscriptionSuspendPlanV2 merchantShortId opCity apiTokenInfo driverId servic
       (.subscriptionDSL.putSubscriptionSuspendPlanV2)
       driverId
       serviceName
+      (Kernel.Prelude.Just apiTokenInfo.personId.getId)
 
 postSubscriptionSubscribePlanV2 ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -236,6 +244,7 @@ postSubscriptionSubscribePlanV2 merchantShortId opCity apiTokenInfo driverId pla
       driverId
       planId
       serviceName
+      (Kernel.Prelude.Just apiTokenInfo.personId.getId)
       req
 
 getSubscriptionCurrentPlanV2 ::
@@ -253,6 +262,7 @@ getSubscriptionCurrentPlanV2 merchantShortId opCity apiTokenInfo driverId servic
     (.subscriptionDSL.getSubscriptionCurrentPlanV2)
     driverId
     serviceName
+    (Kernel.Prelude.Just apiTokenInfo.personId.getId)
 
 getSubscriptionOrderStatus ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -269,6 +279,7 @@ getSubscriptionOrderStatus merchantShortId opCity apiTokenInfo driverId orderId 
     (.subscriptionDSL.getSubscriptionOrderStatus)
     driverId
     orderId
+    (Kernel.Prelude.Just apiTokenInfo.personId.getId)
 
 getSubscriptionDriverPaymentHistoryAPIV2 ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -291,6 +302,7 @@ getSubscriptionDriverPaymentHistoryAPIV2 merchantShortId opCity apiTokenInfo dri
     paymentMode
     limit
     offset
+    (Kernel.Prelude.Just apiTokenInfo.personId.getId)
 
 getSubscriptionDriverPaymentHistoryEntityDetailsV2 ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -309,6 +321,7 @@ getSubscriptionDriverPaymentHistoryEntityDetailsV2 merchantShortId opCity apiTok
     driverId
     serviceName
     invoiceId
+    (Kernel.Prelude.Just apiTokenInfo.personId.getId)
 
 postSubscriptionCollectManualPayments ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -335,13 +348,14 @@ postSubscriptionCollectManualPayments merchantShortId opCity apiTokenInfo driver
       (.subscriptionDSL.postSubscriptionCollectManualPayments)
       driverId
       serviceName
+      (Kernel.Prelude.Just apiTokenInfo.personId.getId)
       req
 
 postSubscriptionFeeWaiveOff :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.Dashboard.AppManagement.Subscription.WaiveOffReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postSubscriptionFeeWaiveOff merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
-  SharedLogic.Transaction.withTransactionStoring transaction $ API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.subscriptionDSL.postSubscriptionFeeWaiveOff) req
+  SharedLogic.Transaction.withTransactionStoring transaction $ API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.subscriptionDSL.postSubscriptionFeeWaiveOff) (Kernel.Prelude.Just apiTokenInfo.personId.getId) req
 
 getSubscriptionPurchaseList ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -362,3 +376,4 @@ getSubscriptionPurchaseList merchantShortId opCity apiTokenInfo driverId limit o
     limit
     offset
     status
+    (Kernel.Prelude.Just apiTokenInfo.personId.getId)

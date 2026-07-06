@@ -28,6 +28,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import TransactionLogs.PushLogs
 
@@ -40,7 +41,7 @@ onTrack ::
   SignatureAuthResult ->
   OnTrack.OnTrackReqV2 ->
   FlowHandler AckResponse
-onTrack _ reqV2 = withFlowHandlerBecknAPI do
+onTrack _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.onTrackReqContext
   L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do

@@ -84,6 +84,7 @@ library
     , exceptions
     , external
     , extra
+    , finance-kernel
     , generic-lens
     , haskell-cac
     , hspec
@@ -175,6 +176,7 @@ executable driver-offer-allocator-exe
     , exceptions
     , external
     , extra
+    , finance-kernel
     , generic-lens
     , haskell-cac
     , hspec

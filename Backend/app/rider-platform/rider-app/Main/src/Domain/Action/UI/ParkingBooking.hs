@@ -25,6 +25,7 @@ import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.ParkingTransaction as QPT
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.ActorInfo as ActorInfo
 import qualified Tools.Payment as TPayment
 import qualified Tools.Wallet as TWallet
 
@@ -33,7 +34,7 @@ postMultimodalParkingBook ::
     API.Types.UI.ParkingBooking.ParkingBookingReq ->
     Environment.Flow API.Types.UI.ParkingBooking.ParkingBookingResponse
   )
-postMultimodalParkingBook mbApiKey req = do
+postMultimodalParkingBook mbApiKey req = ActorInfo.withRequestIdActorInfo $ do
   -- Verify API key
   apiKey <- mbApiKey & fromMaybeM (MissingHeader "api-key")
   expectedApiKey <- asks (.parkingApiKey)

@@ -113,6 +113,10 @@ data AuthReq = AuthReq
     merchantId :: Text,
     merchantOperatingCity :: Maybe Context.City,
     email :: Maybe Text,
+    -- | Employee/conductor id for GIMS_EMPLOYEE_ID_PASSWORD login. Added alongside the
+    -- older type-specific identifier fields (email/mobileNumber) rather than replacing
+    -- them, so existing flows are untouched.
+    employeeId :: Maybe Text,
     password :: Maybe Text,
     name :: Maybe Text,
     identifierType :: Maybe SP.IdentifierType,
@@ -207,70 +211,107 @@ auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRe
     SP.GIMS_EMAIL_PASSWORD -> do
       email <- req'.email & fromMaybeM (InvalidRequest "Email is required for GIMS_EMAIL_PASSWORD auth")
       password <- req'.password & fromMaybeM (InvalidRequest "Password is required for GIMS_EMAIL_PASSWORD auth")
-      smsCfg <- asks (.smsCfg)
-      deploymentVersion <- asks (.version)
-      mbCloudType <- asks (.cloudType)
-      let merchantId = Id req'.merchantId :: Id DO.Merchant
-      merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-      merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant req'.merchantOperatingCity
-      integratedBPPConfig <- findFirstIbppConfigByCityAndVehicle merchantOpCityId (show BUS)
-      baseUrl <- getGimsBaseUrl integratedBPPConfig
-      let gtfsId = integratedBPPConfig.feedKey
-      emailDbHash <- getDbHash email
-      passwordDbHash <- getDbHash password
-      let emailHashHex = Hex.encodeHex (unDbHash emailDbHash)
-          passwordHashHex = Hex.encodeHex (unDbHash passwordDbHash)
-      gimsResp <-
-        NandiFlow.gimsEmployeeLogin
-          baseUrl
-          gtfsId
-          GimsEmployeeLoginReq
-            { auth_type = Just "Email",
-              email_hash = emailHashHex,
-              password_hash = passwordHashHex
-            }
-      unless gimsResp.verified $ throwError $ InvalidRequest "GIMS verification failed"
-      operatorBadgeToken <- gimsResp.token & fromMaybeM (InvalidRequest "GIMS did not return operator badge token")
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-      let loginRole = case gimsResp.role of
-            Just GimsConductor -> SP.BUS_CONDUCTOR
-            _ -> SP.BUS_DRIVER
-      person <-
-        QP.findByEmailAndMerchantIdAndRole (Just email) merchant.id loginRole
-          >>= maybe
-            ( do
-                basePerson <- makePerson req' transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice Nothing mbCloudType merchant.id merchantOpCityId False (Just loginRole)
-                let conductorPerson = basePerson {SP.operatorBadgeToken = Just operatorBadgeToken}
-                void $ QP.create conductorPerson
-                createDriverDetails conductorPerson.id merchant.id merchantOpCityId transporterConfig
-                pure conductorPerson
-            )
-            ( \existingPerson ->
-                if existingPerson.operatorBadgeToken == Just operatorBadgeToken
-                  then pure existingPerson
-                  else do
-                    let refreshedPerson = existingPerson {SP.operatorBadgeToken = Just operatorBadgeToken}
-                    QP.updateByPrimaryKey refreshedPerson
-                    pure refreshedPerson
-            )
-      checkSlidingWindowLimit (authHitsCountKey person)
-      let entityId = getId person.id
-          useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
-          scfg = sessionConfig smsCfg
-          mkId = getId merchant.id
-      token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId SR.SIGNATURE SR.DIRECT
-      _ <- QR.create token
-      void $ QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice (Just $ deploymentVersion.getDeploymentVersion) merchantOpCityId mbCloudType
-      cleanCachedTokens person.id
-      QR.deleteByPersonIdExceptNew person.id token.id
-      _ <- QR.setVerified True token.id
-      when person.isNew $ QP.setIsNewFalse False person.id
-      decPerson <- decrypt person
-      let personAPIEntity = SP.makePersonAPIEntity decPerson
-      return $ AuthRes token.id token.attempts (Just token.token) (Just personAPIEntity)
+      emailHashHex <- Hex.encodeHex . unDbHash <$> getDbHash email
+      passwordHashHex <- Hex.encodeHex . unDbHash <$> getDbHash password
+      let gimsReq =
+            GimsEmployeeLoginReq
+              { auth_type = Just "Email",
+                email_hash = Just emailHashHex,
+                employee_id = Nothing,
+                password_hash = passwordHashHex
+              }
+      -- Match on the GIMS badge token first so we reuse a Person already created via the
+      -- employeeId login (which stores no email); fall back to email for legacy/email-only accounts.
+      runGimsEmployeeLogin req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice gimsReq $
+        \merchant loginRole badgeToken ->
+          QP.findByOperatorBadgeTokenAndMerchantId (Just badgeToken) merchant.id
+            >>= maybe (QP.findByEmailAndMerchantIdAndRole (Just email) merchant.id loginRole) (pure . Just)
+    SP.GIMS_EMPLOYEE_ID_PASSWORD -> do
+      -- Trim first, then treat a whitespace-only value as absent so GIMS never receives a blank employee_id.
+      employeeId <- (req'.employeeId >>= (\eid -> let stripped = strip eid in if stripped == "" then Nothing else Just stripped)) & fromMaybeM (InvalidRequest "EmployeeId is required for GIMS_EMPLOYEE_ID_PASSWORD auth")
+      password <- req'.password & fromMaybeM (InvalidRequest "Password is required for GIMS_EMPLOYEE_ID_PASSWORD auth")
+      passwordHashHex <- Hex.encodeHex . unDbHash <$> getDbHash password
+      let gimsReq =
+            GimsEmployeeLoginReq
+              { auth_type = Just "EmployeeId",
+                email_hash = Nothing,
+                employee_id = Just employeeId,
+                password_hash = passwordHashHex
+              }
+      -- We never persist the employeeId locally (see "reuse operatorBadgeToken"); the
+      -- person is matched by the GIMS-issued badge token returned after verification.
+      runGimsEmployeeLogin req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice gimsReq $
+        \merchant _loginRole badgeToken -> QP.findByOperatorBadgeTokenAndMerchantId (Just badgeToken) merchant.id
     _ -> do
       authRes <- authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash
       return $ AuthRes {attempts = authRes.attempts, authId = authRes.authId, token = Nothing, person = Nothing}
+
+-- | Shared driver-of-conductor login against GIMS. Both password-based identifier
+-- types (email, employeeId) send their credential to GIMS to verify, and on success
+-- find-or-create the local Person keyed off the GIMS badge token. The only thing that
+-- varies is how the GIMS request is built and how an existing Person is matched, so
+-- those are passed in by the caller.
+runGimsEmployeeLogin ::
+  AuthReq ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  GimsEmployeeLoginReq ->
+  (DO.Merchant -> SP.Role -> Text -> Flow (Maybe SP.Person)) ->
+  Flow AuthRes
+runGimsEmployeeLogin req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice gimsReq findExistingPerson = do
+  smsCfg <- asks (.smsCfg)
+  deploymentVersion <- asks (.version)
+  mbCloudType <- asks (.cloudType)
+  let merchantId = Id req'.merchantId :: Id DO.Merchant
+  merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant req'.merchantOperatingCity
+  integratedBPPConfig <- findFirstIbppConfigByCityAndVehicle merchantOpCityId (show BUS)
+  baseUrl <- getGimsBaseUrl integratedBPPConfig
+  let gtfsId = integratedBPPConfig.feedKey
+  gimsResp <- NandiFlow.gimsEmployeeLogin baseUrl gtfsId gimsReq
+  unless gimsResp.verified $ throwError $ InvalidRequest "GIMS verification failed"
+  operatorBadgeToken <- gimsResp.token & fromMaybeM (InvalidRequest "GIMS did not return operator badge token")
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let loginRole = case gimsResp.role of
+        Just GimsConductor -> SP.BUS_CONDUCTOR
+        _ -> SP.BUS_DRIVER
+  person <-
+    findExistingPerson merchant loginRole operatorBadgeToken
+      >>= maybe
+        ( do
+            basePerson <- makePerson req' transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice Nothing mbCloudType merchant.id merchantOpCityId False (Just loginRole)
+            let conductorPerson = basePerson {SP.operatorBadgeToken = Just operatorBadgeToken}
+            void $ QP.create conductorPerson
+            createDriverDetails conductorPerson.id merchant.id merchantOpCityId transporterConfig
+            pure conductorPerson
+        )
+        ( \existingPerson ->
+            if existingPerson.operatorBadgeToken == Just operatorBadgeToken
+              then pure existingPerson
+              else do
+                let refreshedPerson = existingPerson {SP.operatorBadgeToken = Just operatorBadgeToken}
+                QP.updateByPrimaryKey refreshedPerson
+                pure refreshedPerson
+        )
+  checkSlidingWindowLimit (authHitsCountKey person)
+  let entityId = getId person.id
+      useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
+      scfg = sessionConfig smsCfg
+      mkId = getId merchant.id
+  token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId SR.SIGNATURE SR.DIRECT
+  _ <- QR.create token
+  void $ QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice (Just $ deploymentVersion.getDeploymentVersion) merchantOpCityId mbCloudType
+  cleanCachedTokens person.id
+  QR.deleteByPersonIdExceptNew person.id token.id
+  _ <- QR.setVerified True token.id
+  when person.isNew $ QP.setIsNewFalse False person.id
+  decPerson <- decrypt person
+  let personAPIEntity = SP.makePersonAPIEntity decPerson
+  return $ AuthRes token.id token.attempts (Just token.token) (Just personAPIEntity)
 
 authWithOtp ::
   Bool ->
@@ -316,6 +357,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
         return (person, SOTP.EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
       SP.GIMS_EMAIL_PASSWORD -> throwError $ InvalidRequest "GIMS_EMAIL_PASSWORD does not use OTP auth"
+      SP.GIMS_EMPLOYEE_ID_PASSWORD -> throwError $ InvalidRequest "GIMS_EMPLOYEE_ID_PASSWORD does not use OTP auth"
 
   checkSlidingWindowLimit (authHitsCountKey person)
   void $ cachePersonOTPChannel person.id otpChannel
@@ -513,6 +555,9 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         case req.email of
           Just email -> pure (Just email, Nothing, Nothing)
           Nothing -> throwError $ InvalidRequest "Email is required for GIMS_EMAIL_PASSWORD auth"
+      -- Conductor/driver identified by the GIMS badge token (set on the Person right
+      -- after this); no email or mobile is captured for the employeeId login.
+      SP.GIMS_EMPLOYEE_ID_PASSWORD -> pure (Nothing, Nothing, Nothing)
   safetyCohortNewTag <- Yudhishthira.fetchNammaTagExpiry (cast merchantOperatingCityId) $ LYT.TagNameValue "SafetyCohort#New"
   return $
     SP.Person

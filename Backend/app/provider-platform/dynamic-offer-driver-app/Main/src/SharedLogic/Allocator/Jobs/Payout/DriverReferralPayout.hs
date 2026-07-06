@@ -36,6 +36,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler
@@ -66,7 +67,7 @@ data DailyStatsWithVpa = DailyStatsWithVpa
 sendDriverReferralPayoutJobData ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
@@ -140,7 +141,7 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
 callPayout ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     SchedulerFlow r,
@@ -172,7 +173,7 @@ callPayout ds driverInfo payoutVpa payoutConfigList statusForRetry = do
 callPayoutHandler ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     SchedulerFlow r,
@@ -276,11 +277,11 @@ getRescheduledTime gap = addUTCTime gap <$> getCurrentTime
 processScheduledRegistrationRefunds ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    Finance.HasActorInfo m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   [DPC.PayoutConfig] ->

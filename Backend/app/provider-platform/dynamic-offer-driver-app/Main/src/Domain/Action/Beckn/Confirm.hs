@@ -40,6 +40,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool.Types
@@ -276,7 +277,8 @@ validateRequest ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasShortDurationRetryCfg r c,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
   ) =>
   Subscriber.Subscriber ->
   Id DM.Merchant ->

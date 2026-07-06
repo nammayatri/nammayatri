@@ -795,6 +795,7 @@ library
       Storage.Queries.VehicleRouteMappingExtra
       Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
+      Tools.ActorInfo
       Tools.Auth
       Tools.Beam.UtilsTH
       Tools.Call

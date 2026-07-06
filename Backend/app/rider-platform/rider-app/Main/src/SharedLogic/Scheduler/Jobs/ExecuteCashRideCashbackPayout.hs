@@ -14,6 +14,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Account as DA
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
@@ -43,7 +44,8 @@ executeCashRideCashbackPayoutJob ::
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Job 'ExecuteCashRideCashbackPayout ->
   m ExecutionResult
@@ -67,7 +69,8 @@ runPayoutForPerson ::
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id Person ->
   m ()
@@ -108,7 +111,8 @@ submitCashbackPayout ::
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Person ->
   Text -> -- VPA

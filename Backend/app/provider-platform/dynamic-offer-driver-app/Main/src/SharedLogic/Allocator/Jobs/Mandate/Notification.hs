@@ -23,12 +23,13 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
-import Kernel.Types.Id (Id, cast)
+import Kernel.Types.Id (Id (Id), cast)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Payment.Domain.Action as APayments
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import qualified SharedLogic.ActiveDriversList as ADL
 import SharedLogic.Allocator
 import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual, jobDuplicationPreventionKey, roundToHalf, setIsNotificationSchedulerRunningKey)
 import Storage.Beam.SchedulerJob ()
@@ -53,6 +54,7 @@ sendPDNNotificationToDriver ::
     EncFlow m r,
     HasShortDurationRetryCfg r c,
     HasField "maxShards" r Int,
+    HasField "activeDriversListKeyShards" r Int,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
@@ -79,19 +81,24 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
       CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
         >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
     let limit = transporterConfig.driverFeeMandateNotificationBatchSize
-    driverFees <- QDF.findDriverFeeInRangeWithNotifcationNotSentServiceNameAndStatus merchantId merchantOpCityId limit startTime endTime retryCount DF.PAYMENT_PENDING serviceName
+        findDriverFees = case jobData.shardNum of
+          Nothing -> QDF.findDriverFeeInRangeWithNotifcationNotSentServiceNameAndStatus merchantId merchantOpCityId limit startTime endTime retryCount DF.PAYMENT_PENDING serviceName
+          Just shardNum -> do
+            driverIds <- ADL.getNextDriverBatch ("Notification:" <> merchantId.getId <> ":" <> merchantOpCityId.getId <> ":" <> show serviceName) shardNum startTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) limit
+            QDF.findDriverFeeInRangeWithNotifcationNotSentServiceNameAndStatusByDriverIds merchantId merchantOpCityId limit startTime endTime retryCount DF.PAYMENT_PENDING serviceName (Id <$> driverIds)
+    driverFees <- findDriverFees
     if null driverFees
       then do
         if retryCount >= transporterConfig.notificationRetryCountThreshold
           then do
             setIsNotificationSchedulerRunningKey startTime endTime merchantOpCityId serviceName False
-            driverFeesPostRetries <- QDF.findDriverFeeInRangeWithNotifcationNotSentServiceNameAndStatus merchantId merchantOpCityId limit startTime endTime retryCount DF.PAYMENT_PENDING serviceName
+            driverFeesPostRetries <- findDriverFees
             mapM_ handleNotificationFailureAfterRetiresEnd (driverFeesPostRetries <&> (.id))
             let jobDataT :: Text = show jobData
             hashedJobData <- getHash jobDataT
             duplicationKey <- Hedis.setNxExpire (jobDuplicationPreventionKey hashedJobData "Notification") (3600 * 12) True --- 12 hours expiry time  for duplication prevention  key
             when duplicationKey $ do
-              scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId serviceName
+              scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId serviceName jobData.shardNum
             return Complete
           else do
             let dfCalculationJobTs = 2 ^ retryCount * transporterConfig.notificationRetryTimeGap
@@ -103,7 +110,8 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
                     startTime = startTime,
                     endTime = endTime,
                     retryCount = Just $ retryCount + 1,
-                    serviceName = Just serviceName
+                    serviceName = Just serviceName,
+                    shardNum = jobData.shardNum
                   }
             return Complete
       else do
@@ -169,8 +177,9 @@ scheduleJobs ::
   Id Merchant ->
   Id MerchantOperatingCity ->
   Plan.ServiceNames ->
+  Maybe Int ->
   m ()
-scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId serviceName = do
+scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId serviceName shardNum = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let dfExecutionTime = transporterConfig.driverAutoPayExecutionTime
       dfStatusCheckTime = transporterConfig.orderAndNotificationStatusCheckTime
@@ -188,7 +197,8 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId ser
           merchantOperatingCityId = Just merchantOpCityId,
           startTime = startTime,
           endTime = endTime,
-          serviceName = Just serviceName
+          serviceName = Just serviceName,
+          shardNum = shardNum
         }
     createJobIn @_ @'OrderAndNotificationStatusUpdate (Just merchantId) (Just merchantOpCityId) orderAndNotificationJobTs $
       OrderAndNotificationStatusUpdateJobData

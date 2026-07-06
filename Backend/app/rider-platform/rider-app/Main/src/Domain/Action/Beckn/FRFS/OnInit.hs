@@ -32,6 +32,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified Lib.Payment.Domain.Action as DPayment
 import Lib.Payment.Storage.Beam.BeamFlow
@@ -81,7 +82,8 @@ onInit ::
     HasField "isMetroTestTransaction" r Bool,
     Metrics.HasBAPMetrics m r,
     HasShortDurationRetryCfg r c,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    Finance.HasActorInfo m r
   ) =>
   DOnInit ->
   Merchant.Merchant ->
@@ -137,7 +139,8 @@ createPayments ::
     EncFlow m r,
     ServiceFlow m r,
     HasField "isMetroTestTransaction" r Bool,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    Finance.HasActorInfo m r
   ) =>
   [FTBooking.FRFSTicketBooking] ->
   Id DMOC.MerchantOperatingCity ->
