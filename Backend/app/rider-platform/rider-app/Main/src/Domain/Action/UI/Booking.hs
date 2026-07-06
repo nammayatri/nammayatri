@@ -279,7 +279,7 @@ bookingListV2ByCustomerLookup merchantId mbLimit mbOffset mbBookingOffset mbJour
           Just person -> pure person.id
           Nothing -> tryEmail
       Nothing -> tryEmail
-  bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset Nothing mbFromDate' mbToDate' billingCategoryList rideTypeList (fromMaybe [] mbBookingStatusList) (fromMaybe [] mbJourneyStatusList) mbIsPaymentSuccess mbBookingRequestType Nothing Nothing
+  bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset Nothing mbFromDate' mbToDate' billingCategoryList rideTypeList (fromMaybe [] mbBookingStatusList) (fromMaybe [] mbJourneyStatusList) mbIsPaymentSuccess mbBookingRequestType Nothing Nothing Nothing
   where
     tryEmail =
       case mbEmail of
