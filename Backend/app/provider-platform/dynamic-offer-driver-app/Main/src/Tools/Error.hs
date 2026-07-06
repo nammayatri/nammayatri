@@ -1289,6 +1289,8 @@ data DriverOnboardingError
   | DriverAlreadyLinked
   | DLAlreadyLinked
   | DLAlreadyUpdated
+  | DLAlreadyInProcessing
+  | DLDocumentInProcessing
   | RCAlreadyLinked
   | RCAlreadyUpdated
   | RCLimitReached Int
@@ -1382,6 +1384,8 @@ instance IsBaseError DriverOnboardingError where
     DriverAlreadyLinked -> Just "Document is already linked with driver."
     DLAlreadyLinked -> Just "Driver License Is Already Linked With Another Driver."
     DLAlreadyUpdated -> Just "No action required. Driver license is already linked to driver."
+    DLAlreadyInProcessing -> Just "Driver license is already in processing."
+    DLDocumentInProcessing -> Just "Another document for this driver is already in processing."
     RCAlreadyLinked -> Just "Vehicle RC not available."
     RCAlreadyUpdated -> Just "No action required. Vehicle RC is already linked to driver."
     InvalidOperatingCity city -> Just $ "Operating city \"" <> city <> "\" is invalid."
@@ -1476,6 +1480,8 @@ instance IsHTTPError DriverOnboardingError where
     DriverAlreadyLinked -> "DRIVER_ALREADY_LINKED"
     DLAlreadyLinked -> "DL_ALREADY_LINKED"
     DLAlreadyUpdated -> "DL_ALREADY_UPDATED"
+    DLAlreadyInProcessing -> "DL_ALREADY_IN_PROCESSING"
+    DLDocumentInProcessing -> "DL_DOCUMENT_IN_PROCESSING"
     RCAlreadyLinked -> "RC_ALREADY_LINKED"
     RCAlreadyUpdated -> "RC_ALREADY_UPDATED"
     InvalidOperatingCity _ -> "OPERATING_CITY_INVALID"
@@ -1563,6 +1569,8 @@ instance IsHTTPError DriverOnboardingError where
     DriverAlreadyLinked -> E400
     DLAlreadyLinked -> E400
     DLAlreadyUpdated -> E400
+    DLAlreadyInProcessing -> E400
+    DLDocumentInProcessing -> E400
     RCAlreadyLinked -> E400
     RCAlreadyUpdated -> E400
     InvalidOperatingCity _ -> E400
