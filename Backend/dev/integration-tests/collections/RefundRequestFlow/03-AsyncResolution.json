@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "03-AsyncResolution",
-    "description": "Resolution axis: a PENDING Stripe refund settles late (poll /info?refreshRefunds), and voids on failure — both sides. Owns the PENDING->SETTLED (poll) and PENDING->VOIDED (poll-fail) transitions, plus the check that actual_refunded_amount is populated from the Stripe response, and an idempotency re-poll. The Case-2 role/split + invoice tuples are only GLANCED (owned by 01). Signed-webhook drive is deferred (HMAC secret is Passetto-encrypted); the poll exercises the same processRefundResult dispatcher.",
+    "description": "Resolution axis: a PENDING Stripe refund settles late (poll /info?refreshRefunds), and voids on failure — both sides. Covers the PENDING->SETTLED (poll) and PENDING->VOIDED (poll-fail) transitions, plus the check that actual_refunded_amount is populated from the Stripe response, and an idempotency re-poll. The Case-2 role/split + invoice fields are only spot-checked (fully asserted in 01). Signed-webhook drive is deferred (HMAC secret is Passetto-encrypted); the poll exercises the same processRefundResult dispatcher.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -133,7 +133,8 @@
               "else {",
               "  // the list handler can 500 transiently on an unrelated async notification fork — retry once before failing",
               "  var _t = Date.now(); while (Date.now() - _t < 2000) {}",
-              "  pm.sendRequest({url: pm.request.url.toString(), method: 'GET', header: {token: pm.environment.get('rider_token')}}, function (err, res) {",
+              "  var _gu = (pm.environment.get('baseUrl_app')||'').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1') + '/rideBooking/list?limit=5&onlyActive=false&offset=0';",
+              "  pm.sendRequest({url: _gu, method: 'GET', header: {token: pm.environment.get('rider_token')}}, function (err, res) {",
               "    var d2 = {}; try { d2 = res.json(); } catch(e) {}",
               "    _gate(res ? res.code : 0, d2);",
               "  });",
@@ -487,7 +488,7 @@
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
               "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'fare_breakup_info',select:['fare_breakups'],where_clause:[{column_name:'entity_id',val:pm.environment.get('rideId'),op:'='},{column_name:'entity_type',val:'RIDE',op:'='}],limit:1}); }",
-              "// RIDE_FARE cap = sum of these tags (= li.rideFare + li.gstAmount, RidePayment.hs:841). TOLL/PARKING analogous (D1 uses tollCap/parkingCap).",
+              "// RIDE_FARE cap = sum of these tags (= li.rideFare + li.gstAmount, RidePayment.hs:841). TOLL/PARKING analogous (same pattern for tollCap/parkingCap).",
               "var _RF = ['RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE','RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE','RIDE_FARE_DISCOUNT_APPLICABLE_TAX','RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX'];",
               "var _TOLL = ['TOLL_FARE_TAX_EXCLUSIVE','TOLL_FARE_TAX'];",
               "var _PARK = ['PARKING_CHARGE_TAX_EXCLUSIVE','PARKING_CHARGE_TAX'];",
@@ -739,7 +740,7 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('raise accepted', function () { if (pm.response.code === 400 && /refundable cap/i.test(pm.response.text())) { pm.expect.fail('Raise rejected by the per-component cap: the RIDE_FARE T-fraction exceeds the RIDE_FARE component total (rideFare+gst). Reduce the T-fraction in the prerequest. Body: ' + pm.response.text()); } pm.expect(pm.response.code).to.be.oneOf([200,201]); });"
+              "pm.test('raise accepted', function () { if (pm.response.code === 400 && /refundable cap/i.test(pm.response.text())) { pm.expect(false, 'Raise rejected by the per-component cap: the RIDE_FARE T-fraction exceeds the RIDE_FARE component total (rideFare+gst). Reduce the T-fraction in the prerequest. Body: ' + pm.response.text()).to.be.true; } pm.expect(pm.response.code).to.be.oneOf([200,201]); });"
             ]
           }
         }
@@ -885,7 +886,7 @@
               "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}]}); }",
               "function _ok(rows){ return rows.some(function(r){return r.status==='PENDING' && _isRefund(r);}); }",
               "function _log(rows){ try { console.log('  ↳ refund legs:', JSON.stringify(rows.filter(_isRefund).map(function(x){return {st:x.status, amt:x.amount, type:x.reference_type};}))); } catch(e){} }",
-              "function _assert(rows){ _log(rows); pm.test('B4 refund leg(s) PENDING after async approve', function(){ var pend = (rows||[]).filter(function(r){return r.status==='PENDING' && _isRefund(r);}); pm.expect(pend.length, 'expected PENDING provisional refund legs after async approve').to.be.above(0); }); }",
+              "function _assert(rows){ _log(rows); pm.test('refund leg(s) PENDING after async approve', function(){ var pend = (rows||[]).filter(function(r){return r.status==='PENDING' && _isRefund(r);}); pm.expect(pend.length, 'expected PENDING provisional refund legs after async approve').to.be.above(0); }); }",
               "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
               "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(10); }"
             ]
@@ -1079,7 +1080,7 @@
               "function _ok(rows){ return rows.some(function(r){return r.status==='SETTLED' && _isRefund(r);}); }",
               "function _log(rows){ try { console.log('  ↳ refund legs:', JSON.stringify(rows.filter(_isRefund).map(function(x){return {st:x.status, amt:x.amount, type:x.reference_type};}))); } catch(e){} }",
               "function _assert(rows){ _log(rows); var settled = (rows||[]).filter(function(r){return r.status==='SETTLED' && _isRefund(r);});",
-              "  pm.test('B4 BAP refund legs SETTLED after succeeded poll (glance — deep model owned by 01)', function(){ pm.expect(settled.length, 'expected SETTLED refund legs after the succeeded poll').to.be.above(0); });",
+              "  pm.test('BAP refund legs SETTLED after succeeded poll (quick check — full role model asserted in 01)', function(){ pm.expect(settled.length, 'expected SETTLED refund legs after the succeeded poll').to.be.above(0); });",
               "  pm.sendRequest({ url:_mockUrl()+'/mock/override', method:'DELETE' }, function(){}); }",
               "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
               "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(10); }"
@@ -1113,7 +1114,7 @@
       }
     },
     {
-      "name": "Assert BPP legs SETTLED after poll (glance — deep model owned by 01)",
+      "name": "Assert BPP legs SETTLED after poll (quick check — full model asserted in 01)",
       "event": [
         {
           "listen": "prerequest",
@@ -1134,7 +1135,7 @@
               "function _ok(rows){ return rows.some(function(r){return r.status==='SETTLED' && _isRefund(r);}); }",
               "function _log(rows){ try { console.log('  ↳ refund legs:', JSON.stringify(rows.filter(_isRefund).map(function(x){return {st:x.status, amt:x.amount, type:x.reference_type};}))); } catch(e){} }",
               "function _assert(rows){ _log(rows); var settled = (rows||[]).filter(function(r){return r.status==='SETTLED' && _isRefund(r);});",
-              "  pm.test('BPP refund legs SETTLED after poll (glance — deep model owned by 01)', function(){ pm.expect(settled.length, 'expected BPP SETTLED refund legs after poll').to.be.above(0); });",
+              "  pm.test('BPP refund legs SETTLED after poll (quick check — full role model asserted in 01)', function(){ pm.expect(settled.length, 'expected BPP SETTLED refund legs after poll').to.be.above(0); });",
               "}",
               "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
               "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(10); }"
@@ -1266,7 +1267,7 @@
       }
     },
     {
-      "name": "GLANCE: BAP refund invoice exists (negative) after settle — tuple owned by 01",
+      "name": "Quick check: BAP refund invoice exists (negative) after settle — all fields asserted in 01",
       "event": [
         {
           "listen": "test",
@@ -1277,7 +1278,7 @@
               "function _ok(rows){ return rows.some(function(r){return r.invoice_type==='Refund' && r.status==='Paid';}); }",
               "function _assert(rows){",
               "  var inv=(rows||[]).filter(function(r){return r.invoice_type==='Refund' && r.status==='Paid';});",
-              "  pm.test('GLANCE a negative Paid BAP refund invoice exists after settle (tuple owned by 01)', function(){ pm.expect(inv.length,'expected a Paid Refund invoice').to.be.above(0); pm.expect(Number(inv[0].total_amount)).to.be.below(0); });",
+              "  pm.test('Quick check: a negative Paid BAP refund invoice exists after settle (all fields asserted in 01)', function(){ pm.expect(inv.length,'expected a Paid Refund invoice').to.be.above(0); pm.expect(Number(inv[0].total_amount)).to.be.below(0); });",
               "}",
               "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
               "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(10); }"
@@ -1311,7 +1312,7 @@
       }
     },
     {
-      "name": "GLANCE: BPP Commission refund invoice exists Draft (magnitude owned by 01)",
+      "name": "Quick check: BPP Commission refund invoice exists Draft (exact amount asserted in 01)",
       "event": [
         {
           "listen": "test",
@@ -1324,7 +1325,7 @@
               "function _assert(rows){",
               "  var comm=(rows||[]).filter(function(r){return r.invoice_type==='Commission';});",
               "  try{ console.log('  ↳ Commission invoice rows:', JSON.stringify((rows||[]).map(function(x){return {st:x.status,total:x.total_amount};})),'C='+_C); }catch(e){}",
-              "  pm.test('GLANCE Case-2 Commission refund invoice exists Draft (magnitude owned by 01)', function(){ pm.expect(_C,'commission>0 (00 gates it)').to.be.above(0); pm.expect(comm.length,'expected a Commission refund invoice').to.be.above(0); pm.expect(comm[0].status).to.eql('Draft'); pm.expect(Number(comm[0].total_amount)).to.be.below(0); });",
+              "  pm.test('Quick check: Case-2 Commission refund invoice exists Draft (exact amount asserted in 01)', function(){ pm.expect(_C,'commission>0 (00 gates it)').to.be.above(0); pm.expect(comm.length,'expected a Commission refund invoice').to.be.above(0); pm.expect(comm[0].status).to.eql('Draft'); pm.expect(Number(comm[0].total_amount)).to.be.below(0); });",
               "}",
               "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
               "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(10); }"
@@ -1421,7 +1422,7 @@
               "var rows=[]; try{ rows=(pm.response.json().rows)||[]; }catch(e){}",
               "var paid=rows.filter(function(r){return r.invoice_type==='Refund' && r.status==='Paid';});",
               "try{ console.log('  ↳ BAP Refund invoices after re-poll:', JSON.stringify(rows.map(function(x){return {st:x.status,type:x.invoice_type};}))); }catch(e){}",
-              "pm.test('Idempotent: re-poll did NOT mint a second refund invoice (exactly 1 Paid Refund)', function(){ pm.expect(paid.length,'exactly one Paid Refund invoice must exist after a redundant re-poll').to.eql(1); });"
+              "pm.test('Idempotent: re-poll did NOT create a second refund invoice (exactly 1 Paid Refund)', function(){ pm.expect(paid.length,'exactly one Paid Refund invoice must exist after a redundant re-poll').to.eql(1); });"
             ]
           }
         }
@@ -1495,7 +1496,7 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('raise accepted', function () { if (pm.response.code === 400 && /refundable cap/i.test(pm.response.text())) { pm.expect.fail('Raise rejected by the per-component cap: the RIDE_FARE T-fraction exceeds the RIDE_FARE component total (rideFare+gst). Reduce the T-fraction in the prerequest. Body: ' + pm.response.text()); } pm.expect(pm.response.code).to.be.oneOf([200,201]); });"
+              "pm.test('raise accepted', function () { if (pm.response.code === 400 && /refundable cap/i.test(pm.response.text())) { pm.expect(false, 'Raise rejected by the per-component cap: the RIDE_FARE T-fraction exceeds the RIDE_FARE component total (rideFare+gst). Reduce the T-fraction in the prerequest. Body: ' + pm.response.text()).to.be.true; } pm.expect(pm.response.code).to.be.oneOf([200,201]); });"
             ]
           }
         }

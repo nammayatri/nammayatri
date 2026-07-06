@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "04-FailureAndRetry",
-    "description": "Resolution axis: a refund that FAILS at the Stripe call goes FAILED, voids its provisional leg (no orphaned money), and recovers on retry (approve+retryRefunds) to REFUNDED. Owns the FAILED->retry state machine + #19 (refunds=REFUND_FAILURE + refund_request.refunds_id link). (The #37 double-charge guard needs a reliably-orchestrated FAILED-with-re_ state, which the poll harness can't produce deterministically — deferred.)",
+    "description": "Resolution axis: a refund that FAILS at the Stripe call goes FAILED, voids its provisional leg (no orphaned money), and recovers on retry (approve+retryRefunds) to REFUNDED. Covers the FAILED->retry state machine (refunds=REFUND_FAILURE + refund_request.refunds_id link). (The double-charge guard needs a reliably-orchestrated FAILED-with-re_ state, which the poll harness can't produce deterministically — deferred.)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -138,7 +138,8 @@
               "else {",
               "  // the list handler can 500 transiently on an unrelated async notification fork — retry once before failing",
               "  var _t = Date.now(); while (Date.now() - _t < 2000) {}",
-              "  pm.sendRequest({url: pm.request.url.toString(), method: 'GET', header: {token: pm.environment.get('rider_token')}}, function (err, res) {",
+              "  var _gu = (pm.environment.get('baseUrl_app')||'').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1') + '/rideBooking/list?limit=5&onlyActive=false&offset=0';",
+              "  pm.sendRequest({url: _gu, method: 'GET', header: {token: pm.environment.get('rider_token')}}, function (err, res) {",
               "    var d2 = {}; try { d2 = res.json(); } catch(e) {}",
               "    _gate(res ? res.code : 0, d2);",
               "  });",
@@ -459,7 +460,7 @@
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
               "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'fare_breakup_info',select:['fare_breakups'],where_clause:[{column_name:'entity_id',val:pm.environment.get('rideId'),op:'='},{column_name:'entity_type',val:'RIDE',op:'='}],limit:1}); }",
-              "// RIDE_FARE cap = sum of these tags (= li.rideFare + li.gstAmount, RidePayment.hs:841). TOLL/PARKING analogous (D1 uses tollCap/parkingCap).",
+              "// RIDE_FARE cap = sum of these tags (= li.rideFare + li.gstAmount, RidePayment.hs:841). TOLL/PARKING analogous (same pattern for tollCap/parkingCap).",
               "var _RF = ['RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE','RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE','RIDE_FARE_DISCOUNT_APPLICABLE_TAX','RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX'];",
               "var _TOLL = ['TOLL_FARE_TAX_EXCLUSIVE','TOLL_FARE_TAX'];",
               "var _PARK = ['PARKING_CHARGE_TAX_EXCLUSIVE','PARKING_CHARGE_TAX'];",
@@ -843,7 +844,7 @@
       }
     },
     {
-      "name": "Assert FAILED state: request FAILED + refunds REFUND_FAILURE + refunds_id link (#19)",
+      "name": "Assert FAILED state: request FAILED + refunds REFUND_FAILURE + refunds_id link",
       "event": [
         {
           "listen": "prerequest",
@@ -863,17 +864,17 @@
               "function _ok(rows){ return rows.length>0 && rows[0].status==='FAILED'; }",
               "function _assert(rr){",
               "  console.log('  ↳ refund_request:', JSON.stringify(rr.map(function(x){return {st:x.status, refunds_id:x.refunds_id};})));",
-              "  pm.test('#19 refund_request reached FAILED', function(){ pm.expect(rr.length).to.be.above(0); pm.expect(rr[0].status).to.eql('FAILED'); });",
+              "  pm.test('refund_request reached FAILED', function(){ pm.expect(rr.length).to.be.above(0); pm.expect(rr[0].status).to.eql('FAILED'); });",
               "  var rid = rr.length ? rr[0].refunds_id : null;",
               "  // nested: assert the linked refunds row is REFUND_FAILURE and refunds_id points at the internal Refunds id",
               "  function _refPoll(k){ pm.sendRequest({url:_mockUrl()+'/mock/sql/select',method:'POST',header:{'Content-Type':'application/json'},body:{mode:'raw',raw:JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'refunds',select:['id','status','id_assigned_by_service_provider'],where_clause:[{column_name:'order_id',val:pm.environment.get('orderShortId'),op:'='}]})}}, function(err,res){",
               "    var refs=[]; try{ refs=((res&&res.json())||{}).rows||[]; }catch(e){}",
               "    if(refs.filter(function(x){return x.status==='REFUND_FAILURE';}).length===0 && k>0){ setTimeout(function(){ _refPoll(k-1); }, 3000); return; } // KV->PG drain: wait for the refunds row",
               "    console.log('  ↳ refunds:', JSON.stringify(refs.map(function(x){return {id:x.id, st:x.status, re:x.id_assigned_by_service_provider};})));",
-              "    var _fail=refs.filter(function(x){return x.status==='REFUND_FAILURE';}); pm.test('#19 a REFUND_FAILURE refunds row exists (no re_)', function(){ pm.expect(_fail.length, '#19 REFUND_FAILURE refunds row must exist').to.be.above(0); pm.expect(_fail[0].id_assigned_by_service_provider==null||_fail[0].id_assigned_by_service_provider==='', 'create-error assigns no re_').to.be.true; });",
-              "    pm.test('#19 refund_request.refunds_id links the internal REFUND_FAILURE Refunds row (not the Stripe re_)', function(){",
+              "    var _fail=refs.filter(function(x){return x.status==='REFUND_FAILURE';}); pm.test('a REFUND_FAILURE refunds row exists (no re_)', function(){ pm.expect(_fail.length, 'a REFUND_FAILURE refunds row must exist').to.be.above(0); pm.expect(_fail[0].id_assigned_by_service_provider==null||_fail[0].id_assigned_by_service_provider==='', 'create-error assigns no re_').to.be.true; });",
+              "    pm.test('refund_request.refunds_id links the internal REFUND_FAILURE Refunds row (not the Stripe re_)', function(){",
               "      pm.expect(rid, 'refund_request.refunds_id must be a non-empty string').to.be.a('string').and.to.not.be.empty;",
-              "      pm.expect(_fail.length, '#19 REFUND_FAILURE refunds row must exist (link target)').to.be.above(0);",
+              "      pm.expect(_fail.length, 'a REFUND_FAILURE refunds row must exist (link target)').to.be.above(0);",
               "      pm.expect(rid, 'refunds_id must equal the REFUND_FAILURE refunds row id').to.eql(_fail[0].id);",
               "    });",
               "  }); } _refPoll(10);",
@@ -919,7 +920,7 @@
             "exec": [
               "pm.test('re-approve of a FAILED request WITHOUT retryRefunds is rejected with 400 mentioning retryRefund', function () {",
               "  pm.expect(pm.response.code, pm.response.text()).to.eql(400);",
-              "  pm.expect(pm.response.text(), 'error should point the admin at the retryRefunds flag').to.match(/retryRefund/i);",
+              "  pm.expect(/retryRefund/i.test(pm.response.text()), 'error should point the admin at the retryRefunds flag').to.be.true;",
               "});"
             ]
           }
