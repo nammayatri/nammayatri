@@ -47,6 +47,7 @@ data RiderConfig = RiderConfig
     cancellationRateThresholdMonthly :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationRateThresholdWeekly :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationRateWindow :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    chargeOnlyCommissionAtBooth :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     csAlertTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     cxAgentDetails :: Kernel.Prelude.Maybe [IssueManagement.Common.CxAgentDetails],
     dailyConditionCooldownTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -205,7 +206,7 @@ data RiderConfig = RiderConfig
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Show, Generic, ToJSON, FromJSON, Eq)
+  deriving (Show, (Generic), (ToJSON), (FromJSON), (Eq))
 
 data BusTierSortingConfig = BusTierSortingConfig {rank :: Kernel.Prelude.Int, tier :: BecknV2.FRFS.Enums.ServiceTierType} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 

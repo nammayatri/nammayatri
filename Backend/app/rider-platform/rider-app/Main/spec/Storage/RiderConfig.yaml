@@ -246,6 +246,7 @@ RiderConfig:
     maxNearbyBuses: Maybe Int
     nearbyBusSearchRadius: Maybe Double
     enableOnlinePaymentRide: Maybe Bool
+    chargeOnlyCommissionAtBooth: Maybe Bool
     enableEditLocationWithoutRide: Maybe Bool
     nearbyBusMaxTimeThreshold: Maybe Int
     specialVehicleNotificationConfigs: "Maybe [SpecialVehicleNotificationConfig]"

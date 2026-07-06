@@ -47,6 +47,7 @@ data RiderConfigT f = RiderConfigT
     cancellationRateWindow :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     csAlertTriggerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     cxAgentDetails :: B.C f (Kernel.Prelude.Maybe [IssueManagement.Common.CxAgentDetails]),
+    chargeOnlyCommissionAtBooth :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     dailyConditionCooldownTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     dailyMinRidesForBlocking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     dailyMinRidesForNudging :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

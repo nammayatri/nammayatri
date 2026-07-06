@@ -766,7 +766,14 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       Left err -> fromEitherM (\e -> InternalError ("Failed to create driver ride invoice: " <> show e)) (Left err)
       Right _ -> pure ()
 
-    when (commissionAmount > 0) $ do
+    -- Booths where payoutRideMoneyToDriver is disabled charge only the commission
+    -- directly from the customer at booking time (see createRideBookingPaymentOrder
+    -- on the BAP side), so it never reaches the driver's wallet and must not be
+    -- deducted again here.
+    let commissionAlreadyCollectedAtBooth =
+          booking.paymentInstrument == Just BoothOnline
+            && not (fromMaybe False transporterConfig.payoutRideMoneyToDriver)
+    when (commissionAmount > 0 && not commissionAlreadyCollectedAtBooth) $ do
       let commissionRef = if isOnline then walletReferenceCommissionOnline else walletReferenceCommissionCash
           onlineCommissionPaidOutDirectly =
             isOnline && fromMaybe False transporterConfig.driverWalletConfig.onlineCommissionPaidOutDirectly

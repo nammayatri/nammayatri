@@ -101,6 +101,7 @@ import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRideB
@@ -185,7 +186,11 @@ createRideBookingPaymentOrder booking = do
   staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
   paymentOrderId <- generateGUID
   orderShortId <- generateShortId
-  let amount = booking.estimatedTotalFare.amount
+  riderConfig <- CQRC.findByMerchantOperatingCityId merchantOperatingCityId
+  let chargeOnlyCommissionAtBooth = maybe False (fromMaybe False . (.chargeOnlyCommissionAtBooth)) riderConfig
+      -- When enabled, only the platform commission is collected at the booth; the rest of the
+      -- fare is settled directly between rider and driver, so the driver never needs a payout for it.
+      amount = if chargeOnlyCommissionAtBooth then fromMaybe booking.estimatedTotalFare.amount booking.commission else booking.estimatedTotalFare.amount
   isSplitEnabled <- Payment.getIsSplitEnabled booking.merchantId merchantOperatingCityId Nothing DOrder.RideBooking
   isPercentageSplitEnabled <- Payment.getIsPercentageSplit booking.merchantId merchantOperatingCityId Nothing DOrder.RideBooking
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled amount [] isPercentageSplitEnabled False
