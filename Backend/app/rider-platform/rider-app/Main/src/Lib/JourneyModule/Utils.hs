@@ -282,7 +282,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime currentTimeIST integratedBpp
                 eta <- fromMaybe [] bus.busData.eta_data,
                 eta.stopCode == stopCode
             ]
-      enrichedBuses <- mapM getVehicleServiceType filteredBuses
+      enrichedBuses <- mapConcurrently getVehicleServiceType filteredBuses
       return (routeWithBuses.routeId, catMaybes enrichedBuses)
 
     buildLiveEntries frfsServiceTierMap (routeId, validBuses) =
