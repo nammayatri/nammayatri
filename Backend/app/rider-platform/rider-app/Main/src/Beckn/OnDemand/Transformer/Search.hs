@@ -45,8 +45,7 @@ tfFulfillment SLS.SearchRes {..} = do
       -- ONDC v2.1.0: For scheduled rides (startTime > now), include pickup time window duration
       isScheduled = startTime > now
       mbScheduledPickupDuration = Beckn.OnDemand.Utils.Common.mkScheduledPickupDuration isScheduled
-      stopsWithDest = searchRequest.stops <> maybeToList searchRequest.toLocation
-      fulfillmentStops_ = Beckn.OnDemand.Utils.Common.mkStops searchRequest.fromLocation stopsWithDest startTime mbScheduledPickupDuration
+      fulfillmentStops_ = Beckn.OnDemand.Utils.Common.mkStops origin stops startTime mbScheduledPickupDuration
       fulfillmentTags_ = Tags.convertToTagGroup . (.fulfillmentTags) =<< taggings
       fulfillmentType_ = Nothing
       fulfillmentVehicle_ = Nothing
