@@ -60,6 +60,17 @@ apis:
               - docsVerificationStatus: DocsVerificationStatus
             response:
               type: StatusRes
+  # Vehicle-only RC verify-status. Resolves the RC from registrationNo/rcId. Dashboard callers are already
+  # merchant/city-scoped by ApiAuthV2, so the per-person RC-ownership gate is skipped here (it is enforced
+  # only on the driver-app UI endpoint). No helperApi / fleetOwnerId needed.
+  - GET:
+      endpoint: /register/vehicleStatus
+      auth: ApiAuthV2
+      query:
+        - registrationNo: Text
+        - rcId: Text
+      response:
+        type: RcVerifyStatusResp
   - POST:
       endpoint: /verify/{verifyType}
       auth: ApiAuthV2
@@ -194,3 +205,8 @@ types:
   ReferralInfoRes:
     personId: Id Driver
     name: Text
+  RcVerifyStatusResp:
+    registrationNo: Text
+    verified: Bool
+    approved: Maybe Bool
+    documents: [DocumentStatusItem]
