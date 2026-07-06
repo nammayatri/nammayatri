@@ -229,12 +229,34 @@ tollStartsOnRouteSegment :: LineSegment -> Toll -> Bool
 tollStartsOnRouteSegment routeSegment Toll {..} =
   any (gateIntersectsRouteSegment routeSegment) tollStartGates
 
+usesPolygonStartGates :: Toll -> Bool
+usesPolygonStartGates Toll {..} =
+  any isPolyStartGate tollStartGates
+  where
+    isPolyStartGate (PolyGate _) = True
+    isPolyStartGate (LineGate _) = False
+
+-- | True when any pending toll's exit gate is crossed on this route segment.
+exitDetectedOnRouteSegment :: LineSegment -> [Toll] -> Bool
+exitDetectedOnRouteSegment routeSegment =
+  any (\Toll {..} -> any (gateIntersectsRouteSegment routeSegment) tollEndGates)
+
+-- | On segments where a pending toll exits, only line tolls may be newly armed.
+canAddTollToPending :: Bool -> Toll -> Bool
+canAddTollToPending exitOnSegment toll =
+  not exitOnSegment || not (usesPolygonStartGates toll)
+
 addPendingTollStartersOnSegment :: LineSegment -> [Toll] -> [Toll] -> [Toll]
 addPendingTollStartersOnSegment routeSegment tolls pendingTolls =
   let pendingTollIds = map (getId . (.id)) pendingTolls
+      exitOnSegment = exitDetectedOnRouteSegment routeSegment pendingTolls
       newTollStarters =
         filter
-          (\toll -> tollStartsOnRouteSegment routeSegment toll && getId toll.id `notElem` pendingTollIds)
+          ( \toll ->
+              tollStartsOnRouteSegment routeSegment toll
+                && getId toll.id `notElem` pendingTollIds
+                && canAddTollToPending exitOnSegment toll
+          )
           tolls
    in nubBy (\toll1 toll2 -> getId toll1.id == getId toll2.id) (pendingTolls <> newTollStarters)
 
@@ -292,6 +314,8 @@ getAggregatedTollChargesAndNamesOnRoute mbDriverId route tolls initialPendingTol
   For each route segment it finds tolls whose entry gate intersects, tracks them as pending until the
   corresponding exit gate is crossed, then charges them. The route is not sliced after each exit so
   nested tolls inside an active toll window are still detected on later segments.
+
+  On segments where a pending toll exits, new polygon tolls are not armed (line tolls still may be).
 
   Note:
   In case of on ride it is possible that the batch of driver waypoints that we have has only the start of the toll and the end of the toll comes later.
