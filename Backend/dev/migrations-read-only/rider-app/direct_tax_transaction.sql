@@ -27,3 +27,11 @@ ALTER TABLE atlas_app.direct_tax_transaction ADD PRIMARY KEY ( id);
 ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN tds_section text ;
 ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN pan_type text ;
 ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN tds_rate_reason text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN updated_by_id text ;
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN updated_by text ;
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN created_by_id text ;
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN created_by text ;

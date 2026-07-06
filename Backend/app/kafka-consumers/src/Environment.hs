@@ -270,7 +270,7 @@ buildAppEnv AppCfg {..} consumerType = do
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
   let cloudType = Nothing :: Maybe CloudType
-  let actorInfo = Finance.ActorInfo {actorType = Finance.UNKNOWN, actorId = requestId} -- FIXME update to proper value
+  let actorInfo = Finance.ActorInfo {actorType = Finance.UNKNOWN, actorId = requestId}
   pure $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

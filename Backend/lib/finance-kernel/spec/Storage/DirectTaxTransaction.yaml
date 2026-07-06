@@ -4,6 +4,7 @@
 imports:
   UTCTime: Kernel.Prelude
   HighPrecMoney: Kernel.Types.Common
+  ActorType: Lib.Finance.Core.Types
 
 DirectTaxTransaction:
   tableName: direct_tax_transaction
@@ -43,6 +44,12 @@ DirectTaxTransaction:
     createdAt: UTCTime
     tdsSection: Maybe Text
     tdsRateReason: Maybe TdsRateReason
+
+    # --- Audit ---
+    createdBy: Maybe ActorType                     # Who created this record
+    createdById: Maybe Text                        # requestId for UNKNOWN/SYSTEM, jobId for JOB, personId for PERSON/DASHBOARD_PERSON
+    updatedBy: Maybe ActorType                     # Who updated this record
+    updatedById: Maybe Text                        # requestId for UNKNOWN/SYSTEM, jobId for JOB, personId for PERSON/DASHBOARD_PERSON
 
   constraints:
     id: PrimaryKey
