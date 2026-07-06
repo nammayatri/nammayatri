@@ -164,6 +164,11 @@ SubscriptionConfig:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId,isUIEnabled]
+
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where:
+        eq: [merchantOperatingCityId]
   default:
     allowManualPaymentLinks: "false"
     sendDeepLink: "false"

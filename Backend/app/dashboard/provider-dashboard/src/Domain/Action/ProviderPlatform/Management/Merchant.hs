@@ -52,6 +52,7 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     postMerchantConfigSpecialLocationUpsert,
     postMerchantConfigUpsertPlanAndConfigSubscription,
     getMerchantConfigVendorSplitDetailsList,
+    getMerchantConfigSubscriptionConfigList,
     postMerchantConfigOperatingCityWhiteList,
     postMerchantConfigMerchantCreate,
     getMerchantConfigVehicleServiceTier,
@@ -646,3 +647,8 @@ getMerchantConfigVendorSplitDetailsList :: (Kernel.Types.Id.ShortId Domain.Types
 getMerchantConfigVendorSplitDetailsList merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigVendorSplitDetailsList)
+
+getMerchantConfigSubscriptionConfigList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow [Common.SubscriptionConfigAPIEntity])
+getMerchantConfigSubscriptionConfigList merchantShortId opCity apiTokenInfo = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigSubscriptionConfigList)
