@@ -28,12 +28,13 @@ import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Kernel.Utils.Servant.JSONBS
 import Kernel.Utils.Servant.SignatureAuth
 import Servant
+import qualified Tools.ActorInfo as ActorInfo
 
 handler :: FlowServer API.API
 handler = trigger :<|> callbackReceiver
 
 trigger :: Text -> BS.ByteString -> FlowHandler AckResponse
-trigger urlText body = withFlowHandlerBecknAPI' $ do
+trigger urlText body = withFlowHandlerBecknAPI' . ActorInfo.withRequestIdActorInfo $ do
   url <- parseBaseUrl urlText
   logInfo $ decodeUtf8 body
   callBAP url body
@@ -59,6 +60,6 @@ callBAP uri body = do
     fakeAPI = Proxy
 
 callbackReceiver :: SignatureAuthResult -> Text -> BS.ByteString -> FlowHandler AckResponse
-callbackReceiver _ action body = withFlowHandlerBecknAPI' $ do
+callbackReceiver _ action body = withFlowHandlerBecknAPI' . ActorInfo.withRequestIdActorInfo $ do
   logInfo $ "Received " <> action <> " callback with body: " <> decodeUtf8 body
   return Ack

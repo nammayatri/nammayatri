@@ -115,6 +115,18 @@ apis:
       response:
         type: MultipleRideEndResp
       validation: Dashboard.ProviderPlatform.Management.Ride.validateMultipleRideEndReq
+      helperApi:
+        - POST:
+            endpoint: /end
+            name: PostRideEndMultiple
+            auth: ApiAuthV2
+            query:
+              - requestorId: Text
+            request:
+              type: MultipleRideEndReq
+            response:
+              type: MultipleRideEndResp
+            validation: Dashboard.ProviderPlatform.Management.Ride.validateMultipleRideEndReq
       migrate:
         endpoint: RideAPI MultipleRideEndEndpoint
         endpointV2:

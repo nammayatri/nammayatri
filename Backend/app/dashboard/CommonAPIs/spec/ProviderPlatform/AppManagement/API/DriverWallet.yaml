@@ -45,6 +45,16 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /wallet/{driverId}/payout
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            query:
+              - requestorId: Text
+            response:
+              type: APISuccess
   - POST:
       endpoint: /wallet/{driverId}/topup
       auth: ApiAuthV2
@@ -63,6 +73,18 @@ apis:
         type: AirportCashRechargeRequest
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /wallet/{driverId}/airportCashRecharge
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            query:
+              - requestorId: Text
+            request:
+              type: AirportCashRechargeRequest
+            response:
+              type: APISuccess
   - GET:
       endpoint: /wallet/{driverId}/payoutHistory
       auth: ApiAuthV2

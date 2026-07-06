@@ -42,10 +42,11 @@ import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 
 populateTipAmount :: Id Ride -> HighPrecMoney -> Maybe Text -> Flow APISuccess
-populateTipAmount rideId tipAmount apiKey = do
+populateTipAmount rideId tipAmount apiKey = ActorInfo.withRequestIdActorInfo $ do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let merchantId = fromMaybe booking.providerId ride.merchantId

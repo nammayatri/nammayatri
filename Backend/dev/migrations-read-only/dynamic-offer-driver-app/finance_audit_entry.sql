@@ -15,3 +15,11 @@ ALTER TABLE atlas_driver_offer_bpp.finance_audit_entry ADD COLUMN new_state text
 ALTER TABLE atlas_driver_offer_bpp.finance_audit_entry ADD COLUMN previous_state text ;
 ALTER TABLE atlas_driver_offer_bpp.finance_audit_entry ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.finance_audit_entry ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.finance_audit_entry ALTER COLUMN previous_state TYPE jsonb USING previous_state::jsonb;
+ALTER TABLE atlas_driver_offer_bpp.finance_audit_entry ALTER COLUMN new_state TYPE jsonb USING new_state::jsonb;
+ALTER TABLE atlas_driver_offer_bpp.finance_audit_entry ALTER COLUMN metadata TYPE jsonb USING metadata::jsonb;

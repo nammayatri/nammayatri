@@ -42,6 +42,7 @@ import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
@@ -155,7 +156,8 @@ orderStatusHandler ::
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
     HasField "isMetroTestTransaction" r Bool,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    Finance.HasActorInfo m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   FulfillmentStatusHandler m ->
@@ -196,7 +198,8 @@ orderStatusHandlerWithRefunds ::
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
     HasField "isMetroTestTransaction" r Bool,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    Finance.HasActorInfo m r
   ) =>
   FulfillmentStatusHandler m ->
   DOrder.PaymentServiceType ->
@@ -510,7 +513,7 @@ refundStatusHandler paymentOrder paymentServiceType = do
 initiateRefundWithPaymentStatusRespSync ::
   ( EsqDBFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBReplicaFlow m r,
     ServiceFlow m r,
     EncFlow m r,
@@ -535,7 +538,7 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
     processRefund ::
       ( EsqDBFlow m r,
         CacheFlow m r,
-        MonadFlow m,
+        Finance.HasActorInfo m r,
         EsqDBReplicaFlow m r,
         ServiceFlow m r,
         EncFlow m r,
@@ -580,7 +583,8 @@ markRefundPendingAndSyncOrderStatus ::
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
     HasField "isMetroTestTransaction" r Bool,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    Finance.HasActorInfo m r
   ) =>
   Id Merchant.Merchant ->
   Id Person.Person ->
@@ -628,7 +632,8 @@ syncOrderStatus ::
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
     HasField "isMetroTestTransaction" r Bool,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    Finance.HasActorInfo m r
   ) =>
   FulfillmentStatusHandler m ->
   Id Merchant.Merchant ->
@@ -811,7 +816,8 @@ type MakePaymentIntentConstraints m r c =
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     FinanceBeamFlow.BeamFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    Finance.HasActorInfo m r
   )
 
 makePaymentIntent ::
@@ -915,7 +921,8 @@ cancelPaymentIntent ::
     CacheFlow m r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -938,7 +945,8 @@ chargePaymentIntent ::
     CacheFlow m r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -992,12 +1000,12 @@ chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType p
 
 -- | Unified refund wrapper. Uses refundPaymentService under the hood.
 makeRefundPayment ::
-  ( MonadFlow m,
-    EncFlow m r,
+  ( EncFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
     HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    Finance.HasActorInfo m r
   ) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -1010,12 +1018,12 @@ makeRefundPayment merchantId merchantOpCityId paymentMode refundReq = do
 
 -- | Unified refund status check. Replaces refreshStripeRefund.
 getRefundStatusForOrder ::
-  ( MonadFlow m,
-    EncFlow m r,
+  ( EncFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
     HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    Finance.HasActorInfo m r
   ) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -1342,7 +1350,8 @@ capturePendingPaymentIfExists ::
     EncFlow m r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Person.Person ->
   Id DMOC.MerchantOperatingCity ->
@@ -1386,7 +1395,7 @@ capturePendingPaymentIfExists person merchantOperatingCityId = do
                   throwError $ InvalidRequest "You have pending dues from a previous ride. Please clear your dues before booking a new ride."
 
 zeroEffectivePaymentDueToOffer ::
-  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, FinanceBeamFlow.BeamFlow m r, HasKafkaProducer r) =>
+  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, FinanceBeamFlow.BeamFlow m r, HasKafkaProducer r, Finance.HasActorInfo m r) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Id Ride.Ride ->

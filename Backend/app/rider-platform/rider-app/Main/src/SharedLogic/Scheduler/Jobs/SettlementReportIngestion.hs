@@ -34,6 +34,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Settlement.Ingestion (ingestPaymentSettlementReport)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
@@ -66,7 +67,8 @@ runSettlementReportIngestionJob ::
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasField "blackListedJobs" r [Text],
     JobCreatorEnv r,
-    HasSchemaName SchedulerJobT
+    HasSchemaName SchedulerJobT,
+    Finance.HasActorInfo m r
   ) =>
   Job 'SettlementReportIngestion ->
   m ExecutionResult

@@ -153,6 +153,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -572,7 +573,7 @@ financeCtxFromRide booking ride mbPanCard isOnline = do
 -- Wallet entry delta (for topup/payout)
 
 createWalletEntryDelta ::
-  (BeamFlow m r) =>
+  (BeamFlow m r, Lib.Finance.HasActorInfo m r) =>
   CounterpartyType ->
   Text -> -- Owner ID
   HighPrecMoney -> -- Delta (positive credit, negative debit)
@@ -710,7 +711,7 @@ getPayoutEligibilityData accountId cutoff now = do
 -- | Mark a list of wallet ledger entries as paid out.
 --   Called by the payout webhook handler after successful disbursement.
 settleWalletEntries ::
-  (BeamFlow m r) =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   [Id LedgerEntry] -> -- entry IDs to settle
   Text -> -- PayoutRequest ID
   m ()

@@ -137,3 +137,8 @@ ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN operator_badge_token text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

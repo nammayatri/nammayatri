@@ -249,8 +249,10 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
           Query.updateVerificationStatusOnlyById Documents.VALID imageEntity.id
         else when (isNothing validationStatus) $ Query.updateVerificationStatusOnlyById Documents.MANUAL_VERIFICATION_REQUIRED imageEntity.id
       when (imageType == DVC.ProfilePhoto) $
-        fork "deferred face match on selfie upload" $
+        fork "deferred face match on selfie upload" $ do
           runDeferredFaceMatchOnSelfie person imageEntity.createdAt
+          -- Recompute verified/enabled right away: the deferred run may have promoted PENDING docs to VALID.
+          void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent person.id)
       when (imageType == DVC.LocalResidenceProof) $
         mapM_
           ( \staleImg -> do

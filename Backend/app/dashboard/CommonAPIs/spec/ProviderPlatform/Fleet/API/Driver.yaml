@@ -2005,6 +2005,8 @@ types:
     - createdAt: Maybe UTCTime
     - updatedAt: Maybe UTCTime
     - enabled: Maybe Bool
+    - verified: Maybe Bool
+    - approved: Maybe Bool
     - selectedServiceTiers: [Text]
     - driverDob: Maybe UTCTime
     - failedRules: Maybe [Text]

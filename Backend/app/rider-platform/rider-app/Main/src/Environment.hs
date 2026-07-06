@@ -71,6 +71,7 @@ import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Kernel.Utils.Servant.SignatureAuth
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler.Types
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
@@ -334,7 +335,8 @@ data AppEnv = AppEnv
     sftpConfig :: SFTPConfig,
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
     bapHostRedirectMap :: BapHostRedirectMap,
-    useCachedActiveRidesList :: Bool
+    useCachedActiveRidesList :: Bool,
+    actorInfo :: Finance.ActorInfo
   }
   deriving (Generic)
 
@@ -404,6 +406,7 @@ buildAppEnv cfg@AppCfg {..} = do
       Right env -> pure (Just env)
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
+  let actorInfo = Finance.ActorInfo {actorType = Finance.UNKNOWN, actorId = requestId} -- to be modified in api handler
   return AppEnv {minTripDistanceForReferralCfg = convertHighPrecMetersToDistance Meter <$> minTripDistanceForReferralCfg, disableViaPointTimetableCheck = disableViaPointTimetableCheck, ..}
 
 releaseAppEnv :: AppEnv -> IO ()

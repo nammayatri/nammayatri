@@ -51,6 +51,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.Analytics as Analytics
@@ -259,7 +260,7 @@ recomputeRideFinancialsForFareUpdate booking ride newFareParamsId newEstimatedFa
   QRide.updateCommissionAndDiscount newCommission newDiscount ride.id
 
 releaseLien ::
-  ( MonadFlow m,
+  ( Finance.HasActorInfo m r,
     CacheFlow m r,
     EsqDBFlow m r,
     MonadCatch m

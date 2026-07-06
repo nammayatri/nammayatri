@@ -92,6 +92,19 @@ apis:
         type: PurchasedPassSelectReq
       response:
         type: PassSelectionAPIEntity
+      helperApi:
+        - POST:
+            endpoint: /customer/{customerId}/pass/{passId}/select
+            auth: ApiAuthV2
+            params:
+              customerId: Id Person
+              passId: Id Pass
+            query:
+              - requestorId: Text
+            request:
+              type: PurchasedPassSelectReq
+            response:
+              type: PassSelectionAPIEntity
 
   - GET:
       endpoint: customer/{customerId}/payment/{orderId}/status
@@ -101,6 +114,17 @@ apis:
         orderId: Id PaymentOrder
       response:
         type: PaymentStatusResp
+      helperApi:
+        - GET:
+            endpoint: customer/{customerId}/payment/{orderId}/status
+            auth: ApiAuthV2
+            params:
+              customerId: Id Person
+              orderId: Id PaymentOrder
+            query:
+              - requestorId: Text
+            response:
+              type: PaymentStatusResp
 
   - POST:
       endpoint: /customer/{customerId}/pass/{passId}/resetDeviceSwitchCount

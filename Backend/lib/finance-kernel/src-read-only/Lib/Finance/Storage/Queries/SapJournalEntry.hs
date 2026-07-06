@@ -49,6 +49,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.SapJournalEntry.SapJournalEntry {..
       Se.Set Beam.bldat bldat,
       Se.Set Beam.budat budat,
       Se.Set Beam.createdBy createdBy,
+      Se.Set Beam.createdById createdById,
       Se.Set Beam.currency currency,
       Se.Set Beam.description description,
       Se.Set Beam.gjahr gjahr,
@@ -65,6 +66,8 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.SapJournalEntry.SapJournalEntry {..
       Se.Set Beam.totalDebitAmount totalDebitAmount,
       Se.Set Beam.transactionCount transactionCount,
       Se.Set Beam.transactionType transactionType,
-      Se.Set Beam.updatedAt _now
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.updatedBy updatedBy,
+      Se.Set Beam.updatedById updatedById
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

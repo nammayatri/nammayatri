@@ -41,6 +41,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
@@ -66,7 +67,7 @@ import qualified Tools.Payout as TPayout
 sendScheduledBatchPayout ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
@@ -103,7 +104,7 @@ sendScheduledBatchPayout Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) d
 processCategory ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
@@ -136,7 +137,7 @@ processCategory config jobData = do
 processWalletPayouts ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
@@ -213,7 +214,7 @@ processWalletPayouts config jobData = do
 processOneWalletPayout ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     BeamFlow m r,

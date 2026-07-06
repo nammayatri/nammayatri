@@ -67,15 +67,22 @@ data LocationAddress = LocationAddress
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("volunteer" :> (GetVolunteerBooking :<|> PostVolunteerAssignStartOtpRide))
+type API = ("volunteer" :> (GetVolunteerBooking :<|> PostVolunteerAssignStartOtpRideHelper))
 
 type GetVolunteerBooking = (Capture "bookingOtp" Kernel.Prelude.Text :> "booking" :> Get '[JSON] BookingInfoResponse)
 
 type PostVolunteerAssignStartOtpRide = ("assign" :> "start" :> ReqBody '[JSON] AssignCreateAndStartOtpRideAPIReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
+type PostVolunteerAssignStartOtpRideHelper =
+  ( "assign" :> "start" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] AssignCreateAndStartOtpRideAPIReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
 data VolunteerAPIs = VolunteerAPIs
   { getVolunteerBooking :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient BookingInfoResponse,
-    postVolunteerAssignStartOtpRide :: AssignCreateAndStartOtpRideAPIReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postVolunteerAssignStartOtpRide :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> AssignCreateAndStartOtpRideAPIReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkVolunteerAPIs :: (Client EulerHS.Types.EulerClient API -> VolunteerAPIs)
