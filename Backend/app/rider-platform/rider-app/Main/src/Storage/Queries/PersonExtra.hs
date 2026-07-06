@@ -62,6 +62,15 @@ findByMobileNumberHashAndCountryCode countryCode mobileNumberHash =
 findByMobileNumberAndMerchantAndRole :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DbHash -> Id Merchant -> [Role] -> m (Maybe Person)
 findByMobileNumberAndMerchantAndRole mobileNumberHash (Id merchantId) role = findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.In role]]
 
+updateEnableOtpLessRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Maybe Bool -> m ()
+updateEnableOtpLessRide (Id personId) enableOtpLessRide = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.updatedAt now,
+      Se.Set BeamP.enableOtpLessRide enableOtpLessRide
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
 updateImeiNumber ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField 'AsEncrypted Kernel.Prelude.Text) -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())

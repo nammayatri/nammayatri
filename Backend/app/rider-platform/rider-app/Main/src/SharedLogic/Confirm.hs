@@ -68,11 +68,13 @@ import qualified Storage.CachedQueries.InsuranceConfig as CQInsuranceConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
 import Storage.ConfigPilot.Config.MerchantPaymentMethod (MerchantPaymentMethodDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.Estimate as QEstimate
@@ -188,7 +190,9 @@ confirm DConfirmReq {..} = do
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = (maybe False not searchRequest.isMultimodalSearch) && merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
   let driverPreference = extractDriverPreference person.customerNammaTags
-  (booking, bookingParties) <- buildBooking merchant personId searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions person.paymentMode dashboardAgentId requiresPaymentBeforeConfirm driverPreference
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  let bookingEnableOtpLessRide = if riderConfig.enableOtpLessRide then person.enableOtpLessRide else Nothing
+  (booking, bookingParties) <- buildBooking merchant personId searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions person.paymentMode dashboardAgentId requiresPaymentBeforeConfirm driverPreference bookingEnableOtpLessRide
   mbBookingOfferEntity <-
     case booking.selectedOfferId of
       Just offerId -> do
@@ -390,8 +394,9 @@ buildBooking ::
   Maybe Text ->
   Bool ->
   Maybe [Text] ->
+  Maybe Bool ->
   m (DRB.Booking, [DBPL.BookingPartiesLink])
-buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId paymentInstrument isScheduled disabilityTag configInExperimentVersions paymentMode dashboardAgentId requiresPaymentBeforeConfirm driverPreference = do
+buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId paymentInstrument isScheduled disabilityTag configInExperimentVersions paymentMode dashboardAgentId requiresPaymentBeforeConfirm driverPreference enableOtpLessRide = do
   id <- generateGUID
   let bookingId = Id id
   displayBookingId <- Just <$> DBI.generateDisplayBookingId merchant.shortId bookingId now
@@ -459,6 +464,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           hasStops = searchRequest.hasStops,
           isReferredRide = searchRequest.driverIdentifier $> True,
           preferSafetyPlus = quote.isSafetyPlus,
+          enableOtpLessRide = enableOtpLessRide,
           driverPreference = driverPreference,
           recentLocationId = searchRequest.recentLocationId,
           isMultimodalSearch = searchRequest.isMultimodalSearch,
