@@ -81,6 +81,7 @@ import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.LocationUpdates as LocUpd
 import qualified Lib.LocationUpdates.Internal as LocUpdInternal
 import Lib.Scheduler.Environment (JobCreator)
@@ -238,9 +239,7 @@ getDriverNumberFromRequest req driverId =
       getDriverNumberFromPerson driver
 
 type EndRideFlow m r =
-  ( MonadFlow m,
-    CoreMetrics m,
-    MonadReader r m,
+  ( CoreMetrics m,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     LT.HasLocationService m r,
@@ -251,7 +250,8 @@ type EndRideFlow m r =
     JobCreator r m,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
-    Esq.EsqDBReplicaFlow m r
+    Esq.EsqDBReplicaFlow m r,
+    Finance.HasActorInfo m r
   )
 
 driverEndRide ::

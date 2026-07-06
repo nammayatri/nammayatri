@@ -36,6 +36,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
+import qualified Tools.ActorInfo as ActorInfo
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.PushLogs
 
@@ -48,7 +49,7 @@ onInit ::
   SignatureAuthResult ->
   OnInit.OnInitReqV2 ->
   FlowHandler AckResponse
-onInit _ reqV2 = withFlowHandlerBecknAPI $ do
+onInit _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Common.getTransactionId reqV2.onInitReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     mbDOnInitReq <- TaxiACL.buildOnInitReqV2 reqV2

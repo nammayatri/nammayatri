@@ -25,6 +25,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSUtils as FRFSUtils
@@ -49,8 +50,7 @@ import qualified Utils.Common.JWT.Config as GW
 import qualified Utils.Common.JWT.TransitClaim as TC
 
 handleCancelledStatus ::
-  ( MonadFlow m,
-    CacheFlow m r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
@@ -64,7 +64,8 @@ handleCancelledStatus ::
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text],
     HasShortDurationRetryCfg r c,
-    HasLongDurationRetryCfg r c
+    HasLongDurationRetryCfg r c,
+    Finance.HasActorInfo m r
   ) =>
   Merchant.Merchant ->
   DFRFSTicketBooking.FRFSTicketBooking ->

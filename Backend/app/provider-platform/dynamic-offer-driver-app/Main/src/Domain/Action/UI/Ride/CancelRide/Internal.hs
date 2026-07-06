@@ -70,6 +70,7 @@ import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), createReversal, getEntriesByReference, invoice, runFinance, settleEntry, transferPending, transferWithoutAttribution, transfer_, voidEntry)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -122,8 +123,7 @@ import TransactionLogs.Types
 
 -- main fn
 cancelRideImpl ::
-  ( MonadFlow m,
-    EncFlow m r,
+  ( EncFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -161,7 +161,8 @@ cancelRideImpl ::
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
-    ClickhouseFlow m r
+    ClickhouseFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id DRide.Ride ->
   DRide.RideEndedBy ->
@@ -256,7 +257,8 @@ cancelRideTransaction ::
     LT.HasLocationService m r,
     HasShortDurationRetryCfg r c,
     EncFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
   ) =>
   SRB.Booking ->
   DRide.Ride ->
@@ -566,7 +568,8 @@ getCancellationCharges booking ride cancellationType reasonCode = do
 createCancellationLedgerEntries ::
   ( EsqDBFlow m r,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   SRB.Booking ->
   DRide.Ride ->
@@ -712,7 +715,8 @@ cancellationLedgerRefs =
 applyCancellationLedgerAction ::
   ( EsqDBFlow m r,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   SRB.Booking ->
   DRide.Ride ->

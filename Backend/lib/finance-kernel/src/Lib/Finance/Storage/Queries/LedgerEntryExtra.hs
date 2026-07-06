@@ -12,6 +12,14 @@ import qualified Lib.Finance.Storage.Beam.LedgerEntry as Beam
 import Lib.Finance.Storage.Queries.LedgerEntry ()
 import qualified Sequelize as Se
 
+findByIds ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  [Kernel.Types.Id.Id Domain.LedgerEntry] ->
+  m [Domain.LedgerEntry]
+findByIds [] = pure []
+findByIds entryIds =
+  findAllWithKV [Se.Is Beam.id $ Se.In (map Kernel.Types.Id.getId entryIds)]
+
 -- | Find ledger entries by reference type (IN list) and reference ID
 findByReferenceIn ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>

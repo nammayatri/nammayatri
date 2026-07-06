@@ -47,6 +47,7 @@ import Kernel.Utils.Servant.HTML
 import Servant hiding (serveDirectoryWebApp, throwError)
 import Servant.OpenApi
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo as ActorInfo
 import qualified Tools.Payment as TPayment
 
 type API =
@@ -154,7 +155,7 @@ juspayWebhookHandler ::
   Value ->
   FlowHandler AckResponse
 juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId secret =
-  withFlowHandlerAPI . Payment.juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId secret
+  withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo . Payment.juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId secret
 
 stripeWebhookHandler ::
   ShortId DM.Merchant ->
@@ -165,7 +166,7 @@ stripeWebhookHandler ::
   Stripe.RawByteString ->
   FlowHandler AckResponse
 stripeWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader =
-  withFlowHandlerAPI . Payment.stripeWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader
+  withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo . Payment.stripeWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader
 
 stripeTestWebhookHandler ::
   ShortId DM.Merchant ->
@@ -176,7 +177,7 @@ stripeTestWebhookHandler ::
   Stripe.RawByteString ->
   FlowHandler AckResponse
 stripeTestWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader =
-  withFlowHandlerAPI . Payment.stripeTestWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader
+  withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo . Payment.stripeTestWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader
 
 juspayPayoutWebhookHandlerV2 ::
   ShortId DM.Merchant ->
@@ -185,4 +186,4 @@ juspayPayoutWebhookHandlerV2 ::
   Value ->
   FlowHandler AckResponse
 juspayPayoutWebhookHandlerV2 merchantShortId mbOpCity secret value' =
-  withFlowHandlerAPI $ Payout.juspayPayoutWebhookHandler merchantShortId mbOpCity secret value'
+  withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo $ Payout.juspayPayoutWebhookHandler merchantShortId mbOpCity secret value'

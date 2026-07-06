@@ -26,5 +26,5 @@ handler merchantId city = getVolunteerBooking merchantId city :<|> postVolunteer
 getVolunteerBooking :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.RideBooking.Volunteer.BookingInfoResponse)
 getVolunteerBooking a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.Volunteer.getVolunteerBooking a3 a2 a1
 
-postVolunteerAssignStartOtpRide :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.Dashboard.RideBooking.Volunteer.AssignCreateAndStartOtpRideAPIReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postVolunteerAssignStartOtpRide a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.Volunteer.postVolunteerAssignStartOtpRide a3 a2 a1
+postVolunteerAssignStartOtpRide :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.Dashboard.RideBooking.Volunteer.AssignCreateAndStartOtpRideAPIReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postVolunteerAssignStartOtpRide a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.Volunteer.postVolunteerAssignStartOtpRide a4 a3 a2 a1

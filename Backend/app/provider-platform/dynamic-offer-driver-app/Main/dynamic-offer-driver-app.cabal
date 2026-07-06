@@ -918,6 +918,7 @@ library
       Storage.Queries.WalletTransactionExtra
       Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
+      Tools.ActorInfo
       Tools.Auth
       Tools.BackgroundVerification
       Tools.Beam.UtilsTH

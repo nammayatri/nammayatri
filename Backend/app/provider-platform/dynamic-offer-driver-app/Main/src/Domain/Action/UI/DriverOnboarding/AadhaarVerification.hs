@@ -47,7 +47,7 @@ import qualified Kernel.Types.Documents as Documents
 import qualified Kernel.Types.Documents as KTD
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (ActorType (UNKNOWN))
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding

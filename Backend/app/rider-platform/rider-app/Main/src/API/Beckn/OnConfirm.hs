@@ -33,6 +33,7 @@ import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
+import qualified Tools.ActorInfo as ActorInfo
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.PushLogs
 
@@ -45,7 +46,7 @@ onConfirm ::
   SignatureAuthResult ->
   OnConfirm.OnConfirmReqV2 ->
   FlowHandler AckResponse
-onConfirm _ reqV2 = withFlowHandlerBecknAPI do
+onConfirm _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.onConfirmReqContext
   L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do

@@ -8,6 +8,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction
 import Tools.Beam.UtilsTH
 
@@ -15,6 +16,8 @@ data IndirectTaxTransactionT f = IndirectTaxTransactionT
   { cgstAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
     counterpartyId :: (B.C f Kernel.Prelude.Text),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    createdBy :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType)),
+    createdById :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     creditOrDebitNoteNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     externalCharges :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     gstCreditType :: (B.C f Lib.Finance.Domain.Types.IndirectTaxTransaction.GstCreditType),
@@ -38,6 +41,8 @@ data IndirectTaxTransactionT f = IndirectTaxTransactionT
     totalTaxAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     transactionDate :: (B.C f Kernel.Prelude.UTCTime),
     transactionType :: (B.C f Lib.Finance.Domain.Types.IndirectTaxTransaction.TransactionType),
+    updatedBy :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType)),
+    updatedById :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)

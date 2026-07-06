@@ -30,7 +30,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (ActorType (UNKNOWN))
 import Storage.CachedQueries.Merchant as CM
 import qualified Storage.Queries.AadhaarOtpReq as OtpReqQuery
 import qualified Storage.Queries.AadhaarOtpVerify as OtpVerifyQuery
