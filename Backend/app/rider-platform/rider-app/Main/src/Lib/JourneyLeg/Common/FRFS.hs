@@ -95,7 +95,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           -- Fetch all bus data for the route using getRoutesBuses
           (allBusDataForRoute, routeStopMappings) <- do
             buses <- concat <$> mapConcurrently (\rc -> (.buses) <$> CQMMB.getRoutesBuses rc integratedBppConfig) routesToUseForTrackVehicles
-            routeStopMappings <- HM.fromList <$> mapM (\rc -> (rc,) <$> HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode rc integratedBppConfig) routesToUseForTrackVehicles
+            routeStopMappings <- HM.fromList <$> mapConcurrently (\rc -> (rc,) <$> HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode rc integratedBppConfig) routesToUseForTrackVehicles
             return (buses, routeStopMappings)
 
           -- Fetch user's boarding station and leg's end station details
@@ -195,7 +195,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           -- Fetch all bus data for the route using getRoutesBuses
           (allBusDataForRoute, routeStopMappings) <- do
             buses <- concat <$> mapConcurrently (\rc -> (.buses) <$> CQMMB.getRoutesBuses rc integratedBppConfig) routesToUseForTrackVehicles
-            routeStopMappings <- HM.fromList <$> mapM (\rc -> (rc,) <$> HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode rc integratedBppConfig) routesToUseForTrackVehicles
+            routeStopMappings <- HM.fromList <$> mapConcurrently (\rc -> (rc,) <$> HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode rc integratedBppConfig) routesToUseForTrackVehicles
             return (buses, routeStopMappings)
 
           -- Fetch user's boarding station and leg's end station details

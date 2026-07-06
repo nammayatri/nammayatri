@@ -14,6 +14,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.RiderConfig as DomainRiderConfig
 import Domain.Types.RouteStopTimeTable
+import Domain.Utils (mapConcurrently)
 import qualified Environment
 import EulerHS.Prelude hiding (decodeUtf8, id)
 import ExternalBPP.ExternalAPI.CallAPI as CallAPI
@@ -97,10 +98,14 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
       logDebug $ "Vehicle numbers: " <> show vehicleNumbers
       logDebug $ "Number of unique vehicle numbers: " <> show (length vehicleNumbers)
 
-      busRouteMapping <- forM vehicleNumbers $ \vehicleNumber -> do
-        mbResult <- SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \config ->
-          maybeToList <$> OTPRest.getVehicleServiceType config vehicleNumber Nothing
-        pure $ Kernel.Prelude.listToMaybe mbResult
+      busRouteMapping <-
+        mapConcurrently
+          ( \vehicleNumber -> do
+              mbResult <- SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \config ->
+                maybeToList <$> OTPRest.getVehicleServiceType config vehicleNumber Nothing
+              pure $ Kernel.Prelude.listToMaybe mbResult
+          )
+          vehicleNumbers
 
       let successfulMappings = catMaybes busRouteMapping
 
