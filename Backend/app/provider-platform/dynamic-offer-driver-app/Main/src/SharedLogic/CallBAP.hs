@@ -83,6 +83,7 @@ import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.DriverStats as DDriverStats
 import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.Estimate as DEst
+import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -465,7 +466,7 @@ rideAssignedCommon booking ride driver veh = do
                             _ -> Nothing
                    in maybe False (== veh.registrationNo) mbRegNo
               )
-              <$> QIV.findAllByDriverIdAndDocType ride.driverId DIT.VehicleRegistrationCertificate
+              <$> QIV.findAllByDriverIdAndDocType ride.driverId (docTypeToText DIT.VehicleRegistrationCertificate)
 
           newVehicle <-
             (flip $ maybe (pure veh))

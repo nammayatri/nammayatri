@@ -25,6 +25,7 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import Lib.Finance.Invoice.Interface (InvoiceLineItem, LineItemDescription (..))
@@ -52,7 +53,8 @@ generateEInvoiceForInvoice ::
     EncFlow m r,
     Metrics.CoreMetrics m,
     HasRequestId r,
-    BeamFlow.BeamFlow m r
+    BeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   FInvoice.Invoice ->
   m ()
@@ -124,7 +126,8 @@ generateEInvoiceForInvoice invoice = do
                   <> fromMaybe "<none>" eInvResp.signedQRCode
                   <> ctx
               logError $ "GSTEInvoice: IRN generated: " <> fromMaybe "<no IRN in response>" eInvResp.irn
-              QFInvoice.updateIrnAndSignedQRByInvoiceId eInvResp.irn eInvResp.signedQRCode invoice.id
+              actorInfo <- asks (.actorInfo)
+              QFInvoice.updateIrnAndSignedQRByInvoiceId eInvResp.irn eInvResp.signedQRCode (Just actorInfo.actorType) actorInfo.actorId invoice.id
               logInfo $ "GSTEInvoice: invoice row updated with IRN." <> ctx
           case eResult of
             Right _ -> logInfo $ "GSTEInvoice: e-invoice flow completed successfully." <> ctx

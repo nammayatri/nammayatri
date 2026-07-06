@@ -912,6 +912,11 @@ REMOTE_EXCLUDES = [
     "dist", ".direnv", "_build", "result", "result-*",
     ".cabal-dir",
     ".git",
+    ".hie",
+    "hie",
+    ".nix-deps",
+    ".ci-project-root",
+    ".ci-cabal-dir",
     "Frontend/android-native", "Frontend/ios",
     "Frontend/build", "Frontend/dist",
 ]
@@ -1517,11 +1522,6 @@ def remote_deploy(body: dict) -> dict:
         session["running"] = True
         session["buf"].append(f"[deploy] {' '.join(argv)}")
 
-    # Compute the single MinIO build-cache commit from the dev's LOCAL git (the
-    # Mac has .git; the devbox no longer does): the nearest minio-pushed-tagged
-    # ancestor. cache-restore on the devbox pulls exactly this commit's cache, or
-    # builds from scratch if it's empty / not in MinIO. Dropped as
-    # Backend/.ci-cache-sha in the post-rsync hook below.
     cache_commit = _compute_cache_commit(str(PROJECT_ROOT))
     with session["lock"]:
         if cache_commit:
@@ -1532,14 +1532,14 @@ def remote_deploy(body: dict) -> dict:
                 "cabal will build from scratch"
             )
 
-    # After rsync, (re)create a minimal 1-commit git repo on the remote so Nix
-    # copies only tracked files (much faster than copying the whole tree). Since
-    # .git is no longer rsynced, `rm -rf .git` also reclaims any stale full-history
-    # .git left by earlier deploys. Then drop the single cache commit for
-    # cache-restore to consume (empty file => build from scratch).
+    git_ignore_cmd = (
+        "printf '%s\\n' 'dist-newstyle/' 'hie/' '.hie/' '.nix-deps/' "
+        "'.cabal-dir/' '.ci-project-root' '.ci-cabal-dir' '.ci-cache-sha' "
+        "> .git/info/exclude"
+    )
     git_init_cmd = (
         f"cd {shlex.quote(remote_dir)} && "
-        f"rm -rf .git && git init -q && git add -A && "
+        f"rm -rf .git && git init -q && {git_ignore_cmd} && git add -A && "
         f"GIT_AUTHOR_NAME=deploy GIT_AUTHOR_EMAIL=deploy@deploy "
         f"GIT_COMMITTER_NAME=deploy GIT_COMMITTER_EMAIL=deploy@deploy "
         f"git commit -q -m deploy --allow-empty 2>/dev/null || true; "

@@ -92,6 +92,16 @@ apis:
         driverId: Id Driver
       response:
         type: PayoutRegistrationRes
+      helperApi:
+        - GET:
+            endpoint: /{driverId}/payout/registration
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            query:
+              - requestorId: Text
+            response:
+              type: PayoutRegistrationRes
   - POST: # DeleteBankAccountAPI
       endpoint: /{driverId}/delete/bankAccount
       auth: ApiAuthV2

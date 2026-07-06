@@ -44,6 +44,7 @@ import qualified Storage.Queries.LmsCertificate as SQLC
 import Storage.Queries.LmsVideoTranslation as SQLVT
 import Storage.Queries.ModuleCompletionInformation as SQMCI
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 
 -- types of coin event and its corresponding function
@@ -357,7 +358,7 @@ markVideoByStatus (mbPersonId, merchantId, merchantOpCityId) req status = do
           else when allVideosCompleted $ do SQDMC.updateEntitiesCompleted (Just now) (dmc.entitiesCompleted <> [DTDMC.VIDEO]) dmc.completionId
 
 postLmsQuestionConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id DM.Merchant, Kernel.Types.Id.Id DMOC.MerchantOperatingCity) -> API.Types.UI.LmsModule.QuestionConfirmReq -> Environment.Flow API.Types.UI.LmsModule.QuestionConfirmRes
-postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = do
+postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   personId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   driverStats <- runInReplica $ QDriverStats.findById driver.id >>= fromMaybeM DriverInfoNotFound

@@ -23,6 +23,7 @@ import qualified Kernel.Types.Id
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Tools.ActorInfo as ActorInfo
 
 getDriverWalletWalletBalance ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -51,8 +52,9 @@ postDriverWalletWalletPayout ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   Kernel.Types.Id.Id DP.Person ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow APISuccess.APISuccess
-postDriverWalletWalletPayout merchantShortId opCity driverId = do
+postDriverWalletWalletPayout merchantShortId opCity driverId mbRequestorId = ActorInfo.withDashboardMbPersonIdActorInfo ((Kernel.Types.Id.Id @DP.Person) Kernel.Prelude.<$> mbRequestorId) Kernel.Prelude.$ do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Kernel.Prelude.Nothing merchant (Kernel.Prelude.Just opCity)
   DDriverWallet.postWalletPayout (Kernel.Prelude.Just driverId, merchant.id, merchantOpCityId)
@@ -72,9 +74,10 @@ postDriverWalletWalletAirportCashRecharge ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   Kernel.Types.Id.Id DP.Person ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   DDashboardDriverWallet.AirportCashRechargeRequest ->
   Environment.Flow APISuccess.APISuccess
-postDriverWalletWalletAirportCashRecharge merchantShortId opCity driverId req = do
+postDriverWalletWalletAirportCashRecharge merchantShortId opCity driverId mbRequestorId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Kernel.Types.Id.Id @DP.Person) Kernel.Prelude.<$> mbRequestorId) Kernel.Prelude.$ do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Kernel.Prelude.Nothing merchant (Kernel.Prelude.Just opCity)
   DDriverWallet.recordAirportCashRecharge (driverId, merchant.id, merchantOpCityId) req.amount req.referenceId

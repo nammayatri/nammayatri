@@ -38,6 +38,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Servant
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Person as QP
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Auth
 import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
@@ -74,24 +75,24 @@ handlerS2S :: FlowServer S2SAPI
 handlerS2S = paytmEdcCallback :<|> getStatusS2S
 
 createOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DRide.Ride -> FlowHandler Payment.CreateOrderResp
-createOrder (personId, merchantId) rideId = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DPayment.createOrder (personId, merchantId) rideId
+createOrder (personId, merchantId) rideId = withFlowHandlerAPIPersonId personId . ActorInfo.withPersonIdActorInfo personId . withPersonIdLogTag personId $ DPayment.createOrder (personId, merchantId) rideId
 
 getStatus :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler DPayment.PaymentStatusResp
-getStatus (personId, merchantId) orderId = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DPayment.getStatus (personId, merchantId) orderId
+getStatus (personId, merchantId) orderId = withFlowHandlerAPIPersonId personId . ActorInfo.withPersonIdActorInfo personId . withPersonIdLogTag personId $ DPayment.getStatus (personId, merchantId) orderId
 
 getOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler DOrder.PaymentOrderAPIEntity
-getOrder (personId, merchantId) orderId = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DPayment.getOrder (personId, merchantId) orderId
+getOrder (personId, merchantId) orderId = withFlowHandlerAPIPersonId personId . ActorInfo.withPersonIdActorInfo personId . withPersonIdLogTag personId $ DPayment.getOrder (personId, merchantId) orderId
 
 getStatusS2S :: Id DOrder.PaymentOrder -> Id DP.Person -> Maybe Data.Text.Text -> FlowHandler DPayment.PaymentStatusResp
-getStatusS2S orderId personId mbApiKey = withFlowHandlerAPI $ do
+getStatusS2S orderId personId mbApiKey = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound "Person not found")
   DPayment.getStatusS2S orderId personId person.merchantId mbApiKey
 
 paytmEdcCallback :: DPayment.PaytmEdcCallbackReq -> FlowHandler AckResponse
-paytmEdcCallback = withFlowHandlerAPI . DPayment.paytmEdcCallbackHandler
+paytmEdcCallback = withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo . DPayment.paytmEdcCallbackHandler
 
 postWalletRecharge :: (Id DP.Person, Id Merchant.Merchant) -> PaymentAPI.WalletRechargeReq -> FlowHandler Payment.CreateOrderResp
-postWalletRecharge (personId, merchantId) req = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DPayment.postWalletRecharge (personId, merchantId) req
+postWalletRecharge (personId, merchantId) req = withFlowHandlerAPIPersonId personId . ActorInfo.withPersonIdActorInfo personId . withPersonIdLogTag personId $ DPayment.postWalletRecharge (personId, merchantId) req
 
 getWalletBalance :: (Id DP.Person, Id Merchant.Merchant) -> FlowHandler Wallet.WalletBalanceData
-getWalletBalance (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DPayment.getWalletBalance (personId, merchantId)
+getWalletBalance (personId, merchantId) = withFlowHandlerAPIPersonId personId . ActorInfo.withPersonIdActorInfo personId . withPersonIdLogTag personId $ DPayment.getWalletBalance (personId, merchantId)

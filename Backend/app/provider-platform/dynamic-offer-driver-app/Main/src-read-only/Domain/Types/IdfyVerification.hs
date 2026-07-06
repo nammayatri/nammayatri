@@ -1,10 +1,11 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Types.IdfyVerification where
+module Domain.Types.IdfyVerification (module Domain.Types.IdfyVerification, module ReExport) where
 
 import Data.Aeson
-import qualified Domain.Types.DocumentVerificationConfig
+import Domain.Types.Extra.IdfyVerification as ReExport
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -17,7 +18,7 @@ import qualified Tools.Beam.UtilsTH
 
 data IdfyVerificationE e = IdfyVerification
   { airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    docType :: Domain.Types.DocumentVerificationConfig.DocumentType,
+    docType :: Kernel.Prelude.Text,
     documentImageId1 :: Kernel.Types.Id.Id Domain.Types.Image.Image,
     documentImageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
     documentNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
@@ -41,9 +42,9 @@ data IdfyVerificationE e = IdfyVerification
   }
   deriving (Generic)
 
-type IdfyVerification = IdfyVerificationE ('AsEncrypted)
+type IdfyVerification = IdfyVerificationE 'AsEncrypted
 
-type DecryptedIdfyVerification = IdfyVerificationE ('AsUnencrypted)
+type DecryptedIdfyVerification = IdfyVerificationE 'AsUnencrypted
 
 instance EncryptedItem IdfyVerification where
   type Unencrypted IdfyVerification = (DecryptedIdfyVerification, HashSalt)
@@ -111,4 +112,4 @@ instance EncryptedItem' IdfyVerification where
 
 data ImageExtractionValidation = Success | Skipped | Failed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ImageExtractionValidation))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ImageExtractionValidation)

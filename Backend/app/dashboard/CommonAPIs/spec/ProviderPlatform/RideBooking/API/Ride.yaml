@@ -18,6 +18,18 @@ apis:
       migrate:
         endpoint: RideAPI RideStartEndpoint
         userActionType: ApiAuth DRIVER_OFFER_BPP RIDES RIDE_START
+      helperApi:
+        - POST:
+            endpoint: /{rideId}/start
+            auth: ApiAuthV2
+            params:
+              rideId: Id Ride
+            query:
+              - requestorId: Text
+            request:
+              type: StartRideReq
+            response:
+              type: APISuccess
   - POST: # RideEndAPI
       endpoint: /{rideId}/end
       auth: ApiAuthV2
@@ -27,6 +39,18 @@ apis:
         type: EndRideReq
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{rideId}/end
+            auth: ApiAuthV2
+            params:
+              rideId: (Id Ride)
+            query:
+              - requestorId: Text
+            request:
+              type: EndRideReq
+            response:
+              type: APISuccess
       migrate:
         endpoint: RideAPI RideEndEndpoint
         userActionType: ApiAuth DRIVER_OFFER_BPP RIDES RIDE_END
@@ -48,6 +72,18 @@ apis:
         type: CancelRideReq
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{rideId}/cancel
+            auth: ApiAuthV2
+            params:
+              rideId: Id Ride
+            query:
+              - requestorId: Text
+            request:
+              type: CancelRideReq
+            response:
+              type: APISuccess
       migrate:
         endpoint: RideAPI RideCancelEndpoint
         userActionType: ApiAuth DRIVER_OFFER_BPP RIDES RIDE_CANCEL
@@ -58,6 +94,16 @@ apis:
         type: BookingWithVehicleAndPhoneReq
       response:
         type: BookingWithVehicleAndPhoneRes
+      helperApi:
+        - POST:
+            endpoint: /booking/withVehicleNumberAndPhone
+            auth: ApiAuthV2
+            query:
+              - requestorId: Text
+            request:
+              type: BookingWithVehicleAndPhoneReq
+            response:
+              type: BookingWithVehicleAndPhoneRes
       migrate:
         endpoint: RideAPI BookingWithVehicleNumberAndPhoneEndpoint
         userActionType: ApiAuth DRIVER_OFFER_BPP RIDES BOOKING_WITH_VEHICLE_NUMBER_AND_PHONE

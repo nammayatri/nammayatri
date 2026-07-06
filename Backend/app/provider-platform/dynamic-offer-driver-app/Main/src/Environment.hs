@@ -55,6 +55,7 @@ import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
@@ -149,6 +150,7 @@ data AppCfg = AppCfg
     maxShards :: Int,
     maxNotificationShards :: Int,
     gateNotifiedKeyShards :: Int,
+    activeDriversListKeyShards :: Int,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     enableAPILatencyLogging :: Bool,
@@ -267,6 +269,7 @@ data AppEnv = AppEnv
     maxShards :: Int,
     maxNotificationShards :: Int,
     gateNotifiedKeyShards :: Int,
+    activeDriversListKeyShards :: Int,
     version :: Metrics.DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
@@ -325,7 +328,8 @@ data AppEnv = AppEnv
     masterCloudForwarderManager :: Http.Manager,
     enableLtsPoolDataForPooling :: Bool,
     rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
-    xyneWebhookSigningSecret :: Text
+    xyneWebhookSigningSecret :: Text,
+    actorInfo :: Finance.ActorInfo
   }
   deriving (Generic)
 
@@ -407,6 +411,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
   masterCloudForwarderManager <- Http.newManager (setResponseTimeout cfg.httpClientOptions.timeoutMs HttpTLS.tlsManagerSettings)
+  let actorInfo = Finance.ActorInfo {actorType = Finance.UNKNOWN, actorId = requestId} -- to be modified in api handler
   return AppEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
 
 releaseAppEnv :: AppEnv -> IO ()

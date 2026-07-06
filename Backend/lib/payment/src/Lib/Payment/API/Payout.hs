@@ -19,6 +19,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error (GenericError (InvalidRequest))
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common (fromMaybeM, throwError)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.StateTransition as ST
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import Lib.Payment.API.Payout.Types
@@ -109,7 +110,8 @@ payoutUIHandler cfg =
       buildPayoutResp refreshed
 
 payoutDashboardHandler ::
-  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r, EncFlow m r, VerifyVpaFlow m) =>
+  forall m r.
+  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r, EncFlow m r, VerifyVpaFlow m, Finance.HasActorInfo m r) =>
   PayoutDashboardHandlerConfig m ->
   ServerT DashboardAPI m
 payoutDashboardHandler cfg@PayoutDashboardHandlerConfig {mkHistoryItemEnricher = mkEnricher} =
@@ -150,7 +152,7 @@ payoutDashboardHandler cfg@PayoutDashboardHandlerConfig {mkHistoryItemEnricher =
     cancelPayout payoutRequestId req = do
       payoutRequest <- QPR.findById payoutRequestId >>= fromMaybeM (InvalidRequest "Payout request not found")
       PayoutRequest.cancelPayoutWithin (2 * 60 * 60) req.reason payoutRequest
-      pure Success
+      pure @m Success
 
     markCash payoutRequestId req = do
       payoutRequest <- QPR.findById payoutRequestId >>= fromMaybeM (InvalidRequest "Payout request not found")
@@ -158,7 +160,7 @@ payoutDashboardHandler cfg@PayoutDashboardHandlerConfig {mkHistoryItemEnricher =
         CASH_PENDING -> PayoutRequest.markCashPending req.agentId req.agentName req.message payoutRequest
         CASH_PAID -> PayoutRequest.markCashPaid req.agentId req.agentName req.message payoutRequest
         _ -> throwError $ InvalidRequest "Invalid cash status"
-      pure Success
+      pure @m Success
 
     updateVpa req = do
       when req.verify $ verifyVpaForUpdate req
