@@ -61,7 +61,7 @@ logAudit input = do
 -- | Get audit log for an entity
 getAuditLog ::
   (BeamFlow.BeamFlow m r) =>
-  Text -> -- Entity type
+  AuditEntityType ->
   Text -> -- Entity ID
   m [AuditEntry]
 getAuditLog = QAudit.findByEntity
@@ -69,7 +69,7 @@ getAuditLog = QAudit.findByEntity
 -- | Get audit entries by action type
 getAuditByAction ::
   (BeamFlow.BeamFlow m r) =>
-  Text -> -- Entity type
+  AuditEntityType ->
   AuditAction ->
   m [AuditEntry]
 getAuditByAction = QAudit.findByAction
@@ -77,7 +77,7 @@ getAuditByAction = QAudit.findByAction
 -- | Get audit entries by actor
 getAuditByActor ::
   (BeamFlow.BeamFlow m r) =>
-  Text -> -- Actor type (e.g., "DRIVER", "SYSTEM", "ADMIN")
+  ActorType -> -- Actor type (e.g., "DRIVER", "SYSTEM", "ADMIN")
   Maybe Text -> -- Actor ID (optional)
   m [AuditEntry]
 getAuditByActor = QAudit.findByActor

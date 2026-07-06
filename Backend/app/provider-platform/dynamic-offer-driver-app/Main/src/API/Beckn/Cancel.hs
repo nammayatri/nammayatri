@@ -52,6 +52,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Storage.Queries.SearchTry as QST
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import TransactionLogs.PushLogs
 
@@ -68,7 +69,7 @@ cancel ::
   SignatureAuthResult ->
   Cancel.CancelReqV2 ->
   FlowHandler AckResponse
-cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
+cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   (dCancelReq, callbackUrl, bapId, msgId, city, country, txnId, bppId, bppUri) <- do
     transactionId <- Utils.getTransactionId reqV2.cancelReqContext
     Utils.withTransactionIdLogTag transactionId $ do

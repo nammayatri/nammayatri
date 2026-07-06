@@ -46,6 +46,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import TransactionLogs.PushLogs
 
@@ -62,7 +63,7 @@ confirm ::
   SignatureAuthResult ->
   Confirm.ConfirmReqV2 ->
   FlowHandler AckResponse
-confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI do
+confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.confirmReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "Confirm APIV2 Flow" "Reached"

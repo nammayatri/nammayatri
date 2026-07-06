@@ -24,6 +24,7 @@ instance FromTType' Beam.SapJournalEntry Lib.Finance.Domain.Types.SapJournalEntr
             budat = budat,
             createdAt = createdAt,
             createdBy = createdBy,
+            createdById = createdById,
             currency = currency,
             description = description,
             gjahr = gjahr,
@@ -41,7 +42,9 @@ instance FromTType' Beam.SapJournalEntry Lib.Finance.Domain.Types.SapJournalEntr
             totalDebitAmount = totalDebitAmount,
             transactionCount = transactionCount,
             transactionType = transactionType,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            updatedBy = updatedBy,
+            updatedById = updatedById
           }
 
 instance ToTType' Beam.SapJournalEntry Lib.Finance.Domain.Types.SapJournalEntry.SapJournalEntry where
@@ -54,6 +57,7 @@ instance ToTType' Beam.SapJournalEntry Lib.Finance.Domain.Types.SapJournalEntry.
         Beam.budat = budat,
         Beam.createdAt = createdAt,
         Beam.createdBy = createdBy,
+        Beam.createdById = createdById,
         Beam.currency = currency,
         Beam.description = description,
         Beam.gjahr = gjahr,
@@ -71,5 +75,7 @@ instance ToTType' Beam.SapJournalEntry Lib.Finance.Domain.Types.SapJournalEntry.
         Beam.totalDebitAmount = totalDebitAmount,
         Beam.transactionCount = transactionCount,
         Beam.transactionType = transactionType,
-        Beam.updatedAt = updatedAt
+        Beam.updatedAt = updatedAt,
+        Beam.updatedBy = updatedBy,
+        Beam.updatedById = updatedById
       }

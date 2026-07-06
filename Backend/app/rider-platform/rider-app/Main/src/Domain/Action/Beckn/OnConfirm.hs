@@ -45,6 +45,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
@@ -140,7 +141,7 @@ onConfirm ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig, "cloudType" ::: Maybe CloudType],
     CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EncFlow m r,
     SchedulerFlow r,
     EsqDBReplicaFlow m r,

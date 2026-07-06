@@ -34,6 +34,7 @@ import qualified Lib.Payment.API as PaymentAPI
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Auth
 
 type API =
@@ -58,23 +59,23 @@ handler authInfo =
          )
 
 createOrder :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Invoice -> FlowHandler Payment.CreateOrderResp
-createOrder tokenDetails invoiceId = withFlowHandlerAPI $ DPayment.createOrder tokenDetails invoiceId
+createOrder tokenDetails@(personId, _, _) invoiceId = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DPayment.createOrder tokenDetails invoiceId
 
 -- This APIs are decoupled from Driver Fee Table.
 getStatus :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id DOrder.PaymentOrder -> FlowHandler DPayment.PaymentStatusResp
-getStatus tokenDetails orderId = withFlowHandlerAPI $ DPayment.getStatus tokenDetails orderId
+getStatus tokenDetails@(personId, _, _) orderId = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DPayment.getStatus tokenDetails orderId
 
 getOrder :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id DOrder.PaymentOrder -> FlowHandler DOrder.PaymentOrderAPIEntity
-getOrder tokenDetails orderId = withFlowHandlerAPI $ DPayment.getOrder tokenDetails orderId
+getOrder tokenDetails@(personId, _, _) orderId = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DPayment.getOrder tokenDetails orderId
 
 getNotificationStatus :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Notification -> FlowHandler Payment.NotificationStatusResp
-getNotificationStatus notificationId = withFlowHandlerAPI . DPayment.pdnNotificationStatus notificationId
+getNotificationStatus tokenDetails@(personId, _, _) = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId . DPayment.pdnNotificationStatus tokenDetails
 
 postWalletRecharge :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> () -> FlowHandler Payment.CreateOrderResp
-postWalletRecharge tokenDetails _ = withFlowHandlerAPI $ DPayment.postWalletRecharge tokenDetails ()
+postWalletRecharge tokenDetails@(personId, _, _) _ = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DPayment.postWalletRecharge tokenDetails ()
 
 getWalletBalance :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler Wallet.WalletBalanceData
-getWalletBalance tokenDetails = withFlowHandlerAPI $ DPayment.getWalletBalance tokenDetails
+getWalletBalance tokenDetails@(personId, _, _) = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DPayment.getWalletBalance tokenDetails
 
 getStatusV2 :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> FlowHandler DPayment.PaymentStatusResp
-getStatusV2 tokenDetails orderIdText = withFlowHandlerAPI $ DPayment.getStatusV2 tokenDetails orderIdText
+getStatusV2 tokenDetails@(personId, _, _) orderIdText = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DPayment.getStatusV2 tokenDetails orderIdText

@@ -20,6 +20,7 @@ import qualified Domain.Types.DocumentVerificationConfig as DVC
 import Domain.Types.DriverInformation
 import Domain.Types.DriverLicense
 import Domain.Types.DriverRCAssociation
+import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.IdfyVerification as IV
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantOperatingCity as CQMOC
@@ -78,10 +79,11 @@ fetchDriverDocsInfo merchantId' opCity mbDriverIds = do
         do
           person' <- B.all_ (BeamCommon.person BeamCommon.atlasDB)
           dl' <- B.leftJoin_' (B.all_ $ BeamCommon.driverLicense BeamCommon.atlasDB) (\dl'' -> BeamDL.driverId dl'' B.==?. BeamP.id person')
-          idfy' <- B.leftJoin_' (B.all_ $ BeamCommon.idfyVerification BeamCommon.atlasDB) (\idfy'' -> BeamIV.driverId idfy'' B.==?. BeamP.id person')
+          -- docType filter also keeps synchronous face-compare audit rows (docType faceCompare*) out of this join
+          idfy' <- B.leftJoin_' (B.all_ $ BeamCommon.idfyVerification BeamCommon.atlasDB) (\idfy'' -> BeamIV.driverId idfy'' B.==?. BeamP.id person' B.&&?. BeamIV.docType idfy'' B.==?. B.val_ (docTypeToText DVC.DriverLicense))
           drc' <- B.leftJoin_' (B.all_ $ BeamCommon.driverRCAssociation BeamCommon.atlasDB) (\drc'' -> BeamRC.driverId drc'' B.==?. BeamP.id person')
           vc' <- B.leftJoin_' (B.all_ $ BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB) (\vc'' -> BeamRC.rcId drc' B.==?. B.just_ (BeamVRC.id vc''))
-          idfy'' <- B.leftJoin_' (B.all_ $ BeamCommon.idfyVerification BeamCommon.atlasDB) (\idfy''' -> BeamIV.driverId idfy''' B.==?. BeamP.id person' B.&&?. BeamIV.docType idfy''' B.==?. B.val_ DVC.VehicleRegistrationCertificate)
+          idfy'' <- B.leftJoin_' (B.all_ $ BeamCommon.idfyVerification BeamCommon.atlasDB) (\idfy''' -> BeamIV.driverId idfy''' B.==?. BeamP.id person' B.&&?. BeamIV.docType idfy''' B.==?. B.val_ (docTypeToText DVC.VehicleRegistrationCertificate))
           di' <- B.join_' (BeamCommon.driverInformation BeamCommon.atlasDB) (\di'' -> BeamDI.driverId di'' B.==?. BeamP.id person')
           pure (person', dl', idfy', drc', vc', idfy'', di')
   resDom <- case res of

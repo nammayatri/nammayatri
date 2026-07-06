@@ -74,6 +74,7 @@ import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common hiding (mkPrice)
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.JourneyModule.RouteServiceability as JMRouteServiceability
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JMU
@@ -122,6 +123,7 @@ import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingP
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SeatLayout as QSeatLayout
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
@@ -741,7 +743,11 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ = do
     sortedQuotesWithCategories
 
 postFrfsQuoteV2Confirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasFlowEnv m r '["seatBookingConfirmAPIRateLimitOptions" ::: APIRateLimitOptions], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Maybe Bool -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
-postFrfsQuoteV2Confirm (mbPersonId, merchantId) quoteId mbIsMockPayment req = do
+postFrfsQuoteV2Confirm (mbPersonId, merchantId) quoteId mbIsMockPayment req =
+  ActorInfo.withMbPersonIdActorInfo mbPersonId $ postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId) quoteId mbIsMockPayment req
+
+postFrfsQuoteV2ConfirmWithActor :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasFlowEnv m r '["seatBookingConfirmAPIRateLimitOptions" ::: APIRateLimitOptions], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Maybe Bool -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId) quoteId mbIsMockPayment req = do
   personId <- fromMaybeM (InvalidRequest "personId not found") mbPersonId
   selectedQuoteCategories <-
     case req.offered of
@@ -794,7 +800,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId) quoteId mbIsMockPayment req = do
       bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory quote.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory quote.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
       (_, booking, _, _, _) <- confirmAndUpsertBooking personId quote selectedQuoteCategories req.crisSdkResponse (Just True) mbIsMockPayment integratedBppConfig Nothing
       select merchant merchantOperatingCity bapConfig quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer
-      getFrfsBookingStatus (Just personId, merchantId) booking.id
+      getFrfsBookingStatusWithActor (Just personId, merchantId) booking.id
     _ -> do
       postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer mbIsMockPayment integratedBppConfig req.tripId
   where
@@ -802,8 +808,9 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId) quoteId mbIsMockPayment req = do
     rateLimitKey personId' tripId' = "BAP:FRFS_CONFIRM_RATE_LIMIT:" <> personId' <> ":" <> tripId'
 
 postFrfsQuoteConfirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasFlowEnv m r '["seatBookingConfirmAPIRateLimitOptions" ::: APIRateLimitOptions], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Maybe Bool -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
-postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId mbIsMockPayment = do
-  postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId mbIsMockPayment (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {offered = Nothing, ticketQuantity = Nothing, childTicketQuantity = Nothing, crisSdkResponse = Nothing, enableOffer = Nothing, tripId = Nothing})
+postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId mbIsMockPayment =
+  ActorInfo.withMbPersonIdActorInfo mbPersonId $
+    postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId_) quoteId mbIsMockPayment (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {offered = Nothing, ticketQuantity = Nothing, childTicketQuantity = Nothing, crisSdkResponse = Nothing, enableOffer = Nothing, tripId = Nothing})
 
 postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuotePaymentRetry = error "Logic yet to be decided"
@@ -896,11 +903,19 @@ frfsOrderStatusHandler merchantId paymentStatusResponse switchFRFSQuoteTier = do
     withPaymentStatusResponseHandler paymentBooking paymentOrder action = action (paymentBooking, paymentOrder, Just paymentStatusResponse)
 
 getFrfsBookingStatus ::
-  (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) =>
+  (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r, Finance.HasActorInfo m r) =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
   Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking ->
   m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
-getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
+getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
+  getFrfsBookingStatusWithActor (mbPersonId, merchantId_) bookingId
+
+getFrfsBookingStatusWithActor ::
+  (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r, Finance.HasActorInfo m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
+  Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking ->
+  m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+getFrfsBookingStatusWithActor (mbPersonId, merchantId_) bookingId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   booking <- B.runInReplica $ QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
@@ -911,7 +926,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
       ( EncFlow m r,
         EsqDBFlow m r,
         CacheFlow m r,
-        MonadFlow m,
+        Finance.HasActorInfo m r,
         EsqDBReplicaFlow m r,
         ServiceFlow m r,
         SchedulerFlow r

@@ -7,12 +7,15 @@ import Data.Aeson
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Lib.Finance.Core.Types
 import qualified Tools.Beam.UtilsTH
 
 data IndirectTaxTransaction = IndirectTaxTransaction
   { cgstAmount :: Kernel.Types.Common.HighPrecMoney,
     counterpartyId :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
+    createdBy :: Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType,
+    createdById :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     creditOrDebitNoteNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     externalCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     gstCreditType :: Lib.Finance.Domain.Types.IndirectTaxTransaction.GstCreditType,
@@ -36,6 +39,8 @@ data IndirectTaxTransaction = IndirectTaxTransaction
     totalTaxAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     transactionDate :: Kernel.Prelude.UTCTime,
     transactionType :: Lib.Finance.Domain.Types.IndirectTaxTransaction.TransactionType,
+    updatedBy :: Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType,
+    updatedById :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic)

@@ -51,6 +51,7 @@ import Storage.Beam.Payment ()
 import qualified Storage.Queries.BBPS as QBBPS
 import qualified Storage.Queries.BBPSConfig as QBBPSC
 import qualified Storage.Queries.Person as QP
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Auth
 import Tools.Error
 import qualified Tools.Payment as Payment
@@ -77,7 +78,7 @@ postBbpsCreateOrder ::
     API.Types.UI.BBPS.BBPSPaymentReq ->
     Environment.Flow Kernel.External.Payment.Interface.CreateOrderResp
   )
-postBbpsCreateOrder (mbPersonId, merchantId) req = do
+postBbpsCreateOrder (mbPersonId, merchantId) req = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   bbpsAmount <- (highPrecMoneyFromText req.billDetails.txnAmount) & fromMaybeM (InvalidRequest "Invalid amount")

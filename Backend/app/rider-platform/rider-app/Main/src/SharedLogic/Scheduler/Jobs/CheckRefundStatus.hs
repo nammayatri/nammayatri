@@ -32,6 +32,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -56,7 +57,7 @@ import qualified UrlShortner.Common as UrlShortner
 checkRefundStatusJob ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EncFlow m r,
     SchedulerFlow r,
     EsqDBReplicaFlow m r,
@@ -104,7 +105,7 @@ processRefundStatus ::
   forall m r c.
   ( CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EncFlow m r,
     SchedulerFlow r,
     EsqDBReplicaFlow m r,

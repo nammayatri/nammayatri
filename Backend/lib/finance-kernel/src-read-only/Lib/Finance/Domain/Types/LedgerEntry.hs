@@ -8,6 +8,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
+import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.Account
 import qualified Tools.Beam.UtilsTH
 
@@ -15,6 +16,8 @@ data LedgerEntry = LedgerEntry
   { amount :: Kernel.Types.Common.HighPrecMoney,
     concernedIndividualId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
+    createdBy :: Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType,
+    createdById :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     currency :: Kernel.Types.Common.Currency,
     entryType :: Lib.Finance.Domain.Types.LedgerEntry.EntryType,
     fromAccountId :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account,
@@ -37,6 +40,8 @@ data LedgerEntry = LedgerEntry
     toAccountId :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account,
     toEndingBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     toStartingBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    updatedBy :: Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType,
+    updatedById :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     voidReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime
   }

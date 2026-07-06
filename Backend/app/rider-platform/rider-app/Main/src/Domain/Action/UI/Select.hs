@@ -76,6 +76,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.MerchantPaymentMethod
 import qualified SharedLogic.Payment as SPayment
@@ -123,7 +124,8 @@ type SelectFlow m r c =
     HasFlowEnv m r '["version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
     Redis.HedisFlow m r,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
-    ClickhouseFlow m r
+    ClickhouseFlow m r,
+    Finance.HasActorInfo m r
   )
 
 data DSelectReq = DSelectReq

@@ -224,7 +224,7 @@ postDriverRegistrationTriggerReminder merchantShortId opCity apiTokenInfo driver
 getDriverRegistrationPayoutRegistration :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow Common.PayoutRegistrationRes
 getDriverRegistrationPayoutRegistration merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationPayoutRegistration) driverId
+  Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationPayoutRegistration) driverId (Just apiTokenInfo.personId.getId)
 
 getDriverRegistrationPayoutOrderStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Text -> Flow PayoutTypes.PayoutOrderStatusResp
 getDriverRegistrationPayoutOrderStatus merchantShortId opCity apiTokenInfo driverId orderId = do

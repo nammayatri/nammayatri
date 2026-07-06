@@ -122,3 +122,10 @@ ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN order
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN is_valid_subscription_purchase boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN updated_by_id text ;
+ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN updated_by text ;
+ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN created_by_id text ;

@@ -76,6 +76,7 @@ import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (MonadFlow)
 import Lib.Finance.Account.Interface (AccountInput (..))
 import Lib.Finance.Account.Service (getOrCreateAccount)
+import Lib.Finance.Core.Types (HasActorInfo)
 import Lib.Finance.Domain.Types.Account
 import Lib.Finance.Domain.Types.DirectTaxTransaction (DirectTaxTransaction, TdsRateReason (..))
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
@@ -503,7 +504,7 @@ collectEntryId entryId =
 --   Skips if amount <= 0.  Automatically collects the entry ID.
 --   Returns the entry ID if created (Nothing if skipped due to amount <= 0).
 transfer ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   AccountRole ->
   AccountRole ->
   HighPrecMoney ->
@@ -537,7 +538,7 @@ transfer fromRole toRole amount refType = do
       pure (Just result.id)
 
 transferWithoutAttribution ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   AccountRole ->
   AccountRole ->
   HighPrecMoney ->
@@ -574,7 +575,7 @@ transferWithoutAttribution fromRole toRole amount refType = do
 --   Use for intermediate legs (e.g. BuyerAsset -> BuyerExternal)
 --   that should not appear on invoices.
 transfer_ ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   AccountRole ->
   AccountRole ->
   HighPrecMoney ->
@@ -609,7 +610,7 @@ transfer_ fromRole toRole amount refType = do
 --   (e.g. rider payment obligations before payment capture).
 --   Automatically collects the entry ID.
 transferPending ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   AccountRole ->
   AccountRole ->
   HighPrecMoney ->
@@ -645,7 +646,7 @@ transferPending fromRole toRole amount refType = do
 -- | Like 'transfer' but allows zero-amount entries (e.g. placeholder TDS entries).
 --   Skips only for negative amounts.  Automatically collects the entry ID.
 transferAllowZero ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   AccountRole ->
   AccountRole ->
   HighPrecMoney ->
@@ -697,7 +698,7 @@ transferAllowZero fromRole toRole amount refType = do
 invoice ::
   ( BeamFlow.BeamFlow m r,
     Redis.HedisFlow m r,
-    MonadFlow m
+    HasActorInfo m r
   ) =>
   InvoiceConfig ->
   FinanceM m (Maybe (Id Invoice))
@@ -710,7 +711,7 @@ invoice config = do
 invoiceInner ::
   ( BeamFlow.BeamFlow m r,
     Redis.HedisFlow m r,
-    MonadFlow m
+    HasActorInfo m r
   ) =>
   FinanceCtx ->
   InvoiceConfig ->
@@ -815,7 +816,7 @@ data DirectTaxConfig = DirectTaxConfig
 --         }
 --   @
 recordIndirectTax ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   IndirectTaxConfig ->
   FinanceM m (Id IndirectTaxTransaction)
 recordIndirectTax config = do
@@ -845,7 +846,7 @@ recordIndirectTax config = do
 -- | Record a standalone direct tax (TDS) transaction without creating an invoice.
 --   Uses FinanceCtx for merchantId and merchantOperatingCityId.
 recordDirectTax ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   DirectTaxConfig ->
   FinanceM m (Id DirectTaxTransaction)
 recordDirectTax config = do

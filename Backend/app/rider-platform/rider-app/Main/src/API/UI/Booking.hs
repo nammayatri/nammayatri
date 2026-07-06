@@ -28,6 +28,7 @@ import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Auth
 import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
@@ -156,8 +157,8 @@ favouriteBookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Intege
 favouriteBookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbStatus mbClientId driverNo = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.favouriteBookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbStatus mbClientId driverNo
 
 generateInvoice :: (Id Person.Person, Id Merchant.Merchant) -> DInvoice.GenerateInvoiceReq -> FlowHandler DInvoice.GenerateInvoiceRes
-generateInvoice (personId, merchantId) req = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DInvoice.generateInvoice (personId, merchantId) req
+generateInvoice (personId, merchantId) req = withFlowHandlerAPIPersonId personId . ActorInfo.withPersonIdActorInfo personId . withPersonIdLogTag personId $ DInvoice.generateInvoice (personId, merchantId) req
 
 -- | Optional: get payment status for payment-before-confirm booking. With Paytm EDC webhook, confirm is triggered server-side on success so polling is not required; use only for UI refresh or fallback if webhook is delayed.
 getRideBookingPaymentStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DPayment.PaymentStatusResp
-getRideBookingPaymentStatus bookingId (personId, merchantId) = withFlowHandlerAPIPersonId personId $ DPayment.getRideBookingPaymentStatusByBookingId (personId, merchantId) bookingId
+getRideBookingPaymentStatus bookingId (personId, merchantId) = withFlowHandlerAPIPersonId personId . ActorInfo.withPersonIdActorInfo personId $ DPayment.getRideBookingPaymentStatusByBookingId (personId, merchantId) bookingId

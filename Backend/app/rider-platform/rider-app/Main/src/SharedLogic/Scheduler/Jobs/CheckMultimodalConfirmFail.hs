@@ -23,6 +23,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.JobScheduler
@@ -37,7 +38,7 @@ import qualified UrlShortner.Common as UrlShortner
 checkMultimodalConfirmFailJob ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EncFlow m r,
     SchedulerFlow r,
     EsqDBReplicaFlow m r,

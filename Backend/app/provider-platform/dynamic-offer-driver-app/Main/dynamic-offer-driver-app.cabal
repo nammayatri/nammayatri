@@ -395,6 +395,7 @@ library
       Domain.Types.Extra.DriverFee
       Domain.Types.Extra.DriverHomeLocation
       Domain.Types.Extra.DriverPlan
+      Domain.Types.Extra.IdfyVerification
       Domain.Types.Extra.Location
       Domain.Types.Extra.MerchantClientConfig
       Domain.Types.Extra.MerchantMessage
@@ -440,6 +441,7 @@ library
       Lib.DriverScore.Types
       Lib.LocationUpdates
       Lib.Schema
+      SharedLogic.ActiveDriversList
       SharedLogic.AirportEntryFee
       SharedLogic.Allocator
       SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation
@@ -918,6 +920,7 @@ library
       Storage.Queries.WalletTransactionExtra
       Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
+      Tools.ActorInfo
       Tools.Auth
       Tools.BackgroundVerification
       Tools.Beam.UtilsTH

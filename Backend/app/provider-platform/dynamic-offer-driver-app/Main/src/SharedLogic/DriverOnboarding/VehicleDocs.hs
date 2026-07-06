@@ -8,6 +8,7 @@ import qualified Data.Text as T
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as FODVC
 import qualified Domain.Types.HyperVergeVerification as HV
 import qualified Domain.Types.IdfyVerification as IV
@@ -50,7 +51,7 @@ import qualified Storage.Queries.VehicleNOC as VNOCQuery
 import qualified Storage.Queries.VehiclePUC as VPUCQuery
 import qualified Storage.Queries.VehiclePermit as VPQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
-import Tools.Error (DriverOnboardingError (ImageNotValid))
+import Tools.Error (DriverOnboardingError (FaceMatchFailed, ImageNotValid))
 
 type DocVerificationConfigs = Either [FODVC.FleetOwnerDocumentVerificationConfig] [DVC.DocumentVerificationConfig]
 
@@ -318,7 +319,7 @@ fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs 
   mbVerificationReqRecord <- case entityImagesInfo.entity of
     IQuery.PersonEntity person -> do
       -- Driver inspection or status handler
-      inprogressVehicleIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing person.id DVC.VehicleRegistrationCertificate
+      inprogressVehicleIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing person.id (docTypeToText DVC.VehicleRegistrationCertificate)
       inprogressVehicleHV <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing person.id DVC.VehicleRegistrationCertificate
       pure $ getLatestVerificationRecord inprogressVehicleIdfy inprogressVehicleHV
     IQuery.VehicleRCEntity _rc -> do
@@ -599,7 +600,7 @@ checkIfUnderProgress entityImagesInfo docType = do
     IQuery.PersonEntity person -> do
       -- Driver inspection or status handler: docType: DriverLicense/VehicleRegistrationCertificate
       let driverId = person.id
-      mbVerificationReqIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing driverId docType
+      mbVerificationReqIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing driverId (docTypeToText docType)
       mbVerificationReqHV <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing driverId docType
       pure $ getLatestVerificationRecord mbVerificationReqIdfy mbVerificationReqHV
     IQuery.VehicleRCEntity _rc -> do
@@ -627,7 +628,8 @@ checkIfUnderProgress entityImagesInfo docType = do
 extractImageFailReason :: Maybe DriverOnboardingError -> Maybe Text
 extractImageFailReason imageError =
   case imageError of
-    Just (ImageNotValid reason) -> Just reason -- only this because we are inserting this type only in manual reject request in update documents dashboard api
+    Just (ImageNotValid reason) -> Just reason -- manual reject reason from the update-documents dashboard api
+    Just FaceMatchFailed -> toMessage FaceMatchFailed -- surfaces the face-match failure in the status API's verificationMessage
     _ -> Nothing
 
 documentStatusMessage :: ResponseStatus -> Maybe Text -> DDVC.DocumentType -> Maybe BaseUrl -> Language -> Bool -> Flow (Maybe Text)
@@ -708,9 +710,9 @@ toVerificationMessage msg lang = do
 getLatestVerificationRecord :: Maybe IV.IdfyVerification -> Maybe HV.HyperVergeVerification -> Maybe SDO.VerificationReqRecord
 getLatestVerificationRecord mbIdfyVerificationReq mbHvVerificationReq = do
   case (mbIdfyVerificationReq <&> (.createdAt), mbHvVerificationReq <&> (.createdAt)) of
-    (Just idfyCreatedAt, Just hvCreatedAt) -> if idfyCreatedAt > hvCreatedAt then SDO.makeIdfyVerificationReqRecord <$> mbIdfyVerificationReq else SDO.makeHVVerificationReqRecord <$> mbHvVerificationReq
+    (Just idfyCreatedAt, Just hvCreatedAt) -> if idfyCreatedAt > hvCreatedAt then (SDO.makeIdfyVerificationReqRecord =<< mbIdfyVerificationReq) <|> (SDO.makeHVVerificationReqRecord <$> mbHvVerificationReq) else SDO.makeHVVerificationReqRecord <$> mbHvVerificationReq
     (Nothing, Just _) -> SDO.makeHVVerificationReqRecord <$> mbHvVerificationReq
-    (Just _, Nothing) -> SDO.makeIdfyVerificationReqRecord <$> mbIdfyVerificationReq
+    (Just _, Nothing) -> SDO.makeIdfyVerificationReqRecord =<< mbIdfyVerificationReq
     (Nothing, Nothing) -> Nothing
 
 -- Convert CommonDriverOnboardingDocuments to CommonDocumentItem

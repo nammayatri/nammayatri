@@ -45,7 +45,7 @@ postDriverWalletWalletPayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.M
 postDriverWalletWalletPayout merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) (Kernel.Prelude.Just $ Kernel.Types.Id.cast driverId) Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
-  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.driverWalletDSL.postDriverWalletWalletPayout) driverId)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.driverWalletDSL.postDriverWalletWalletPayout) driverId (Kernel.Prelude.Just apiTokenInfo.personId.getId))
 
 postDriverWalletWalletTopup :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> API.Types.UI.DriverWallet.TopUpRequest -> Environment.Flow Domain.Action.UI.Plan.PlanSubscribeRes)
 postDriverWalletWalletTopup merchantShortId opCity apiTokenInfo driverId req = do
@@ -62,7 +62,7 @@ postDriverWalletWalletAirportCashRecharge :: (Kernel.Types.Id.ShortId Domain.Typ
 postDriverWalletWalletAirportCashRecharge merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) (Kernel.Prelude.Just $ Kernel.Types.Id.cast driverId) Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
-  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.driverWalletDSL.postDriverWalletWalletAirportCashRecharge) driverId req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.driverWalletDSL.postDriverWalletWalletAirportCashRecharge) driverId (Kernel.Prelude.Just apiTokenInfo.personId.getId) req)
 
 getDriverWalletWalletTransactionHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.Flow API.Types.UI.DriverWallet.WalletTransactionHistoryResponse)
 getDriverWalletWalletTransactionHistory merchantShortId opCity apiTokenInfo driverId fromDate toDate limit offset = do
