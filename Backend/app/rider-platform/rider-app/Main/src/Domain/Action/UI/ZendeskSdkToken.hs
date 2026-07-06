@@ -44,7 +44,8 @@ postProfileZendeskSdkToken req = do
         M.fromList
           [ ("name", toJSON name),
             ("external_id", toJSON externalId),
-            ("email", toJSON email)
+            ("email", toJSON email),
+            ("scope", toJSON ("user" :: Text))
           ]
       claims =
         JWTClaimsSet
@@ -57,12 +58,13 @@ postProfileZendeskSdkToken req = do
             jti = stringOrURI jtiText,
             unregisteredClaims = ClaimsMap claimsMap
           }
-      header =
+  mbMessagingKeyId <- mapM decrypt zendeskCfg.messagingKeyId
+  let header =
         JOSEHeader
           { typ = Just "JWT",
             alg = Just HS256,
             cty = Nothing,
-            kid = Nothing
+            kid = mbMessagingKeyId
           }
       key = hmacSecret jwtSecret
       signedJwt = encodeSigned key header claims
