@@ -133,7 +133,8 @@
               "else {",
               "  // the list handler can 500 transiently on an unrelated async notification fork — retry once before failing",
               "  var _t = Date.now(); while (Date.now() - _t < 2000) {}",
-              "  pm.sendRequest({url: pm.request.url.toString(), method: 'GET', header: {token: pm.environment.get('rider_token')}}, function (err, res) {",
+              "  var _gu = (pm.environment.get('baseUrl_app')||'').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1') + '/rideBooking/list?limit=5&onlyActive=false&offset=0';",
+              "  pm.sendRequest({url: _gu, method: 'GET', header: {token: pm.environment.get('rider_token')}}, function (err, res) {",
               "    var d2 = {}; try { d2 = res.json(); } catch(e) {}",
               "    _gate(res ? res.code : 0, d2);",
               "  });",
@@ -454,7 +455,7 @@
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
               "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'fare_breakup_info',select:['fare_breakups'],where_clause:[{column_name:'entity_id',val:pm.environment.get('rideId'),op:'='},{column_name:'entity_type',val:'RIDE',op:'='}],limit:1}); }",
-              "// RIDE_FARE cap = sum of these tags (= li.rideFare + li.gstAmount, RidePayment.hs:841). TOLL/PARKING analogous (D1 uses tollCap/parkingCap).",
+              "// RIDE_FARE cap = sum of these tags (= li.rideFare + li.gstAmount, RidePayment.hs:841). TOLL/PARKING analogous (same pattern for tollCap/parkingCap).",
               "var _RF = ['RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE','RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE','RIDE_FARE_DISCOUNT_APPLICABLE_TAX','RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX'];",
               "var _TOLL = ['TOLL_FARE_TAX_EXCLUSIVE','TOLL_FARE_TAX'];",
               "var _PARK = ['PARKING_CHARGE_TAX_EXCLUSIVE','PARKING_CHARGE_TAX'];",
@@ -664,7 +665,7 @@
       }
     },
     {
-      "name": "C1 Fare Breakup Menu Contract",
+      "name": "Fare Breakup Menu Contract",
       "event": [
         {
           "listen": "test",
@@ -672,16 +673,16 @@
             "type": "text/javascript",
             "exec": [
               "var d = {}; try { d = pm.response.json(); } catch(e) {}",
-              "pm.test('C1 Fare Breakup Returns 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Fare Breakup Returns 200', function () { pm.response.to.have.status(200); });",
               "var comps = d.components;",
               "if (comps == null) {",
-              "  console.log('C1: components=null (legacy ride, no structured breakup) — tolerated. totalAmount=' + JSON.stringify(d.totalAmount));",
-              "  pm.test('C1 Legacy Branch: TotalAmount Still Present', function () { pm.expect(d.totalAmount, 'totalAmount must always be present').to.have.property('amount'); });",
+              "  console.log('components=null (legacy ride, no structured breakup) — tolerated. totalAmount=' + JSON.stringify(d.totalAmount));",
+              "  pm.test('Legacy Branch: TotalAmount Still Present', function () { pm.expect(d.totalAmount, 'totalAmount must always be present').to.have.property('amount'); });",
               "} else {",
-              "  pm.test('C1 Components Is A Non-Empty List', function () { pm.expect(comps, 'fixture ride should expose components').to.be.an('array').that.is.not.empty; });",
+              "  pm.test('Components Is A Non-Empty List', function () { pm.expect(comps, 'fixture ride should expose components').to.be.an('array').that.is.not.empty; });",
               "  var allowed = ['RIDE_FARE','TOLL','PARKING'];",
               "  var sum = 0;",
-              "  pm.test('C1 Each Component Has Shape And Allowed Name', function () {",
+              "  pm.test('Each Component Has Shape And Allowed Name', function () {",
               "    comps.forEach(function (c) {",
               "      pm.expect(allowed, 'component must be RIDE_FARE/TOLL/PARKING, got ' + c.component).to.include(c.component);",
               "      ['exclTax','tax','total'].forEach(function (k) { pm.expect(c[k], c.component + '.' + k + ' must be a PriceAPIEntity').to.have.property('amount'); });",
@@ -689,11 +690,11 @@
               "      sum += Number(c.total.amount);",
               "    });",
               "  });",
-              "  pm.test('C1 TotalAmount Equals Sum Of Component Totals', function () {",
+              "  pm.test('TotalAmount Equals Sum Of Component Totals', function () {",
               "    pm.expect(d.totalAmount, 'totalAmount must be a PriceAPIEntity').to.have.property('amount');",
               "    pm.expect(Number(d.totalAmount.amount)).to.be.closeTo(sum, 0.02);",
               "  });",
-              "  console.log('C1 fareBreakup: ' + comps.map(function(c){return c.component+'='+c.total.amount;}).join(', ') + ' | totalAmount=' + d.totalAmount.amount);",
+              "  console.log('fareBreakup: ' + comps.map(function(c){return c.component+'='+c.total.amount;}).join(', ') + ' | totalAmount=' + d.totalAmount.amount);",
               "}"
             ]
           }
@@ -726,15 +727,15 @@
       "response": []
     },
     {
-      "name": "C2 Create Guard Empty Components 400",
+      "name": "Create Guard: Empty Components 400",
       "event": [
         {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "console.log('C2 empty-components create -> ' + pm.response.code + ' ' + pm.response.text());",
-              "pm.test('C2 Empty refundComponents Rejected 400 (V2 requires non-empty)', function () {",
+              "console.log('empty-components create -> ' + pm.response.code + ' ' + pm.response.text());",
+              "pm.test('Empty refundComponents Rejected 400 (refundComponents must be non-empty)', function () {",
               "  pm.expect(pm.response.code, pm.response.text()).to.eql(400);",
               "});"
             ]
@@ -853,17 +854,17 @@
       "response": []
     },
     {
-      "name": "C3 Create Guard Non-Owner (other rider) Rejected 400",
+      "name": "Create Guard: Non-Owner (other rider) Rejected 400",
       "event": [
         {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "console.log('C3 other-rider create -> ' + pm.response.code + ' ' + pm.response.text());",
-              "pm.test('C3 Non-Owner (other rider) Rejected 400 mentioning owner', function () {",
+              "console.log('other-rider create -> ' + pm.response.code + ' ' + pm.response.text());",
+              "pm.test('Non-Owner (other rider) Rejected 400 mentioning owner', function () {",
               "  pm.expect(pm.response.code, pm.response.text()).to.eql(400);",
-              "  pm.expect(pm.response.text(), 'error should say the ride does not belong to this rider').to.match(/owner/i);",
+              "  pm.expect(/owner/i.test(pm.response.text()), 'error should say the ride does not belong to this rider').to.be.true;",
               "});"
             ]
           }
@@ -901,17 +902,17 @@
       "response": []
     },
     {
-      "name": "C4a Raise Valid Refund For List",
+      "name": "Raise Valid Refund For List",
       "event": [
         {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "console.log('C4a raise(list test) -> ' + pm.response.code + ' ' + pm.response.text());",
-              "pm.test('C4a Valid Refund Raise Accepted (200/201)', function () {",
+              "console.log('raise(list test) -> ' + pm.response.code + ' ' + pm.response.text());",
+              "pm.test('Valid Refund Raise Accepted (200/201)', function () {",
               "  if (pm.response.code === 400 && /refundable cap/i.test(pm.response.text())) {",
-              "    pm.expect.fail('rf2 exceeded the RIDE_FARE component cap — reduce the T-fraction. Body: ' + pm.response.text());",
+              "    pm.expect(false, 'rf2 exceeded the RIDE_FARE component cap — reduce the T-fraction. Body: ' + pm.response.text()).to.be.true;",
               "  }",
               "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
               "});"
@@ -951,15 +952,15 @@
       "response": []
     },
     {
-      "name": "C4b Second OPEN Create Allowed",
+      "name": "Second OPEN Create Allowed",
       "event": [
         {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "console.log('C4b second-open raise -> ' + pm.response.code + ' ' + pm.response.text());",
-              "pm.test('C4b Second OPEN Create Allowed (only an APPROVED sibling blocks)', function () {",
+              "console.log('second-open raise -> ' + pm.response.code + ' ' + pm.response.text());",
+              "pm.test('Second OPEN Create Allowed (only an APPROVED sibling blocks)', function () {",
               "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
               "});"
             ]
@@ -998,7 +999,7 @@
       "response": []
     },
     {
-      "name": "C4c Customer Refund List Contract",
+      "name": "Customer Refund List Contract",
       "event": [
         {
           "listen": "test",
@@ -1006,17 +1007,17 @@
             "type": "text/javascript",
             "exec": [
               "var d = {}; try { d = pm.response.json(); } catch(e) {}",
-              "pm.test('C4c Refund List Returns 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Refund List Returns 200', function () { pm.response.to.have.status(200); });",
               "var list = d.refundRequests;",
-              "pm.test('C4c Response Wraps A refundRequests List', function () {",
+              "pm.test('Response Wraps A refundRequests List', function () {",
               "  pm.expect(list, 'RefundRequestListResp.refundRequests must be an array').to.be.an('array').that.is.not.empty;",
               "});",
-              "console.log('C4c list (newest first): ' + (list||[]).map(function(r){return r.description+'/'+r.status+'/'+(r.requestedAmount&&r.requestedAmount.amount);}).join(' | '));",
-              "pm.test('C4c Both OPEN Requests Coexist (multiple OPEN allowed)', function () {",
+              "console.log('list (newest first): ' + (list||[]).map(function(r){return r.description+'/'+r.status+'/'+(r.requestedAmount&&r.requestedAmount.amount);}).join(' | '));",
+              "pm.test('Both OPEN Requests Coexist (multiple OPEN allowed)', function () {",
               "  var open = (list||[]).filter(function(r){ return r.status === 'OPEN'; });",
               "  pm.expect(open.length, 'expected the two OPEN requests just raised').to.be.at.least(2);",
               "});",
-              "pm.test('C4c Newest-First Ordering (second open sorts before list test)', function () {",
+              "pm.test('Newest-First Ordering (second open sorts before list test)', function () {",
               "  var descs = (list||[]).map(function(r){ return r.description; });",
               "  var iSecond = descs.indexOf('second open');",
               "  var iFirst = descs.indexOf('list test');",
@@ -1024,7 +1025,7 @@
               "  pm.expect(iFirst, 'the first-raised request must be present').to.be.above(-1);",
               "  pm.expect(iSecond, 'newest-first: the later \"second open\" must precede \"list test\"').to.be.below(iFirst);",
               "});",
-              "pm.test('C4c Item Echoes Requested Code / Amount / Status', function () {",
+              "pm.test('Item Echoes Requested Code / Amount / Status', function () {",
               "  var raised = (list||[]).filter(function(r){ return r.description === 'list test'; })[0];",
               "  pm.expect(raised, 'the just-raised \"list test\" request must be in the list').to.not.be.undefined;",
               "  pm.expect(raised.code, 'code echoes the request').to.eql('CUSTOMER_REQUEST');",
@@ -1103,17 +1104,17 @@
       "response": []
     },
     {
-      "name": "C5a Evidence Upload Accepted image png",
+      "name": "Evidence Upload Accepted (image/png)",
       "event": [
         {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "console.log('C5a evidence(image/png) -> ' + pm.response.code + ' ' + pm.response.text());",
-              "pm.test('C5a Evidence (image/png) Accepted (200/201)', function () {",
+              "console.log('evidence(image/png) -> ' + pm.response.code + ' ' + pm.response.text());",
+              "pm.test('Evidence (image/png) Accepted (200/201)', function () {",
               "  if (pm.response.code === 400 && /refundable cap/i.test(pm.response.text())) {",
-              "    pm.expect.fail('rf2 exceeded the RIDE_FARE component cap; body: ' + pm.response.text());",
+              "    pm.expect(false, 'rf2 exceeded the RIDE_FARE component cap; body: ' + pm.response.text()).to.be.true;",
               "  }",
               "  // validateContentType passes for Image+image/png; the S3 put is forked, so create returns Success regardless of S3 wiring.",
               "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
@@ -1154,18 +1155,18 @@
       "response": []
     },
     {
-      "name": "C5b Evidence Rejected Unsupported Type",
+      "name": "Evidence Rejected (unsupported type)",
       "event": [
         {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "console.log('C5b evidence(application/zip) -> ' + pm.response.code + ' ' + pm.response.text());",
-              "pm.test('C5b Unsupported Content Type Rejected (400/415)', function () {",
+              "console.log('evidence(application/zip) -> ' + pm.response.code + ' ' + pm.response.text());",
+              "pm.test('Unsupported Content Type Rejected (400/415)', function () {",
               "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([400,415]);",
               "});",
-              "pm.test('C5b Rejection Is FILE_FORMAT_NOT_SUPPORTED', function () {",
+              "pm.test('Rejection Is FILE_FORMAT_NOT_SUPPORTED', function () {",
               "  pm.expect(/FILE_FORMAT_NOT_SUPPORTED|not supported/i.test(pm.response.text()), 'expected the content-type guard; body: ' + pm.response.text()).to.be.true;",
               "});"
             ]

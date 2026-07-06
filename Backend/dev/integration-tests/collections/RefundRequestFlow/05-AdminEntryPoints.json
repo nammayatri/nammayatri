@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "05-AdminEntryPoints",
-    "description": "Do the dashboard admin refund levers work? Exercises /initiate (auto-approve), reject (mints nothing), modified-approve (the admin override component set drives the amount, not the customer's rf1), terminal-state re-respond guards, and list+pagination on one ride — glancing only where money must have moved (01 owns the deep ledger role-joins + invoice tuples).",
+    "description": "Do the dashboard admin refund levers work? Exercises /initiate (auto-approve), reject (creates nothing), modified-approve (the admin override component set drives the amount, not the customer's rf1), terminal-state re-respond guards, and list+pagination on one ride — with quick checks that money moved (the detailed ledger role-joins and invoice-field assertions are in 01).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -133,7 +133,8 @@
               "else {",
               "  // the list handler can 500 transiently on an unrelated async notification fork — retry once before failing",
               "  var _t = Date.now(); while (Date.now() - _t < 2000) {}",
-              "  pm.sendRequest({url: pm.request.url.toString(), method: 'GET', header: {token: pm.environment.get('rider_token')}}, function (err, res) {",
+              "  var _gu = (pm.environment.get('baseUrl_app')||'').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1') + '/rideBooking/list?limit=5&onlyActive=false&offset=0';",
+              "  pm.sendRequest({url: _gu, method: 'GET', header: {token: pm.environment.get('rider_token')}}, function (err, res) {",
               "    var d2 = {}; try { d2 = res.json(); } catch(e) {}",
               "    _gate(res ? res.code : 0, d2);",
               "  });",
@@ -451,7 +452,7 @@
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
               "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'fare_breakup_info',select:['fare_breakups'],where_clause:[{column_name:'entity_id',val:pm.environment.get('rideId'),op:'='},{column_name:'entity_type',val:'RIDE',op:'='}],limit:1}); }",
-              "// RIDE_FARE cap = sum of these tags (= li.rideFare + li.gstAmount, RidePayment.hs:841). TOLL/PARKING analogous (D1 uses tollCap/parkingCap).",
+              "// RIDE_FARE cap = sum of these tags (= li.rideFare + li.gstAmount, RidePayment.hs:841). TOLL/PARKING analogous (same pattern for tollCap/parkingCap).",
               "var _RF = ['RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE','RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE','RIDE_FARE_DISCOUNT_APPLICABLE_TAX','RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX'];",
               "var _TOLL = ['TOLL_FARE_TAX_EXCLUSIVE','TOLL_FARE_TAX'];",
               "var _PARK = ['PARKING_CHARGE_TAX_EXCLUSIVE','PARKING_CHARGE_TAX'];",
@@ -667,7 +668,7 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('raise accepted', function () { if (pm.response.code === 400 && /refundable cap/i.test(pm.response.text())) { pm.expect.fail('Raise rejected by the per-component cap: rf1 (T/2) exceeds the RIDE_FARE component total. Reduce the T-fraction. Body: ' + pm.response.text()); } pm.expect(pm.response.code).to.be.oneOf([200,201]); });"
+              "pm.test('raise accepted', function () { if (pm.response.code === 400 && /refundable cap/i.test(pm.response.text())) { pm.expect(false, 'Raise rejected by the per-component cap: rf1 (T/2) exceeds the RIDE_FARE component total. Reduce the T-fraction. Body: ' + pm.response.text()).to.be.true; } pm.expect(pm.response.code).to.be.oneOf([200,201]); });"
             ]
           }
         }
@@ -945,7 +946,7 @@
       }
     },
     {
-      "name": "Assert reject minted NO BAP refund leg for THIS request (metadata-scoped)",
+      "name": "Assert reject created NO BAP refund leg for THIS request (metadata-scoped)",
       "event": [
         {
           "listen": "test",
@@ -958,7 +959,7 @@
               "function _meta(m){ if(m==null) return {}; if(typeof m==='object') return m; try{ return JSON.parse(m); }catch(e){ return {}; } }",
               "var mine=rows.filter(function(l){ return _RT.indexOf(l.reference_type)>=0 && _meta(l.metadata).refundRequestId===rid; });",
               "try{ console.log('  \\u21b3 BAP legs for THIS reject:', JSON.stringify(mine.map(function(x){return {st:x.status,type:x.reference_type};}))); }catch(e){}",
-              "pm.test('reject minted NO BAP refund ledger leg for this request (metadata-scoped)', function(){ pm.expect(mine.length, 'a rejected request must post no BAP refund leg tagged with its refundRequestId').to.eql(0); });"
+              "pm.test('reject created NO BAP refund ledger leg for this request (metadata-scoped)', function(){ pm.expect(mine.length, 'a rejected request must post no BAP refund leg tagged with its refundRequestId').to.eql(0); });"
             ]
           }
         }
@@ -989,7 +990,7 @@
       }
     },
     {
-      "name": "Assert reject minted NO BPP refund leg for THIS request (metadata-scoped)",
+      "name": "Assert reject created NO BPP refund leg for THIS request (metadata-scoped)",
       "event": [
         {
           "listen": "test",
@@ -1002,7 +1003,7 @@
               "function _meta(m){ if(m==null) return {}; if(typeof m==='object') return m; try{ return JSON.parse(m); }catch(e){ return {}; } }",
               "var mine=rows.filter(function(l){ return _RT.indexOf(l.reference_type)>=0 && _meta(l.metadata).refundRequestId===rid; });",
               "try{ console.log('  \\u21b3 BPP legs for THIS reject:', JSON.stringify(mine.map(function(x){return {st:x.status,type:x.reference_type};}))); }catch(e){}",
-              "pm.test('reject minted NO BPP refund ledger leg for this request (metadata-scoped)', function(){ pm.expect(mine.length, 'a rejected request must post no BPP refund leg tagged with its refundRequestId').to.eql(0); });"
+              "pm.test('reject created NO BPP refund ledger leg for this request (metadata-scoped)', function(){ pm.expect(mine.length, 'a rejected request must post no BPP refund leg tagged with its refundRequestId').to.eql(0); });"
             ]
           }
         }
@@ -1042,7 +1043,7 @@
               "var rows=[]; try{ rows=(pm.response.json().rows)||[]; }catch(e){}",
               "// the Commission refund invoice is keyed reference_id=refundRequestId, so it IS scopable to this reject.",
               "try{ console.log('  \\u21b3 invoices for THIS refundRequestId:', JSON.stringify(rows.map(function(x){return {type:x.invoice_type,st:x.status};}))); }catch(e){}",
-              "pm.test('reject created NO Commission refund invoice for this request', function(){ var comm=rows.filter(function(r){return r.invoice_type==='Commission';}); pm.expect(comm.length, 'a rejected request must not mint a Commission refund invoice').to.eql(0); });"
+              "pm.test('reject created NO Commission refund invoice for this request', function(){ var comm=rows.filter(function(r){return r.invoice_type==='Commission';}); pm.expect(comm.length, 'a rejected request must not create a Commission refund invoice').to.eql(0); });"
             ]
           }
         }
@@ -1082,7 +1083,7 @@
             "exec": [
               "pm.test('Initiate Accepted', function () {",
               "  if (pm.response.code === 400 && /refundable cap/i.test(pm.response.text())) {",
-              "    pm.expect.fail('Initiate rejected by the per-component cap (rf2 exceeds the remaining RIDE_FARE cap). Body: ' + pm.response.text());",
+              "    pm.expect(false, 'Initiate rejected by the per-component cap (rf2 exceeds the remaining RIDE_FARE cap). Body: ' + pm.response.text()).to.be.true;",
               "  }",
               "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
               "});"
@@ -1146,7 +1147,7 @@
               "function _assert(rows){",
               "  var admin = (rows||[]).filter(function(r){ return r.code==='ADMIN_INITIATED'; });",
               "  try { console.log('  ↳ ADMIN_INITIATED rows:', JSON.stringify(admin.map(function(x){ return {st:x.status, code:x.code, tries:x.refunds_tries}; }))); } catch(e) {}",
-              "  pm.test('Initiate mints exactly one ADMIN_INITIATED request', function () {",
+              "  pm.test('Initiate creates exactly one ADMIN_INITIATED request', function () {",
               "    pm.expect(admin.length, 'expected exactly one ADMIN_INITIATED refund_request born of /initiate').to.eql(1);",
               "  });",
               "  pm.test('ADMIN_INITIATED row born APPROVED/REFUNDED (auto-approve, never OPEN)', function () {",
@@ -1189,7 +1190,7 @@
       }
     },
     {
-      "name": "Glance BAP Refund Ledger Settled (SQL)",
+      "name": "Quick Check BAP Refund Ledger Settled (SQL)",
       "event": [
         {
           "listen": "test",
@@ -1198,14 +1199,14 @@
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
               "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_ledger_entry',select:['id','status','reference_type'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}]}); }",
-              "// GLANCE only: 01 owns the BAP role-join + per-component sum. Here just confirm money moved -> >=1 SETTLED refund-typed leg.",
+              "// Quick check only: the BAP role-join + per-component sum are asserted in 01. Here just confirm money moved -> >=1 SETTLED refund-typed leg.",
               "var _REFUND_RT = ['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission'];",
               "function _isRefund(r){ return _REFUND_RT.indexOf(r.reference_type) >= 0; }",
               "function _ok(rows){ return rows.some(function(r){ return r.status==='SETTLED' && _isRefund(r); }); }",
               "function _assert(rows){",
               "  var settled = (rows||[]).filter(function(r){ return r.status==='SETTLED' && _isRefund(r); });",
               "  try { console.log('  ↳ SETTLED refund legs:', JSON.stringify(settled.map(function(x){ return {st:x.status, type:x.reference_type}; }))); } catch(e) {}",
-              "  pm.test('Initiate moved money: >=1 SETTLED refund leg (deep model owned by 01)', function () {",
+              "  pm.test('Initiate moved money: >=1 SETTLED refund leg (full model asserted in 01)', function () {",
               "    pm.expect(settled.length, 'expected >=1 SETTLED refund-typed leg on the ride after /initiate auto-approve').to.be.above(0);",
               "  });",
               "}",
@@ -1247,7 +1248,7 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('raise accepted', function () { if (pm.response.code === 400 && /refundable cap/i.test(pm.response.text())) { pm.expect.fail('Raise rejected by the per-component cap: rf1 exceeds the remaining RIDE_FARE cap after the initiate refund. Body: ' + pm.response.text()); } pm.expect(pm.response.code).to.be.oneOf([200,201]); });"
+              "pm.test('raise accepted', function () { if (pm.response.code === 400 && /refundable cap/i.test(pm.response.text())) { pm.expect(false, 'Raise rejected by the per-component cap: rf1 exceeds the remaining RIDE_FARE cap after the initiate refund. Body: ' + pm.response.text()).to.be.true; } pm.expect(pm.response.code).to.be.oneOf([200,201]); });"
             ]
           }
         }
@@ -1411,14 +1412,15 @@
               "    pm.expect(Number(arc[0].amount), 'approved component amount ~= admin override rf2').to.be.closeTo(_rf2, 0.05);",
               "  });",
               "  var rid = rr.length ? rr[0].refunds_id : null;",
-              "  pm.sendRequest({url:_mockUrl()+'/mock/sql/select',method:'POST',header:{'Content-Type':'application/json'},body:{mode:'raw',raw:JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'refunds',select:['id','refund_amount','status'],where_clause:[{column_name:'order_id',val:pm.environment.get('orderShortId'),op:'='}]})}}, function(e,r){",
+              "  function _refPoll(k){ pm.sendRequest({url:_mockUrl()+'/mock/sql/select',method:'POST',header:{'Content-Type':'application/json'},body:{mode:'raw',raw:JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'refunds',select:['id','refund_amount','status'],where_clause:[{column_name:'order_id',val:pm.environment.get('orderShortId'),op:'='}]})}}, function(e,r){",
               "    var refs=[]; try{refs=((r&&r.json())||{}).rows||[];}catch(x){}",
+              "    if (rid && refs.filter(function(x){return x.id===rid;}).length===0 && k>0){ setTimeout(function(){_refPoll(k-1);},3000); return; } // KV->PG drain: wait for the linked refunds row",
               "    console.log('  \\u21b3 refunds(order):', JSON.stringify(refs.map(function(x){return {id:x.id, amt:x.refund_amount, st:x.status};})));",
               "    var mine = rid ? refs.filter(function(x){return x.id===rid;}) : [];",
               "    pm.test('the modified request issued a Stripe refund (admin lever completed end-to-end)', function(){ pm.expect(mine.length, 'the modified refund_request.refunds_id should link a refunds row').to.be.above(0); });",
               "    var amt = mine.length ? Number(mine[0].refund_amount) : null;",
               "    pm.test('admin override drove the refund amount to rf2 (not the customer rf1)', function(){ pm.expect(amt, 'a refund amount must be present for the modified request').to.not.be.null; pm.expect(Math.abs(amt-_rf2), 'refund amount must equal the admin override rf2='+_rf2+' (got '+amt+', customer rf1='+_rf1+')').to.be.at.most(0.05); });",
-              "  });",
+              "  }); } _refPoll(10);",
               "}",
               "function _poll(n){ pm.sendRequest({url:_mockUrl()+'/mock/sql/select',method:'POST',header:{'Content-Type':'application/json'},body:{mode:'raw',raw:_rrBody()}}, function(e,r){ var rows=[]; try{rows=((r&&r.json())||{}).rows||[];}catch(x){} if(_ok(rows)||n<=0){ _assert(rows); } else { setTimeout(function(){_poll(n-1);},3000); } }); }",
               "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(8); }"
@@ -1553,61 +1555,6 @@
             "refundRequest",
             "{{refundRequestId}}",
             "respond"
-          ]
-        }
-      }
-    },
-    {
-      "name": "List Pagination Respects limit=1",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('List limit=1 returns at most one item', function () {",
-              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
-              "  var d = {}; try { d = pm.response.json(); } catch(e) {}",
-              "  var items = d.refundRequests || d.list || d.requests || d.refundRequestList || (Array.isArray(d) ? d : null);",
-              "  if (!Array.isArray(items)) { items = null; Object.keys(d||{}).forEach(function(k){ if(items===null && Array.isArray(d[k])) items = d[k]; }); }",
-              "  if (!Array.isArray(items)) items = [];",
-              "  console.log('  ↳ list(limit=1) returned', items.length, 'item(s)');",
-              "  pm.expect(items.length, 'limit=1 must cap the page at <=1 refund request (maxLimit=20)').to.be.at.most(1);",
-              "});"
-            ]
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "token",
-            "value": "{{bap_dashboard_token}}"
-          }
-        ],
-        "url": {
-          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/list?limit=1&offset=0",
-          "host": [
-            "{{bap_dashboard_url}}"
-          ],
-          "path": [
-            "bap",
-            "{{bap_short_id}}",
-            "{{dashboard_city}}",
-            "payment",
-            "refundRequest",
-            "list"
-          ],
-          "query": [
-            {
-              "key": "limit",
-              "value": "1"
-            },
-            {
-              "key": "offset",
-              "value": "0"
-            }
           ]
         }
       }

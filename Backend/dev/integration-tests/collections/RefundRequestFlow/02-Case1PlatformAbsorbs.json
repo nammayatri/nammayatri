@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "02-Case1PlatformAbsorbs",
-    "description": "Case-1 money model (deductFromDriver=false, platform absorbs). Approve -> asserts the BPP legs are ALL SellerExpense->BuyerExternal with ZERO driver OwnerLiability and NO Commission refund invoice (the absence proof). BAP legs + refund invoice are only GLANCED — their deep role/tuple model is owned by 01.",
+    "description": "Case-1 money model (deductFromDriver=false, platform absorbs). Approve -> asserts the BPP legs are ALL SellerExpense->BuyerExternal with ZERO driver OwnerLiability and NO Commission refund invoice (the absence proof). BAP legs + refund invoice are only spot-checked — their full role and invoice-field assertions are in 01.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -133,7 +133,8 @@
               "else {",
               "  // the list handler can 500 transiently on an unrelated async notification fork — retry once before failing",
               "  var _t = Date.now(); while (Date.now() - _t < 2000) {}",
-              "  pm.sendRequest({url: pm.request.url.toString(), method: 'GET', header: {token: pm.environment.get('rider_token')}}, function (err, res) {",
+              "  var _gu = (pm.environment.get('baseUrl_app')||'').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1') + '/rideBooking/list?limit=5&onlyActive=false&offset=0';",
+              "  pm.sendRequest({url: _gu, method: 'GET', header: {token: pm.environment.get('rider_token')}}, function (err, res) {",
               "    var d2 = {}; try { d2 = res.json(); } catch(e) {}",
               "    _gate(res ? res.code : 0, d2);",
               "  });",
@@ -487,7 +488,7 @@
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
               "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'fare_breakup_info',select:['fare_breakups'],where_clause:[{column_name:'entity_id',val:pm.environment.get('rideId'),op:'='},{column_name:'entity_type',val:'RIDE',op:'='}],limit:1}); }",
-              "// RIDE_FARE cap = sum of these tags (= li.rideFare + li.gstAmount, RidePayment.hs:841). TOLL/PARKING analogous (D1 uses tollCap/parkingCap).",
+              "// RIDE_FARE cap = sum of these tags (= li.rideFare + li.gstAmount, RidePayment.hs:841). TOLL/PARKING analogous (same pattern for tollCap/parkingCap).",
               "var _RF = ['RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE','RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE','RIDE_FARE_DISCOUNT_APPLICABLE_TAX','RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX'];",
               "var _TOLL = ['TOLL_FARE_TAX_EXCLUSIVE','TOLL_FARE_TAX'];",
               "var _PARK = ['PARKING_CHARGE_TAX_EXCLUSIVE','PARKING_CHARGE_TAX'];",
@@ -703,7 +704,7 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('raise accepted', function () { if (pm.response.code === 400 && /refundable cap/i.test(pm.response.text())) { pm.expect.fail('Raise rejected by the per-component cap: rf1 (T/2) exceeds the RIDE_FARE component total (rideFare+gst). Reduce the T-fraction. Body: ' + pm.response.text()); } pm.expect(pm.response.code).to.be.oneOf([200,201]); });"
+              "pm.test('raise accepted', function () { if (pm.response.code === 400 && /refundable cap/i.test(pm.response.text())) { pm.expect(false, 'Raise rejected by the per-component cap: rf1 (T/2) exceeds the RIDE_FARE component total (rideFare+gst). Reduce the T-fraction. Body: ' + pm.response.text()).to.be.true; } pm.expect(pm.response.code).to.be.oneOf([200,201]); });"
             ]
           }
         }
@@ -853,7 +854,7 @@
               "  console.log('  ↳ expected (Case-1): RideFareRefund + RideFareRefundVAT ALL on SellerExpense->BuyerExternal, SUM to rf1 =', pm.environment.get('rf1'), '| NO driver/commission legs');",
               "  try { console.log('  ↳ DB rows:', JSON.stringify((rows||[]).map(function(x){ return {st:x.status, amt:x.amount, type:x.reference_type}; }))); } catch(e) {}",
               "  var _settled = (rows||[]).filter(function (r) { return r.status === 'SETTLED' && _isRefund(r); });",
-              "  pm.test('P2 Case-1: SETTLED per-component refund legs present (no-clawback is asserted via account roles in the D3 item below)', function () {",
+              "  pm.test('Case-1: SETTLED per-component refund legs present (no-clawback is asserted via account roles in the account-roles item below)', function () {",
               "    pm.expect(_settled.length, 'expected >=1 SETTLED refund leg').to.be.above(0);",
               "  });",
               "  // Case-1 (platform absorbs): per-component legs (RideFareRefund + RideFareRefundVAT, +Toll/Parking) ALL on SellerExpense->BuyerExternal (verify the role via the 📊 Finance view / a finance_account join), summing to gross rf1. NO driver clawback (OwnerLiability), NO RideFareRefundCommission slice.",
@@ -897,7 +898,7 @@
       }
     },
     {
-      "name": "Assert BPP refund leg ACCOUNT ROLES (D3 — Case-1: ALL SellerExpense, NO driver OwnerLiability)",
+      "name": "Assert BPP refund leg ACCOUNT ROLES (Case-1: ALL SellerExpense, NO driver OwnerLiability)",
       "event": [
         {
           "listen": "test",
@@ -905,7 +906,7 @@
             "type": "text/javascript",
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
-              "// D3: the TRUE Case-1/Case-2 discriminator is the account ROLE (no role column exists). Resolve each leg's",
+              "// The TRUE Case-1/Case-2 discriminator is the account ROLE (no role column exists). Resolve each leg's",
               "// from_account_id -> finance_account (account_type + counterparty_type). Case-1 (platform absorbs): every leg",
               "// debits SellerExpense = Expense + SELLER, and NO leg debits the driver OwnerLiability (Liability + DRIVER).",
               "var _DRIVER_RT = ['RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT'];",
@@ -914,17 +915,17 @@
               "var refLegs = legs.filter(function(l){ return l.status==='SETTLED' && _DRIVER_RT.indexOf(l.reference_type)>=0; });",
               "var ids = refLegs.map(function(l){ return l.from_account_id; }).filter(function(x){ return !!x; });",
               "if (!ids.length) {",
-              "  pm.test('D3 Case-1 role check: settled BPP refund legs present', function(){ pm.expect(ids.length, 'no settled BPP refund legs with from_account_id to role-check').to.be.above(0); });",
+              "  pm.test('Case-1 role check: settled BPP refund legs present', function(){ pm.expect(ids.length, 'no settled BPP refund legs with from_account_id to role-check').to.be.above(0); });",
               "} else {",
               "  pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_acctBody(ids)} }, function(err,res){",
               "    var accts=[]; try{ accts=((res&&res.json())||{}).rows||[]; }catch(e){}",
               "    var amap={}; accts.forEach(function(a){ amap[a.id]={t:a.account_type, c:a.counterparty_type}; });",
               "    try { console.log('  ↳ BPP leg roles:', JSON.stringify(refLegs.map(function(l){ var a=amap[l.from_account_id]||{}; return {type:l.reference_type, from_t:a.t, from_c:a.c}; }))); } catch(e){}",
-              "    pm.test('D3 Case-1: ALL refund legs debit SellerExpense (Expense + SELLER) -> platform absorbs', function(){",
+              "    pm.test('Case-1: ALL refund legs debit SellerExpense (Expense + SELLER) -> platform absorbs', function(){",
               "      pm.expect(refLegs.length, 'expected >=1 settled refund leg').to.be.above(0);",
               "      refLegs.forEach(function(l){ var a=amap[l.from_account_id]||{}; pm.expect(a.t, l.reference_type+' account_type (Case-1 must be Expense)').to.eql('Expense'); pm.expect(a.c, l.reference_type+' counterparty_type (Case-1 must be SELLER)').to.eql('SELLER'); });",
               "    });",
-              "    pm.test('D3 Case-1: NO OwnerLiability (driver clawback) leg -> driver payout untouched', function(){",
+              "    pm.test('Case-1: NO OwnerLiability (driver clawback) leg -> driver payout untouched', function(){",
               "      var driverLiab = refLegs.filter(function(l){ var a=amap[l.from_account_id]||{}; return a.t==='Liability' && (a.c==='DRIVER' || a.c==='FLEET_OWNER'); });",
               "      pm.expect(driverLiab.length, 'Case-1 (platform absorbs) must NOT debit the driver OwnerLiability').to.eql(0);",
               "    });",
@@ -961,14 +962,14 @@
       "response": []
     },
     {
-      "name": "GLANCE: BAP refund legs settled + sum to rf1 (deep role model owned by 01)",
+      "name": "Quick check: BAP refund legs settled + sum to rf1 (account roles asserted in 01)",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
-              "// GLANCE (demoted): 01 OWNS the BAP role join (OwnerAsset->BuyerAsset) + exact per-component model. BAP is deductFromDriver-invariant,",
+              "// Quick check only: the BAP role join (OwnerAsset->BuyerAsset) + exact per-component model are asserted in 01. BAP is deductFromDriver-invariant,",
               "// so here we only confirm it settled identically to Case-2: >=1 SETTLED refund-typed leg summing to rf1. No role-join re-check.",
               "var _RT = ['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission'];",
               "function _isRefund(r){ return _RT.indexOf(r.reference_type) >= 0; }",
@@ -977,7 +978,7 @@
               "function _assert(rows){",
               "  var settled = (rows||[]).filter(function(r){return r.status==='SETTLED' && _isRefund(r);});",
               "  try { console.log('  ↳ BAP settled refund legs:', JSON.stringify(settled.map(function(x){return {amt:x.amount,type:x.reference_type};}))); } catch(e){}",
-              "  pm.test('GLANCE BAP refund legs SETTLED and SUM to rf1 (role model owned by 01)', function () {",
+              "  pm.test('Quick check: BAP refund legs SETTLED and SUM to rf1 (account roles asserted in 01)', function () {",
               "    pm.expect(settled.length, 'expected >=1 SETTLED BAP refund leg').to.be.above(0);",
               "    var _sum = settled.reduce(function(a,r){return a+Number(r.amount);},0);",
               "    pm.expect(_sum).to.be.closeTo(Number(pm.environment.get('rf1')), 0.011);",
@@ -1015,21 +1016,21 @@
       }
     },
     {
-      "name": "GLANCE: BAP refund invoice exists (negative, Paid) — tuple owned by 01",
+      "name": "Quick check: BAP refund invoice exists (negative, Paid) — all fields asserted in 01",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
-              "// GLANCE (demoted): 01 OWNS the full BAP refund-invoice tuple (Paid/RIDER/reference_invoice_number/per-component lines).",
+              "// Quick check only: the full BAP refund-invoice fields (Paid/RIDER/reference_invoice_number/per-component lines) are asserted in 01.",
               "// Here we only confirm one exists and is negative.",
               "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_invoice',select:['invoice_type','status','total_amount'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}]}); }",
               "function _ok(rows){ return rows.some(function(r){return r.invoice_type==='Refund' && r.status==='Paid';}); }",
               "function _assert(rows){",
               "  var refundInv = (rows||[]).filter(function(r){return r.invoice_type==='Refund' && r.status==='Paid';});",
               "  try { console.log('  ↳ BAP invoices:', JSON.stringify((rows||[]).map(function(x){return {st:x.status,total:x.total_amount,type:x.invoice_type};}))); } catch(e){}",
-              "  pm.test('GLANCE a negative Paid BAP refund invoice exists (tuple owned by 01)', function () {",
+              "  pm.test('Quick check: a negative Paid BAP refund invoice exists (all fields asserted in 01)', function () {",
               "    pm.expect(refundInv.length, 'expected a Paid Refund invoice').to.be.above(0);",
               "    pm.expect(Number(refundInv[0].total_amount), 'refund invoice total must be negative').to.be.below(0);",
               "  });",

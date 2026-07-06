@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "00-FixtureStripeRide",
-    "description": "The FIXTURE: builds the one real Stripe card ride that 01-07 attach to (driver onboarding + Stripe Connect + rider card + search/accept/start/end + ride invoices + COMPLETED). Ends with fail-fast fixture GUARDS so a broken fixture dies here, not downstream: V4/#17 payment_order.id is a real GUID != rideId; V2 BPP ride commission > 0 (else Case-2/agg asserts are vacuous); V5 the RIDE_FARE component cap > 0. No refund actions.",
+    "description": "The FIXTURE: builds the one real Stripe card ride that 01-07 attach to (driver onboarding + Stripe Connect + rider card + search/accept/start/end + ride invoices + COMPLETED). Ends with fail-fast fixture GUARDS so a broken fixture dies here, not downstream: payment_order.id is a real GUID != rideId; BPP ride commission > 0 (else Case-2/agg asserts are vacuous); the RIDE_FARE component cap > 0. No refund actions.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_postman_id": "b1b1b1b1-c0de-4000-8000-000000000000"
   },
@@ -1808,7 +1808,7 @@
       "response": []
     },
     {
-      "name": "Fixture guard V4/#17: payment_order.id is a real GUID != rideId",
+      "name": "Fixture guard: payment_order.id is a real GUID != rideId",
       "event": [
         {
           "listen": "test",
@@ -1817,7 +1817,7 @@
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
               "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'payment_order',select:['id','short_id','payment_service_order_id','domain_entity_id'],where_clause:[{column_name:'domain_entity_id',val:pm.environment.get('rideId'),op:'='}],limit:1}); }",
-              "function _finish(rows){ if(!rows.length){ pm.test('payment_order present for the ride', function(){ pm.expect(0,'no payment_order for ride (charge not settled?)').to.be.above(0); }); return; } var o=rows[0]; pm.environment.set('orderId', o.id); pm.environment.set('orderShortId', o.short_id); var rid=pm.environment.get('rideId'); console.log('Fixture V4: order.id='+o.id+' domain_entity_id='+o.domain_entity_id+' rideId='+rid); pm.test('V4/#17 payment_order.id is a real GUID and is NOT the rideId', function(){ pm.expect(/^[0-9a-fA-F-]{16,}$/.test(String(o.id)),'order.id should be a GUID').to.be.true; pm.expect(o.id,'order.id must differ from rideId (else the order==ride bug is masked)').to.not.eql(rid); pm.expect(o.domain_entity_id,'domain_entity_id must equal rideId').to.eql(rid); }); pm.test('order carries a Stripe payment intent (pi_)', function(){ pm.expect(/^pi_/.test(String(o.payment_service_order_id))).to.be.true; }); }",
+              "function _finish(rows){ if(!rows.length){ pm.test('payment_order present for the ride', function(){ pm.expect(0,'no payment_order for ride (charge not settled?)').to.be.above(0); }); return; } var o=rows[0]; pm.environment.set('orderId', o.id); pm.environment.set('orderShortId', o.short_id); var rid=pm.environment.get('rideId'); console.log('Fixture guard: order.id='+o.id+' domain_entity_id='+o.domain_entity_id+' rideId='+rid); pm.test('payment_order.id is a real GUID and is NOT the rideId', function(){ pm.expect(/^[0-9a-fA-F-]{16,}$/.test(String(o.id)),'order.id should be a GUID').to.be.true; pm.expect(o.id,'order.id must differ from rideId (else the order==ride bug is masked)').to.not.eql(rid); pm.expect(o.domain_entity_id,'domain_entity_id must equal rideId').to.eql(rid); }); pm.test('order carries a Stripe payment intent (pi_)', function(){ pm.expect(/^pi_/.test(String(o.payment_service_order_id))).to.be.true; }); }",
               "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{ mode:'raw', raw:_sqlBody() } }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(rows.length){ _finish(rows); } else if(n>0){ setTimeout(function(){ _poll(n-1); }, 3000); } else { _finish([]); } }); }",
               "var _d={}; try{ _d=pm.response.json(); }catch(e){} var _r0=(_d&&_d.rows)||[];",
               "if(_r0.length){ _finish(_r0); } else { _poll(10); }"
@@ -1896,7 +1896,7 @@
       "response": []
     },
     {
-      "name": "Fixture guard V2: BPP ride commission > 0 (else Case-2/agg tests are vacuous)",
+      "name": "Fixture guard: BPP ride commission > 0 (else Case-2/agg tests are vacuous)",
       "event": [
         {
           "listen": "test",
@@ -1905,7 +1905,7 @@
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
               "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'ride',select:['id','commission','status'],where_clause:[{column_name:'id',val:pm.environment.get('driver_ride_id'),op:'='}],limit:1}); }",
-              "function _finish(rows){ if(!rows.length){ pm.test('BPP ride row present', function(){ pm.expect(0,'no BPP ride row (KV not drained?)').to.be.above(0); }); return; } var r=rows[0]; var comm=Number(r.commission==null?0:r.commission); pm.environment.set('bpp_commission', String(comm)); console.log('Fixture V2: bpp commission='+comm); pm.test('V2 BPP ride commission > 0 (fixture must support Case-2 clawback + agg-commission)', function(){ pm.expect(comm,'commission must be > 0 or all Case-2/agg asserts pass vacuously; check the local commission config').to.be.above(0); }); }",
+              "function _finish(rows){ if(!rows.length){ pm.test('BPP ride row present', function(){ pm.expect(0,'no BPP ride row (KV not drained?)').to.be.above(0); }); return; } var r=rows[0]; var comm=Number(r.commission==null?0:r.commission); pm.environment.set('bpp_commission', String(comm)); console.log('Fixture guard: bpp commission='+comm); pm.test('BPP ride commission > 0 (fixture must support Case-2 clawback + agg-commission)', function(){ pm.expect(comm,'commission must be > 0 or all Case-2/agg asserts pass vacuously; check the local commission config').to.be.above(0); }); }",
               "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{ mode:'raw', raw:_sqlBody() } }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(rows.length){ _finish(rows); } else if(n>0){ setTimeout(function(){ _poll(n-1); }, 3000); } else { _finish([]); } }); }",
               "var _d={}; try{ _d=pm.response.json(); }catch(e){} var _r0=(_d&&_d.rows)||[];",
               "if(_r0.length){ _finish(_r0); } else { _poll(10); }"
@@ -1940,7 +1940,7 @@
       "response": []
     },
     {
-      "name": "Fixture guard V5: RIDE_FARE component cap > 0",
+      "name": "Fixture guard: RIDE_FARE component cap > 0",
       "event": [
         {
           "listen": "test",
@@ -1950,7 +1950,7 @@
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
               "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'fare_breakup_info',select:['fare_breakups'],where_clause:[{column_name:'entity_id',val:pm.environment.get('rideId'),op:'='},{column_name:'entity_type',val:'RIDE',op:'='}],limit:1}); }",
               "var _RF=['RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE','RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE','RIDE_FARE_DISCOUNT_APPLICABLE_TAX','RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX'];",
-              "function _finish(rows){ var bk=[]; if(rows&&rows.length){ try{ bk=JSON.parse(rows[0].fare_breakups||'[]'); }catch(e){ bk=[]; } } var cap=Math.round(bk.filter(function(b){return _RF.indexOf(b.description)>=0;}).reduce(function(a,b){return a+Number(b.amount||0);},0)*100)/100; if(cap>0){ pm.environment.set('rideFareCap', String(cap)); } console.log('Fixture V5: rideFareCap='+cap); pm.test('V5 RIDE_FARE component cap > 0 (do NOT fall back to T; a zero cap masks a capture regression)', function(){ pm.expect(cap,'RIDE_FARE cap from fare_breakup_info must be > 0').to.be.above(0); }); }",
+              "function _finish(rows){ var bk=[]; if(rows&&rows.length){ try{ bk=JSON.parse(rows[0].fare_breakups||'[]'); }catch(e){ bk=[]; } } var cap=Math.round(bk.filter(function(b){return _RF.indexOf(b.description)>=0;}).reduce(function(a,b){return a+Number(b.amount||0);},0)*100)/100; if(cap>0){ pm.environment.set('rideFareCap', String(cap)); } console.log('Fixture guard: rideFareCap='+cap); pm.test('RIDE_FARE component cap > 0 (do NOT fall back to T; a zero cap masks a capture regression)', function(){ pm.expect(cap,'RIDE_FARE cap from fare_breakup_info must be > 0').to.be.above(0); }); }",
               "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{ mode:'raw', raw:_sqlBody() } }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(rows.length){ _finish(rows); } else if(n>0){ setTimeout(function(){ _poll(n-1); }, 3000); } else { _finish([]); } }); }",
               "var _d={}; try{ _d=pm.response.json(); }catch(e){} var _r0=(_d&&_d.rows)||[];",
               "if(_r0.length){ _finish(_r0); } else { _poll(10); }"
