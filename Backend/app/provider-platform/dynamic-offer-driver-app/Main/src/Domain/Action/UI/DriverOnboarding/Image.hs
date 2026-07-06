@@ -219,6 +219,10 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
         )
         $ throwError $ DocumentAlreadyValidated (show imageType)
 
+      -- Driver selfie re-upload lock: allowed only while every face-match-bound doc is absent or INVALID.
+      when (imageType == DVC.ProfilePhoto && not isDashboard) $
+        enforceSelfieReuploadPolicy person allImages
+
       imagePath <- createPath personId.getId merchantId.getId imageType fileExtension
       s3Result <-
         withTryCatch "S3:put:uploadImage" $
