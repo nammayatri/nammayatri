@@ -431,6 +431,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         sosId = Nothing,
         isTierUpgrade = Just isTierUpgrade,
         assignedServiceTierName = assignedServiceTierName,
+        rideTags = Nothing,
         ..
       }
 
