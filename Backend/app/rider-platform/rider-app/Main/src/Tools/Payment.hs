@@ -49,6 +49,7 @@ module Tools.Payment
     roundToTwoDecimalPlaces,
     fetchGatewayReferenceId,
     fetchOfferSKUConfig,
+    substituteVehicleTypeInOfferSKU,
     mkOfferBasket,
     extractSplitSettlementDetailsAmount,
     getPaymentOrderValidity,
@@ -115,6 +116,7 @@ import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Version
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Payment.Domain.Types.PaymentOrder
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
@@ -842,6 +844,13 @@ fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceT
       RideHailing -> DMSC.PaymentService Payment.Juspay
       OnlineRideHailing -> DMSC.PaymentService Payment.Stripe
       STCL -> DMSC.MembershipPaymentService Payment.Juspay
+
+offerSKUVehicleTypePlaceholder :: Text
+offerSKUVehicleTypePlaceholder = MessageBuilder.templateText "VEHICLE_TYPE"
+
+substituteVehicleTypeInOfferSKU :: Show a => a -> Maybe Text -> Maybe Text
+substituteVehicleTypeInOfferSKU vehicleType =
+  fmap (T.replace offerSKUVehicleTypePlaceholder (T.pack (show vehicleType)))
 
 mkOfferBasket ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
