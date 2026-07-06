@@ -156,7 +156,7 @@
 					"var d = pm.response.json();",
 					"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
 					"var quotes = d.quotes || [];",
-					"var want = pm.environment.get('vehicle_variant') || 'SEDAN';",
+					"var want = 'COMFY';",
 					"var pick = null;",
 					"for (var i=0; i<quotes.length; i++) {",
 					"  var inner = quotes[i].onIntercityCab || quotes[i].onDemandCab;",

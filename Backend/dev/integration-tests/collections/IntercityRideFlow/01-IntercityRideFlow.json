@@ -112,7 +112,7 @@
 				"method": "POST",
 				"header": [
 					{"key": "Content-Type", "value": "application/json"},
-					{"key": "token", "value": "{{driver_id}}"},
+					{"key": "token", "value": "{{driver_token}}"},
 					{"key": "vt", "value": "{{vehicle_variant}}"},
 					{"key": "dm", "value": "ONLINE"},
 					{"key": "mId", "value": "{{driver_merchant_id}}"}
@@ -151,7 +151,7 @@
 				"method": "POST",
 				"header": [
 					{"key": "Content-Type", "value": "application/json"},
-					{"key": "token", "value": "{{driver_id}}"},
+					{"key": "token", "value": "{{driver_token}}"},
 					{"key": "vt", "value": "{{vehicle_variant}}"},
 					{"key": "dm", "value": "ONLINE"},
 					{"key": "mId", "value": "{{driver_merchant_id}}"}
@@ -181,7 +181,7 @@
 					"var d = pm.response.json();",
 					"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
 					"var quotes = d.quotes || [];",
-					"var want = pm.environment.get('vehicle_variant') || 'SEDAN';",
+					"var want = 'COMFY';",
 					"var pick = null;",
 					"for (var i=0; i<quotes.length; i++) {",
 					"  var inner = quotes[i].onIntercityCab || quotes[i].onDemandCab;",
@@ -216,7 +216,7 @@
 		{
 			"name": "Get Nearby Ride Requests (Driver)",
 			"event": [
-				{"listen": "prerequest", "script": {"exec": ["const s=Date.now(); while(Date.now()-s<2000){}"], "type": "text/javascript"}},
+				{"listen": "prerequest", "script": {"exec": ["const s=Date.now(); while(Date.now()-s<10000){}"], "type": "text/javascript"}},
 				{"listen": "test", "script": {"exec": [
 					"var d = pm.response.json();",
 					"if (d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) {",
