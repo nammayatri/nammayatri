@@ -213,12 +213,17 @@ postMultimodalInitiate ::
   )
 postMultimodalInitiate (_personId, _merchantId) journeyId filterServiceAndJrnyType mbNewServiceTiers = do
   runAction journeyId $ do
-    journeyLegs <- QJourneyLeg.getJourneyLegs journeyId
-    journey <- JM.getJourney journeyId
-    let (blacklistedServiceTiers, blacklistedFareQuoteTypes) = JMU.getBlacklistedFilters filterServiceAndJrnyType mbNewServiceTiers
-    JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs blacklistedServiceTiers blacklistedFareQuoteTypes) "addAllLegs"
-    JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
-    legs <- JMU.measureLatency (JM.getAllLegsInfo journey.riderId journey.id) "JM.getAllLegsInfo"
+    journeyLegs <- JMU.measureLatency (QJourneyLeg.getJourneyLegs journeyId) "QJourneyLeg.getJourneyLegs postMultimodalInitiate"
+    journey <- JMU.measureLatency (JM.getJourney journeyId) "JM.getJourney postMultimodalInitiate"
+    let alreadyInitiated = journey.status >= Domain.Types.Journey.INITIATED && all (isJust . (.legSearchId)) journeyLegs
+    legs <-
+      if alreadyInitiated
+        then JMU.measureLatency (JM.getAllLegsInfoFromLegs journey.riderId journey.id journeyLegs) "JM.getAllLegsInfoFromLegs"
+        else do
+          let (blacklistedServiceTiers, blacklistedFareQuoteTypes) = JMU.getBlacklistedFilters filterServiceAndJrnyType mbNewServiceTiers
+          JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs blacklistedServiceTiers blacklistedFareQuoteTypes) "addAllLegs"
+          JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
+          JMU.measureLatency (JM.getAllLegsInfo journey.riderId journey.id) "JM.getAllLegsInfo"
     JMU.measureLatency (generateJourneyInfoResponse journey legs) "generateJourneyInfoResponse"
 
 postMultimodalInitiateSimpl ::
