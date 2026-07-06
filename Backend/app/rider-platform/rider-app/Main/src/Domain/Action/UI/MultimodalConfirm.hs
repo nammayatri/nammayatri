@@ -173,6 +173,7 @@ import Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.VehicleActionHistory as QVAH
 import System.Environment (lookupEnv)
 import System.IO.Unsafe (unsafePerformIO)
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Error as StationError
 import qualified Tools.Metrics as Metrics
@@ -213,12 +214,17 @@ postMultimodalInitiate ::
   )
 postMultimodalInitiate (_personId, _merchantId) journeyId filterServiceAndJrnyType mbNewServiceTiers = do
   runAction journeyId $ do
-    journeyLegs <- QJourneyLeg.getJourneyLegs journeyId
-    journey <- JM.getJourney journeyId
-    let (blacklistedServiceTiers, blacklistedFareQuoteTypes) = JMU.getBlacklistedFilters filterServiceAndJrnyType mbNewServiceTiers
-    JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs blacklistedServiceTiers blacklistedFareQuoteTypes) "addAllLegs"
-    JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
-    legs <- JMU.measureLatency (JM.getAllLegsInfo journey.riderId journey.id) "JM.getAllLegsInfo"
+    journeyLegs <- JMU.measureLatency (QJourneyLeg.getJourneyLegs journeyId) "QJourneyLeg.getJourneyLegs postMultimodalInitiate"
+    journey <- JMU.measureLatency (JM.getJourney journeyId) "JM.getJourney postMultimodalInitiate"
+    let alreadyInitiated = journey.status >= Domain.Types.Journey.INITIATED && all (isJust . (.legSearchId)) journeyLegs
+    legs <-
+      if alreadyInitiated
+        then JMU.measureLatency (JM.getAllLegsInfoFromLegs journey.riderId journey.id journeyLegs) "JM.getAllLegsInfoFromLegs"
+        else do
+          let (blacklistedServiceTiers, blacklistedFareQuoteTypes) = JMU.getBlacklistedFilters filterServiceAndJrnyType mbNewServiceTiers
+          JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs blacklistedServiceTiers blacklistedFareQuoteTypes) "addAllLegs"
+          JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
+          JMU.measureLatency (JM.getAllLegsInfo journey.riderId journey.id) "JM.getAllLegsInfo"
     JMU.measureLatency (generateJourneyInfoResponse journey legs) "generateJourneyInfoResponse"
 
 postMultimodalInitiateSimpl ::
@@ -244,7 +250,7 @@ postMultimodalConfirm ::
     API.Types.UI.MultimodalConfirm.JourneyConfirmReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.JourneyConfirmResp
   )
-postMultimodalConfirm (_mbPersonId, _merchantId) journeyId forcedBookLegOrder mbIsMockPayment journeyConfirmReq = do
+postMultimodalConfirm (mbPersonId, _merchantId) journeyId forcedBookLegOrder mbIsMockPayment journeyConfirmReq = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   journey <- JM.getJourney journeyId
   legs <- QJourneyLeg.getJourneyLegs journey.id
   let confirmElements = journeyConfirmReq.journeyConfirmReqElements
@@ -299,7 +305,7 @@ getMultimodalBookingPaymentStatus ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Environment.Flow ApiTypes.JourneyBookingPaymentStatus
   )
-getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
+getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   legs <- QJourneyLeg.getJourneyLegs journeyId

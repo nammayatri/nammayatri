@@ -56,6 +56,7 @@ import qualified Storage.Queries.PaymentCustomer as QPaymentCustomer
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Payment as TPayment
 
@@ -75,14 +76,19 @@ getcustomer person = do
     then
       return $
         TPayment.CreateCustomerResp
-          { customerId = customer.customerId,
+          { customerId = person.id.getId, -- in-app UPI requires customer.personId only
             clientAuthToken = customer.clientAuthToken,
             clientAuthTokenExpiry = customer.clientAuthTokenExpiry
           }
     else do
       getCustomerResp <- TPayment.getCustomer person.merchantId person.merchantOperatingCityId person.paymentMode customer.customerId
       QPaymentCustomer.updateCATAndExipry getCustomerResp.clientAuthToken getCustomerResp.clientAuthTokenExpiry getCustomerResp.customerId (Just paymentMode)
-      return getCustomerResp
+      return $
+        TPayment.CreateCustomerResp
+          { customerId = person.id.getId, -- in-app UPI requires customer.personId only
+            clientAuthToken = getCustomerResp.clientAuthToken,
+            clientAuthTokenExpiry = getCustomerResp.clientAuthTokenExpiry
+          }
 
 buildCreateCustomer ::
   ( CacheFlow m r,
@@ -260,7 +266,7 @@ postPaymentAddTip ::
     API.Types.UI.RidePayment.AddTipRequest ->
     Environment.Flow APISuccess
   )
-postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
+postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   Redis.withWaitOnLockRedisWithExpiry (SPayment.paymentJobExecLockKey rideId.getId) 10 20 $ do
     personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
     person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -678,7 +684,7 @@ postPaymentClearDues ::
     API.Types.UI.RidePayment.ClearDuesReq ->
     Environment.Flow API.Types.UI.RidePayment.ClearDuesResp
   )
-postPaymentClearDues (mbPersonId, _merchantId) req = do
+postPaymentClearDues (mbPersonId, _merchantId) req = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   duesResp <- SPayment.getDuesForPerson person
@@ -702,7 +708,7 @@ postPaymentRideCapture ::
     Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
     Environment.Flow APISuccess
   )
-postPaymentRideCapture (mbPersonId, _merchantId) rideId = do
+postPaymentRideCapture (mbPersonId, _merchantId) rideId = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   Redis.withWaitOnLockRedisWithExpiry (SPayment.paymentJobExecLockKey rideId.getId) 10 20 $ do

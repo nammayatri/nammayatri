@@ -10,11 +10,12 @@ import qualified Kernel.External.Settlement.Interface.Types as Ext
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (generateGUID, getCurrentTime)
+import Lib.Finance.Core.Types (HasActorInfo)
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as Dom
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 
 toPgPaymentSettlementReport ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   Text ->
   Text ->
   Maybe Text ->
@@ -27,6 +28,7 @@ toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId refer
   now <- getCurrentTime
   reportId <- generateGUID
   (orderType, isValidSubscriptionPurchase) <- resolveOrderType report.orderId
+  actorInfo <- asks (.actorInfo)
   let (chargebackId, chargebackReasonCode, chargebackStatus, chargebackAmount) = case report.txnType of
         Ext.CHARGEBACK ->
           ( report.disputeId,
@@ -87,9 +89,12 @@ toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId refer
         reconStatus = Dom.PENDING,
         reconMessage = Nothing,
         rawData = report.rawData,
+        createdBy = Just actorInfo.actorType,
+        createdById = actorInfo.actorId,
+        updatedBy = Just actorInfo.actorType,
+        updatedById = actorInfo.actorId,
         createdAt = now,
-        updatedAt = now,
-        createdBy = Just "System"
+        updatedAt = now
       }
 
 mapTxnType :: Ext.TxnType -> Dom.TxnType

@@ -87,6 +87,7 @@ import Lib.Finance
     runFinance,
     transfer,
   )
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.Account ()
 import Lib.Finance.Ledger.Service ()
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
@@ -208,7 +209,8 @@ getStatus ::
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    Finance.HasActorInfo m r
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Id DOrder.PaymentOrder ->
@@ -342,7 +344,8 @@ getStatusV2 ::
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    Finance.HasActorInfo m r
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Text ->
@@ -535,7 +538,7 @@ processWalletTopupWebhook ::
   ( BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     Redis.HedisLTSFlowEnv r
   ) =>
   DP.Person ->
@@ -576,8 +579,7 @@ processWalletTopupWebhook driver order transactionStatus = do
         sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY notificationTitle notificationMessage driver driver.deviceToken
 
 processPayment ::
-  ( MonadFlow m,
-    BeamFlow m r,
+  ( BeamFlow m r,
     CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
@@ -585,7 +587,8 @@ processPayment ::
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    Finance.HasActorInfo m r
   ) =>
   Id DM.Merchant ->
   DP.Driver ->
@@ -613,12 +616,12 @@ processPayment merchantId driver orderId sendNotification (serviceName, subsConf
     when (sendNotification && subsConfig.sendInAppFcmNotifications && serviceName /= DP.PREPAID_SUBSCRIPTION) $ notifyPaymentSuccessIfNotNotified driver orderId
 
 processNonClearedDriverFees ::
-  ( MonadFlow m,
-    CacheFlow m r,
+  ( CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -631,8 +634,7 @@ processNonClearedDriverFees merchantId person driverFee = do
       pure ()
 
 processSubscriptionPurchasePayment ::
-  ( MonadFlow m,
-    CacheFlow m r,
+  ( CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
@@ -641,7 +643,8 @@ processSubscriptionPurchasePayment ::
     Redis.HedisLTSFlowEnv r,
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    Finance.HasActorInfo m r
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -782,12 +785,12 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
           sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
 
 updatePrepaidBalanceAndExpiry ::
-  ( MonadFlow m,
-    CacheFlow m r,
+  ( CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -860,13 +863,13 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
       pure (fst newBalance, Nothing)
 
 updatePaymentStatus ::
-  ( MonadFlow m,
-    BeamFlow m r,
+  ( BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     Redis.HedisLTSFlowEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    Finance.HasActorInfo m r
   ) =>
   Id DP.Person ->
   Id DMOC.MerchantOperatingCity ->
@@ -1031,8 +1034,7 @@ processNotification merchantOpCityId notification notificationStatus respCode re
     QNTF.updateNotificationStatusAndResponseInfoById notificationStatus respCode respMessage notification.id
 
 processMandate ::
-  ( MonadFlow m,
-    BeamFlow m r,
+  ( BeamFlow m r,
     CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
@@ -1043,7 +1045,8 @@ processMandate ::
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    EncFlow m r
+    EncFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   (DP.ServiceNames, DSC.SubscriptionConfig) ->
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->

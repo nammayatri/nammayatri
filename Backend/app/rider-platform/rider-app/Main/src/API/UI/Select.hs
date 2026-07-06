@@ -52,6 +52,7 @@ import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Auth
 import Tools.Error
 import Tools.FlowHandling (withFlowHandlerAPIPersonId)
@@ -87,7 +88,7 @@ handler =
     :<|> selectResult
 
 select :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> FlowHandler DSelect.DSelectResultRes
-select (personId, merchantId) estimateId req = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
+select (personId, merchantId) estimateId req = withFlowHandlerAPIPersonId personId . ActorInfo.withPersonIdActorInfo personId . withPersonIdLogTag personId $ do
   Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
     dSelectReq <- DSelect.select personId estimateId req
     becknReq <- ACL.buildSelectReqV2 dSelectReq
@@ -109,7 +110,7 @@ select (personId, merchantId) estimateId req = withFlowHandlerAPIPersonId person
   pure DSelect.DSelectResultRes {selectTtl = ttlInInt}
 
 select2 :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> FlowHandler DSelect.MultimodalSelectRes
-select2 (personId, merchantId) estimateId req = withFlowHandlerAPIPersonId personId $ select2' (personId, merchantId) estimateId req Nothing
+select2 (personId, merchantId) estimateId req = withFlowHandlerAPIPersonId personId . ActorInfo.withPersonIdActorInfo personId $ select2' (personId, merchantId) estimateId req Nothing
 
 select2' :: (DSelect.SelectFlow m r c, DSearch.SearchRequestFlow m r, HasFlowEnv m r '["slackCfg" ::: SlackConfig], HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions], HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text]) => (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> Maybe (DJourney.Journey, DJourneyLeg.JourneyLeg) -> m DSelect.MultimodalSelectRes
 select2' (personId, merchantId) estimateId req mbJourneyLegData = withPersonIdLogTag personId $ do

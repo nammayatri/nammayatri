@@ -90,7 +90,10 @@ getRouteFare config merchantOperatingCityId request getAllFares = do
   let eulerClientFn payload' token =
         let client = ET.client routeFareAPI
          in client (Just $ "Bearer " <> token) (Just "application/json") (Just "CUMTA") payload'
+  startTime <- getCurrentTime
   encryptedResponse <- callCRISAPI config routeFareAPI (eulerClientFn payload) "getRouteFare"
+  endTime <- getCurrentTime
+  logDebug $ "CRIS getRouteFare Latency: " <> show (diffUTCTime endTime startTime) <> " seconds"
 
   logInfo $ "getRouteFare Resp: " <> show encryptedResponse
 

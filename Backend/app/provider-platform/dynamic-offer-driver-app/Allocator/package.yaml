@@ -93,6 +93,7 @@ dependencies:
   - singletons
   - unordered-containers
   - beckn-services
+  - finance-kernel
 
 ghc-options:
   - -fwrite-ide-info

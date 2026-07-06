@@ -158,4 +158,5 @@ in  { esqDBCfg
     , totpStepSize = Some +30
     , totpClockSkew = Some +2
     , twoFaIssuerName = "Control Centre"
+    , twoFaExemptRoles = [] : List Text
     }

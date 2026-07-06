@@ -61,7 +61,6 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common
 import Kernel.Types.Flow
 import Kernel.Types.Id
-import Kernel.Types.Version (CloudType (GCP))
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
@@ -300,20 +299,9 @@ bookingListV2ByCustomerLookup merchantId mbLimit mbOffset mbBookingOffset mbJour
           pure person.id
         Nothing -> throwError $ InternalError "No Person Found"
 
-applyMasterDbIfGcp :: Flow a -> Flow a
-applyMasterDbIfGcp computation = do
-  mbCloudType <- asks (.cloudType)
-  case mbCloudType of
-    Just cloudType | cloudType == GCP -> do
-      logInfo "applyMasterDbIfGcp: CloudType is GCP, routing queries to Master DB (AWS)"
-      B.runInMasterDb computation
-    _ -> do
-      logInfo $ "applyMasterDbIfGcp: CloudType is " <> show mbCloudType <> ", using default replica/local DB"
-      computation
-
 bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SLT.BillingCategory] -> [SLT.RideType] -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Maybe Bool -> Maybe SRB.BookingRequestType -> Maybe Bool -> Maybe [Domain.Types.PassType.PassEnum] -> Maybe Bool -> Flow BookingListResV2
-bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate' mbToDate' billingCategoryList rideTypeList mbBookingStatusList mbJourneyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable mbPassTypes mbDontNeedFareBreakup = do
-  applyMasterDbIfGcp $ do
+bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate' mbToDate' billingCategoryList rideTypeList mbBookingStatusList mbJourneyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable mbPassTypes mbDontNeedFareBreakup =
+  do
     allPasses <- getPassList merchantId personId limitIntMaybe mbInitialPassOffsetInt mbFromDate' mbToDate' mbSendEligiblePassIfAvailable mbPassTypes
     (apiEntity, nextBookingOffset, nextJourneyOffset, nextPassOffset, hasMoreData) <- case mbBookingRequestType of
       Just SRB.BookingRequest -> do
@@ -352,16 +340,15 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
       _ -> do
         bookingListFork <-
           awaitableFork "bookingListV2->getBookingList" $
-            applyMasterDbIfGcp $ getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
+            getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
 
         -- Journeys (NammaTransit) should only be included for PERSONAL billing category and NORMAL ride type
         let shouldIncludeJourneys = shouldIncludeJourneysForFilters billingCategoryList rideTypeList
         journeyListFork <-
           awaitableFork "bookingListV2->getJourneyList" $
-            applyMasterDbIfGcp $
-              if shouldIncludeJourneys
-                then getJourneyList personId integralLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
-                else pure []
+            if shouldIncludeJourneys
+              then getJourneyList personId integralLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
+              else pure []
 
         (rbList, allbookings) <-
           L.await Nothing bookingListFork >>= \case
@@ -425,7 +412,7 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
           logInfo $ "rbList: test " <> show rbList
         Nothing -> do
           fork "booking list status update" $
-            applyMasterDbIfGcp $ do
+            do
               (rbList_, allbookings_) <- getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
               checkBookingsForStatus allbookings_
               logInfo $ "rbList: test " <> show rbList_

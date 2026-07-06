@@ -1,6 +1,7 @@
 module Storage.Queries.IdfyVerificationExtra where
 
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.IdfyVerification as DIdfy
 import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
@@ -24,7 +25,7 @@ findLatestByDriverIdAndDocType limit offset driverId docType fromDate toDate = d
   findAllWithOptionsKV
     [ Se.And
         ( [Se.Is Beam.driverId $ Se.Eq (getId driverId)]
-            <> [Se.Is Beam.docType $ Se.Eq docType]
+            <> [Se.Is Beam.docType $ Se.Eq (docTypeToText docType)]
             <> [Se.Is Beam.createdAt $ Se.GreaterThanOrEq fromDate]
             <> [Se.Is Beam.createdAt $ Se.LessThanOrEq toDate]
         )
@@ -43,7 +44,7 @@ findLatestCompletedByDriverIdAndDocType driverId docType =
     <$> findAllWithOptionsKV
       [ Se.And
           [ Se.Is Beam.driverId $ Se.Eq (getId driverId),
-            Se.Is Beam.docType $ Se.Eq docType,
+            Se.Is Beam.docType $ Se.Eq (docTypeToText docType),
             Se.Is Beam.status $ Se.Eq "completed"
           ]
       ]

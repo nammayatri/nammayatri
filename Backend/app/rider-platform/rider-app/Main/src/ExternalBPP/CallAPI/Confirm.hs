@@ -21,6 +21,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.PTCircuitBreaker as CB
@@ -35,7 +36,7 @@ import qualified UrlShortner.Common as UrlShortner
 confirm ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EncFlow m r,
     SchedulerFlow r,
     EsqDBReplicaFlow m r,
@@ -113,7 +114,7 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
     processOnConfirm ::
       ( CacheFlow m r,
         EsqDBFlow m r,
-        MonadFlow m,
+        Finance.HasActorInfo m r,
         EncFlow m r,
         SchedulerFlow r,
         EsqDBReplicaFlow m r,

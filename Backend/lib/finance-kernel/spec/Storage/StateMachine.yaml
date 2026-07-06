@@ -6,6 +6,7 @@ imports:
   Value: Data.Aeson
   PaymentState: Lib.Finance.Domain.Types.StateTransition
   PaymentEntityType: Lib.Finance.Domain.Types.StateTransition
+  ActorType: Lib.Finance.Core.Types
 
 StateTransition:
   tableName: finance_state_transition
@@ -31,7 +32,7 @@ StateTransition:
     toState: PaymentState
     event: PaymentEvent
     eventData: Maybe Value
-    actorType: Text
+    actorType: ActorType
     actorId: Maybe Text
     merchantId: Text
     merchantOperatingCityId: Text
