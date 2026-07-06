@@ -45,6 +45,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Coins as Coins
 import Lib.DriverCoins.Types
+import qualified Lib.Finance.Core.Types as Finance
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.SystemConfigs ()
@@ -73,13 +74,12 @@ postDriverCoinsBulkUploadCoins merchantShortId opCity Common.BulkUploadCoinsReq 
   pure $ Common.BulkUploadCoinRes {success = successCount, failed = failedCount, failedItems = failedItems}
 
 bulkUpdateByDriverId ::
-  ( MonadFlow m,
-    MonadReader r m,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     CacheFlow m r,
     CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -147,13 +147,12 @@ postDriverCoinsBulkUploadCoinsV2 merchantShortId opCity Common.BulkUploadCoinsRe
   pure $ Common.BulkUploadCoinRes {success = successCount, failed = failedCount, failedItems = failedItems}
 
 bulkUpdateByDriverIdV2 ::
-  ( MonadFlow m,
-    MonadReader r m,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     CacheFlow m r,
     CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->

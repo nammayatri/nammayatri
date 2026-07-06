@@ -95,6 +95,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, runFinance, transfer, transferWithoutAttribution, transfer_)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -155,7 +156,7 @@ endRideTransaction ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     Esq.EsqDBReplicaFlow m r,
     HasField "maxShards" r Int,
     EventStreamFlow m r,
@@ -264,7 +265,7 @@ processEndRideFinance ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     Esq.EsqDBReplicaFlow m r,
     HasField "maxShards" r Int,
     EventStreamFlow m r,
@@ -432,10 +433,10 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
             else pure 0
 
 createDriverWalletTransaction ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Ride.Ride ->
   SRB.Booking ->

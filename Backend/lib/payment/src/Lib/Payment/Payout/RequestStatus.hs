@@ -12,6 +12,7 @@ where
 
 import qualified Kernel.External.Payout.Juspay.Types.Payout as JuspayPayout
 import Kernel.Prelude
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.StateTransition as ST
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import Lib.Payment.Domain.Types.PayoutRequest
@@ -31,7 +32,7 @@ castPayoutOrderStatusToPayoutRequestStatus = \case
   _ -> PROCESSING
 
 updatePayoutRequestStatusWithHistory ::
-  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r) =>
+  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   PayoutRequestStatus ->
   Maybe Text ->
   PayoutRequest ->
@@ -41,13 +42,14 @@ updatePayoutRequestStatusWithHistory newStatus message payoutRequest = do
   recordHistory (Just payoutRequest.status) newStatus message payoutRequest
 
 recordHistory ::
-  (FinanceBeamFlow.BeamFlow m r) =>
+  (FinanceBeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Maybe PayoutRequestStatus ->
   PayoutRequestStatus ->
   Maybe Text ->
   PayoutRequest ->
   m ()
 recordHistory fromStatus toStatus message payoutRequest = do
+  actorInfo <- asks (.actorInfo)
   let merchantIdText = payoutRequest.merchantId
       opCityIdText = payoutRequest.merchantOperatingCityId
   void $
@@ -60,8 +62,8 @@ recordHistory fromStatus toStatus message payoutRequest = do
           paymentEvent = toPaymentEvent toStatus,
           message = message,
           metadata = Nothing,
-          actorType = "SYSTEM",
-          actorId = Nothing,
+          actorType = actorInfo.actorType,
+          actorId = actorInfo.actorId,
           merchantId = merchantIdText,
           merchantOperatingCityId = opCityIdText
         }

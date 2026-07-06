@@ -48,6 +48,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler (SchedulerType)
 import Lib.Scheduler.Environment (SchedulerConfig (..))
 import Lib.SessionizerMetrics.Prometheus.Internal
@@ -140,7 +141,8 @@ data HandlerEnv = HandlerEnv
     blackListedJobs :: [Text],
     cloudType :: Maybe CloudType,
     sftpConfig :: SFTPConfig,
-    masterCloudProxyConfig :: MCF.MasterCloudProxyConfig
+    masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
+    actorInfo :: Finance.ActorInfo
   }
   deriving (Generic)
 
@@ -194,6 +196,7 @@ buildHandlerEnv HandlerCfg {..} = do
       Right env -> pure (Just env)
   let url = Nothing
   cloudType <- Just <$> lookupCloudType
+  let actorInfo = Finance.ActorInfo {actorType = Finance.UNKNOWN, actorId = requestId} -- to be modified in job handler
   return HandlerEnv {..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()

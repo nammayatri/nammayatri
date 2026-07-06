@@ -100,8 +100,9 @@ postRidePayoutOfferSync merchantShortId opCity apiTokenInfo req = do
   runRequestValidation Domain.Action.Dashboard.Ride.validateMultipleRideSyncReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  let requestorId = (Kernel.Prelude.Just apiTokenInfo.personId.getId)
   SharedLogic.Transaction.withResponseTransactionStoring transaction $
-    API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.postRidePayoutOfferSync) req
+    API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.postRidePayoutOfferSync) requestorId req
 
 postRideCancelMultiple :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Ride.MultipleRideCancelReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postRideCancelMultiple merchantShortId opCity apiTokenInfo req = do

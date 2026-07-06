@@ -40,6 +40,7 @@ import Kernel.Tools.Metrics.CoreMetrics (DeploymentVersion)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler (SchedulerType)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import SharedLogic.Booking
@@ -71,8 +72,7 @@ import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types
 
 reAllocateBookingIfPossible ::
-  ( MonadFlow m,
-    EncFlow m r,
+  ( EncFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -104,7 +104,8 @@ reAllocateBookingIfPossible ::
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
-    ClickhouseFlow m r
+    ClickhouseFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Bool ->
   Bool ->

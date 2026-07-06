@@ -27,6 +27,7 @@ instance FromTType' Beam.PgPaymentSettlementReport Lib.Finance.Domain.Types.PgPa
             chargebackStatus = chargebackStatus,
             createdAt = createdAt,
             createdBy = createdBy,
+            createdById = createdById,
             currency = currency,
             disputeId = disputeId,
             disputeType = disputeType,
@@ -68,6 +69,8 @@ instance FromTType' Beam.PgPaymentSettlementReport Lib.Finance.Domain.Types.PgPa
             txnType = txnType,
             uniqueSplitId = uniqueSplitId,
             updatedAt = updatedAt,
+            updatedBy = updatedBy,
+            updatedById = updatedById,
             utr = utr,
             vendorId = vendorId
           }
@@ -85,6 +88,7 @@ instance ToTType' Beam.PgPaymentSettlementReport Lib.Finance.Domain.Types.PgPaym
         Beam.chargebackStatus = chargebackStatus,
         Beam.createdAt = createdAt,
         Beam.createdBy = createdBy,
+        Beam.createdById = createdById,
         Beam.currency = currency,
         Beam.disputeId = disputeId,
         Beam.disputeType = disputeType,
@@ -126,6 +130,8 @@ instance ToTType' Beam.PgPaymentSettlementReport Lib.Finance.Domain.Types.PgPaym
         Beam.txnType = txnType,
         Beam.uniqueSplitId = uniqueSplitId,
         Beam.updatedAt = updatedAt,
+        Beam.updatedBy = updatedBy,
+        Beam.updatedById = updatedById,
         Beam.utr = utr,
         Beam.vendorId = vendorId
       }

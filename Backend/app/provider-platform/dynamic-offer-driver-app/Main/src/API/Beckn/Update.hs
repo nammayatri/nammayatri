@@ -30,6 +30,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo as ActorInfo
 
 type API =
   Capture "merchantId" (Id Merchant)
@@ -44,7 +45,7 @@ update ::
   SignatureAuthResult ->
   Update.UpdateReqV2 ->
   FlowHandler AckResponse
-update merchantId (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $ do
+update merchantId (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId req.updateReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "updateAPI" "Received update API call."

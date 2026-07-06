@@ -28,6 +28,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.UserCancellationDues as UserCancellationDues
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as QM
@@ -38,6 +39,7 @@ import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Text.Hex
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import Tools.OpenAPIInstances ()
 
@@ -115,17 +117,17 @@ getCancellationDuesDetails merchantId _merchantCity apiKey mbIncludeBreakup Canc
         }
 
 customerCancellationDuesSync ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id Merchant ->
   Context.City ->
   Maybe Text ->
   CustomerCancellationDuesSyncReq ->
   m APISuccess
-customerCancellationDuesSync merchantId merchantCity apiKey req = do
+customerCancellationDuesSync merchantId merchantCity apiKey req = ActorInfo.withRequestIdActorInfo $ do
   merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
