@@ -27,8 +27,12 @@ updateEditableFields ::
   Maybe Text ->
   Maybe Int ->
   Maybe A.Value ->
+  -- | 'Nothing' = leave alone; 'Just Nothing' = clear back to one-shot;
+  -- 'Just (Just n)' = set the repeat cap to n. Double-'Maybe' (unlike the
+  -- other fields here) because ops needs a way to unset a previously-set cap.
+  Maybe (Maybe Int) ->
   m ()
-updateEditableFields cohortId mName mDesc mOrder mEligibility mRewardTitle mRewardImageUrl mCouponValidityDays mPresentation = do
+updateEditableFields cohortId mName mDesc mOrder mEligibility mRewardTitle mRewardImageUrl mCouponValidityDays mPresentation mMaxUnlocksPerCohort = do
   now <- getCurrentTime
   let updates =
         catMaybes
@@ -40,6 +44,7 @@ updateEditableFields cohortId mName mDesc mOrder mEligibility mRewardTitle mRewa
             mRewardImageUrl >>= \u -> Just (Se.Set Beam.rewardImageUrl (Just u)),
             mCouponValidityDays >>= \d -> Just (Se.Set Beam.couponValidityDays (Just d)),
             mPresentation >>= \p -> Just (Se.Set Beam.presentation (Just p)),
+            mMaxUnlocksPerCohort >>= \mn -> Just (Se.Set Beam.maxUnlocksPerCohort mn),
             Just (Se.Set Beam.updatedAt now)
           ]
   unless (null updates) $

@@ -95,6 +95,7 @@ data RideT f = RideT
     rideEndTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     rideRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     rideStartTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    rideTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     safetyCheckStatus :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     safetyJourneyStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.SosJourneyStatus),
     shortId :: B.C f Kernel.Prelude.Text,

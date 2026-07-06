@@ -17,6 +17,7 @@ RewardCohort:
     rewardTitle: Text
     rewardImageUrl: Maybe Text
     couponValidityDays: Maybe Int
+    maxUnlocksPerCohort: Maybe Int
     presentation: Maybe Value
     createdAt: UTCTime
     updatedAt: UTCTime
