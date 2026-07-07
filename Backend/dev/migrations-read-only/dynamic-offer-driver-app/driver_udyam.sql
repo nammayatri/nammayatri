@@ -19,3 +19,4 @@ ALTER TABLE atlas_driver_offer_bpp.driver_udyam ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_udyam ADD COLUMN reject_reason text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_udyam ADD COLUMN document_image_id character varying(36) ;

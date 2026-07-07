@@ -2,6 +2,7 @@ module Storage.Queries.DriverLicenseExtra where
 
 import Domain.Types.DriverLicense
 import Domain.Types.Image
+import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -33,6 +34,8 @@ upsert a@DriverLicense {..} = do
       updateOneWithKV
         [ Se.Set BeamDL.driverDob driverDob,
           Se.Set BeamDL.driverName driverName,
+          Se.Set BeamDL.documentImageId1 documentImageId1.getId,
+          Se.Set BeamDL.rejectReason rejectReason,
           Se.Set BeamDL.licenseExpiry licenseExpiry,
           Se.Set BeamDL.classOfVehicles classOfVehicles,
           Se.Set BeamDL.driverId (Kernel.Types.Id.getId driverId),
@@ -42,6 +45,10 @@ upsert a@DriverLicense {..} = do
         ]
         [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
     Nothing -> createWithKV a
+
+deleteByDriverIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> VerificationStatus -> m ()
+deleteByDriverIdAndStatus driverId status =
+  deleteWithKV [Se.And [Se.Is BeamDL.driverId $ Se.Eq driverId.getId, Se.Is BeamDL.verificationStatus $ Se.Eq status]]
 
 findByDLNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Text -> m (Maybe DriverLicense)
 findByDLNumber dlNumber = do
