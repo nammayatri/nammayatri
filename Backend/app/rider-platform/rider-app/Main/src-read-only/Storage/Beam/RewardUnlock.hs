@@ -25,6 +25,7 @@ data RewardUnlockT f = RewardUnlockT
     reclaimedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     redeemedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     status :: (B.C f Domain.Types.RewardUnlock.UnlockStatus),
+    unlockSeq :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     unlockedAt :: (B.C f Kernel.Prelude.UTCTime),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime),
     viewedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),

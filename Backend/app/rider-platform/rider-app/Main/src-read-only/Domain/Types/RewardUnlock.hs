@@ -28,6 +28,7 @@ data RewardUnlock = RewardUnlock
     reclaimedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     redeemedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     status :: Domain.Types.RewardUnlock.UnlockStatus,
+    unlockSeq :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     unlockedAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime,
     viewedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

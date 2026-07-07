@@ -22,7 +22,7 @@ import Servant
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.RiderPlatform.Management.Rewards.API)
-handler merchantId city = postRewardsCampaign merchantId city :<|> putRewardsCampaign merchantId city :<|> postRewardsCampaignCohort merchantId city :<|> putRewardsCampaignCohort merchantId city :<|> postRewardsCampaignCohortCodes merchantId city :<|> postRewardsCampaignStatus merchantId city :<|> getRewardsCampaign merchantId city :<|> getRewardsCampaigns merchantId city :<|> getRewardsCampaignStats merchantId city :<|> postRewardsTriggerEval merchantId city
+handler merchantId city = postRewardsCampaign merchantId city :<|> putRewardsCampaign merchantId city :<|> postRewardsCampaignCohort merchantId city :<|> putRewardsCampaignCohort merchantId city :<|> postRewardsCampaignCohortCodes merchantId city :<|> postRewardsCampaignStatus merchantId city :<|> getRewardsCampaign merchantId city :<|> getRewardsCampaigns merchantId city :<|> getRewardsCampaignStats merchantId city :<|> postRewardsTriggerEval merchantId city :<|> postRewardsCohortValidateEligibility merchantId city
 
 postRewardsCampaign :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.Rewards.CreateCampaignReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.CreateCampaignResp)
 postRewardsCampaign a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Rewards.postRewardsCampaign a3 a2 a1
@@ -53,3 +53,6 @@ getRewardsCampaignStats a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.D
 
 postRewardsTriggerEval :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Person -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postRewardsTriggerEval a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Rewards.postRewardsTriggerEval a3 a2 a1
+
+postRewardsCohortValidateEligibility :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.Rewards.ValidateCohortEligibilityReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.ValidateCohortEligibilityResp)
+postRewardsCohortValidateEligibility a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Rewards.postRewardsCohortValidateEligibility a3 a2 a1

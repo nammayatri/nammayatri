@@ -38,3 +38,8 @@ ALTER TABLE atlas_app.reward_cohort ALTER COLUMN presentation TYPE jsonb USING C
 
 ALTER TABLE atlas_app.reward_cohort ALTER COLUMN presentation TYPE jsonb;
 ALTER TABLE atlas_app.reward_cohort ALTER COLUMN eligibility_json_logic TYPE jsonb;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.reward_cohort ADD COLUMN max_unlocks_per_cohort integer ;
