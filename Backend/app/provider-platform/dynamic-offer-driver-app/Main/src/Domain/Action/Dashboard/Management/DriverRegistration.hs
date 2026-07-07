@@ -1418,15 +1418,6 @@ approveDocStatus = \case
   BusinessLicenseApproveData bl -> bl.verificationStatus
   UdyamApproveData udyam -> udyam.verificationStatus
 
-approveDocNumber :: ApproveDocumentData -> Flow (Maybe Text)
-approveDocNumber = \case
-  DLApproveData dl -> Just <$> decrypt dl.licenseNumber
-  PanApproveData pan -> Just <$> decrypt pan.panCardNumber
-  AadhaarApproveData aadhaar -> mapM decrypt aadhaar.aadhaarNumber
-  GstApproveData gst -> Just <$> decrypt gst.gstin
-  BusinessLicenseApproveData bl -> Just <$> decrypt bl.licenseNumber
-  UdyamApproveData udyam -> Just <$> decrypt udyam.udyamNumber
-
 -- | Common validation for document approve flows (DL, PAN, Aadhaar, GST, BusinessLicense, UDYAM).
 --
 -- 'mbExistDocData' is the row the caller resolved via imageId (or its own doc-number fallback).
@@ -1440,17 +1431,25 @@ approveDocNumber = \case
 --      case:- Exist -> (D1-N1-VALID) and Request (D1-N1) -> allow (admin may want to update image and details)
 --   3. Driver check: the requesting driver must not already hold a VALID document of this type
 --      on a different row. For handle this case:- Exist -> (D2-N2-VALID, D1-N1-INVALID) and Request -> (D2-N1)
+-- | Directly deletes ALL of the requesting driver's INVALID rows for the document type
+-- (a driver may have multiple) without a prior get, so the approve flow can upsert the
+-- approved row cleanly. Call right before the upsert/create in approve functions.
+deleteInvalidDocumentOfDriver :: DVC.DocumentType -> Id DP.Person -> Flow ()
+deleteInvalidDocumentOfDriver documentType reqDriverId = case documentType of
+  DVC.DriverLicense -> QDL.deleteByDriverIdAndStatus reqDriverId Documents.INVALID
+  DVC.PanCard -> QPan.deleteByDriverIdAndStatus reqDriverId Documents.INVALID
+  DVC.AadhaarCard -> QAadhaarCard.deleteByDriverIdAndStatus reqDriverId Documents.INVALID
+  DVC.GSTCertificate -> QGstin.deleteByDriverIdAndStatus reqDriverId Documents.INVALID
+  DVC.BusinessLicense -> QBLExtra.deleteByDriverIdAndStatus reqDriverId Documents.INVALID
+  DVC.UDYAMCertificate -> QUdyamExtra.deleteByDriverIdAndStatus reqDriverId Documents.INVALID
+  _ -> pure ()
+
 validateDocumentApprovalChecks :: DVC.DocumentType -> Maybe Text -> Id DP.Person -> Maybe ApproveDocumentData -> Flow ()
 validateDocumentApprovalChecks documentType mbReqDocNum reqDriverId mbExistDocData = do
   mbDocData <- case mbExistDocData of
     Just docData -> pure (Just docData)
     Nothing -> maybe (pure Nothing) findDocumentByNumber mbReqDocNum
   whenJust mbDocData $ \docData -> do
-    mbStoredNumber <- approveDocNumber docData
-    whenJust mbReqDocNum $ \reqDocNum ->
-      whenJust mbStoredNumber $ \storedNumber ->
-        when (reqDocNum /= storedNumber) $
-          throwError $ InvalidRequest $ "Provided document number does not match the number on the existing " <> show documentType <> " record"
     when
       (approveDocStatus docData == Documents.VALID && approveDocDriverId docData /= reqDriverId) -- Need to discuss that if req document already present in pending or any other status with other driver then in the case of admin, we will overirde the driverId or not.
       throwDocumentAlreadyLinked
@@ -1461,19 +1460,7 @@ validateDocumentApprovalChecks documentType mbReqDocNum reqDriverId mbExistDocDa
         when (approveDocDriverId driverDoc /= approveDocDriverId docData) $
           throwError DriverAlreadyLinked
       Nothing -> throwError DriverAlreadyLinked
-  -- Clean up the requesting driver's stale INVALID document so the approve flow can
-  -- upsert the approved row cleanly (callers must upsert, not update, after this).
-  deleteInvalidDocumentOfDriver
   where
-    -- Directly deletes ALL of the driver's INVALID rows (a driver may have multiple) without a prior get.
-    deleteInvalidDocumentOfDriver = case documentType of
-      DVC.DriverLicense -> QDL.deleteByDriverIdAndStatus reqDriverId Documents.INVALID
-      DVC.PanCard -> QPan.deleteByDriverIdAndStatus reqDriverId Documents.INVALID
-      DVC.AadhaarCard -> QAadhaarCard.deleteByDriverIdAndStatus reqDriverId Documents.INVALID
-      DVC.GSTCertificate -> QGstin.deleteByDriverIdAndStatus reqDriverId Documents.INVALID
-      DVC.BusinessLicense -> QBLExtra.deleteByDriverIdAndStatus reqDriverId Documents.INVALID
-      DVC.UDYAMCertificate -> QUdyamExtra.deleteByDriverIdAndStatus reqDriverId Documents.INVALID
-      _ -> pure ()
     findDocumentByNumber docNum = case documentType of
       DVC.DriverLicense -> fmap DLApproveData <$> QDL.findByDLNumber docNum
       DVC.PanCard -> do
@@ -1490,7 +1477,7 @@ validateDocumentApprovalChecks documentType mbReqDocNum reqDriverId mbExistDocDa
         fmap BusinessLicenseApproveData . listToMaybe <$> QBLExtra.findAllByLicenseNumberHash licenseHash
       DVC.UDYAMCertificate -> do
         udyamHash <- getDbHash docNum
-        fmap UdyamApproveData . listToMaybe <$> QUdyamExtra.findAllByEncryptedUdyamNumber udyamHash
+        fmap UdyamApproveData . listToMaybe <$> QUdyam.findAllByEncryptedUdyamNumber udyamHash
       _ -> throwError $ InvalidRequest $ "Approve validation not supported for document type " <> show documentType
     findValidDocumentByDriverId = case documentType of
       DVC.DriverLicense -> fmap DLApproveData <$> QDL.findByDriverIdAndVerificationStatus reqDriverId Documents.VALID
@@ -1506,7 +1493,7 @@ validateDocumentApprovalChecks documentType mbReqDocNum reqDriverId mbExistDocDa
           Just gst | gst.verificationStatus == Documents.VALID -> Just (GstApproveData gst)
           _ -> Nothing
       DVC.BusinessLicense -> fmap BusinessLicenseApproveData <$> QBLExtra.findByPersonIdAndVerificationStatus reqDriverId Documents.VALID
-      DVC.UDYAMCertificate -> fmap UdyamApproveData <$> QUdyamExtra.findValidUdyamByDriverId reqDriverId
+      DVC.UDYAMCertificate -> fmap UdyamApproveData <$> QUdyam.findByDriverIdAndVerificationStatus reqDriverId Documents.VALID
       _ -> pure Nothing
     throwDocumentAlreadyLinked :: Flow ()
     throwDocumentAlreadyLinked = case documentType of
@@ -1521,9 +1508,9 @@ findApproveImage :: Id DImage.Image -> Flow DImage.Image
 findApproveImage imageId = QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
 
 whenCreateDocumentRequired :: Id DMOC.MerchantOperatingCity -> Flow () -> Flow () -> Flow ()
-whenCreateDocumentRequired mOpCityId onSkip create = do
+whenCreateDocumentRequired mOpCityId onSkip createAction = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId mOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
-  if transporterConfig.createDocumentRequired == Just True then create else onSkip
+  if transporterConfig.createDocumentRequired == Just True then createAction else onSkip
 
 approveAndUpdateDL :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Common.DLApproveDetails -> Flow ()
 approveAndUpdateDL merchantId merchantOpCityId req = do
@@ -1554,7 +1541,8 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
                 DDL.rejectReason = Nothing,
                 DDL.driverId = driverId
               }
-      -- Upsert: the row may have been removed by the stale-INVALID cleanup in validateDocumentApprovalChecks
+      -- Clean up stale INVALID rows, then upsert (the driver's own row may be among the deleted)
+      deleteInvalidDocumentOfDriver DVC.DriverLicense driverId
       QDL.upsert updatedDL
       QImage.updateVerificationStatusByIdAndType VALID imageId DVC.DriverLicense
       whenJust dl.documentImageId2 $ \img2 ->
@@ -1596,6 +1584,7 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
                 DDL.createdAt = now,
                 DDL.updatedAt = now
               }
+      deleteInvalidDocumentOfDriver DVC.DriverLicense driverId
       QDL.create newDL
       QImage.updateVerificationStatusByIdAndType VALID imageId DVC.DriverLicense
       createReminder
@@ -1671,7 +1660,8 @@ approveAndUpdateBusinessLicense req mId mOpCityId = do
                 DBL.verificationStatus = VALID,
                 DBL.driverId = driverId
               }
-      -- Upsert: the row may have been removed by the stale-INVALID cleanup in validateDocumentApprovalChecks
+      -- Clean up stale INVALID rows, then upsert (the driver's own row may be among the deleted)
+      deleteInvalidDocumentOfDriver DVC.BusinessLicense driverId
       QBLExtra.upsert updatedBl
       createReminder
         DVC.BusinessLicense
@@ -1701,6 +1691,7 @@ approveAndUpdateBusinessLicense req mId mOpCityId = do
                 createdAt = now,
                 updatedAt = now
               }
+      deleteInvalidDocumentOfDriver DVC.BusinessLicense driverId
       QBL.create bl
       createReminder
         DVC.BusinessLicense
@@ -1749,7 +1740,8 @@ approveAndUpdatePan req mId mOpCityId = do
                 DPan.documentImageId1 = imageId,
                 DPan.driverId = driverId
                }
-      -- Upsert: the row may have been removed by the stale-INVALID cleanup in validateDocumentApprovalChecks
+      -- Clean up stale INVALID rows, then upsert (the driver's own row may be among the deleted)
+      deleteInvalidDocumentOfDriver DVC.PanCard driverId
       QPan.upsert updatedPan
     Nothing -> do
       let pan =
@@ -1774,6 +1766,7 @@ approveAndUpdatePan req mId mOpCityId = do
                 verifiedBy = Just DPan.DASHBOARD,
                 panAadhaarLinkage = Nothing
               }
+      deleteInvalidDocumentOfDriver DVC.PanCard driverId
       QPan.create pan
   updateFleetOwnerInfoOnDocApproval person $ \personId ->
     QFOIE.updatePanImage (Just panNoEnc) (Just imageId.getId) personId
@@ -1817,12 +1810,14 @@ approveAndUpdateAadhaar req mId mOpCityId = do
                 DAadhaar.nameOnCard = req.nameOnCard <|> aadhaar.nameOnCard,
                 DAadhaar.dateOfBirth = req.dateOfBirth <|> aadhaar.dateOfBirth,
                 DAadhaar.address = req.address <|> aadhaar.address,
+                DAadhaar.aadhaarFrontImageId = Just imageId,
                 DAadhaar.aadhaarBackImageId = mbImageId2 <|> aadhaar.aadhaarBackImageId,
                 DAadhaar.verificationStatus = VALID,
                 DAadhaar.updatedAt = now,
                 DAadhaar.driverId = driverId
               }
-      -- Upsert: the row may have been removed by the stale-INVALID cleanup in validateDocumentApprovalChecks
+      -- Clean up stale INVALID rows, then upsert (the driver's own row may be among the deleted)
+      deleteInvalidDocumentOfDriver DVC.AadhaarCard driverId
       QAadhaarCard.upsertAadhaarRecord updatedAadhaar
     Nothing -> do
       let aadhaarCard =
@@ -1846,6 +1841,7 @@ approveAndUpdateAadhaar req mId mOpCityId = do
                 DAadhaar.createdAt = now,
                 DAadhaar.updatedAt = now
               }
+      deleteInvalidDocumentOfDriver DVC.AadhaarCard driverId
       QAadhaarCard.create aadhaarCard
   updateFleetOwnerInfoOnDocApproval person $ \personId ->
     QFOIE.updateAadhaarImage (Just encryptedAadhaar) (Just imageId.getId) ((.getId) <$> mbImageId2) personId
@@ -1908,7 +1904,7 @@ approveAndUpdateUdyamDocument req merchantId merchantOpCityId = do
   let imageId = Id req.documentImageId.getId
   udyamImage <- findApproveImage imageId
   let driverId = udyamImage.personId
-  mbUdyamByImage <- QUdyam.findByImageId imageId
+  mbUdyamByImage <- QUdyam.findByImageId (Just imageId)
   -- Fallback for re-upload-after-reject: the UDYAM row's documentImageId still points at the
   -- prior (rejected) image. Look up by udyam number hash to recover the existing row.
   mbUdyamResolved <- case mbUdyamByImage of
@@ -1916,7 +1912,7 @@ approveAndUpdateUdyamDocument req merchantId merchantOpCityId = do
     Nothing -> case req.udyamNumber of
       Just uNum -> do
         udyamHash <- getDbHash uNum
-        listToMaybe <$> QUdyamExtra.findAllByEncryptedUdyamNumber udyamHash
+        listToMaybe <$> QUdyam.findAllByEncryptedUdyamNumber udyamHash
       Nothing -> pure Nothing
   -- Common approve-time checks: number mismatch, document linked to another driver, driver already linked
   validateDocumentApprovalChecks DVC.UDYAMCertificate req.udyamNumber driverId (UdyamApproveData <$> mbUdyamResolved)
@@ -1933,7 +1929,8 @@ approveAndUpdateUdyamDocument req merchantId merchantOpCityId = do
                 DUdyam.rejectReason = Nothing,
                 DUdyam.driverId = driverId
               }
-      -- Upsert: the row may have been removed by the stale-INVALID cleanup in validateDocumentApprovalChecks
+      -- Clean up stale INVALID rows, then upsert (the driver's own row may be among the deleted)
+      deleteInvalidDocumentOfDriver DVC.UDYAMCertificate driverId
       QUdyamExtra.upsert updatedUdyam
       QImage.updateVerificationStatusByIdAndType VALID imageId DVC.UDYAMCertificate
       whenJust req.tdsRate $ \rate ->
@@ -1959,6 +1956,7 @@ approveAndUpdateUdyamDocument req merchantId merchantOpCityId = do
                 createdAt = now,
                 updatedAt = now
               }
+      deleteInvalidDocumentOfDriver DVC.UDYAMCertificate driverId
       QUdyam.create newUdyam
       QImage.updateVerificationStatusByIdAndType VALID imageId DVC.UDYAMCertificate
       whenJust req.tdsRate $ \rate ->
@@ -2113,7 +2111,7 @@ approveAndUpdateLocalResidenceProof req merchantId merchantOperatingCityId = do
   mbInfo <- QDII.findByPrimaryKey image.personId
   case mbInfo of
     Just info ->
-      QDII.updateByPrimaryKey info {DII.addressState = req.state, DII.addressDocumentType = DDriver.castFromCommon <$> req.proofDocumentType, DII.updatedAt = now}
+      QDII.updateByPrimaryKey info {DII.addressState = req.state <|> info.addressState, DII.addressDocumentType = (DDriver.castFromCommon <$> req.proofDocumentType) <|> info.addressDocumentType, DII.address = req.address <|> info.address, DII.updatedAt = now}
     Nothing ->
       QDII.create
         DII.DriverIdentityInfo
@@ -2122,7 +2120,7 @@ approveAndUpdateLocalResidenceProof req merchantId merchantOperatingCityId = do
             DII.merchantOperatingCityId = merchantOperatingCityId,
             DII.addressState = req.state,
             DII.addressDocumentType = DDriver.castFromCommon <$> req.proofDocumentType,
-            DII.address = Nothing,
+            DII.address = req.address,
             DII.courtRecord = Nothing,
             DII.nomineeDob = Nothing,
             DII.nomineeName = Nothing,
@@ -2247,7 +2245,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
             QDII.updateByPrimaryKey info {DII.addressState = Nothing, DII.addressDocumentType = Nothing, DII.updatedAt = now}
         DVC.UDYAMCertificate -> do
           rejectImage imageId
-          mbUdyam <- QUdyam.findByImageId imageId
+          mbUdyam <- QUdyam.findByImageId (Just imageId)
           whenJust mbUdyam $ \udyam ->
             QUdyam.updateVerificationStatusAndRejectReason INVALID (Just reason) udyam.id
         docType
@@ -2266,6 +2264,12 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
       let documentId = Id commonRejectReq.documentId.getId
       document <- QCommonDriverOnboardingDocuments.findById documentId >>= fromMaybeM (DocumentNotFound documentId.getId)
       rejectAndUpdateCommonDocument commonRejectReq merchantOperatingCityId
+      -- LDC reject also resets the fleet owner's TDS: explicit rate from the request, else the configured default (mirrors approve)
+      when (document.documentType == DVC.LDCCertificate) $ do
+        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+        let mbTdsRate = commonRejectReq.tdsRate <|> ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate)
+        whenJust document.driverId $ \driverId ->
+          QFOI.updateTdsRate mbTdsRate driverId
       whenJust document.driverId $ \driverId -> do
         mbDriver <- QDriver.findById driverId
         case mbDriver of
@@ -2611,7 +2615,8 @@ approveGST req merchantId merchantOperatingCityId = do
                 DGstin.driverId = fleetOwnerId,
                 DGstin.documentImageId1 = imageId
               }
-      -- Upsert: the row may have been removed by the stale-INVALID cleanup in validateDocumentApprovalChecks
+      -- Clean up stale INVALID rows, then upsert (the fleet owner's own row may be among the deleted)
+      deleteInvalidDocumentOfDriver DVC.GSTCertificate fleetOwnerId
       QGstin.upsertGstinRecord updatedGstin
     Nothing -> do
       let gstin =
@@ -2641,6 +2646,7 @@ approveGST req merchantId merchantOperatingCityId = do
                 pincode = Nothing,
                 stateName = Nothing
               }
+      deleteInvalidDocumentOfDriver DVC.GSTCertificate fleetOwnerId
       QGstin.create gstin
   updateFleetOwnerInfoOnDocApproval person $ \personId ->
     QFOIE.updateGstImage (Just gstEnc) (Just imageId.getId) personId

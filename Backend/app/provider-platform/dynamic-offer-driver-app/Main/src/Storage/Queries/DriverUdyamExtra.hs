@@ -12,38 +12,6 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.DriverUdyam as Beam
 import Storage.Queries.DriverUdyam ()
 
-findAllByEncryptedUdyamNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> m [DriverUdyam]
-findAllByEncryptedUdyamNumber udyamNumberHash = do
-  findAllWithKV [Se.Is Beam.udyamNumberHash $ Se.Eq udyamNumberHash]
-
-findValidUdyamByHashExcludingDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe DriverUdyam)
-findValidUdyamByHashExcludingDriver udyamNumberHash driverId =
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.udyamNumberHash $ Se.Eq udyamNumberHash,
-          Se.Is Beam.driverId $ Se.Not $ Se.Eq (Kernel.Types.Id.getId driverId),
-          Se.Is Beam.verificationStatus $ Se.Eq Documents.VALID
-        ]
-    ]
-
-findValidUdyamByHash :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> m (Maybe DriverUdyam)
-findValidUdyamByHash udyamNumberHash =
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.udyamNumberHash $ Se.Eq udyamNumberHash,
-          Se.Is Beam.verificationStatus $ Se.Eq Documents.VALID
-        ]
-    ]
-
-findValidUdyamByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe DriverUdyam)
-findValidUdyamByDriverId driverId =
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
-          Se.Is Beam.verificationStatus $ Se.Eq Documents.VALID
-        ]
-    ]
-
 upsert :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DriverUdyam -> m ()
 upsert a@DriverUdyam {..} =
   findOneWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)] >>= \case

@@ -16,8 +16,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data DriverUdyamE e = DriverUdyam
-  { driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    documentImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
+  { documentImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
+    driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     enterpriseName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     enterpriseType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.DriverUdyam.DriverUdyam,
@@ -32,9 +32,9 @@ data DriverUdyamE e = DriverUdyam
   }
   deriving (Generic)
 
-type DriverUdyam = DriverUdyamE ('AsEncrypted)
+type DriverUdyam = DriverUdyamE 'AsEncrypted
 
-type DecryptedDriverUdyam = DriverUdyamE ('AsUnencrypted)
+type DecryptedDriverUdyam = DriverUdyamE 'AsUnencrypted
 
 instance EncryptedItem DriverUdyam where
   type Unencrypted DriverUdyam = (DecryptedDriverUdyam, HashSalt)
@@ -42,8 +42,8 @@ instance EncryptedItem DriverUdyam where
     udyamNumber_ <- encryptItem (udyamNumber entity, salt)
     pure
       DriverUdyam
-        { driverId = driverId entity,
-          documentImageId = documentImageId entity,
+        { documentImageId = documentImageId entity,
+          driverId = driverId entity,
           enterpriseName = enterpriseName entity,
           enterpriseType = enterpriseType entity,
           id = id entity,
@@ -60,8 +60,8 @@ instance EncryptedItem DriverUdyam where
     udyamNumber_ <- fst <$> decryptItem (udyamNumber entity)
     pure
       ( DriverUdyam
-          { driverId = driverId entity,
-            documentImageId = documentImageId entity,
+          { documentImageId = documentImageId entity,
+            driverId = driverId entity,
             enterpriseName = enterpriseName entity,
             enterpriseType = enterpriseType entity,
             id = id entity,

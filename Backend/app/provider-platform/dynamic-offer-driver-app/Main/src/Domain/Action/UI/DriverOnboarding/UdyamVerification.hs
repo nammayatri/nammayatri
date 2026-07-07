@@ -39,7 +39,6 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverUdyam as DUQuery
-import qualified Storage.Queries.DriverUdyamExtra as DUQueryExtra
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Person as PersonQuery
 import Tools.Error
@@ -71,7 +70,7 @@ verifyUdyam (personId, merchantOpCityId) req = do
   case transporterConfig.allowDuplicateUdyam of
     Just False -> do
       udyamHash <- getDbHash req.uamNumber
-      udyamInfoList <- DUQueryExtra.findAllByEncryptedUdyamNumber udyamHash
+      udyamInfoList <- DUQuery.findAllByEncryptedUdyamNumber udyamHash
       let otherDriverIds = filter (/= person.id) (map (.driverId) udyamInfoList)
       unless (Kernel.Prelude.null otherDriverIds) $ do
         otherPersonDetails <- PersonQuery.getDriversByIdIn otherDriverIds
@@ -117,7 +116,7 @@ onVerifyUdyam verificationReq output serviceName = do
           let updated =
                 driverUdyam
                   { DUdyam.verificationStatus = Documents.VALID,
-                    DUdyam.documentImageId = Just verificationReq.documentImageId1 <|> driverUdyam.documentImageId,
+                    DUdyam.documentImageId = Just verificationReq.documentImageId1,
                     DUdyam.enterpriseName = output.enterpriseName,
                     DUdyam.enterpriseType = output.enterpriseType,
                     DUdyam.rejectReason = Nothing,

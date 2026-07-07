@@ -227,6 +227,7 @@ types:
   LocalAddressProofDocumentMetadata:
     state: Maybe IndianState
     proofDocumentType: Maybe AddressDocumentType
+    address: Maybe Text
   GSTDocumentMetadata:
     gstNumber: Text
   RCDocumentMetadata:

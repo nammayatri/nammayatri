@@ -1391,7 +1391,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
             if enableMetadata
               then
                 mbIdentityInfo <&> \info ->
-                  LocalAddressProofMetadata LocalAddressProofDocumentMetadata {state = info.addressState, proofDocumentType = info.addressDocumentType}
+                  LocalAddressProofMetadata LocalAddressProofDocumentMetadata {state = info.addressState, proofDocumentType = info.addressDocumentType, address = info.address}
               else Nothing
       return (if hasAddressDetails then status else Just NO_DOC_AVAILABLE, reason, url, Nothing, mbS3Path, mbImageId, Nothing, mbLocalMetadata)
     DVC.DriverVehicleNOC -> do

@@ -1173,6 +1173,13 @@ DriverUdyam :
     findByImageId:
       kvFunction: findOneWithKV
       where: documentImageId
+    findAllByEncryptedUdyamNumber:
+      kvFunction: findAllWithKV
+      where: udyamNumberHash|B
+    findByDriverIdAndVerificationStatus:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, verificationStatus]
     updateVerificationStatus:
       kvFunction: updateWithKV
       params: [verificationStatus, updatedAt]

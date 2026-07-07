@@ -265,7 +265,8 @@ castDocumentMetadata = \case
     CommonOnboarding.LocalAddressProofMetadata
       CommonOnboarding.LocalAddressProofDocumentMetadata
         { state = l.state,
-          proofDocumentType = DDriver.castToCommon <$> l.proofDocumentType
+          proofDocumentType = DDriver.castToCommon <$> l.proofDocumentType,
+          address = l.address
         }
   VehicleDocs.GSTMetadata g ->
     CommonOnboarding.GSTMetadata
