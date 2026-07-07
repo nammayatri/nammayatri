@@ -446,3 +446,4 @@ ALTER TABLE atlas_app.ride ADD COLUMN assigned_service_tier_name text ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.ride ADD COLUMN ride_tags text[] ;
