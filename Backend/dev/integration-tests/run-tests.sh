@@ -75,9 +75,6 @@ RIDE_ENVS=("NY_Bangalore" "YS_Kolkata" "NY_Chennai" "BT_Delhi")
 # Bangalore only has Auto, no cab dynamic-offer fare policies
 CAB_CITIES=("YS_Kolkata" "NY_Chennai" "BT_Delhi")
 
-# Cities with no AUTO_RICKSHAW fare products - Auto suites only should skip these
-AUTO_EXCLUDE_CITIES=("YS_Kolkata" "BT_Delhi")
-
 # ── Utilities ──
 
 flush_redis() {
@@ -393,14 +390,22 @@ run_rides() {
                 fi
             fi
 
-            # Skip Auto collections for cities without AUTO_RICKSHAW fare products
+            # Skip Auto collections for environments whose env json says they have no
+            # AUTO_RICKSHAW fare products (auto_fare_products_available: "false")
             if [[ "$suite_name" == *"Auto"* ]]; then
-                local is_excluded_for_auto=false
-                for ec in "${AUTO_EXCLUDE_CITIES[@]}"; do
-                    [ "$ec" == "$env_name" ] && is_excluded_for_auto=true
-                done
-                if [ "$is_excluded_for_auto" = true ]; then
-                    echo "  SKIP: $suite_name (no auto fare products for $env_name)"
+                local auto_available
+                auto_available=$(python3 -c "
+import json, sys
+try:
+    with open('$env_file') as f:
+        values = json.load(f).get('values', [])
+    v = next((x.get('value') for x in values if x.get('key') == 'auto_fare_products_available'), 'true')
+    print(v)
+except Exception:
+    print('true')
+")
+                if [ "$auto_available" = "false" ]; then
+                    echo "  SKIP: $suite_name (auto_fare_products_available=false for $env_name)"
                     continue
                 fi
             fi
