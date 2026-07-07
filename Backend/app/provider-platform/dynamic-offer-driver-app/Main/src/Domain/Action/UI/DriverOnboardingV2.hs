@@ -106,6 +106,7 @@ import qualified Storage.Queries.DriverPanCard as QDPC
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverSSN as QDriverSSN
 import qualified Storage.Queries.FleetDriverAssociationExtra as FDA
+import qualified Storage.Queries.FleetRCAssociationExtra as FRCA
 import qualified Storage.Queries.HyperVergeSdkLogs as HVSdkLogsQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
@@ -1375,6 +1376,76 @@ postDriverLinkToFleet (mbDriverId, merchantId, _) req = do
           let requestReason = fromMaybe "Driver requested to join fleet" req.requestReason
           FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just requestReason)
   return Success
+
+-- | Vehicle-only RC verify-status (driver app). RC resolved by @registrationNo@/@rcId@; access gated on
+--   the calling driver's active DriverRCAssociation. Fleet ownership is not accepted here.
+getDriverRegisterVehicleStatus ::
+  (Maybe (Id Domain.Types.Person.Person), Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
+  Maybe Text ->
+  Maybe Text ->
+  Flow APITypes.RcVerifyStatusResp
+getDriverRegisterVehicleStatus (mbPersonId, _, _) mbRegistrationNo mbRcId = do
+  callerId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  (registrationNo, verified, approved, documents) <- rcVerifyStatus (DriverCaller callerId) mbRegistrationNo mbRcId
+  pure $ APITypes.RcVerifyStatusResp {registrationNo, verified, approved, documents}
+
+-- | Who is asking for RC verify-status. Encoding the two callers as a sum type makes the invalid
+--   combinations of the old @Maybe callerId@ + @Bool isDashboard@ pair (driver with no id / dashboard with
+--   an id) unrepresentable, so the driver path can never silently skip the RC-ownership authz.
+data RcVerifyCaller
+  = -- | Driver app: authorize against this driver's active DriverRCAssociation (closes the IDOR).
+    DriverCaller (Id Domain.Types.Person.Person)
+  | -- | Dashboard: no per-person gate (already merchant/city-scoped by ApiAuthV2); the RC's resolved
+    --   city must match this operating city.
+    DashboardCaller (Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
+
+-- | Shared RC verify-status core (UI + dashboard). Resolves the RC, authorizes the caller, checks all
+--   mandatory vehicle docs, and — under @enableBotFlow@ — persists RC.verified. The authz closes the IDOR:
+--   @DriverCaller@ requires an active DriverRCAssociation; @DashboardCaller@ instead pins the RC's resolved
+--   city to the caller's operating city.
+rcVerifyStatus :: RcVerifyCaller -> Maybe Text -> Maybe Text -> Flow (Text, Bool, Maybe Bool, [SStatus.DocumentStatusItem])
+rcVerifyStatus caller mbRegistrationNo mbRcId = do
+  rc <- case (mbRegistrationNo, mbRcId) of
+    (Just registrationNo, _) -> VRCE.findLastVehicleRCWrapper registrationNo >>= fromMaybeM (RCNotFound registrationNo)
+    (Nothing, Just rcId) -> RCQuery.findById (Id rcId) >>= fromMaybeM (RCNotFound rcId)
+    (Nothing, Nothing) -> throwError (InvalidRequest "Either registrationNo or rcId must be provided")
+  registrationNo <- decrypt rc.certificateNumber
+  now <- getCurrentTime
+  -- Dashboard's path city, which the RC's resolved city must match (driver app has none).
+  let mbPassedCityId = case caller of
+        DashboardCaller cityId -> Just cityId
+        DriverCaller _ -> Nothing
+  -- Authz for driver-app callers; reused below for city so we don't re-query.
+  mbCallerAssoc <-
+    case caller of
+      DashboardCaller _ -> pure Nothing
+      DriverCaller callerId -> Just <$> (DAQuery.findLinkedByRCIdAndDriverId callerId rc.id now >>= fromMaybeM RCNotLinked)
+  -- City from the RC's associated person: caller (driver) → latest driver → fleet owner → RC's own.
+  mbAssocPerson <- case mbCallerAssoc of
+    Just callerAssoc -> PersonQuery.findById callerAssoc.driverId
+    Nothing -> do
+      mbDriverId <- fmap (.driverId) <$> DAQuery.findLatestLinkedByRCId rc.id now
+      mbPersonId' <- case mbDriverId of
+        Just driverId -> pure (Just driverId)
+        Nothing -> fmap (.fleetOwnerId) . listToMaybe <$> FRCA.findAllActiveAssociationByRCId rc.id
+      maybe (pure Nothing) PersonQuery.findById mbPersonId'
+  merchantOpCityId <-
+    ((mbAssocPerson <&> (.merchantOperatingCityId)) <|> rc.merchantOperatingCityId)
+      & fromMaybeM (InvalidRequest $ "RC has no associated driver/fleet or operating city to derive city from: " <> registrationNo)
+  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+  -- Dashboard: the RC's city must match the caller's path city.
+  whenJust mbPassedCityId $ \passedCityId ->
+    when (passedCityId /= merchantOpCityId) $
+      throwError (InvalidRequest $ "RC belongs to city: " <> show merchantOperatingCity.city)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  -- This RC's mandatory vehicle docs with per-doc statuses (keyed on the RC).
+  (vehicleDocItem, configs) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig ENGLISH registrationNo (Just True)
+  let allValid = SStatus.checkAllVehicleDocsValidForFetchedDocs configs vehicleDocItem
+  -- Persist verified only under enableBotFlow (matches existing config behaviour).
+  when (transporterConfig.enableBotFlow == Just True) $ do
+    rcHash <- getDbHash registrationNo
+    RCQuery.updateVerifiedByCertificateNumberHash (Just allValid) rcHash
+  pure (registrationNo, allValid, rc.approved, vehicleDocItem.documents)
 
 postDriverDigilockerInitiate ::
   ( Maybe (Id Domain.Types.Person.Person),

@@ -20,6 +20,7 @@ buildMerchantServiceConfig merchantId serviceConfig merchantOperatingCityId = do
       { merchantId,
         serviceConfig,
         merchantOperatingCityId = Just merchantOperatingCityId,
+        runInCloud = Nothing,
         updatedAt = now,
         createdAt = now
       }
