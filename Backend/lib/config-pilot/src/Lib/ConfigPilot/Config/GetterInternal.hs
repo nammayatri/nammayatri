@@ -114,8 +114,10 @@ invalidateConfigInMem cfgType = do
   now <- getCurrentTime
   let val = A.object ["forceCleanupTimestamp" .= timeOfDayFromUTCTime now, "forceCleanupKeyPrefix" .= keyPrefix]
   Hedis.setExp "inmem:force:cleanup:timeofday" val 600
-  IM.refreshInMem keyPrefix -- L1: clear in-mem across pods via the shudhi sidecar (the Redis flag above is the TTL-based fallback)
   Hedis.delRedisCacheBucket keyPrefix -- L2: drop the cross-pod Redis hash bucket for this config type in one DEL
+  logDebug $ "Redis Key Deleted : " <> keyPrefix
+  IM.refreshInMem keyPrefix -- L1: clear in-mem across pods via the shudhi sidecar (the Redis flag above is the TTL-based fallback)
+  logDebug $ "InMemKey Key Deleted : " <> keyPrefix
   where
     timeOfDayFromUTCTime t =
       let dayTime = utctDayTime t
