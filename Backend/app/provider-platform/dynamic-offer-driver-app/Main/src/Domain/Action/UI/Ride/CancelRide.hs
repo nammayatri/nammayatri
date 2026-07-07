@@ -54,6 +54,7 @@ import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.DriverCoins.Coins as DC
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.CallBAPInternal
@@ -81,8 +82,7 @@ data ServiceHandle m = ServiceHandle
   }
 
 cancelRideHandle ::
-  ( MonadFlow m,
-    EncFlow m r,
+  ( EncFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -117,7 +117,8 @@ cancelRideHandle ::
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
-    CH.ClickhouseFlow m r
+    CH.ClickhouseFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   ServiceHandle m
 cancelRideHandle =
@@ -162,6 +163,7 @@ dashboardCancelRideHandler ::
   CancelRideReq ->
   Flow APISuccess.APISuccess
 dashboardCancelRideHandler shandle merchantId merchantOpCityId rideId req =
+  -- TODO ActorInfo.withDashboardPersonIdActorInfo requestorId $ do
   withLogTag ("merchantId-" <> merchantId.getId) $ do
     void $ cancelRideImpl shandle (DashboardRequestorId (merchantId, merchantOpCityId)) rideId req False
     return APISuccess.Success

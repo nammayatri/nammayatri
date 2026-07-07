@@ -32,7 +32,7 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "onboarding" :> "configs" :> QueryParam "makeSelfieAadhaarPanMandatory" Kernel.Prelude.Bool :> QueryParam "onlyVehicle" Kernel.Prelude.Bool
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
       :<|> TokenAuth
       :> "driver"
@@ -50,7 +50,7 @@ type API =
            "vehicleServiceTier"
            Domain.Types.Common.ServiceTierType
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.DriverOnboardingV2.RateCardResp]
       :<|> TokenAuth
       :> "driver"
@@ -59,7 +59,7 @@ type API =
            "rcNo"
            Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.VehiclePhotosResp
       :<|> TokenAuth
       :> "driver"
@@ -92,51 +92,51 @@ type API =
            "rcNo"
            Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.VehiclePhotosResp
       :<|> TokenAuth
       :> "driver"
       :> "updateAirCondition"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.UpdateAirConditionUpdateRequest
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "driver"
       :> "vehicleServiceTiers"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers
       :<|> TokenAuth
       :> "driver"
       :> "updateServiceTiers"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "driver"
       :> "register"
       :> "ssn"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.SSNReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "driver"
       :> "verify"
       :> "bankAccount"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.VerifyBankAccReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.External.Verification.Interface.Types.VerifyAsyncResp
       :<|> TokenAuth
       :> Capture
@@ -148,30 +148,30 @@ type API =
            "driverId"
            (Kernel.Types.Id.Id Domain.Types.Person.Driver)
       :> Get
-           ('[JSON])
+           '[JSON]
            Kernel.External.Verification.Types.BankAccountVerificationResponse
       :<|> TokenAuth
       :> "driver"
       :> "delete"
       :> "bankAccount"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "driver"
       :> "backgroundVerification"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "driver"
       :> "register"
       :> "pancard"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.DriverPanReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "driver"
@@ -182,7 +182,7 @@ type API =
            "paymentMode"
            Domain.Types.Extra.MerchantPaymentMethod.PaymentMode
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
       :<|> TokenAuth
       :> "driver"
@@ -190,7 +190,7 @@ type API =
       :> "bankAccount"
       :> "status"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.BankAccountResp
       :<|> TokenAuth
       :> "driver"
@@ -200,37 +200,37 @@ type API =
            "status"
            Domain.Types.Image.SelfieFetchStatus
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.GetLiveSelfieResp
       :<|> TokenAuth
       :> "driver"
       :> "register"
       :> "aadhaarCard"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.AadhaarCardReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "driver"
       :> "register"
       :> "logHvSdkCall"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.HVSdkCallLogReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "driver"
       :> "register"
       :> "commonDocument"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.CommonDocumentReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "driver"
@@ -246,49 +246,62 @@ type API =
            "searchString"
            Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.FleetRCListRes
       :<|> TokenAuth
       :> "driver"
       :> "linkToFleet"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.LinkToFleetReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "driver"
+      :> "register"
+      :> "vehicleStatus"
+      :> QueryParam
+           "registrationNo"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "rcId"
+           Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           API.Types.UI.DriverOnboardingV2.RcVerifyStatusResp
       :<|> TokenAuth
       :> "driver"
       :> "digilocker"
       :> "initiate"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.DigiLockerInitiateReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.DigiLockerInitiateResp
       :<|> TokenAuth
       :> "driver"
       :> "digilocker"
       :> "pullDocuments"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverOnboardingV2.PullDocumentReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverVerifyBankAccount :<|> getInfoBankAccount :<|> postDriverDeleteBankAccount :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall :<|> postDriverRegisterCommonDocument :<|> getDriverFleetRcs :<|> postDriverLinkToFleet :<|> postDriverDigilockerInitiate :<|> postDriverDigilockerPullDocuments
+handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverVerifyBankAccount :<|> getInfoBankAccount :<|> postDriverDeleteBankAccount :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall :<|> postDriverRegisterCommonDocument :<|> getDriverFleetRcs :<|> postDriverLinkToFleet :<|> getDriverRegisterVehicleStatus :<|> postDriverDigilockerInitiate :<|> postDriverDigilockerPullDocuments
 
 getOnboardingConfigs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
   )
 getOnboardingConfigs a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getOnboardingConfigs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
@@ -298,10 +311,10 @@ getDriverRateCard ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Types.Common.Meters) ->
-    Kernel.Prelude.Maybe (Kernel.Types.Common.Minutes) ->
-    Kernel.Prelude.Maybe (Domain.Types.Common.TripCategory) ->
-    Kernel.Prelude.Maybe (Domain.Types.Common.ServiceTierType) ->
+    Kernel.Prelude.Maybe Kernel.Types.Common.Meters ->
+    Kernel.Prelude.Maybe Kernel.Types.Common.Minutes ->
+    Kernel.Prelude.Maybe Domain.Types.Common.TripCategory ->
+    Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType ->
     Environment.FlowHandler [API.Types.UI.DriverOnboardingV2.RateCardResp]
   )
 getDriverRateCard a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRateCard (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
@@ -321,14 +334,14 @@ getDriverVehiclePhotosB64 ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Text ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.VehiclePhotosResp
   )
@@ -427,7 +440,7 @@ getDriverRegisterBankAccountLink ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe (Domain.Types.Extra.MerchantPaymentMethod.PaymentMode) ->
+    Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
   )
 getDriverRegisterBankAccountLink a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRegisterBankAccountLink (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
@@ -486,9 +499,9 @@ getDriverFleetRcs ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.FleetRCListRes
   )
 getDriverFleetRcs a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverFleetRcs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
@@ -502,6 +515,17 @@ postDriverLinkToFleet ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postDriverLinkToFleet a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverLinkToFleet (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getDriverRegisterVehicleStatus ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Environment.FlowHandler API.Types.UI.DriverOnboardingV2.RcVerifyStatusResp
+  )
+getDriverRegisterVehicleStatus a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRegisterVehicleStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postDriverDigilockerInitiate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

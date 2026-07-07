@@ -33,6 +33,7 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverGstin as DGst
 import qualified Domain.Types.DriverPanCard as DPan
+import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.IdfyVerification as DIdfy
 import qualified Domain.Types.IdfyVerification as Domain
@@ -385,7 +386,7 @@ mkIdfyVerificationEntityGst person imageId1 requestId now imageExtractionValidat
         documentImageId1 = imageId1,
         documentImageId2 = Nothing,
         requestId,
-        docType = ODC.GSTCertificate,
+        docType = docTypeToText ODC.GSTCertificate,
         documentNumber = encryptedGst,
         driverDateOfBirth = Nothing,
         imageExtractionValidation = imageExtractionValidation,

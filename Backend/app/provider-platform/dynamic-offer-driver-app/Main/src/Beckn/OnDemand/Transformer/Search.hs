@@ -161,7 +161,13 @@ tfAddress (Just location) = do
     then do
       pure Nothing
     else do
-      pure $ Just returnData
+      pure $
+        Just
+          returnData
+            { Beckn.Types.Core.Taxi.Common.Address.area_code =
+                nonEmptyAreaCode location.locationAreaCode
+                  <|> nonEmptyAreaCode (Beckn.Types.Core.Taxi.Common.Address.area_code returnData)
+            }
 
 tfLatLong :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Data.Text.Text -> m Kernel.External.Maps.LatLong
 tfLatLong locationGps = do
@@ -221,3 +227,9 @@ getToSpecialLocationId req = do
   fulfillment <- intent.intentFulfillment
   tags <- fulfillment.fulfillmentTags
   Utils.getTagV2 Tags.SEARCH_REQUEST_INFO Tags.TO_SPECIAL_LOCATION_ID (Just tags)
+
+nonEmptyAreaCode :: Maybe T.Text -> Maybe T.Text
+nonEmptyAreaCode = \case
+  Nothing -> Nothing
+  Just t | T.null (T.strip t) -> Nothing
+  Just t -> Just t

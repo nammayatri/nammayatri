@@ -13,6 +13,7 @@ imports:
   Currency: Kernel.Types.Common
   HighPrecMoney: Kernel.Types.Common
   Value: Data.Aeson
+  ActorType: Lib.Finance.Core.Types
 
 PgPaymentSettlementReport:
   tableName: pg_payment_settlement_report
@@ -137,7 +138,10 @@ PgPaymentSettlementReport:
     rawData: Maybe Value                           # Full PG row stored as JSON for audit/debugging
 
     # --- Audit ---
-    createdBy: Maybe Text                          # Who created this record
+    createdBy: Maybe ActorType                     # Who created this record
+    createdById: Maybe Text                        # requestId for UNKNOWN/SYSTEM, jobId for JOB, personId for PERSON/DASHBOARD_PERSON
+    updatedBy: Maybe ActorType                     # Who updated this record
+    updatedById: Maybe Text                        # requestId for UNKNOWN/SYSTEM, jobId for JOB, personId for PERSON/DASHBOARD_PERSON
 
     # --- Multi-tenancy ---
     merchantId: Text
@@ -178,7 +182,7 @@ PgPaymentSettlementReport:
 
     updateReconStatus:
       kvFunction: updateOneWithKV
-      params: [reconStatus, reconMessage, updatedAt]
+      params: [reconStatus, reconMessage, updatedBy, updatedById, updatedAt]
       where: id
 
 

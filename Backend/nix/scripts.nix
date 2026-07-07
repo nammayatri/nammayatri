@@ -59,6 +59,125 @@ _:
           '';
         };
 
+        run-cabal-build-devbox = {
+          category = "Backend";
+          description = "Deploy the local repo to a dev-box worker and run cache-restore + cabal build all remotely, streaming output to this terminal.";
+          cdToProjectRoot = false;
+          exec = ''
+            export PATH="${lib.makeBinPath (with pkgs; [ curl jq rsync openssh git coreutils ])}:$PATH"
+            set -euo pipefail
+
+            REPO_ROOT=$(git -C "''${FLAKE_ROOT}" rev-parse --show-toplevel)
+            BASE_API="''${BASE_API:-http://34.100.155.111:8787}"
+
+            # ── (i) developer name → remote dir /tmp/<devName>/nammayatri ──
+            printf 'Enter developer name: ' >&2
+            read -r DEV_NAME
+            if ! [[ "$DEV_NAME" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+              echo "unsafe developer name: $DEV_NAME" >&2; exit 1
+            fi
+            REMOTE_DIR="/tmp/''${DEV_NAME}/nammayatri"
+
+            # ── cabal clean? wipe dist-newstyle so cache-restore pulls a fresh
+            #    CI cache; default No = build on the existing dist-newstyle. ──
+            printf 'Run cabal clean first (wipe dist-newstyle for a fresh cache-restore)? [y/N]: ' >&2
+            read -r DO_CLEAN
+            CLEAN=0
+            case "$DO_CLEAN" in [yY]|[yY][eE][sS]) CLEAN=1 ;; esac
+
+            # ── (ii) list dev-box workers from the base-station API ──
+            mapfile -t BOXES < <(
+              curl -fsS --max-time 5 "$BASE_API/api/status" \
+              | jq -r '.workers[] | select(.type=="dev-box") | [(.name // ""), (.localIp // ""), (.awsIp // ""), (.username // "")] | join("|")'
+            )
+            if [ "''${#BOXES[@]}" -eq 0 ]; then
+              echo "No dev-box machines found at $BASE_API/api/status" >&2; exit 1
+            fi
+
+            # ── select: auto if exactly one, else interactive ──
+            if [ "''${#BOXES[@]}" -eq 1 ]; then
+              SEL="''${BOXES[0]}"
+            else
+              echo "Available dev-box machines:" >&2
+              i=1
+              for row in "''${BOXES[@]}"; do
+                IFS='|' read -r n lip aip un <<<"$row"
+                printf '  %d) %-28s  %s  (user=%s)\n' "$i" "$n" "''${lip:-$aip}" "$un" >&2
+                i=$((i+1))
+              done
+              SEL=""
+              while [ -z "$SEL" ]; do
+                printf 'Select a machine [1-%d]: ' "''${#BOXES[@]}" >&2
+                read -r c
+                if [[ "$c" =~ ^[0-9]+$ ]] && [ "$c" -ge 1 ] && [ "$c" -le "''${#BOXES[@]}" ]; then
+                  SEL="''${BOXES[$((c-1))]}"
+                else
+                  echo "Invalid selection." >&2
+                fi
+              done
+            fi
+            IFS='|' read -r NAME LOCAL_IP AWS_IP RUSER <<<"$SEL"
+            HOST="''${LOCAL_IP:-$AWS_IP}"
+            PORT=22
+            if [ -z "$HOST" ]; then echo "dev-box '$NAME' has no reachable IP" >&2; exit 1; fi
+            echo "Selected dev-box: $NAME  host=$HOST  user=$RUSER  port=$PORT" >&2
+
+            # ── ssh key discovery + key-only preflight ──
+            SSH_KEY=""
+            for k in "$HOME/.ssh/id_ed25519" "$HOME/.ssh/id_rsa" "$HOME/.ssh/id_ecdsa"; do
+              if [ -f "$k" ]; then SSH_KEY="$k"; break; fi
+            done
+            SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15 -o GSSAPIAuthentication=no -o ConnectTimeout=10 -p "$PORT")
+            if [ -n "$SSH_KEY" ]; then SSH_OPTS+=(-i "$SSH_KEY"); fi
+            if ! ssh "''${SSH_OPTS[@]}" -o BatchMode=yes "$RUSER@$HOST" 'echo ok' >/dev/null 2>&1; then
+              echo "SSH key not authorized on $RUSER@$HOST." >&2
+              echo "Run: ssh-copy-id ''${SSH_KEY:+-i $SSH_KEY} -p $PORT $RUSER@$HOST" >&2
+              exit 1
+            fi
+
+            # ── nearest 'minio-pushed'-tagged commit, from LOCAL git ──
+            git -C "$REPO_ROOT" fetch --quiet origin 'refs/tags/minio-pushed/*:refs/tags/minio-pushed/*' 2>/dev/null || true
+            git -C "$REPO_ROOT" fetch --quiet origin main 2>/dev/null || true
+            BASE="HEAD"
+            MB=$(git -C "$REPO_ROOT" merge-base origin/main HEAD 2>/dev/null || true)
+            if [ -n "$MB" ]; then BASE="$MB"; fi
+            CACHE_SHA=""
+            while IFS= read -r sha; do
+              if git -C "$REPO_ROOT" rev-parse -q --verify "refs/tags/minio-pushed/$sha" >/dev/null 2>&1; then
+                CACHE_SHA="$sha"; break
+              fi
+            done < <(git -C "$REPO_ROOT" log --format=%H -n 30 "$BASE" 2>/dev/null)
+            echo "cache commit: ''${CACHE_SHA:-<none — remote builds from scratch>}" >&2
+
+            # ── (iii) rsync deploy (same excludes as the dashboard) ──
+            RSYNC_SSH="ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=10 -p $PORT"
+            if [ -n "$SSH_KEY" ]; then RSYNC_SSH="$RSYNC_SSH -i $SSH_KEY"; fi
+            echo "Deploying $REPO_ROOT -> $RUSER@$HOST:$REMOTE_DIR ..." >&2
+            rsync -az --delete --info=progress2 \
+              -e "$RSYNC_SSH" \
+              --rsync-path "mkdir -p $REMOTE_DIR && rsync" \
+              --exclude data --exclude node_modules --exclude dist-newstyle --exclude dist \
+              --exclude .direnv --exclude _build --exclude result --exclude 'result-*' \
+              --exclude .cabal-dir --exclude .git --exclude .hie --exclude hie \
+              --exclude .nix-deps --exclude .ci-project-root --exclude .ci-cabal-dir \
+              --exclude 'Frontend/android-native' --exclude 'Frontend/ios' \
+              --exclude 'Frontend/build' --exclude 'Frontend/dist' \
+              "$REPO_ROOT/" "$RUSER@$HOST:$REMOTE_DIR/"
+
+            # ── (iv) minimal 1-commit repo + write Backend/.ci-cache-sha ──
+            # git-ignore the devbox-only build artifacts BEFORE `git add -A`, so
+            # `nix develop` copies only real source to the store (hie/ alone is
+            # ~400MB of tiny files and stalls the copy otherwise).
+            ssh "''${SSH_OPTS[@]}" -o BatchMode=yes "$RUSER@$HOST" \
+              "cd $REMOTE_DIR && rm -rf .git && git init -q && printf '%s\n' 'dist-newstyle/' 'hie/' '.hie/' '.nix-deps/' '.cabal-dir/' '.ci-project-root' '.ci-cabal-dir' '.ci-cache-sha' > .git/info/exclude && git add -A && GIT_AUTHOR_NAME=deploy GIT_AUTHOR_EMAIL=deploy@deploy GIT_COMMITTER_NAME=deploy GIT_COMMITTER_EMAIL=deploy@deploy git commit -q -m deploy --allow-empty 2>/dev/null || true; mkdir -p Backend && printf '%s' '$CACHE_SHA' > Backend/.ci-cache-sha"
+
+            # ── (v) cache-restore + cabal build all, streamed here via ssh -tt ──
+            echo "== running cache-restore + cabal build all on $NAME ==" >&2
+            ssh -tt "''${SSH_OPTS[@]}" "$RUSER@$HOST" \
+              "bash $REMOTE_DIR/Backend/nix/devbox/remote-run.sh $REMOTE_DIR/Backend $CLEAN"
+          '';
+        };
+
         docs = {
           category = "Backend";
           description = "Run Hoogle server for Haskell packages.";

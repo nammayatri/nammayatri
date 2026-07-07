@@ -7,23 +7,19 @@ module API.Action.UI.ZendeskSdkToken
   )
 where
 
-import qualified Control.Lens
+import qualified API.Types.UI.ZendeskSdkToken
 import qualified Domain.Action.UI.ZendeskSdkToken
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
-import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "profile" :> "zendeskSdkToken" :> Get ('[JSON]) Kernel.Prelude.Text)
+type API = ("profile" :> "zendeskSdkToken" :> ReqBody ('[JSON]) API.Types.UI.ZendeskSdkToken.ZendeskJwtReq :> Post ('[JSON]) API.Types.UI.ZendeskSdkToken.ZendeskJwtResp)
 
 handler :: Environment.FlowServer API
-handler = getProfileZendeskSdkToken
+handler = postProfileZendeskSdkToken
 
-getProfileZendeskSdkToken :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler Kernel.Prelude.Text)
-getProfileZendeskSdkToken a1 = withFlowHandlerAPI $ Domain.Action.UI.ZendeskSdkToken.getProfileZendeskSdkToken (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+postProfileZendeskSdkToken :: (API.Types.UI.ZendeskSdkToken.ZendeskJwtReq -> Environment.FlowHandler API.Types.UI.ZendeskSdkToken.ZendeskJwtResp)
+postProfileZendeskSdkToken a1 = withFlowHandlerAPI $ Domain.Action.UI.ZendeskSdkToken.postProfileZendeskSdkToken a1

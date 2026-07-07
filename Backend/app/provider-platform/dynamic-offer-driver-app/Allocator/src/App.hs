@@ -17,8 +17,9 @@ module App where
 
 import qualified Client.Main as CM
 import qualified Data.Bool as B
+import Data.Singletons (SingI)
 import qualified Data.Text as T
-import Environment (HandlerCfg, HandlerEnv, buildHandlerEnv)
+import Environment (Flow, HandlerCfg, HandlerEnv, buildHandlerEnv)
 import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Language as L
@@ -81,7 +82,8 @@ import SharedLogic.KaalChakra.Chakras
 import SharedLogic.MediaFileDocument (mediaFileDocumentComplete)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
-import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
+import qualified Tools.ActorInfo as ActorInfo
+import "dynamic-offer-driver-app" Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 
 instance HasSchemaName Beam.MerchantOperatingCityT where
   schemaName _ = T.pack currentSchemaName
@@ -105,6 +107,17 @@ createCAC appCfg = do
         threadDelay 1000000
         B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
 
+putJobHandlerInListWrapper ::
+  forall t (e :: t).
+  (JobProcessor t, JobInfoProcessor e, SingI e) =>
+  R.FlowRuntime ->
+  HandlerEnv ->
+  (Job e -> Flow ExecutionResult) ->
+  JobHandlersList t ->
+  JobHandlersList t
+putJobHandlerInListWrapper flowRt env jobHandler =
+  putJobHandlerInList (liftIO . runFlowR flowRt env . ActorInfo.withJobIdActorInfoWrapper jobHandler)
+
 allocatorHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle AllocatorJobType
 allocatorHandle flowRt env =
   SchedulerHandle
@@ -119,53 +132,53 @@ allocatorHandle flowRt env =
       reScheduleOnError = QAllJ.reScheduleOnError,
       jobHandlers =
         emptyJobHandlerList
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSearchRequestToDrivers)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockDriver)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockAirportDriver)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . softBlockNotifyDriver)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockSoftBlockedDriver)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . calculateSupplyDemand)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . calculateCongestionChargeAvgTaxi)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . calculateDriverFeeForDrivers)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendPDNNotificationToDriver)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . startMandateExecutionForDriver)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . notificationAndOrderStatusUpdate)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendOverlayToDriver)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . badDebtCalculation)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendManualPaymentLink)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . retryDocumentVerificationJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendDriverReferralPayoutJobData)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRideNotificationsToDriver)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendTagActionNotification)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRideAssignedOnUpdate)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . checkExotelCallStatusAndNotifyBAP)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendFleetAlert)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runDailyJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runWeeklyJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runMonthlyJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runQuarterlyJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runDailyUpdateTagJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runWeeklyUpdateTagJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runMonthlyUpdateTagJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runQuarterlyUpdateTagJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runScheduledFCMS)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendWebhookWithRetryToExternal)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . installationStatus)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . mediaFileDocumentComplete)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendFeedbackPN)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSpecialZonePayout)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . processReminder)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . expireSubscriptionPurchase)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledBatchPayout)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runReconciliationJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runSettlementReportIngestionJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runSAPSubscriptionPurchaseDispatchJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runSAPPGSettlementDispatchJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . checkPickupZoneArrival)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . triggerSpecialZoneNotify)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . scheduledTDSDistribution)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . triggerIffcoTokioInsuranceForOnRideDrivers)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runAggregatedCommissionInvoiceCreationJob)
+          & putJobHandlerInListWrapper flowRt env sendSearchRequestToDrivers
+          & putJobHandlerInListWrapper flowRt env unblockDriver
+          & putJobHandlerInListWrapper flowRt env unblockAirportDriver
+          & putJobHandlerInListWrapper flowRt env softBlockNotifyDriver
+          & putJobHandlerInListWrapper flowRt env unblockSoftBlockedDriver
+          & putJobHandlerInListWrapper flowRt env calculateSupplyDemand
+          & putJobHandlerInListWrapper flowRt env calculateCongestionChargeAvgTaxi
+          & putJobHandlerInListWrapper flowRt env calculateDriverFeeForDrivers
+          & putJobHandlerInListWrapper flowRt env sendPDNNotificationToDriver
+          & putJobHandlerInListWrapper flowRt env startMandateExecutionForDriver
+          & putJobHandlerInListWrapper flowRt env notificationAndOrderStatusUpdate
+          & putJobHandlerInListWrapper flowRt env sendOverlayToDriver
+          & putJobHandlerInListWrapper flowRt env badDebtCalculation
+          & putJobHandlerInListWrapper flowRt env sendManualPaymentLink
+          & putJobHandlerInListWrapper flowRt env retryDocumentVerificationJob
+          & putJobHandlerInListWrapper flowRt env sendDriverReferralPayoutJobData
+          & putJobHandlerInListWrapper flowRt env sendScheduledRideNotificationsToDriver
+          & putJobHandlerInListWrapper flowRt env sendTagActionNotification
+          & putJobHandlerInListWrapper flowRt env sendScheduledRideAssignedOnUpdate
+          & putJobHandlerInListWrapper flowRt env checkExotelCallStatusAndNotifyBAP
+          & putJobHandlerInListWrapper flowRt env sendFleetAlert
+          & putJobHandlerInListWrapper flowRt env runDailyJob
+          & putJobHandlerInListWrapper flowRt env runWeeklyJob
+          & putJobHandlerInListWrapper flowRt env runMonthlyJob
+          & putJobHandlerInListWrapper flowRt env runQuarterlyJob
+          & putJobHandlerInListWrapper flowRt env runDailyUpdateTagJob
+          & putJobHandlerInListWrapper flowRt env runWeeklyUpdateTagJob
+          & putJobHandlerInListWrapper flowRt env runMonthlyUpdateTagJob
+          & putJobHandlerInListWrapper flowRt env runQuarterlyUpdateTagJob
+          & putJobHandlerInListWrapper flowRt env runScheduledFCMS
+          & putJobHandlerInListWrapper flowRt env sendWebhookWithRetryToExternal
+          & putJobHandlerInListWrapper flowRt env installationStatus
+          & putJobHandlerInListWrapper flowRt env mediaFileDocumentComplete
+          & putJobHandlerInListWrapper flowRt env sendFeedbackPN
+          & putJobHandlerInListWrapper flowRt env sendSpecialZonePayout
+          & putJobHandlerInListWrapper flowRt env processReminder
+          & putJobHandlerInListWrapper flowRt env expireSubscriptionPurchase
+          & putJobHandlerInListWrapper flowRt env sendScheduledBatchPayout
+          & putJobHandlerInListWrapper flowRt env runReconciliationJob
+          & putJobHandlerInListWrapper flowRt env runSettlementReportIngestionJob
+          & putJobHandlerInListWrapper flowRt env runSAPSubscriptionPurchaseDispatchJob
+          & putJobHandlerInListWrapper flowRt env runSAPPGSettlementDispatchJob
+          & putJobHandlerInListWrapper flowRt env checkPickupZoneArrival
+          & putJobHandlerInListWrapper flowRt env triggerSpecialZoneNotify
+          & putJobHandlerInListWrapper flowRt env scheduledTDSDistribution
+          & putJobHandlerInListWrapper flowRt env triggerIffcoTokioInsuranceForOnRideDrivers
+          & putJobHandlerInListWrapper flowRt env runAggregatedCommissionInvoiceCreationJob
     }
 
 runDriverOfferAllocator ::

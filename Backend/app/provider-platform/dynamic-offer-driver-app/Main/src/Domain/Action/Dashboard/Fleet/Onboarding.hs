@@ -1,6 +1,7 @@
 module Domain.Action.Dashboard.Fleet.Onboarding
   ( getOnboardingDocumentConfigs,
     getOnboardingRegisterStatus,
+    getOnboardingRegisterVehicleStatus,
     castStatusRes,
     postOnboardingVerify,
     getOnboardingGetReferralDetails,
@@ -159,6 +160,28 @@ getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeS
               then Just Dashboard.Common.ADMIN_APPROVED
               else Nothing
   pure $ applyVehicleDocsFilter effectiveFilter res
+
+-- | Dashboard vehicle-only RC verify-status. Delegates to the shared @rcVerifyStatus@ with @isDashboard =
+--   True@ (and no caller), which skips the per-person RC-ownership gate — dashboard callers are already
+--   merchant/city-scoped by ApiAuthV2. The RC is resolved from @registrationNo@/@rcId@, but its resolved
+--   city must match this dashboard user's operating city (else the RC belongs to a different city).
+getOnboardingRegisterVehicleStatus ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Text ->
+  Maybe Text ->
+  Environment.Flow CommonOnboarding.RcVerifyStatusResp
+getOnboardingRegisterVehicleStatus merchantShortId opCity mbRegistrationNo mbRcId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  (registrationNo, verified, approved, documents) <- DOnboarding.rcVerifyStatus Nothing True (Just merchantOpCity.id) mbRegistrationNo mbRcId
+  pure $
+    CommonOnboarding.RcVerifyStatusResp
+      { registrationNo,
+        verified,
+        approved,
+        documents = map castDocumentStatusItem documents
+      }
 
 postOnboardingVerify ::
   ShortId DM.Merchant ->

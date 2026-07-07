@@ -102,6 +102,7 @@ library
     , errors
     , esqueleto
     , euler-hs
+    , finance-kernel
     , hedis
     , hw-kafka-client
     , location-updates
@@ -199,6 +200,7 @@ executable kafka-consumers-exe
     , errors
     , esqueleto
     , euler-hs
+    , finance-kernel
     , hedis
     , hw-kafka-client
     , kafka-consumers

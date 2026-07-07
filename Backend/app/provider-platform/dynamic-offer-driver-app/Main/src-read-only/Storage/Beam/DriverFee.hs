@@ -76,6 +76,6 @@ instance B.Table DriverFeeT where
 
 type DriverFee = DriverFeeT Identity
 
-$(enableKVPG ''DriverFeeT ['id] [['driverId]])
+$(enableKVPGWithPartialIndex ''DriverFeeT ['id] [['driverId]] [SKeyPartial [('feeType, "CANCELLATION_PENALTY")]])
 
 $(mkTableInstances ''DriverFeeT "driver_fee")

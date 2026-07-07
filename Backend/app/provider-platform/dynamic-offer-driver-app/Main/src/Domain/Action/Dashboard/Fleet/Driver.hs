@@ -274,6 +274,7 @@ import qualified Storage.Queries.VehicleExtra as QVehicleExtra
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCQuery
 import qualified Storage.Queries.VehicleRouteMapping as VRM
+import qualified Tools.ActorInfo as ActorInfo
 import qualified Tools.Csv as Csv
 import Tools.Encryption
 import Tools.Error
@@ -1799,6 +1800,8 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
                         },
                   selectedServiceTiers = [],
                   enabled = Just driverInfo'.enabled,
+                  verified = Just driverInfo'.verified,
+                  approved = driverInfo'.approved,
                   driverId = driverId,
                   driverName = driverName,
                   firstName = firstName,
@@ -2043,6 +2046,8 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
                   updatedAt = Just vrc.updatedAt,
                   selectedServiceTiers = selectedServiceTiers,
                   enabled = enabled,
+                  verified = vrc.verified,
+                  approved = vrc.approved,
                   driverId = driverId,
                   driverName = driverName,
                   firstName = firstName,
@@ -3696,7 +3701,8 @@ fetchOrCreatePerson moc req_ = do
             registrationLat = Nothing,
             registrationLon = Nothing,
             otpChannel = Nothing,
-            password = Nothing
+            password = Nothing,
+            employeeId = Nothing
           }
   mobileNumberHash <- getDbHash req_.driverPhoneNumber
   QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberHash moc.merchantId DP.DRIVER
@@ -4916,7 +4922,7 @@ postDriverFleetScheduledBookingReassign ::
   Text ->
   Common.ReassignScheduledBookingReq ->
   Flow APISuccess
-postDriverFleetScheduledBookingReassign merchantShortId _opCity fleetOwnerId Common.ReassignScheduledBookingReq {..} = do
+postDriverFleetScheduledBookingReassign merchantShortId _opCity fleetOwnerId Common.ReassignScheduledBookingReq {..} = ActorInfo.withDashboardPersonIdActorInfo (Id @DP.Person fleetOwnerId) $ do
   merchant <- findMerchantByShortId merchantShortId
 
   -- 1. Get old ride and validate old driver belongs to fleet

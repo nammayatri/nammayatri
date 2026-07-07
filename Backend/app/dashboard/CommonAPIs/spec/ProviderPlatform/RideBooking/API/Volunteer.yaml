@@ -27,6 +27,17 @@ apis:
       migrate:
         endpoint: VolunteerAPI AssignCreateAndStartOtpRideEndpoint
         userActionType: ApiAuth DRIVER_OFFER_BPP VOLUNTEER VOLUNTEER_ASSIGN_CREATE_AND_START_OTP_RIDE
+      helperApi:
+        - POST:
+            endpoint: /assign/start
+            name: PostVolunteerAssignStartOtpRide
+            auth: ApiAuthV2
+            query:
+              - requestorId: Text
+            request:
+              type: AssignCreateAndStartOtpRideAPIReq
+            response:
+              type: APISuccess
 
 types:
   BookingInfoResponse:

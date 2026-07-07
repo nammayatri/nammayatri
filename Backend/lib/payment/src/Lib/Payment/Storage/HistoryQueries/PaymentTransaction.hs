@@ -19,6 +19,7 @@ import Kernel.External.Payment.Juspay.Types
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import Lib.Payment.Domain.Types.Common
 import Lib.Payment.Domain.Types.PaymentOrder (PaymentOrder)
@@ -34,7 +35,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QTransaction
 type BeamFlow m r = (FinanceBeamFlow.BeamFlow m r, PaymentBeamFlow.BeamFlow m r)
 
 create ::
-  BeamFlow m r =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   Id MerchantOperatingCity ->
   PaymentTransaction ->
   Maybe Text ->
@@ -48,7 +49,7 @@ create merchantOpCityId transaction mbAction = do
   PaymentHistory.recordPaymentHistory merchantOpCityId Nothing transaction.status (Just historyMessage) transaction
 
 updateMultiple ::
-  BeamFlow m r =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   Id MerchantOperatingCity ->
   PaymentTransaction ->
   PaymentTransaction ->
@@ -81,7 +82,7 @@ findEarliestChargedTransactionByOrderId :: PaymentBeamFlow.BeamFlow m r => Id Pa
 findEarliestChargedTransactionByOrderId = QTransaction.findEarliestChargedTransactionByOrderId
 
 updateStatusAndError ::
-  BeamFlow m r =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   Id MerchantOperatingCity ->
   PaymentTransaction ->
   TransactionStatus ->
@@ -100,7 +101,7 @@ updateStatusAndError merchantOpCityId transaction status mbErrorCode mbErrorMess
   PaymentHistory.recordPaymentHistory merchantOpCityId (Just transaction.status) status (Just historyMessage) transaction
 
 updateAmount ::
-  BeamFlow m r =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   Id MerchantOperatingCity ->
   PaymentTransaction ->
   HighPrecMoney ->
@@ -122,7 +123,7 @@ updateAmount merchantOpCityId transaction newAmount newApplicationFeeAmount mbAc
   PaymentHistory.recordPaymentHistory merchantOpCityId (Just transaction.status) transaction.status (Just historyMessage) transaction
 
 incrementRetryCountAndError ::
-  BeamFlow m r =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   Id MerchantOperatingCity ->
   PaymentTransaction ->
   Maybe Text ->

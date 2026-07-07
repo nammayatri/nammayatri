@@ -39,6 +39,7 @@ import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Shutdown
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.SessionizerMetrics.Prometheus.Internal (EventCounterMetric, registerEventRequestCounterMetric)
 import Lib.SessionizerMetrics.Types.Event (EventStreamMap)
 import Passetto.Client (PassettoContext)
@@ -199,7 +200,8 @@ data AppEnv = AppEnv
     jobInfoMap :: M.Map Text Bool,
     blackListedJobs :: [Text],
     shortDurationRetryCfg :: RetryCfg,
-    cloudType :: Maybe CloudType
+    cloudType :: Maybe CloudType,
+    actorInfo :: Finance.ActorInfo
   }
   deriving (Generic)
 
@@ -268,6 +270,7 @@ buildAppEnv AppCfg {..} consumerType = do
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
   let cloudType = Nothing :: Maybe CloudType
+  let actorInfo = Finance.ActorInfo {actorType = Finance.UNKNOWN, actorId = requestId} -- FIXME update to proper value
   pure $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

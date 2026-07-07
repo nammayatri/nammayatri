@@ -67,6 +67,7 @@ import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
 
@@ -94,7 +95,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           -- Fetch all bus data for the route using getRoutesBuses
           (allBusDataForRoute, routeStopMappings) <- do
             buses <- concat <$> mapConcurrently (\rc -> (.buses) <$> CQMMB.getRoutesBuses rc integratedBppConfig) routesToUseForTrackVehicles
-            routeStopMappings <- HM.fromList <$> mapM (\rc -> (rc,) <$> HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode rc integratedBppConfig) routesToUseForTrackVehicles
+            routeStopMappings <- HM.fromList <$> mapConcurrently (\rc -> (rc,) <$> HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode rc integratedBppConfig) routesToUseForTrackVehicles
             return (buses, routeStopMappings)
 
           -- Fetch user's boarding station and leg's end station details
@@ -194,7 +195,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           -- Fetch all bus data for the route using getRoutesBuses
           (allBusDataForRoute, routeStopMappings) <- do
             buses <- concat <$> mapConcurrently (\rc -> (.buses) <$> CQMMB.getRoutesBuses rc integratedBppConfig) routesToUseForTrackVehicles
-            routeStopMappings <- HM.fromList <$> mapM (\rc -> (rc,) <$> HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode rc integratedBppConfig) routesToUseForTrackVehicles
+            routeStopMappings <- HM.fromList <$> mapConcurrently (\rc -> (rc,) <$> HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode rc integratedBppConfig) routesToUseForTrackVehicles
             return (buses, routeStopMappings)
 
           -- Fetch user's boarding station and leg's end station details
@@ -449,7 +450,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
         routeDetails
 
 confirm :: JT.ConfirmFlow m r c => Id DPerson.Person -> Id DMerchant.Merchant -> Maybe (Id FRFSQuote) -> Bool -> Bool -> Maybe API.CrisSdkResponse -> Spec.VehicleCategory -> [API.FRFSCategorySelectionReq] -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> m ()
-confirm personId merchantId mbQuoteId bookLater bookingAllowed crisSdkResponse vehicleType categorySelectionReq isSingleMode mbEnableOffer mbIsMockPayment mbTripId = do
+confirm personId merchantId mbQuoteId bookLater bookingAllowed crisSdkResponse vehicleType categorySelectionReq isSingleMode mbEnableOffer mbIsMockPayment mbTripId = ActorInfo.withPersonIdActorInfo personId $ do
   when (not bookLater && bookingAllowed) $ do
     quoteId <- mbQuoteId & fromMaybeM (InvalidRequest "You can't confirm bus before getting the fare")
     quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)

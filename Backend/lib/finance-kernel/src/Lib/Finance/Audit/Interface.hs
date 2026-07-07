@@ -13,14 +13,15 @@ where
 
 import Data.Aeson (Value)
 import Kernel.Prelude
-import Lib.Finance.Domain.Types.AuditEntry (AuditAction)
+import Lib.Finance.Core.Types (ActorType)
+import Lib.Finance.Domain.Types.AuditEntry (AuditAction, AuditEntityType)
 
 -- | Input for creating an audit entry
 data AuditInput = AuditInput
-  { entityType :: Text,
+  { entityType :: AuditEntityType,
     entityId :: Text,
     action :: AuditAction,
-    actorType :: Text,
+    actorType :: ActorType,
     actorId :: Maybe Text,
     beforeState :: Maybe Value, -- Maps to previousState in DB
     afterState :: Maybe Value, -- Maps to newState in DB

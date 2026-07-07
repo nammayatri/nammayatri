@@ -26,11 +26,6 @@ data MerchantT f = MerchantT
   { id :: B.C f Text,
     shortId :: B.C f Text,
     serverNames :: B.C f [Domain.ServerName],
-    is2faMandatory :: B.C f Bool,
-    twoFaOtpTTLInSecs :: B.C f (Maybe Int),
-    twoFaMaxOtpVerifyAttempts :: B.C f (Maybe Int),
-    totpStepSize :: B.C f (Maybe Int),
-    totpClockSkew :: B.C f (Maybe Int),
     defaultOperatingCity :: B.C f City,
     supportedOperatingCities :: B.C f [City],
     domain :: B.C f (Maybe Text),
@@ -44,10 +39,7 @@ data MerchantT f = MerchantT
     hasFleetMemberHierarchy :: B.C f (Maybe Bool),
     isStrongNameCheckRequired :: B.C f (Maybe Bool),
     singleActiveSessionOnly :: B.C f (Maybe Bool),
-    trackLoginLogoutForRoles :: B.C f [Text],
-    twoFactorMandatoryForRoles :: B.C f [Text],
-    emailOtpTTLInSecs :: B.C f (Maybe Int),
-    emailMaxOtpVerifyAttempts :: B.C f (Maybe Int)
+    trackLoginLogoutForRoles :: B.C f [Text]
   }
   deriving (Generic, B.Beamable)
 
