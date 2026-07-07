@@ -188,7 +188,13 @@ type Driver = Person
 
 data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY | NON_BINARY deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL | GIMS_EMAIL_PASSWORD deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data IdentifierType
+  = MOBILENUMBER
+  | AADHAAR
+  | EMAIL
+  | GIMS_EMAIL_PASSWORD
+  | GIMS_EMPLOYEE_ID_PASSWORD
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data Role
   = DRIVER

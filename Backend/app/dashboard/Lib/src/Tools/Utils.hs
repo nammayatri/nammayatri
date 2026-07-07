@@ -20,10 +20,9 @@ import Data.ByteString.Base32 as Base32
 import qualified Data.Text as T2
 import qualified Data.Text.Encoding as T
 import qualified Data.Time.Clock.POSIX as DT
-import qualified Domain.Types.Merchant as DMerchant
 import Kernel.Prelude
-import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow, logError)
+import Network.HTTP.Types.URI (urlEncode)
 
 genTOTP :: Text -> IO OTP
 genTOTP secretKey = do
@@ -67,10 +66,23 @@ generateSecretKey = do
   randomBytes <- getRandomBytes 20
   pure $ encodeBase32 randomBytes
 
-generateAuthenticatorURI :: Maybe Int -> Text -> Text -> ShortId DMerchant.Merchant -> Text
+-- | Build a standards-compliant otpauth URI. Authenticator apps display the
+-- issuer prominently, so it should be the deployment brand (e.g. "Control
+-- Centre"), not the merchant. Format:
+--
+--     otpauth://totp/<Issuer>:<user>?secret=...&issuer=<Issuer>&period=30
+--
+-- with both the label and the issuer query parameter URL-encoded.
+generateAuthenticatorURI :: Maybe Int -> Text -> Text -> Text -> Text
 generateAuthenticatorURI mbStepSize secretKey user issuer =
-  "otpauth://totp/" <> issuer.getShortId <> "?secret=" <> secretKey <> "&user=" <> user <> periodParam
+  "otpauth://totp/" <> encoded (issuer <> ":" <> user)
+    <> "?secret="
+    <> secretKey
+    <> "&issuer="
+    <> encoded issuer
+    <> periodParam
   where
+    encoded = T.decodeUtf8 . urlEncode True . T.encodeUtf8
     periodParam = case mbStepSize of
       Just n | n > 0 -> "&period=" <> T2.pack (show n)
       _ -> ""

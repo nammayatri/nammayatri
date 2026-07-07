@@ -2,6 +2,7 @@ module Domain.Action.Dashboard.Management.FinanceManagement
   ( getFinanceManagementSubscriptionPurchaseList,
     getFinanceManagementInvoiceList,
     getFinanceManagementFinanceInvoiceList,
+    getFinanceManagementFinanceAuditList,
     getFinanceManagementFinanceReconciliation,
     postFinanceManagementReconciliationTrigger,
     getFinanceManagementFinancePaymentSettlementList,
@@ -38,7 +39,9 @@ import Kernel.Types.Id (Id (..), ShortId (..), cast)
 import Kernel.Utils.Common (logError, logWarning, secondsToNominalDiffTime)
 import Kernel.Utils.Error (fromMaybeM, throwError)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as FinanceCore
 import qualified Lib.Finance.Domain.Types.Account as Account
+import qualified Lib.Finance.Domain.Types.AuditEntry as AuditEntry
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
@@ -49,6 +52,7 @@ import qualified Lib.Finance.Domain.Types.ReconciliationSummary as ReconSummary
 import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
 import qualified Lib.Finance.Ledger.Service as LedgerService
+import qualified Lib.Finance.Storage.Queries.AuditEntryExtra as QAuditEntryExtra
 import qualified Lib.Finance.Storage.Queries.DirectTaxTransaction as QDirectTax
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
@@ -578,6 +582,63 @@ getFinanceManagementFinanceInvoiceList ::
   Maybe UTCTime ->
   Flow API.InvoiceListRes
 getFinanceManagementFinanceInvoiceList = getFinanceManagementInvoiceList
+
+getFinanceManagementFinanceAuditList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe AuditEntry.AuditEntityType ->
+  Maybe AuditEntry.AuditAction ->
+  Maybe FinanceCore.ActorType ->
+  Maybe Text ->
+  Maybe Text ->
+  Flow API.AuditListRes
+getFinanceManagementFinanceAuditList merchantShortId opCity mbLimit mbOffset mbFrom mbTo mbEntityType mbAction mbActorType mbActorId mbEntityId = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  let limit = mkPageLimit mbLimit
+      offset = mkPageOffset mbOffset
+
+  entries <-
+    QAuditEntryExtra.findByMerchantOpCityIdWithFilters
+      merchant.id.getId
+      merchantOpCityId.getId
+      mbFrom
+      mbTo
+      mbEntityType
+      mbAction
+      mbActorType
+      mbActorId
+      mbEntityId
+      (Just limit)
+      (Just offset)
+
+  let auditEntries = map toAuditListItem entries
+      totalItems = length auditEntries
+      summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
+
+  pure API.AuditListRes {..}
+  where
+    toAuditListItem :: AuditEntry.AuditEntry -> API.AuditListItem
+    toAuditListItem entry =
+      API.AuditListItem
+        { auditEntryId = entry.id.getId,
+          entityType = entry.entityType,
+          entityId = entry.entityId,
+          action = entry.action,
+          actorType = entry.actorType,
+          actorId = entry.actorId,
+          previousState = entry.previousState,
+          newState = entry.newState,
+          metadata = entry.metadata,
+          ipAddress = entry.ipAddress,
+          createdAt = entry.createdAt,
+          updatedAt = entry.updatedAt
+        }
 
 -- | Get reconciliation data
 getFinanceManagementFinanceReconciliation ::

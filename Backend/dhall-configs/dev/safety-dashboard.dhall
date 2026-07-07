@@ -43,7 +43,7 @@ let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let kvConfigUpdateFrequency = +10
 
-let sendEmailRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
+let sendEmailRateLimitOptions = { limit = +100, limitResetTimeInSec = +600 }
 
 let driverOfferBpp =
       { name = common.ServerName.DRIVER_OFFER_BPP
@@ -151,4 +151,12 @@ in  { esqDBCfg
     , inMemConfig
     , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9993)
     , incomingAPIResponseTimeout = +15
+    , is2faMandatory = True
+    , twoFaEnforcementDeadlineText = Some "2026-08-04T00:00:00Z"
+    , twoFaOtpTTLInSecs = Some +900
+    , twoFaMaxOtpVerifyAttempts = Some +5
+    , totpStepSize = Some +30
+    , totpClockSkew = Some +2
+    , twoFaIssuerName = "Control Centre"
+    , twoFaExemptRoles = [] : List Text
     }

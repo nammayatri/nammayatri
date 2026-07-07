@@ -249,8 +249,17 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
           Query.updateVerificationStatusOnlyById Documents.VALID imageEntity.id
         else when (isNothing validationStatus) $ Query.updateVerificationStatusOnlyById Documents.MANUAL_VERIFICATION_REQUIRED imageEntity.id
       when (imageType == DVC.ProfilePhoto) $
-        fork "deferred face match on selfie upload" $
+        fork "deferred face match on selfie upload" $ do
           runDeferredFaceMatchOnSelfie person imageEntity.createdAt
+          -- Recompute verified/enabled right away: the deferred run may have promoted PENDING docs to VALID.
+          void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent person.id)
+      when (imageType == DVC.LocalResidenceProof) $
+        mapM_
+          ( \staleImg -> do
+              _ <- withTryCatch "S3:delete:staleLocalResidenceProof" $ S3.delete (T.unpack staleImg.s3Path)
+              Query.deleteById staleImg.id
+          )
+          (filter (\staleImg -> staleImg.id /= imageEntity.id) allImages)
       return $ ImageValidateResponse {imageId = imageEntity.id}
   where
     checkErrors id_ _ Nothing = throwImageError id_ ImageValidationFailed

@@ -8,6 +8,7 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Domain.Types.FRFSVehicleServiceTier as DFRFSVehicleServiceTier
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import qualified Domain.Types.VehicleSeatLayoutMapping as DVSLM
+import Domain.Utils (mapConcurrently)
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (all, any, catMaybes, concatMap, elem, find, foldr, groupBy, id, length, map, mapM_, null, readMaybe, toList, whenJust)
@@ -43,15 +44,18 @@ buildRouteWithLiveVehicle ::
   Flow (Maybe API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
 buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromStopCode toStopCode frfsTierMap mbSourceStopLatLong maxLiveVehicles = do
   let vehicleNos = nub $ map (.vehicle_no) busScheduleDetails <> map (.vehicleNumber) routeInfo.buses
-  seatLayoutMappings <-
-    mapM
-      ( \vehicleNo ->
-          JMU.measureLatency
-            (CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vehicleNo integratedBPPConfig.feedKey)
-            ("buildRouteWithLiveVehicle: findByVehicleNoAndGtfsIdCached vehicle=" <> vehicleNo)
+  seatLayoutMappingsByVehicleNo <-
+    mapConcurrently
+      ( \vehicleNo -> do
+          mapping <-
+            JMU.measureLatency
+              (CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vehicleNo integratedBPPConfig.feedKey)
+              ("buildRouteWithLiveVehicle: findByVehicleNoAndGtfsIdCached vehicle=" <> vehicleNo)
+          pure (vehicleNo, mapping)
       )
       vehicleNos
-  let seatLayoutMappingByVehicleNo = Map.fromList (zip vehicleNos seatLayoutMappings)
+  let seatLayoutMappingByVehicleNo = Map.fromList seatLayoutMappingsByVehicleNo
+      seatLayoutMappings = map snd seatLayoutMappingsByVehicleNo
       shouldRunSeatHoldReaper = any ((== Just DVSLM.AUTO_ASSIGNED) . (>>= (.seatSelectionType))) seatLayoutMappings
       -- Map of vehicleNo -> active tripId, derived from the schedule details' active trip
       -- (same logic as the single-vehicle path), so live vehicles can carry their currentTripId.
@@ -133,7 +137,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
           (JMU.getRouteStopIndices routeId' fromStopCode' toStopCode' integratedBPPConfig')
           ("getBusScheduleInfo: getRouteStopIndices routeId=" <> routeId')
       catMaybes
-        <$> mapM
+        <$> mapConcurrently
           ( \detail -> do
               let busLiveInfo = join $ lookup detail.vehicle_no busLiveInfoMap
               logDebug $ "getBusScheduleInfo: getBusLiveInfo vehicle=" <> detail.vehicle_no <> ", found=" <> show (isJust busLiveInfo) <> ", details=" <> show (fmap (\v -> (v.vehicle_number, v.latitude, v.longitude, v.timestamp, v.routes_info, v.bearing)) busLiveInfo)
@@ -195,7 +199,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
     getLiveVehicles busesData integratedBPPConfig' frfsTierMap' mbSourceLatLong maxLiveCount seatLayoutMappingByVehicleNo' activeTripIdByVehicleNo' = do
       allVehicles <-
         catMaybes
-          <$> mapM
+          <$> mapConcurrently
             ( \bus -> do
                 mbVehicleMetadata <-
                   JMU.measureLatency

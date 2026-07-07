@@ -34,6 +34,7 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
@@ -56,8 +57,7 @@ import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types
 
 sendScheduledRideAssignedOnUpdate ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
@@ -92,7 +92,8 @@ sendScheduledRideAssignedOnUpdate ::
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
-    CH.ClickhouseFlow m r
+    CH.ClickhouseFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Job 'ScheduledRideAssignedOnUpdate ->
   m ExecutionResult
@@ -267,8 +268,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
       return $ expectedEndTime > scheduledPickupTimeWithGraceTime
 
 cancelOrReallocate ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
@@ -303,7 +303,8 @@ cancelOrReallocate ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
-    CH.ClickhouseFlow m r
+    CH.ClickhouseFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   DRide.Ride ->
   Text ->

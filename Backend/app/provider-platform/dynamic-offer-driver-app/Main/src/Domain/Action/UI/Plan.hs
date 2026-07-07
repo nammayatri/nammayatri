@@ -53,6 +53,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -367,7 +368,8 @@ class Subscription a where
       EsqDBFlow m r,
       Redis.HedisFlow m r,
       HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-      HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+      HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+      Finance.HasActorInfo m r
     ) =>
     a ->
     Id SP.Person ->
@@ -457,7 +459,8 @@ getSubcriptionStatusWithPlanPrepaid ::
     EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    Finance.HasActorInfo m r
   ) =>
   Id SP.Person ->
   m (Maybe DI.DriverAutoPayStatus, Maybe DriverPlan)
@@ -1229,6 +1232,7 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
   let createOrderResp' = SPayment.applyPseudoClientId pseudoClientId createOrderResp
   now <- getCurrentTime
   purchaseId <- generateGUID
+  actorInfo <- asks (.actorInfo)
   let paymentOrderId = Id orderId
       planRideCredit = getPlanAmount plan.planBaseAmount
       expiryDate = Nothing
@@ -1255,6 +1259,10 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
             waiveOffEnabledOn = Nothing,
             waiveOffValidTill = Nothing,
             serviceName = PREPAID_SUBSCRIPTION,
+            createdBy = Just actorInfo.actorType,
+            createdById = actorInfo.actorId,
+            updatedBy = Just actorInfo.actorType,
+            updatedById = actorInfo.actorId,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOpCityId,
             createdAt = now,

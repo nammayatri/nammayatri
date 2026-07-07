@@ -247,6 +247,16 @@ getAllLegsInfo' personId journeyId checkSearch = do
     allLegs <- QJourneyLeg.getJourneyLegs journeyId
     mapMaybeM (\leg -> measureLatency (getLegInfo personId checkSearch allLegs leg) ("getLegInfo leg: " <> show leg.sequenceNumber <> " mode: " <> show leg.mode)) allLegs
 
+getAllLegsInfoFromLegs ::
+  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  Id DPerson.Person ->
+  Id DJourney.Journey ->
+  [DJourneyLeg.JourneyLeg] ->
+  m [JL.LegInfo]
+getAllLegsInfoFromLegs personId journeyId allLegs = do
+  whenJourneyUpdateInProgress journeyId $
+    mapMaybeM (\leg -> measureLatency (getLegInfo personId True allLegs leg) ("getLegInfo leg: " <> show leg.sequenceNumber <> " mode: " <> show leg.mode)) allLegs
+
 getLegInfo ::
   JL.GetStateFlow m r c =>
   Id DPerson.Person ->

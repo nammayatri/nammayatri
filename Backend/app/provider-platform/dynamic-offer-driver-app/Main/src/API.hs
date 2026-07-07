@@ -46,6 +46,7 @@ import Kernel.Utils.Servant.HTML
 import Servant hiding (serveDirectoryWebApp)
 import Servant.OpenApi
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo as ActorInfo
 
 type DriverOfferAPI =
   MainAPI
@@ -196,7 +197,7 @@ juspayWebhookHandler ::
   Value ->
   FlowHandler AckResponse
 juspayWebhookHandler merchantShortId secret value' =
-  withFlowHandlerAPI $ Payment.juspayWebhookHandler merchantShortId Nothing Nothing secret value'
+  withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo $ Payment.juspayWebhookHandler merchantShortId Nothing Nothing secret value'
 
 juspayWebhookHandlerV2 ::
   ShortId DM.Merchant ->
@@ -206,7 +207,7 @@ juspayWebhookHandlerV2 ::
   Aeson.Value ->
   FlowHandler AckResponse
 juspayWebhookHandlerV2 merchantShortId mbOpCity mbServiceName secret webhookPayload =
-  withFlowHandlerAPI $ Payment.juspayWebhookHandler merchantShortId mbOpCity mbServiceName secret webhookPayload
+  withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo $ Payment.juspayWebhookHandler merchantShortId mbOpCity mbServiceName secret webhookPayload
 
 safetyWebhookHandler ::
   ShortId DM.Merchant ->
@@ -245,7 +246,7 @@ juspayPayoutWebhookHandler ::
   Value ->
   FlowHandler AckResponse
 juspayPayoutWebhookHandler merchantShortId secret value' =
-  withFlowHandlerAPI $ Payout.juspayPayoutWebhookHandler merchantShortId Nothing Nothing secret value'
+  withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo $ Payout.juspayPayoutWebhookHandler merchantShortId Nothing Nothing secret value'
 
 juspayPayoutWebhookHandlerV2 ::
   ShortId DM.Merchant ->
@@ -255,7 +256,7 @@ juspayPayoutWebhookHandlerV2 ::
   Value ->
   FlowHandler AckResponse
 juspayPayoutWebhookHandlerV2 merchantShortId mbOpCity mbServiceName secret value' =
-  withFlowHandlerAPI $ Payout.juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName secret value'
+  withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo $ Payout.juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName secret value'
 
 stripePayoutWebhookHandler ::
   ShortId DM.Merchant ->

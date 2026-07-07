@@ -44,6 +44,7 @@ import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDi
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.StclMembership as QStclMembership
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Auth
 import qualified Utils.Common.Cac.KeyNameConstants as CCK
 
@@ -74,7 +75,7 @@ postSubmitApplication ::
     APITypes.MembershipApplicationReq ->
     Environment.Flow PaymentTypes.CreateOrderResp
   )
-postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
+postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = ActorInfo.withMbPersonIdActorInfo mbDriverId $ do
   -- Extract and validate driver ID
   driverId <- mbDriverId & fromMaybeM (InvalidRequest "Driver ID not found in authentication context")
 
@@ -231,7 +232,7 @@ postBuyAdditionalShares ::
     APITypes.TopUpSharesReq ->
     Environment.Flow PaymentTypes.CreateOrderResp
   )
-postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = do
+postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = ActorInfo.withMbPersonIdActorInfo mbDriverId $ do
   driverId <- mbDriverId & fromMaybeM (InvalidRequest "Driver ID not found in authentication context")
 
   when (req.numberOfShares <= 0) $
@@ -418,7 +419,7 @@ putUpdateApplication ::
     APITypes.UpdateMembershipApplicationReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-putUpdateApplication (mbDriverId, _merchantId, _merchantOperatingCityId) req = do
+putUpdateApplication (mbDriverId, _merchantId, _merchantOperatingCityId) req = ActorInfo.withMbPersonIdActorInfo mbDriverId $ do
   driverId' <- mbDriverId & fromMaybeM (InvalidRequest "Driver ID not found in authentication context")
 
   -- Edits apply to every SUBMITTED and PENDING allotment for this driver so dashboard queries don't
@@ -496,7 +497,7 @@ getMembership ::
     ) ->
     Environment.Flow APITypes.MembershipDetailsResp
   )
-getMembership (mbDriverId, _merchantId, _merchantOperatingCityId) = do
+getMembership (mbDriverId, _merchantId, _merchantOperatingCityId) = ActorInfo.withMbPersonIdActorInfo mbDriverId $ do
   -- Extract and validate driver ID from authentication token
   driverId' <- mbDriverId & fromMaybeM (InvalidRequest "Driver ID not found in authentication context")
 

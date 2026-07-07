@@ -18,6 +18,7 @@ import Kernel.Prelude
 import Kernel.Types.Error (GenericError (InternalError, InvalidRequest))
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DCommon
@@ -56,7 +57,8 @@ initiateRegistration ::
     PaymentBeamFlow.BeamFlow m r,
     FinanceBeamFlow.BeamFlow m r,
     MonadFlow m,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    Finance.HasActorInfo m r
   ) =>
   Id DCommon.Merchant ->
   Maybe (Id DCommon.MerchantOperatingCity) ->
@@ -169,7 +171,8 @@ initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall cust
 processRegistrationPayment ::
   ( EncFlow m r,
     PaymentBeamFlow.BeamFlow m r,
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id DOrder.PaymentOrder ->
   Payment.TransactionStatus ->
@@ -233,7 +236,8 @@ processRegistrationPayment orderId transactionStatus mbPayerVpa autoRefund creat
 refundRegistrationAmount ::
   ( EncFlow m r,
     PaymentBeamFlow.BeamFlow m r,
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id DOrder.PaymentOrder ->
   (DPayment.CreatePayoutServiceReq -> m IPayout.CreatePayoutOrderResp) -> -- payout call

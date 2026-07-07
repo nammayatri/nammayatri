@@ -41,30 +41,24 @@ jobs:
           MINIO_SECRET_KEY=$(jq -r '.minio_secret_key' /etc/service_discovery.json)
           mc alias set minio "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
 
-      - name: Check repl artifacts exist for merge base
+      - name: Check minio-pushed tag for merge base
         id: artifact-check
         run: |
           MERGE_BASE="${{ steps.merge-base.outputs.sha }}"
+          git fetch origin 'refs/tags/minio-pushed/*:refs/tags/minio-pushed/*' || true
           FOUND_SHA=""
-
           for sha in $(git log --format='%H' -n 10 "$MERGE_BASE"); do
-            echo "Checking artifacts for $sha..."
-            if mc stat "minio/haskell-cache/cabal-repl/$sha/rider-app.tar.zst" > /dev/null 2>&1 && \
-               mc stat "minio/haskell-cache/cabal-repl/$sha/repl-support.tar.zst" > /dev/null 2>&1 && \
-               mc stat "minio/haskell-cache/cabal-repl/$sha/cache-root.txt" > /dev/null 2>&1 && \
-               mc stat "minio/haskell-cache/cabal-build/$sha/build-path.txt" > /dev/null 2>&1; then
+            if git rev-parse -q --verify "refs/tags/minio-pushed/$sha" >/dev/null; then
               FOUND_SHA="$sha"
-              echo "Artifacts found for $sha"
+              echo "minio-push verified for $sha"
               break
             fi
-            echo "No artifacts for $sha, trying previous commit..."
           done
-
           if [ -n "$FOUND_SHA" ]; then
             echo "found=true" >> $GITHUB_OUTPUT
             echo "base_sha=$FOUND_SHA" >> $GITHUB_OUTPUT
           else
-            echo "::error::No repl artifacts found in last 10 commits from merge base $MERGE_BASE — cannot run incremental repl check"
+            echo "::error::No minio-pushed tag found in last 10 commits from $MERGE_BASE"
             exit 1
           fi
 

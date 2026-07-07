@@ -168,6 +168,20 @@ apis:
         type: FRFSQuoteConfirmReq
       response:
         type: FRFSTicketBookingStatusAPIRes
+      helperApi:
+        - POST:
+            endpoint: /customer/{customerId}/frfs/quote/v2/{quoteId}/confirm
+            auth: ApiAuthV2
+            params:
+              customerId: Id Person
+              quoteId: Id FRFSQuote
+            query:
+              - isMockPayment: Bool
+              - requestorId: Text
+            request:
+              type: FRFSQuoteConfirmReq
+            response:
+              type: FRFSTicketBookingStatusAPIRes
 
   - GET:
       endpoint: /customer/{customerId}/frfs/booking/{bookingId}/status
@@ -177,6 +191,17 @@ apis:
         bookingId: Id FRFSTicketBooking
       response:
         type: FRFSTicketBookingStatusAPIRes
+      helperApi:
+        - GET:
+            endpoint: /customer/{customerId}/frfs/booking/{bookingId}/status
+            auth: ApiAuthV2
+            params:
+              customerId: Id Person
+              bookingId: Id FRFSTicketBooking
+            query:
+              - requestorId: Text
+            response:
+              type: FRFSTicketBookingStatusAPIRes
 
   - GET:
       endpoint: /customer/{customerId}/frfs/route/{routeId}/seatLayout

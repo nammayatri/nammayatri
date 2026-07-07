@@ -18,6 +18,7 @@ import qualified Data.Text as T
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (generateGUID, getCurrentTime)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.StateTransition as ST
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.StateTransition as QTransition
@@ -30,7 +31,7 @@ data PayoutHistoryRecord = PayoutHistoryRecord
     paymentEvent :: ST.PaymentEvent,
     message :: Maybe Text,
     metadata :: Maybe A.Value,
-    actorType :: Text,
+    actorType :: Finance.ActorType,
     actorId :: Maybe Text,
     merchantId :: Text,
     merchantOperatingCityId :: Text
@@ -88,7 +89,7 @@ recordTransition ::
   ST.PaymentEvent ->
   Maybe Text ->
   Maybe A.Value ->
-  Text ->
+  Finance.ActorType ->
   Maybe Text ->
   Text ->
   Text ->

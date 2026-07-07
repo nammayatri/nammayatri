@@ -52,7 +52,7 @@ import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import qualified Kernel.Storage.Esqueleto.Config as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Common (Currency, HighPrecMoney, Meters (..), MonadFlow, Seconds (..), getMeters)
+import Kernel.Types.Common (Currency, HighPrecMoney, Meters (..), Seconds (..), getMeters)
 import Kernel.Types.Id
 import Kernel.Utils.Common
   ( CacheFlow,
@@ -66,6 +66,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Time (secondsFromTimeOfDay)
 import qualified "dynamic-offer-driver-app" Lib.DriverCoins.Coins as DC
 import qualified "dynamic-offer-driver-app" Lib.DriverCoins.Types as DCT
+import qualified Lib.Finance.Core.Types as Finance
 import "dynamic-offer-driver-app" SharedLogic.FareCalculator (timeZoneIST)
 import "dynamic-offer-driver-app" SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import "dynamic-offer-driver-app" SharedLogic.Finance.Wallet (createWalletEntryDelta, walletReferenceD2DReferral)
@@ -101,7 +102,8 @@ sendReferralFCM ::
     Esq.EsqDBReplicaFlow m r,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     CHConfig.ClickhouseFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
   ) =>
   Bool ->
   Ride.Ride ->
@@ -243,10 +245,12 @@ fraudChecksForReferralPayout validRide transporterConfig mobileNumberHash riderD
 ------------------------------------------------------------
 
 sendDriverToDriverReferralReward ::
+  forall m r.
   ( CacheFlow m r,
     Esq.EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
   ) =>
   Bool ->
   Ride.Ride ->
@@ -282,7 +286,8 @@ sendDriverToDriverReferralReward validRide ride _booking mbRiderDetails transpor
             isMaxReferralExceeded = totalPayoutCount <= transporterConfig.maxPayoutReferralForADay
         when isMaxReferralExceeded $
           fork "Updating Payout Stats of Referring Driver (driver-to-driver)" $
-            updateReferralStatsForDriverToDriver referringDriverId mbDailyStats localTime payoutConfig referringDriver
+            (updateReferralStatsForDriverToDriver referringDriverId mbDailyStats localTime payoutConfig referringDriver) ::
+          m ()
   where
     updateReferralStatsForDriverToDriver referringDriverId mbDailyStats localTime payoutConfig referringDriver = do
       d2dRewardAmount <-
@@ -363,7 +368,7 @@ sendDriverToDriverReferralReward validRide ride _booking mbRiderDetails transpor
 creditReferralWallet ::
   ( CacheFlow m r,
     Esq.EsqDBFlow m r,
-    MonadFlow m
+    Finance.HasActorInfo m r
   ) =>
   HighPrecMoney ->
   Id DP.Person ->

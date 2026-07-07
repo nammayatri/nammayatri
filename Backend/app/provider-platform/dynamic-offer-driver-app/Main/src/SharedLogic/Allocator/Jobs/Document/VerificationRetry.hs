@@ -74,18 +74,21 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
   let jobData = jobDetails.jobInfo.jobData
   verificationReq <- IVQuery.findByRequestId jobData.requestId >>= fromMaybeM (InternalError $ "Verification request not found in retryDocumentVerificationJob for requestId : " <> jobData.requestId)
   person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
-  documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, documentType = Just verificationReq.docType, vehicleCategory = Just (fromMaybe DVC.CAR verificationReq.vehicleCategory)}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId verificationReq.docType (fromMaybe DVC.CAR verificationReq.vehicleCategory) Nothing)) >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show verificationReq.docType))
-  let maxRetryCount = documentVerificationConfig.maxRetryCount
-  if (fromMaybe 0 verificationReq.retryCount) <= maxRetryCount
-    then do
-      documentNum <- decrypt verificationReq.documentNumber
-      IVQuery.updateStatus "source_down_retried" verificationReq.requestId
-      case verificationReq.docType of
-        DTO.VehicleRegistrationCertificate -> callVerifyRC documentNum person verificationReq
-        DTO.DriverLicense -> callVerifyDL documentNum person verificationReq
-        _ -> pure ()
-    else do
-      IVQuery.updateStatus "source_down_failed" verificationReq.requestId
+  case parseDocType verificationReq.docType of
+    Nothing -> logWarning $ "Skipping retry for non-document idfy_verification row, requestId: " <> jobData.requestId <> ", docType: " <> verificationReq.docType
+    Just parsedDocType -> do
+      documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, documentType = Just parsedDocType, vehicleCategory = Just (fromMaybe DVC.CAR verificationReq.vehicleCategory)}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId parsedDocType (fromMaybe DVC.CAR verificationReq.vehicleCategory) Nothing)) >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show parsedDocType))
+      let maxRetryCount = documentVerificationConfig.maxRetryCount
+      if (fromMaybe 0 verificationReq.retryCount) <= maxRetryCount
+        then do
+          documentNum <- decrypt verificationReq.documentNumber
+          IVQuery.updateStatus "source_down_retried" verificationReq.requestId
+          case parsedDocType of
+            DTO.VehicleRegistrationCertificate -> callVerifyRC documentNum person verificationReq
+            DTO.DriverLicense -> callVerifyDL documentNum person verificationReq
+            _ -> pure ()
+        else do
+          IVQuery.updateStatus "source_down_failed" verificationReq.requestId
   return Complete
   where
     callVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r, Redis.HedisLTSFlowEnv r) => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
@@ -97,7 +100,7 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
         Verification.AsyncResp res -> do
           case res.requestor of
             VT.Idfy -> IVQuery.create =<< mkIdfyNewVerificationEntity verificationReq res.requestId
-            VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperNewVergeVerificationEntity res.requestId verificationReq res.transactionId
+            VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperNewVergeVerificationEntity res.requestId verificationReq res.transactionId DTO.VehicleRegistrationCertificate
             _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> T.pack (show res.requestor))
           CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
         Verification.SyncResp res -> void $ VehicleRegistrationCert.onVerifyRC person Nothing res.response (Just verifyRes.remPriorityList) (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.documentImageId1 (verificationReq.retryCount <&> (+ 1)) (Just "source_down_retrying") Nothing verificationReq.vehicleCategory
@@ -110,12 +113,12 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
         case verifyRes of
           VerificationIntTypes.AsyncDLResp res -> case res.requestor of
             VT.Idfy -> IVQuery.create =<< mkIdfyNewVerificationEntity verificationReq res.requestId
-            VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperNewVergeVerificationEntity res.requestId verificationReq res.transactionId
+            VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperNewVergeVerificationEntity res.requestId verificationReq res.transactionId DTO.DriverLicense
             _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> show res.requestor)
           VerificationIntTypes.SyncDLResp _ -> throwError $ InternalError "Service provider not configured to return DL verification sync responses in retry flow"
 
-mkHyperNewVergeVerificationEntity :: MonadFlow m => Text -> DIdfyVerification.IdfyVerification -> Maybe Text -> m DHVVerification.HyperVergeVerification
-mkHyperNewVergeVerificationEntity reqId DIdfyVerification.IdfyVerification {..} transactionId = do
+mkHyperNewVergeVerificationEntity :: MonadFlow m => Text -> DIdfyVerification.IdfyVerification -> Maybe Text -> DTO.DocumentType -> m DHVVerification.HyperVergeVerification
+mkHyperNewVergeVerificationEntity reqId DIdfyVerification.IdfyVerification {..} transactionId parsedDocType = do
   now <- getCurrentTime
   newId <- generateGUID
   return $
@@ -125,6 +128,7 @@ mkHyperNewVergeVerificationEntity reqId DIdfyVerification.IdfyVerification {..} 
         status = "source_down_retrying",
         hypervergeResponse = idfyResponse,
         requestId = reqId,
+        docType = parsedDocType,
         createdAt = now,
         updatedAt = now,
         ..

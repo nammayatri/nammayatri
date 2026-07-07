@@ -43,7 +43,8 @@ import Kernel.Types.Common (Currency (..), HighPrecMoney)
 import Kernel.Types.Id
 import Kernel.Utils.Common (HasRequestId, addUTCTime, fork, getCurrentTime, logError, logInfo, withTryCatch)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import Lib.Finance
+import Lib.Finance hiding (TransactionType (SubscriptionPurchase))
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
@@ -332,7 +333,7 @@ getOrCreateSellerRevenueAccount currency merchantId merchantOperatingCityId = do
   getOrCreateAccount input
 
 createPrepaidHold ::
-  (BeamFlow m r) =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   CounterpartyType ->
   Text -> -- Owner ID
   HighPrecMoney ->
@@ -386,7 +387,7 @@ findPendingPrepaidHoldByReference ownerAccountId referenceType referenceId = do
   pure $ find (\entry -> entry.fromAccountId == ownerAccountId && entry.status == PENDING) entries
 
 voidPrepaidHold ::
-  (BeamFlow m r) =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   CounterpartyType ->
   Text -> -- Owner ID
   Text -> -- Reference ID
@@ -406,7 +407,7 @@ voidPrepaidHold counterpartyType ownerId referenceId reason mbVehicleCategory = 
       forM_ pendingEntries $ \entry -> voidEntry entry.id reason
 
 settlePrepaidHoldByReference ::
-  (BeamFlow m r) =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   CounterpartyType ->
   Text ->
   Text ->
@@ -448,7 +449,8 @@ creditPrepaidBalance ::
     EncFlow m r,
     Redis.HedisFlow m r,
     Metrics.CoreMetrics m,
-    HasRequestId r
+    HasRequestId r,
+    Finance.HasActorInfo m r
   ) =>
   CounterpartyType ->
   Text -> -- Owner ID
@@ -726,7 +728,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
     (_, _, _, _, _, _, Left err) -> pure $ Left err
 
 debitPrepaidBalance ::
-  (BeamFlow m r) =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   CounterpartyType ->
   Text -> -- Owner ID
   HighPrecMoney -> -- Final ride fare (base fare for settlement)
@@ -781,7 +783,8 @@ handleSubscriptionExpiry ::
   ( BeamFlow m r,
     Redis.HedisFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    Finance.HasActorInfo m r
   ) =>
   DSP.SubscriptionPurchase ->
   m ()
@@ -921,7 +924,7 @@ checkAndMarkExhaustedSubscriptions counterpartyType ownerId ownerType mbVehicleC
 -- Returns Just (purchaseId, expiryDate) if a purchase was activated, Nothing otherwise.
 -- The caller is responsible for scheduling the ExpireSubscriptionPurchase job.
 activateNextQueuedPurchaseExpiry ::
-  (BeamFlow m r) =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   Text -> -- Owner ID
   DSP.SubscriptionOwnerType ->
   Maybe DVC.VehicleCategory -> -- Category scope for FIFO isolation (Nothing = pooled)
@@ -938,7 +941,8 @@ activateNextQueuedPurchaseExpiry ownerId ownerType mbVehicleCategory = do
         Just plan -> do
           now <- getCurrentTime
           let expiryDate = fmap (\days -> addUTCTime (fromIntegral (days * 60 * 60 * 24)) now) plan.validityInDays
-          QSPE.updateExpiryAndStartDateById expiryDate (Just now) nextPurchase.id
+          actorInfo <- asks (.actorInfo)
+          QSPE.updateExpiryAndStartDateById expiryDate (Just now) actorInfo nextPurchase.id
           logInfo $ "Activated expiry for queued subscription " <> nextPurchase.id.getId <> " with expiryDate: " <> show expiryDate <> " startDate: " <> show now
           pure $ (nextPurchase.id,) <$> expiryDate
         Nothing -> do

@@ -14,6 +14,7 @@ import Kernel.Prelude
 import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as ITTDomain
 import qualified Lib.Finance.Domain.Types.Invoice
 import qualified Sequelize as Se
@@ -258,13 +259,16 @@ updateExpiryAndStartDateById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe UTCTime ->
   Maybe UTCTime ->
+  Finance.ActorInfo ->
   Id SubscriptionPurchase ->
   m ()
-updateExpiryAndStartDateById newExpiryDate newStartDate purchaseId = do
+updateExpiryAndStartDateById newExpiryDate newStartDate actorInfo purchaseId = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.expiryDate newExpiryDate,
       Se.Set Beam.startDate newStartDate,
+      Se.Set Beam.updatedBy (Just actorInfo.actorType),
+      Se.Set Beam.updatedById actorInfo.actorId,
       Se.Set Beam.updatedAt now
     ]
     [Se.Is Beam.id $ Se.Eq (getId purchaseId)]

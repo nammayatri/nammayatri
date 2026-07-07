@@ -15,6 +15,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id (cast)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
@@ -29,7 +30,6 @@ import qualified Storage.Queries.Notification as QNTF
 notificationAndOrderStatusUpdate ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m,
     Esq.EsqDBReplicaFlow m r,
     ServiceFlow m r,
     Esq.Transactionable m,
@@ -43,7 +43,8 @@ notificationAndOrderStatusUpdate ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasField "blackListedJobs" r [Text],
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
   ) =>
   Job 'OrderAndNotificationStatusUpdate ->
   m ExecutionResult
