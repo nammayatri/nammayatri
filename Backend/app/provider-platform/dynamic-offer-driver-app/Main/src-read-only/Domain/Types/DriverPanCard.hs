@@ -29,6 +29,7 @@ data DriverPanCardE e = DriverPanCard
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     panAadhaarLinkage :: Kernel.Prelude.Maybe Domain.Types.DriverPanCard.PanAadhaarLinkage,
     panCardNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
+    rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     verificationStatus :: Kernel.Types.Documents.VerificationStatus,
     verifiedBy :: Kernel.Prelude.Maybe Domain.Types.DriverPanCard.VerifiedBy,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
@@ -37,9 +38,9 @@ data DriverPanCardE e = DriverPanCard
   }
   deriving (Generic)
 
-type DriverPanCard = DriverPanCardE ('AsEncrypted)
+type DriverPanCard = DriverPanCardE 'AsEncrypted
 
-type DecryptedDriverPanCard = DriverPanCardE ('AsUnencrypted)
+type DecryptedDriverPanCard = DriverPanCardE 'AsUnencrypted
 
 instance EncryptedItem DriverPanCard where
   type Unencrypted DriverPanCard = (DecryptedDriverPanCard, HashSalt)
@@ -61,6 +62,7 @@ instance EncryptedItem DriverPanCard where
           merchantOperatingCityId = merchantOperatingCityId entity,
           panAadhaarLinkage = panAadhaarLinkage entity,
           panCardNumber = panCardNumber_,
+          rejectReason = rejectReason entity,
           verificationStatus = verificationStatus entity,
           verifiedBy = verifiedBy entity,
           merchantId = merchantId entity,
@@ -85,6 +87,7 @@ instance EncryptedItem DriverPanCard where
             merchantOperatingCityId = merchantOperatingCityId entity,
             panAadhaarLinkage = panAadhaarLinkage entity,
             panCardNumber = panCardNumber_,
+            rejectReason = rejectReason entity,
             verificationStatus = verificationStatus entity,
             verifiedBy = verifiedBy entity,
             merchantId = merchantId entity,
@@ -105,8 +108,8 @@ data PanType = INDIVIDUAL | BUSINESS deriving (Eq, Ord, Show, Read, Generic, ToJ
 
 data VerifiedBy = FRONTEND_SDK | DASHBOARD | DASHBOARD_ADMIN | DASHBOARD_USER | DIGILOCKER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PanAadhaarLinkage))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PanAadhaarLinkage)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PanType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PanType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''VerifiedBy))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VerifiedBy)
