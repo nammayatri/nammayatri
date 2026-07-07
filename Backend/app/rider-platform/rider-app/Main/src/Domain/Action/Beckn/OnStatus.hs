@@ -44,11 +44,10 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Tools.Logging
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
-import Kernel.Types.Id (Id, cast)
+import Kernel.Types.Id (Id)
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
-import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
 import SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QB
@@ -366,11 +365,10 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       sosId = Nothing
       offersFraudCheckFailureReason = booking.offersFraudCheckFailureReason
       driverArrivalStatus = Nothing
-  mbSafetySettings <- QSafetySettings.findByPersonId (cast booking.riderId)
   let isMeterRide = case booking.bookingDetails of
         DB.MeterRideDetails _ -> True
         _ -> False
-      enableOtpLessRide = Just $ isMeterRide || fromMaybe False (mbSafetySettings >>= (.enableOtpLessRide))
+      enableOtpLessRide = Just $ isMeterRide || fromMaybe False booking.enableOtpLessRide
   pure $ DRide.Ride {cloudType = cloudType, isTierUpgrade = Just isTierUpgrade, assignedServiceTierName = assignedServiceTierName, enableOtpLessRide = enableOtpLessRide, rideTags = Nothing, ..}
 
 mkBookingCancellationReason ::

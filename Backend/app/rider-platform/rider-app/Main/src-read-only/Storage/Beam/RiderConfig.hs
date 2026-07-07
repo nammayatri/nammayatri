@@ -72,6 +72,7 @@ data RiderConfigT f = RiderConfigT
     enableLocalPoliceSupport :: B.C f Kernel.Prelude.Bool,
     enableMultiModalForAllUsers :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableOnlinePaymentRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enableOtpLessRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableRewardsManagement :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableRideEndOffers :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableRideHailingOffers :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

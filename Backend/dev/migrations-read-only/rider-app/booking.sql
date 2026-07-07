@@ -539,3 +539,8 @@ ALTER TABLE atlas_app.booking ADD COLUMN supplier_address text ;
 ALTER TABLE atlas_app.booking ADD COLUMN issued_by_name text ;
 ALTER TABLE atlas_app.booking ADD COLUMN issued_by_id text ;
 ALTER TABLE atlas_app.booking ADD COLUMN issued_by_address text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN enable_otp_less_ride boolean ;

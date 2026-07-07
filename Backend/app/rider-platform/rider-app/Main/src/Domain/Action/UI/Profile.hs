@@ -465,6 +465,9 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
   deploymentVersion <- asks (.version)
   cloudType <- asks (.cloudType)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  when (req.enableOtpLessRide == Just True && not riderConfig.enableOtpLessRide) $
+    throwError (InvalidRequest "Otp less rides are not enabled for this city.")
   when (isNothing person.clientId && isJust mbClientId) $ QPerson.updateClientId mbClientId personId
   fork "Triggering kafka marketing params event for person" $
     case req.marketingParams of
@@ -713,6 +716,9 @@ updateEmergencySettings personId req = do
     updateSafetySettings :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => UpdateEmergencySettingsReq -> m ()
     updateSafetySettings UpdateEmergencySettingsReq {..} = do
       person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+      when (enableOtpLessRide == Just True && not riderConfig.enableOtpLessRide) $
+        throwError (InvalidRequest "Otp less rides are not enabled for this city.")
       let shareContacts = fromMaybe False shareEmergencyContacts
           setContactField field = bool (Just shareContacts) field (isJust field)
           emergencyInfo =
@@ -731,6 +737,7 @@ updateEmergencySettings personId req = do
                 enableOtpLessRide = enableOtpLessRide
               }
       void $ Lib.upsert (cast personId) emergencyInfo (Lib.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
+      whenJust enableOtpLessRide $ \v -> QPerson.updateEnableOtpLessRide personId (Just v)
 
     updateShareOptionForEmergencyContacts = isJust req.shareTripWithEmergencyContactOption || isJust req.shareTripWithEmergencyContacts
 

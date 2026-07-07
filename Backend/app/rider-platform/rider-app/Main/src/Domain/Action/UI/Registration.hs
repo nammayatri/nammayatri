@@ -767,6 +767,8 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
   encEmail <- mapM encrypt req.email
   encBusinessEmail <- mapM encrypt req.businessEmail
   deploymentVersion <- asks (.version)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+  let gatedEnableOtpLessRide = if riderConfig.enableOtpLessRide then req.enableOtpLessRide else Nothing
   return $
     SP.Person
       { id = pid,
@@ -831,7 +833,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         androidId = Nothing,
         registeredViaPartnerOrgId = mbPartnerOrgId,
         juspayCustomerPaymentID = Nothing,
-        enableOtpLessRide = req.enableOtpLessRide,
+        enableOtpLessRide = gatedEnableOtpLessRide,
         totalRidesCount = Just 0,
         customerNammaTags = Nothing,
         informPoliceSos = False,

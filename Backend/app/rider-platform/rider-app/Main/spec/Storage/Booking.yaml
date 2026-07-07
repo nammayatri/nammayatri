@@ -242,6 +242,7 @@ Booking:
     disabilityTag: Maybe Text
     configInExperimentVersions: "[ConfigVersionMap]"
     preferSafetyPlus: Bool
+    enableOtpLessRide: Maybe Bool
     driverPreference: Maybe [Text]
     recentLocationId: Maybe (Id RecentLocation)
     isInsured: Bool

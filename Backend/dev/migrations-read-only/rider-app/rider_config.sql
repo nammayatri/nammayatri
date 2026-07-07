@@ -766,3 +766,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN non_allowed_override_fleet_no_serv
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_otp_less_ride boolean  default false;
