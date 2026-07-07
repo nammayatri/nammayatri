@@ -390,6 +390,26 @@ run_rides() {
                 fi
             fi
 
+            # Skip Auto collections for environments whose env json says they have no
+            # AUTO_RICKSHAW fare products (auto_fare_products_available: "false")
+            if [[ "$suite_name" == *"Auto"* ]]; then
+                local auto_available
+                auto_available=$(python3 -c "
+import json, sys
+try:
+    with open('$env_file') as f:
+        values = json.load(f).get('values', [])
+    v = next((x.get('value') for x in values if x.get('key') == 'auto_fare_products_available'), 'true')
+    print(v)
+except Exception:
+    print('true')
+")
+                if [ "$auto_available" = "false" ]; then
+                    echo "  SKIP: $suite_name (auto_fare_products_available=false for $env_name)"
+                    continue
+                fi
+            fi
+
             echo ""
             echo "------------------------------------------------------------"
             echo "  $env_name / $suite_name"
