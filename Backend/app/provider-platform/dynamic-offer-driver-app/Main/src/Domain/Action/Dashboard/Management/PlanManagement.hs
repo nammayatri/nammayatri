@@ -88,9 +88,9 @@ postPlanManagementDeletePlan ::
   Flow APISuccess
 postPlanManagementDeletePlan _merchantShortId _opCity planIdText = do
   let planId = Id planIdText
-  plan <- QPlan.findByPrimaryKey planId >>= fromMaybeM (InvalidRequest "Plan not found")
   QPlanExtra.markAsDeprecated planId
-  CQPlan.clearPlanCacheForPlan plan
+  mbPlan <- QPlan.findByPrimaryKey planId
+  whenJust mbPlan CQPlan.clearPlanCacheForPlan
   pure Success
 
 postPlanManagementActivatePlan ::
@@ -100,9 +100,11 @@ postPlanManagementActivatePlan ::
   Flow APISuccess
 postPlanManagementActivatePlan _merchantShortId _opCity planIdText = do
   let planId = Id planIdText
-  plan <- QPlan.findByPrimaryKey planId >>= fromMaybeM (InvalidRequest "Plan not found")
+  -- markAsActive matches WHERE id (flips every payment-mode row); cache clear is best-effort so a
+  -- plan id that maps to multiple rows doesn't 404.
   QPlanExtra.markAsActive planId
-  CQPlan.clearPlanCacheForPlan plan
+  mbPlan <- QPlan.findByPrimaryKey planId
+  whenJust mbPlan CQPlan.clearPlanCacheForPlan
   pure Success
 
 getPlanManagementListPlans ::

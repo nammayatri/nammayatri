@@ -3,6 +3,7 @@ module Domain.Action.UI.CustomerReferral where
 import API.Types.UI.CustomerReferral
 import qualified Domain.Action.Beckn.Common as Common
 import qualified Domain.Action.Internal.Payout as DPayout
+import qualified Domain.Action.UI.Payout as UIPayout
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as MerchantOpCity
 import qualified Domain.Types.Person as Person
@@ -81,10 +82,27 @@ getReferralVerifyVpa (mbPersonId, _mbMerchantId) vpa = do
 getReferralPayoutHistory :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Flow PayoutHistory
 getReferralPayoutHistory (mbPersonId, _mbMerchantId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   payoutOrders <- QPayoutOrder.findAllByCustomerId personId.getId
-  let history = map getPayoutOrderDetails payoutOrders
+  refreshedOrders <- forM payoutOrders $ \payoutOrder ->
+    if isPayoutOrderTerminal payoutOrder.status
+      then pure payoutOrder
+      else do
+        void $
+          withTryCatch ("getReferralPayoutHistory:refreshPayoutStatus:" <> payoutOrder.orderId) $ do
+            payoutConfig <-
+              getOneConfig
+                (PayoutConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just VehicleCategory.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing})
+                (Just (maybeToList <$> CQPayoutCfg.findByCityIdAndVehicleCategory person.merchantOperatingCityId VehicleCategory.AUTO_CATEGORY (Just [])))
+                >>= fromMaybeM (PayoutConfigNotFound "AUTO_CATEGORY" person.merchantOperatingCityId.getId)
+            let payoutStatusServiceReq = DP.PayoutStatusServiceReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand}
+                payoutOrderStatusCall = TPayout.payoutOrderStatus person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just personId.getId)
+            DP.payoutStatusService (cast person.merchantId) (cast personId) payoutStatusServiceReq payoutOrderStatusCall
+        QPayoutOrder.findByOrderId payoutOrder.orderId <&> fromMaybe payoutOrder
+  let history = map getPayoutOrderDetails refreshedOrders
   pure $ PayoutHistory {..}
   where
+    isPayoutOrderTerminal status = UIPayout.isPayoutOrderSuccess status || UIPayout.isPayoutStatusFailed status
     getPayoutOrderDetails payoutOrder =
       PayoutItem
         { amount = payoutOrder.amount.amount,

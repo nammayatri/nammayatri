@@ -640,6 +640,7 @@ DocumentVerificationConfig:
     maxRetryCount: Int
     isDefaultEnabledOnManualVerification: Bool
     isImageValidationRequired: Bool
+    markImageValidOnValidationSkip: Maybe Bool
     doStrictVerifcation: Bool
     order: Int
     filterForOldApks: Maybe Bool
@@ -1147,6 +1148,7 @@ DriverUdyam :
   fields:
     id: Id DriverUdyam
     driverId: Id Person
+    documentImageId: Maybe (Id Image)
     udyamNumber: EncryptedHashedField e Text
     enterpriseType: Maybe Text
     enterpriseName : Maybe Text
@@ -1159,6 +1161,7 @@ DriverUdyam :
     id: PrimaryKey
     driverId: SecondaryKey
     udyamNumberHash: "!SecondaryKey" # forcing to be a secondary key
+    documentImageId: SecondaryKey
 
   queries:
     findById:
@@ -1167,6 +1170,16 @@ DriverUdyam :
     findByDriverId:
       kvFunction: findOneWithKV
       where: driverId
+    findByImageId:
+      kvFunction: findOneWithKV
+      where: documentImageId
+    findAllByEncryptedUdyamNumber:
+      kvFunction: findAllWithKV
+      where: udyamNumberHash|B
+    findByDriverIdAndVerificationStatus:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, verificationStatus]
     updateVerificationStatus:
       kvFunction: updateWithKV
       params: [verificationStatus, updatedAt]
@@ -1245,6 +1258,7 @@ FleetOwnerDocumentVerificationConfig:
     dependencyDocumentType: "[DocumentType]"
     isDefaultEnabledOnManualVerification: Bool
     isImageValidationRequired: Bool
+    markImageValidOnValidationSkip: Maybe Bool
     checkExtraction: Bool
     checkExpiry: Bool
     maxRetryCount: Int
@@ -1252,6 +1266,7 @@ FleetOwnerDocumentVerificationConfig:
     order: Int
     role: Role
     documentCategory: Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory
+    rolesAllowedToUploadDocument: Maybe [Role]
   default:
     order: "0"
     role: "'FLEET_OWNER'"
@@ -1261,6 +1276,14 @@ FleetOwnerDocumentVerificationConfig:
     role: PrimaryKey
   sqlType:
     dependencyDocumentType: text[]
+    rolesAllowedToUploadDocumentText: text[]
+  beamFields:
+    rolesAllowedToUploadDocument:
+      rolesAllowedToUploadDocumentText: Maybe [Text]
+  toTType:
+    rolesAllowedToUploadDocumentText: (Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show)) Kernel.Prelude.<$> rolesAllowedToUploadDocument|E
+  fromTType:
+    rolesAllowedToUploadDocument: rolesAllowedToUploadDocumentText >>= traverse (readMaybe . Data.Text.unpack)|E
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithOptionsKV

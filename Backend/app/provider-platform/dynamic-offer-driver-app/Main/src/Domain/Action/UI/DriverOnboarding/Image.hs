@@ -59,6 +59,7 @@ import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CFQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -232,13 +233,21 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
       Query.create imageEntity
 
       -- skipping validation for rc as validation not available in idfy
-      isImageValidationRequired <-
+      (isImageValidationRequired, markValidOnSkip) <-
         if person.role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS]
           then do
-            -- Image validation for fleet (separate config table, in-mem cached, role-aware).
-            mbFleetDocConfig <- SStatus.findFleetDocVerificationConfig merchantOpCityId imageType person.role
-            return $ maybe True (.isImageValidationRequired) mbFleetDocConfig
-          else return $ maybe True (.isImageValidationRequired) $ find (\c -> c.vehicleCategory == fromMaybe CAR vehicleCategory) docConfigs
+            --------------- Image validation for fleet (different config table than docConfigs)
+            fleetDocConfigs <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing
+            return
+              ( maybe True (.isImageValidationRequired) fleetDocConfigs,
+                fleetDocConfigs >>= (.markImageValidOnValidationSkip)
+              )
+          else do
+            let mbDocCfg = find (\c -> c.vehicleCategory == fromMaybe CAR vehicleCategory) docConfigs
+            return
+              ( maybe True (.isImageValidationRequired) mbDocCfg,
+                mbDocCfg >>= (.markImageValidOnValidationSkip)
+              )
       if isImageValidationRequired && isNothing validationStatus
         then do
           validationOutput <-
@@ -247,7 +256,11 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
           when validationOutput.validationAvailable $ do
             checkErrors imageEntity.id imageType validationOutput.detectedImage
           Query.updateVerificationStatusOnlyById Documents.VALID imageEntity.id
-        else when (isNothing validationStatus) $ Query.updateVerificationStatusOnlyById Documents.MANUAL_VERIFICATION_REQUIRED imageEntity.id
+        else
+          when (isNothing validationStatus) $
+            if markValidOnSkip == Just True
+              then Query.updateVerificationStatusOnlyById Documents.VALID imageEntity.id
+              else Query.updateVerificationStatusOnlyById Documents.MANUAL_VERIFICATION_REQUIRED imageEntity.id
       when (imageType == DVC.ProfilePhoto) $
         fork "deferred face match on selfie upload" $ do
           runDeferredFaceMatchOnSelfie person imageEntity.createdAt

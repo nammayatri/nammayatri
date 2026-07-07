@@ -36,6 +36,7 @@ data DocumentVerificationConfigT f = DocumentVerificationConfigT
     isMandatory :: B.C f Kernel.Prelude.Bool,
     isMandatoryForEnabling :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isReminderSupported :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    markImageValidOnValidationSkip :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     maxRetryCount :: B.C f Kernel.Prelude.Int,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
