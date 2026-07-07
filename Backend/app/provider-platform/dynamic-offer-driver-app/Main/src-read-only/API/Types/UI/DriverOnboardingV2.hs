@@ -23,6 +23,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Servant
 import qualified Servant.Client.Core
+import qualified SharedLogic.DriverOnboarding.VehicleDocs
 import Tools.Auth
 
 data AadhaarCardReq = AadhaarCardReq
@@ -250,6 +251,15 @@ data RateCardResp = RateCardResp
     tripCategory :: Domain.Types.Common.TripCategory
   }
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RcVerifyStatusResp = RcVerifyStatusResp
+  { approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    documents :: [SharedLogic.DriverOnboarding.VehicleDocs.DocumentStatusItem],
+    registrationNo :: Kernel.Prelude.Text,
+    verified :: Kernel.Prelude.Bool
+  }
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SSNReq = SSNReq {ssn :: Kernel.Prelude.Text}
