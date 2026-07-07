@@ -14,8 +14,8 @@ import qualified Kernel.Types.Documents
 import Tools.Beam.UtilsTH
 
 data DriverUdyamT f = DriverUdyamT
-  { driverId :: B.C f Kernel.Prelude.Text,
-    documentImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+  { documentImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    driverId :: B.C f Kernel.Prelude.Text,
     enterpriseName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     enterpriseType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
@@ -37,6 +37,6 @@ instance B.Table DriverUdyamT where
 
 type DriverUdyam = DriverUdyamT Identity
 
-$(enableKVPG ''DriverUdyamT ['id] [['driverId], ['udyamNumberHash], ['documentImageId]])
+$(enableKVPG ''DriverUdyamT ['id] [['documentImageId], ['driverId], ['udyamNumberHash]])
 
 $(mkTableInstances ''DriverUdyamT "driver_udyam")

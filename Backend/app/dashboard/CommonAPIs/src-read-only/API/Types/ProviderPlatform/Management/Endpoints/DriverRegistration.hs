@@ -133,7 +133,7 @@ data CommonDocumentListItem = CommonDocumentListItem
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data CommonDocumentRejectDetails = CommonDocumentRejectDetails {reason :: Kernel.Prelude.Text, documentId :: Kernel.Types.Id.Id Dashboard.Common.CommonDriverOnboardingDocuments}
+data CommonDocumentRejectDetails = CommonDocumentRejectDetails {reason :: Kernel.Prelude.Text, documentId :: Kernel.Types.Id.Id Dashboard.Common.CommonDriverOnboardingDocuments, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -347,7 +347,8 @@ data LDCApproveDetails = LDCApproveDetails {documentId :: Kernel.Types.Id.Id Das
 data LocalResidenceProofApproveDetails = LocalResidenceProofApproveDetails
   { documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image,
     state :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState,
-    proofDocumentType :: Kernel.Prelude.Maybe Dashboard.Common.Driver.AddressDocumentType
+    proofDocumentType :: Kernel.Prelude.Maybe Dashboard.Common.Driver.AddressDocumentType,
+    address :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

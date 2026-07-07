@@ -166,7 +166,7 @@ data GSTDocumentMetadata = GSTDocumentMetadata {gstNumber :: Kernel.Prelude.Text
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LocalAddressProofDocumentMetadata = LocalAddressProofDocumentMetadata {proofDocumentType :: Kernel.Prelude.Maybe Dashboard.Common.Driver.AddressDocumentType, state :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState}
+data LocalAddressProofDocumentMetadata = LocalAddressProofDocumentMetadata {address :: Kernel.Prelude.Maybe Kernel.Prelude.Text, proofDocumentType :: Kernel.Prelude.Maybe Dashboard.Common.Driver.AddressDocumentType, state :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -102,7 +102,8 @@ data PanDocumentMetadata = PanDocumentMetadata
 
 data LocalAddressProofDocumentMetadata = LocalAddressProofDocumentMetadata
   { state :: Maybe Context.IndianState,
-    proofDocumentType :: Maybe DI.AddressDocumentType
+    proofDocumentType :: Maybe DI.AddressDocumentType,
+    address :: Maybe Text
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
