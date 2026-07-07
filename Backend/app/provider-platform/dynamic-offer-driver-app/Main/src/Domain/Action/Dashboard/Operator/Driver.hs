@@ -975,6 +975,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
       API.Types.ProviderPlatform.Operator.Driver.DRIVER -> do
         let driverId = Kernel.Types.Id.Id reqId
         driverInfo <- QDI.findByPrimaryKey driverId >>= fromMaybeM (PersonNotFound reqId)
+        unless driverInfo.verified $ throwError (InvalidRequest "Driver is not verified")
         if isDocReqEmpty
           then do
             -- Two-phase: phase 1 durably commits `approved`; phase 2 (approved == True) does the fast
@@ -985,8 +986,8 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
                   transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
                   -- Throws (naming the offending docs) if any BotApproval dependency doc isn't VALID.
                   SStatus.botApproveAndReconcile merchantOpCity person transporterConfig
+                  QDI.updateByPrimaryKey driverInfo {DDI.enabled = True}
                   pure (DRR.COMPLETED, Nothing, Nothing)
-            unless driverInfo.verified $ throwError (InvalidRequest "Driver is not verified")
             if driverInfo.approved == Just True
               then runReconcile
               else do
@@ -1000,6 +1001,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
       API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> do
         let fleetOwnerId = Kernel.Types.Id.Id reqId
         fleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId >>= fromMaybeM (PersonNotFound reqId)
+        unless fleetOwnerInfo.verified $ throwError (InvalidRequest "Fleet Owner is not verified")
         if isDocReqEmpty
           then do
             -- Sync dependency-docs check; the heavy fleet recompute (sets `enabled` + cascades) is forked.
@@ -1007,6 +1009,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
             transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
             -- Throws (naming the offending docs) if any BotApproval dependency doc isn't VALID.
             SStatus.botApproveAndReconcile merchantOpCity fleetPerson transporterConfig
+            QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.enabled = True}
             pure (DRR.COMPLETED, Nothing, Nothing)
           else do
             applyDocRejections req.entityType reqId validatedDocs
@@ -1016,9 +1019,9 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
       API.Types.ProviderPlatform.Operator.Driver.VEHICLE -> do
         let rcId = Kernel.Types.Id.Id reqId
         rcInfo <- QVRC.findByPrimaryKey rcId >>= fromMaybeM (VehicleNotFound reqId)
+        when (rcInfo.verified /= Just True) $ throwError (InvalidRequest "RC is not verified")
         if isDocReqEmpty
           then do
-            when (rcInfo.verified /= Just True) $ throwError (InvalidRequest "RC is not verified")
             unless (rcInfo.approved == Just True) $ QVRC.updateByPrimaryKey rcInfo {DVRC.approved = Just True}
             pure (DRR.COMPLETED, rcInfo.unencryptedCertificateNumber, Nothing)
           else do
