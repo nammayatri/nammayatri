@@ -14,12 +14,13 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MerchantServiceConfigT f = MerchantServiceConfigT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    configJSON :: (B.C f Data.Aeson.Value),
-    serviceName :: (B.C f Domain.Types.MerchantServiceConfig.ServiceName),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    runInCloud :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    configJSON :: B.C f Data.Aeson.Value,
+    serviceName :: B.C f Domain.Types.MerchantServiceConfig.ServiceName,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -29,8 +30,8 @@ instance B.Table MerchantServiceConfigT where
 
 type MerchantServiceConfig = MerchantServiceConfigT Identity
 
-$(enableKVPG (''MerchantServiceConfigT) [('merchantId), ('serviceName)] [])
+$(enableKVPG ''MerchantServiceConfigT ['merchantId, 'serviceName] [])
 
-$(mkTableInstances (''MerchantServiceConfigT) "merchant_service_config")
+$(mkTableInstances ''MerchantServiceConfigT "merchant_service_config")
 
-$(Domain.Types.UtilsTH.mkCacParseInstance (''MerchantServiceConfigT))
+$(Domain.Types.UtilsTH.mkCacParseInstance ''MerchantServiceConfigT)

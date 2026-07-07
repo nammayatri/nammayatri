@@ -32,7 +32,9 @@ findAllActiveAssociationByRCId ::
   m [FleetRCAssociation]
 findAllActiveAssociationByRCId (Id rcId) = do
   now <- getCurrentTime
-  findAllWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq rcId, Se.Is Beam.associatedTill $ Se.GreaterThan $ Just now]]
+  -- Order by associatedOn DESC so callers taking the head (listToMaybe) deterministically get the most
+  -- recent active fleet association, even when an RC transiently has more than one during reassignment.
+  findAllWithOptionsKV [Se.And [Se.Is Beam.rcId $ Se.Eq rcId, Se.Is Beam.associatedTill $ Se.GreaterThan $ Just now]] (Se.Desc Beam.associatedOn) Nothing Nothing
 
 findActiveAssociationByFleetOwnerId ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
