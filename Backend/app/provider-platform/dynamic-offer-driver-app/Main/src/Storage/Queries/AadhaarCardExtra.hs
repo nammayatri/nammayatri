@@ -1,6 +1,7 @@
 module Storage.Queries.AadhaarCardExtra where
 
 import qualified Domain.Types.AadhaarCard as Domain
+import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -41,6 +42,15 @@ findAllByEncryptedAadhaarNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =
 findAllByEncryptedAadhaarNumber mbAadhaarNumberHash = do
   findAllWithKV
     [Se.Is Beam.aadhaarNumberHash $ Se.Eq mbAadhaarNumberHash]
+
+findAllByMerchantIdAndDateOfBirth :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Text -> m [Domain.AadhaarCard]
+findAllByMerchantIdAndDateOfBirth merchantId dateOfBirth =
+  findAllWithDb
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),
+          Se.Is Beam.dateOfBirth $ Se.Eq (Just dateOfBirth)
+        ]
+    ]
 
 upsertAadhaarRecord :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.AadhaarCard -> m ()
 upsertAadhaarRecord a@Domain.AadhaarCard {..} =

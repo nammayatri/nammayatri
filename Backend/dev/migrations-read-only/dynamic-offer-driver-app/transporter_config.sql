@@ -978,3 +978,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN override_operat
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_document_metadata boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_masked_aadhaar boolean ;

@@ -320,6 +320,8 @@ data AadhaarError
   | TransactionIdNotFound
   | AadhaarAlreadyLinked
   | AadhaarDataAlreadyPresent
+  | MaskedAadhaarNotAllowed
+  | AadhaarNameAndDobRequired
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''AadhaarError
@@ -329,6 +331,8 @@ instance IsBaseError AadhaarError where
   toMessage TransactionIdNotFound = Just " transaction id not found for this verification"
   toMessage AadhaarAlreadyLinked = Just "aadhaar number is already linked"
   toMessage AadhaarDataAlreadyPresent = Just "aadhaar data is already present for this driver"
+  toMessage MaskedAadhaarNotAllowed = Just "masked aadhaar number is not allowed for this merchant"
+  toMessage AadhaarNameAndDobRequired = Just "name and date of birth are required for a masked aadhaar number"
 
 instance IsHTTPError AadhaarError where
   toErrorCode = \case
@@ -336,11 +340,15 @@ instance IsHTTPError AadhaarError where
     TransactionIdNotFound -> "TRANSACTION_ID_NOT_FOUND"
     AadhaarAlreadyLinked -> "AADHAAR_ALREADY_LINKED"
     AadhaarDataAlreadyPresent -> "AADHAAR_DATA_ALREADY_PRESENT"
+    MaskedAadhaarNotAllowed -> "MASKED_AADHAAR_NOT_ALLOWED"
+    AadhaarNameAndDobRequired -> "AADHAAR_NAME_AND_DOB_REQUIRED"
   toHttpCode = \case
     AadhaarAlreadyVerified -> E400
     TransactionIdNotFound -> E400
     AadhaarAlreadyLinked -> E400
     AadhaarDataAlreadyPresent -> E400
+    MaskedAadhaarNotAllowed -> E400
+    AadhaarNameAndDobRequired -> E400
 
 instance IsAPIError AadhaarError
 
