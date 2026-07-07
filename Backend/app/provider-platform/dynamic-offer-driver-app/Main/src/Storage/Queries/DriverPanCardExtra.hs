@@ -61,7 +61,15 @@ upsertPanRecord a@DriverPanCard {..} mbExisting =
           Se.Set Beam.panCardNumberHash (panCardNumber & hash),
           Se.Set Beam.updatedAt updatedAt,
           Se.Set Beam.verificationStatus verificationStatus,
-          Se.Set Beam.driverNameOnGovtDB driverNameOnGovtDB
+          Se.Set Beam.driverNameOnGovtDB driverNameOnGovtDB,
+          Se.Set Beam.docType docType
         ]
         [Se.Is Beam.driverId $ Se.Eq driverId.getId]
     Nothing -> createWithKV a
+
+upsert :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => DriverPanCard -> m ()
+upsert record = findOneWithKV [Se.Is Beam.driverId $ Se.Eq record.driverId.getId] >>= upsertPanRecord record
+
+deleteByDriverIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Documents.VerificationStatus -> m ()
+deleteByDriverIdAndStatus driverId status =
+  deleteWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId.getId, Se.Is Beam.verificationStatus $ Se.Eq status]]

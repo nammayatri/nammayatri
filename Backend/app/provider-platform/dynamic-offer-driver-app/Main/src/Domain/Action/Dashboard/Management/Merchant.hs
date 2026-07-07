@@ -58,6 +58,7 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantPayoutConfigUpdate,
     postMerchantConfigUpsertPlanAndConfigSubscription,
     getMerchantConfigVendorSplitDetailsList,
+    getMerchantConfigSubscriptionConfigList,
     postMerchantConfigOperatingCityWhiteList,
     postMerchantConfigMerchantCreate,
     getMerchantConfigVehicleServiceTier,
@@ -1267,6 +1268,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         isReminderSupported = Nothing,
         onlyImageVerificationStatusLookupRequired = Nothing,
         faceMatchSourceDoc = Nothing,
+        markImageValidOnValidationSkip = Nothing,
         ..
       }
   where
@@ -4203,7 +4205,7 @@ postMerchantConfigUpsertPlanAndConfigSubscription merchantShortId city req = do
       case command of
         Common.VIEW_DIFF -> do
           existingConfig <- case tableName of
-            Common.SUBSCRIPTION_CONFIG -> runWithDecodeToType config tableName True (\(val :: DSC.SubscriptionConfig) -> QSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName val.merchantOperatingCityId val.serviceName)
+            Common.SUBSCRIPTION_CONFIG -> runWithDecodeToType config tableName True (\(k :: SubscriptionConfigKey) -> QSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName (Just merchantOpCity.id) k.serviceName)
             Common.PLAN -> runWithDecodeToType config tableName True (\(val :: Plan.Plan) -> QPlan.findByIdAndPaymentModeWithServiceName val.id val.paymentMode val.serviceName)
             Common.PLAN_TRANSLATION -> runWithDecodeToType config tableName True (\(val :: [PlanTrans.PlanTranslation]) -> catMaybes <$> mapM (\ele -> SQPT.findByPlanIdAndLanguage ele.planId ele.language) val)
             Common.VENDOR_SPLIT_DETAILS -> runWithDecodeToType config tableName True (\(val :: [DVSD.VendorSplitDetails]) -> catMaybes <$> mapM (\ele -> QVSD.findByPrimaryKey ele.area ele.merchantOperatingCityId ele.vehicleVariant ele.vendorId) val)
@@ -4226,7 +4228,11 @@ postMerchantConfigUpsertPlanAndConfigSubscription merchantShortId city req = do
               withResolvedVendorSplitCity vendorSplit = vendorSplit {DVSD.merchantOperatingCityId = resolvedMerchantOpCityId}
               withResolvedSubscriptionConfigCity subscriptionConfig = subscriptionConfig {DSC.merchantOperatingCityId = Just resolvedMerchantOpCityId}
           _ <- case (actionType, tableName) of
-            (Common.CREATE_CONFIG, Common.SUBSCRIPTION_CONFIG) -> runWithDecodeToType config tableName False $ \(subscriptionConfig :: DSC.SubscriptionConfig) -> QSC.create (withResolvedSubscriptionConfigCity subscriptionConfig)
+            (Common.CREATE_CONFIG, Common.SUBSCRIPTION_CONFIG) -> do
+              templates <- QSC.findAllByMerchantOpCityId (Just resolvedMerchantOpCityId)
+              template <- fromMaybeM (InvalidRequest "No existing subscription config in this city to clone as a create template") (listToMaybe (DL.sortOn (\c -> c.serviceName) templates))
+              runWithDecodeToType (mergeJsonObjects (toJSON template) config) tableName False $ \(sc :: DSC.SubscriptionConfig) ->
+                QSC.create (withResolvedSubscriptionConfigCity sc)
             (Common.CREATE_CONFIG, Common.PLAN) -> runWithDecodeToType config tableName False $ \(plan :: Plan.Plan) -> do
               let planToCreate = withResolvedPlanIds plan
               QPlan.create planToCreate
@@ -4238,7 +4244,12 @@ postMerchantConfigUpsertPlanAndConfigSubscription merchantShortId city req = do
               let vendorSplitsToCreate = map withResolvedVendorSplitCity val
               forM_ vendorSplitsToCreate QVSD.create
               forM_ vendorSplitsToCreate clearVendorSplitRowCache
-            (Common.UPDATE_CONFIG, Common.SUBSCRIPTION_CONFIG) -> runWithDecodeToType config tableName False $ \(subscriptionConfig :: DSC.SubscriptionConfig) -> QSC.updateByPrimaryKey (withResolvedSubscriptionConfigCity subscriptionConfig)
+            (Common.UPDATE_CONFIG, Common.SUBSCRIPTION_CONFIG) ->
+              runWithDecodeToType config tableName False $ \(k :: SubscriptionConfigKey) -> do
+                existing <- QSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName (Just resolvedMerchantOpCityId) k.serviceName >>= fromMaybeM (InvalidRequest "SubscriptionConfig not found for update")
+                void $
+                  runWithDecodeToType (mergeJsonObjects (toJSON existing) config) tableName False $ \(sc :: DSC.SubscriptionConfig) ->
+                    QSC.updateByPrimaryKey (withResolvedSubscriptionConfigCity sc)
             (Common.UPDATE_CONFIG, Common.PLAN) -> runWithDecodeToType config tableName False $ \(plan :: Plan.Plan) -> do
               let planToUpdate = withResolvedPlanIds plan
               mbOldPlan <- QPlan.findByPrimaryKey planToUpdate.id
@@ -4305,6 +4316,76 @@ getMerchantConfigVendorSplitDetailsList merchantShortId city = do
           maxVendorFeeAmount = vendorSplit.maxVendorFeeAmount,
           dailyPlanId = vendorSplit.dailyPlanId
         }
+
+getMerchantConfigSubscriptionConfigList :: ShortId DM.Merchant -> Context.City -> Flow [Common.SubscriptionConfigAPIEntity]
+getMerchantConfigSubscriptionConfigList merchantShortId city = do
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+  configs <- QSC.findAllByMerchantOpCityId (Just merchantOperatingCity.id)
+  pure $ map (toSubscriptionConfigAPIEntity merchantOperatingCity.id) configs
+  where
+    toSubscriptionConfigAPIEntity mocId cfg =
+      Common.SubscriptionConfigAPIEntity
+        { merchantOperatingCityId = getId (fromMaybe mocId cfg.merchantOperatingCityId),
+          serviceName = show cfg.serviceName,
+          allowDriverFeeCalcSchedule = cfg.allowDriverFeeCalcSchedule,
+          allowDueAddition = cfg.allowDueAddition,
+          allowManualPaymentLinks = cfg.allowManualPaymentLinks,
+          enableCityBasedFeeSwitch = cfg.enableCityBasedFeeSwitch,
+          enableOffersForMembers = cfg.enableOffersForMembers,
+          enableServiceUsageChargeDefault = cfg.enableServiceUsageChargeDefault,
+          freeTrialRidesApplicable = cfg.freeTrialRidesApplicable,
+          isFreeTrialDaysApplicable = cfg.isFreeTrialDaysApplicable,
+          isSubscriptionEnabledAtCategoryLevel = cfg.isSubscriptionEnabledAtCategoryLevel,
+          isTriggeredAtEndRide = cfg.isTriggeredAtEndRide,
+          isUIEnabled = cfg.isUIEnabled,
+          sendDeepLink = cfg.sendDeepLink,
+          sendInAppFcmNotifications = cfg.sendInAppFcmNotifications,
+          useOverlayService = cfg.useOverlayService,
+          autopayEnabled = cfg.autopayEnabled,
+          enableDailyPlanVendorSplit = cfg.enableDailyPlanVendorSplit,
+          isVendorSplitEnabled = cfg.isVendorSplitEnabled,
+          showManualPlansInUI = cfg.showManualPlansInUI,
+          subscriptionDown = cfg.subscriptionDown,
+          genericBatchSizeForJobs = cfg.genericBatchSizeForJobs,
+          maxRetryCount = cfg.maxRetryCount,
+          deepLinkExpiryTimeInMinutes = cfg.deepLinkExpiryTimeInMinutes,
+          numberOfFreeTrialRides = cfg.numberOfFreeTrialRides,
+          waiveOffOfferTitle = cfg.waiveOffOfferTitle,
+          waiveOffOfferDescription = cfg.waiveOffOfferDescription,
+          defaultCityVehicleCategory = show cfg.defaultCityVehicleCategory,
+          paymentLinkChannel = show cfg.paymentLinkChannel,
+          paymentServiceName = toJSON cfg.paymentServiceName,
+          payoutServiceName = toJSON cfg.payoutServiceName,
+          partialDueClearanceMessageKey = show <$> cfg.partialDueClearanceMessageKey,
+          cgstPercentageOneTimeSecurityDeposit = toJSON cfg.cgstPercentageOneTimeSecurityDeposit,
+          sgstPercentageOneTimeSecurityDeposit = toJSON cfg.sgstPercentageOneTimeSecurityDeposit,
+          genericJobRescheduleTime = toJSON cfg.genericJobRescheduleTime,
+          genericNextJobScheduleTimeThreshold = toJSON cfg.genericNextJobScheduleTimeThreshold,
+          paymentLinkJobTime = toJSON cfg.paymentLinkJobTime,
+          manualPaymentLinkRateLimitExpirySeconds = toJSON cfg.manualPaymentLinkRateLimitExpirySeconds,
+          sendManualPaymentLinkJobMaxDelay = toJSON cfg.sendManualPaymentLinkJobMaxDelay,
+          dataEntityToSend = toJSON cfg.dataEntityToSend,
+          disabledVariantsForSubscription = toJSON cfg.disabledVariantsForSubscription,
+          eventsEnabledForWebhook = toJSON cfg.eventsEnabledForWebhook,
+          executionEnabledForVehicleCategories = toJSON cfg.executionEnabledForVehicleCategories,
+          extWebhookConfigs = toJSON (isJust cfg.extWebhookConfigs),
+          subscriptionEnabledForVehicleCategories = toJSON cfg.subscriptionEnabledForVehicleCategories,
+          vendorMigrationMappings = toJSON cfg.vendorMigrationMappings,
+          webhookConfig = toJSON cfg.webhookConfig
+        }
+
+-- Minimal decode of just the identifying key from a (possibly partial) subscription-config payload.
+data SubscriptionConfigKey = SubscriptionConfigKey {serviceName :: Plan.ServiceNames}
+  deriving (Generic)
+
+instance FromJSON SubscriptionConfigKey
+
+-- Right-biased shallow merge of two JSON objects: keys in the patch override the base.
+mergeJsonObjects :: Value -> Value -> Value
+mergeJsonObjects (DAT.Object base) (DAT.Object patch) = DAT.Object (HM.union patch base)
+mergeJsonObjects _ patch = patch
 
 jsonDiff :: Value -> Value -> Value
 jsonDiff (DAT.Object a) (DAT.Object b) =

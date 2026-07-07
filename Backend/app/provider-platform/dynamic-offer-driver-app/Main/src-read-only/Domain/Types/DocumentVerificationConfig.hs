@@ -36,6 +36,7 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     isMandatory :: Kernel.Prelude.Bool,
     isMandatoryForEnabling :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isReminderSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    markImageValidOnValidationSkip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     maxRetryCount :: Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
