@@ -32,6 +32,7 @@ data DriverInformationT f = DriverInformationT
     addressDocumentType :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType),
     adminId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     airConditionScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    airportBlockExpiryTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     approved :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     autoPayStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverAutoPayStatus),
     availableUpiApps :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

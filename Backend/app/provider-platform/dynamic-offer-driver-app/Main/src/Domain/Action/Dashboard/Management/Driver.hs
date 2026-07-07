@@ -152,6 +152,7 @@ import qualified Storage.Clickhouse.SearchRequestForDriver as CHSearchRequestFor
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AadhaarCardExtra as QAadhaarCardExtra
 import qualified Storage.Queries.DailyStats as QDailyStats
+import qualified Storage.Queries.DriverBlockTransactions as QDBT
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperator
@@ -1509,8 +1510,8 @@ postDriverVehicleUpsertSelectedServiceTiers merchantShortId opCity req = do
         Just tier -> Right tier
         Nothing -> Left $ "Invalid service tier: " <> tierText
 
-getDriverAirportPreference :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Flow Common.AirportPreferenceRes
-getDriverAirportPreference merchantShortId _opCity mbPhoneNumber mbVehicleNumber = do
+getDriverAirportPreference :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.AirportPreferenceRes
+getDriverAirportPreference merchantShortId _opCity mbPhoneNumber mbVehicleNumber mbSpecialZoneId = do
   merchant <- findMerchantByShortId merchantShortId
   driver <- case (mbPhoneNumber, mbVehicleNumber) of
     (Just phoneNumber, _) -> do
@@ -1522,17 +1523,34 @@ getDriverAirportPreference merchantShortId _opCity mbPhoneNumber mbVehicleNumber
       QPerson.findById vehicle.driverId >>= fromMaybeM (PersonDoesNotExist vehicle.driverId.getId)
     _ -> throwError $ InvalidRequest "Either phoneNumber or vehicleNumber must be provided"
   driverInfo <- B.runInReplica $ QDriverInfo.findById driver.id >>= fromMaybeM DriverInfoNotFound
+  now <- getCurrentTime
+  effectiveRestriction <- QDriverInfo.resolveAirportRestriction now driverInfo
+  let effBlockExpiry = if effectiveRestriction == DrInfo.BLOCKED then driverInfo.airportBlockExpiryTime else Nothing
+  blockHistory <- forM mbSpecialZoneId $ \specialZoneId -> do
+    history <- QDBT.findByDriverIdAndSpecialZoneId (cast driver.id) (Just specialZoneId)
+    pure $ map toHistoryItem $ sortOn (Down . (\h -> h.reportedAt)) history
   pure
     Common.AirportPreferenceRes
       { driverId = cast driver.id,
         driverName = driver.firstName <> maybe "" (" " <>) driver.lastName,
-        enableForAirport = castAirportRestrictionToCommon driverInfo.enableForAirport
+        enableForAirport = castAirportRestrictionToCommon effectiveRestriction,
+        blockExpiryTime = effBlockExpiry,
+        blockHistory = blockHistory
       }
   where
     castAirportRestrictionToCommon :: DrInfo.AirportRestrictionType -> Common.AirportRestrictionType
     castAirportRestrictionToCommon DrInfo.ENABLED = Common.ENABLED
     castAirportRestrictionToCommon DrInfo.DISABLED = Common.DISABLED
     castAirportRestrictionToCommon DrInfo.BLOCKED = Common.BLOCKED
+    toHistoryItem :: DTDBT.DriverBlockTransactions -> Common.AirportBlockHistoryItem
+    toHistoryItem h =
+      Common.AirportBlockHistoryItem
+        { blockReason = h.blockReason,
+          blockLiftTime = h.blockLiftTime,
+          blockedBy = Just (show h.blockedBy),
+          actionType = show <$> h.actionType,
+          reportedAt = h.reportedAt
+        }
 
 postDriverAirportPreference :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.AirportPreferenceReq -> Flow APISuccess
 postDriverAirportPreference merchantShortId opCity driverId req = do
@@ -1541,9 +1559,27 @@ postDriverAirportPreference merchantShortId opCity driverId req = do
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  QDriverInfo.updateAirportSwitch (castAirportRestrictionToDomain req.enableForAirport) personId
   now <- getCurrentTime
-  let airportDisabledTag = Yudhishthira.addTagExpiry (Yudhishthira.mkTagNameValue (LYT.TagName "AirportRides") (LYT.TextValue "Disabled")) Nothing now
+  when (req.enableForAirport == Common.BLOCKED) $ do
+    driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
+    effective <- QDriverInfo.resolveAirportRestriction now driverInfo
+    when (effective == DrInfo.BLOCKED) $ throwError DriverAirportAlreadyBlocked
+  let airportLogInfo =
+        QDriverInfo.AirportBlockLogInfo
+          { blockedBy = DTDBT.Dashboard,
+            reason = if req.enableForAirport == Common.BLOCKED then req.blockReason else Just "MANUAL_UNBLOCK",
+            specialZoneId = req.specialZoneId,
+            requestorId = Nothing,
+            merchantId = merchant.id,
+            merchantOperatingCityId = merchantOpCityId
+          }
+  QDriverInfo.updateAirportSwitch (castAirportRestrictionToDomain req.enableForAirport) req.blockExpiryTime (Just airportLogInfo) personId
+  when (req.enableForAirport == Common.BLOCKED) $
+    whenJust req.blockExpiryTime $ \expiry ->
+      JC.createJobIn @_ @'UnblockAirportDriver (Just merchant.id) (Just merchantOpCityId) (diffUTCTime expiry now) $
+        UnblockAirportDriverRequestJobData {driverId = cast personId, specialZoneId = req.specialZoneId}
+  let mbAirportBlockValidityHours = req.blockExpiryTime <&> \expiry -> Hours (floor (diffUTCTime expiry now / 3600))
+  let airportDisabledTag = Yudhishthira.addTagExpiry (Yudhishthira.mkTagNameValue (LYT.TagName "AirportRides") (LYT.TextValue "Disabled")) mbAirportBlockValidityHours now
   let withoutTag = Yudhishthira.removeTagNameValue driver.driverTag airportDisabledTag
   let updatedTags = if req.enableForAirport == Common.ENABLED then withoutTag else withoutTag <> [airportDisabledTag]
   unless (Just (Yudhishthira.showRawTags updatedTags) == (Yudhishthira.showRawTags <$> driver.driverTag)) $

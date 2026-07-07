@@ -208,6 +208,7 @@ data DriverError
   | DriverActivityUpdateInProgress Text
   | InsufficientAirportBalance HighPrecMoney HighPrecMoney
   | DriverNotEnabledForAirport
+  | DriverAirportAlreadyBlocked
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverError
@@ -229,7 +230,8 @@ instance IsBaseError DriverError where
   toMessage AccountBlocked = Just "Account has been blocked."
   toMessage (DriverActivityUpdateInProgress driverId) = Just $ "Driver activity update is already in progress for driverId: " <> driverId <> ". Please try again later."
   toMessage (InsufficientAirportBalance required available) = Just $ "Insufficient airport entry fee balance. Required: " <> show required <> ", Available: " <> show available <> ". Please recharge before starting this ride."
-  toMessage DriverNotEnabledForAirport = Just "Driver is not enabled for airport rides and cannot start this ride."
+  toMessage DriverNotEnabledForAirport = Just "Driver is not enabled for airport rides"
+  toMessage DriverAirportAlreadyBlocked = Just "Driver is already blocked for airport rides."
 
 instance IsHTTPError DriverError where
   toErrorCode = \case
@@ -250,6 +252,7 @@ instance IsHTTPError DriverError where
     DriverActivityUpdateInProgress _ -> "DRIVER_ACTIVITY_UPDATE_IN_PROGRESS"
     InsufficientAirportBalance _ _ -> "INSUFFICIENT_AIRPORT_BALANCE"
     DriverNotEnabledForAirport -> "DRIVER_NOT_ENABLED_FOR_AIRPORT"
+    DriverAirportAlreadyBlocked -> "DRIVER_AIRPORT_ALREADY_BLOCKED"
   toHttpCode = \case
     DriverAccountDisabled -> E403
     DriverWithoutVehicle _ -> E400
@@ -268,6 +271,7 @@ instance IsHTTPError DriverError where
     DriverActivityUpdateInProgress _ -> E409
     InsufficientAirportBalance _ _ -> E402
     DriverNotEnabledForAirport -> E403
+    DriverAirportAlreadyBlocked -> E403
 
 instance IsAPIError DriverError where
   toPayload (DriverAccountBlocked errorPayload) = toJSON errorPayload

@@ -352,3 +352,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN can_switch_to_a
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN enable_for_airport text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN airport_block_expiry_time timestamp with time zone ;
