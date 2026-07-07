@@ -5,7 +5,8 @@ import qualified Data.Aeson as A
 import Data.Char (isAlphaNum)
 import qualified Data.Map as M
 import qualified Data.Text as T
-import Data.Time (utctDay)
+import Data.Time (Day, utctDay)
+import Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -16,14 +17,15 @@ import qualified Kernel.External.Verification.HyperVerge.Types as HV
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
+import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverIdentityInfo as QDII
 import qualified Storage.Queries.DriverInformationExtra as QDI
 import qualified Storage.Queries.DriverLicense as QDL
-import qualified Storage.Queries.DriverPanCard as QPan
 import qualified Storage.Queries.HyperVergeVerification as QHVV
 import qualified Storage.Queries.IdfyVerificationExtra as QIV
 import qualified Storage.Queries.Person as QP
@@ -69,20 +71,30 @@ generateToken (personId, merchantId, merchantOpCityId) = do
     QDL.findByDriverId personId
       >>= fromMaybeM (InvalidRequest "Driver license is required for Aarokya token generation")
   dlNumber <- decrypt driverLicense.licenseNumber
+  -- Aadhaar is the preferred source for address / DOB / gender: it is the driver's
+  -- own identity document, structured, and provider-agnostic. Only a VALID record is
+  -- trusted; anything else is ignored and we fall back to the other sources.
+  mbAadhaar <- QAadhaarCard.findByPrimaryKey personId
+  let validAadhaar = mbAadhaar >>= \a -> if a.verificationStatus == Documents.VALID then Just a else Nothing
+      mbAadhaarAddress = nonEmptyText =<< (validAadhaar >>= (.address))
   -- Best-effort: a failure here (e.g. driver_identity_info not yet migrated in this
-  -- environment, KV hiccup, unparseable Idfy data) must never fail token generation.
+  -- environment, KV hiccup, unparseable document data) must never fail token generation.
   -- withTryCatch logs and we fall back to no address.
-  mbAddress <- either (const Nothing) (\x -> x) <$> withTryCatch "aarokya:resolveDriverAddress" (resolveDriverAddress personId merchantId merchantOpCityId person)
+  mbAddress <- either (const Nothing) (\addr -> addr) <$> withTryCatch "aarokya:resolveDriverAddress" (resolveDriverAddress personId merchantId merchantOpCityId person mbAadhaarAddress)
   -- DOB is the driver's own identity attribute, so it is read directly by driverId
-  -- (no name match needed): Driving License first, PAN card as fallback. Optional.
-  mbPanCard <- QPan.findByDriverId personId
-  let mbDob = (T.pack . show . utctDay) <$> (driverLicense.driverDob <|> (mbPanCard >>= (.driverDob)))
+  -- (no name match needed): Aadhaar first (raw text, parsed & normalised to ISO),
+  -- then Driving License. All optional.
+  let mbDob =
+        (normalizeAadhaarDob =<< (validAadhaar >>= (.dateOfBirth)))
+          <|> ((T.pack . show . utctDay) <$> driverLicense.driverDob)
   let mbLastName = case catMaybes [person.middleName, person.lastName] of
         [] -> Nothing
         parts -> Just (T.unwords parts)
-  let mbGender = case show person.gender of
+  -- Gender: Aadhaar (normalised to MALE/FEMALE/OTHER) first, then person.gender.
+  let currentGender = case show person.gender of
         g | g `elem` ["MALE", "FEMALE", "OTHER"] -> Just g
         _ -> Nothing
+      mbGender = (normalizeGender =<< (validAadhaar >>= (.driverGender))) <|> currentGender
   let req =
         PartnerSdk.GenerateTokenReq
           { phoneCountryCode = countryCode,
@@ -125,26 +137,28 @@ extractStatusFromToken token = do
     Just (A.String s) -> Just (T.toUpper s)
     _ -> Nothing
 
--- | Resolve the driver's address from their latest completed document
--- verification, trying each provider in turn. The fallback order is:
---   1. Idfy Driving License
---   2. Idfy Vehicle Registration Certificate (owner-name matched)
+-- | Resolve the driver's address, trying each source in turn. The fallback order is:
+--   1. Aadhaar (structured column, the driver's own address)
+--   2. Idfy Driving License
 --   3. HyperVerge Driving License
---   4. HyperVerge Vehicle Registration Certificate (owner-name matched)
--- The DL address is preferred over the RC one (the RC owner is often a
--- relative / financier / fleet, so the RC address is only accepted when the
+--   4. Idfy Vehicle Registration Certificate (owner-name matched)
+--   5. HyperVerge Vehicle Registration Certificate (owner-name matched)
+-- The DL addresses are preferred over the RC ones (the RC owner is often a
+-- relative / financier / fleet, so an RC address is only accepted when the
 -- owner name matches the driver's). Always optional: returns Nothing on any
 -- missing/unparseable data instead of failing the token call.
 getDriverAddress ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DP.Person ->
   DP.Person ->
+  Maybe Text ->
   m (Maybe Text)
-getDriverAddress personId person =
+getDriverAddress personId person mbAadhaarAddress =
   firstJustM
-    [ getAddressFromDoc personId DVC.DriverLicense extractDlAddress,
-      getAddressFromDoc personId DVC.VehicleRegistrationCertificate (extractRcAddress driverName),
+    [ pure mbAadhaarAddress,
+      getAddressFromDoc personId DVC.DriverLicense extractDlAddress,
       getAddressFromHVDoc personId DVC.DriverLicense extractHvDlAddress,
+      getAddressFromDoc personId DVC.VehicleRegistrationCertificate (extractRcAddress driverName),
       getAddressFromHVDoc personId DVC.VehicleRegistrationCertificate (extractHvRcAddress driverName)
     ]
   where
@@ -249,6 +263,26 @@ nameTokens =
 nonEmptyText :: Text -> Maybe Text
 nonEmptyText t = if T.null (T.strip t) then Nothing else Just t
 
+-- | Aadhaar DOB is stored as raw text whose format varies by source (DigiLocker /
+-- OTP). Parse it against the known formats and re-emit it as ISO @YYYY-MM-DD@ (the
+-- format the SDK expects). Returns Nothing if none of the formats parse.
+normalizeAadhaarDob :: Text -> Maybe Text
+normalizeAadhaarDob raw =
+  let s = T.unpack (T.strip raw)
+      tryFmt fmt = parseTimeM True defaultTimeLocale fmt s :: Maybe Day
+   in T.pack . formatTime defaultTimeLocale "%Y-%m-%d"
+        <$> foldr ((<|>) . tryFmt) Nothing ["%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%d%m%Y"]
+
+-- | Normalise an Aadhaar gender string to the SDK's MALE/FEMALE/OTHER. Returns
+-- Nothing on anything unrecognised so we fall back to person.gender.
+normalizeGender :: Text -> Maybe Text
+normalizeGender raw = case T.toUpper (T.strip raw) of
+  g
+    | g `elem` ["M", "MALE"] -> Just "MALE"
+    | g `elem` ["F", "FEMALE"] -> Just "FEMALE"
+    | g `elem` ["O", "OTHER", "TRANSGENDER", "T"] -> Just "OTHER"
+    | otherwise -> Nothing
+
 -- | Returns the driver's address, resolving it lazily: if one is already stored
 -- (DriverIdentityInfo.address, falling back to the legacy DriverInformation.address)
 -- it is reused as-is and no Idfy parsing happens. Only when nothing is stored do
@@ -260,15 +294,16 @@ resolveDriverAddress ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   DP.Person ->
+  Maybe Text ->
   m (Maybe Text)
-resolveDriverAddress personId merchantId merchantOpCityId person = do
+resolveDriverAddress personId merchantId merchantOpCityId person mbAadhaarAddress = do
   mbDriverInfo <- QDI.findById (cast personId)
   mbIdentityInfo <- QDII.findByDriverId personId
   let mbStored = (mbIdentityInfo >>= (.address)) <|> (mbDriverInfo >>= (.address))
   case mbStored of
     Just stored -> pure (Just stored)
     Nothing -> do
-      mbResolved <- getDriverAddress personId person
+      mbResolved <- getDriverAddress personId person mbAadhaarAddress
       whenJust ((,) <$> mbResolved <*> mbDriverInfo) $ \(address, driverInfo) ->
         Redis.withLockRedis (DIInfo.driverIdentityInfoLockKey personId) 10 $ do
           mbExisting <- QDII.findByDriverId personId
