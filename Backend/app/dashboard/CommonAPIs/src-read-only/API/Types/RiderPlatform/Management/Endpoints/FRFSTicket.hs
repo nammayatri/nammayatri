@@ -47,6 +47,33 @@ data FRFSEndStopsFareAPI = FRFSEndStopsFareAPI
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSGtfsFareAPI = FRFSGtfsFareAPI {code :: Data.Text.Text, name :: Kernel.Prelude.Maybe Data.Text.Text, providerCode :: Kernel.Prelude.Maybe Data.Text.Text, validityDuration :: Kernel.Prelude.Maybe Data.Text.Text}
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSGtfsRes = FRFSGtfsRes
+  { fares :: [FRFSGtfsFareAPI],
+    integratedBppConfigId :: Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig,
+    ready :: Kernel.Prelude.Bool,
+    routeStops :: [FRFSGtfsRouteStopAPI],
+    routes :: [FRFSGtfsRouteAPI],
+    stops :: [FRFSGtfsStopAPI]
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSGtfsRouteAPI = FRFSGtfsRouteAPI {code :: Data.Text.Text, shortName :: Data.Text.Text, variant :: Kernel.Prelude.Maybe Data.Text.Text, vehicleType :: Kernel.Prelude.Maybe Data.Text.Text}
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSGtfsRouteStopAPI = FRFSGtfsRouteStopAPI {routeCode :: Data.Text.Text, sequenceNum :: Kernel.Prelude.Int, stopCode :: Data.Text.Text, stopType :: Kernel.Prelude.Maybe Data.Text.Text}
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSGtfsStopAPI = FRFSGtfsStopAPI {code :: Data.Text.Text, lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double, lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double, name :: Kernel.Prelude.Maybe Data.Text.Text}
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSRouteFareAPI = FRFSRouteFareAPI {code :: Data.Text.Text, fares :: [FRFSStopFareMatrixAPI], longName :: Data.Text.Text, shortName :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -118,7 +145,7 @@ data UpsertRouteFareResp = UpsertRouteFareResp {success :: Data.Text.Text, unpro
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("fRFSTicket" :> (GetFRFSTicketFrfsRoutes :<|> GetFRFSTicketFrfsRouteFareList :<|> PutFRFSTicketFrfsRouteFareUpsert :<|> GetFRFSTicketFrfsRouteStations :<|> PostFRFSTicketFrfsStatusUpdateHelper))
+type API = ("fRFSTicket" :> (GetFRFSTicketFrfsRoutes :<|> GetFRFSTicketFrfsRouteFareList :<|> PutFRFSTicketFrfsRouteFareUpsert :<|> GetFRFSTicketFrfsRouteStations :<|> GetFRFSTicketFrfsGtfs :<|> PostFRFSTicketFrfsStatusUpdateHelper))
 
 type GetFRFSTicketFrfsRoutes =
   ( "frfs" :> "routes" :> QueryParam "searchStr" Data.Text.Text :> MandatoryQueryParam "limit" Kernel.Prelude.Int
@@ -167,6 +194,15 @@ type GetFRFSTicketFrfsRouteStations =
            [FRFSStationAPI]
   )
 
+type GetFRFSTicketFrfsGtfs =
+  ( "frfs" :> "gtfs" :> QueryParam "integratedBppConfigId" (Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig)
+      :> QueryParam
+           "platformType"
+           Dashboard.Common.PlatformType
+      :> MandatoryQueryParam "vehicleType" BecknV2.FRFS.Enums.VehicleCategory
+      :> Get '[JSON] FRFSGtfsRes
+  )
+
 type PostFRFSTicketFrfsStatusUpdate = ("frfs" :> "statusUpdate" :> ReqBody '[JSON] FRFSStatusUpdateReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostFRFSTicketFrfsStatusUpdateHelper =
@@ -188,19 +224,21 @@ data FRFSTicketAPIs = FRFSTicketAPIs
       ) ->
       EulerHS.Types.EulerClient UpsertRouteFareResp,
     getFRFSTicketFrfsRouteStations :: Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient [FRFSStationAPI],
+    getFRFSTicketFrfsGtfs :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig) -> Kernel.Prelude.Maybe Dashboard.Common.PlatformType -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient FRFSGtfsRes,
     postFRFSTicketFrfsStatusUpdate :: Kernel.Prelude.Maybe Data.Text.Text -> FRFSStatusUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkFRFSTicketAPIs :: (Client EulerHS.Types.EulerClient API -> FRFSTicketAPIs)
 mkFRFSTicketAPIs fRFSTicketClient = (FRFSTicketAPIs {..})
   where
-    getFRFSTicketFrfsRoutes :<|> getFRFSTicketFrfsRouteFareList :<|> putFRFSTicketFrfsRouteFareUpsert :<|> getFRFSTicketFrfsRouteStations :<|> postFRFSTicketFrfsStatusUpdate = fRFSTicketClient
+    getFRFSTicketFrfsRoutes :<|> getFRFSTicketFrfsRouteFareList :<|> putFRFSTicketFrfsRouteFareUpsert :<|> getFRFSTicketFrfsRouteStations :<|> getFRFSTicketFrfsGtfs :<|> postFRFSTicketFrfsStatusUpdate = fRFSTicketClient
 
 data FRFSTicketUserActionType
   = GET_FRFS_TICKET_FRFS_ROUTES
   | GET_FRFS_TICKET_FRFS_ROUTE_FARE_LIST
   | PUT_FRFS_TICKET_FRFS_ROUTE_FARE_UPSERT
   | GET_FRFS_TICKET_FRFS_ROUTE_STATIONS
+  | GET_FRFS_TICKET_FRFS_GTFS
   | POST_FRFS_TICKET_FRFS_STATUS_UPDATE
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
