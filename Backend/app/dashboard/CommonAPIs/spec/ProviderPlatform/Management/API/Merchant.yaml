@@ -581,6 +581,11 @@ apis:
       auth: ApiAuthV2
       response:
         type: "[VendorSplitDetailsAPIEntity]"
+  - GET: # ListSubscriptionConfigs for the operating city
+      endpoint: /config/subscriptionConfig/list
+      auth: ApiAuthV2
+      response:
+        type: "[SubscriptionConfigAPIEntity]"
   - POST: #ToggleConfigPriorityAPI
       endpoint: /config/{configName}/failover
       params:
@@ -1203,6 +1208,60 @@ types:
     - splitValue: Double
     - maxVendorFeeAmount: Maybe HighPrecMoney
     - dailyPlanId: Maybe Text
+  SubscriptionConfigAPIEntity:
+    - merchantOperatingCityId: Text
+    - serviceName: Text
+    # bools
+    - allowDriverFeeCalcSchedule: Bool
+    - allowDueAddition: Bool
+    - allowManualPaymentLinks: Bool
+    - enableCityBasedFeeSwitch: Bool
+    - enableOffersForMembers: Bool
+    - enableServiceUsageChargeDefault: Bool
+    - freeTrialRidesApplicable: Bool
+    - isFreeTrialDaysApplicable: Bool
+    - isSubscriptionEnabledAtCategoryLevel: Bool
+    - isTriggeredAtEndRide: Bool
+    - isUIEnabled: Bool
+    - sendDeepLink: Bool
+    - sendInAppFcmNotifications: Bool
+    - useOverlayService: Bool
+    # maybe bools
+    - autopayEnabled: Maybe Bool
+    - enableDailyPlanVendorSplit: Maybe Bool
+    - isVendorSplitEnabled: Maybe Bool
+    - showManualPlansInUI: Maybe Bool
+    - subscriptionDown: Maybe Bool
+    # ints
+    - genericBatchSizeForJobs: Int
+    - maxRetryCount: Int
+    - deepLinkExpiryTimeInMinutes: Maybe Int
+    - numberOfFreeTrialRides: Maybe Int
+    # text
+    - waiveOffOfferTitle: Text
+    - waiveOffOfferDescription: Text
+    # enums (rendered as selects; carried as their string form)
+    - defaultCityVehicleCategory: Text
+    - paymentLinkChannel: Text
+    - paymentServiceName: Value
+    - payoutServiceName: Value
+    - partialDueClearanceMessageKey: Maybe Text
+    # money / durations / arrays / nested objects — raw JSON (exact round-trip)
+    - cgstPercentageOneTimeSecurityDeposit: Value
+    - sgstPercentageOneTimeSecurityDeposit: Value
+    - genericJobRescheduleTime: Value
+    - genericNextJobScheduleTimeThreshold: Value
+    - paymentLinkJobTime: Value
+    - manualPaymentLinkRateLimitExpirySeconds: Value
+    - sendManualPaymentLinkJobMaxDelay: Value
+    - dataEntityToSend: Value
+    - disabledVariantsForSubscription: Value
+    - eventsEnabledForWebhook: Value
+    - executionEnabledForVehicleCategories: Value
+    - extWebhookConfigs: Value
+    - subscriptionEnabledForVehicleCategories: Value
+    - vendorMigrationMappings: Value
+    - webhookConfig: Value
   VehicleServiceTierRes:
     - recordType: Type
     - type: [VehicleServiceTierItem]
