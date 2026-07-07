@@ -64,3 +64,7 @@ upsertAadhaarRecord a@Domain.AadhaarCard {..} =
         ]
         [Se.Is Beam.driverId $ Se.Eq driverId.getId]
     Nothing -> createWithKV a
+
+deleteByDriverIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Documents.VerificationStatus -> m ()
+deleteByDriverIdAndStatus driverId status =
+  deleteWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.verificationStatus $ Se.Eq status]]

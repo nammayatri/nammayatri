@@ -69,6 +69,7 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerification
       Se.Set Beam.isMandatory isMandatory,
       Se.Set Beam.isMandatoryForEnabling isMandatoryForEnabling,
       Se.Set Beam.isReminderSupported isReminderSupported,
+      Se.Set Beam.markImageValidOnValidationSkip markImageValidOnValidationSkip,
       Se.Set Beam.maxRetryCount maxRetryCount,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.onlyImageVerificationStatusLookupRequired onlyImageVerificationStatusLookupRequired,
