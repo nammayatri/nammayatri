@@ -121,6 +121,20 @@ instance ToHttpApiData Role where
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
+data PlatformType = MULTIMODAL | PARTNERORG | APPLICATION
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+instance FromHttpApiData PlatformType where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = left T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData PlatformType where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
+
 data Operator
 
 data VerificationStatus = PENDING | VALID | INVALID | MANUAL_VERIFICATION_REQUIRED | UNAUTHORIZED
