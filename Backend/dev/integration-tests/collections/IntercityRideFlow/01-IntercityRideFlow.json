@@ -181,7 +181,7 @@
 					"var d = pm.response.json();",
 					"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
 					"var quotes = d.quotes || [];",
-					"var want = 'COMFY';",
+					"var want = pm.environment.get('intercity_quote_tier');",
 					"var pick = null;",
 					"for (var i=0; i<quotes.length; i++) {",
 					"  var inner = quotes[i].onIntercityCab || quotes[i].onDemandCab;",
