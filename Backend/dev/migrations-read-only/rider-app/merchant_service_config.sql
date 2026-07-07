@@ -12,3 +12,8 @@ ALTER TABLE atlas_app.merchant_service_config ADD PRIMARY KEY ( merchant_id, ser
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_service_config ALTER COLUMN service_name TYPE character varying(50);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_config ADD COLUMN run_in_cloud text ;
