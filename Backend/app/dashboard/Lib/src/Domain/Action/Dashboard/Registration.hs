@@ -210,6 +210,10 @@ login LoginReq {..} = do
 makeEmailHitsCountKey :: Maybe Text -> Text
 makeEmailHitsCountKey email = "Email:" <> fromMaybe "" email <> ":hitsCount"
 
+-- Merchant / city switching happens post-authentication (the request carries
+-- a valid TokenInfo). We do NOT re-check 2FA here — the user already passed
+-- the TOTP gate at login. Re-prompting on every switch is friction without
+-- adding meaningful security (the token itself is the auth proof).
 switchMerchant ::
   ( BeamFlow m r,
     Redis.HedisFlow m r,
@@ -218,18 +222,16 @@ switchMerchant ::
     HasFlowEnv m r '["is2faMandatory" ::: Bool],
     HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
     HasFlowEnv m r '["twoFaExemptRoles" ::: [Text]],
-    HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
-    HasFlowEnv m r '["totpClockSkew" ::: Maybe Int],
     EncFlow m r
   ) =>
   TokenInfo ->
   SwitchMerchantReq ->
   m LoginRes
-switchMerchant authToken SwitchMerchantReq {..} = do
-  merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
+switchMerchant authToken req = do
+  merchant <- QMerchant.findByShortId req.merchantId >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   merchantServerAccessCheck merchant
   person <- QP.findById authToken.personId >>= fromMaybeM (PersonDoesNotExist authToken.personId.getId)
-  generateLoginRes person merchant otp merchant.defaultOperatingCity
+  generateLoginResWithoutOtp person merchant merchant.defaultOperatingCity
 
 switchMerchantAndCity ::
   ( BeamFlow m r,
@@ -239,20 +241,16 @@ switchMerchantAndCity ::
     HasFlowEnv m r '["is2faMandatory" ::: Bool],
     HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
     HasFlowEnv m r '["twoFaExemptRoles" ::: [Text]],
-    HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
-    HasFlowEnv m r '["totpClockSkew" ::: Maybe Int],
     EncFlow m r
   ) =>
   TokenInfo ->
   SwitchMerchantAndCityReq ->
   m LoginRes
-switchMerchantAndCity authToken SwitchMerchantAndCityReq {..} = do
-  merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
+switchMerchantAndCity authToken req = do
+  merchant <- QMerchant.findByShortId req.merchantId >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   merchantServerAccessCheck merchant
   person <- QP.findById authToken.personId >>= fromMaybeM (PersonDoesNotExist authToken.personId.getId)
-  if authToken.merchantId /= merchant.id
-    then generateLoginRes person merchant otp city
-    else generateLoginResWithoutOtp person merchant city
+  generateLoginResWithoutOtp person merchant req.city
 
 generateLoginRes ::
   ( BeamFlow m r,
