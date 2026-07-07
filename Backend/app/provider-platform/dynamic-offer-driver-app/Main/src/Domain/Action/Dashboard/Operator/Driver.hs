@@ -1145,7 +1145,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
           case docType of
             DVC.VehicleRegistrationCertificate -> do
               mbDoc <- QVRC.findByPrimaryKey rcId
-              forM_ mbDoc $ \doc -> QVRC.updateByPrimaryKey doc {DVRC.verificationStatus = Documents.INVALID}
+              forM_ mbDoc $ \doc -> QVRC.updateByPrimaryKey doc {DVRC.verificationStatus = Documents.INVALID, DVRC.rejectReason = rejectReason}
             DVC.VehicleInspectionForm ->
               IQuery.updateVerificationStatusByRcIdAndImageTypes Documents.INVALID rcId VDocs.vehicleDocsByRcIdList
             DVC.InspectionHub -> do
@@ -1162,10 +1162,10 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
           case docType of
             DVC.AadhaarCard -> do
               mbDoc <- QAadhaarCard.findByPrimaryKey personId
-              forM_ mbDoc $ \doc -> QAadhaarCard.updateByPrimaryKey doc {DAadhaarCard.verificationStatus = Documents.INVALID}
+              forM_ mbDoc $ \doc -> QAadhaarCard.updateByPrimaryKey doc {DAadhaarCard.verificationStatus = Documents.INVALID, DAadhaarCard.rejectReason = rejectReason}
             DVC.PanCard -> do
               mbDoc <- QDPC.findByDriverId personId
-              forM_ mbDoc $ \doc -> QDPC.updateByPrimaryKey doc {DDPC.verificationStatus = Documents.INVALID}
+              forM_ mbDoc $ \doc -> QDPC.updateByPrimaryKey doc {DDPC.verificationStatus = Documents.INVALID, DDPC.rejectReason = rejectReason}
             DVC.DriverLicense -> do
               mbDoc <- DLQuery.findByDriverId personId
               forM_ mbDoc $ \doc -> DLQuery.updateByPrimaryKey doc {DDL.verificationStatus = Documents.INVALID, DDL.rejectReason = rejectReason}
@@ -1174,7 +1174,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
               forM_ mbDoc $ \doc -> QDSSN.updateByPrimaryKey doc {DDSSN.verificationStatus = Documents.INVALID, DDSSN.rejectReason = rejectReason}
             DVC.GSTCertificate -> do
               mbDoc <- QDGST.findByDriverId personId
-              forM_ mbDoc $ \doc -> QDGST.updateByPrimaryKey doc {DDGST.verificationStatus = Documents.INVALID}
+              forM_ mbDoc $ \doc -> QDGST.updateByPrimaryKey doc {DDGST.verificationStatus = Documents.INVALID, DDGST.rejectReason = rejectReason}
             DVC.UDYAMCertificate -> do
               mbDoc <- QUDYAM.findByDriverId personId
               forM_ mbDoc $ \doc -> QUDYAM.updateByPrimaryKey doc {DDUDYAM.verificationStatus = Documents.INVALID, DDUDYAM.rejectReason = rejectReason}

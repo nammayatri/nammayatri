@@ -366,6 +366,7 @@ mkAadhaar merchantId merchantOpCityId personId name gender dob mbAadhaarNumber i
         driverImage = img,
         driverImagePath = imgPath,
         verificationStatus = bool KTD.INVALID KTD.VALID aadhaarVerified,
+        rejectReason = Nothing,
         merchantOperatingCityId = merchantOpCityId,
         merchantId = merchantId,
         createdAt = now,
@@ -511,7 +512,8 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
             maskedAadhaarNumber = maskedAadhaarNumber,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOpCityId,
-            nameOnCard = extractedAadhaar.name_on_card
+            nameOnCard = extractedAadhaar.name_on_card,
+            rejectReason = Nothing
           }
 
     makeVerifyAadhaarHitsCountKey :: Text -> Text
