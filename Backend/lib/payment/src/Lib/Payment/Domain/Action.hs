@@ -2442,6 +2442,7 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
             transferAmount = Just req.transferAmount,
             idAssignedByServiceProvider = Nothing,
             entityIds = mbEntityIds,
+            entityId = mbEntityIds >>= listToMaybe,
             entityName = mbEntityName,
             status = Payout.INITIATED,
             transferStatus,

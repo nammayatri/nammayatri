@@ -56,17 +56,13 @@ findAllWithOptions limit offset mbDriverId mbMobileNumberHash mbFrom mbTo isFail
     (Just limit)
     (Just offset)
 
-findAllWithStatusAndEntity :: BeamFlow m r => Int -> Int -> Payout.PayoutOrderStatus -> [Maybe EntityName] -> m [PayoutOrder]
-findAllWithStatusAndEntity limit offset status entityNames = do
+findAllByCustomerIdWithLimitOffset :: BeamFlow m r => Maybe Int -> Maybe Int -> Text -> m [PayoutOrder]
+findAllByCustomerIdWithLimitOffset limit offset customerId = do
   findAllWithOptionsKV
-    [ Se.And
-        ( [Se.Is Beam.entityName (Se.In entityNames)]
-            <> [Se.Is Beam.status $ Se.Eq status]
-        )
-    ]
+    [Se.Is Beam.customerId $ Se.Eq customerId]
     (Se.Desc Beam.createdAt)
-    (Just limit)
-    (Just offset)
+    limit
+    offset
 
 findLatestPaidPayoutByCustomerId :: BeamFlow m r => Text -> m (Maybe PayoutOrder)
 findLatestPaidPayoutByCustomerId customerId = do
