@@ -20,8 +20,10 @@ where
 
 import qualified API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
+import qualified BecknV2.FRFS.Types as SpecT
+import qualified BecknV2.FRFS.Utils as SpecUtils
 import Data.Aeson
-import Data.List (partition, sortBy)
+import Data.List (nub, nubBy, partition, sortBy)
 import Data.Ord (Down (..))
 import qualified Data.Text as T
 import Domain.Types.Beckn.FRFS.OnSearch
@@ -44,6 +46,7 @@ import EulerHS.Prelude (comparing, toStrict)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
@@ -744,3 +747,82 @@ discoveryOnSearch ::
   DiscoveryOnSearchReq ->
   m ()
 discoveryOnSearch _discoveryReq = pure ()
+
+-- ===================== FRFS GTFS cache (from discovery on_search catalog) =====================
+
+frfsGtfsCacheKey :: Text -> Text
+frfsGtfsCacheKey ibcId = "frfs:gtfs:" <> ibcId
+
+rawGtfsCacheKey :: Text -> Text
+rawGtfsCacheKey ibcId = "frfs:gtfs:raw:" <> ibcId
+
+parseGtfsGps :: Maybe Text -> (Maybe Double, Maybe Double)
+parseGtfsGps Nothing = (Nothing, Nothing)
+parseGtfsGps (Just t) =
+  case map T.strip (T.splitOn "," t) of
+    (a : b : _) -> (readMaybe (T.unpack a), readMaybe (T.unpack b))
+    _ -> (Nothing, Nothing)
+
+-- Extract (located stops, routes, routeStops) from one ONDC on_search catalog page.
+extractGtfsPage :: SpecT.OnSearchReq -> ([API.FRFSGtfsStopAPI], [API.FRFSGtfsRouteAPI], [API.FRFSGtfsRouteStopAPI])
+extractGtfsPage req =
+  let providers = fromMaybe [] (req.onSearchReqMessage >>= (\m -> m.onSearchReqMessageCatalog.catalogProviders))
+      fulfillments = providers >>= (fromMaybe [] . (.providerFulfillments))
+      stopRows = mapMaybe toStop (fulfillments >>= (fromMaybe [] . (.fulfillmentStops)))
+      routeRows = mapMaybe toRoute fulfillments
+      routeStopRows = concatMap toRouteStops fulfillments
+   in (stopRows, routeRows, routeStopRows)
+  where
+    toStop s = do
+      loc <- s.stopLocation
+      desc <- loc.locationDescriptor
+      code <- desc.descriptorCode
+      let (lat, lon) = parseGtfsGps loc.locationGps
+      pure API.FRFSGtfsStopAPI {code = code, name = desc.descriptorName, lat = lat, lon = lon}
+    routeCodeOf f = do
+      let tags = fromMaybe [] f.fulfillmentTags
+      rid <- SpecUtils.getTag "ROUTE_INFO" "ROUTE_ID" tags
+      pure $ T.strip rid <> maybe "" ("_" <>) (SpecUtils.getTag "ROUTE_INFO" "ROUTE_DIRECTION" tags)
+    toRoute f = do
+      let tags = fromMaybe [] f.fulfillmentTags
+      rid <- SpecUtils.getTag "ROUTE_INFO" "ROUTE_ID" tags
+      code <- routeCodeOf f
+      pure API.FRFSGtfsRouteAPI {code = code, shortName = T.strip rid, longName = "", vehicleType = f.fulfillmentVehicle >>= (.vehicleCategory)}
+    toRouteStops f =
+      case routeCodeOf f of
+        Nothing -> []
+        Just code ->
+          zipWith
+            (\sq s -> API.FRFSGtfsRouteStopAPI {routeCode = code, stopCode = fromMaybe "" s.stopId, sequenceNum = sq})
+            [1 ..]
+            (fromMaybe [] f.fulfillmentStops)
+
+-- Merge one on_search page into the per-network cached GTFS blob (TTL 60m).
+storeDiscoveryGtfs :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => Bool -> Text -> SpecT.OnSearchReq -> m ()
+storeDiscoveryGtfs storeRaw ibcId req = do
+  let (stops, routes, routeStops) = extractGtfsPage req
+      key = frfsGtfsCacheKey ibcId
+  Hedis.whenWithLockRedis (key <> ":merge") 30 $ do
+    mbExisting <- Hedis.safeGet key
+    let existing = fromMaybe (API.FRFSGtfsRes {integratedBppConfigId = Id ibcId, ready = True, routes = [], stops = [], routeStops = [], rawResponses = []}) mbExisting
+        mergedStops = nubBy (\a b -> a.code == b.code) (existing.stops <> stops)
+        mergedRoutes = nubBy (\a b -> a.code == b.code) (existing.routes <> routes)
+        mergedRouteStops = nub (existing.routeStops <> routeStops)
+    Hedis.setExp
+      key
+      ( API.FRFSGtfsRes
+          { integratedBppConfigId = Id ibcId,
+            ready = True,
+            routes = mergedRoutes,
+            stops = mergedStops,
+            routeStops = mergedRouteStops,
+            rawResponses = []
+          } ::
+          API.FRFSGtfsRes
+      )
+      3600
+  when storeRaw $ do
+    let rawKey = rawGtfsCacheKey ibcId
+    Hedis.whenWithLockRedis (rawKey <> ":merge") 30 $ do
+      mbRaw <- Hedis.safeGet rawKey
+      Hedis.setExp rawKey (fromMaybe [] mbRaw <> [toJSON req]) 3600

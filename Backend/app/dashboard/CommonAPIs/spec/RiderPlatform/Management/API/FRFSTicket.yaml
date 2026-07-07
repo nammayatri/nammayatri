@@ -8,6 +8,7 @@ imports:
   StationType: Domain.Types.StationType
   IntegratedBPPConfig: Dashboard.Common
   FRFSTicketBooking: Dashboard.Common
+  Value: Data.Aeson
 
 module: FRFSTicket
 types:
@@ -86,6 +87,36 @@ types:
     bookingIds: "[Id FRFSTicketBooking]"
     derive: "'HideSecrets"
 
+  # GTFS-style view built from the ONDC discovery on_search catalog, cached per bppConfig
+  FRFSGtfsStopAPI:
+    code: Text
+    name: Maybe Text
+    lat: Maybe Double
+    lon: Maybe Double
+    derive: "Show,Eq"
+
+  FRFSGtfsRouteAPI:
+    code: Text
+    shortName: Text
+    longName: Text
+    vehicleType: Maybe Text
+    derive: "Show,Eq"
+
+  FRFSGtfsRouteStopAPI:
+    routeCode: Text
+    stopCode: Text
+    sequenceNum: Int
+    derive: "Show,Eq"
+
+  FRFSGtfsRes:
+    integratedBppConfigId: Id IntegratedBPPConfig
+    ready: Bool
+    routes: [FRFSGtfsRouteAPI]
+    stops: [FRFSGtfsStopAPI]
+    routeStops: [FRFSGtfsRouteStopAPI]
+    rawResponses: [Value]
+    derive: "Show"
+
 apis:
   - GET: # Get list of all the FRFS routes
       endpoint: /frfs/routes
@@ -139,6 +170,17 @@ apis:
         type: "[FRFSStationAPI]"
       migrate:
         userActionType: ApiAuth APP_BACKEND FRFS LIST_FRFS_STATION
+
+  - GET: # Cached GTFS view built from the ONDC discovery on_search catalog (keyed by integratedBppConfigId)
+      endpoint: /frfs/gtfs
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+      query:
+        integratedBppConfigId: Id IntegratedBPPConfig
+        storeRaw: Bool
+      response:
+        type: FRFSGtfsRes
 
   - POST: # FRFS Status Update (proxies internal/frfs/statusUpdate)
       endpoint: /frfs/statusUpdate

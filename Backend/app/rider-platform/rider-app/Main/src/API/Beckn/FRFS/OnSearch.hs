@@ -68,6 +68,9 @@ processOnSearch req = do
           fork "FRFS discovery on_search processing" $ do
             Redis.whenWithLockRedis (onSearchProcessingLockKey message_id) 60 $
               DOnSearch.discoveryOnSearch onSearchReq
+          when (discoveryCounter.storeGtfs == Just True) $
+            whenJust discoveryCounter.integratedBppConfigId $ \ibcId ->
+              fork "FRFS discovery GTFS store" $ DOnSearch.storeDiscoveryGtfs (discoveryCounter.storeRaw == Just True) ibcId req
           fork "FRFS discovery onSearch logs" $ do
             void $ pushLogs "discovery_on_search" (toJSON req) onSearchReq.merchantId "PUBLIC_TRANSPORT"
         pure Utils.ack

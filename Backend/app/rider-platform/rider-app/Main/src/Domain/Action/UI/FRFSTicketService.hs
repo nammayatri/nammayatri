@@ -559,8 +559,79 @@ postFrfsDiscoverySearch (_, merchantId) mbIntegratedBPPConfigId req = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory req.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOpCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory req.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory req.vehicleType) platformType
-  CallExternalBPP.discoverySearch merchant bapConfig integratedBPPConfig req
+  CallExternalBPP.discoverySearch merchant bapConfig integratedBPPConfig False False req
   return Kernel.Types.APISuccess.Success
+
+-- ===================== FRFS GTFS (discovery on_search catalog cache) =====================
+
+frfsGtfsCacheKey :: Text -> Text
+frfsGtfsCacheKey ibcId = "frfs:gtfs:" <> ibcId
+
+rawGtfsCacheKey :: Text -> Text
+rawGtfsCacheKey ibcId = "frfs:gtfs:raw:" <> ibcId
+
+getFrfsGtfs ::
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Context.City ->
+  Spec.VehicleCategory ->
+  Environment.Flow API.Types.UI.FRFSTicketService.FRFSGtfsRes
+getFrfsGtfs (_mbPersonId, merchantId) mbIntegratedBppConfigId mbStoreRaw city vehicleType = do
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> " ,city: " <> show city)
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBppConfigId merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
+  let ibcId = integratedBPPConfig.id.getId
+      key = frfsGtfsCacheKey ibcId
+      rawKey = rawGtfsCacheKey ibcId
+      storeRaw = mbStoreRaw == Just True
+      emptyRes = API.Types.UI.FRFSTicketService.FRFSGtfsRes {integratedBppConfigId = integratedBPPConfig.id, ready = False, routes = [], stops = [], routeStops = [], rawResponses = []}
+  mbCached <- Hedis.safeGet key
+  existingRaw <- if storeRaw then fromMaybe [] <$> Hedis.safeGet rawKey else pure []
+  -- When storeRaw is requested we must refresh unless BOTH the parsed cache and the raw cache are already populated,
+  -- otherwise a warm parsed-cache would short-circuit and the raw pages would never be captured.
+  let usable = isJust mbCached && (not storeRaw || not (null existingRaw))
+  gtfs <-
+    if usable
+      then pure (fromMaybe emptyRes mbCached)
+      else do
+        merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
+        bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOpCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
+        let discReq = API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq {city = city, vehicleType = vehicleType, platformType = Nothing}
+            -- raw refreshes use their own lock so a recent parsed-only (storeRaw=false) refresh doesn't block them
+            (refreshLockKey, lockTtl) = if storeRaw then (rawKey <> ":refresh", 60 :: Int) else (key <> ":refresh", 300 :: Int)
+        Hedis.whenWithLockRedis refreshLockKey lockTtl $
+          CallExternalBPP.discoverySearch merchant bapConfig integratedBPPConfig True storeRaw discReq
+        waitForGtfs key integratedBPPConfig.id (15 :: Int)
+  finalRaw <-
+    if not storeRaw
+      then pure []
+      else
+        if usable
+          then pure existingRaw
+          else waitForRaw rawKey (15 :: Int) (negate 1) -- wait until the raw page count stops growing (or timeout)
+  pure
+    API.Types.UI.FRFSTicketService.FRFSGtfsRes
+      { integratedBppConfigId = gtfs.integratedBppConfigId,
+        ready = gtfs.ready,
+        routes = gtfs.routes,
+        stops = gtfs.stops,
+        routeStops = gtfs.routeStops,
+        rawResponses = finalRaw
+      }
+  where
+    waitForGtfs key ibcTypedId 0 =
+      fromMaybe (API.Types.UI.FRFSTicketService.FRFSGtfsRes {integratedBppConfigId = ibcTypedId, ready = False, routes = [], stops = [], routeStops = [], rawResponses = []}) <$> Hedis.safeGet key
+    waitForGtfs key ibcTypedId n = do
+      mb <- Hedis.safeGet key
+      case mb of
+        Just g -> pure g
+        Nothing -> liftIO (EulerHS.Prelude.threadDelay 1000000) >> waitForGtfs key ibcTypedId (n - 1)
+    waitForRaw rawKey 0 _ = fromMaybe [] <$> Hedis.safeGet rawKey
+    waitForRaw rawKey n prev = do
+      cur <- fromMaybe [] <$> Hedis.safeGet rawKey
+      if not (null cur) && length cur == prev
+        then pure cur
+        else liftIO (EulerHS.Prelude.threadDelay 1000000) >> waitForRaw rawKey (n - 1) (length cur)
 
 postFrfsSearchHandler ::
   (CallExternalBPP.FRFSSearchFlow m r, HasShortDurationRetryCfg r c, HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) =>

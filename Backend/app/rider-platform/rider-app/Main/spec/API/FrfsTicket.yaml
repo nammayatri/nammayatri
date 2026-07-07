@@ -25,6 +25,7 @@ imports:
   RouteStopInfo: SharedLogic.FRFSUtils
   PlatformType: Domain.Types.IntegratedBPPConfig
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+  Value: Data.Aeson
   RecentLocation: Domain.Types.RecentLocation
   TimeOfDay: Date.Time
   FRFSQuoteCategory: Domain.Types.FRFSQuoteCategory
@@ -200,6 +201,36 @@ types:
     vehicleServiceTier: Maybe FRFSVehicleServiceTierAPI
     priceWithCurrency: PriceAPIEntity
     sequenceNum: Maybe Int
+    derive: "Show"
+
+  # GTFS-style view built from the ONDC discovery on_search catalog, cached per bppConfig
+  FRFSGtfsStopAPI:
+    code: Text
+    name: Maybe Text
+    lat: Maybe Double
+    lon: Maybe Double
+    derive: "Show,Eq"
+
+  FRFSGtfsRouteAPI:
+    code: Text
+    shortName: Text
+    longName: Text
+    vehicleType: Maybe Text
+    derive: "Show,Eq"
+
+  FRFSGtfsRouteStopAPI:
+    routeCode: Text
+    stopCode: Text
+    sequenceNum: Int
+    derive: "Show,Eq"
+
+  FRFSGtfsRes:
+    integratedBppConfigId: Id IntegratedBPPConfig
+    ready: Bool
+    routes: [FRFSGtfsRouteAPI]
+    stops: [FRFSGtfsStopAPI]
+    routeStops: [FRFSGtfsRouteStopAPI]
+    rawResponses: [Value]
     derive: "Show"
 
   FRFSTicketAPI:

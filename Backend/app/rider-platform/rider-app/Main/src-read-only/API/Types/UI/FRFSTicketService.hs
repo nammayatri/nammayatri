@@ -4,6 +4,7 @@ module API.Types.UI.FRFSTicketService where
 
 import qualified API.Types.UI.RiderLocation
 import qualified BecknV2.FRFS.Enums
+import qualified Data.Aeson
 import qualified Data.Maybe
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
@@ -145,6 +146,29 @@ data FRFSDiscountRes = FRFSDiscountRes
 
 data FRFSDiscoverySearchAPIReq = FRFSDiscoverySearchAPIReq {city :: Kernel.Types.Beckn.Context.City, platformType :: Data.Maybe.Maybe Domain.Types.IntegratedBPPConfig.PlatformType, vehicleType :: BecknV2.FRFS.Enums.VehicleCategory}
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSGtfsRes = FRFSGtfsRes
+  { integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
+    rawResponses :: [Data.Aeson.Value],
+    ready :: Kernel.Prelude.Bool,
+    routeStops :: [FRFSGtfsRouteStopAPI],
+    routes :: [FRFSGtfsRouteAPI],
+    stops :: [FRFSGtfsStopAPI]
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSGtfsRouteAPI = FRFSGtfsRouteAPI {code :: Data.Text.Text, longName :: Data.Text.Text, shortName :: Data.Text.Text, vehicleType :: Data.Maybe.Maybe Data.Text.Text}
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSGtfsRouteStopAPI = FRFSGtfsRouteStopAPI {routeCode :: Data.Text.Text, sequenceNum :: Kernel.Prelude.Int, stopCode :: Data.Text.Text}
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSGtfsStopAPI = FRFSGtfsStopAPI {code :: Data.Text.Text, lat :: Data.Maybe.Maybe Kernel.Prelude.Double, lon :: Data.Maybe.Maybe Kernel.Prelude.Double, name :: Data.Maybe.Maybe Data.Text.Text}
+  deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSPossibleStopsReq = FRFSPossibleStopsReq {stationCodes :: [Data.Text.Text]}
