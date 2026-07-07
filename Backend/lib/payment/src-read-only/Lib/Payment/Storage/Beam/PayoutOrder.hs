@@ -23,7 +23,6 @@ data PayoutOrderT f = PayoutOrderT
     customerEmailEncrypted :: B.C f Kernel.Prelude.Text,
     customerEmailHash :: B.C f Kernel.External.Encryption.DbHash,
     customerId :: B.C f Kernel.Prelude.Text,
-    entityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     entityIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     entityName :: B.C f (Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Common.EntityName),
     id :: B.C f Kernel.Prelude.Text,
@@ -56,6 +55,6 @@ instance B.Table PayoutOrderT where
 
 type PayoutOrder = PayoutOrderT Identity
 
-$(enableKVPG ''PayoutOrderT ['id, 'orderId] [['customerId], ['entityId], ['id]])
+$(enableKVPG ''PayoutOrderT ['id, 'orderId] [['customerId], ['entityIds], ['id]])
 
 $(mkTableInstancesGenericSchema ''PayoutOrderT "payout_order")
