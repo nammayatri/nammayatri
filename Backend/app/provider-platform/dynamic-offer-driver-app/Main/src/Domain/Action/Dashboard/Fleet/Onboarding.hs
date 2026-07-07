@@ -174,7 +174,7 @@ getOnboardingRegisterVehicleStatus ::
 getOnboardingRegisterVehicleStatus merchantShortId opCity mbRegistrationNo mbRcId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  (registrationNo, verified, approved, documents) <- DOnboarding.rcVerifyStatus Nothing True (Just merchantOpCity.id) mbRegistrationNo mbRcId
+  (registrationNo, verified, approved, documents) <- DOnboarding.rcVerifyStatus (DOnboarding.DashboardCaller merchantOpCity.id) mbRegistrationNo mbRcId
   pure $
     CommonOnboarding.RcVerifyStatusResp
       { registrationNo,
