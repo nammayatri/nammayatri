@@ -76,11 +76,11 @@ getReferralVerifyVpa (mbPersonId, _mbMerchantId) vpa = do
       logDebug $ "verify vpa resp : " <> show response
       pure $ VpaResp {vpa = response.vpa, isValid = response.status == "VALID"}
 
-getReferralPayoutHistory :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Flow PayoutHistory
-getReferralPayoutHistory (mbPersonId, _mbMerchantId) = do
+getReferralPayoutHistory :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Int -> Maybe Int -> Flow PayoutHistory
+getReferralPayoutHistory (mbPersonId, _mbMerchantId) mbLimit mbOffset = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  payoutOrders <- QPayoutOrder.findAllByCustomerId personId.getId
+  payoutOrders <- QPayoutOrder.findAllByCustomerIdWithLimitOffset mbLimit mbOffset personId.getId
   refreshedOrders <- forM payoutOrders $ \payoutOrder ->
     if isPayoutOrderTerminal payoutOrder.status
       then pure payoutOrder
