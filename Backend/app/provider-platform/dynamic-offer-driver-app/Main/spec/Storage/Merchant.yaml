@@ -1300,6 +1300,7 @@ TransporterConfig:
     allowDuplicatePan: Maybe Bool
     allowDuplicateGst: Maybe Bool
     allowDuplicateAadhaar: Maybe Bool
+    allowMaskedAadhaar: Maybe Bool
     allowDuplicateUdyam: Maybe Bool
     allowPanAadhaarLinkage: Maybe Bool
     individualPANCheck: Maybe Bool

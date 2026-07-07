@@ -59,6 +59,8 @@ hyperVergeResultWebhookHandler payload = do
       logInfo $ "PAN Card Validation Status Updated for Driver: " <> show imageEntity.personId <> " to: " <> show vstatus
     DVC.AadhaarCard -> do
       QAadhaarCard.updateVerificationStatus vstatus imageEntity.personId
+      mbAadhaar <- QAadhaarCard.findByPrimaryKey imageEntity.personId
+      SLogicOnboarding.updateLinkedAadhaarNumber imageEntity.personId (if vstatus == Documents.VALID then mbAadhaar else Nothing)
       logInfo $ "Aadhaar Card Validation Status Updated for Driver: " <> show imageEntity.personId <> " to: " <> show vstatus
     DVC.ProfilePhoto ->
       logInfo $ "Profile Photo Validation Status Updated for Driver: " <> show imageEntity.personId <> " to: " <> show vstatus

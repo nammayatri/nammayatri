@@ -1,15 +1,22 @@
 module Storage.Queries.AadhaarCardExtra where
 
+import qualified Data.Text as T
+import qualified Database.Beam as B
+import qualified Database.Beam.Query ()
 import qualified Domain.Types.AadhaarCard as Domain
+import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Documents
+import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime, throwError)
 import Sequelize as Se
 import Storage.Beam.AadhaarCard as Beam
+import qualified Storage.Beam.Common as BeamCommon
 import Storage.Queries.OrphanInstances.AadhaarCard ()
 
 findByPhoneNumberAndUpdate ::
@@ -41,6 +48,49 @@ findAllByEncryptedAadhaarNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =
 findAllByEncryptedAadhaarNumber mbAadhaarNumberHash = do
   findAllWithKV
     [Se.Is Beam.aadhaarNumberHash $ Se.Eq mbAadhaarNumberHash]
+
+-- | Active-conflict lookup by Aadhaar number hash for the full-Aadhaar duplicate check. The
+-- 'isActiveAadhaarConflict' predicates (same merchant, other driver, active status) are applied in
+-- the query so only genuine conflicts are returned, instead of fetching all rows for the hash and
+-- filtering in Haskell.
+findActiveConflictsByAadhaarHash ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  Maybe DbHash ->
+  m [Domain.AadhaarCard]
+findActiveConflictsByAadhaarHash merchantId excludeDriverId mbAadhaarNumberHash = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.aadhaarNumberHash $ Se.Eq mbAadhaarNumberHash,
+          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),
+          Se.Is Beam.driverId $ Se.Not $ Se.Eq (Kernel.Types.Id.getId excludeDriverId),
+          Se.Is Beam.verificationStatus $ Se.In [Kernel.Types.Documents.VALID, Kernel.Types.Documents.MANUAL_VERIFICATION_REQUIRED, Kernel.Types.Documents.PENDING]
+        ]
+    ]
+
+-- | Case-insensitive lookup by merchant + DOB + name. Name is compared with SQL LOWER on both
+-- sides (via 'B.lower_'), so stored mixed-case names still match. Written as a raw beam query
+-- because the Sequelize DSL cannot apply LOWER to a column.
+findAllByMerchantIdDobAndName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Text -> Text -> m [Domain.AadhaarCard]
+findAllByMerchantIdDobAndName merchantId dateOfBirth nameOnCard = do
+  dbConf <- getMasterBeamConfig
+  result <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.filter_'
+            ( \aadhaarCard ->
+                B.sqlBool_ (aadhaarCard.merchantId B.==. B.val_ (Kernel.Types.Id.getId merchantId))
+                  B.&&?. B.sqlBool_ (aadhaarCard.dateOfBirth B.==. B.val_ (Just dateOfBirth))
+                  B.&&?. B.sqlBool_ (B.lower_ (B.coalesce_ [aadhaarCard.nameOnCard] (B.val_ "")) B.==. B.val_ (T.toLower nameOnCard))
+            )
+            (B.all_ (BeamCommon.aadhaarCard BeamCommon.atlasDB))
+  case result of
+    Right aadhaarCards -> catMaybes <$> mapM fromTType' aadhaarCards
+    -- Fail closed: this query backs the masked-Aadhaar duplicate check, so swallowing a DB
+    -- error (returning []) would silently let a duplicate through. Propagate instead.
+    Left err -> throwError $ InternalError ("findAllByMerchantIdDobAndName failed: " <> show err)
 
 upsertAadhaarRecord :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.AadhaarCard -> m ()
 upsertAadhaarRecord a@Domain.AadhaarCard {..} =
