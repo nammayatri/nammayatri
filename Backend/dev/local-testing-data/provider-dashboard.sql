@@ -59,6 +59,21 @@ BEGIN
     );
 END $$;
 
+-- Fleet owner + operator roles: grant access to dashboard analytics and vehicle list stats endpoints
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type, created_at, updated_at)
+SELECT gen_random_uuid(), r.id, 'DSL', 'USER_FULL_ACCESS', perm.action, now(), now()
+FROM atlas_bpp_dashboard.role r
+CROSS JOIN (VALUES
+  ('PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_DASHBOARD_ANALYTICS'),
+  ('PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_DASHBOARD_ANALYTICS_ALL_TIME'),
+  ('PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_VEHICLE_LIST_STATS'),
+  ('PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_DASHBOARD_ANALYTICS_CACHE'),
+  ('PROVIDER_OPERATOR/DRIVER/GET_DRIVER_OPERATOR_DASHBOARD_ANALYTICS'),
+  ('PROVIDER_OPERATOR/DRIVER/GET_DRIVER_OPERATOR_DASHBOARD_ANALYTICS_ALL_TIME')
+) AS perm(action)
+WHERE r.dashboard_access_type IN ('FLEET_OWNER', 'DASHBOARD_OPERATOR')
+ON CONFLICT DO NOTHING;
+
 -- Grant the JUSPAY_ADMIN dev token cross-merchant + cross-city dashboard access.
 DO $$
 DECLARE

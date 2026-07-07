@@ -229,6 +229,10 @@ class MockHandler(BaseHTTPRequestHandler):
             return self._mock_sql_update(body)
         if path == "/mock/sql/insert" and self.command == "POST":
             return self._mock_sql_insert(body)
+        if path == "/mock/sql/delete" and self.command == "POST":
+            return self._mock_sql_delete(body)
+        if path == "/mock/sql/raw" and self.command == "POST":
+            return self._mock_sql_raw(body)
 
         # ── Generic Redis SET / DEL (for tests that need to seed or invalidate Redis cache state) ──
         if path == "/mock/redis/set" and self.command == "POST":
@@ -614,6 +618,82 @@ class MockHandler(BaseHTTPRequestHandler):
             return self._json({"ok": True, "rowcount": rowcount})
         except Exception:
             log.exception("sql-insert error")
+            return self._json({"error": "internal server error"}, status=500)
+
+    def _mock_sql_delete(self, body):
+        """POST /mock/sql/delete — run a DELETE against a dev DB table.
+        Body: {
+          "db_name": "atlas_dev",
+          "db_schema": "atlas_driver_offer_bpp",
+          "table_name": "fleet_rc_daily_stats",
+          "where_clause": [{"column_name": "fleet_owner_id", "val": "f0%", "op": "LIKE"}]
+        }
+        Returns: {"ok": true, "rowcount": N}"""
+        from psycopg2 import sql as psql
+        try:
+            data, db_name, schema, table = self._parse_sql_target(body)
+        except ValueError as ve:
+            return self._json({"error": str(ve)}, status=400)
+
+        where = data.get("where_clause") or []
+        if not where:
+            return self._json({"error": "where_clause required (refusing unscoped DELETE)"}, status=400)
+
+        try:
+            where_sql, where_params = self._build_where(where)
+        except ValueError as ve:
+            return self._json({"error": str(ve)}, status=400)
+
+        query = psql.SQL("DELETE FROM {sch}.{tbl}{where}").format(
+            sch=psql.Identifier(schema),
+            tbl=psql.Identifier(table),
+            where=where_sql,
+        )
+
+        try:
+            conn = self._pg_connect(db_name)
+            try:
+                conn.autocommit = True
+                cur = conn.cursor()
+                cur.execute(query, where_params)
+                rowcount = cur.rowcount
+                cur.close()
+            finally:
+                conn.close()
+            return self._json({"ok": True, "rowcount": rowcount})
+        except Exception:
+            log.exception("sql-delete error")
+            return self._json({"error": "internal server error"}, status=500)
+
+    def _mock_sql_raw(self, body):
+        """POST /mock/sql/raw — run a raw SQL statement against a dev DB.
+        Body: {"db_name": "atlas_dev", "sql": "ALTER TABLE ..."}
+        Non-SELECT statements allowed (DDL + INSERT/UPDATE/DELETE).
+        Returns: {"ok": true, "rowcount": N}"""
+        try:
+            data = json.loads(body) if body else {}
+        except json.JSONDecodeError:
+            return self._json({"error": "invalid JSON"}, status=400)
+        db_name = data.get("db_name")
+        sql = (data.get("sql") or "").strip()
+        if not db_name or not sql:
+            return self._json({"error": "db_name, sql are required"}, status=400)
+        first_word = sql.split()[0].upper() if sql else ""
+        if first_word not in ("ALTER", "CREATE", "DROP", "TRUNCATE", "INSERT", "UPDATE", "DELETE"):
+            return self._json({"error": f"only non-SELECT statements allowed, got {first_word!r}"}, status=400)
+        try:
+            conn = self._pg_connect(db_name)
+            try:
+                conn.autocommit = True
+                cur = conn.cursor()
+                cur.execute(sql)
+                rowcount = cur.rowcount
+                cur.close()
+            finally:
+                conn.close()
+            return self._json({"ok": True, "rowcount": rowcount})
+        except Exception:
+            log.exception("sql-raw error")
             return self._json({"error": "internal server error"}, status=500)
 
     # ── Generic scheduler job trigger (for scheduler tests) ──
@@ -1124,7 +1204,7 @@ def main():
 
     server = _QuietThreadingHTTPServer(("0.0.0.0", args.port), MockHandler)
     log.info(f"Mock server running on :{args.port}")
-    log.info("APIs: POST/GET/DELETE /mock/override, POST /mock/sql/select, POST /mock/sql/update, POST /mock/sql/insert, POST /mock/scheduler/trigger, POST /mock/scheduler/peek, POST /mock/scheduler/clear")
+    log.info("APIs: POST/GET/DELETE /mock/override, POST /mock/sql/select, POST /mock/sql/update, POST /mock/sql/insert, POST /mock/sql/delete, POST /mock/sql/raw, POST /mock/scheduler/trigger, POST /mock/scheduler/peek, POST /mock/scheduler/clear")
     log.info(f"Services: {', '.join(r[0].strip('/') for r in ROUTES)}")
     try:
         server.serve_forever()
