@@ -67,7 +67,6 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder {..}) = do
       Se.Set Beam.customerEmailEncrypted (customerEmail & unEncrypted . encrypted),
       Se.Set Beam.customerEmailHash (customerEmail & hash),
       Se.Set Beam.customerId customerId,
-      Se.Set Beam.entityId entityId,
       Se.Set Beam.entityIds entityIds,
       Se.Set Beam.entityName entityName,
       Se.Set Beam.idAssignedByServiceProvider idAssignedByServiceProvider,
