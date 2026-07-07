@@ -191,14 +191,15 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
   let driverLocMap = Map.fromList $ map (\dl -> (dl.driverId.getId, dl)) driversNearGate
   vehicleStats <- forM cityServiceTiers $ \vst -> do
     let vt = show vst.serviceTierType
+        vtVariant = show (castServiceTierToVariant vst.serviceTierType)
         calloutVars = getCalloutVars vst
         queueResps = mapMaybe (\cv -> Map.lookup cv uniqVariantsQueueMap) calloutVars
         -- Merge queue responses from all callout variants for this tier
         mergedDrivers = concatMap (.drivers) queueResps
         mergedQueueSize = sum $ map (.queueSize) queueResps
     -- Live demand (pending customer searches) and committed supply (drivers notified/accepted)
-    mbDemandCount <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Int (SpecialZoneDriverDemand.mkGateSearchDemandKey gateId vt)
-    mbSupplyCount <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Int (SpecialZoneDriverDemand.mkGateSearchSupplyKey gateId vt)
+    mbDemandCount <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Int (SpecialZoneDriverDemand.mkGateSearchDemandKey gateId vtVariant)
+    mbSupplyCount <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Int (SpecialZoneDriverDemand.mkGateSearchSupplyKey gateId vtVariant)
     -- Drivers who accepted the pickup notification and are en-route to the gate
     acceptedRequests <- QSZQR.findAllByGateIdStatusAndVehicleType queueRequestCutoff gateId DSZQR.Accepted vt
     let totalInQueue = mergedQueueSize
