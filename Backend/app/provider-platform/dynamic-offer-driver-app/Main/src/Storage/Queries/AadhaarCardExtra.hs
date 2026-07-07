@@ -1,7 +1,12 @@
 module Storage.Queries.AadhaarCardExtra where
 
+import qualified Data.Text as T
+import qualified Database.Beam as B
+import qualified Database.Beam.Query ()
 import qualified Domain.Types.AadhaarCard as Domain
+import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -10,6 +15,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import Sequelize as Se
 import Storage.Beam.AadhaarCard as Beam
+import qualified Storage.Beam.Common as BeamCommon
 import Storage.Queries.OrphanInstances.AadhaarCard ()
 
 findByPhoneNumberAndUpdate ::
@@ -41,6 +47,27 @@ findAllByEncryptedAadhaarNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =
 findAllByEncryptedAadhaarNumber mbAadhaarNumberHash = do
   findAllWithKV
     [Se.Is Beam.aadhaarNumberHash $ Se.Eq mbAadhaarNumberHash]
+
+-- | Case-insensitive lookup by merchant + DOB + name. Name is compared with SQL LOWER on both
+-- sides (via 'B.lower_'), so stored mixed-case names still match. Written as a raw beam query
+-- because the Sequelize DSL cannot apply LOWER to a column.
+findAllByMerchantIdDobAndName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Text -> Text -> m [Domain.AadhaarCard]
+findAllByMerchantIdDobAndName merchantId dateOfBirth nameOnCard = do
+  dbConf <- getMasterBeamConfig
+  result <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.filter_'
+            ( \aadhaarCard ->
+                B.sqlBool_ (aadhaarCard.merchantId B.==. B.val_ (Kernel.Types.Id.getId merchantId))
+                  B.&&?. B.sqlBool_ (aadhaarCard.dateOfBirth B.==. B.val_ (Just dateOfBirth))
+                  B.&&?. B.sqlBool_ (B.lower_ (B.coalesce_ [aadhaarCard.nameOnCard] (B.val_ "")) B.==. B.val_ (T.toLower nameOnCard))
+            )
+            (B.all_ (BeamCommon.aadhaarCard BeamCommon.atlasDB))
+  case result of
+    Right aadhaarCards -> catMaybes <$> mapM fromTType' aadhaarCards
+    Left _ -> pure []
 
 upsertAadhaarRecord :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.AadhaarCard -> m ()
 upsertAadhaarRecord a@Domain.AadhaarCard {..} =

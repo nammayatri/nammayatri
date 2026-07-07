@@ -29,6 +29,7 @@ import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Time.Calendar.OrdinalDate as TO
 import qualified Domain.Types as DVST
+import qualified Domain.Types.AadhaarCard as DAadhaarCard
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DVC
@@ -62,6 +63,7 @@ import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.External.Types (Language, VerificationFlow)
 import qualified Kernel.External.Verification.Interface as VI
+import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Documents
@@ -69,6 +71,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as ACOverlay
 import SharedLogic.Analytics as Analytics
@@ -103,8 +106,330 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import Text.Regex.Posix ((=~))
 import Tools.Error
 import qualified Tools.Ticket as TT
+import qualified Tools.Utils as Utils
 import qualified Tools.Verification as Verification
 import qualified Tools.Whatsapp as Whatsapp
+
+isFullAadhaar :: Text -> Bool
+isFullAadhaar s =
+  let s' = removeSpaceAndDash s
+   in T.length s' == 12 && T.all (\c -> c >= '0' && c <= '9') s'
+
+validateAadhaarOnboarding ::
+  Person ->
+  Maybe Text ->
+  Flow DriverDocument
+validateAadhaarOnboarding person mbAadhaarNumber = do
+  externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
+  whenJust mbAadhaarNumber $ \_ ->
+    checkSlidingWindowLimitWithOptions ("VerifyAadhaar:driverIdHits:" <> person.id.getId <> ":hitsCount") externalServiceRateLimitOptions
+  (blocked, driverDocument) <- getDriverDocumentInfo person
+  when blocked $ throwError AccountBlocked
+  pure driverDocument
+
+isActiveAadhaarConflict :: Person -> DAadhaarCard.AadhaarCard -> Bool
+isActiveAadhaarConflict person aadhaarInfo =
+  aadhaarInfo.driverId /= person.id
+    && aadhaarInfo.merchantId == person.merchantId
+    && aadhaarInfo.verificationStatus `elem` [Documents.VALID, Documents.MANUAL_VERIFICATION_REQUIRED, Documents.PENDING]
+
+updateLinkedAadhaarNumber :: Id Person.Person -> Maybe DAadhaarCard.AadhaarCard -> Flow ()
+updateLinkedAadhaarNumber personId mbAadhaar = do
+  mbPerson <- QP.findById personId
+  whenJust mbPerson $ \person ->
+    if isFleetRole person.role
+      then
+        FOI.updateAadhaarImage
+          (mbAadhaar >>= (.aadhaarNumber))
+          ((.getId) <$> (mbAadhaar >>= (.aadhaarFrontImageId)))
+          ((.getId) <$> (mbAadhaar >>= (.aadhaarBackImageId)))
+          personId
+      else
+        when (person.role == Person.DRIVER) $
+          DIQuery.updateAadhaarNumber (mbAadhaar >>= (.aadhaarNumber)) personId
+
+checkMaskedAadhaarAllowed :: DTC.TransporterConfig -> Maybe Text -> Flow () -> Flow ()
+checkMaskedAadhaarAllowed transporterConfig mbAadhaarNumber cleanupOnConflict =
+  whenJust mbAadhaarNumber $ \aadhaarNumber ->
+    when (not (isFullAadhaar aadhaarNumber) && transporterConfig.allowMaskedAadhaar == Just False) $
+      cleanupOnConflict >> throwError MaskedAadhaarNotAllowed
+
+validateMaskedAadhaarNameDob :: DTC.TransporterConfig -> AadhaarExtractedData -> Flow () -> Flow ()
+validateMaskedAadhaarNameDob transporterConfig aadhaarData cleanupOnConflict =
+  whenJust aadhaarData.aedAadhaarNumber $ \aadhaarNumber ->
+    when
+      ( not (isFullAadhaar aadhaarNumber)
+          && transporterConfig.allowMaskedAadhaar /= Just False
+          && (isNothing aadhaarData.aedNameOnCard || isNothing aadhaarData.aedDateOfBirth)
+      )
+      $ cleanupOnConflict >> throwError AadhaarNameAndDobRequired
+
+checkDuplicateFullAadhaar :: Person -> DTC.TransporterConfig -> Maybe Text -> Flow () -> Flow ()
+checkDuplicateFullAadhaar person transporterConfig mbAadhaarNumber cleanupOnConflict =
+  case (transporterConfig.allowDuplicateAadhaar, mbAadhaarNumber) of
+    (Just False, Just aadhaarNumber)
+      | isFullAadhaar aadhaarNumber -> do
+        aadhaarHash <- getDbHash aadhaarNumber
+        aadhaarInfoList <- QAadhaarCard.findAllByEncryptedAadhaarNumber (Just aadhaarHash)
+        unless (null (filter (isActiveAadhaarConflict person) aadhaarInfoList)) $
+          cleanupOnConflict >> throwError AadhaarAlreadyLinked
+    _ -> pure ()
+
+checkDuplicateMaskedAadhaar :: Person -> DTC.TransporterConfig -> AadhaarExtractedData -> Flow () -> Flow ()
+checkDuplicateMaskedAadhaar person transporterConfig aadhaarData cleanupOnConflict =
+  case (transporterConfig.allowDuplicateAadhaar, aadhaarData.aedAadhaarNumber, aadhaarData.aedDateOfBirth, aadhaarData.aedNameOnCard) of
+    (Just False, Just aadhaarNumber, Just dateOfBirth, Just nameOnCard)
+      | not (isFullAadhaar aadhaarNumber) -> do
+        candidates <- QAadhaarCard.findAllByMerchantIdDobAndName person.merchantId dateOfBirth nameOnCard
+        let newLastThree = T.takeEnd 3 aadhaarNumber
+            conflicts =
+              filter
+                ( \aadhaarInfo ->
+                    isActiveAadhaarConflict person aadhaarInfo
+                      && (T.takeEnd 3 <$> aadhaarInfo.maskedAadhaarNumber) == Just newLastThree
+                )
+                candidates
+        unless (null conflicts) $
+          cleanupOnConflict >> throwError AadhaarAlreadyLinked
+    _ -> pure ()
+
+mkIdfyVerificationEntityPanAadhaarLink :: Person.Person -> Id Image.Image -> Text -> UTCTime -> EncryptedHashedField 'AsEncrypted Text -> Flow DIdfy.IdfyVerification
+mkIdfyVerificationEntityPanAadhaarLink person imageId1 requestId now encryptedPan = do
+  entityId <- generateGUID
+  return $
+    DIdfy.IdfyVerification
+      { id = Id entityId,
+        driverId = person.id,
+        documentImageId1 = imageId1,
+        documentImageId2 = Nothing,
+        requestId,
+        imageExtractionValidation = DIdfy.Skipped,
+        documentNumber = encryptedPan,
+        issueDateOnDoc = Nothing,
+        driverDateOfBirth = Nothing,
+        docType = docTypeToText ODC.PanAadhaarLinkage,
+        status = "pending",
+        idfyResponse = Nothing,
+        retryCount = Just 0,
+        nameOnCard = Nothing,
+        vehicleCategory = Nothing,
+        merchantId = Just person.merchantId,
+        merchantOperatingCityId = Just person.merchantOperatingCityId,
+        airConditioned = Nothing,
+        oxygen = Nothing,
+        ventilator = Nothing,
+        createdAt = now,
+        updatedAt = now
+      }
+
+triggerPanAadhaarLinkageWhenPanAndAadhaarExist :: Person.Person -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Flow ()
+triggerPanAadhaarLinkageWhenPanAndAadhaarExist person merchantOpCityId mbAadhaarNumber = do
+  logInfo ("triggerPanAadhaarLinkageWhenPanAndAadhaarExist: " <> show mbAadhaarNumber)
+  whenJust mbAadhaarNumber $ \aadhaarNumber -> do
+    logInfo ("aadhaarNumber: " <> show aadhaarNumber)
+    when (isFullAadhaar aadhaarNumber) $
+      verifyPanAadhaarLinkageIfPanExists person merchantOpCityId aadhaarNumber
+
+-- | Shared PAN↔Aadhaar linkage trigger: given a resolved PAN card and a full Aadhaar number, fire the
+-- async link verification and persist the Idfy verification entity. Used by both linkage entrypoints.
+triggerPanAadhaarLink :: Person.Person -> Id DMOC.MerchantOperatingCity -> DPan.DriverPanCard -> Text -> Text -> Flow ()
+triggerPanAadhaarLink person merchantOpCityId driverPanCard panNumber aadhaarNumber = do
+  verifyRes <-
+    Verification.verifyPanAadhaarLinkAsync person.merchantId merchantOpCityId $
+      VI.VerifyPanAadhaarLinkAsyncReq {panNumber, aadhaarNumber, driverId = person.id.getId}
+  logInfo ("verifyRes: " <> show verifyRes)
+  case verifyRes.requestor of
+    VT.Idfy -> do
+      encPan <- encrypt panNumber
+      now <- getCurrentTime
+      ivEntity <- mkIdfyVerificationEntityPanAadhaarLink person driverPanCard.documentImageId1 verifyRes.requestId now encPan
+      IVQuery.create ivEntity
+    _ -> throwError $ InternalError ("Service provider not configured for PAN-Aadhaar linkage. Provider: " <> show verifyRes.requestor)
+
+verifyPanAadhaarLinkageIfPanExists :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Flow ()
+verifyPanAadhaarLinkageIfPanExists person merchantOpCityId aadhaarNumber = do
+  logInfo ("verifyPanAadhaarLinkageIfPanExists: " <> show aadhaarNumber)
+  mdriverPanCard <- DPQuery.findByDriverId person.id
+  whenJust mdriverPanCard $ \driverPanCard -> do
+    panNumber <- decrypt driverPanCard.panCardNumber
+    shouldLink <- shouldTriggerPanAadhaarLinkage merchantOpCityId driverPanCard.docType panNumber
+    when shouldLink $ triggerPanAadhaarLink person merchantOpCityId driverPanCard panNumber aadhaarNumber
+
+shouldTriggerPanAadhaarLinkage :: Id DMOC.MerchantOperatingCity -> Maybe DPan.PanType -> Text -> Flow Bool
+shouldTriggerPanAadhaarLinkage merchantOpCityId docType panNumber = do
+  transporterConfig <-
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
+      >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let allowed = fromMaybe True transporterConfig.allowPanAadhaarLinkage
+      isBusiness = docType == Just DPan.BUSINESS || isBusinessPan (Just panNumber)
+  pure (allowed && not isBusiness)
+
+verifyPanAadhaarLinkageIfAadhaarExists :: Person.Person -> Id DMOC.MerchantOperatingCity -> Maybe DPan.DriverPanCard -> Flow ()
+verifyPanAadhaarLinkageIfAadhaarExists person merchantOpCityId mdriverPanCard = do
+  logInfo ("verifyPanAadhaarLinkageIfAadhaarExists: mdriverPanCard isJust=" <> show (isJust mdriverPanCard))
+  whenJust mdriverPanCard $ \driverPanCard -> do
+    panNumber <- decrypt driverPanCard.panCardNumber
+    shouldLink <- shouldTriggerPanAadhaarLinkage merchantOpCityId driverPanCard.docType panNumber
+    when shouldLink $ do
+      mbAadhaarCard <- QAadhaarCard.findByPrimaryKey person.id
+      mbAadhaarNumber <- traverse decrypt (mbAadhaarCard >>= (.aadhaarNumber))
+      let mbFullAadhaar = mbAadhaarNumber >>= \aadhaar -> if isFullAadhaar aadhaar then Just aadhaar else Nothing
+      whenJust mbFullAadhaar $ \aadhaarNumber ->
+        triggerPanAadhaarLink person merchantOpCityId driverPanCard panNumber aadhaarNumber
+
+data AadhaarExtractedData = AadhaarExtractedData
+  { aedAadhaarNumber :: Maybe Text,
+    aedNameOnCard :: Maybe Text,
+    aedDateOfBirth :: Maybe Text,
+    aedDriverGender :: Maybe Text,
+    aedAddress :: Maybe Text,
+    aedVerificationStatus :: Documents.VerificationStatus,
+    aedConsent :: Bool,
+    aedConsentTimestamp :: Maybe UTCTime,
+    aedFrontImageId :: Maybe (Id Image.Image),
+    aedBackImageId :: Maybe (Id Image.Image)
+  }
+
+data AadhaarVerifyInput
+  = AadhaarExtractInput (Maybe Text) Text (Maybe Text) Bool (Maybe Text)
+  | AadhaarSdkInput (Maybe Text) (Maybe Text) (Maybe Text) (Maybe Text) Bool UTCTime Documents.VerificationStatus (Maybe (Id Image.Image)) (Maybe (Id Image.Image))
+
+buildAadhaarCard ::
+  Id Person.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  AadhaarExtractedData ->
+  Flow DAadhaarCard.AadhaarCard
+buildAadhaarCard driverId merchantId merchantOpCityId d = do
+  currTime <- getCurrentTime
+  encryptedAadhaarNumber <- traverse encrypt d.aedAadhaarNumber
+  return $
+    DAadhaarCard.AadhaarCard
+      { driverId = driverId,
+        merchantId = merchantId,
+        merchantOperatingCityId = merchantOpCityId,
+        verificationStatus = d.aedVerificationStatus,
+        rejectReason = Nothing,
+        createdAt = currTime,
+        updatedAt = currTime,
+        aadhaarNumber = encryptedAadhaarNumber,
+        maskedAadhaarNumber = maskText <$> d.aedAadhaarNumber,
+        driverGender = d.aedDriverGender,
+        driverImage = Nothing,
+        driverImagePath = Nothing,
+        consent = d.aedConsent,
+        consentTimestamp = fromMaybe currTime d.aedConsentTimestamp,
+        nameOnCard = d.aedNameOnCard,
+        dateOfBirth = d.aedDateOfBirth,
+        address = d.aedAddress,
+        aadhaarFrontImageId = d.aedFrontImageId,
+        aadhaarBackImageId = d.aedBackImageId
+      }
+
+verifyAadhaarCommon ::
+  Bool ->
+  DPan.VerifiedBy ->
+  Person ->
+  DTC.TransporterConfig ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  AadhaarVerifyInput ->
+  Flow (Maybe Text)
+verifyAadhaarCommon isDashboard verifyBy person transporterConfig merchantId merchantOpCityId input = do
+  let (mbAadhaarPlain, cleanupImageIds) = case input of
+        AadhaarExtractInput aviAadhaarNumber aviFrontImageId aviBackImageId _ _ -> (aviAadhaarNumber, [Id aviFrontImageId] <> maybe [] (\backImageId -> [Id backImageId]) aviBackImageId)
+        AadhaarSdkInput maskedAadhaarNumber _ _ _ _ _ _ frontImageId backImageId -> (maskedAadhaarNumber, catMaybes [frontImageId, backImageId])
+  let cleanupOnConflict = Utils.cleanupUploadedImages cleanupImageIds person.id
+  driverDocument <- validateAadhaarOnboarding person mbAadhaarPlain
+  mbExistingAadhaar <- QAadhaarCard.findByPrimaryKey person.id
+  whenJust mbExistingAadhaar $ \existing -> do
+    when (not isDashboard && existing.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $ do
+      cleanupOnConflict
+      throwError $ DocumentUnderManualReview "Aadhaar"
+    when (existing.verificationStatus == Documents.VALID && not (fromMaybe False transporterConfig.allowAadhaarReupload)) $ do
+      cleanupOnConflict
+      throwError $ DocumentAlreadyValidated "Aadhaar"
+  checkMaskedAadhaarAllowed transporterConfig mbAadhaarPlain cleanupOnConflict
+  checkDuplicateFullAadhaar person transporterConfig mbAadhaarPlain cleanupOnConflict
+  aadhaarData <- case input of
+    AadhaarExtractInput aviAadhaarNumber aviFrontImageId aviBackImageId aviConsent aviAadhaarName -> do
+      image1 <- getValidDocumentImage person.id aviFrontImageId ODC.AadhaarCard
+      image2 <- case aviBackImageId of
+        Just backImageId -> do
+          image <- getValidDocumentImage person.id backImageId ODC.AadhaarCard
+          return $ Just image
+        Nothing -> return Nothing
+      let extractReq =
+            Verification.ExtractAadhaarImageReq
+              { image1 = image1,
+                image2 = image2,
+                driverId = person.id.getId,
+                consent = if aviConsent then "yes" else "no"
+              }
+      aadhaarDocConfig <- listToMaybe <$> CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.AadhaarCard Nothing
+      faceMatchOutcome <- maybe (pure FMSkip) (\cfg -> runDocFaceMatch person cfg (Id aviFrontImageId) (Just image1) aviAadhaarNumber) aadhaarDocConfig
+      when (faceMatchOutcome == FMFail) $ throwError FaceMatchFailed
+      resp <- Verification.extractAadhaarImage person.merchantId merchantOpCityId extractReq
+      case resp.extractedAadhaar of
+        Just extractedAadhaarData -> do
+          let extractedAadhaarOutputData = extractedAadhaarData.extraction_output
+          let extractedAadhaarNumber = removeSpaceAndDash <$> extractedAadhaarOutputData.id_number
+          let extractedNameOnCard = extractedAadhaarOutputData.name_on_card
+          logInfo ("extractedNameOnCard: " <> show extractedNameOnCard)
+          logInfo ("aadhaarName: " <> show aviAadhaarName)
+          when (verifyBy /= DPan.FRONTEND_SDK) $ case aviAadhaarNumber of
+            Just aadhaarNumber ->
+              unless (extractedAadhaarNumber == Just aadhaarNumber) $
+                throwImageError (Id aviFrontImageId) $
+                  ImageDocumentNumberMismatch
+                    (maybe "null" maskText extractedAadhaarNumber)
+                    (maskText aadhaarNumber)
+            Nothing -> throwError (InvalidRequest "Aadhaar number is required")
+          when (isNameCompareRequired transporterConfig verifyBy) $
+            validateDocument person.merchantId merchantOpCityId person.id extractedAadhaarOutputData.name_on_card extractedAadhaarOutputData.date_of_birth Nothing ODC.AadhaarCard driverDocument
+          let aadhaarStatus = if faceMatchOutcome == FMDeferred then Documents.PENDING else Documents.VALID
+          return
+            AadhaarExtractedData
+              { aedAadhaarNumber = aviAadhaarNumber,
+                aedNameOnCard = extractedAadhaarOutputData.name_on_card,
+                aedDateOfBirth = extractedAadhaarOutputData.date_of_birth,
+                aedDriverGender = extractedAadhaarOutputData.gender,
+                aedAddress = extractedAadhaarOutputData.address,
+                aedVerificationStatus = aadhaarStatus,
+                aedConsent = aviConsent,
+                aedConsentTimestamp = Nothing,
+                aedFrontImageId = Just (Id aviFrontImageId),
+                aedBackImageId = Id <$> aviBackImageId
+              }
+        Nothing -> throwImageError (Id aviFrontImageId) ImageExtractionFailed
+    AadhaarSdkInput maskedAadhaarNumber nameOnCard dateOfBirth address consent consentTimestamp verificationStatus frontImageId backImageId ->
+      return
+        AadhaarExtractedData
+          { aedAadhaarNumber = maskedAadhaarNumber,
+            aedNameOnCard = nameOnCard,
+            aedDateOfBirth = dateOfBirth,
+            aedDriverGender = Nothing,
+            aedAddress = address,
+            aedVerificationStatus = verificationStatus,
+            aedConsent = consent,
+            aedConsentTimestamp = Just consentTimestamp,
+            aedFrontImageId = frontImageId,
+            aedBackImageId = backImageId
+          }
+  validateMaskedAadhaarNameDob transporterConfig aadhaarData cleanupOnConflict
+  checkDuplicateMaskedAadhaar person transporterConfig aadhaarData cleanupOnConflict
+  aadhaarCard <- buildAadhaarCard person.id merchantId merchantOpCityId aadhaarData
+  QAadhaarCard.upsertAadhaarRecord aadhaarCard
+  -- Only propagate the number to the denormalized columns once the Aadhaar is actually VALID.
+  -- When face match is deferred the status is PENDING here, and the write is done later in
+  -- promotePendingToValid (once the deferred face match passes).
+  when (aadhaarData.aedVerificationStatus == Documents.VALID) $
+    whenJust aadhaarData.aedAadhaarNumber $ \aadhaarNumber -> do
+      encryptedAadhaarNumber <- encrypt aadhaarNumber
+      if isFleetRole person.role
+        then FOI.updateAadhaarImage (Just encryptedAadhaarNumber) (getId <$> aadhaarData.aedFrontImageId) (getId <$> aadhaarData.aedBackImageId) person.id
+        else when (person.role == Person.DRIVER) $ DIQuery.updateAadhaarNumber (Just encryptedAadhaarNumber) person.id
+  pure aadhaarData.aedAadhaarNumber
 
 defaultDriverDocumentTypes :: [DVC.DocumentType]
 defaultDriverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto, DVC.UploadProfile, DVC.SocialSecurityNumber, DVC.BackgroundVerification, DVC.GSTCertificate, DVC.BusinessLicense, DVC.LocalResidenceProof, DVC.PoliceVerificationCertificate, DVC.DrivingSchoolCertificate, DVC.TrainingForm, DVC.DriverInspectionHub, DVC.FinnishIDResidencePermit, DVC.TaxiDriverPermit]

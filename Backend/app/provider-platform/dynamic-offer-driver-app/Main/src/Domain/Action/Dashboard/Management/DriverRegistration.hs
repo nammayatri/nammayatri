@@ -1440,7 +1440,11 @@ deleteInvalidDocumentOfDriver :: DVC.DocumentType -> Id DP.Person -> Flow ()
 deleteInvalidDocumentOfDriver documentType reqDriverId = case documentType of
   DVC.DriverLicense -> QDL.deleteByDriverIdAndStatus reqDriverId Documents.INVALID
   DVC.PanCard -> QPan.deleteByDriverIdAndStatus reqDriverId Documents.INVALID
-  DVC.AadhaarCard -> QAadhaarCard.deleteByDriverIdAndStatus reqDriverId Documents.INVALID
+  DVC.AadhaarCard -> do
+    mbAadhaar <- QAadhaarCard.findByPrimaryKey reqDriverId
+    when (((.verificationStatus) <$> mbAadhaar) == Just Documents.INVALID) $
+      SDO.updateLinkedAadhaarNumber reqDriverId Nothing
+    QAadhaarCard.deleteByDriverIdAndStatus reqDriverId Documents.INVALID
   DVC.GSTCertificate -> QGstin.deleteByDriverIdAndStatus reqDriverId Documents.INVALID
   DVC.BusinessLicense -> QBLExtra.deleteByDriverIdAndStatus reqDriverId Documents.INVALID
   DVC.UDYAMCertificate -> QUdyamExtra.deleteByDriverIdAndStatus reqDriverId Documents.INVALID
@@ -1782,28 +1786,39 @@ approveAndUpdateAadhaar req mId mOpCityId = do
   let driverId = aadhaarImage.personId
   person <- validatePersonForDocumentApproval driverId mId
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId mOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
-  aadhaarHash <- getDbHash req.aadhaarNumber
   encryptedAadhaar <- encrypt req.aadhaarNumber
-  aadhaarInfoList <- QAadhaarCard.findAllByEncryptedAadhaarNumber (Just aadhaarHash)
-  case transporterConfig.allowDuplicateAadhaar of
-    Just False -> do
-      let otherDriverIds = filter (/= driverId) (map (.driverId) aadhaarInfoList)
-      unless (Kernel.Prelude.null otherDriverIds) $ throwError AadhaarAlreadyLinked
-    _ -> pure ()
+  if SDO.isFullAadhaar req.aadhaarNumber
+    then when (transporterConfig.allowDuplicateAadhaar == Just False) $ do
+      aadhaarHash <- getDbHash req.aadhaarNumber
+      aadhaarInfoList <- QAadhaarCard.findAllByEncryptedAadhaarNumber (Just aadhaarHash)
+      unless (Kernel.Prelude.null (filter (SDO.isActiveAadhaarConflict person) aadhaarInfoList)) $ throwError AadhaarAlreadyLinked
+    else do
+      when (transporterConfig.allowMaskedAadhaar == Just False) $ throwError MaskedAadhaarNotAllowed
+      (nameOnCard, dateOfBirth) <- case (req.nameOnCard, req.dateOfBirth) of
+        (Just n, Just d) -> pure (n, d)
+        _ -> throwError AadhaarNameAndDobRequired
+      when (transporterConfig.allowDuplicateAadhaar == Just False) $ do
+        candidates <- QAadhaarCard.findAllByMerchantIdDobAndName person.merchantId dateOfBirth nameOnCard
+        let newLastThree = T.takeEnd 3 req.aadhaarNumber
+            conflicts = filter (\aadhaar -> SDO.isActiveAadhaarConflict person aadhaar && (T.takeEnd 3 <$> aadhaar.maskedAadhaarNumber) == Just newLastThree) candidates
+        unless (Kernel.Prelude.null conflicts) $ throwError AadhaarAlreadyLinked
   -- Fallback for re-upload: if no aadhaar row points to this image, recover the driver's existing row by aadhaar number.
   -- Aadhaar is driver-keyed (one record per driver), so also fall back to the primary key lookup to make sure an
   -- existing row with a different number resolves to an update instead of a duplicate create.
   mbAadhaarByImage <- QAadhaarCard.findByFrontImageId (Just imageId)
   mbAadhaar <- case mbAadhaarByImage of
     Just _ -> pure mbAadhaarByImage
-    Nothing -> pure $ find (\a -> a.driverId == driverId) aadhaarInfoList
+    Nothing -> QAadhaarCard.findByPrimaryKey driverId
   -- Common approve-time checks: number mismatch, document linked to another driver, driver already linked
   validateDocumentApprovalChecks DVC.AadhaarCard (Just req.aadhaarNumber) driverId (AadhaarApproveData <$> mbAadhaar)
   QImage.updateVerificationStatusByIdAndType VALID imageId DVC.AadhaarCard
   whenJust mbImageId2 $ \backImageId ->
     QImage.updateVerificationStatusByIdAndType VALID backImageId DVC.AadhaarCard
   now <- getCurrentTime
-  let maskedNumber = T.replicate (T.length req.aadhaarNumber - 4) "X" <> T.takeEnd 4 req.aadhaarNumber
+  let maskedNumber =
+        if SDO.isFullAadhaar req.aadhaarNumber
+          then T.replicate (T.length req.aadhaarNumber - 4) "X" <> T.takeEnd 4 req.aadhaarNumber
+          else req.aadhaarNumber
   case mbAadhaar of
     Just aadhaar -> do
       let updatedAadhaar =
@@ -1849,6 +1864,8 @@ approveAndUpdateAadhaar req mId mOpCityId = do
       QAadhaarCard.create aadhaarCard
   updateFleetOwnerInfoOnDocApproval person $ \personId ->
     QFOIE.updateAadhaarImage (Just encryptedAadhaar) (Just imageId.getId) ((.getId) <$> mbImageId2) personId
+  when (person.role == DP.DRIVER) $
+    QDriverInfo.updateAadhaarNumber (Just encryptedAadhaar) driverId
 
 approveAndUpdateCommonDocument :: Common.CommonDocumentApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateCommonDocument req _mId _mOpCityId = do
@@ -2255,6 +2272,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
         DVC.AadhaarCard -> do
           rejectImage imageId
           QAadhaarCard.updateVerificationStatusAndRejectReason INVALID (Just reason) image.personId
+          SDO.updateLinkedAadhaarNumber image.personId Nothing
         DVC.GSTCertificate -> do
           rejectImage imageId
           QGstin.updateVerificationStatusAndRejectReason INVALID (Just reason) imageId
