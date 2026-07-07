@@ -22,6 +22,7 @@ module Domain.Action.UI.Payment
     pdnNotificationStatus,
     postWalletRecharge,
     getWalletBalance,
+    processSubscriptionPurchasePayment,
   )
 where
 
@@ -314,7 +315,8 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
                 whenJust mbDriverFee $ \df -> QDF.updateStatus REFUND_PENDING df.id now
           case mbSubscriptionPurchase of
             Just subscriptionPurchase -> do
-              unless (status /= Payment.CHARGED) $ processSubscriptionPurchasePayment merchantId driver subscriptionPurchase
+              unless (status /= Payment.CHARGED) $
+                processSubscriptionPurchasePaymentWithRetry merchantId driver subscriptionPurchase
             Nothing -> do
               when (order.entityName == Just DPayment.DRIVER_WALLET_TOPUP) $
                 processWalletTopupWebhook driver order status
@@ -421,7 +423,8 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
           driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
           logDebug $ "Webhook Response Status: " <> show transactionStatus <> " Payer Vpa: " <> show payerVpa <> " OrderId: " <> show orderShortId
           when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
-            unless (transactionStatus /= Payment.CHARGED) $ processSubscriptionPurchasePayment merchantId driver subscriptionPurchase
+            unless (transactionStatus /= Payment.CHARGED) $
+              processSubscriptionPurchasePaymentWithRetry merchantId driver subscriptionPurchase
         Nothing -> do
           logDebug $ "Webhook Response Status: " <> show transactionStatus <> " Payer Vpa: " <> show payerVpa <> " OrderId: " <> show orderShortId
           -- PAYOUT_REGISTRATION orders have no invoice and no relationship with subscriptions,
@@ -755,34 +758,101 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
             mbPanCard
             mbVehicleCategory
             >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
-        let updatedPurchase =
-              latestPurchase
-                { status = DSP.ACTIVE,
-                  purchaseTimestamp = now,
-                  expiryDate = expiryDate,
-                  startDate = if isJust expiryDate then Just now else Nothing,
-                  financeInvoiceId = mbInvoiceId
-                }
-        unless isFleetOwner $
-          Analytics.incrementOperatorTotalActiveDriversIfFirstDriverSubscription transporterConfig person.id.getId
-        QSP.updateByPrimaryKey updatedPurchase
-        -- Schedule expiry job only if expiry was set (not queued)
-        whenJust expiryDate $ \expiry -> do
-          let delay = diffUTCTime expiry now
-          createJobIn @_ @'ExpireSubscriptionPurchase
-            (Just merchantId)
-            (Just latestPurchase.merchantOperatingCityId)
-            delay
-            $ ExpireSubscriptionPurchaseJobData
-              { subscriptionPurchaseId = latestPurchase.id
-              }
-        unless isFleetOwner $ do
-          let prepaidRechargeMessage =
-                "Your recharge worth Rs."
-                  <> show (SPayment.roundToTwoDecimalPlaces creditAmount)
-                  <> " is successful"
-              prepaidRechargeTitle = "Recharge Successful!"
-          sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
+        case mbInvoiceId of
+          Nothing ->
+            logError $ "Invoice generation failed for subscription purchase: " <> latestPurchase.id.getId
+          Just invoiceId -> do
+            unless isFleetOwner $
+              Analytics.incrementOperatorTotalActiveDriversIfFirstDriverSubscription transporterConfig person.id.getId
+            whenJust expiryDate $ \expiry -> do
+              let delay = diffUTCTime expiry now
+              createJobIn @_ @'ExpireSubscriptionPurchase
+                (Just merchantId)
+                (Just latestPurchase.merchantOperatingCityId)
+                delay
+                $ ExpireSubscriptionPurchaseJobData
+                  { subscriptionPurchaseId = latestPurchase.id
+                  }
+            let updatedPurchase =
+                  latestPurchase
+                    { status = DSP.ACTIVE,
+                      purchaseTimestamp = now,
+                      expiryDate = expiryDate,
+                      startDate = if isJust expiryDate then Just now else Nothing,
+                      financeInvoiceId = Just invoiceId
+                    }
+            QSP.updateByPrimaryKey updatedPurchase
+            unless isFleetOwner $ do
+              let prepaidRechargeMessage =
+                    "Your recharge worth Rs."
+                      <> show (SPayment.roundToTwoDecimalPlaces creditAmount)
+                      <> " is successful"
+                  prepaidRechargeTitle = "Recharge Successful!"
+              sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
+
+processSubscriptionPurchasePaymentWithRetry ::
+  ( CacheFlow m r,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    Redis.HedisFlow m r,
+    JobCreatorEnv r,
+    Redis.HedisLTSFlowEnv r,
+    HasField "schedulerType" r SchedulerType,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    Finance.HasActorInfo m r
+  ) =>
+  Id DM.Merchant ->
+  DP.Person ->
+  DSP.SubscriptionPurchase ->
+  m ()
+processSubscriptionPurchasePaymentWithRetry merchantId driver purchase = do
+  result <- try @_ @SomeException $ processSubscriptionPurchasePayment merchantId driver purchase
+  case result of
+    Left err -> do
+      logError $ "processSubscriptionPurchasePayment failed: " <> show err
+      scheduleRetrySubscriptionPurchaseProcessing merchantId purchase
+    Right _ -> do
+      latest <- QSP.findByPrimaryKey purchase.id
+      whenJust latest $ \p ->
+        when (p.status == DSP.PENDING) $
+          scheduleRetrySubscriptionPurchaseProcessing merchantId p
+
+scheduleRetrySubscriptionPurchaseProcessing ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Redis.HedisFlow m r,
+    JobCreatorEnv r,
+    HasField "schedulerType" r SchedulerType
+  ) =>
+  Id DM.Merchant ->
+  DSP.SubscriptionPurchase ->
+  m ()
+scheduleRetrySubscriptionPurchaseProcessing merchantId purchase = do
+  let lockKey = "retry:sub:purchase:" <> purchase.id.getId
+  acquired <- Redis.tryLockRedis lockKey 120
+  when acquired $ do
+    result <- try @_ @SomeException $ do
+      subscriptionConfig <-
+        CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName purchase.merchantOperatingCityId Nothing purchase.serviceName
+          >>= fromMaybeM (NoSubscriptionConfigForService purchase.merchantOperatingCityId.getId $ show purchase.serviceName)
+      let delaySec = round subscriptionConfig.genericJobRescheduleTime
+      createJobIn @_ @'RetrySubscriptionPurchaseProcessing
+        (Just merchantId)
+        (Just purchase.merchantOperatingCityId)
+        subscriptionConfig.genericJobRescheduleTime
+        $ RetrySubscriptionPurchaseProcessingJobData
+          { subscriptionPurchaseId = purchase.id,
+            maxRetries = subscriptionConfig.maxRetryCount,
+            currentRetry = 0,
+            retryDelaySec = delaySec
+          }
+    case result of
+      Right _ -> pure ()
+      Left err -> do
+        logError $ "Failed to schedule retry for subscription purchase " <> purchase.id.getId <> ": " <> show err
+        Redis.unlockRedis lockKey
 
 updatePrepaidBalanceAndExpiry ::
   ( CacheFlow m r,

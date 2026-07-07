@@ -316,6 +316,7 @@ let AllocatorJobType =
       | SpecialZonePayout
       | ProcessReminder
       | ExpireSubscriptionPurchase
+      | RetrySubscriptionPurchaseProcessing
       | Reconciliation
       | ScheduledBatchPayout
       | SettlementReportIngestion
@@ -382,6 +383,9 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.SpecialZonePayout, mapValue = True }
       , { mapKey = AllocatorJobType.ProcessReminder, mapValue = True }
       , { mapKey = AllocatorJobType.ExpireSubscriptionPurchase
+        , mapValue = True
+        }
+      , { mapKey = AllocatorJobType.RetrySubscriptionPurchaseProcessing
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.Reconciliation, mapValue = True }

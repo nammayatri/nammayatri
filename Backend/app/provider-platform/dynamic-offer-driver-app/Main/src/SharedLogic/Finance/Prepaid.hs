@@ -48,6 +48,7 @@ import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.InvoiceLedgerLink as QInvLink
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Finance.EInvoice
 import SharedLogic.Finance.Wallet (computeTdsRateReason)
@@ -485,8 +486,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
       existingTdsEntries <- getEntriesByReference tdsReimbursementReferenceType referenceId
       let gstAmount' = max 0 gstAmount
           netAmount = max 0 (paidAmount - gstAmount')
-      let purchaseEntryExists fromId toId amount =
-            any
+      let findExistingPurchaseEntry fromId toId amount =
+            find
               ( \entry ->
                   entry.fromAccountId == fromId
                     && entry.toAccountId == toId
@@ -494,8 +495,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                     && entry.status == SETTLED
               )
               existingPurchaseEntries
-          creditEntryExists =
-            any
+          findExistingCreditEntry =
+            find
               ( \entry ->
                   entry.fromAccountId == sellerRideCredit.id
                     && entry.toAccountId == ownerAccount.id
@@ -503,8 +504,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                     && entry.status == SETTLED
               )
               existingCreditEntries
-          tdsEntryExists fromId toId amount =
-            any
+          findExistingTdsEntry fromId toId amount =
+            find
               ( \entry ->
                   entry.fromAccountId == fromId
                     && entry.toAccountId == toId
@@ -516,9 +517,9 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
       gstEntryId <-
         if paidAmount > 0 && gstAmount' > 0
           then do
-            if purchaseEntryExists sellerAsset.id governmentLiability.id gstAmount'
-              then pure Nothing
-              else do
+            case findExistingPurchaseEntry sellerAsset.id governmentLiability.id gstAmount' of
+              Just existing -> pure (Just existing.id)
+              Nothing -> do
                 let gstEntry =
                       LedgerEntryInput
                         { fromAccountId = sellerAsset.id,
@@ -544,9 +545,9 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
           then do
             if netAmount > 0
               then do
-                if purchaseEntryExists sellerAsset.id sellerLiability.id netAmount
-                  then pure Nothing
-                  else do
+                case findExistingPurchaseEntry sellerAsset.id sellerLiability.id netAmount of
+                  Just existing -> pure (Just existing.id)
+                  Nothing -> do
                     let liabilityEntry =
                           LedgerEntryInput
                             { fromAccountId = sellerAsset.id,
@@ -573,37 +574,36 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
           Just rate | rate > 0 && netAmount > 0 -> do
             let tdsAmount = netAmount * realToFrac rate
             if tdsAmount > 0
-              then
-                if tdsEntryExists govtDirectAsset.id govtDirectExpense.id tdsAmount
-                  then pure Nothing
-                  else do
-                    let tdsEntry =
-                          LedgerEntryInput
-                            { fromAccountId = govtDirectAsset.id,
-                              toAccountId = govtDirectExpense.id,
-                              concernedIndividualId = Nothing,
-                              amount = tdsAmount,
-                              currency = currency,
-                              entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,
-                              status = SETTLED,
-                              referenceType = tdsReimbursementReferenceType,
-                              referenceId = referenceId,
-                              metadata = Nothing,
-                              merchantId = merchantId,
-                              merchantOperatingCityId = merchantOperatingCityId,
-                              settlementStatus = Nothing
-                            }
-                    result <- createEntryWithBalanceUpdate tdsEntry
-                    pure $ either (const Nothing) (Just . (.id)) result
+              then case findExistingTdsEntry govtDirectAsset.id govtDirectExpense.id tdsAmount of
+                Just existing -> pure (Just existing.id)
+                Nothing -> do
+                  let tdsEntry =
+                        LedgerEntryInput
+                          { fromAccountId = govtDirectAsset.id,
+                            toAccountId = govtDirectExpense.id,
+                            concernedIndividualId = Nothing,
+                            amount = tdsAmount,
+                            currency = currency,
+                            entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,
+                            status = SETTLED,
+                            referenceType = tdsReimbursementReferenceType,
+                            referenceId = referenceId,
+                            metadata = Nothing,
+                            merchantId = merchantId,
+                            merchantOperatingCityId = merchantOperatingCityId,
+                            settlementStatus = Nothing
+                          }
+                  result <- createEntryWithBalanceUpdate tdsEntry
+                  pure $ either (const Nothing) (Just . (.id)) result
               else pure Nothing
           _ -> pure Nothing
       -- Create credit entry
       _ <-
         if creditAmount > 0
           then do
-            if creditEntryExists
-              then pure Nothing
-              else do
+            case findExistingCreditEntry of
+              Just _existing -> pure Nothing
+              Nothing -> do
                 let creditEntry =
                       LedgerEntryInput
                         { fromAccountId = sellerRideCredit.id,
@@ -625,97 +625,101 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
           else pure Nothing
       -- Collect all entry IDs
       let entryIds = catMaybes [gstEntryId, liabilityEntryId, tdsEntryId]
-      -- Create invoice for subscription purchases
+      -- Create invoice for subscription purchases (idempotent: check if already linked)
       mbInvoiceId <- case mbInvoiceParams of
         Just invoiceParams | not (null entryIds) -> do
-          panDecrypted <- traverse (decrypt . (.panCardNumber)) mbPanCard
-          let panTypeText = mbPanCard >>= (fmap show . (.docType))
-          let invoiceInput =
-                InvoiceInput
-                  { invoiceType = SubscriptionPurchase,
-                    paymentOrderId = Just invoiceParams.paymentOrderId,
-                    issuedToType = invoiceParams.issuedToType,
-                    issuedToId = ownerId,
-                    issuedToName = invoiceParams.issuedToName,
-                    issuedToAddress = invoiceParams.issuedToAddress,
-                    issuedByType = invoiceParams.issuedByType,
-                    issuedById = invoiceParams.issuedById,
-                    issuedByName = invoiceParams.issuedByName,
-                    issuedByAddress = invoiceParams.issuedByAddress,
-                    supplierName = Nothing,
-                    supplierAddress = Nothing,
-                    supplierGSTIN = invoiceParams.merchantGstin,
-                    supplierTaxNo = Nothing,
-                    supplierId = Nothing,
-                    merchantGstin = invoiceParams.merchantGstin,
-                    referenceId = Nothing,
-                    gstinOfParty = invoiceParams.gstinOfParty,
-                    panOfParty = panDecrypted,
-                    panType = panTypeText,
-                    counterpartyId = ownerId,
-                    tdsRateReason = computeTdsRateReason mbPanCard False,
-                    tanOfDeductee = Nothing,
-                    lineItems =
-                      let lineItemGstAmount = max 0 gstAmount
-                          lineItemNetAmount = max 0 (paidAmount - lineItemGstAmount)
-                       in catMaybes
-                            [ if lineItemNetAmount > 0
-                                then
-                                  Just
-                                    InvoiceLineItem
-                                      { description = "Subscription Plan Fee",
-                                        descriptionType = Just SubscriptionPlanFee,
-                                        quantity = 1,
-                                        unitPrice = lineItemNetAmount,
-                                        lineTotal = lineItemNetAmount,
-                                        isExternalCharge = False,
-                                        groupId = Just "g-subscription",
-                                        itemType = Just Fare
-                                      }
-                                else Nothing,
-                              if lineItemGstAmount > 0
-                                then
-                                  Just
-                                    InvoiceLineItem
-                                      { description = "GST",
-                                        descriptionType = Just Gst,
-                                        quantity = 1,
-                                        unitPrice = lineItemGstAmount,
-                                        lineTotal = lineItemGstAmount,
-                                        isExternalCharge = False,
-                                        groupId = Just "g-subscription",
-                                        itemType = Just Tax
-                                      }
-                                else Nothing
-                            ],
-                    gstBreakdown = mbGstBreakdown, -- explicit CGST/SGST/IGST from caller, falls back to 50/50 in Service.hs if Nothing
-                    currency = currency,
-                    dueAt = Nothing,
-                    merchantId = merchantId,
-                    merchantOperatingCityId = merchantOperatingCityId,
-                    merchantShortId = invoiceParams.merchantShortId,
-                    -- Subscription purchases are always GST (not VAT)
-                    isVat = False,
-                    issuedToTaxNo = invoiceParams.gstinOfParty,
-                    issuedByTaxNo = invoiceParams.merchantGstin,
-                    paymentMode = Just "ONLINE", -- subscription paid via Juspay autopay/manual
-                    periodStart = Nothing,
-                    periodEnd = Nothing
-                  }
-          invoiceResult <- createInvoice invoiceInput entryIds
-          case invoiceResult of
-            Right inv -> do
-              -- Fire-and-forget B2B e-invoice generation. Runs in a background
-              -- thread so Redis/HTTP calls never block invoice creation.
-              -- Any uncaught exception from the forked action is logged and
-              -- swallowed so the process is never crashed by a GSP failure.
-              fork "generate B2B e-invoice" $
-                SharedLogic.Finance.EInvoice.generateEInvoiceForInvoice inv
-                  `catch` ( \(e :: SomeException) ->
-                              logError $ "GSTEInvoice: background fork failed: " <> show e
-                          )
-              pure (Just inv.id)
-            Left _err -> pure Nothing
+          mbExistingLink <- listToMaybe . catMaybes <$> mapM (QInvLink.findByLedgerEntry) entryIds
+          case mbExistingLink of
+            Just existingLink -> pure (Just $ cast existingLink.invoiceId)
+            Nothing -> do
+              panDecrypted <- traverse (decrypt . (.panCardNumber)) mbPanCard
+              let panTypeText = mbPanCard >>= (fmap show . (.docType))
+              let invoiceInput =
+                    InvoiceInput
+                      { invoiceType = SubscriptionPurchase,
+                        paymentOrderId = Just invoiceParams.paymentOrderId,
+                        issuedToType = invoiceParams.issuedToType,
+                        issuedToId = ownerId,
+                        issuedToName = invoiceParams.issuedToName,
+                        issuedToAddress = invoiceParams.issuedToAddress,
+                        issuedByType = invoiceParams.issuedByType,
+                        issuedById = invoiceParams.issuedById,
+                        issuedByName = invoiceParams.issuedByName,
+                        issuedByAddress = invoiceParams.issuedByAddress,
+                        supplierName = Nothing,
+                        supplierAddress = Nothing,
+                        supplierGSTIN = invoiceParams.merchantGstin,
+                        supplierTaxNo = Nothing,
+                        supplierId = Nothing,
+                        merchantGstin = invoiceParams.merchantGstin,
+                        referenceId = Nothing,
+                        gstinOfParty = invoiceParams.gstinOfParty,
+                        panOfParty = panDecrypted,
+                        panType = panTypeText,
+                        counterpartyId = ownerId,
+                        tdsRateReason = computeTdsRateReason mbPanCard False,
+                        tanOfDeductee = Nothing,
+                        lineItems =
+                          let lineItemGstAmount = max 0 gstAmount
+                              lineItemNetAmount = max 0 (paidAmount - lineItemGstAmount)
+                           in catMaybes
+                                [ if lineItemNetAmount > 0
+                                    then
+                                      Just
+                                        InvoiceLineItem
+                                          { description = "Subscription Plan Fee",
+                                            descriptionType = Just SubscriptionPlanFee,
+                                            quantity = 1,
+                                            unitPrice = lineItemNetAmount,
+                                            lineTotal = lineItemNetAmount,
+                                            isExternalCharge = False,
+                                            groupId = Just "g-subscription",
+                                            itemType = Just Fare
+                                          }
+                                    else Nothing,
+                                  if lineItemGstAmount > 0
+                                    then
+                                      Just
+                                        InvoiceLineItem
+                                          { description = "GST",
+                                            descriptionType = Just Gst,
+                                            quantity = 1,
+                                            unitPrice = lineItemGstAmount,
+                                            lineTotal = lineItemGstAmount,
+                                            isExternalCharge = False,
+                                            groupId = Just "g-subscription",
+                                            itemType = Just Tax
+                                          }
+                                    else Nothing
+                                ],
+                        gstBreakdown = mbGstBreakdown, -- explicit CGST/SGST/IGST from caller, falls back to 50/50 in Service.hs if Nothing
+                        currency = currency,
+                        dueAt = Nothing,
+                        merchantId = merchantId,
+                        merchantOperatingCityId = merchantOperatingCityId,
+                        merchantShortId = invoiceParams.merchantShortId,
+                        -- Subscription purchases are always GST (not VAT)
+                        isVat = False,
+                        issuedToTaxNo = invoiceParams.gstinOfParty,
+                        issuedByTaxNo = invoiceParams.merchantGstin,
+                        paymentMode = Just "ONLINE",
+                        periodStart = Nothing,
+                        periodEnd = Nothing
+                      }
+              invoiceResult <- createInvoice invoiceInput entryIds
+              case invoiceResult of
+                Right inv -> do
+                  -- Fire-and-forget B2B e-invoice generation. Runs in a background
+                  -- thread so Redis/HTTP calls never block invoice creation.
+                  -- Any uncaught exception from the forked action is logged and
+                  -- swallowed so the process is never crashed by a GSP failure.
+                  fork "generate B2B e-invoice" $
+                    SharedLogic.Finance.EInvoice.generateEInvoiceForInvoice inv
+                      `catch` ( \(e :: SomeException) ->
+                                  logError $ "GSTEInvoice: background fork failed: " <> show e
+                              )
+                  pure (Just inv.id)
+                Left _err -> pure Nothing
         _ -> pure Nothing
       mbBal <- getBalance ownerAccount.id
       pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") (\bal -> Right (bal, mbInvoiceId)) mbBal

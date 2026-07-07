@@ -90,6 +90,7 @@ data AllocatorJobType
   | SpecialZonePayout
   | ProcessReminder
   | ExpireSubscriptionPurchase
+  | RetrySubscriptionPurchaseProcessing
   | Reconciliation
   | ScheduledBatchPayout
   | SettlementReportIngestion
@@ -146,6 +147,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SSpecialZonePayout jobData = AnyJobInfo <$> restoreJobInfo SSpecialZonePayout jobData
   restoreAnyJobInfo SProcessReminder jobData = AnyJobInfo <$> restoreJobInfo SProcessReminder jobData
   restoreAnyJobInfo SExpireSubscriptionPurchase jobData = AnyJobInfo <$> restoreJobInfo SExpireSubscriptionPurchase jobData
+  restoreAnyJobInfo SRetrySubscriptionPurchaseProcessing jobData = AnyJobInfo <$> restoreJobInfo SRetrySubscriptionPurchaseProcessing jobData
   restoreAnyJobInfo SReconciliation jobData = AnyJobInfo <$> restoreJobInfo SReconciliation jobData
   restoreAnyJobInfo SScheduledBatchPayout jobData = AnyJobInfo <$> restoreJobInfo SScheduledBatchPayout jobData
   restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
@@ -537,6 +539,18 @@ newtype ExpireSubscriptionPurchaseJobData = ExpireSubscriptionPurchaseJobData
 instance JobInfoProcessor 'ExpireSubscriptionPurchase
 
 type instance JobContent 'ExpireSubscriptionPurchase = ExpireSubscriptionPurchaseJobData
+
+data RetrySubscriptionPurchaseProcessingJobData = RetrySubscriptionPurchaseProcessingJobData
+  { subscriptionPurchaseId :: Id DSP.SubscriptionPurchase,
+    maxRetries :: Int,
+    currentRetry :: Int,
+    retryDelaySec :: Int
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'RetrySubscriptionPurchaseProcessing
+
+type instance JobContent 'RetrySubscriptionPurchaseProcessing = RetrySubscriptionPurchaseProcessingJobData
 
 data ReconciliationJobData = ReconciliationJobData
   { reconciliationType :: Text,
