@@ -14,6 +14,25 @@
 --
 -- Idempotent via NOT EXISTS — safe to re-apply.
 
+UPDATE atlas_driver_offer_bpp.geometry
+  SET state = 'NationalCapitalTerritory'
+  WHERE state = 'Delhi';
+
+UPDATE atlas_driver_offer_bpp.geometry
+  SET geom_geo_json = '{"type":"MultiPolygon","coordinates":[[[[76.8,28.4],[77.4,28.4],[77.4,28.9],[76.8,28.9],[76.8,28.4]]]]}'
+    , geom = ST_SetSRID(
+        ST_GeomFromGeoJSON('{"type":"MultiPolygon","coordinates":[[[[76.8,28.4],[77.4,28.4],[77.4,28.9],[76.8,28.9],[76.8,28.4]]]]}'),
+        4326
+      )
+  WHERE city = 'Delhi';
+
+UPDATE atlas_driver_offer_bpp.merchant
+  SET prepaid_subscription_and_wallet_enabled = false
+  WHERE prepaid_subscription_and_wallet_enabled = true;
+
+UPDATE atlas_driver_offer_bpp.transporter_config
+  SET allow_default_plan_allocation = true;
+
 -- ────────────────────────────────────────────────────────────────────────
 -- 1. Person (driver)
 -- ────────────────────────────────────────────────────────────────────────
@@ -139,6 +158,63 @@ WHERE NOT EXISTS (
   WHERE di.driver_id = md5(m.id || ':seed-driver-person')::uuid::text
 );
 
+UPDATE atlas_driver_offer_bpp.driver_information
+SET enabled = true, subscribed = true, updated_at = now()
+WHERE driver_id IN (
+  SELECT p.id FROM atlas_driver_offer_bpp.person p WHERE p.role = 'DRIVER'
+);
+UPDATE atlas_driver_offer_bpp.driver_information
+SET on_ride = false, updated_at = now()
+WHERE on_ride = true
+  AND NOT EXISTS (
+    SELECT 1 FROM atlas_driver_offer_bpp.ride r
+    WHERE r.driver_id = driver_information.driver_id
+      AND r.status IN ('NEW','INPROGRESS')
+  );
+UPDATE atlas_driver_offer_bpp.driver_information
+SET verified = true, updated_at = now()
+WHERE driver_id IN (
+  SELECT md5(m.id || ':seed-driver-person')::uuid::text
+  FROM atlas_driver_offer_bpp.merchant m
+);
+
+UPDATE atlas_driver_offer_bpp.person p
+SET merchant_operating_city_id = (
+    SELECT moc.id
+    FROM atlas_driver_offer_bpp.merchant_operating_city moc
+    WHERE moc.merchant_id = p.merchant_id
+    ORDER BY
+        CASE moc.city
+            WHEN 'Delhi'     THEN 0
+            WHEN 'Kolkata'   THEN 0
+            WHEN 'Bangalore' THEN 0
+            WHEN 'Chennai'   THEN 0
+            WHEN 'Kochi'     THEN 0
+            ELSE 1
+        END, moc.city
+    LIMIT 1
+),
+updated_at = now()
+WHERE p.merchant_operating_city_id IS NULL
+  AND p.role = 'DRIVER'
+  AND p.id IN (
+    SELECT md5(m.id || ':seed-driver-person')::uuid::text
+    FROM atlas_driver_offer_bpp.merchant m
+  );
+
+UPDATE atlas_driver_offer_bpp.driver_information di
+SET merchant_operating_city_id = p.merchant_operating_city_id,
+    updated_at = now()
+FROM atlas_driver_offer_bpp.person p
+WHERE di.driver_id = p.id
+  AND p.merchant_operating_city_id IS NOT NULL
+  AND (di.merchant_operating_city_id IS NULL
+       OR di.merchant_operating_city_id != p.merchant_operating_city_id)
+  AND p.id IN (
+    SELECT md5(m.id || ':seed-driver-person')::uuid::text
+    FROM atlas_driver_offer_bpp.merchant m
+  );
+
 -- ────────────────────────────────────────────────────────────────────────
 -- 3b. DriverStats
 -- PK = driver_id; only driver_id and idle_since are NOT NULL without
@@ -174,6 +250,7 @@ INSERT INTO atlas_driver_offer_bpp.vehicle
   , category
   , make
   , capacity
+  , selected_service_tiers
   , created_at
   , updated_at
   )
@@ -188,6 +265,7 @@ SELECT
   , 'CAR'
   , 'Maruti'
   , 4
+  , ARRAY['SEDAN']::text[]
   , now()
   , now()
 FROM atlas_driver_offer_bpp.merchant m
@@ -195,6 +273,10 @@ WHERE NOT EXISTS (
   SELECT 1 FROM atlas_driver_offer_bpp.vehicle v
   WHERE v.driver_id = md5(m.id || ':seed-driver-person')::uuid::text
 );
+
+UPDATE atlas_driver_offer_bpp.vehicle
+SET selected_service_tiers = ARRAY[variant]::text[], updated_at = now()
+WHERE selected_service_tiers = '{}';
 
 -- ────────────────────────────────────────────────────────────────────────
 -- 5. VehicleRegistrationCertificate

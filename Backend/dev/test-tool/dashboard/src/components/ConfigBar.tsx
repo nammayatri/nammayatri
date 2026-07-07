@@ -15,6 +15,45 @@ interface Props {
   onAdminCredentialsChange?: (email: string, password: string) => void;
 }
 
+// BAP merchant → BPP merchant mapping for cases where the naming convention
+// (FOO → FOO_PARTNER) doesn't hold. E.g. ANNA_APP (Chennai BAP) is served
+// by NAMMA_YATRI_PARTNER which covers Chennai in its geo-restrictions.
+const BAP_TO_BPP: Record<string, string> = {
+  ANNA_APP: 'NAMMA_YATRI_PARTNER',
+};
+
+const resolveBppMerchant = (bapShortId: string, driverMerchants: MerchantInfo[]): string => {
+  if (BAP_TO_BPP[bapShortId]) return BAP_TO_BPP[bapShortId];
+  const direct = driverMerchants.find(m => m.short_id === bapShortId + '_PARTNER')
+    || driverMerchants.find(m => m.short_id === bapShortId);
+  return direct?.short_id || bapShortId + '_PARTNER';
+};
+
+const normalizeLabel = (value: string) => value.toLowerCase().replace(/[_\s-]+/g, '');
+
+const cityMatches = (left?: string, right?: string): boolean => {
+  if (!right) return true;   // no city filter → any driver city matches
+  if (!left) return false;   // driver has no city → doesn't match a specific city
+  return normalizeLabel(left) === normalizeLabel(right);
+};
+
+const selectDriverForMerchantCity = (
+  merchant: string,
+  city: string,
+  drivers: DriverInfo[],
+  driverMerchants: MerchantInfo[],
+): DriverInfo | undefined => {
+  const resolvedBpp = resolveBppMerchant(merchant, driverMerchants);
+  // Prefer drivers that have a vehicle (vehicle_variant set) — drivers without a
+  // vehicle record are filtered out by the allocator's driver pool processing.
+  return drivers.find(dr => dr.merchant === resolvedBpp && cityMatches(dr.city, city) && !!dr.vehicle_variant)
+    || drivers.find(dr => dr.merchant === resolvedBpp && cityMatches(dr.city, city))
+    || drivers.find(dr => dr.merchant === resolvedBpp && !!dr.vehicle_variant)
+    || drivers.find(dr => dr.merchant === resolvedBpp)
+    || drivers.find(dr => cityMatches(dr.city, city) && !!dr.vehicle_variant)
+    || drivers.find(dr => cityMatches(dr.city, city));
+};
+
 export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, isRunning, onCityChange, onDriverChange, onMerchantShortIdChange, onAdminCredentialsChange }) => {
   const [riderMerchants, setRiderMerchants] = useState<MerchantInfo[]>([]);
   const [driverMerchants, setDriverMerchants] = useState<MerchantInfo[]>([]);
@@ -31,6 +70,17 @@ export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, is
   const [selectedCity, setSelectedCity] = useState('');
   const [selectedRider, setSelectedRider] = useState('');
   const [selectedDriver, setSelectedDriver] = useState('');
+
+  const syncDriverSelection = (merchant: string, city: string, nextDrivers = drivers, nextDriverMerchants = driverMerchants) => {
+    const selected = merchant ? selectDriverForMerchantCity(merchant, city, nextDrivers, nextDriverMerchants) : undefined;
+    if (selected) {
+      setSelectedDriver(selected.token);
+      onDriverChange?.(selected.token, selected.vehicle_variant, selected.merchant_id, selected.person_id);
+    } else {
+      setSelectedDriver('');
+      onDriverChange?.('', undefined, undefined, undefined);
+    }
+  };
 
   const set = (key: keyof Config, value: string) => {
     const updated = { ...config, [key]: value };
@@ -55,18 +105,20 @@ export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, is
         setAdminCreds(ac);
         setContextLoaded(true);
 
-        // Auto-select first merchant + city + rider
+        // Auto-select first merchant + city (prefer city that has a driver) + rider
         const uniqueM = Array.from(new Map(rm.map((m: MerchantInfo) => [m.short_id, m])).values());
         if (uniqueM.length > 0) {
           const firstMerchant = uniqueM[0].short_id;
           setSelectedMerchant(firstMerchant);
           const cities = rm.filter((m: MerchantInfo) => m.short_id === firstMerchant);
+          const driverShortId = resolveBppMerchant(firstMerchant, dm);
+          let initCity = '';
           if (cities.length > 0) {
-            setSelectedCity(cities[0].city);
-            onCityChange?.(cities[0].city);
-            // Find matching driver merchant (convention: rider "FOO" → driver "FOO_PARTNER")
-            const driverMerch = dm.find((m: MerchantInfo) => m.short_id === firstMerchant + '_PARTNER') || dm.find((m: MerchantInfo) => m.short_id === firstMerchant);
-            const driverShortId = driverMerch?.short_id || firstMerchant;
+            const driverCities = d.filter((dr: DriverInfo) => dr.merchant === driverShortId && dr.city);
+            const preferred = cities.find(c => driverCities.some((dr: DriverInfo) => cityMatches(dr.city, c.city))) || cities[0];
+            initCity = preferred.city;
+            setSelectedCity(initCity);
+            onCityChange?.(initCity);
             onMerchantShortIdChange?.(driverShortId);
             const creds = ac[driverShortId];
             if (creds) onAdminCredentialsChange?.(creds.email, creds.password);
@@ -76,11 +128,7 @@ export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, is
             setSelectedRider(merchantRiders[0].token);
             set('token', merchantRiders[0].token);
           }
-          const merchantDrivers = d.filter((dr: DriverInfo) => dr.merchant?.includes(firstMerchant) || dr.merchant?.includes(firstMerchant.replace('_PARTNER', '')));
-          if (merchantDrivers.length > 0) {
-            setSelectedDriver(merchantDrivers[0].token);
-            onDriverChange?.(merchantDrivers[0].token, merchantDrivers[0].vehicle_variant, merchantDrivers[0].merchant_id, merchantDrivers[0].person_id);
-          }
+          syncDriverSelection(firstMerchant, initCity, d, dm);
         }
       } else {
         setContextError(true);
@@ -97,12 +145,18 @@ export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, is
   const ridersForMerchant = selectedMerchant
     ? riders.filter(r => r.merchant === selectedMerchant)
     : riders;
-  const driversForMerchant = selectedMerchant
-    ? drivers.filter(d => d.merchant?.includes(selectedMerchant) || d.merchant?.includes(selectedMerchant.replace('_PARTNER', '')))
-    : drivers;
-  const variantsForCity = selectedCity
-    ? variants.filter(v => v.city === selectedCity)
-    : variants;
+  const resolvedBpp = selectedMerchant ? resolveBppMerchant(selectedMerchant, driverMerchants) : '';
+  const driversForMerchant = (() => {
+    if (!selectedMerchant) return drivers;
+    const cityFiltered = drivers.filter(d =>
+      d.merchant === resolvedBpp &&
+      (!selectedCity || !d.city || cityMatches(d.city, selectedCity))
+    );
+    // If no city-matched driver, show all drivers for this merchant so user can still see/pick them
+    return cityFiltered.length > 0
+      ? cityFiltered
+      : drivers.filter(d => d.merchant === resolvedBpp);
+  })();
 
   const handleMerchantChange = (merchant: string) => {
     setSelectedMerchant(merchant);
@@ -110,11 +164,15 @@ export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, is
     setSelectedRider('');
     setSelectedDriver('');
     const cities = riderMerchants.filter(m => m.short_id === merchant);
+    const driverShortId = resolveBppMerchant(merchant, driverMerchants);
+    let newCity = '';
     if (cities.length > 0) {
-      setSelectedCity(cities[0].city);
-      onCityChange?.(cities[0].city);
-      const driverMerch = driverMerchants.find(m => m.short_id === merchant + '_PARTNER') || driverMerchants.find(m => m.short_id === merchant);
-      const driverShortId = driverMerch?.short_id || merchant;
+      // Prefer a city that has a matching driver so coordinates align; fall back to first city
+      const driverCities = drivers.filter(d => d.merchant === driverShortId && d.city);
+      const preferred = cities.find(c => driverCities.some(d => cityMatches(d.city, c.city))) || cities[0];
+      newCity = preferred.city;
+      setSelectedCity(newCity);
+      onCityChange?.(newCity);
       onMerchantShortIdChange?.(driverShortId);
       const creds = adminCreds[driverShortId];
       if (creds) onAdminCredentialsChange?.(creds.email, creds.password);
@@ -124,11 +182,13 @@ export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, is
       setSelectedRider(merchantRiders[0].token);
       set('token', merchantRiders[0].token);
     }
-    const merchantDrivers = drivers.filter(d => d.merchant?.includes(merchant) || d.merchant?.includes(merchant.replace('_PARTNER', '')));
-    if (merchantDrivers.length > 0) {
-      setSelectedDriver(merchantDrivers[0].token);
-      onDriverChange?.(merchantDrivers[0].token, merchantDrivers[0].vehicle_variant, merchantDrivers[0].merchant_id, merchantDrivers[0].person_id);
-    }
+    syncDriverSelection(merchant, newCity);
+  };
+
+  const handleCityChange = (city: string) => {
+    setSelectedCity(city);
+    onCityChange?.(city);
+    syncDriverSelection(selectedMerchant, city);
   };
 
   const handleRiderChange = (token: string) => {
@@ -185,7 +245,7 @@ export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, is
             </div>
             <div className="config-field">
               <label>City</label>
-              <select value={selectedCity} onChange={e => { setSelectedCity(e.target.value); onCityChange?.(e.target.value); }}>
+              <select value={selectedCity} onChange={e => handleCityChange(e.target.value)}>
                 <option value="">All Cities</option>
                 {Array.from(new Map(citiesForMerchant.map(c => [c.city, c])).values()).map(c => (
                   <option key={c.city_id} value={c.city}>{c.city} ({c.country})</option>

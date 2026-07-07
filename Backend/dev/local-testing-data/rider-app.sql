@@ -15,6 +15,21 @@
 --
 -- Idempotent via ON CONFLICT DO NOTHING — safe to re-apply.
 
+
+-- Fix geometry rows where state='Delhi' (invalid IndianState value) → 'NationalCapitalTerritory'.
+-- The config-sync SQL seeds one row with state='Delhi' which causes BeamRowReadError on rideSearch.
+UPDATE atlas_app.geometry
+  SET state = 'NationalCapitalTerritory'
+  WHERE state = 'Delhi';
+
+-- Fix Delhi geometry polygons — config-sync seeds placeholder (Paris) coordinates.
+-- Replace both geom (WKB) and geom_geo_json with a bounding box covering all of Delhi (28.4–28.9°N, 76.8–77.4°E).
+UPDATE atlas_app.geometry
+  SET
+    geom_geo_json = '{"type":"MultiPolygon","coordinates":[[[[76.8,28.4],[77.4,28.4],[77.4,28.9],[76.8,28.9],[76.8,28.4]]]]}',
+    geom = ST_AsEWKB(ST_Multi(ST_GeomFromText('POLYGON((76.8 28.4, 77.4 28.4, 77.4 28.9, 76.8 28.9, 76.8 28.4))', 4326)))::text
+  WHERE city = 'Delhi';
+
 -- unencrypted: 9999900001
 INSERT INTO atlas_app.person
   ( id

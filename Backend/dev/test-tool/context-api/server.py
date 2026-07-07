@@ -374,6 +374,425 @@ def _apply_local_testing_data():
                 cur.close()
     finally:
         conn.close()
+    # Seeds set vehicle.selected_service_tiers via direct SQL UPDATE, which the
+    # cached LTS driver-pool-data in Redis does not pick up. A stale cache with
+    # selectedServiceTiers=[] makes buildDriverResult drop the driver from EVERY
+    # pool (matchingTiers becomes empty) — so the driver goes online, pings
+    # location, but never receives nearbyRideRequest. Clearing the keys forces
+    # getOrBuildDriverPoolDataBatch to rebuild from the DB on the next search.
+    _clear_driver_pool_data_cache()
+
+
+def _clear_driver_pool_data_cache():
+    """Delete cached LTS driver-pool-data keys so they rebuild from the DB.
+
+    driver-pool-data lives on the single-node LTS Redis (6379), not the KV
+    cluster. Deletion is safe and idempotent: getOrBuildDriverPoolDataBatch
+    cold-builds any missing key from driver_information + vehicle + person."""
+    try:
+        scan = subprocess.run(
+            ["redis-cli", "-p", "6379", "--scan", "--pattern",
+             "dynamic-offer-driver-app-lts:driver-pool-data:*"],
+            capture_output=True, text=True, timeout=15,
+        )
+        keys = [k for k in scan.stdout.splitlines() if k.strip()]
+        if not keys:
+            print("  \033[96m[local-testing-data]\033[0m no driver-pool-data cache keys to clear")
+            return
+        cmds = "".join(f"DEL {k}\n" for k in keys)
+        subprocess.run(["redis-cli", "-p", "6379"], input=cmds,
+                       capture_output=True, text=True, timeout=15)
+        print(f"  \033[96m[local-testing-data]\033[0m cleared {len(keys)} stale driver-pool-data cache key(s)")
+    except Exception as e:
+        print(f"  \033[96m[local-testing-data]\033[0m driver-pool-data cache clear failed: {e}")
+
+
+_geometry_restart_done = False  # restart rider-app once per server session to reload in-memory geometry cache
+
+
+def _redis_cli_bin():
+    """Locate redis-cli (PATH first, then a nix-store glob fallback)."""
+    import shutil, glob
+    found = shutil.which('redis-cli')
+    if found:
+        return found
+    for p in glob.glob('/nix/store/*redis*/bin/redis-cli'):
+        return p
+    return None
+
+
+def _flush_redis_patterns(patterns):
+    """Delete keys matching patterns from the single Redis (6379) AND every cluster
+    master node (30001-30003). We shell out to redis-cli because this interpreter has no
+    `redis` module; and we scan each cluster node individually because `redis-cli --scan`
+    only covers the node it connects to."""
+    import subprocess
+    rcli = _redis_cli_bin()
+    if not rcli:
+        print("[fix-driver-pool] Redis flush skipped: redis-cli not found")
+        return
+
+    def _scan_del(host, port, cluster):
+        deleted = 0
+        for pat in patterns:
+            try:
+                out = subprocess.run([rcli, '-h', host, '-p', str(port), '--scan', '--pattern', pat],
+                                     capture_output=True, text=True, timeout=15).stdout
+            except Exception as e:
+                print(f"[fix-driver-pool] scan {host}:{port} {pat} failed: {e}")
+                continue
+            keys = [k for k in out.splitlines() if k.strip()]
+            for k in keys:
+                cmd = [rcli, '-h', host, '-p', str(port), 'DEL', k]
+                if cluster:
+                    cmd.insert(1, '-c')
+                subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            deleted += len(keys)
+        return deleted
+
+    total = 0
+    # Single (non-cluster) Redis
+    try:
+        total += _scan_del('127.0.0.1', 6379, cluster=False)
+    except Exception as e:
+        print(f"[fix-driver-pool] single redis flush failed: {e}")
+    # Cluster: discover master nodes, scan each
+    try:
+        nodes_out = subprocess.run([rcli, '-p', '30001', 'CLUSTER', 'NODES'],
+                                   capture_output=True, text=True, timeout=10).stdout
+        masters = []
+        for line in nodes_out.splitlines():
+            parts = line.split()
+            if len(parts) >= 3 and 'master' in parts[2]:
+                hp = parts[1].split('@')[0]
+                if ':' in hp:
+                    masters.append(hp.rsplit(':', 1))
+        if not masters:  # fallback to the standard local cluster ports
+            masters = [('127.0.0.1', '30001'), ('127.0.0.1', '30002'), ('127.0.0.1', '30003')]
+        for host, port in masters:
+            total += _scan_del(host, int(port), cluster=True)
+    except Exception as e:
+        print(f"[fix-driver-pool] cluster redis flush failed: {e}")
+    print(f"[fix-driver-pool] Redis flush deleted {total} key(s) for patterns {patterns}")
+
+
+def fix_driver_pool():
+    """Fix driver pool config + geometry georestrictions for all merchants.
+
+    Idempotent — safe to run before every rideSearch:
+    - selected_service_tiers='{}' drops driver from every LTS pool.
+    - allow_default_plan_allocation=false makes setActivity silently fail.
+    - geom_geo_json seeded with Paris placeholder → RIDE_NOT_SERVICEABLE for all cities."""
+    # City → [lon_min, lat_min, lon_max, lat_max] bounding boxes (WGS84)
+    CITY_BOUNDS = {
+        'Bangalore':   [77.40, 12.80, 77.80, 13.25],
+        'Mysore':      [76.50, 12.20, 76.80, 12.50],
+        'Tumkur':      [77.00, 13.20, 77.30, 13.50],
+        'Davanagere':  [75.80, 14.30, 76.10, 14.60],
+        'Shivamogga':  [75.40, 13.80, 75.80, 14.10],
+        'Chennai':     [80.00, 12.80, 80.50, 13.30],
+        'Kolkata':     [88.20, 22.40, 88.60, 22.80],
+        'Delhi':       [76.80, 28.40, 77.40, 28.90],
+        'Hyderabad':   [78.30, 17.20, 78.60, 17.60],
+        'Kochi':       [76.10,  9.90, 76.50, 10.20],
+        'Thrissur':    [76.10, 10.40, 76.40, 10.60],
+        'Kozhikode':   [75.70, 11.10, 76.00, 11.40],
+        'Mangalore':   [74.70, 12.70, 75.00, 13.00],
+        'Hubli':       [75.00, 15.20, 75.30, 15.50],
+        'Tumkur':      [77.00, 13.20, 77.30, 13.50],
+        'Helsinki':    [24.70, 60.10, 25.30, 60.40],
+    }
+
+    def make_geojson(b):
+        lo, la, hi, ha = b
+        coords = [[[lo, la], [hi, la], [hi, ha], [lo, ha], [lo, la]]]
+        return json.dumps({"type": "MultiPolygon", "coordinates": [coords]})
+
+    errors = []
+    city_rows_fixed = 0
+    seed_driver_state = []
+    transporter_debug = []
+    try:
+        conn = get_conn()
+        conn.autocommit = True
+        cur = conn.cursor()
+
+        # BPP fixes
+
+        # Assign a primary city to seed drivers that have no merchant_operating_city_id.
+        # Prefer well-known cities (Delhi, Kolkata, Bangalore, Chennai, Kochi) so the
+        # driver lands in a city whose geometry and service tiers are configured for tests.
+        # Debug: check current state of seed driver city assignment (person + driver_information)
+        cur.execute("""
+            SELECT m.short_id, moc_p.city AS person_city, moc_di.city AS di_city,
+                   di.on_ride, di.active, di.enabled, di.subscribed
+            FROM atlas_driver_offer_bpp.person p
+            JOIN atlas_driver_offer_bpp.merchant m ON m.id = p.merchant_id
+            JOIN atlas_driver_offer_bpp.driver_information di ON di.driver_id = p.id
+            LEFT JOIN atlas_driver_offer_bpp.merchant_operating_city moc_p ON moc_p.id = p.merchant_operating_city_id
+            LEFT JOIN atlas_driver_offer_bpp.merchant_operating_city moc_di ON moc_di.id = di.merchant_operating_city_id
+            WHERE p.role = 'DRIVER'
+              AND p.id IN (
+                SELECT md5(m2.id || ':seed-driver-person')::uuid::text
+                FROM atlas_driver_offer_bpp.merchant m2
+              )
+            ORDER BY m.short_id
+        """)
+        seed_driver_state = cur.fetchall()
+        print(f"[fix-driver-pool] seed driver state: {seed_driver_state}")
+
+        cur.execute("""
+            UPDATE atlas_driver_offer_bpp.person p
+            SET merchant_operating_city_id = (
+                SELECT moc.id
+                FROM atlas_driver_offer_bpp.merchant_operating_city moc
+                WHERE moc.merchant_id = p.merchant_id
+                ORDER BY
+                    CASE moc.city
+                        WHEN 'Delhi'     THEN 0
+                        WHEN 'Kolkata'   THEN 0
+                        WHEN 'Bangalore' THEN 0
+                        WHEN 'Chennai'   THEN 0
+                        WHEN 'Kochi'     THEN 0
+                        ELSE 1
+                    END, moc.city
+                LIMIT 1
+            ),
+            updated_at = now()
+            WHERE p.merchant_operating_city_id IS NULL
+              AND p.role = 'DRIVER'
+        """)
+        city_rows_fixed = cur.rowcount
+        print(f"[fix-driver-pool] city assignment: {city_rows_fixed} person rows updated")
+        cur.execute("""
+            UPDATE atlas_driver_offer_bpp.driver_information di
+            SET merchant_operating_city_id = p.merchant_operating_city_id,
+                updated_at = now()
+            FROM atlas_driver_offer_bpp.person p
+            WHERE di.driver_id = p.id
+              AND p.merchant_operating_city_id IS NOT NULL
+              AND (di.merchant_operating_city_id IS NULL
+                   OR di.merchant_operating_city_id != p.merchant_operating_city_id)
+        """)
+
+        # Disable wallet-balance filter for ALL test merchants.
+        # prepaid_subscription_and_wallet_enabled=true on the merchant causes
+        # filterByWalletBalance to drop all seed drivers (no real wallet balance in dev).
+        cur.execute("""
+            UPDATE atlas_driver_offer_bpp.merchant
+            SET prepaid_subscription_and_wallet_enabled = false
+            WHERE prepaid_subscription_and_wallet_enabled = true
+        """)
+
+        # Give each driver ALL service tiers its vehicle variant is eligible for, not just
+        # ARRAY[variant]. The allocator pools a driver into a tier's batch only if that tier
+        # is in selected_service_tiers. On Yatri Sathi (Kolkata) the rider's SEDAN estimate
+        # is processed as compatible tiers (AC_PRIORITY, HATCHBACK, PREMIUM_SEDAN, TAXI) — NOT
+        # bare SEDAN — so a driver opted into only [SEDAN] is rejected by processCandidatesChunk
+        # ("No nearby requests"). Eligibility = vehicle_service_tier rows whose
+        # allowed_vehicle_variant contains the driver's variant, in the driver's operating city.
+        cur.execute("""
+            UPDATE atlas_driver_offer_bpp.vehicle v
+            SET selected_service_tiers = sub.tiers, updated_at = now()
+            FROM (
+                SELECT vv.driver_id,
+                       array_agg(DISTINCT vst.service_tier_type) AS tiers
+                FROM atlas_driver_offer_bpp.vehicle vv
+                JOIN atlas_driver_offer_bpp.person p ON p.id = vv.driver_id
+                JOIN atlas_driver_offer_bpp.vehicle_service_tier vst
+                     ON vst.merchant_operating_city_id = p.merchant_operating_city_id
+                    AND vst.is_enabled = true
+                    AND vv.variant = ANY(vst.allowed_vehicle_variant)
+                GROUP BY vv.driver_id
+            ) sub
+            WHERE v.driver_id = sub.driver_id
+              AND sub.tiers IS NOT NULL
+              AND NOT (v.selected_service_tiers @> sub.tiers AND sub.tiers @> v.selected_service_tiers)
+        """)
+        # Fallback for drivers with no operating-city tier match: at least offer their own variant.
+        cur.execute("""
+            UPDATE atlas_driver_offer_bpp.vehicle
+            SET selected_service_tiers = ARRAY[variant]::text[], updated_at = now()
+            WHERE selected_service_tiers = '{}'
+        """)
+        # Check driver_pool_config exists for each merchant+city combo
+        cur.execute("""
+            SELECT m.short_id, moc.city,
+                   dpc.id IS NOT NULL AS has_pool_config,
+                   dpc.min_radius_of_search, dpc.max_radius_of_search
+            FROM atlas_driver_offer_bpp.merchant m
+            JOIN atlas_driver_offer_bpp.merchant_operating_city moc ON moc.merchant_id = m.id
+            LEFT JOIN atlas_driver_offer_bpp.driver_pool_config dpc ON dpc.merchant_operating_city_id = moc.id
+            WHERE m.short_id IN ('JATRI_SAATHI_PARTNER','BHARAT_TAXI_PARTNER','NAMMA_YATRI_PARTNER')
+              AND moc.city IN ('Kolkata','Delhi','Bangalore','Chennai')
+            ORDER BY m.short_id, moc.city
+        """)
+        transporter_debug = cur.fetchall()
+        print(f"[fix-driver-pool] driver_pool_config state: {transporter_debug}")
+        cur.execute("""
+            UPDATE atlas_driver_offer_bpp.transporter_config
+            SET allow_default_plan_allocation = true
+        """)
+        cur.execute("""
+            UPDATE atlas_driver_offer_bpp.driver_information
+            SET enabled = true, subscribed = true, updated_at = now()
+            WHERE driver_id IN (
+                SELECT p.id FROM atlas_driver_offer_bpp.person p WHERE p.role = 'DRIVER'
+            ) AND (enabled = false OR subscribed = false)
+        """)
+
+        # Merchants with online_payment=true (BRIDGE_FINLAND, BRIDGE_CABS — Stripe) require a
+        # DriverBankAccount with charges_enabled=true before setActivity will let the driver go
+        # online (else "Driver Bank Account not found"). Seed a test bank account for every such
+        # driver, and make sure existing ones have charges enabled.
+        cur.execute("""
+            INSERT INTO atlas_driver_offer_bpp.driver_bank_account
+                (driver_id, account_id, charges_enabled, details_submitted, payouts_enabled,
+                 merchant_id, merchant_operating_city_id, created_at, updated_at)
+            SELECT p.id, 'acct_test_' || replace(p.id::text, '-', ''), true, true, true,
+                   p.merchant_id, p.merchant_operating_city_id, now(), now()
+            FROM atlas_driver_offer_bpp.person p
+            JOIN atlas_driver_offer_bpp.merchant m ON m.id = p.merchant_id
+            WHERE p.role = 'DRIVER' AND m.online_payment = true
+              AND NOT EXISTS (
+                  SELECT 1 FROM atlas_driver_offer_bpp.driver_bank_account dba
+                  WHERE dba.driver_id = p.id
+              )
+        """)
+        # Fleet drivers: setActivity checks the FLEET OWNER's bank account, not the driver's.
+        # Seed one for every fleet owner that has active drivers under an online-payment merchant.
+        cur.execute("""
+            INSERT INTO atlas_driver_offer_bpp.driver_bank_account
+                (driver_id, account_id, charges_enabled, details_submitted, payouts_enabled,
+                 merchant_id, merchant_operating_city_id, created_at, updated_at)
+            SELECT fo.fleet_owner_id,
+                   'acct_test_' || replace(fo.fleet_owner_id::text, '-', ''), true, true, true,
+                   fo.merchant_id, fo.moc, now(), now()
+            FROM (
+                SELECT fda.fleet_owner_id,
+                       (array_agg(p.merchant_id))[1] AS merchant_id,
+                       (array_agg(p.merchant_operating_city_id))[1] AS moc
+                FROM atlas_driver_offer_bpp.fleet_driver_association fda
+                JOIN atlas_driver_offer_bpp.person p ON p.id = fda.driver_id
+                JOIN atlas_driver_offer_bpp.merchant m ON m.id = p.merchant_id
+                WHERE fda.is_active = true AND m.online_payment = true
+                GROUP BY fda.fleet_owner_id
+            ) fo
+            WHERE NOT EXISTS (
+                SELECT 1 FROM atlas_driver_offer_bpp.driver_bank_account dba
+                WHERE dba.driver_id = fo.fleet_owner_id
+            )
+        """)
+        cur.execute("""
+            UPDATE atlas_driver_offer_bpp.driver_bank_account
+            SET charges_enabled = true, details_submitted = true, updated_at = now()
+            WHERE charges_enabled = false OR details_submitted = false
+        """)
+
+        # The dev OSRM instance only has Bangalore map data, so actual-distance routing
+        # for any other city (Kolkata, Chennai, ...) snaps both points to arbitrary
+        # far-apart Bangalore nodes -> bogus large actualDistanceToPickup. The driver pool's
+        # calculateDriverPoolWithActualDist then drops every candidate whose actual distance
+        # exceeds actual_distance_threshold (offRideFinal=0 -> "No nearby requests"), even
+        # though the driver is co-located with the pickup. Setting
+        # threshold_to_ignore_actual_distance_threshold makes any driver within that
+        # straight-line distance bypass the broken OSRM actual-distance filter. Chennai only
+        # "worked" by luck of snapping close enough; this makes ALL cities deterministic.
+        cur.execute("""
+            UPDATE atlas_driver_offer_bpp.driver_pool_config
+            SET threshold_to_ignore_actual_distance_threshold = 60000, updated_at = now()
+            WHERE threshold_to_ignore_actual_distance_threshold IS NULL
+               OR threshold_to_ignore_actual_distance_threshold < 60000
+        """)
+
+        # Cancel stale bookings/rides so flows never hit ACTIVE_BOOKING_ALREADY_PRESENT
+        # or CURRENT_RIDE_INPROGRESS on subsequent runs.
+        cur.execute("""
+            UPDATE atlas_app.booking SET status='CANCELLED'
+            WHERE status NOT IN ('COMPLETED','CANCELLED')
+        """)
+        cur.execute("""
+            UPDATE atlas_driver_offer_bpp.ride SET status='CANCELLED'
+            WHERE status NOT IN ('COMPLETED','CANCELLED')
+        """)
+        cur.execute("""
+            UPDATE atlas_driver_offer_bpp.booking SET status='CANCELLED'
+            WHERE status NOT IN ('COMPLETED','CANCELLED')
+        """)
+        # Reset on_ride AND the advance-booking state. A stale driver_trip_end_location
+        # makes initializeRide treat the next assignment as an advance booking and set
+        # has_advance_booking=true, which then makes StartRide throw CURRENT_RIDE_INPROGRESS.
+        cur.execute("""
+            UPDATE atlas_driver_offer_bpp.driver_information
+            SET on_ride = false,
+                has_advance_booking = false,
+                driver_trip_end_location_lat = NULL,
+                driver_trip_end_location_lon = NULL,
+                updated_at = now()
+            WHERE on_ride = true
+               OR has_advance_booking = true
+               OR driver_trip_end_location_lat IS NOT NULL
+               OR driver_trip_end_location_lon IS NOT NULL
+        """)
+
+        # Flush stale Redis entries so they don't bleed across test runs:
+        #  - ride_*/rideDetails_* -> ride & ride_details are KV-backed. The SQL cancel above
+        #    only updates Postgres, not the KV copy, so a stale ride stays NEW in the read
+        #    path. Worse, deleting ONLY rideDetails_* (the old behaviour) orphans a NEW ride
+        #    whose ride_details listDriverRides reads via runInReplica -> VEHICLE_NOT_FOUND.
+        #    So delete the COMPLETE ride key set (by id/driver/booking/shortId) + rideDetails.
+        #  - lts:on_ride*          -> CURRENT_RIDE_INPROGRESS + active-ride lookups.
+        #  - *DriverPoolConfig*    -> cached driver_pool_config (the updated
+        #                             threshold_to_ignore_actual_distance_threshold).
+        # NOTE: the context-api python has no `redis` module, so we shell out to redis-cli.
+        # The cluster (30001-30003) distributes keys across nodes, and `redis-cli --scan`
+        # only scans the node it connects to, so we must scan EVERY master node, not just one.
+        _flush_redis_patterns([
+            'ride_id_*', 'ride_driverId_*', 'ride_bookingId_*', 'ride_shortId_*',
+            'rideDetails_*', 'lts:on_ride*', '*DriverPoolConfig*',
+        ])
+
+        # Fix geometry geom_geo_json for both schemas so origin point-in-polygon passes.
+        # Config-sync seeds placeholder (Paris ≈ 2.35°E 48.85°N) coordinates for most cities.
+        # The rider-app caches these in-memory at startup; we track whether we actually
+        # changed any rows so we can restart the services to reload the cache.
+        geom_rows_fixed = 0
+        for city, bounds in CITY_BOUNDS.items():
+            lo, la, hi, ha = bounds
+            geojson = make_geojson(bounds)
+            for schema in ('atlas_app', 'atlas_driver_offer_bpp'):
+                cur.execute(f"""
+                    UPDATE {schema}.geometry
+                    SET geom_geo_json = %s
+                    WHERE city = %s
+                      AND (geom_geo_json IS NULL
+                           OR geom_geo_json LIKE '%%2.3%%'
+                           OR geom_geo_json LIKE '%%48.8%%'
+                           OR NOT (
+                               (geom_geo_json::json->'coordinates'->0->0->0->>0)::float BETWEEN {lo-1} AND {hi+1}
+                           ))
+                """, (geojson, city))
+                geom_rows_fixed += cur.rowcount
+
+        cur.close()
+        conn.close()
+    except Exception as e:
+        errors.append(str(e))
+        print(f"[fix-driver-pool] DB error: {e}")
+        geom_rows_fixed = 0
+        city_rows_fixed = 0
+    _clear_driver_pool_data_cache()
+    # Restart rider/driver services once per server session so they reload the
+    # in-memory geometry cache. Even if geom_rows_fixed==0 (DB already correct),
+    # the running services may have loaded stale Paris coordinates at startup.
+    global _geometry_restart_done
+    restarted = False
+    if not _geometry_restart_done:
+        _geometry_restart_done = True
+        print(f"[fix-driver-pool] first run this session — restarting services to reload geometry cache")
+        _restart_haskell_services()
+        restarted = True
+    return {"ok": len(errors) == 0, "errors": errors, "geom_rows_fixed": geom_rows_fixed, "city_rows_fixed": city_rows_fixed, "seed_driver_state": seed_driver_state, "transporter_debug": transporter_debug, "restarted": restarted}
 
 
 def _restart_haskell_services():
@@ -1917,6 +2336,7 @@ def get_drivers():
                rt.token, rt.verified, v.variant as vehicle_variant
         FROM atlas_driver_offer_bpp.person p
         JOIN atlas_driver_offer_bpp.merchant m ON m.id = p.merchant_id
+        JOIN atlas_driver_offer_bpp.driver_information di ON di.driver_id = p.id AND di.enabled = true
         LEFT JOIN atlas_driver_offer_bpp.merchant_operating_city moc ON moc.id = p.merchant_operating_city_id
         LEFT JOIN atlas_driver_offer_bpp.registration_token rt ON rt.entity_id = p.id AND rt.verified = true
         LEFT JOIN atlas_driver_offer_bpp.vehicle v ON v.driver_id = p.id
@@ -3042,6 +3462,32 @@ class ContextHandler(BaseHTTPRequestHandler):
         if parsed.query:
             target_url += f"?{parsed.query}"
 
+        # Auto-clear stale bookings/rides before every rideSearch so that
+        # ACTIVE_BOOKING_ALREADY_PRESENT never blocks a fresh test run.
+        if method == "POST" and target_path == "/v2/rideSearch":
+            try:
+                conn = get_conn()
+                conn.autocommit = True
+                cur = conn.cursor()
+                cur.execute("UPDATE atlas_app.booking SET status='CANCELLED' WHERE status NOT IN ('COMPLETED','CANCELLED')")
+                cur.execute("UPDATE atlas_driver_offer_bpp.ride SET status='CANCELLED' WHERE status NOT IN ('COMPLETED','CANCELLED')")
+                cur.execute("UPDATE atlas_driver_offer_bpp.booking SET status='CANCELLED' WHERE status NOT IN ('COMPLETED','CANCELLED')")
+                cur.execute("UPDATE atlas_driver_offer_bpp.driver_information SET on_ride=false, updated_at=now() WHERE on_ride=true")
+                cur.close()
+                conn.close()
+            except Exception as _e:
+                print(f"[rideSearch-cleanup] DB error: {_e}")
+            try:
+                import redis as _redis
+                rc = _redis.RedisCluster(host='localhost', port=30001, decode_responses=True, skip_full_coverage_check=True)
+                for k in rc.keys('rideDetails*'):
+                    rc.delete(k)
+                rs = _redis.Redis(host='localhost', port=6379, decode_responses=True)
+                for k in rs.keys('lts:on_ride*'):
+                    rs.delete(k)
+            except Exception as _e:
+                print(f"[rideSearch-cleanup] Redis error: {_e}")
+
         # Read request body
         content_len = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_len) if content_len > 0 else None
@@ -3347,6 +3793,19 @@ class ContextHandler(BaseHTTPRequestHandler):
                 self._send_json({"ok": True})
             except Exception as e:
                 self._send_json({"ok": False, "error": str(e)}, 500)
+            return True
+
+        if method in ("GET", "POST") and path == "/api/fix-driver-pool":
+            self._send_json(fix_driver_pool())
+            return True
+
+        if method == "GET" and path == "/api/rider-health":
+            try:
+                import urllib.request as _ur
+                r = _ur.urlopen(f"{RIDER_URL}/v2/", timeout=3)
+                self._send_json({"ok": True})
+            except Exception:
+                self._send_json({"ok": False}, 503)
             return True
 
         if method == "GET" and path == "/api/control-center/status":
@@ -4728,7 +5187,10 @@ def main():
     # status_store) is already guarded by its own `threading.Lock` /
     # `threading.RLock`. New routes adding shared state must follow
     # that discipline.
-    server = ThreadingHTTPServer(("0.0.0.0", port), ContextHandler)
+    class _ReuseAddrServer(ThreadingHTTPServer):
+        allow_reuse_address = True
+
+    server = _ReuseAddrServer(("0.0.0.0", port), ContextHandler)
     # Daemon = True so threads don't block process shutdown when the
     # user Ctrl-C's the server.
     server.daemon_threads = True

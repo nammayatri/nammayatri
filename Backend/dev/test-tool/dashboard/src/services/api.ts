@@ -117,27 +117,36 @@ export function startLocationPinger(ctx: Record<string, any>, log?: (level: 'inf
   const ping = async () => {
     await ensureMerchantId();
     const origin = ctx.searchOrigin || ctx.driverLocation || { lat: 10.0739, lon: 76.2733 };
-    const token = ctx.driverPersonId || ctx.driverToken;
+    const token = ctx.driverToken || ctx.driverPersonId;
+    const url = `${PROXY_BASE}/proxy/lts/driver/location`;
+    const body = [{ pt: { lat: origin.lat, lon: origin.lon }, ts: new Date().toISOString() }];
+
+    // Ping ONCE with the driver's actual vehicle variant. LTS allows only one
+    // in-flight location update per driver token — firing several variants
+    // concurrently makes all but one return HTTP 429 (and the survivor is
+    // random), so the driver lands in an unpredictable geo-bucket. A single
+    // ping mirrors production and is enough: LTS nearBy returns the driver to
+    // the allocator regardless of which variant bucket it sits in, and the test
+    // flow selects the estimate matching this same variant. Falls back to SEDAN
+    // only if the variant is unknown.
+    const vt: string = ctx.driverVehicleVariant || 'SEDAN';
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'vt': ctx.driverVehicleVariant || 'SUV',
+      'vt': vt,
       'dm': 'ONLINE',
     };
     if (token) headers['token'] = token;
     if (resolvedMerchantId) headers['mid'] = resolvedMerchantId;
-    const body = [{ pt: { lat: origin.lat, lon: origin.lon }, ts: new Date().toISOString() }];
-    const url = `${PROXY_BASE}/proxy/lts/driver/location`;
     const start = performance.now();
-    axios.post(url, body, { headers, timeout: 5000 })
-      .then((resp) => {
-        const ms = Math.round(performance.now() - start);
-        pingerLogFn?.('req', `[Pinger] POST /driver/location → ${resp.status} (${ms}ms) mid=${resolvedMerchantId || 'NONE'}`);
-      })
-      .catch((err) => {
-        const ms = Math.round(performance.now() - start);
-        const status = err.response?.status || 0;
-        pingerLogFn?.('error', `[Pinger] POST /driver/location → ${status} FAILED (${ms}ms) ${err.message}`);
-      });
+    try {
+      const resp = await axios.post(url, body, { headers, timeout: 5000 });
+      const ms = Math.round(performance.now() - start);
+      pingerLogFn?.('req', `[Pinger] POST /driver/location (${vt}) → ${resp.status} (${ms}ms) mid=${resolvedMerchantId || 'NONE'}`);
+    } catch (err: any) {
+      const ms = Math.round(performance.now() - start);
+      const status = err.response?.status || 0;
+      pingerLogFn?.('error', `[Pinger] POST /driver/location (${vt}) → ${status} FAILED (${ms}ms) ${err.message}`);
+    }
   };
   pingerLogFn?.('info', '[Pinger] Started — pinging driver location every 10s');
   ping();
@@ -186,8 +195,9 @@ export async function callStep(
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (step.auth) {
-    // Use driver person_id for LTS, fleet auth token for fleet, driver token for driver API, rider token otherwise
-    const token = step.service === 'lts' ? (ctx.driverPersonId || ctx.driverToken || config.token)
+    // LTS validates the registration token via driver-app /internal/auth (verifyPerson),
+    // so it needs the driver registration token — not the person_id.
+    const token = step.service === 'lts' ? (ctx.driverToken || ctx.driverPersonId || config.token)
       : step.service === 'provider-dashboard' ? (ctx.fleetAuthToken || config.token)
       : (step.service === 'driver') ? (ctx.driverToken || config.token) : config.token;
     if (token) headers['token'] = token;

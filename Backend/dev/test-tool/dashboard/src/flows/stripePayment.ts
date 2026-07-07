@@ -36,10 +36,13 @@ const happyPath: Scenario = {
     { id: 'estimate-select', name: 'Select Estimate', method: 'POST', service: 'rider', path: '/placeholder', auth: true,
       useCatalog: 'estimate-select' },
 
-    // === DRIVER SECTION: Set location + go online + accept ride ===
+    // === DRIVER SECTION: Fix driver pool, set location + go online + accept ride ===
+    { id: 'fix-driver-pool', name: '[Driver] Prepare Pool', method: 'POST', service: 'internal',
+      path: '/api/fix-driver-pool', assert: () => null,
+      summary: (d: any) => d?.ok ? 'Fixed service tiers + cleared pool cache' : `errors: ${(d?.errors || []).join(', ')}` },
     { id: 'driver-location', name: '[Driver] Set Location (= pickup)', method: 'POST', service: 'lts',
       path: '/driver/location', auth: true,
-      extraHeaders: (ctx) => ({ 'vt': ctx.driverVehicleVariant || 'SUV', 'dm': 'ONLINE', ...(ctx.driverMerchantId ? { 'mid': ctx.driverMerchantId } : {}) }),
+      extraHeaders: (ctx) => ({ 'vt': ctx.driverVehicleVariant || 'SEDAN', 'dm': 'ONLINE', ...(ctx.driverMerchantId ? { 'mid': ctx.driverMerchantId } : {}) }),
       note: 'Updates driver location via LTS and starts background pinger (every 10s) to keep geo bucket alive.',
       body: (ctx) => {
         const origin = ctx.searchOrigin || { lat: 10.0739, lon: 76.2733 };
