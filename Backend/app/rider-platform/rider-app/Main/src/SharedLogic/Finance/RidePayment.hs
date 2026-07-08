@@ -133,6 +133,7 @@ module SharedLogic.Finance.RidePayment
     refundLegRefTypes,
     getRefundLegEntries,
     getSettledRefundByComponent,
+    settledRefundByComponent,
     createPendingCancellationFeeLedger,
     markCancellationFeeInvoicePaid,
     voidRideInvoice,
@@ -1030,9 +1031,15 @@ getRefundLegEntries rideId = concat <$> mapM (`getEntriesByReference` rideId) re
 --   ledger-driven "already refunded" that the per-component cap check compares against.
 getSettledRefundByComponent :: (BeamFlow.BeamFlow m r) => Text -> DFareBreakup.FareComponent -> m HighPrecMoney
 getSettledRefundByComponent rideId component = do
-  let (baseRef, vatRef) = refundRefTypesForComponent component
   entries <- getRefundLegEntries rideId
-  pure $ sum [e.amount | e <- entries, e.status == LE.SETTLED, e.referenceType `elem` [baseRef, vatRef]]
+  pure $ settledRefundByComponent entries component
+
+-- | Pure part of 'getSettledRefundByComponent' — sums the SETTLED base+VAT legs for one
+--   component from pre-fetched entries, so per-component checks can share a single fetch.
+settledRefundByComponent :: [LE.LedgerEntry] -> DFareBreakup.FareComponent -> HighPrecMoney
+settledRefundByComponent entries component =
+  let (baseRef, vatRef) = refundRefTypesForComponent component
+   in sum [e.amount | e <- entries, e.status == LE.SETTLED, e.referenceType `elem` [baseRef, vatRef]]
 
 createRefundRaisedLedger ::
   (BeamFlow.BeamFlow m r, MonadFlow m) =>

@@ -105,6 +105,7 @@ data TransporterConfigT f = TransporterConfigT
     deactivateRCOnUnlink :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     defaultOnboardingAs :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.OnboardingAs),
     defaultPopupDelay :: B.C f Kernel.Types.Common.Seconds,
+    defaultRefundDeductFromDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     deleteDriverBankAccountWhenLinkToFleet :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     demandHotspotsConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     digilockerEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

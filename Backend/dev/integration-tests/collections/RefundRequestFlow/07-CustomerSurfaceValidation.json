@@ -952,16 +952,19 @@
       "response": []
     },
     {
-      "name": "Second OPEN Create Allowed",
+      "name": "Second Create While One In Process Blocked 400",
       "event": [
         {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "console.log('second-open raise -> ' + pm.response.code + ' ' + pm.response.text());",
-              "pm.test('Second OPEN Create Allowed (only an APPROVED sibling blocks)', function () {",
-              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+              "console.log('second create while one open -> ' + pm.response.code + ' ' + pm.response.text());",
+              "pm.test('Second Create Blocked While A Request Is In Process (single-OPEN policy)', function () {",
+              "  pm.expect(pm.response.code, pm.response.text()).to.eql(400);",
+              "});",
+              "pm.test('Error Says A Request Is Already In Process (UI toast text source)', function () {",
+              "  pm.expect(/already in process/i.test(pm.response.text()), 'expected the already-in-process message, got: ' + pm.response.text()).to.be.true;",
               "});"
             ]
           }
@@ -1013,17 +1016,9 @@
               "  pm.expect(list, 'RefundRequestListResp.refundRequests must be an array').to.be.an('array').that.is.not.empty;",
               "});",
               "console.log('list (newest first): ' + (list||[]).map(function(r){return r.description+'/'+r.status+'/'+(r.requestedAmount&&r.requestedAmount.amount);}).join(' | '));",
-              "pm.test('Both OPEN Requests Coexist (multiple OPEN allowed)', function () {",
+              "pm.test('Exactly One OPEN Request (single-OPEN policy: the blocked second create left no row)', function () {",
               "  var open = (list||[]).filter(function(r){ return r.status === 'OPEN'; });",
-              "  pm.expect(open.length, 'expected the two OPEN requests just raised').to.be.at.least(2);",
-              "});",
-              "pm.test('Newest-First Ordering (second open sorts before list test)', function () {",
-              "  var descs = (list||[]).map(function(r){ return r.description; });",
-              "  var iSecond = descs.indexOf('second open');",
-              "  var iFirst = descs.indexOf('list test');",
-              "  pm.expect(iSecond, 'the second-raised request must be present').to.be.above(-1);",
-              "  pm.expect(iFirst, 'the first-raised request must be present').to.be.above(-1);",
-              "  pm.expect(iSecond, 'newest-first: the later \"second open\" must precede \"list test\"').to.be.below(iFirst);",
+              "  pm.expect(open.length, 'the blocked create must not have persisted a row').to.eql(1);",
               "});",
               "pm.test('Item Echoes Requested Code / Amount / Status', function () {",
               "  var raised = (list||[]).filter(function(r){ return r.description === 'list test'; })[0];",
@@ -1061,6 +1056,81 @@
             "refundRequest"
           ]
         }
+      },
+      "response": []
+    },
+    {
+      "name": "Close the listed request — only one open request at a time (frees the order for the evidence tests)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Find the OPEN request left by the accept-test (KV->PG drain may lag) and stash its id;",
+              "// the main request rejects it via the dashboard so the order frees up (one open request at a time).",
+              "pm.environment.set('closeRequestId', '');",
+              "function _deT(v){ return (v||'').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "var _mock = _deT(pm.environment.get('mockServerUrl'));",
+              "var _sel = {url:_mock+'/mock/sql/select',method:'POST',header:{'Content-Type':'application/json'},body:{mode:'raw',raw:JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'refund_request',select:['id','status'],where_clause:[{column_name:'order_id',val:pm.environment.get('orderId'),op:'='},{column_name:'status',val:'OPEN',op:'='}]})}};",
+              "function _poll(k){",
+              "  pm.sendRequest(_sel, function(err,res){",
+              "    var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){}",
+              "    if(rows.length){ pm.environment.set('closeRequestId', rows[0].id); console.log('closing OPEN request ' + rows[0].id); }",
+              "    else if(k>0){ setTimeout(function(){ _poll(k-1); }, 1500); }",
+              "    else { console.log('no OPEN request drained for order ' + pm.environment.get('orderId')); }",
+              "  });",
+              "}",
+              "_poll(10);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d={}; try{ d=pm.response.json(); }catch(e){}",
+              "pm.test('Request closed — order freed for the next request (only one open at a time)', function(){",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+              "  pm.expect(d.status).to.eql('REJECTED');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"approve\":false,\"responseDescription\":\"closing test request - only one open request at a time\"}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{closeRequestId}}/respond",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{dashboard_city}}",
+            "payment",
+            "refundRequest",
+            "{{closeRequestId}}",
+            "respond"
+          ]
+        },
+        "description": "The raised request served the block-test and the list contract; close it so the evidence create isn't blocked."
       },
       "response": []
     },
@@ -1104,6 +1174,56 @@
       "response": []
     },
     {
+      "name": "Evidence Rejected (unsupported type)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "console.log('evidence(application/zip) -> ' + pm.response.code + ' ' + pm.response.text());",
+              "pm.test('Unsupported Content Type Rejected (400/415)', function () {",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([400,415]);",
+              "});",
+              "pm.test('Rejection Is FILE_FORMAT_NOT_SUPPORTED', function () {",
+              "  pm.expect(/FILE_FORMAT_NOT_SUPPORTED|not supported/i.test(pm.response.text()), 'expected the content-type guard; body: ' + pm.response.text()).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{riderToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"refundComponents\":[{\"component\":\"RIDE_FARE\",\"amount\":{\"amount\":{{rf2}},\"currency\":\"{{currency}}\"}}],\"code\":\"CUSTOMER_REQUEST\",\"description\":\"evidence bad\",\"evidence\":\"iVBORw0KGgo=\",\"fileType\":\"Image\",\"reqContentType\":\"application/zip\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "{{rideId}}",
+            "refundRequest",
+            "create"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
       "name": "Evidence Upload Accepted (image/png)",
       "event": [
         {
@@ -1138,56 +1258,6 @@
         "body": {
           "mode": "raw",
           "raw": "{\"refundComponents\":[{\"component\":\"RIDE_FARE\",\"amount\":{\"amount\":{{rf2}},\"currency\":\"{{currency}}\"}}],\"code\":\"CUSTOMER_REQUEST\",\"description\":\"evidence ok\",\"evidence\":\"iVBORw0KGgo=\",\"fileType\":\"Image\",\"reqContentType\":\"image/png\"}"
-        },
-        "url": {
-          "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create",
-          "host": [
-            "{{baseUrl_app}}"
-          ],
-          "path": [
-            "payment",
-            "{{rideId}}",
-            "refundRequest",
-            "create"
-          ]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "Evidence Rejected (unsupported type)",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "console.log('evidence(application/zip) -> ' + pm.response.code + ' ' + pm.response.text());",
-              "pm.test('Unsupported Content Type Rejected (400/415)', function () {",
-              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([400,415]);",
-              "});",
-              "pm.test('Rejection Is FILE_FORMAT_NOT_SUPPORTED', function () {",
-              "  pm.expect(/FILE_FORMAT_NOT_SUPPORTED|not supported/i.test(pm.response.text()), 'expected the content-type guard; body: ' + pm.response.text()).to.be.true;",
-              "});"
-            ]
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "token",
-            "value": "{{riderToken}}"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\"refundComponents\":[{\"component\":\"RIDE_FARE\",\"amount\":{\"amount\":{{rf2}},\"currency\":\"{{currency}}\"}}],\"code\":\"CUSTOMER_REQUEST\",\"description\":\"evidence bad\",\"evidence\":\"iVBORw0KGgo=\",\"fileType\":\"Image\",\"reqContentType\":\"application/zip\"}"
         },
         "url": {
           "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create",

@@ -610,20 +610,14 @@ getPaymentRefundRequest ::
 getPaymentRefundRequest (mbPersonId, _merchantId) rideId = do
   orderId <- SPayment.getOrderIdForRide rideId >>= fromMaybeM (InternalError $ "No payment order found for ride " <> rideId.getId)
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  eResult <- Redis.whenWithLockRedisAndReturnValue (refundRequestProccessingKey orderId) 60 $ do
-    rows <- QRefundRequest.findAllByOrderId orderId
-    forM_ rows $ \rr ->
-      unless (rr.personId == personId) $
-        throwError $ InvalidRequest "Person is not the owner of the ride"
-    items <- forM (sortOn (Down . (.createdAt)) rows) $ \rr -> do
-      evidence <- fetchEvidenceFromS3 rr
-      pure $ mkRefundRequestResp rideId rr evidence
-    pure $ API.Types.UI.RidePayment.RefundRequestListResp {refundRequests = items}
-  case eResult of
-    Left () -> do
-      logError $ "Order refund locked: " <> orderId.getId
-      throwError (InvalidRequest "Order refund locked")
-    Right result -> return result
+  rows <- QRefundRequest.findAllByOrderId orderId
+  forM_ rows $ \rr ->
+    unless (rr.personId == personId) $
+      throwError $ InvalidRequest "Person is not the owner of the ride"
+  items <- forM (sortOn (Down . (.createdAt)) rows) $ \rr -> do
+    evidence <- fetchEvidenceFromS3 rr
+    pure $ mkRefundRequestResp rideId rr evidence
+  pure $ API.Types.UI.RidePayment.RefundRequestListResp {refundRequests = items}
 
 -- | Per-component fare+tax breakdown for a ride — the refundable options feeding
 --   refundRequest/create. Reuses 'buildLedgerInfoFromBreakups' with appFee=0, so RideFare is the
@@ -766,8 +760,8 @@ createPaymentRefundRequest h rideId = do
   orderId <- SPayment.getOrderIdForRide rideId >>= fromMaybeM (InternalError $ "No payment order found for ride " <> rideId.getId)
   eResult <- Redis.whenWithLockRedisAndReturnValue (refundRequestProccessingKey orderId) 60 $ do
     existingRequests <- QRefundRequest.findAllByOrderId orderId
-    when (any (\r -> r.status == DRefundRequest.APPROVED) existingRequests) $
-      throwError (InvalidRequest $ "Another refund request is in flight for order: " <> orderId.getId)
+    when (any (\r -> r.status `elem` [DRefundRequest.OPEN, DRefundRequest.APPROVED]) existingRequests) $
+      throwError (InvalidRequest $ "A refund request is already in process for this order; please retry after it is resolved. Order: " <> orderId.getId)
     ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
     booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
     h.validateRefundRequester booking
@@ -820,18 +814,19 @@ validateRefundComponents rideId booking comps = do
       Domain.Types.FareBreakup.RIDE
       (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE)
   mbLi <- SPayment.buildLedgerInfoFromBreakups fareBreakups discount 0 0 0 ctx
-  whenJust mbLi $ \li ->
-    forM_ comps $ \c -> do
-      let cap = componentTotal li c.component
-          requested = c.amount.amount
-      already <- RidePaymentFinance.getSettledRefundByComponent rideId.getId c.component
-      when (already + requested > cap) $
-        throwError
-          ( InvalidRequest $
-              "Refund for " <> show c.component <> " (already " <> show already <> " + requested " <> show requested
-                <> ") exceeds the refundable cap "
-                <> show cap
-          )
+  li <- mbLi & fromMaybeM (InvalidRequest $ "Refund requires a structured fare breakup; ride " <> rideId.getId <> " has none")
+  refundEntries <- RidePaymentFinance.getRefundLegEntries rideId.getId
+  forM_ comps $ \c -> do
+    let cap = componentTotal li c.component
+        requested = c.amount.amount
+        already = RidePaymentFinance.settledRefundByComponent refundEntries c.component
+    when (already + requested > cap) $
+      throwError
+        ( InvalidRequest $
+            "Refund for " <> show c.component <> " (already " <> show already <> " + requested " <> show requested
+              <> ") exceeds the refundable cap "
+              <> show cap
+        )
   where
     componentTotal li component = case component of
       Domain.Types.FareBreakup.RIDE_FARE -> li.rideFare + li.gstAmount
@@ -867,7 +862,9 @@ processRefundRaised refundRequest = do
           Nothing
           (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
   (rideFareTotal, splits) <- computeRefundSplits rideId refundRequest ctx
-  void $ RidePaymentFinance.createRefundRaisedLedger ctx refundRequest.id splits
+  RidePaymentFinance.createRefundRaisedLedger ctx refundRequest.id splits >>= \case
+    Left err -> throwError $ InternalError $ "Failed to write refund raise ledger for refund request " <> refundRequest.id.getId <> ": " <> show err
+    Right _ -> pure ()
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   CallBPPInternal.refundLedger merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId $
     CallBPPInternal.RefundLedgerReq
