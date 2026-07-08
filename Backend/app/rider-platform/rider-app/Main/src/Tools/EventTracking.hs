@@ -34,16 +34,17 @@ trackEvent ::
   TrackingEvent ->
   m ()
 trackEvent merchantId merchantOperatingCityId event = do
+  let (customerId, actionName, attrs) = eventToAction event
+      logCtx = " event=" <> actionName <> " merchantId=" <> merchantId.getId <> " merchantOpCityId=" <> merchantOperatingCityId.getId
   mbMerchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId))
   case mbMerchantConfig of
-    Nothing -> logDebug "EventTracking: MerchantServiceUsageConfig not found, skipping event"
+    Nothing -> logInfo $ "EventTracking skipped:" <> logCtx <> " reason=MerchantServiceUsageConfig not found for this operating city"
     Just merchantConfig -> do
       let providers = merchantConfig.eventTrackingProviders
       if null providers
-        then logDebug "EventTracking: no providers configured for merchantOperatingCity, skipping event"
+        then logInfo $ "EventTracking skipped:" <> logCtx <> " reason=no providers in usage config (eventTrackingProviders is empty)"
         else do
-          let (customerId, actionName, attrs) = eventToAction event
-              req =
+          let req =
                 MT.MoengageEventReq
                   { MT._type = "event",
                     MT.customer_id = customerId,
@@ -61,6 +62,7 @@ sendToProvider ::
   MT.MoengageEventReq ->
   m ()
 sendToProvider merchantId merchantOperatingCityId provider actionName req = do
+  let logCtx = " event=" <> actionName <> " provider=" <> show provider <> " merchantId=" <> merchantId.getId <> " merchantOpCityId=" <> merchantOperatingCityId.getId
   mbConfig <-
     getOneConfig
       ( MerchantServiceConfigDimensions
@@ -72,14 +74,15 @@ sendToProvider merchantId merchantOperatingCityId provider actionName req = do
       Nothing
   case mbConfig of
     Nothing ->
-      logDebug $ "EventTracking: provider " <> show provider <> " listed in usage config but no service config row found, skipping"
+      logInfo $ "EventTracking skipped:" <> logCtx <> " reason=provider listed in usage config but no service config row found (not configured for this merchant/city)"
     Just config -> case config.serviceConfig of
       DMSC.EventTrackingServiceConfig msc -> do
         result <- try @_ @SomeException $ EventTracking.pushEvent msc req
         case result of
-          Left err -> logError $ "EventTracking event " <> actionName <> " (" <> show provider <> ") failed: " <> show err
-          Right _ -> logDebug $ "EventTracking event " <> actionName <> " (" <> show provider <> ") sent"
-      _ -> logError "Unexpected service config type for EventTracking"
+          Left err -> logError $ "EventTracking failed:" <> logCtx <> " error=" <> show err
+          Right (Just _) -> logInfo $ "EventTracking sent:" <> logCtx
+          Right Nothing -> logInfo $ "EventTracking skipped:" <> logCtx <> " reason=provider disabled (enabled=false in service config)"
+      _ -> logError $ "EventTracking failed:" <> logCtx <> " reason=unexpected service config type (not EventTrackingServiceConfig)"
 
 eventToAction :: TrackingEvent -> (Text, Text, Value)
 eventToAction = \case
