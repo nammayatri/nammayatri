@@ -139,6 +139,17 @@ fallbackOrderStatusHandler paymentStatusResp = do
         Payment.PARTIAL_CHARGED -> DPayment.FulfillmentPending
   pure (fulfillment, Nothing, Nothing)
 
+-- | Redis SETNX key used to ensure the fulfillment-success notification
+-- for a given payment order fires exactly once across concurrent triggers
+-- (client status polls, Juspay webhook, scheduled reconciler, FRFS Path A).
+mkFulfillmentNotifyFiredKey :: Id DOrder.PaymentOrder -> Text
+mkFulfillmentNotifyFiredKey orderId = "fulfillmentNotify:fired:" <> orderId.getId
+
+-- | TTL (24h) for the fire-once flag above. Comfortably outlives any
+-- legitimate re-entry window (payment order validity, hourly reconciler).
+fulfillmentNotifyFiredTtlSec :: Int
+fulfillmentNotifyFiredTtlSec = 86400
+
 orderStatusHandler ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -265,7 +276,20 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
               DPayment.FulfillmentPending -> do
                 when (paymentOrder.status /= updatedPaymentOrder.status && updatedPaymentOrder.status == Payment.CHARGED) $ do
                   TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_PENDING paymentOrder.id personId paymentService
-              DPayment.FulfillmentSucceeded -> TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_SUCCESS paymentOrder.id personId paymentService
+              DPayment.FulfillmentSucceeded -> do
+                let notifyFiredKey = mkFulfillmentNotifyFiredKey paymentOrder.id
+                notifyLockAcquired <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $
+                  Redis.tryLockRedis notifyFiredKey fulfillmentNotifyFiredTtlSec
+                when notifyLockAcquired $ do
+                  result <-
+                    withTryCatch "Path B FULFILLMENT_SUCCESS notify" $
+                      TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_SUCCESS paymentOrder.id personId paymentService
+                  case result of
+                    Right _ -> pure ()
+                    Left err -> do
+                      logError $ "Path B FULFILLMENT_SUCCESS notify failed, releasing SETNX lock for retry: " <> show err
+                      void $ withTryCatch "Path B release notify lock" $
+                        Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.del notifyFiredKey
               _ -> pure ()
         -- Invalidate the Offer List Cache
         case newPaymentFulfillmentStatus of

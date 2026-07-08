@@ -45,6 +45,7 @@ import ExternalBPP.CallAPI.Cancel
 import Kernel.Beam.Functions
 import Kernel.External.Encryption as ENC
 import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
+import qualified Kernel.External.Notification as Notification
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude as Prelude hiding (lookup)
 import Kernel.Sms.Config (SmsConfig)
@@ -57,7 +58,9 @@ import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSUtils as FRFSUtils
@@ -88,6 +91,8 @@ import qualified Storage.Queries.PersonStats as QPS
 import qualified Text.Regex as TR
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
+import qualified Tools.Notifications as TNotifications
+import qualified Tools.Payment as Payment
 import qualified Tools.SMS as Sms
 import qualified UrlShortner.Common as UrlShortner
 import qualified Utils.Common.JWT.Config as GW
@@ -210,6 +215,26 @@ onConfirm merchant booking' quoteCategories dOrder = do
   whenJust mbJourneyId $ \journeyId -> do
     QJourneyExtra.updateLongestJourneyExpiryTimeWithTickets journeyId tickets
   void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
+  mbPaymentBooking <- QFRFSTicketBookingPayment.findTicketBookingPayment booking
+  whenJust mbPaymentBooking $ \paymentBooking -> do
+    mbPaymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId
+    whenJust mbPaymentOrder $ \paymentOrder -> do
+      let notifyFiredKey = SPayment.mkFulfillmentNotifyFiredKey paymentOrder.id
+      notifyLockAcquired <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $
+        Redis.tryLockRedis notifyFiredKey SPayment.fulfillmentNotifyFiredTtlSec
+      when notifyLockAcquired $ do
+        result <-
+          withTryCatch "FRFS OnConfirm FULFILLMENT_SUCCESS notify" $ do
+            let paymentServiceType = fromMaybe Payment.FRFSMultiModalBooking paymentOrder.paymentServiceType
+            void $ QPaymentOrder.updatePaymentFulfillmentStatus paymentOrder.id (Just DPayment.FulfillmentSucceeded) paymentOrder.domainEntityId Nothing
+            fork "FRFS OnConfirm fulfillment notification" $
+              TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_SUCCESS paymentOrder.id booking.riderId paymentServiceType
+        case result of
+          Right _ -> pure ()
+          Left err -> do
+            logError $ "FRFS OnConfirm FULFILLMENT_SUCCESS notify failed, releasing SETNX lock for retry: " <> show err
+            void $ withTryCatch "FRFS OnConfirm release notify lock" $
+              Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.del notifyFiredKey
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mRiderNumber <- mapM ENC.decrypt person.mobileNumber
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
