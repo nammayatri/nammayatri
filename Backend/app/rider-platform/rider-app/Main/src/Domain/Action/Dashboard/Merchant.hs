@@ -426,6 +426,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             isQueueEnabled = request.isQueueEnabled <|> (mbExistingSpLoc >>= (.isQueueEnabled)),
             enforceTollRoute = mbExistingSpLoc >>= (.enforceTollRoute),
             render = request.render,
+            fetchAllGateFareProduct = mbExistingSpLoc >>= (.fetchAllGateFareProduct),
             supportNumber = request.supportNumber,
             paymentModes = request.paymentModes <|> (mbExistingSpLoc >>= (.paymentModes)) <|> Just SL.defaultPaymentModes,
             fareSettlementType = request.fareSettlementType <|> (mbExistingSpLoc >>= (.fareSettlementType)),
@@ -1562,6 +1563,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoNotificationActiveTillInSec :: Maybe Text,
     enforceTollRoute :: Maybe Text,
     render :: Maybe Text,
+    fetchAllGateFareProduct :: Maybe Text,
     enableQueueFilter :: Maybe Text,
     paymentModes :: Maybe Text,
     fareSettlementType :: Maybe Text
@@ -1609,6 +1611,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> optional (r .: "gate_info_notification_active_till_in_sec")
       <*> optional (r .: "enforce_toll_route")
       <*> optional (r .: "render")
+      <*> optional (r .: "fetch_all_gate_fare_product")
       <*> optional (r .: "enable_queue_filter")
       <*> optional (r .: "payment_modes")
       <*> optional (r .: "fare_settlement_type")
@@ -1666,6 +1669,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
           mbRender :: Maybe DSL.RenderType = readMaybeCSVField idx (fromMaybe "" row.render) "Render"
           mbFareSettlementType :: Maybe DSL.FareSettlementType = readMaybeCSVField idx (fromMaybe "" row.fareSettlementType) "Payment Collection Mode"
+          mbFetchAllGateFareProduct :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.fetchAllGateFareProduct) "Fetch All Gate Fare Product"
       enabled :: Bool <- readCSVField idx row.enabled "Enabled"
       resolvedPaymentModes <- resolvePaymentModes idx row.paymentModes
       gateInfoId <- maybe generateGUID (pure . Id) (cleanField =<< row.gateInfoId)
@@ -1708,6 +1712,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 isQueueEnabled = mbIsQueueEnabled,
                 enforceTollRoute = mbEnforceTollRoute,
                 render = mbRender,
+                fetchAllGateFareProduct = mbFetchAllGateFareProduct,
                 supportNumber = supportNumber,
                 paymentModes = resolvedPaymentModes,
                 fareSettlementType = mbFareSettlementType
