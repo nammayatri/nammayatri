@@ -410,6 +410,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             isQueueEnabled = request.isQueueEnabled <|> (mbExistingSpLoc >>= (.isQueueEnabled)),
             enforceTollRoute = mbExistingSpLoc >>= (.enforceTollRoute),
             render = request.render,
+            fetchAllGateFareProduct = mbExistingSpLoc >>= (.fetchAllGateFareProduct),
             supportNumber = request.supportNumber,
             ..
           }
@@ -1520,6 +1521,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoId :: Maybe Text,
     gateInfoNotificationActiveTillInSec :: Maybe Text,
     enforceTollRoute :: Maybe Text,
+    fetchAllGateFareProduct :: Maybe Text,
     render :: Maybe Text,
     enableQueueFilter :: Maybe Text
   }
@@ -1567,6 +1569,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> optional (r .: "enforce_toll_route")
       <*> optional (r .: "render")
       <*> optional (r .: "enable_queue_filter")
+      <*> optional (r .: "fetch_all_gate_fare_product")
 
 postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
@@ -1620,6 +1623,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
           supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
           mbRender :: Maybe DSL.RenderType = readMaybeCSVField idx (fromMaybe "" row.render) "Render"
+          mbFetchAllGateFareProduct :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.fetchAllGateFareProduct) "Fetch All Gate Fare Product"
       enabled :: Bool <- readCSVField idx row.enabled "Enabled"
       gateInfoId <- maybe generateGUID (pure . Id) (cleanField =<< row.gateInfoId)
       gateInfoName :: Text <- cleanCSVField idx row.gateInfoName "Gate Info (name)"
@@ -1661,6 +1665,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 isQueueEnabled = mbIsQueueEnabled,
                 enforceTollRoute = mbEnforceTollRoute,
                 render = mbRender,
+                fetchAllGateFareProduct = mbFetchAllGateFareProduct,
                 supportNumber = supportNumber
               }
           gateInfo =

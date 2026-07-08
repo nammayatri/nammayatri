@@ -97,7 +97,8 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoNotificationActiveTillInSec :: Maybe Text,
     enforceTollRoute :: Maybe Text,
     render :: Maybe Text,
-    enableQueueFilter :: Maybe Text
+    enableQueueFilter :: Maybe Text,
+    fetchAllGateFareProduct :: Maybe Text
   }
   deriving (Show)
 
@@ -143,6 +144,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> optional (r .: "enforce_toll_route")
       <*> optional (r .: "render")
       <*> optional (r .: "enable_queue_filter")
+      <*> optional (r .: "fetch_all_gate_fare_product")
 
 ---------------------------------------------------------------------
 -- CSV Helper Functions
@@ -254,6 +256,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
       mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
       supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
       mbRender :: Maybe DSL.RenderType = readMaybeCSVField idx (fromMaybe "" row.render) "Render"
+  let mbFetchAllGateFareProduct :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.fetchAllGateFareProduct) "Fetch All Gate Fare Product"
   pickupPriority :: Int <- readCSVField idx row.pickupPriority "Pickup Priority"
   dropPriority :: Int <- readCSVField idx row.dropPriority "Drop Priority"
   gateInfoId <- maybe generateGUID (pure . Id) (cleanField =<< row.gateInfoId)
@@ -297,6 +300,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             isQueueEnabled = mbIsQueueEnabled,
             enforceTollRoute = mbEnforceTollRoute,
             render = mbRender,
+            fetchAllGateFareProduct = mbFetchAllGateFareProduct,
             supportNumber = supportNumber
           }
       gateInfo =
