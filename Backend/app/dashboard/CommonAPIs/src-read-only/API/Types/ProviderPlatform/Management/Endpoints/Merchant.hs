@@ -624,10 +624,63 @@ data Status
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data SubscriptionConfigAPIEntity = SubscriptionConfigAPIEntity
+  { merchantOperatingCityId :: Kernel.Prelude.Text,
+    serviceName :: Kernel.Prelude.Text,
+    allowDriverFeeCalcSchedule :: Kernel.Prelude.Bool,
+    allowDueAddition :: Kernel.Prelude.Bool,
+    allowManualPaymentLinks :: Kernel.Prelude.Bool,
+    enableCityBasedFeeSwitch :: Kernel.Prelude.Bool,
+    enableOffersForMembers :: Kernel.Prelude.Bool,
+    enableServiceUsageChargeDefault :: Kernel.Prelude.Bool,
+    freeTrialRidesApplicable :: Kernel.Prelude.Bool,
+    isFreeTrialDaysApplicable :: Kernel.Prelude.Bool,
+    isSubscriptionEnabledAtCategoryLevel :: Kernel.Prelude.Bool,
+    isTriggeredAtEndRide :: Kernel.Prelude.Bool,
+    isUIEnabled :: Kernel.Prelude.Bool,
+    sendDeepLink :: Kernel.Prelude.Bool,
+    sendInAppFcmNotifications :: Kernel.Prelude.Bool,
+    useOverlayService :: Kernel.Prelude.Bool,
+    autopayEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableDailyPlanVendorSplit :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isVendorSplitEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    showManualPlansInUI :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    subscriptionDown :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    genericBatchSizeForJobs :: Kernel.Prelude.Int,
+    maxRetryCount :: Kernel.Prelude.Int,
+    deepLinkExpiryTimeInMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    numberOfFreeTrialRides :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    waiveOffOfferTitle :: Kernel.Prelude.Text,
+    waiveOffOfferDescription :: Kernel.Prelude.Text,
+    defaultCityVehicleCategory :: Kernel.Prelude.Text,
+    paymentLinkChannel :: Kernel.Prelude.Text,
+    paymentServiceName :: Data.Aeson.Value,
+    payoutServiceName :: Data.Aeson.Value,
+    partialDueClearanceMessageKey :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cgstPercentageOneTimeSecurityDeposit :: Data.Aeson.Value,
+    sgstPercentageOneTimeSecurityDeposit :: Data.Aeson.Value,
+    genericJobRescheduleTime :: Data.Aeson.Value,
+    genericNextJobScheduleTimeThreshold :: Data.Aeson.Value,
+    paymentLinkJobTime :: Data.Aeson.Value,
+    manualPaymentLinkRateLimitExpirySeconds :: Data.Aeson.Value,
+    sendManualPaymentLinkJobMaxDelay :: Data.Aeson.Value,
+    dataEntityToSend :: Data.Aeson.Value,
+    disabledVariantsForSubscription :: Data.Aeson.Value,
+    eventsEnabledForWebhook :: Data.Aeson.Value,
+    executionEnabledForVehicleCategories :: Data.Aeson.Value,
+    extWebhookConfigs :: Data.Aeson.Value,
+    subscriptionEnabledForVehicleCategories :: Data.Aeson.Value,
+    vendorMigrationMappings :: Data.Aeson.Value,
+    webhookConfig :: Data.Aeson.Value
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data TableName
   = SUBSCRIPTION_CONFIG
   | PLAN
   | PLAN_TRANSLATION
+  | VENDOR_SPLIT_DETAILS
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -834,6 +887,19 @@ type VehicleServiceTierListRes = [VehicleServiceTierItem]
 
 type VehicleServiceTierRes = [VehicleServiceTierItem]
 
+data VendorSplitDetailsAPIEntity = VendorSplitDetailsAPIEntity
+  { merchantOperatingCityId :: Kernel.Prelude.Text,
+    area :: Kernel.Prelude.Text,
+    vendorId :: Kernel.Prelude.Text,
+    vehicleVariant :: Kernel.Prelude.Text,
+    splitType :: Kernel.Prelude.Text,
+    splitValue :: Kernel.Prelude.Double,
+    maxVendorFeeAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    dailyPlanId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data WaitingChargeAPIEntity
   = PerMinuteWaitingCharge Kernel.Types.Common.HighPrecMoney
   | ConstantWaitingCharge Kernel.Types.Common.Money
@@ -846,7 +912,7 @@ data WaitingChargeInfoAPIEntity = WaitingChargeInfoAPIEntity {freeWaitingTime ::
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("merchant" :> (PostMerchantUpdate :<|> GetMerchantConfigCommon :<|> PostMerchantConfigCommonUpdate :<|> GetMerchantConfigDriverPool :<|> PostMerchantConfigDriverPoolUpdate :<|> PostMerchantConfigDriverPoolCreate :<|> PostMerchantConfigDriverPoolUpsert :<|> GetMerchantConfigDriverPoolList :<|> GetMerchantConfigDriverIntelligentPool :<|> PostMerchantConfigDriverIntelligentPoolUpdate :<|> GetMerchantConfigOnboardingDocument :<|> PostMerchantConfigOnboardingDocumentUpdate :<|> PostMerchantConfigOnboardingDocumentCreate :<|> GetMerchantServiceUsageConfig :<|> PostMerchantServiceConfigMapsUpdate :<|> PostMerchantServiceUsageConfigMapsUpdate :<|> PostMerchantServiceConfigSmsUpdate :<|> PostMerchantServiceUsageConfigSmsUpdate :<|> PostMerchantServiceConfigVerificationUpdate :<|> PostMerchantConfigFarePolicyDriverExtraFeeBoundsCreate :<|> PostMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate :<|> PostMerchantConfigFarePolicyPerExtraKmRateUpdate :<|> PostMerchantConfigFarePolicyUpdate :<|> PostMerchantConfigFarePolicyUpsert :<|> GetMerchantConfigFarePolicyExport :<|> GetMerchantConfigFarePolicyDetails :<|> GetMerchantConfigFareProductList :<|> PostMerchantConfigFareProductSetEnabled :<|> PostMerchantConfigOperatingCityCreateHelper :<|> PostMerchantSchedulerTrigger :<|> PostMerchantUpdateOnboardingVehicleVariantMapping :<|> PostMerchantConfigSpecialLocationUpsert :<|> GetMerchantConfigSpecialLocationList :<|> GetMerchantConfigGeometryList :<|> PutMerchantConfigGeometryUpdate :<|> PostMerchantSpecialLocationUpsertHelper :<|> DeleteMerchantSpecialLocationDelete :<|> PostMerchantSpecialLocationGatesUpsertHelper :<|> DeleteMerchantSpecialLocationGatesDelete :<|> PostMerchantConfigTollUpsert :<|> GetMerchantConfigTollList :<|> PostMerchantTollUpsert :<|> DeleteMerchantTollDelete :<|> PostMerchantConfigClearCacheSubscription :<|> PostMerchantConfigUpsertPlanAndConfigSubscription :<|> PostMerchantConfigFailover :<|> PostMerchantPayoutConfigUpdate :<|> PostMerchantConfigOperatingCityWhiteList :<|> PostMerchantConfigMerchantCreateHelper :<|> GetMerchantConfigVehicleServiceTier :<|> GetMerchantConfigVehicleServiceTierList :<|> PostMerchantConfigVehicleServiceTierUpdate :<|> PostMerchantConfigVehicleServiceTierCreate :<|> PostMerchantConfigDebugLogUpdate :<|> GetMerchantCityList))
+type API = ("merchant" :> (PostMerchantUpdate :<|> GetMerchantConfigCommon :<|> PostMerchantConfigCommonUpdate :<|> GetMerchantConfigDriverPool :<|> PostMerchantConfigDriverPoolUpdate :<|> PostMerchantConfigDriverPoolCreate :<|> PostMerchantConfigDriverPoolUpsert :<|> GetMerchantConfigDriverPoolList :<|> GetMerchantConfigDriverIntelligentPool :<|> PostMerchantConfigDriverIntelligentPoolUpdate :<|> GetMerchantConfigOnboardingDocument :<|> PostMerchantConfigOnboardingDocumentUpdate :<|> PostMerchantConfigOnboardingDocumentCreate :<|> GetMerchantServiceUsageConfig :<|> PostMerchantServiceConfigMapsUpdate :<|> PostMerchantServiceUsageConfigMapsUpdate :<|> PostMerchantServiceConfigSmsUpdate :<|> PostMerchantServiceUsageConfigSmsUpdate :<|> PostMerchantServiceConfigVerificationUpdate :<|> PostMerchantConfigFarePolicyDriverExtraFeeBoundsCreate :<|> PostMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate :<|> PostMerchantConfigFarePolicyPerExtraKmRateUpdate :<|> PostMerchantConfigFarePolicyUpdate :<|> PostMerchantConfigFarePolicyUpsert :<|> GetMerchantConfigFarePolicyExport :<|> GetMerchantConfigFarePolicyDetails :<|> GetMerchantConfigFareProductList :<|> PostMerchantConfigFareProductSetEnabled :<|> PostMerchantConfigOperatingCityCreateHelper :<|> PostMerchantSchedulerTrigger :<|> PostMerchantUpdateOnboardingVehicleVariantMapping :<|> PostMerchantConfigSpecialLocationUpsert :<|> GetMerchantConfigSpecialLocationList :<|> GetMerchantConfigGeometryList :<|> PutMerchantConfigGeometryUpdate :<|> PostMerchantSpecialLocationUpsertHelper :<|> DeleteMerchantSpecialLocationDelete :<|> PostMerchantSpecialLocationGatesUpsertHelper :<|> DeleteMerchantSpecialLocationGatesDelete :<|> PostMerchantConfigTollUpsert :<|> GetMerchantConfigTollList :<|> PostMerchantTollUpsert :<|> DeleteMerchantTollDelete :<|> PostMerchantConfigClearCacheSubscription :<|> PostMerchantConfigUpsertPlanAndConfigSubscription :<|> GetMerchantConfigVendorSplitDetailsList :<|> GetMerchantConfigSubscriptionConfigList :<|> PostMerchantConfigFailover :<|> PostMerchantPayoutConfigUpdate :<|> PostMerchantConfigOperatingCityWhiteList :<|> PostMerchantConfigMerchantCreateHelper :<|> GetMerchantConfigVehicleServiceTier :<|> GetMerchantConfigVehicleServiceTierList :<|> PostMerchantConfigVehicleServiceTierUpdate :<|> PostMerchantConfigVehicleServiceTierCreate :<|> PostMerchantConfigDebugLogUpdate :<|> GetMerchantCityList))
 
 type PostMerchantUpdate = ("update" :> ReqBody '[JSON] MerchantUpdateReq :> Post '[JSON] MerchantUpdateRes)
 
@@ -1229,6 +1295,10 @@ type PostMerchantConfigClearCacheSubscription = ("config" :> "clearCache" :> "su
 
 type PostMerchantConfigUpsertPlanAndConfigSubscription = ("config" :> "upsertPlanAndConfig" :> "subscription" :> ReqBody '[JSON] UpsertPlanAndConfigReq :> Post '[JSON] UpsertPlanAndConfigResp)
 
+type GetMerchantConfigVendorSplitDetailsList = ("config" :> "vendorSplitDetails" :> "list" :> Get '[JSON] [VendorSplitDetailsAPIEntity])
+
+type GetMerchantConfigSubscriptionConfigList = ("config" :> "subscriptionConfig" :> "list" :> Get '[JSON] [SubscriptionConfigAPIEntity])
+
 type PostMerchantConfigFailover =
   ( "config" :> Capture "configName" Dashboard.Common.Merchant.ConfigNames :> "failover"
       :> ReqBody
@@ -1298,9 +1368,9 @@ data MerchantAPIs = MerchantAPIs
     postMerchantConfigDriverPoolCreate :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance -> Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit -> Kernel.Prelude.Maybe Dashboard.Common.VehicleVariant -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Common.Meters -> Lib.Types.SpecialLocation.Area -> DriverPoolConfigCreateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantConfigDriverPoolUpsert ::
       ( Data.ByteString.Lazy.ByteString,
-        Dashboard.Common.Merchant.UpsertDriverPoolConfigCsvReq
-      ) ->
-      EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
+          Dashboard.Common.Merchant.UpsertDriverPoolConfigCsvReq
+        ) ->
+        EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
     getMerchantConfigDriverPoolList :: EulerHS.Types.EulerClient DriverPoolConfigListRes,
     getMerchantConfigDriverIntelligentPool :: EulerHS.Types.EulerClient DriverIntelligentPoolConfigRes,
     postMerchantConfigDriverIntelligentPoolUpdate :: DriverIntelligentPoolConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
@@ -1327,9 +1397,9 @@ data MerchantAPIs = MerchantAPIs
     postMerchantUpdateOnboardingVehicleVariantMapping :: (Data.ByteString.Lazy.ByteString, UpdateOnboardingVehicleVariantMappingReq) -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantConfigSpecialLocationUpsert ::
       ( Data.ByteString.Lazy.ByteString,
-        Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq
-      ) ->
-      EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
+          Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq
+        ) ->
+        EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
     getMerchantConfigSpecialLocationList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Types.SpecialLocation.SpecialLocationType -> Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.SpecialLocationType] -> EulerHS.Types.EulerClient SpecialLocationResp,
     getMerchantConfigGeometryList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient GeometryResp,
     putMerchantConfigGeometryUpdate :: (Data.ByteString.Lazy.ByteString, Dashboard.Common.Merchant.UpdateGeometryReq) -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
@@ -1339,14 +1409,16 @@ data MerchantAPIs = MerchantAPIs
     deleteMerchantSpecialLocationGatesDelete :: Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantConfigTollUpsert ::
       ( Data.ByteString.Lazy.ByteString,
-        Dashboard.Common.Merchant.UpsertTollCsvReq
-      ) ->
-      EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
+          Dashboard.Common.Merchant.UpsertTollCsvReq
+        ) ->
+        EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
     getMerchantConfigTollList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient TollListResp,
     postMerchantTollUpsert :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Toll.Domain.Types.Toll.Toll) -> Dashboard.Common.Merchant.UpsertTollReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     deleteMerchantTollDelete :: Kernel.Types.Id.Id Toll.Domain.Types.Toll.Toll -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantConfigClearCacheSubscription :: ClearCacheSubscriptionReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantConfigUpsertPlanAndConfigSubscription :: UpsertPlanAndConfigReq -> EulerHS.Types.EulerClient UpsertPlanAndConfigResp,
+    getMerchantConfigVendorSplitDetailsList :: EulerHS.Types.EulerClient [VendorSplitDetailsAPIEntity],
+    getMerchantConfigSubscriptionConfigList :: EulerHS.Types.EulerClient [SubscriptionConfigAPIEntity],
     postMerchantConfigFailover :: Dashboard.Common.Merchant.ConfigNames -> Dashboard.Common.Merchant.ConfigFailoverReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantPayoutConfigUpdate :: PayoutConfigReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantConfigOperatingCityWhiteList :: Dashboard.Common.Merchant.WhiteListOperatingCityReq -> EulerHS.Types.EulerClient Dashboard.Common.Merchant.WhiteListOperatingCityRes,
@@ -1362,7 +1434,7 @@ data MerchantAPIs = MerchantAPIs
 mkMerchantAPIs :: (Client EulerHS.Types.EulerClient API -> MerchantAPIs)
 mkMerchantAPIs merchantClient = (MerchantAPIs {..})
   where
-    postMerchantUpdate :<|> getMerchantConfigCommon :<|> postMerchantConfigCommonUpdate :<|> getMerchantConfigDriverPool :<|> postMerchantConfigDriverPoolUpdate :<|> postMerchantConfigDriverPoolCreate :<|> postMerchantConfigDriverPoolUpsert :<|> getMerchantConfigDriverPoolList :<|> getMerchantConfigDriverIntelligentPool :<|> postMerchantConfigDriverIntelligentPoolUpdate :<|> getMerchantConfigOnboardingDocument :<|> postMerchantConfigOnboardingDocumentUpdate :<|> postMerchantConfigOnboardingDocumentCreate :<|> getMerchantServiceUsageConfig :<|> postMerchantServiceConfigMapsUpdate :<|> postMerchantServiceUsageConfigMapsUpdate :<|> postMerchantServiceConfigSmsUpdate :<|> postMerchantServiceUsageConfigSmsUpdate :<|> postMerchantServiceConfigVerificationUpdate :<|> postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate :<|> postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate :<|> postMerchantConfigFarePolicyPerExtraKmRateUpdate :<|> postMerchantConfigFarePolicyUpdate :<|> postMerchantConfigFarePolicyUpsert :<|> getMerchantConfigFarePolicyExport :<|> getMerchantConfigFarePolicyDetails :<|> getMerchantConfigFareProductList :<|> postMerchantConfigFareProductSetEnabled :<|> postMerchantConfigOperatingCityCreate :<|> postMerchantSchedulerTrigger :<|> postMerchantUpdateOnboardingVehicleVariantMapping :<|> postMerchantConfigSpecialLocationUpsert :<|> getMerchantConfigSpecialLocationList :<|> getMerchantConfigGeometryList :<|> putMerchantConfigGeometryUpdate :<|> postMerchantSpecialLocationUpsert :<|> deleteMerchantSpecialLocationDelete :<|> postMerchantSpecialLocationGatesUpsert :<|> deleteMerchantSpecialLocationGatesDelete :<|> postMerchantConfigTollUpsert :<|> getMerchantConfigTollList :<|> postMerchantTollUpsert :<|> deleteMerchantTollDelete :<|> postMerchantConfigClearCacheSubscription :<|> postMerchantConfigUpsertPlanAndConfigSubscription :<|> postMerchantConfigFailover :<|> postMerchantPayoutConfigUpdate :<|> postMerchantConfigOperatingCityWhiteList :<|> postMerchantConfigMerchantCreate :<|> getMerchantConfigVehicleServiceTier :<|> getMerchantConfigVehicleServiceTierList :<|> postMerchantConfigVehicleServiceTierUpdate :<|> postMerchantConfigVehicleServiceTierCreate :<|> postMerchantConfigDebugLogUpdate :<|> getMerchantCityList = merchantClient
+    postMerchantUpdate :<|> getMerchantConfigCommon :<|> postMerchantConfigCommonUpdate :<|> getMerchantConfigDriverPool :<|> postMerchantConfigDriverPoolUpdate :<|> postMerchantConfigDriverPoolCreate :<|> postMerchantConfigDriverPoolUpsert :<|> getMerchantConfigDriverPoolList :<|> getMerchantConfigDriverIntelligentPool :<|> postMerchantConfigDriverIntelligentPoolUpdate :<|> getMerchantConfigOnboardingDocument :<|> postMerchantConfigOnboardingDocumentUpdate :<|> postMerchantConfigOnboardingDocumentCreate :<|> getMerchantServiceUsageConfig :<|> postMerchantServiceConfigMapsUpdate :<|> postMerchantServiceUsageConfigMapsUpdate :<|> postMerchantServiceConfigSmsUpdate :<|> postMerchantServiceUsageConfigSmsUpdate :<|> postMerchantServiceConfigVerificationUpdate :<|> postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate :<|> postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate :<|> postMerchantConfigFarePolicyPerExtraKmRateUpdate :<|> postMerchantConfigFarePolicyUpdate :<|> postMerchantConfigFarePolicyUpsert :<|> getMerchantConfigFarePolicyExport :<|> getMerchantConfigFarePolicyDetails :<|> getMerchantConfigFareProductList :<|> postMerchantConfigFareProductSetEnabled :<|> postMerchantConfigOperatingCityCreate :<|> postMerchantSchedulerTrigger :<|> postMerchantUpdateOnboardingVehicleVariantMapping :<|> postMerchantConfigSpecialLocationUpsert :<|> getMerchantConfigSpecialLocationList :<|> getMerchantConfigGeometryList :<|> putMerchantConfigGeometryUpdate :<|> postMerchantSpecialLocationUpsert :<|> deleteMerchantSpecialLocationDelete :<|> postMerchantSpecialLocationGatesUpsert :<|> deleteMerchantSpecialLocationGatesDelete :<|> postMerchantConfigTollUpsert :<|> getMerchantConfigTollList :<|> postMerchantTollUpsert :<|> deleteMerchantTollDelete :<|> postMerchantConfigClearCacheSubscription :<|> postMerchantConfigUpsertPlanAndConfigSubscription :<|> getMerchantConfigVendorSplitDetailsList :<|> getMerchantConfigSubscriptionConfigList :<|> postMerchantConfigFailover :<|> postMerchantPayoutConfigUpdate :<|> postMerchantConfigOperatingCityWhiteList :<|> postMerchantConfigMerchantCreate :<|> getMerchantConfigVehicleServiceTier :<|> getMerchantConfigVehicleServiceTierList :<|> postMerchantConfigVehicleServiceTierUpdate :<|> postMerchantConfigVehicleServiceTierCreate :<|> postMerchantConfigDebugLogUpdate :<|> getMerchantCityList = merchantClient
 
 data MerchantUserActionType
   = POST_MERCHANT_UPDATE
@@ -1410,6 +1482,8 @@ data MerchantUserActionType
   | DELETE_MERCHANT_TOLL_DELETE
   | POST_MERCHANT_CONFIG_CLEAR_CACHE_SUBSCRIPTION
   | POST_MERCHANT_CONFIG_UPSERT_PLAN_AND_CONFIG_SUBSCRIPTION
+  | GET_MERCHANT_CONFIG_VENDOR_SPLIT_DETAILS_LIST
+  | GET_MERCHANT_CONFIG_SUBSCRIPTION_CONFIG_LIST
   | POST_MERCHANT_CONFIG_FAILOVER
   | POST_MERCHANT_PAYOUT_CONFIG_UPDATE
   | POST_MERCHANT_CONFIG_OPERATING_CITY_WHITE_LIST

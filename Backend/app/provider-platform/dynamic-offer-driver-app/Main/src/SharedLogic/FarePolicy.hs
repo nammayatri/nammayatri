@@ -19,7 +19,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NE
 import Data.Ord (comparing)
-import Data.Text as T hiding (elem, find, null, map)
+import Data.Text as T hiding (elem, find, map, null)
 import Data.Time hiding (getCurrentTime)
 import Data.Time.Calendar.WeekDate
 import qualified Domain.Types as DTC
@@ -31,8 +31,8 @@ import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DDriverExtraFeeBounds
 import qualified Domain.Types.FareProduct as FareProduct
 import Domain.Types.Merchant
-import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Domain.Utils (mapConcurrently)

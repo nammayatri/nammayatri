@@ -45,6 +45,7 @@ import qualified API.Action.UI.TicketService as TicketService
 import qualified API.Action.UI.TrackRoute as TrackRoute
 import qualified API.Action.UI.TriggerFCM as TriggerFCM
 import qualified API.UI.AadhaarVerification as AadhaarVerification
+import qualified API.UI.AddBaggage as AddBaggage
 import qualified API.UI.AppInstalls as AppInstalls
 import qualified API.UI.Booking as Booking
 import qualified API.UI.Call as Call
@@ -52,7 +53,6 @@ import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.Cancel as Cancel
 import qualified API.UI.CancelSearch as CancelSearch
 import qualified API.UI.CancellationReason as CancellationReason
-import qualified API.UI.AddBaggage as AddBaggage
 import qualified API.UI.ChangeServiceTier as ChangeServiceTier
 import qualified API.UI.Confirm as Confirm
 import qualified API.UI.Disability as Disability

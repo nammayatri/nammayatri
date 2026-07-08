@@ -30,11 +30,11 @@ import Domain.Utils (mapConcurrently)
 import ExternalBPP.CallAPI as CallExternalBPP
 import ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import qualified ExternalBPP.Flow as Flow
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Hedis as Redis
-import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics

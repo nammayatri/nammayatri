@@ -48,9 +48,9 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
-import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.DriverScore.Types as DST
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
+import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.DriverPool as DP

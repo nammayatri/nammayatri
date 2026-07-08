@@ -1,7 +1,7 @@
 module Email.OTP.API where
 
-import EulerHS.Prelude
 import Email.OTP.Types
+import EulerHS.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Servant
 

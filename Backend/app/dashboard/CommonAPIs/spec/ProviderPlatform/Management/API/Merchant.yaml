@@ -574,7 +574,7 @@ apis:
         type: UpsertPlanAndConfigResp
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_PLAN_AND_SUBSCRIPTION_CONFIG
-  - GET: # ListVendorSplitDetails for the operating city
+  - GET: # List VendorSplitDetails for the operating city
       endpoint: /config/vendorSplitDetails/list
       auth: ApiAuthV2
       response:

@@ -133,8 +133,10 @@ bulkDecryptWithKeys keys encs = mapM decryptOne encs
         Left _ -> throwError $ UnexpectedResponse "Invalid base64 in ciphertext"
       plainBs <- case Box.boxSealOpen pk sk cipherBs of
         Just bs -> return bs
-        Nothing -> throwError $ UnexpectedResponse
-                     "Decryption failed wrong key or corrupted ciphertext"
+        Nothing ->
+          throwError $
+            UnexpectedResponse
+              "Decryption failed wrong key or corrupted ciphertext"
       jsonText <- case TE.decodeUtf8' plainBs of
         Right t -> return t
         Left _ ->
@@ -175,10 +177,11 @@ mkPassettoContextFromKeys = liftIO $ do
   sodiumInit
   keys <- loadKeypairs
   putStrLn "[passetto-lib] PassettoContext built all encrypt/decrypt calls will use local crypto."
-  return PassettoContext
-    { bulkEncryptAction = bulkEncryptWithKeys keys
-    , bulkDecryptAction = bulkDecryptWithKeys keys
-    }
+  return
+    PassettoContext
+      { bulkEncryptAction = bulkEncryptWithKeys keys,
+        bulkDecryptAction = bulkDecryptWithKeys keys
+      }
 
 mkPassettoContextAuto :: MonadIO m => String -> Word16 -> m PassettoContext
 mkPassettoContextAuto host port = do
