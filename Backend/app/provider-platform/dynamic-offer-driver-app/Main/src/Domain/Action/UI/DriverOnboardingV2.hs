@@ -1438,8 +1438,7 @@ rcVerifyStatus caller mbRegistrationNo mbRcId = do
     when (passedCityId /= merchantOpCityId) $
       throwError (InvalidRequest $ "RC belongs to city: " <> show merchantOperatingCity.city)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  -- This RC's mandatory vehicle docs with per-doc statuses (keyed on the RC).
-  (vehicleDocItem, configs) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig ENGLISH registrationNo (Just True)
+  (vehicleDocItem, configs) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig ENGLISH registrationNo Nothing
   let allValid = SStatus.checkAllVehicleDocsValidForFetchedDocs configs vehicleDocItem
   -- Persist verified only under enableBotFlow (matches existing config behaviour).
   when (transporterConfig.enableBotFlow == Just True) $ do
