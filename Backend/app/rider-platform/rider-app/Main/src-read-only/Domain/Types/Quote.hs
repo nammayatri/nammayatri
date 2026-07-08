@@ -24,7 +24,8 @@ import qualified SharedLogic.Type
 import qualified Tools.Beam.UtilsTH
 
 data Quote = Quote
-  { backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { area :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     billingCategory :: SharedLogic.Type.BillingCategory,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,

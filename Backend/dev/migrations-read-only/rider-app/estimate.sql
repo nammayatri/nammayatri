@@ -663,3 +663,8 @@ ALTER TABLE atlas_app.estimate ADD COLUMN selected_offer_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.estimate ADD COLUMN estimate_breakup_list_json json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN area text ;

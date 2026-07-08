@@ -33,7 +33,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.backendAppVersion backendAppVersion,
+    [ Se.Set Beam.area area,
+      Se.Set Beam.backendAppVersion backendAppVersion,
       Se.Set Beam.backendConfigVersion (fmap Kernel.Utils.Version.versionToText backendConfigVersion),
       Se.Set Beam.billingCategory (Kernel.Prelude.Just billingCategory),
       Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
