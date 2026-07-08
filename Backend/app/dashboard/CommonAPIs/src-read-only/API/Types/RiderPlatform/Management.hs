@@ -13,6 +13,7 @@ import qualified API.Types.RiderPlatform.Management.Media
 import qualified API.Types.RiderPlatform.Management.Merchant
 import qualified API.Types.RiderPlatform.Management.NammaTag
 import qualified API.Types.RiderPlatform.Management.Offer
+import qualified API.Types.RiderPlatform.Management.Payout
 import qualified API.Types.RiderPlatform.Management.Ride
 import qualified API.Types.RiderPlatform.Management.Sos
 import qualified API.Types.RiderPlatform.Management.SosMedia
@@ -35,6 +36,7 @@ data ManagementUserActionType
   | MERCHANT API.Types.RiderPlatform.Management.Merchant.MerchantUserActionType
   | NAMMA_TAG API.Types.RiderPlatform.Management.NammaTag.NammaTagUserActionType
   | OFFER API.Types.RiderPlatform.Management.Offer.OfferUserActionType
+  | PAYOUT API.Types.RiderPlatform.Management.Payout.PayoutUserActionType
   | RIDE API.Types.RiderPlatform.Management.Ride.RideUserActionType
   | SOS API.Types.RiderPlatform.Management.Sos.SosUserActionType
   | SOS_MEDIA API.Types.RiderPlatform.Management.SosMedia.SosMediaUserActionType
@@ -54,6 +56,7 @@ instance Text.Show.Show ManagementUserActionType where
     MERCHANT e -> "MERCHANT/" <> show e
     NAMMA_TAG e -> "NAMMA_TAG/" <> show e
     OFFER e -> "OFFER/" <> show e
+    PAYOUT e -> "PAYOUT/" <> show e
     RIDE e -> "RIDE/" <> show e
     SOS e -> "SOS/" <> show e
     SOS_MEDIA e -> "SOS_MEDIA/" <> show e
@@ -138,6 +141,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "OFFER/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( PAYOUT v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "PAYOUT/" r,
                    ( v1,
                      r2
                      ) <-

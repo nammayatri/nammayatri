@@ -17,6 +17,7 @@ module Domain.Action.UI.Payout
     castPayoutOrderStatus,
     payoutProcessingLockKey,
     processPreviousPayoutAmount,
+    refreshPayoutOrderWithSettlement,
   )
 where
 
@@ -53,8 +54,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Payment.Payout.Request as PayoutRequest
+import qualified Lib.Payment.Payout.RequestStatus as RequestStatus
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant (BasicAuthData)
@@ -131,7 +134,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
               mbPayoutRequest <- QPR.findById (Id payoutRequestId)
               case mbPayoutRequest of
                 Just payoutRequest -> do
-                  let newStatus = castPayoutOrderStatusToPayoutRequestStatus payoutStatus
+                  let newStatus = RequestStatus.castPayoutOrderStatusToPayoutRequestStatus payoutStatus
                   when (payoutRequest.status /= newStatus && payoutRequest.status `notElem` [DPR.CREDITED, DPR.CASH_PAID, DPR.CASH_PENDING]) do
                     let statusMsg = "Bank Webhook: " <> show payoutStatus
                     PayoutRequest.updateStatusWithHistoryById newStatus (Just statusMsg) payoutRequest
@@ -268,7 +271,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
 
                   -- Update PayoutRequest status
                   whenJust mbPayoutReq $ \payoutReq -> do
-                    let newStatus = castPayoutOrderStatusToPayoutRequestStatus payoutStatus
+                    let newStatus = RequestStatus.castPayoutOrderStatusToPayoutRequestStatus payoutStatus
                     when (payoutReq.status /= newStatus && payoutReq.status `notElem` [DPR.CREDITED, DPR.CASH_PAID, DPR.CASH_PENDING]) $ do
                       let statusMsg = "Bank Webhook: " <> show payoutStatus
                       PayoutRequest.updateStatusWithHistoryById newStatus (Just statusMsg) payoutReq
@@ -304,7 +307,11 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
 
     callPayoutServiceForCoinsRedemption driverId payoutConfig payoutOrderId merchantOperatingCityId merchantId = do
       driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-      (_payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- Payout.getPayoutStatusServiceFlow Payout.MerchantServiceUsageConfigOption DEMSC.PayoutService driver.clientSdkVersion driver.merchantOperatingCityId driverId
+      payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
+      let payoutServiceNameCons = case payoutOrder.entityName of
+            Just DPayment.SPECIAL_ZONE_PAYOUT -> DEMSC.RidePayoutService
+            _ -> DEMSC.PayoutService
+      (_payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- Payout.getPayoutStatusServiceFlow Payout.MerchantServiceUsageConfigOption payoutServiceNameCons driver.clientSdkVersion driver.merchantOperatingCityId driverId
       let createPayoutOrderStatusReq = DPayment.PayoutStatusServiceReq {orderId = payoutOrderId, mbExpand = payoutConfig.expand}
           createPayoutOrderStatusCall = Payout.payoutOrderStatus payoutServiceName driver.merchantOperatingCityId driverId mbPersonBankAccount
       payoutStatusResp <- DPayment.payoutStatusService (cast driver.merchantId) (cast driver.id) createPayoutOrderStatusReq createPayoutOrderStatusCall
@@ -337,19 +344,6 @@ castPayoutOrderStatus payoutOrderStatus =
     Payout.FULFILLMENTS_MANUAL_REVIEW -> DS.ManualReview
     _ -> DS.Processing
 
-castPayoutOrderStatusToPayoutRequestStatus :: Payout.PayoutOrderStatus -> DPR.PayoutRequestStatus
-castPayoutOrderStatusToPayoutRequestStatus payoutOrderStatus =
-  case payoutOrderStatus of
-    Payout.SUCCESS -> DPR.CREDITED
-    Payout.FULFILLMENTS_SUCCESSFUL -> DPR.CREDITED
-    Payout.ERROR -> DPR.AUTO_PAY_FAILED
-    Payout.FAILURE -> DPR.AUTO_PAY_FAILED
-    Payout.FULFILLMENTS_FAILURE -> DPR.AUTO_PAY_FAILED
-    Payout.CANCELLED -> DPR.CANCELLED
-    Payout.FULFILLMENTS_CANCELLED -> DPR.CANCELLED
-    Payout.FULFILLMENTS_MANUAL_REVIEW -> DPR.PROCESSING
-    _ -> DPR.PROCESSING
-
 casPayoutOrderStatusToDFeeStatus :: Payout.PayoutOrderStatus -> DDF.DriverFeeStatus
 casPayoutOrderStatusToDFeeStatus payoutOrderStatus =
   case payoutOrderStatus of
@@ -378,6 +372,34 @@ castPayoutOrderStatusToScheduledPayoutStatus payoutOrderStatus =
 
 payoutProcessingLockKey :: Text -> Text
 payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId
+
+isPayoutOrderSuccess :: IPayout.PayoutOrderStatus -> Bool
+isPayoutOrderSuccess status = status `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]
+
+-- | Poll Juspay and return the latest payout_order. When already SUCCESS, return as-is.
+refreshPayoutOrderWithSettlement ::
+  DPayoutOrder.PayoutOrder ->
+  Flow DPayoutOrder.PayoutOrder
+refreshPayoutOrderWithSettlement payoutOrder =
+  if isPayoutOrderSuccess payoutOrder.status
+    then pure payoutOrder
+    else case payoutOrder.entityName of
+      Nothing -> pure payoutOrder
+      Just _ -> do
+        driver <- B.runInReplica $ QP.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonDoesNotExist payoutOrder.customerId)
+        let merchantOpCityId = maybe driver.merchantOperatingCityId Id payoutOrder.merchantOperatingCityId
+        mbVehicle <- QV.findById driver.id
+        let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
+        payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
+        let payoutServiceNameCons = case payoutOrder.entityName of
+              Just DPayment.SPECIAL_ZONE_PAYOUT -> DEMSC.RidePayoutService
+              _ -> DEMSC.PayoutService
+        (_payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <-
+          Payout.getPayoutStatusServiceFlow Payout.MerchantServiceUsageConfigOption payoutServiceNameCons driver.clientSdkVersion merchantOpCityId driver.id
+        let createPayoutOrderStatusReq = DPayment.PayoutStatusServiceReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand}
+            createPayoutOrderStatusCall = Payout.payoutOrderStatus payoutServiceName merchantOpCityId driver.id mbPersonBankAccount
+        void $ DPayment.payoutStatusService (cast driver.merchantId) (cast driver.id) createPayoutOrderStatusReq createPayoutOrderStatusCall
+        QPayoutOrder.findByOrderId payoutOrder.orderId >>= fromMaybeM (PayoutOrderNotFound payoutOrder.orderId)
 
 processPreviousPayoutAmount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl], HasKafkaProducer r) => Id Person.Person -> Maybe Text -> Id DMOC.MerchantOperatingCity -> m ()
 processPreviousPayoutAmount personId mbVpa merchOpCity = do
