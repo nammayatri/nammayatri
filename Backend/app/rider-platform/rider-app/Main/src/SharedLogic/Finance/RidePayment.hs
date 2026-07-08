@@ -154,7 +154,6 @@ module SharedLogic.Finance.RidePayment
 where
 
 import Control.Applicative ((<|>))
-import Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
 import Data.Foldable.Extra (findM)
 import qualified Data.List as List
@@ -985,17 +984,25 @@ createTipLedger ctx tipAmount = do
 -- ---------------------------------------------------------------------------
 --
 -- Per refund_request (per-component refTypes RideFareRefund/TollRefund/ParkingRefund + VAT,
--- ref = rideId, {refundRequestId,status} metadata):
--- APPROVED → pending OwnerAsset→BuyerAsset legs; REFUNDED → settle them; FAILED → void them.
+-- ref = rideId, {refundRequestId} metadata):
+-- raise → pending OwnerAsset→BuyerAsset legs; success → settle them; failure → void them.
 -- VOIDED legs are ignored by dedup/guards (so a retry re-raises); "done" = a SETTLED leg.
 
-mkRefundMetadata :: Id DRefundRequest.RefundRequest -> DRefundRequest.RefundRequestStatus -> Aeson.Value
-mkRefundMetadata refundRequestId refundRequestStatus =
-  Aeson.object ["refundRequestId" .= refundRequestId.getId, "refundRequestStatus" .= refundRequestStatus]
+-- | Links a ledger leg to its refund request. Legs carry only the id; request state lives
+--   solely in refund_request, and checks pair the id with the leg's own status column.
+newtype RefundLedgerMetadata = RefundLedgerMetadata {refundRequestId :: Text}
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
-entryMatchesRefundStatus :: Id DRefundRequest.RefundRequest -> DRefundRequest.RefundRequestStatus -> LE.LedgerEntry -> Bool
-entryMatchesRefundStatus refundRequestId refundRequestStatus entry =
-  entry.metadata == Just (mkRefundMetadata refundRequestId refundRequestStatus)
+mkRefundMetadata :: Id DRefundRequest.RefundRequest -> Aeson.Value
+mkRefundMetadata refundRequestId = Aeson.toJSON (RefundLedgerMetadata refundRequestId.getId)
+
+entryMatchesRefundRequest :: Id DRefundRequest.RefundRequest -> LE.LedgerEntry -> Bool
+entryMatchesRefundRequest refundRequestId entry =
+  (metadataRefundRequestId =<< entry.metadata) == Just refundRequestId.getId
+  where
+    metadataRefundRequestId v = case Aeson.fromJSON v of
+      Aeson.Success (RefundLedgerMetadata rid) -> Just rid
+      _ -> Nothing
 
 -- | Per-component refund split (BAP). One base + one VAT leg per refunded component.
 data RefundComponentSplit = RefundComponentSplit
@@ -1050,12 +1057,12 @@ createRefundRaisedLedger ::
 createRefundRaisedLedger ctx refundRequestId splits = do
   existing <- getRefundLegEntries ctx.referenceId
   -- Skip VOIDED legs so a retry re-raises a fresh pending leg; a live leg de-dups a re-fire.
-  case List.find (\e -> e.status /= LE.VOIDED && entryMatchesRefundStatus refundRequestId DRefundRequest.APPROVED e) existing of
+  case List.find (\e -> e.status /= LE.VOIDED && entryMatchesRefundRequest refundRequestId e) existing of
     Just e -> do
       logInfo $ "Refund APPROVED ledger already written for refundRequest " <> refundRequestId.getId
       pure $ Right [e.id]
     Nothing -> do
-      let meta = Just (mkRefundMetadata refundRequestId DRefundRequest.APPROVED)
+      let meta = Just (mkRefundMetadata refundRequestId)
       result <-
         runFinance ctx $
           forM_ splits $ \s -> do
@@ -1075,7 +1082,7 @@ createRefundSucceededLedger ::
   m (Either FinanceError [Id LE.LedgerEntry])
 createRefundSucceededLedger ctx refundRequestId = do
   existing <- getRefundLegEntries ctx.referenceId
-  let approvedEntries = filter (entryMatchesRefundStatus refundRequestId DRefundRequest.APPROVED) existing
+  let approvedEntries = filter (entryMatchesRefundRequest refundRequestId) existing
       pendingApproved = filter (\e -> e.status == LE.PENDING) approvedEntries
   -- Settle the pending APPROVED leg in place — no reverse entry. Idempotent (settleEntry no-ops if settled).
   forM_ pendingApproved $ \e -> Lib.Finance.Ledger.Service.settleEntry e.id
@@ -1090,7 +1097,7 @@ refundSucceededAlreadyRecorded ::
   m Bool
 refundSucceededAlreadyRecorded rideId refundRequestId = do
   existing <- getRefundLegEntries rideId
-  pure $ any (\e -> e.status == LE.SETTLED && entryMatchesRefundStatus refundRequestId DRefundRequest.APPROVED e) existing
+  pure $ any (\e -> e.status == LE.SETTLED && entryMatchesRefundRequest refundRequestId e) existing
 
 -- | On FAILED, void this refund's pending APPROVED leg(s) — the raised obligation never
 --   materialized. Only PENDING legs → idempotent.
@@ -1102,7 +1109,7 @@ voidRefundRaisedLedger ::
 voidRefundRaisedLedger rideId refundRequestId = do
   existing <- getRefundLegEntries rideId
   let pendingApproved =
-        filter (\e -> e.status == LE.PENDING && entryMatchesRefundStatus refundRequestId DRefundRequest.APPROVED e) existing
+        filter (\e -> e.status == LE.PENDING && entryMatchesRefundRequest refundRequestId e) existing
   forM_ pendingApproved $ \e -> Lib.Finance.Ledger.Service.voidEntry e.id "RefundFailed"
 
 -- | Create PENDING Leg-1 ledger entries + RideCancellation invoice for a

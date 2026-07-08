@@ -14,7 +14,6 @@
 
 module Domain.Action.Internal.RefundLedger where
 
-import Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
 import qualified Domain.Types.Booking as DBooking
 import "beckn-spec" Domain.Types.Invoice (IssuedToType (..))
@@ -74,7 +73,7 @@ data RefundLedgerReq = RefundLedgerReq
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 -- | APPROVED → pending leg(s); REFUNDED → settle them; FAILED → void them.
---   Idempotent via per-transition lock + metadata dedup; throws on write failure.
+--   Idempotent via a per-request lock + leg-status dedup; throws on write failure.
 refundLedger :: Id Ride -> RefundLedgerReq -> Maybe Text -> Flow APISuccess
 refundLedger rideId req apiKey = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
@@ -83,7 +82,7 @@ refundLedger rideId req apiKey = do
   merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
-  Redis.withLockRedis (refundLedgerLockKey req.refundRequestId req.refundRequestStatus) 60 $ do
+  Redis.withLockRedis (refundLedgerLockKey req.refundRequestId) 60 $ do
     transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
     mbDriver <- QPerson.findById ride.driverId
     mbDriverInfo <- QDI.findById (cast ride.driverId)
@@ -97,29 +96,25 @@ refundLedger rideId req apiKey = do
     existing <- getRefundEntries referenceId
     case req.refundRequestStatus of
       APPROVED ->
-        -- Skip VOIDED legs so a retry re-raises fresh; a live leg de-dups a re-fire.
-        unless (any (\e -> e.status /= LE.VOIDED && entryMatchesRefundStatus req.refundRequestId APPROVED e) existing) $
-          postLegs ctx Pending (mkRefundMetadata req.refundRequestId APPROVED) legs req.refundRequestId
+        -- VOIDED legs are skipped so a retry re-raises fresh; ANY live leg de-dups a re-fire.
+        unless (any (\e -> e.status /= LE.VOIDED && entryMatchesRefundRequest req.refundRequestId e) existing) $
+          postLegs ctx Pending (mkRefundMetadata req.refundRequestId) legs req.refundRequestId
       REFUNDED -> do
-        -- alreadyDone = a REFUNDED entry exists OR the APPROVED leg(s) are already settled — either
-        -- way success already ran, so skip the invoice. Live (non-voided) APPROVED legs only.
-        let approvedEntries = filter (\e -> e.status /= LE.VOIDED && entryMatchesRefundStatus req.refundRequestId APPROVED e) existing
-            alreadyDone =
-              any (entryMatchesRefundStatus req.refundRequestId REFUNDED) existing
-                || (not (null approvedEntries) && not (any (\e -> e.status == LE.PENDING) approvedEntries))
-        if not (null approvedEntries)
-          then forM_ (filter (\e -> e.status == LE.PENDING) approvedEntries) $ \e -> LedgerSvc.settleEntry e.id
-          else -- the APPROVED call was missed; post the legs directly as SETTLED with REFUNDED metadata.
-
-            unless (any (entryMatchesRefundStatus req.refundRequestId REFUNDED) existing) $
-              postLegs ctx Settled (mkRefundMetadata req.refundRequestId REFUNDED) legs req.refundRequestId
+        -- alreadyDone = this refund's live legs exist and are ALL settled (skip the invoice).
+        -- Strictly none-PENDING, so a crash mid-settle still completes invoices on redelivery.
+        let idLegs = filter (\e -> e.status /= LE.VOIDED && entryMatchesRefundRequest req.refundRequestId e) existing
+            alreadyDone = not (null idLegs) && not (any (\e -> e.status == LE.PENDING) idLegs)
+        if not (null idLegs)
+          then forM_ (filter (\e -> e.status == LE.PENDING) idLegs) $ \e -> LedgerSvc.settleEntry e.id
+          else -- APPROVED was missed; post directly as SETTLED (reachable only with no live legs — fires at most once).
+            postLegs ctx Settled (mkRefundMetadata req.refundRequestId) legs req.refundRequestId
         -- the fleet/driver-visible refund invoice + (Case-2) the negative Commission invoice, once per refund
         unless alreadyDone $ do
           createRefundInvoice ctx booking req.refundRequestId (fromMaybe [] req.refundComponents)
           when deductFromDriver $ createCommissionRefundInvoice ctx req ride
       FAILED ->
         -- Failed: void the pending APPROVED leg(s). Only PENDING → idempotent.
-        forM_ (filter (\e -> e.status == LE.PENDING && entryMatchesRefundStatus req.refundRequestId APPROVED e) existing) $ \e ->
+        forM_ (filter (\e -> e.status == LE.PENDING && entryMatchesRefundRequest req.refundRequestId e) existing) $ \e ->
           LedgerSvc.voidEntry e.id "RefundFailed"
   pure Success
 
@@ -196,16 +191,25 @@ getRefundEntries referenceId =
         Wallet.walletReferenceRideFareRefundCommission
       ]
 
-mkRefundMetadata :: Text -> RefundLedgerStatus -> Aeson.Value
-mkRefundMetadata refundRequestId status =
-  Aeson.object ["refundRequestId" .= refundRequestId, "refundRequestStatus" .= status]
+-- | Links a ledger leg to its refund request. Legs carry only the id; request state lives
+--   solely in refund_request, and checks pair the id with the leg's own status column.
+newtype RefundLedgerMetadata = RefundLedgerMetadata {refundRequestId :: Text}
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
-entryMatchesRefundStatus :: Text -> RefundLedgerStatus -> LE.LedgerEntry -> Bool
-entryMatchesRefundStatus refundRequestId status entry =
-  entry.metadata == Just (mkRefundMetadata refundRequestId status)
+mkRefundMetadata :: Text -> Aeson.Value
+mkRefundMetadata refundRequestId = Aeson.toJSON (RefundLedgerMetadata refundRequestId)
 
-refundLedgerLockKey :: Text -> RefundLedgerStatus -> Text
-refundLedgerLockKey refundRequestId status = "refundLedger:" <> refundRequestId <> ":" <> show status
+entryMatchesRefundRequest :: Text -> LE.LedgerEntry -> Bool
+entryMatchesRefundRequest refundRequestId entry =
+  (metadataRefundRequestId =<< entry.metadata) == Just refundRequestId
+  where
+    metadataRefundRequestId v = case Aeson.fromJSON v of
+      Aeson.Success (RefundLedgerMetadata rid) -> Just rid
+      _ -> Nothing
+
+-- | One lock per refund request: APPROVED/REFUNDED/FAILED deliveries serialize.
+refundLedgerLockKey :: Text -> Text
+refundLedgerLockKey refundRequestId = "refundLedger:" <> refundRequestId
 
 -- | One BPP (fleet/driver-visible) refund invoice per refund request — no void-prior, no cumulation.
 --   Per-component negative line items (Fare + inline Tax via a shared groupId); issuedTo follows the
