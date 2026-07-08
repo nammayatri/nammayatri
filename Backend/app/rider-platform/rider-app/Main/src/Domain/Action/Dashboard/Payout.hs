@@ -21,8 +21,8 @@ import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getOneConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
@@ -49,7 +49,7 @@ resolveMerchantOpCityAndTz merchantShortId opCity = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   riderConfig <-
-    getOneConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId})
+    getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCity.id.getId})
       >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOpCity.id.getId)
   pure (merchant, merchantOpCity, secondsToMinutes riderConfig.timeDiffFromUtc)
 

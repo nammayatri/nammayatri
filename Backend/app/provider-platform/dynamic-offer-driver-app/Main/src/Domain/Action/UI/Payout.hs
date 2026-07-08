@@ -56,6 +56,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
+import qualified Lib.Payment.Payout.Request as PayoutRequest
 import qualified Lib.Payment.Payout.RequestStatus as RequestStatus
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
@@ -133,7 +134,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
               mbPayoutRequest <- QPR.findById (Id payoutRequestId)
               case mbPayoutRequest of
                 Just payoutRequest -> do
-                  let newStatus = castPayoutOrderStatusToPayoutRequestStatus payoutStatus
+                  let newStatus = RequestStatus.castPayoutOrderStatusToPayoutRequestStatus payoutStatus
                   when (payoutRequest.status /= newStatus && payoutRequest.status `notElem` [DPR.CREDITED, DPR.CASH_PAID, DPR.CASH_PENDING]) do
                     let statusMsg = "Bank Webhook: " <> show payoutStatus
                     PayoutRequest.updateStatusWithHistoryById newStatus (Just statusMsg) payoutRequest
@@ -270,7 +271,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
 
                   -- Update PayoutRequest status
                   whenJust mbPayoutReq $ \payoutReq -> do
-                    let newStatus = castPayoutOrderStatusToPayoutRequestStatus payoutStatus
+                    let newStatus = RequestStatus.castPayoutOrderStatusToPayoutRequestStatus payoutStatus
                     when (payoutReq.status /= newStatus && payoutReq.status `notElem` [DPR.CREDITED, DPR.CASH_PAID, DPR.CASH_PENDING]) $ do
                       let statusMsg = "Bank Webhook: " <> show payoutStatus
                       PayoutRequest.updateStatusWithHistoryById newStatus (Just statusMsg) payoutReq

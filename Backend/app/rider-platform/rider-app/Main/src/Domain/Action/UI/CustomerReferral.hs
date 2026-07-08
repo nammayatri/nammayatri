@@ -89,8 +89,7 @@ getReferralPayoutHistory (mbPersonId, _mbMerchantId) = do
           withTryCatch ("getReferralPayoutHistory:refreshPayoutStatus:" <> payoutOrder.orderId) $ do
             payoutConfig <-
               getOneConfig
-                (PayoutConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just VehicleCategory.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing})
-                (Just (maybeToList <$> CQPayoutCfg.findByCityIdAndVehicleCategory person.merchantOperatingCityId VehicleCategory.AUTO_CATEGORY (Just [])))
+                (PayoutDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just VehicleCategory.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing})
                 >>= fromMaybeM (PayoutConfigNotFound "AUTO_CATEGORY" person.merchantOperatingCityId.getId)
             let payoutStatusServiceReq = DP.PayoutStatusServiceReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand}
                 payoutOrderStatusCall = TPayout.payoutOrderStatus person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just personId.getId)
