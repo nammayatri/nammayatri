@@ -76,7 +76,7 @@ import TransactionLogs.Types
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     findById :: Id DP.Person -> m (Maybe DP.Person),
-    cancelRide :: Id DRide.Ride -> DRide.RideEndedBy -> DBCR.BookingCancellationReason -> Bool -> Maybe Bool -> m (),
+    cancelRide :: Id DRide.Ride -> DRide.RideEndedBy -> DBCR.BookingCancellationReason -> Bool -> Maybe Bool -> Bool -> m (),
     findBookingByIdInReplica :: Id SRB.Booking -> m (Maybe SRB.Booking),
     pickUpDistance :: SRB.Booking -> LatLong -> LatLong -> m Meters
   }
@@ -161,11 +161,12 @@ dashboardCancelRideHandler ::
   Id DMOC.MerchantOperatingCity ->
   Id DRide.Ride ->
   CancelRideReq ->
+  Bool ->
   Flow APISuccess.APISuccess
-dashboardCancelRideHandler shandle merchantId merchantOpCityId rideId req =
+dashboardCancelRideHandler shandle merchantId merchantOpCityId rideId req allowSnapshotVehicleFallback =
   -- TODO ActorInfo.withDashboardPersonIdActorInfo requestorId $ do
   withLogTag ("merchantId-" <> merchantId.getId) $ do
-    void $ cancelRideImpl shandle (DashboardRequestorId (merchantId, merchantOpCityId)) rideId req False
+    void $ cancelRideImpl shandle (DashboardRequestorId (merchantId, merchantOpCityId)) rideId req False allowSnapshotVehicleFallback
     return APISuccess.Success
 
 cancelRideHandler ::
@@ -175,7 +176,7 @@ cancelRideHandler ::
   CancelRideReq ->
   Flow CancelRideResp
 cancelRideHandler sh requestorId rideId req = withLogTag ("rideId-" <> rideId.getId) do
-  (cancellationCnt, isGoToDisabled) <- cancelRideImpl sh requestorId rideId req False
+  (cancellationCnt, isGoToDisabled) <- cancelRideImpl sh requestorId rideId req False False
   pure $ buildCancelRideResp cancellationCnt isGoToDisabled
   where
     buildCancelRideResp cancelCnt isGoToDisabled =
@@ -203,8 +204,9 @@ cancelRideImpl ::
   Id DRide.Ride ->
   CancelRideReq ->
   Bool ->
+  Bool ->
   m (Maybe Int, Maybe Bool)
-cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = do
+cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation allowSnapshotVehicleFallback = do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRide ride) $ throwError $ RideInvalidStatus ("This ride cannot be canceled" <> Text.pack (show ride.status))
   let driverId = ride.driverId
@@ -274,7 +276,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
               CQDGR.deactivateDriverGoHomeRequest booking.merchantOperatingCityId driverId DDGR.SUCCESS driverGoHomeReqInfo (Just False)
         )
         ((,,,) <$> cancellationCnt <*> driverGoHomeRequestId <*> goHomeConfig <*> dghInfo)
-    cancelRide rideId rideEndedBy rideCancelationReason isForceReallocation req.doCancellationRateBasedBlocking
+    cancelRide rideId rideEndedBy rideCancelationReason isForceReallocation req.doCancellationRateBasedBlocking allowSnapshotVehicleFallback
   pure (cancellationCnt, isGoToDisabled)
   where
     isValidRide ride = ride.status `elem` [DRide.NEW, DRide.UPCOMING]

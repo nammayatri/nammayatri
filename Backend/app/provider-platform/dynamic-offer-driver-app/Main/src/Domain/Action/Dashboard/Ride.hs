@@ -844,7 +844,7 @@ rideSync merchantShortId opCity reqRideId = do
 
   logTagInfo "dashboard -> syncRide : " $ show rideId <> "; status: " <> show ride.status
 
-  SyncRide.rideSync Nothing (Just ride) booking merchant
+  SyncRide.rideSync Nothing (Just ride) booking merchant True
 
 ---------------------------------------------------------------------
 
@@ -863,7 +863,7 @@ multipleRideSync merchantShortId opCity rideSyncReq = do
       ( \(ride, booking) ->
           mapLeft show
             <$> ( withTryCatch "mkMultipleRideData:multipleRideSync" $
-                    mkMultipleRideData ride.id <$> SyncRide.rideSync Nothing (Just ride) booking merchant
+                    mkMultipleRideData ride.id <$> SyncRide.rideSync Nothing (Just ride) booking merchant True
                 )
       )
       ridesBookingsZip
@@ -946,7 +946,7 @@ bookingWithVehicleNumberAndPhone merchant merchantOpCityId req = do
 endActiveRide :: Id DRide.Ride -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 endActiveRide rideId merchantId merchantOperatingCityId = do
   let dashboardReq = EHandler.DashboardEndRideReq {point = Nothing, merchantId, merchantOperatingCityId, odometer = Nothing}
-  shandle <- EHandler.buildEndRideHandle merchantId merchantOperatingCityId (Just rideId)
+  shandle <- EHandler.buildEndRideHandle merchantId merchantOperatingCityId (Just rideId) False
   void $ EHandler.dashboardEndRide shandle rideId dashboardReq
 
 fareBreakUp :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Flow Common.FareBreakUpRes

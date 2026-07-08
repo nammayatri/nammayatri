@@ -324,10 +324,12 @@ cancelSearch ::
 cancelSearch _merchantId searchTry = do
   searchRequest <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   callWithErrorHandling searchRequest.transactionId $ do
-    -- Lock Description: This is a Lock held between Init and Cancel Search, if Init is OnGoing the Booking will be created post the lock release and Cancel Search will fail with `RideRequestAlreadyAccepted`.
+    -- Lock Description: This is a Lock held between Init and Cancel Search, if Init is OnGoing the Booking will be created post the lock release and Cancel Search will fail with `CancelSearchLockNotAcquired`.
     -- Lock Release: Any Exceptions or at end of this function.
-    unlessM (Redis.tryLockRedis (mkCancelSearchInitLockKey searchRequest.transactionId) 30) $
-      throwError RideRequestAlreadyAccepted
+    cancelSearchInitLockAcquired <- Redis.tryLockRedis (mkCancelSearchInitLockKey searchRequest.transactionId) 30
+    logError $ "cancelSearchInitLock | cancelSearch acquire | txn=" <> searchRequest.transactionId <> " acquired=" <> show cancelSearchInitLockAcquired
+    unless cancelSearchInitLockAcquired $
+      throwError CancelSearchLockNotAcquired
     when (DTC.isDynamicOfferTrip searchTry.tripCategory) $ do
       mbActiveBooking <- runInMasterDbAndRedis $ QRB.findByTransactionIdAndStatuses searchRequest.transactionId [SRB.NEW, SRB.TRIP_ASSIGNED]
       whenJust mbActiveBooking $ \_ ->
@@ -344,9 +346,11 @@ cancelSearch _merchantId searchTry = do
       exep <- withTryCatch "cancelSearch:callWithErrorHandling" action
       case exep of
         Left e -> do
+          logError $ "cancelSearchInitLock | cancelSearch release (error) | txn=" <> transactionId
           Redis.unlockRedis (mkCancelSearchInitLockKey transactionId)
           someExceptionToAPIErrorThrow e
         Right a -> do
+          logError $ "cancelSearchInitLock | cancelSearch release (success) | txn=" <> transactionId
           Redis.unlockRedis (mkCancelSearchInitLockKey transactionId)
           pure a
 

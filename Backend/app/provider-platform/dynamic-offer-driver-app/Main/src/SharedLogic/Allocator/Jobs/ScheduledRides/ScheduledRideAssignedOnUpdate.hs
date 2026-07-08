@@ -318,7 +318,7 @@ cancelOrReallocate ride cReason isForceReallocation req = do
             additionalInfo = Nothing,
             doCancellationRateBasedBlocking = Nothing
           }
-  (_cancellationCnt, _isGoToDisabled) <- RideCancel.cancelRideImpl RideCancel.cancelRideHandle req ride.id cancelReq isForceReallocation
+  (_cancellationCnt, _isGoToDisabled) <- RideCancel.cancelRideImpl RideCancel.cancelRideHandle req ride.id cancelReq isForceReallocation False
   pure ()
 
 data Result a b = APIFailed | DistanceResp (GetDistanceResp a b)
