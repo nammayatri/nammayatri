@@ -109,6 +109,7 @@ import qualified Storage.Queries.FareParameters as QFP
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.Vehicle as QVeh
@@ -169,8 +170,9 @@ cancelRideImpl ::
   SBCR.BookingCancellationReason ->
   Bool ->
   Maybe Bool ->
+  Bool ->
   m ()
-cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellationRateBasedBlocking = do
+cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellationRateBasedBlocking allowSnapshotVehicleFallback = do
   isLocked <- Redis.tryLockRedis (buildCancelRideTransactionKey rideId) 15
   if isLocked
     then do
@@ -202,7 +204,15 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             logDebug $ "userNoShowCharges: " <> show userNoShowCharges
             let (userNoShowChargesFee, userNoShowChargesTax, userNoShowChargesLogicVersion, userNoShowOverdueCharge, userNoShowOverdueTax) = userNoShowCharges
             driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-            vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+            mbVehicle <- QVeh.findById ride.driverId
+            vehicle <- case mbVehicle of
+              Just v -> pure v
+              Nothing
+                | allowSnapshotVehicleFallback -> do
+                  logWarning $ "Vehicle missing for driver " <> ride.driverId.getId <> " on cancelled ride " <> ride.id.getId <> "; using ride_details snapshot (ops cancel)"
+                  rideDetails <- QRideDetails.findById ride.id >>= fromMaybeM (RideNotFound ride.id.getId)
+                  pure $ BP.buildVehicleFromRideDetailsSnapshot booking ride rideDetails
+                | otherwise -> throwError (DriverWithoutVehicle ride.driverId.getId)
             unless (isValidRide ride) $ throwError (InternalError "Ride is not valid for cancellation")
             cancelRideTransaction booking ride bookingCReason merchant rideEndedBy userNoShowChargesFee userNoShowChargesTax userNoShowOverdueCharge userNoShowOverdueTax userNoShowChargesLogicVersion transporterConfig driver
             logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)

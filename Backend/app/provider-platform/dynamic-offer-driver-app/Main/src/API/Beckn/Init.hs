@@ -120,9 +120,11 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
       exep <- withTryCatch "init:callWithErrorHandling" action
       case exep of
         Left e -> do
+          logError $ "cancelSearchInitLock | Init release (api error) | txn=" <> transactionId
           Redis.unlockRedis (mkCancelSearchInitLockKey transactionId)
           someExceptionToAPIErrorThrow e
         Right a -> do
+          logError $ "cancelSearchInitLock | Init release (api success) | txn=" <> transactionId
           Redis.unlockRedis (mkCancelSearchInitLockKey transactionId)
           pure a
 

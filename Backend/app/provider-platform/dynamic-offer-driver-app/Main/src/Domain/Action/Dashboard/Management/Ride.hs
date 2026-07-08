@@ -111,7 +111,7 @@ postRideEndMultiple merchantShortId opCity mbRequestorId req = ActorInfo.withDas
   runRequestValidation Common.validateMultipleRideEndReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  shandle <- EHandler.buildEndRideHandle merchant.id merchantOpCityId Nothing
+  shandle <- EHandler.buildEndRideHandle merchant.id merchantOpCityId Nothing True
   logTagInfo "dashboard -> multipleRideEnd : " $ show (req.rides <&> (.rideId))
   respItems <- forM req.rides $ \reqItem -> do
     info <- handle Common.listItemErrHandler $ do
@@ -141,7 +141,7 @@ postRideCancelMultiple merchantShortId opCity req = do
                 additionalInfo = reqItem.additionalInfo,
                 doCancellationRateBasedBlocking = Nothing
               }
-      Success <- CHandler.dashboardCancelRideHandler CHandler.cancelRideHandle merchant.id merchantOpCityId rideId dashboardReq
+      Success <- CHandler.dashboardCancelRideHandler CHandler.cancelRideHandle merchant.id merchantOpCityId rideId dashboardReq True
       pure Common.SuccessItem
     pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
   pure $ Common.MultipleRideSyncResp {list = respItems}

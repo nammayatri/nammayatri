@@ -257,7 +257,7 @@ endRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -
 endRide (requestorId, merchantId, merchantOpCityId) rideId EndRideReq {..} = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo requestorId $ do
   requestor <- findPerson requestorId
   let driverReq = RideEnd.DriverEndRideReq {..}
-  shandle <- withTimeAPI "endRide" "buildEndRideHandle" $ RideEnd.buildEndRideHandle merchantId merchantOpCityId (Just rideId)
+  shandle <- withTimeAPI "endRide" "buildEndRideHandle" $ RideEnd.buildEndRideHandle merchantId merchantOpCityId (Just rideId) False
   withTimeAPI "endRide" "driverEndRide" $ RideEnd.driverEndRide shandle rideId driverReq
 
 cancelRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> CancelRideReq -> FlowHandler RideCancel.CancelRideResp
