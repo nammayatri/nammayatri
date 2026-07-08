@@ -233,6 +233,7 @@ library
     , extra
     , finance-kernel
     , hashable
+    , lens
     , mobility-core
     , openapi3
     , payment

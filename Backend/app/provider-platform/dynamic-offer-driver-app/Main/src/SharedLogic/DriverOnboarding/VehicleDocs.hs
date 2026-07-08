@@ -5,7 +5,23 @@ module SharedLogic.DriverOnboarding.VehicleDocs where
 import Control.Applicative ((<|>))
 import Data.List (nub)
 import qualified Data.Text as T
-import Data.Time (Day)
+import Domain.Types.CommonDocumentData
+  ( AadhaarDocumentMetadata (..),
+    BankingDetailsDocumentMetadata (..),
+    DLDocumentMetadata (..),
+    GSTDocumentMetadata (..),
+    LDCDocumentMetadata (..),
+    LocalAddressProofDocumentMetadata (..),
+    NomineeDetailsDocumentMetadata (..),
+    PanDocumentMetadata (..),
+    RCDocumentMetadata (..),
+    TANDocumentMetadata (..),
+    UDYAMDocumentMetadata (..),
+    VehicleFitnessCertificateDocumentMetadata (..),
+    VehicleInsuranceDocumentMetadata (..),
+    VehiclePUCDocumentMetadata (..),
+    VehiclePermitDocumentMetadata (..),
+  )
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
@@ -74,26 +90,6 @@ data VehicleDocumentItem = VehicleDocumentItem
     imageId :: Maybe Text,
     documentExpiry :: Maybe UTCTime,
     docsVerificationStatus :: Maybe DDVS.DocsVerificationStatus
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
--- Per-document-type payload records (DLDocumentMetadata, PanDocumentMetadata, etc.) moved to
--- Domain.Types.CommonDocumentData so both this status-reporting DocumentMetadata and the
--- persisted CommonDocumentData share one set of records without a SharedLogic -> Domain.Types
--- dependency inversion.
-
-data NomineeDetailsDocumentMetadata = NomineeDetailsDocumentMetadata
-  { nomineeName :: Maybe Text,
-    nomineeDob :: Maybe Day,
-    nomineeRelationship :: Maybe Text
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
-data BankingDetailsDocumentMetadata = BankingDetailsDocumentMetadata
-  { accountNumber :: Maybe Text,
-    ifscCode :: Maybe Text,
-    nameAtBank :: Maybe Text,
-    upiId :: Maybe Text
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 

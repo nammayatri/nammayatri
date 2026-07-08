@@ -1575,13 +1575,18 @@ CommonDriverOnboardingDocuments:
     documentImageId: Maybe (Id Image)
     driverId: Maybe (Id Person)
     documentType: DocumentType
-    documentData: CommonDocumentData|NoRelation  # typed per-documentType payload (was a raw JSON Text blob)
+    documentData: CommonDocumentData|NoRelation  # typed per-documentType payload; stored as raw text, parsed/rendered in fromTType/toTType
     rejectReason: Maybe Text
     verificationStatus: VerificationStatus  # PENDING, VERIFIED, REJECTED
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
-  sqlType:
-    documentData: json
+  beamFields:
+    documentData:
+      documentData: Text
+  toTType:
+    documentData: Domain.Types.CommonDocumentData.renderCommonDocumentData documentData|E
+  fromTType:
+    documentData: Domain.Types.CommonDocumentData.parseCommonDocumentDataSafe documentType documentData|E
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey

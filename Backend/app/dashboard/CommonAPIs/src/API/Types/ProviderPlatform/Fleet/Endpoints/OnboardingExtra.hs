@@ -1,8 +1,11 @@
 module API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra where
 
-import Data.Aeson (Value (Null), object, withObject, (.:), (.=))
+import qualified Control.Lens as L
+import Data.Aeson (Value (Null), eitherDecode, encode, object, withObject, (.:), (.=))
+import Data.OpenApi (OpenApiType (OpenApiString), ToParamSchema (..), format, title, type_)
 import qualified Data.Text as T
 import Kernel.Prelude
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 
 data LegalStructure
   = IndividualLegalStructure
@@ -36,3 +39,12 @@ instance FromJSON DocumentOnboardingStage where
       "TaxAndLegal" -> TaxAndLegal <$> v .: "contents"
       "BankDetails" -> pure BankDetails
       _ -> fail $ "Unknown DocumentOnboardingStage tag: " <> T.unpack tag
+
+instance ToParamSchema DocumentOnboardingStage where
+  toParamSchema f =
+    mempty
+      & title L.?~ "DocumentOnboardingStage"
+      & type_ L.?~ OpenApiString
+      & format L.?~ show f
+
+$(mkHttpInstancesForEnum ''DocumentOnboardingStage)

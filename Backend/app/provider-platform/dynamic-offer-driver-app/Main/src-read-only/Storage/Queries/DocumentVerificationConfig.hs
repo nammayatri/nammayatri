@@ -29,7 +29,7 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig])
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig]))
 findAllByMerchantOpCityId limit offset merchantOperatingCityId = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)] (Se.Asc Beam.order) limit offset
 
 findByPrimaryKey ::
@@ -76,7 +76,7 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerification
       Se.Set Beam.onlyImageVerificationStatusLookupRequired onlyImageVerificationStatusLookupRequired,
       Se.Set Beam.order order,
       Se.Set Beam.rcNumberPrefixList rcNumberPrefixList,
-      Se.Set Beam.rolesAllowedToUploadDocumentText (Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show) Kernel.Prelude.<$> rolesAllowedToUploadDocument),
+      Se.Set Beam.rolesAllowedToUploadDocumentText (((Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show)) Kernel.Prelude.<$> rolesAllowedToUploadDocument)),
       Se.Set Beam.supportedVehicleClassesJSON (getConfigJSON supportedVehicleClasses),
       Se.Set Beam.title title,
       Se.Set Beam.vehicleClassCheckType vehicleClassCheckType,

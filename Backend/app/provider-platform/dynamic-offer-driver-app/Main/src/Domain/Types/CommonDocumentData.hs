@@ -3,17 +3,11 @@
 module Domain.Types.CommonDocumentData where
 
 import qualified Data.Aeson as A
-import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Data.Time (UTCTime)
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
+import Data.Time (Day, UTCTime)
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPan
@@ -120,6 +114,21 @@ data TaxDetailsDocumentData = TaxDetailsDocumentData
   }
   deriving (Show, Eq, Ord, Generic, A.ToJSON, A.FromJSON, ToSchema)
 
+data NomineeDetailsDocumentMetadata = NomineeDetailsDocumentMetadata
+  { nomineeName :: Maybe T.Text,
+    nomineeDob :: Maybe Day,
+    nomineeRelationship :: Maybe T.Text
+  }
+  deriving (Show, Eq, Ord, Generic, A.ToJSON, A.FromJSON, ToSchema)
+
+data BankingDetailsDocumentMetadata = BankingDetailsDocumentMetadata
+  { accountNumber :: Maybe T.Text,
+    ifscCode :: Maybe T.Text,
+    nameAtBank :: Maybe T.Text,
+    upiId :: Maybe T.Text
+  }
+  deriving (Show, Eq, Ord, Generic, A.ToJSON, A.FromJSON, ToSchema)
+
 data CommonDocumentData
   = DLData DLDocumentMetadata
   | AadhaarData AadhaarDocumentMetadata
@@ -135,31 +144,13 @@ data CommonDocumentData
   | TANData TANDocumentMetadata
   | LDCData LDCDocumentMetadata
   | TaxDetailsData TaxDetailsDocumentData
+  | NomineeDetailsData NomineeDetailsDocumentMetadata
+  | BankingDetailsData BankingDetailsDocumentMetadata
   | GenericData A.Value
   deriving (Show, Eq, Ord, Generic, A.ToJSON, A.FromJSON, ToSchema)
 
-fromFieldCommonDocumentData ::
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion CommonDocumentData
-fromFieldCommonDocumentData f mbValue = do
-  value <- fromField f mbValue
-  case A.fromJSON value of
-    A.Success a -> pure a
-    _ -> DPSF.returnError DPSF.ConversionFailed f "Conversion failed"
-
-instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be CommonDocumentData where
-  sqlValueSyntax = sqlValueSyntax . A.toJSON
-
-instance FromField CommonDocumentData where
-  fromField = fromFieldCommonDocumentData
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be CommonDocumentData
-
-instance FromBackendRow Postgres CommonDocumentData
-
 instance {-# OVERLAPPING #-} ToSQLObject CommonDocumentData where
-  convertToSQLObject = SQLObjectValue . T.pack . show . A.encode
+  convertToSQLObject = SQLObjectValue . TE.decodeUtf8 . BSL.toStrict . A.encode
 
 parseCommonDocumentDataByType :: DVC.DocumentType -> T.Text -> Either T.Text CommonDocumentData
 parseCommonDocumentDataByType docType raw = case docType of
@@ -177,6 +168,8 @@ parseCommonDocumentDataByType docType raw = case docType of
   DVC.TANCertificate -> typedOrReject TANData
   DVC.LDCCertificate -> typedOrReject LDCData
   DVC.TAXDetails -> typedOrReject TaxDetailsData
+  DVC.NomineeDetails -> typedOrReject NomineeDetailsData
+  DVC.BankingDetails -> typedOrReject BankingDetailsData
   _ -> Right (genericFromText raw)
   where
     typedOrReject :: A.FromJSON a => (a -> CommonDocumentData) -> Either T.Text CommonDocumentData
@@ -186,6 +179,13 @@ parseCommonDocumentDataByType docType raw = case docType of
     genericFromText t = case A.eitherDecodeStrict (TE.encodeUtf8 t) of
       Right v -> GenericData v
       Left _ -> GenericData (A.String t)
+
+parseCommonDocumentDataSafe :: DVC.DocumentType -> T.Text -> CommonDocumentData
+parseCommonDocumentDataSafe docType raw = case parseCommonDocumentDataByType docType raw of
+  Right a -> a
+  Left _ -> case A.eitherDecodeStrict (TE.encodeUtf8 raw) of
+    Right v -> GenericData v
+    Left _ -> GenericData (A.String raw)
 
 renderCommonDocumentData :: CommonDocumentData -> T.Text
 renderCommonDocumentData = \case
@@ -203,6 +203,8 @@ renderCommonDocumentData = \case
   TANData d -> encodeText d
   LDCData d -> encodeText d
   TaxDetailsData d -> encodeText d
+  NomineeDetailsData d -> encodeText d
+  BankingDetailsData d -> encodeText d
   GenericData (A.String t) -> t
   GenericData v -> encodeText v
   where

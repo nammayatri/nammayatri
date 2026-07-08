@@ -13,8 +13,6 @@ ALTER TABLE atlas_driver_offer_bpp.common_driver_onboarding_documents ADD COLUMN
 ALTER TABLE atlas_driver_offer_bpp.common_driver_onboarding_documents ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.common_driver_onboarding_documents ADD PRIMARY KEY ( id);
 
-
-
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.common_driver_onboarding_documents ALTER COLUMN document_data TYPE json;
+ALTER TABLE atlas_driver_offer_bpp.common_driver_onboarding_documents ALTER COLUMN document_data TYPE text;

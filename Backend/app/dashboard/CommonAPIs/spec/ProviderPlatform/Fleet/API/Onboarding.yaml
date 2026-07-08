@@ -24,6 +24,7 @@ apis:
         - makeSelfieAadhaarPanMandatory: Bool
         - onlyVehicle: Bool
         - role: Role
+        - documentOnboardingStage: DocumentOnboardingStage
       response:
         type: DocumentVerificationConfigList
       helperApi:
@@ -36,6 +37,7 @@ apis:
               - makeSelfieAadhaarPanMandatory: Bool
               - onlyVehicle: Bool
               - role: Role
+              - documentOnboardingStage: DocumentOnboardingStage
             response:
               type: DocumentVerificationConfigList
   - GET:

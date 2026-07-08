@@ -165,3 +165,8 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN mark_
 
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN document_onboarding_stage text ;
 
+
+
+
+------- SQL updates -------
+

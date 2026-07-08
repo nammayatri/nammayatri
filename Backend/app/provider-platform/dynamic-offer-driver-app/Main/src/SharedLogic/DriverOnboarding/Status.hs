@@ -1480,7 +1480,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
             if enableMetadata
               then
                 mbIdentityInfo <&> \info ->
-                  NomineeDetailsMetadata NomineeDetailsDocumentMetadata {nomineeName = info.nomineeName, nomineeDob = info.nomineeDob, nomineeRelationship = info.nomineeRelationship}
+                  NomineeDetailsMetadata DCommonDocData.NomineeDetailsDocumentMetadata {nomineeName = info.nomineeName, nomineeDob = info.nomineeDob, nomineeRelationship = info.nomineeRelationship}
               else Nothing
       return (if hasNominee then Just VALID else Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, mbNomineeMetadata)
     DVC.FleetRegistration -> do
@@ -1498,7 +1498,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
                 if enableMetadata
                   then
                     mbFleetInfo <&> \fi ->
-                      BankingDetailsMetadata BankingDetailsDocumentMetadata {accountNumber = fi.payoutVpaBankAccount, ifscCode = Nothing, nameAtBank = Nothing, upiId = fi.payoutVpa}
+                      BankingDetailsMetadata DCommonDocData.BankingDetailsDocumentMetadata {accountNumber = fi.payoutVpaBankAccount, ifscCode = Nothing, nameAtBank = Nothing, upiId = fi.payoutVpa}
                   else Nothing
           return (if hasBankingDetails then Just VALID else Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, mbBankingMetadata)
         else do
@@ -1509,7 +1509,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
                   then
                     mbDriverInfo <&> \di ->
                       BankingDetailsMetadata
-                        BankingDetailsDocumentMetadata
+                        DCommonDocData.BankingDetailsDocumentMetadata
                           { accountNumber = di.driverBankAccountDetails >>= (.accountNumber),
                             ifscCode = di.driverBankAccountDetails >>= (.ifscCode),
                             nameAtBank = di.driverBankAccountDetails >>= (.nameAtBank),

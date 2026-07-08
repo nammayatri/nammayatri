@@ -5,7 +5,6 @@ module Storage.Beam.CommonDriverOnboardingDocuments where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
-import qualified Domain.Types.CommonDocumentData
 import qualified Domain.Types.DocumentVerificationConfig
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -14,7 +13,7 @@ import qualified Kernel.Types.Documents
 import Tools.Beam.UtilsTH
 
 data CommonDriverOnboardingDocumentsT f = CommonDriverOnboardingDocumentsT
-  { documentData :: (B.C f Domain.Types.CommonDocumentData.CommonDocumentData),
+  { documentData :: (B.C f Kernel.Prelude.Text),
     documentImageId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
     documentType :: (B.C f Domain.Types.DocumentVerificationConfig.DocumentType),
     driverId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
