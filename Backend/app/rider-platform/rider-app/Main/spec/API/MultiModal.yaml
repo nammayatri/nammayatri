@@ -353,6 +353,8 @@ types:
     position: LatLong
     serviceSubTypes: "Maybe [ServiceSubType]"
     seatSelectionType: Maybe SeatSelectionType
+    isUpcomingTrip: Maybe Bool
+    previousRouteId: Maybe Text
 
   AlternateRouteDetails:
     routeCode: Text
@@ -392,6 +394,7 @@ types:
     sourceStopCode: Maybe Text
     destinationStopCode: Maybe Text
     vehicleNumber: Maybe Text
+    allowUpcomingTrips: Maybe Bool
     derive: "Show"
 
   AvailableRoute:

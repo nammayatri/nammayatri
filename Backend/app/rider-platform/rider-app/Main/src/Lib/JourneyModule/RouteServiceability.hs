@@ -4,7 +4,7 @@ import qualified API.Types.UI.MultimodalConfirm
 import qualified BecknV2.FRFS.Enums
 import Data.List (nub)
 import qualified Data.Map.Strict as Map
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import qualified Domain.Types.FRFSVehicleServiceTier as DFRFSVehicleServiceTier
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import qualified Domain.Types.VehicleSeatLayoutMapping as DVSLM
@@ -30,6 +30,12 @@ import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 
+-- Upcoming markers refresh ~every 30s while a bus approaches its next trip; an
+-- orphan (bus graduated or never arrived) stops refreshing, so anything staler
+-- than this is dropped at read time — independent of gps-side cleanup.
+upcomingFreshnessThresholdSec :: Int
+upcomingFreshnessThresholdSec = 300
+
 -- | Shared function to build RouteWithLiveVehicle for a single route.
 --   Used by both FRFSTicketService and MultimodalConfirm.
 buildRouteWithLiveVehicle ::
@@ -41,9 +47,30 @@ buildRouteWithLiveVehicle ::
   [(BecknV2.FRFS.Enums.ServiceTierType, DFRFSVehicleServiceTier.FRFSVehicleServiceTier)] ->
   Maybe LatLong ->
   Int ->
+  Bool ->
   Flow (Maybe API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
-buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromStopCode toStopCode frfsTierMap mbSourceStopLatLong maxLiveVehicles = do
-  let vehicleNos = nub $ map (.vehicle_no) busScheduleDetails <> map (.vehicleNumber) routeInfo.buses
+buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromStopCode toStopCode frfsTierMap mbSourceStopLatLong maxLiveVehicles allowUpcomingTrips = do
+  -- When requested, fold in write-ahead (upcoming) buses from the separate
+  -- route:upcoming:<id> hash: keep only fresh markers (drops orphans the gps
+  -- reap couldn't catch, e.g. a rebalance-race) and dedup against live buses
+  -- (a bus mid-graduation can be in both — live wins).
+  upcomingBuses <-
+    if allowUpcomingTrips
+      then do
+        now <- getCurrentTime
+        let nowSec = floor (utcTimeToPOSIXSeconds now) :: Int
+            liveVehicleNos = map (.vehicleNumber) routeInfo.buses
+        upcoming <- CQMMB.getUpcomingRoutesBuses routeInfo.routeId integratedBPPConfig
+        pure $
+          filter
+            ( \b ->
+                (nowSec - b.busData.timestamp) <= upcomingFreshnessThresholdSec
+                  && not (b.vehicleNumber `elem` liveVehicleNos)
+            )
+            upcoming.buses
+      else pure []
+  let mergedBuses = routeInfo.buses <> upcomingBuses
+  let vehicleNos = nub $ map (.vehicle_no) busScheduleDetails <> map (.vehicleNumber) mergedBuses
   seatLayoutMappingsByVehicleNo <-
     mapConcurrently
       ( \vehicleNo -> do
@@ -92,7 +119,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
       getBusScheduleInfo busScheduleDetails integratedBPPConfig routeInfo.routeId fromStopCode toStopCode frfsTierMap seatLayoutMappingByVehicleNo
   liveVehiclesFork <-
     awaitableFork "getLiveVehicles" $
-      getLiveVehicles routeInfo.buses integratedBPPConfig frfsTierMap mbSourceStopLatLong maxLiveVehicles seatLayoutMappingByVehicleNo activeTripIdByVehicleNo
+      getLiveVehicles mergedBuses integratedBPPConfig frfsTierMap mbSourceStopLatLong maxLiveVehicles seatLayoutMappingByVehicleNo activeTripIdByVehicleNo
   schedules <-
     L.await Nothing schedulesFork >>= \case
       Left err -> throwError $ InternalError $ "getBusScheduleInfo fork failed: " <> show err
@@ -234,7 +261,9 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                           currentTripId = Map.lookup bus.vehicleNumber activeTripIdByVehicleNo',
                           serviceSubTypes = mbServiceSubTypes,
                           vehicleTagNumber = mbVehicleTagNumber,
-                          seatSelectionType = seatSelType
+                          seatSelectionType = seatSelType,
+                          isUpcomingTrip = bus.busData.is_upcoming_trip,
+                          previousRouteId = bus.busData.previous_route_id
                         }
                   Nothing -> do
                     logError $ "Vehicle info not found for bus: " <> bus.vehicleNumber

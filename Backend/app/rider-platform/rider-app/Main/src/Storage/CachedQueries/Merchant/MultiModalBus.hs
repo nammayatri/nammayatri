@@ -8,9 +8,11 @@ module Storage.CachedQueries.Merchant.MultiModalBus
     BusRouteId,
     BusDataWithRoutesInfo (..),
     getRoutesBuses,
+    getUpcomingRoutesBuses,
     getBusesForRoutes,
     hasLiveVehicles,
     mkRouteKey,
+    mkUpcomingRouteKey,
     withCrossAppRedisNew,
     utcToIST,
   )
@@ -82,7 +84,9 @@ data BusData = BusData
     eta_data :: Maybe [BusStopETA],
     route_id :: Text,
     route_state :: Maybe RouteState,
-    route_number :: Maybe Text
+    route_number :: Maybe Text,
+    is_upcoming_trip :: Maybe Bool,
+    previous_route_id :: Maybe Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -123,6 +127,13 @@ mkRouteKey mbRedisPrefix routeId = case mbRedisPrefix of
   Just prefix | prefix /= "" -> prefix <> ":route:" <> routeId
   _ -> "route:" <> routeId
 
+-- Create Redis key for a route's upcoming (write-ahead) buses. Must match the
+-- gps-processor writer (redis_keys::upcoming_route_key): <prefix>:route:upcoming:<id>.
+mkUpcomingRouteKey :: Maybe Text -> Text -> Text
+mkUpcomingRouteKey mbRedisPrefix routeId = case mbRedisPrefix of
+  Just prefix | prefix /= "" -> prefix <> ":route:upcoming:" <> routeId
+  _ -> "route:upcoming:" <> routeId
+
 -- Get all buses for a single route
 getRoutesBuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv), HasField "cloudType" r (Maybe CloudType)) => Text -> DIBC.IntegratedBPPConfig -> m RouteWithBuses
 getRoutesBuses routeId integratedBppConfig = do
@@ -131,6 +142,20 @@ getRoutesBuses routeId integratedBppConfig = do
         DIBC.DIRECT config -> config.redisPrefix
         _ -> Nothing
   let key = mkRouteKey redisPrefix routeId
+  busDataPairs <- Hedis.runInMultiCloudLTSRedisForList $ Hedis.hGetAll key
+  let buses = map (uncurry FullBusData) busDataPairs
+  return $ RouteWithBuses routeId buses
+
+-- Get the write-ahead (upcoming trip) buses for a single route. Read only when
+-- upcoming trips are requested; gps-processor keeps these out of the live
+-- route:<id> hash so the default live read stays lean.
+getUpcomingRoutesBuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv), HasField "cloudType" r (Maybe CloudType)) => Text -> DIBC.IntegratedBPPConfig -> m RouteWithBuses
+getUpcomingRoutesBuses routeId integratedBppConfig = do
+  let redisPrefix = case integratedBppConfig.providerConfig of
+        DIBC.ONDC config -> config.redisPrefix
+        DIBC.DIRECT config -> config.redisPrefix
+        _ -> Nothing
+  let key = mkUpcomingRouteKey redisPrefix routeId
   busDataPairs <- Hedis.runInMultiCloudLTSRedisForList $ Hedis.hGetAll key
   let buses = map (uncurry FullBusData) busDataPairs
   return $ RouteWithBuses routeId buses
