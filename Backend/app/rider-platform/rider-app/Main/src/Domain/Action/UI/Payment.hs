@@ -92,6 +92,7 @@ import qualified Lib.Payment.Domain.Types.PersonWallet as DPersonWallet
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PersonWallet as QPersonWallet
+import qualified Lib.Types.SpecialLocation as SL
 import Servant (BasicAuthData)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
@@ -185,7 +186,10 @@ createRideBookingPaymentOrder booking = do
   staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
   paymentOrderId <- generateGUID
   orderShortId <- generateShortId
-  let amount = booking.estimatedTotalFare.amount
+  let amount =
+        if booking.fareSettlementType == Just SL.CommissionOnly
+          then fromMaybe 0 booking.commission
+          else booking.estimatedTotalFare.amount
   isSplitEnabled <- Payment.getIsSplitEnabled booking.merchantId merchantOperatingCityId Nothing DOrder.RideBooking
   isPercentageSplitEnabled <- Payment.getIsPercentageSplit booking.merchantId merchantOperatingCityId Nothing DOrder.RideBooking
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled amount [] isPercentageSplitEnabled False

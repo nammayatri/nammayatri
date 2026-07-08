@@ -42,6 +42,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
@@ -209,6 +210,7 @@ handler merchantId req validatedReq = do
     buildBooking ::
       ( CacheFlow m r,
         EsqDBFlow m r,
+        Esq.EsqDBReplicaFlow m r,
         EncFlow m r,
         HasField "vehicleServiceTier" q ServiceTierType,
         HasField "distance" q (Maybe Meters),
@@ -244,6 +246,8 @@ handler merchantId req validatedReq = do
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
       mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback quoteId
       commission <- FC.calculateCommission driverQuote.fareParams mbFarePolicy
+      mbSpecialLocation <- maybe (pure Nothing) (QSpecialLocation.findById . Id) (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea)
+      let fareSettlementType = mbSpecialLocation >>= (.fareSettlementType)
       let bapUri = showBaseUrl searchRequest.bapUri
           displayBookingId = req.displayBookingId
       (initiatedAs, senderDetails, receiverDetails) <- do
