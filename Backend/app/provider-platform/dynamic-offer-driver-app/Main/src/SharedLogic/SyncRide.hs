@@ -58,15 +58,15 @@ import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 
-rideSync :: Maybe DBCR.CancellationSource -> Maybe DRide.Ride -> DB.Booking -> DM.Merchant -> Flow Common.RideSyncRes
-rideSync mbCancellationSource (Just ride) booking merchant =
+rideSync :: Maybe DBCR.CancellationSource -> Maybe DRide.Ride -> DB.Booking -> DM.Merchant -> Bool -> Flow Common.RideSyncRes
+rideSync mbCancellationSource (Just ride) booking merchant allowSnapshotVehicleFallback =
   case ride.status of
     DRide.UPCOMING -> syncUpcomingRide ride booking
     DRide.NEW -> syncNewRide ride booking
     DRide.INPROGRESS -> syncInProgressRide ride booking
-    DRide.COMPLETED -> syncCompletedRide ride booking
+    DRide.COMPLETED -> syncCompletedRide ride booking allowSnapshotVehicleFallback
     DRide.CANCELLED -> syncCancelledRide mbCancellationSource (Just ride) booking merchant
-rideSync mbCancellationSource Nothing booking merchant =
+rideSync mbCancellationSource Nothing booking merchant _allowSnapshotVehicleFallback =
   syncCancelledRide mbCancellationSource Nothing booking merchant
 
 --UPCOMING --
@@ -161,11 +161,11 @@ data RideCompletedInfo = RideCompletedInfo
     paymentUrl :: Maybe Text
   }
 
-syncCompletedRide :: DRide.Ride -> DB.Booking -> Flow Common.RideSyncRes
-syncCompletedRide ride booking = do
+syncCompletedRide :: DRide.Ride -> DB.Booking -> Bool -> Flow Common.RideSyncRes
+syncCompletedRide ride booking allowSnapshotVehicleFallback = do
   RideCompletedInfo {..} <- fetchRideCompletedInfo ride booking
   handle (errHandler (Just ride.status) booking.status "ride completed") $
-    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl Nothing
+    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl Nothing allowSnapshotVehicleFallback
   pure $ Common.RideSyncRes Common.RIDE_COMPLETED "Success. Sent ride completed update to bap"
 
 fetchRideCompletedInfo :: DRide.Ride -> DB.Booking -> Flow RideCompletedInfo
