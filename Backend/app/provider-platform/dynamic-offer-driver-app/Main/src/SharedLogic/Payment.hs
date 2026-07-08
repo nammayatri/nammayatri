@@ -143,7 +143,19 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
         if splitEnabled -- Filter vendor fees only for the driver fees that are being settled right now
           then filter (\vf -> vf.driverFeeId `elem` driverFeeIds) vendorFees
           else vendorFees
-  splitSettlementDetails <- if splitEnabled then mkSplitSettlementDetails currentVendorFees amount else pure Nothing
+  vendorFeesForSplit <-
+    if splitEnabled
+      then do
+        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = opCity.getId}) (Just (SCTC.findByMerchantOpCityId opCity Nothing)) >>= fromMaybeM (TransporterConfigNotFound opCity.getId)
+        let cancellationPenaltyTotal = sum $ map (\df -> fromMaybe 0 df.cancellationPenaltyAmount) driverFees
+            penaltyVendorFees = case (transporterConfig.cancellationFeeVendor, driverFeeIds) of
+              (Just cancelVendor, firstDriverFeeId : _)
+                | cancellationPenaltyTotal > 0 ->
+                  [VF.VendorFee {driverFeeId = firstDriverFeeId, vendorId = cancelVendor, amount = cancellationPenaltyTotal, createdAt = now, updatedAt = now}]
+              _ -> []
+        pure (currentVendorFees <> penaltyVendorFees)
+      else pure currentVendorFees
+  splitSettlementDetails <- if splitEnabled then mkSplitSettlementDetails vendorFeesForSplit amount else pure Nothing
   logInfo $ "split details: " <> show splitSettlementDetails
   when (amount <= 0) $ throwError (InternalError "Invalid Amount :- should be greater than 0")
   unless (isJust existingInvoice) $ QIN.createMany invoices

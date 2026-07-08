@@ -378,7 +378,6 @@ processDriverFee paymentMode driverFee subscriptionConfig transporterConfig = do
   now <- getCurrentTime
   case paymentMode of
     MANUAL -> do
-      _ <- withTryCatch "makeVendorFeeForCancellationPenalty:processDriverFee" $ makeVendorFeeForCancellationPenalty driverFee subscriptionConfig transporterConfig
       ( if subscriptionConfig.allowManualPaymentLinks
           then
             ( do
@@ -985,35 +984,6 @@ mkPaymentLinkRateLimitKey driverId = "SendPaymentLink:RateLimit:DriverId:" <> dr
 
 getsetManualLinkErrorTrackingKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Maybe Int)
 getsetManualLinkErrorTrackingKey driverId = Hedis.get (mkManualLinkErrorTrackingByDriverIdKey driverId)
-
-makeVendorFeeForCancellationPenalty ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
-  DriverFee ->
-  SubscriptionConfig ->
-  TransporterConfig ->
-  m ()
-makeVendorFeeForCancellationPenalty driverFee subscriptionConfig transporterConfig = when (fromMaybe False subscriptionConfig.isVendorSplitEnabled && isJust transporterConfig.cancellationFeeVendor && fromMaybe 0 driverFee.cancellationPenaltyAmount > 0) $ do
-  let vendorId = fromMaybe "CANCELLATION_PENALTY_VENDOR" transporterConfig.cancellationFeeVendor
-      cancellationAmount = fromMaybe 0 driverFee.cancellationPenaltyAmount
-      cancellationVendorFeeGuardKey = "VendorFee:CancellationApplied:" <> driverFee.id.getId
-  -- Guard against scheduler retries double-adding. Set after write so a crash re-applies, not skips.
-  alreadyApplied <- Hedis.get cancellationVendorFeeGuardKey
-  case (alreadyApplied :: Maybe Bool) of
-    Just True -> logError $ "makeVendorFeeForCancellationPenalty: cancellation already applied for driverFee " <> driverFee.id.getId <> ", skipping"
-    _ -> do
-      mbExisting <- runInMasterDbAndRedis $ QVF.findByVendorAndDriverFeeId vendorId driverFee.id
-      case mbExisting of
-        Just existing -> QVF.updateAmount driverFee.id vendorId (existing.amount + cancellationAmount)
-        Nothing ->
-          QVF.create
-            DVF.VendorFee
-              { driverFeeId = driverFee.id,
-                vendorId = vendorId,
-                amount = cancellationAmount,
-                createdAt = driverFee.createdAt,
-                updatedAt = driverFee.updatedAt
-              }
-      Hedis.setExp cancellationVendorFeeGuardKey True (3600 * 24)
 
 updateCancellationPenaltyAccumulationFees :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) => ServiceNames -> TransporterConfig -> Id Merchant -> Id MerchantOperatingCity -> m ()
 updateCancellationPenaltyAccumulationFees serviceName transporterConfig merchantId merchantOperatingCityId = do
