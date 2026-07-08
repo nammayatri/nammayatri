@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "01-Case2ClawbackAccounting",
-    "description": "Synchronous refund, Stripe answers immediately. Refunds are raised PER-COMPONENT (refundComponents=[{RIDE_FARE, rfN}]) so the per-component ledger-driven flow runs. Success Case-2 (deductFromDriver=true): raise -> approve -> asserts BAP per-component legs (RideFareRefund + RideFareRefundVAT, OwnerAsset->BuyerAsset) SETTLED summing to rf1; BPP Case-2 legs (RideFareRefund + RideFareRefundVAT on OwnerLiability->BuyerExternal + RideFareRefundCommission slice on SellerExpense->BuyerExternal) SETTLED summing to rf1; both negative Refund invoices (BAP carries reference_invoice_number=parent ride invoice) + the negative Commission refund invoice (invoice_type='Commission', reference_id=refundRequestId) + PDFs.",
+    "description": "Synchronous refund, Stripe answers immediately. Refunds are raised PER-COMPONENT (refundComponents=[{RIDE_FARE, rfN}]) so the per-component ledger-driven flow runs. Success Case-2 (deductFromDriver=true): raise -> approve -> asserts BAP per-component legs (RideFareRefund + RideFareRefundVAT, OwnerExpense->BuyerControl) SETTLED summing to rf1 plus a SETTLED zero-out reversal per leg (BuyerControl->OwnerExpense, reversal_of set) so BAP nets to zero; BPP Case-2 legs (RideFareRefund + RideFareRefundVAT on OwnerLiability->BuyerExternal + RideFareRefundCommission slice on SellerExpense->BuyerExternal) SETTLED summing to rf1; both negative Refund invoices (BAP carries reference_invoice_number=parent ride invoice) + the negative Commission refund invoice (invoice_type='Commission', reference_id=refundRequestId) + PDFs.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -935,36 +935,52 @@
       }
     },
     {
-      "name": "Assert BAP ledger SETTLED (OwnerAsset->BuyerAsset)",
+      "name": "Assert BAP ledger SETTLED + zero-out (OwnerExpense->BuyerControl)",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
-              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type','from_account_id','to_account_id'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}]}); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type','from_account_id','to_account_id','reversal_of'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}]}); }",
               "// Per-component refund refTypes (the reset wipes the original ride-payment legs, but we still scope so each assert passes for the RIGHT reason).",
               "var _REFUND_RT = ['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission'];",
               "function _isRefund(r){ return _REFUND_RT.indexOf(r.reference_type) >= 0; }",
-              "function _ok(rows){ return rows.some(function(r){return r.status==='SETTLED' && _isRefund(r);}); }",
+              "// Zero-out model: raise legs (reversal_of NULL) settle in place; success ALSO posts a kernel reversal per leg",
+              "// (reversal_of=<raise leg id>, direction swapped, same refType) so BAP nets to zero. Sums use raise legs ONLY.",
+              "function _isRaise(r){ return _isRefund(r) && !r.reversal_of; }",
+              "function _isMirror(r){ return _isRefund(r) && !!r.reversal_of; }",
+              "function _ok(rows){ return rows.some(function(r){return r.status==='SETTLED' && _isRaise(r);}) && rows.some(_isMirror); }",
               "function _assert(rows){",
               "  var _resp = { count: rows.length, rows: rows };",
-              "  console.log('  ↳ expected: BAP per-component legs (RideFareRefund + RideFareRefundVAT) SUM to rf1 =', pm.environment.get('rf1'));",
-              "  try { var _rows = (_resp.rows) || []; console.log('  ↳ DB rows:', JSON.stringify(_rows.map(function(x){ return {st:x.status, amt:x.amount, type:x.reference_type}; }))); } catch(e) {}",
+              "  console.log('  ↳ expected: BAP raise legs (RideFareRefund + RideFareRefundVAT) SUM to rf1 =', pm.environment.get('rf1'), '+ a SETTLED zero-out reversal per leg');",
+              "  try { var _rows = (_resp.rows) || []; console.log('  ↳ DB rows:', JSON.stringify(_rows.map(function(x){ return {st:x.status, amt:x.amount, type:x.reference_type, rev:!!x.reversal_of}; }))); } catch(e) {}",
               "  var _rows2 = (_resp.rows) || [];",
               "  var _R = Number(pm.environment.get('rf1'));",
-              "  var _settled2 = _rows2.filter(function (r) { return r.status === 'SETTLED' && _isRefund(r); });",
+              "  var _settled2 = _rows2.filter(function (r) { return r.status === 'SETTLED' && _isRaise(r); });",
+              "  var _mirrors = _rows2.filter(_isMirror);",
               "  var _newRefTypes = ['RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT'];",
-              "  pm.test('BAP refund ledger has SETTLED per-component legs', function () {",
-              "    pm.expect(_settled2.length, 'expected >=1 SETTLED refund leg (OwnerAsset->BuyerAsset; verify the role via the 📊 Finance view / a finance_account join)').to.be.above(0);",
+              "  pm.test('BAP refund ledger has SETTLED per-component raise legs', function () {",
+              "    pm.expect(_settled2.length, 'expected >=1 SETTLED refund raise leg (OwnerExpense->BuyerControl; roles verified in the next step)').to.be.above(0);",
               "  });",
-              "  // BAP posts PER-COMPONENT legs (RideFareRefund + RideFareRefundVAT) that SUM to the gross refund rf1 - no single gross 'RideRefund' leg.",
+              "  // BAP posts PER-COMPONENT raise legs (RideFareRefund + RideFareRefundVAT) that SUM to the gross refund rf1 - no single gross 'RideRefund' leg.",
               "  pm.test('BAP per-component refund legs use the per-component refTypes', function () {",
               "      _settled2.forEach(function (r) { pm.expect(_newRefTypes, 'unexpected refType ' + r.reference_type + ' (legacy RideRefund means refundComponents was not sent)').to.include(r.reference_type); });",
               "  });",
-              "  pm.test('BAP per-component refund legs SUM to rf1 (gross)', function () {",
+              "  pm.test('BAP per-component raise legs SUM to rf1 (gross; reversal legs excluded)', function () {",
               "      var _sum = _settled2.reduce(function (a, r) { return a + Number(r.amount); }, 0);",
               "      pm.expect(_sum).to.be.closeTo(_R, 0.011);",
+              "  });",
+              "  pm.test('BAP zero-out: every settled raise leg has a SETTLED same-amount reversal; mirrors SUM to rf1', function () {",
+              "      var _byId = {}; _mirrors.forEach(function (m) { _byId[m.reversal_of] = m; });",
+              "      _settled2.forEach(function (r) {",
+              "        var _m = _byId[r.id];",
+              "        pm.expect(_m, 'raise leg ' + r.id + ' (' + r.reference_type + ') has no reversal — BAP does not net to zero').to.exist;",
+              "        pm.expect(_m.status, 'reversal of ' + r.reference_type + ' must be SETTLED').to.eql('SETTLED');",
+              "        pm.expect(Number(_m.amount), 'reversal amount must equal its raise leg').to.be.closeTo(Number(r.amount), 0.001);",
+              "      });",
+              "      var _msum = _mirrors.reduce(function (a, r) { return a + Number(r.amount); }, 0);",
+              "      pm.expect(_msum, 'zero-out reversals must also sum to rf1').to.be.closeTo(_R, 0.011);",
               "  });",
               "}",
               "",
@@ -984,7 +1000,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\",\"from_account_id\",\"to_account_id\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\",\"from_account_id\",\"to_account_id\",\"reversal_of\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
         },
         "url": {
           "raw": "{{mockServerUrl}}/mock/sql/select",
@@ -1000,7 +1016,7 @@
       }
     },
     {
-      "name": "Assert BAP refund leg ACCOUNT ROLES (OwnerAsset->BuyerAsset)",
+      "name": "Assert BAP refund leg ACCOUNT ROLES (OwnerExpense->BuyerControl + zero-out mirror)",
       "event": [
         {
           "listen": "test",
@@ -1009,14 +1025,17 @@
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
               "// BAP-side mirror of the BPP role check: the refType+sum asserts above do NOT verify the account ROLES.",
-              "// The BAP refund posts OwnerAsset(from) -> BuyerAsset(to) per component (RidePayment.createRefundRaisedLedger;",
-              "// createRefundSucceededLedger settles them in place — no reverse leg). No role column exists -> resolve",
-              "// from_account_id/to_account_id against atlas_app.finance_account. On the BAP ctx.counterpartyType=RIDER, so",
-              "// (FinanceM.roleToInput): OwnerAsset = Asset + RIDER; BuyerAsset = Asset + BUYER.",
+              "// Zero-out model: the raise posts OwnerExpense(from) -> BuyerControl(to) per component (RidePayment.createRefundRaisedLedger);",
+              "// createRefundSucceededLedger settles them AND posts a kernel reversal per leg (reversal_of set, direction swapped:",
+              "// BuyerControl -> OwnerExpense) so BAP nets to zero. No role column exists -> resolve from_account_id/to_account_id",
+              "// against atlas_app.finance_account. On the BAP ctx.counterpartyType=RIDER, so (FinanceM.roleToInput):",
+              "// OwnerExpense = Expense + RIDER; BuyerControl = Control + BUYER.",
               "var _REFUND_RT = ['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission'];",
               "function _acctBody(ids){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_account',select:['id','account_type','counterparty_type'],where_clause:[{column_name:'id',val:ids,op:'IN'}]}); }",
               "var legs=[]; try{ legs=(pm.response.json().rows)||[]; }catch(e){}",
               "var refLegs = legs.filter(function(l){ return l.status==='SETTLED' && _REFUND_RT.indexOf(l.reference_type)>=0; });",
+              "var raiseLegs = refLegs.filter(function(l){ return !l.reversal_of; });",
+              "var mirrorLegs = refLegs.filter(function(l){ return !!l.reversal_of; });",
               "var ids=[];",
               "refLegs.forEach(function(l){ if(l.from_account_id && ids.indexOf(l.from_account_id)<0) ids.push(l.from_account_id); if(l.to_account_id && ids.indexOf(l.to_account_id)<0) ids.push(l.to_account_id); });",
               "if (!ids.length) {",
@@ -1025,13 +1044,21 @@
               "  pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_acctBody(ids)} }, function(err,res){",
               "    var accts=[]; try{ accts=((res&&res.json())||{}).rows||[]; }catch(e){}",
               "    var amap={}; accts.forEach(function(a){ amap[a.id]={t:a.account_type, c:a.counterparty_type}; });",
-              "    try { console.log('  ↳ BAP leg roles:', JSON.stringify(refLegs.map(function(l){ var f=amap[l.from_account_id]||{}, t=amap[l.to_account_id]||{}; return {type:l.reference_type, from_t:f.t, from_c:f.c, to_t:t.t, to_c:t.c}; }))); } catch(e){}",
-              "    pm.test('BAP refund legs debit OwnerAsset (Asset + RIDER)', function(){",
-              "      pm.expect(refLegs.length, 'expected >=1 settled BAP refund leg').to.be.above(0);",
-              "      refLegs.forEach(function(l){ var a=amap[l.from_account_id]||{}; pm.expect(a.t, 'from-leg '+l.reference_type+' account_type (OwnerAsset)').to.eql('Asset'); pm.expect(a.c, 'from-leg '+l.reference_type+' counterparty_type (OwnerAsset=RIDER)').to.eql('RIDER'); });",
+              "    try { console.log('  ↳ BAP leg roles:', JSON.stringify(refLegs.map(function(l){ var f=amap[l.from_account_id]||{}, t=amap[l.to_account_id]||{}; return {type:l.reference_type, rev:!!l.reversal_of, from_t:f.t, from_c:f.c, to_t:t.t, to_c:t.c}; }))); } catch(e){}",
+              "    pm.test('BAP raise legs debit OwnerExpense (Expense + RIDER)', function(){",
+              "      pm.expect(raiseLegs.length, 'expected >=1 settled BAP refund raise leg').to.be.above(0);",
+              "      raiseLegs.forEach(function(l){ var a=amap[l.from_account_id]||{}; pm.expect(a.t, 'from-leg '+l.reference_type+' account_type (OwnerExpense)').to.eql('Expense'); pm.expect(a.c, 'from-leg '+l.reference_type+' counterparty_type (OwnerExpense=RIDER)').to.eql('RIDER'); });",
               "    });",
-              "    pm.test('BAP refund legs credit BuyerAsset (Asset + BUYER)', function(){",
-              "      refLegs.forEach(function(l){ var a=amap[l.to_account_id]||{}; pm.expect(a.t, 'to-leg '+l.reference_type+' account_type (BuyerAsset)').to.eql('Asset'); pm.expect(a.c, 'to-leg '+l.reference_type+' counterparty_type (BuyerAsset=BUYER)').to.eql('BUYER'); });",
+              "    pm.test('BAP raise legs credit BuyerControl (Control + BUYER)', function(){",
+              "      raiseLegs.forEach(function(l){ var a=amap[l.to_account_id]||{}; pm.expect(a.t, 'to-leg '+l.reference_type+' account_type (BuyerControl)').to.eql('Control'); pm.expect(a.c, 'to-leg '+l.reference_type+' counterparty_type (BuyerControl=BUYER)').to.eql('BUYER'); });",
+              "    });",
+              "    pm.test('BAP zero-out mirrors run BuyerControl -> OwnerExpense (roles swapped)', function(){",
+              "      pm.expect(mirrorLegs.length, 'expected >=1 zero-out reversal leg (reversal_of set)').to.be.above(0);",
+              "      mirrorLegs.forEach(function(l){",
+              "        var f=amap[l.from_account_id]||{}, t=amap[l.to_account_id]||{};",
+              "        pm.expect(f.t, 'mirror from-leg '+l.reference_type+' account_type (BuyerControl)').to.eql('Control'); pm.expect(f.c, 'mirror from-leg counterparty (BUYER)').to.eql('BUYER');",
+              "        pm.expect(t.t, 'mirror to-leg '+l.reference_type+' account_type (OwnerExpense)').to.eql('Expense'); pm.expect(t.c, 'mirror to-leg counterparty (RIDER)').to.eql('RIDER');",
+              "      });",
               "    });",
               "  });",
               "}"
@@ -1049,7 +1076,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\",\"from_account_id\",\"to_account_id\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\",\"from_account_id\",\"to_account_id\",\"reversal_of\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
         },
         "url": {
           "raw": "{{mockServerUrl}}/mock/sql/select",

@@ -882,25 +882,26 @@ processRefundSucceeded :: DRefundRequest.RefundRequest -> Environment.Flow ()
 processRefundSucceeded refundRequest = do
   rideId <- SPayment.getRideIdForOrder refundRequest.orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> refundRequest.orderId.getId)
   -- Re-fire guard: the 3 status-refresh hooks can re-enter this REFUNDED transition, and the
-  -- cumulative refund invoice would double-count, so gate every REFUNDED side-effect on the
-  -- ledger dedup signal (the authoritative "already processed" marker).
+  -- cumulative refund invoice would double-count, so gate the one-shot side-effects (invoice,
+  -- BPP call) on the ledger dedup signal. The settle+zero-out is NOT gated: it is internally
+  -- idempotent, so a re-fire heals a crash between the settle and the zero-out reversal.
   alreadyRecorded <- RidePaymentFinance.refundSucceededAlreadyRecorded rideId.getId refundRequest.id
+  ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  let amount = fromMaybe refundRequest.transactionAmount refundRequest.refundsAmount
+      ctx =
+        RidePaymentFinance.buildRiderFinanceCtx
+          booking.merchantId.getId
+          booking.merchantOperatingCityId.getId
+          refundRequest.currency
+          True
+          refundRequest.personId.getId
+          rideId.getId
+          Nothing
+          Nothing
+          (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
+  void $ RidePaymentFinance.createRefundSucceededLedger ctx refundRequest.id
   unless alreadyRecorded $ do
-    ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-    booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-    let amount = fromMaybe refundRequest.transactionAmount refundRequest.refundsAmount
-        ctx =
-          RidePaymentFinance.buildRiderFinanceCtx
-            booking.merchantId.getId
-            booking.merchantOperatingCityId.getId
-            refundRequest.currency
-            True
-            refundRequest.personId.getId
-            rideId.getId
-            Nothing
-            Nothing
-            (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
-    void $ RidePaymentFinance.createRefundSucceededLedger ctx refundRequest.id
     (rideFareTotal, splits) <- computeRefundSplits rideId refundRequest ctx
     RidePaymentFinance.createRefundInvoice rideId.getId refundRequest.id.getId splits
     merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)

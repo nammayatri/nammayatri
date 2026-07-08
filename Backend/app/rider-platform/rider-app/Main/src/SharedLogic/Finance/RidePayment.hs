@@ -985,7 +985,8 @@ createTipLedger ctx tipAmount = do
 --
 -- Per refund_request (per-component refTypes RideFareRefund/TollRefund/ParkingRefund + VAT,
 -- ref = rideId, {refundRequestId} metadata):
--- raise → pending OwnerAsset→BuyerAsset legs; success → settle them; failure → void them.
+-- raise → pending OwnerExpense→BuyerControl legs; success → settle them + post the kernel
+-- reversal (BuyerControl→OwnerExpense) so BAP nets to zero (pass-through); failure → void them.
 -- VOIDED legs are ignored by dedup/guards (so a retry re-raises); "done" = a SETTLED leg.
 
 -- | Links a ledger leg to its refund request. Legs carry only the id; request state lives
@@ -1043,10 +1044,11 @@ getSettledRefundByComponent rideId component = do
 
 -- | Pure part of 'getSettledRefundByComponent' — sums the SETTLED base+VAT legs for one
 --   component from pre-fetched entries, so per-component checks can share a single fetch.
+--   Zero-out reversal legs (reversalOf set) share the refType and must not double the sum.
 settledRefundByComponent :: [LE.LedgerEntry] -> DFareBreakup.FareComponent -> HighPrecMoney
 settledRefundByComponent entries component =
   let (baseRef, vatRef) = refundRefTypesForComponent component
-   in sum [e.amount | e <- entries, e.status == LE.SETTLED, e.referenceType `elem` [baseRef, vatRef]]
+   in sum [e.amount | e <- entries, e.status == LE.SETTLED, e.referenceType `elem` [baseRef, vatRef], isNothing e.reversalOf]
 
 createRefundRaisedLedger ::
   (BeamFlow.BeamFlow m r, MonadFlow m) =>
@@ -1067,8 +1069,8 @@ createRefundRaisedLedger ctx refundRequestId splits = do
         runFinance ctx $
           forM_ splits $ \s -> do
             let (baseRef, vatRef) = refundRefTypesForComponent s.component
-            void $ transferPendingWithMetadata OwnerAsset BuyerAsset s.fareAmount baseRef meta
-            void $ transferPendingWithMetadata OwnerAsset BuyerAsset s.vatAmount vatRef meta
+            void $ transferPendingWithMetadata OwnerExpense BuyerControl s.fareAmount baseRef meta
+            void $ transferPendingWithMetadata OwnerExpense BuyerControl s.vatAmount vatRef meta
       case result of
         Left err -> do
           logError $ "Failed to create refund APPROVED ledger: " <> show err
@@ -1084,12 +1086,21 @@ createRefundSucceededLedger ctx refundRequestId = do
   existing <- getRefundLegEntries ctx.referenceId
   let approvedEntries = filter (entryMatchesRefundRequest refundRequestId) existing
       pendingApproved = filter (\e -> e.status == LE.PENDING) approvedEntries
-  -- Settle the pending APPROVED leg in place — no reverse entry. Idempotent (settleEntry no-ops if settled).
+      hasReversal e = any (\r -> r.reversalOf == Just e.id) existing
+  -- Settle the pending leg(s), then zero out: BAP is a pass-through, so each settled leg gets the
+  -- kernel reversal (BuyerControl → OwnerExpense, same refType, reversalOf-linked). Both halves are
+  -- idempotent (settleEntry no-ops when settled; reversal deduped on reversalOf), so hook re-fires —
+  -- including a crash between settle and reversal — heal on the next delivery.
   forM_ pendingApproved $ \e -> Lib.Finance.Ledger.Service.settleEntry e.id
+  forM_ (filter (\e -> e.status /= LE.VOIDED && not (hasReversal e)) approvedEntries) $ \e ->
+    Lib.Finance.Ledger.Service.createReversal e.id "RefundSucceededZeroOut" >>= \case
+      Left err -> logError $ "Refund zero-out reversal failed for leg " <> e.id.getId <> ": " <> show err
+      Right _ -> pure ()
   pure $ Right (map (\e -> e.id) approvedEntries)
 
 -- | True once this refund's APPROVED leg is SETTLED — the "success already done" signal that
---   gates the one-shot REFUNDED side-effects (settle, invoice, BPP call) against hook re-fires.
+--   gates the one-shot REFUNDED side-effects (invoice, BPP call) against hook re-fires. The
+--   settle+zero-out itself is NOT gated on this (it self-heals in case of mid crash before reversal; see createRefundSucceededLedger).
 refundSucceededAlreadyRecorded ::
   (BeamFlow.BeamFlow m r) =>
   Text -> -- rideId
