@@ -20,6 +20,7 @@ import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text as Text
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.DriverStats as DDriverStats
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -157,16 +158,18 @@ handler merchantId req ride = do
       QRating.updateRating newRatingValue feedbackDetails isSafe issueId wasOfferedAssistance req.shouldFavDriver mediaId rideRating.id driverId
       pure (newRatingValue - oldRatingValue, False)
   newRating <- calculateAverageRating driverId merchant.minimumDriverRatesCount shouldIncrementCount netRatingValue ratingCount ratingsSum transporterConfig
-  syncServiceTiersOnRatingChange newRating driverId ride.merchantOperatingCityId
+  syncServiceTiersOnRatingChange driverStats newRating driverId ride.merchantOperatingCityId
 
 syncServiceTiersOnRatingChange ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  DDriverStats.DriverStats ->
   Maybe Centesimal ->
   Id DP.Person ->
   Id DMOC.MerchantOperatingCity ->
   m ()
-syncServiceTiersOnRatingChange newRating personId merchantOpCityId = do
-  tierResults <- fetchVehicleTierForDriverWithUsageRestriction True Nothing Nothing (Just newRating) Nothing personId merchantOpCityId
+syncServiceTiersOnRatingChange driverStats newRating personId merchantOpCityId = do
+  let updatedDriverStats = driverStats {DDriverStats.rating = newRating}
+  tierResults <- fetchVehicleTierForDriverWithUsageRestriction True Nothing Nothing (Just updatedDriverStats) Nothing personId merchantOpCityId
   let newTiers = (.serviceTierType) . fst <$> filter (not . snd) tierResults
   QVehicle.updateSelectedServiceTiers newTiers personId
 
