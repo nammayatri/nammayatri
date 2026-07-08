@@ -140,7 +140,7 @@ executeSpecialZonePayout payoutRequest = do
                 odometer = Nothing,
                 driverGpsTurnedOff = Nothing
               }
-      shandle <- RideEnd.buildEndRideHandle merchantId merchantOpCityId (Just ride.id)
+      shandle <- RideEnd.buildEndRideHandle merchantId merchantOpCityId (Just ride.id) False
       void $ RideEnd.driverEndRide shandle ride.id driverReq
 
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
@@ -256,7 +256,7 @@ executeOldSpecialZonePayout scheduledPayout = do
                   odometer = Nothing,
                   driverGpsTurnedOff = Nothing
                 }
-        shandle <- RideEnd.buildEndRideHandle mId mocId (Just ride.id)
+        shandle <- RideEnd.buildEndRideHandle mId mocId (Just ride.id) False
         void $ RideEnd.driverEndRide shandle ride.id driverReq
     _ -> pure ()
 

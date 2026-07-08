@@ -193,15 +193,16 @@ buildEndRideHandle ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe (Id DRide.Ride) ->
+  Bool ->
   m (ServiceHandle m)
-buildEndRideHandle merchantId merchantOpCityId rideId = do
+buildEndRideHandle merchantId merchantOpCityId rideId allowSnapshotVehicleFallback = do
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId rideId True Nothing
   return $
     ServiceHandle
       { findBookingById = QRB.findById,
         findRideById = QRide.findById,
         getMerchant = MerchantS.findById,
-        notifyCompleteToBAP = CallBAP.sendRideCompletedUpdateToBAP,
+        notifyCompleteToBAP = \b r fp pm pu loc -> CallBAP.sendRideCompletedUpdateToBAP b r fp pm pu loc allowSnapshotVehicleFallback,
         endRideTransaction = RideEndInt.endRideTransaction,
         getFarePolicyByEstOrQuoteId = FarePolicy.getFarePolicyByEstOrQuoteId,
         getFarePolicyOnEndRide = FarePolicy.getFarePolicyOnEndRide,

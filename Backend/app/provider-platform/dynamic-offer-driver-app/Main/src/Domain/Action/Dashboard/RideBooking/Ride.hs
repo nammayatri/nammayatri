@@ -62,7 +62,7 @@ postRideEnd merchantShortId opCity reqRideId mbRequestorId Common.EndRideReq {po
   let merchantId = merchant.id
   let odometer = (\value -> DRide.OdometerReading Nothing value) <$> odometerReadingValue
   let dashboardReq = EHandler.DashboardEndRideReq {point, merchantId, merchantOperatingCityId, odometer}
-  shandle <- EHandler.buildEndRideHandle merchantId merchantOperatingCityId (Just rideId)
+  shandle <- EHandler.buildEndRideHandle merchantId merchantOperatingCityId (Just rideId) True
   EHandler.dashboardEndRide shandle rideId dashboardReq
 
 getRideCurrentActiveRide :: ShortId DM.Merchant -> Context.City -> Text -> Flow (Id Common.Ride)
@@ -79,7 +79,7 @@ postRideCancel merchantShortId opCity reqRideId mbRequestorId Common.CancelRideR
             additionalInfo,
             doCancellationRateBasedBlocking = Nothing
           }
-  CHandler.dashboardCancelRideHandler CHandler.cancelRideHandle merchant.id merchantOpCityId rideId dashboardReq
+  CHandler.dashboardCancelRideHandler CHandler.cancelRideHandle merchant.id merchantOpCityId rideId dashboardReq True
 
 postRideBookingWithVehicleNumberAndPhone :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Common.BookingWithVehicleAndPhoneReq -> Flow Common.BookingWithVehicleAndPhoneRes
 postRideBookingWithVehicleNumberAndPhone merchantShortId opCity mbRequestorId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) $ do
