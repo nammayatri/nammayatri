@@ -21,6 +21,7 @@ import Data.Aeson.Types (parseFail, typeMismatch)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
+import qualified Domain.Action.UI.Payout as DAP
 import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverReferral as DR
 import qualified Domain.Types.Merchant as DM
@@ -46,7 +47,6 @@ import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverReferral as QDR
-import qualified Domain.Action.UI.Payout as DAP
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
@@ -354,4 +354,3 @@ updateD2dReferralStatsOnLink referringDriverId transporterConfig merchantId merc
                 onlineDuration = Nothing
               }
       QDailyStats.create dailyStatsOfDriver'
-

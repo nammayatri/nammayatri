@@ -237,9 +237,12 @@ getActualQAR now vehicleCategory location radius distance cityId = do
     logQARCounts keys cs =
       logDebug $
         "QAR_COUNTS: vehicleCategory=" <> show vehicleCategory
-          <> " cityId=" <> cityId
-          <> " radius=" <> show radius
-          <> " keyCounts=" <> show (zip keys cs)
+          <> " cityId="
+          <> cityId
+          <> " radius="
+          <> show radius
+          <> " keyCounts="
+          <> show (zip keys cs)
 
     -- Fetch only the signal(s) still missing at this level and fill them in; a value
     -- already found at a finer level is preserved untouched. 'demAt'/'accAt' build a

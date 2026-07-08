@@ -108,7 +108,7 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
   IBM.issueBreachMitigation EXTRA_FARE_MITIGATION merchantConfig driverInfo
   when (doCancellationRateBasedBlocking == Just True && not (driverInfo.onRide)) $ do
-    SCR.nudgeOrBlockDriver merchantConfig driver driverInfo   -------need to deprecate after handling properly in behviour farmework
+    SCR.nudgeOrBlockDriver merchantConfig driver driverInfo -------need to deprecate after handling properly in behviour farmework
     -- Use behavior management framework for cancellation rate evaluation
     let windowSize = toInteger $ fromMaybe 7 merchantConfig.cancellationRateWindow
         counterConfig =
