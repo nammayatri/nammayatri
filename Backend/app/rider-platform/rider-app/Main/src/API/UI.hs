@@ -45,6 +45,7 @@ import qualified API.Action.UI.TicketKapture as TicketKapture
 import qualified API.Action.UI.TicketService as TicketService
 import qualified API.Action.UI.TrackRoute as TrackRoute
 import qualified API.Action.UI.TriggerFCM as TriggerFCM
+import qualified API.Action.UI.ZendeskSdkToken as ZendeskSdkToken
 import qualified API.UI.AadhaarVerification as AadhaarVerification
 import qualified API.UI.AddBaggage as AddBaggage
 import qualified API.UI.AppInstalls as AppInstalls
@@ -176,6 +177,7 @@ type API =
            :<|> SVP.API
            :<|> ChangeServiceTier.API
            :<|> AddBaggage.API
+           :<|> ZendeskSdkToken.API
        )
 
 handler :: FlowServer API
@@ -259,3 +261,4 @@ handler =
     :<|> SVP.handler
     :<|> ChangeServiceTier.handler
     :<|> AddBaggage.handler
+    :<|> ZendeskSdkToken.handler
