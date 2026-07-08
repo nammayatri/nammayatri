@@ -82,6 +82,7 @@ oldIdfyWebhookHandler secret val = do
         Verification.DigiLockerConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.TtenVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy -> Tten verfication config"
         Verification.MorthConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
+        Verification.EkatraConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 idfyWebhookHandler ::
@@ -115,6 +116,7 @@ idfyWebhookHandler merchantShortId secret val = do
         Verification.DigiLockerConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.TtenVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy -> Tten verfication config"
         Verification.MorthConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
+        Verification.EkatraConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 idfyWebhookV2Handler ::
@@ -151,6 +153,7 @@ idfyWebhookV2Handler merchantShortId opCity secret val = do
         Verification.DigiLockerConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.TtenVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy -> Tten verfication config"
         Verification.MorthConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
+        Verification.EkatraConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 onVerify :: Idfy.VerificationResponse -> Text -> Flow AckResponse
