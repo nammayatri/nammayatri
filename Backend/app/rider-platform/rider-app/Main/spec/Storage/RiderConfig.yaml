@@ -85,7 +85,6 @@ RiderConfig:
       supplierName: Maybe Text
       supplierAddress: Maybe Text
       supplierVatNumber: Maybe Text
-      useFareBreakupLineItems: Maybe Bool
 
   tableName: rider_config
 

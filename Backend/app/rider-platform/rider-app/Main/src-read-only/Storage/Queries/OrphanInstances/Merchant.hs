@@ -72,7 +72,8 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
             signingPublicKey = signingPublicKey,
             stuckRideAutoCancellationBuffer = stuckRideAutoCancellationBuffer,
             subscriberId = Kernel.Types.Id.ShortId subscriberId,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            useFareBreakupLineItems = useFareBreakupLineItems
           }
 
 instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
@@ -128,5 +129,6 @@ instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
         Beam.signingPublicKey = signingPublicKey,
         Beam.stuckRideAutoCancellationBuffer = stuckRideAutoCancellationBuffer,
         Beam.subscriberId = Kernel.Types.Id.getShortId subscriberId,
-        Beam.updatedAt = updatedAt
+        Beam.updatedAt = updatedAt,
+        Beam.useFareBreakupLineItems = useFareBreakupLineItems
       }

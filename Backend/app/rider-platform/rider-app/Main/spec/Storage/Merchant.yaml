@@ -44,6 +44,7 @@ Merchant:
 
   fields:
     id: Id Merchant
+    useFareBreakupLineItems: Maybe Bool
     subscriberId: ShortId Subscriber
     shortId: ShortId Merchant
     name: Text

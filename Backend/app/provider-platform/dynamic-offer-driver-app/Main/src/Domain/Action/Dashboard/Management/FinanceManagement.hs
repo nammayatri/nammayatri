@@ -84,8 +84,8 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Plan as CQPlan
-import qualified Storage.Queries.Booking as QBooking
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
@@ -1476,9 +1476,9 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   -- If multiple invoices match the filters, the first (newest by issuedAt DESC) is rendered.
   let chosenPdfData = Kernel.Prelude.head pdfDatas
       chosenInv = chosenPdfData.financeInvoice
-      useItemizedReceipt = (transporterConfig.invoiceConfig >>= (.useFareBreakupLineItems)) == Just True
+      useItemizedReceipt = merchant.useFareBreakupLineItems == Just True
 
-  -- Itemized receipt (TransporterConfig.invoiceConfig.useFareBreakupLineItems): Ride
+  -- Itemized receipt (Merchant.useFareBreakupLineItems): Ride
   -- line items come from FareParameters display breakups (in-app parity), reached via
   -- booking.financeInvoiceId; RideCancellation keeps the row's lines (amounts live in
   -- cancellationDuesDetails) and reaches the ride via invoice.referenceId.
