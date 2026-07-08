@@ -969,16 +969,16 @@
           "script": {
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
-              "// Quick check only: the BAP role join (OwnerAsset->BuyerAsset) + exact per-component model are asserted in 01. BAP is deductFromDriver-invariant,",
-              "// so here we only confirm it settled identically to Case-2: >=1 SETTLED refund-typed leg summing to rf1. No role-join re-check.",
+              "// Quick check only: the BAP role join (OwnerExpense->BuyerControl) + zero-out reversal model are asserted in 01. BAP is deductFromDriver-invariant,",
+              "// so here we only confirm it settled identically to Case-2: >=1 SETTLED raise leg summing to rf1 (reversal legs excluded). No role-join re-check.",
               "var _RT = ['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission'];",
               "function _isRefund(r){ return _RT.indexOf(r.reference_type) >= 0; }",
-              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}]}); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type','reversal_of'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}]}); }",
               "function _ok(rows){ return rows.some(function(r){return r.status==='SETTLED' && _isRefund(r);}); }",
               "function _assert(rows){",
-              "  var settled = (rows||[]).filter(function(r){return r.status==='SETTLED' && _isRefund(r);});",
+              "  var settled = (rows||[]).filter(function(r){return r.status==='SETTLED' && _isRefund(r) && !r.reversal_of;});",
               "  try { console.log('  ↳ BAP settled refund legs:', JSON.stringify(settled.map(function(x){return {amt:x.amount,type:x.reference_type};}))); } catch(e){}",
-              "  pm.test('Quick check: BAP refund legs SETTLED and SUM to rf1 (account roles asserted in 01)', function () {",
+              "  pm.test('Quick check: BAP raise legs SETTLED and SUM to rf1 (roles + zero-out asserted in 01)', function () {",
               "    pm.expect(settled.length, 'expected >=1 SETTLED BAP refund leg').to.be.above(0);",
               "    var _sum = settled.reduce(function(a,r){return a+Number(r.amount);},0);",
               "    pm.expect(_sum).to.be.closeTo(Number(pm.environment.get('rf1')), 0.011);",
@@ -1000,7 +1000,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\",\"from_account_id\",\"to_account_id\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\",\"from_account_id\",\"to_account_id\",\"reversal_of\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
         },
         "url": {
           "raw": "{{mockServerUrl}}/mock/sql/select",
