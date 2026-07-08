@@ -20,6 +20,7 @@ module Storage.Queries.ImageExtra
     filterImageByEntityIdAndImageTypeAndVerificationStatus,
     filterRecentLatestByEntityIdAndImageType,
     filterRecentByPersonRCAndImageType,
+    updateVerificationStatusByRcIdAndImageTypes,
   )
 where
 
@@ -172,6 +173,24 @@ updateVerificationStatusByIdAndType verificationStatus (Kernel.Types.Id.Id id) i
     [ Se.And
         [ Se.Is BeamI.id $ Se.Eq id,
           Se.Is BeamI.imageType $ Se.Eq imageType
+        ]
+    ]
+
+-- Bulk-set verificationStatus for all images of an RC matching any of the given types, in one call.
+-- Used e.g. to invalidate every vehicle inspection photo when the aggregate VehicleInspectionForm is rejected.
+updateVerificationStatusByRcIdAndImageTypes ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Documents.VerificationStatus ->
+  Id DReg.VehicleRegistrationCertificate ->
+  [DocumentType] ->
+  m ()
+updateVerificationStatusByRcIdAndImageTypes verificationStatus rcId imageTypes = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set BeamI.verificationStatus (Just verificationStatus), Se.Set BeamI.updatedAt now]
+    [ Se.And
+        [ Se.Is BeamI.rcId $ Se.Eq (Just rcId.getId),
+          Se.Is BeamI.imageType $ Se.In imageTypes
         ]
     ]
 
