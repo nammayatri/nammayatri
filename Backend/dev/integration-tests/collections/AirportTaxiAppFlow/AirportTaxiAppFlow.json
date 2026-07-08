@@ -103,6 +103,39 @@
       }
     },
     {
+      "name": "Switch City (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('dashboard_token', d.authToken);",
+              "console.log('Switched to', d.merchantId, d.city);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+          "host": ["{{dashboard_base_url}}"],
+          "path": ["user", "switchMerchantAndCity"]
+        }
+      }
+    },
+    {
       "name": "Add Vehicle (Dashboard)",
       "event": [
         {
@@ -169,6 +202,9 @@
           "listen": "test",
           "script": {
             "exec": [
+              "var d = pm.response.json();",
+              "if (d.orderId) { pm.environment.set('payment_order_id', d.orderId); }",
+              "if (d.orderResp && d.orderResp.order_id) { pm.environment.set('juspay_mock_order_id', d.orderResp.order_id); }",
               "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
             ],
             "type": "text/javascript"
@@ -183,9 +219,78 @@
         ],
         "body": { "mode": "raw", "raw": "{}" },
         "url": {
-          "raw": "{{baseURL_namma_P}}/plan/{{plan_id}}/subscribe",
+          "raw": "{{baseURL_namma_P}}/plan/{{plan_id}}/subscribe?serviceName=%22{{plan_service_name}}%22",
           "host": ["{{baseURL_namma_P}}"],
-          "path": ["plan", "{{plan_id}}", "subscribe"]
+          "path": ["plan", "{{plan_id}}", "subscribe"],
+          "query": [
+            { "key": "serviceName", "value": "%22{{plan_service_name}}%22" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Force Payment Success (Mock Override)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Forced juspay order', pm.environment.get('juspay_mock_order_id'), 'to CHARGED');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"value\": \"{{juspay_mock_order_id}}\", \"match\": \"/orders\", \"response\": {\"status\": \"CHARGED\"}}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/override",
+          "host": ["{{mockServerUrl}}"],
+          "path": ["mock", "override"]
+        }
+      }
+    },
+    {
+      "name": "Check Payment Status (Driver)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Give the mock payment gateway a moment before checking status.",
+              "setTimeout(function(){}, 1000);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Payment status:', pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/payment/{{payment_order_id}}/status",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["payment", "{{payment_order_id}}", "status"]
         }
       }
     },
