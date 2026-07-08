@@ -90,7 +90,9 @@ refundLedger rideId req apiKey = do
     -- online cab only; Case-2 clawback legs debit OwnerLiability (the driver wallet), reducing payout.
     ctx <- Wallet.buildFinanceCtx booking ride mbDriver Nothing mbDriverInfo transporterConfig True
     let referenceId = booking.id.getId
-        deductFromDriver = fromMaybe True req.deductFromDriver -- default: clawback
+        -- When the approval doesn't specify who bears the refund, the merchant config decides;
+        -- with no config either, the platform absorbs.
+        deductFromDriver = fromMaybe (fromMaybe False transporterConfig.defaultRefundDeductFromDriver) req.deductFromDriver
         legs = refundLegs deductFromDriver req ride
     existing <- getRefundEntries referenceId
     case req.refundRequestStatus of

@@ -1071,6 +1071,7 @@ TransporterConfig:
     editLocDriverPermissionNeeded: Bool
     rideTimeEstimatedThreshold: Seconds
     includeDriverCurrentlyOnRide: Bool
+    defaultRefundDeductFromDriver: Maybe Bool
     defaultPopupDelay: Seconds
     popupDelayToAddAsPenalty: Maybe Seconds
     fleetAlertThreshold: Maybe Seconds

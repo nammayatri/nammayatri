@@ -1466,6 +1466,70 @@
       "response": []
     },
     {
+      "name": "Over-Cap On Initiate Path Rejected (RIDE_FARE cap+1 -> 400)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Change 4: the per-component cap must be enforced on the ADMIN /initiate path too, not just customer create.",
+              "// rf3over = rideFareCap + 1 exceeds the RIDE_FARE cap regardless of prior refunds -> validateRefundComponents 400.",
+              "function _r2(x){ return Math.round(x*100)/100; }",
+              "var rideFareCap = Number(pm.environment.get('rideFareCap'));",
+              "pm.environment.set('rf3over', String(_r2(rideFareCap + 1)));",
+              "console.log('Initiate over-cap: rf3over='+pm.environment.get('rf3over')+' (rideFareCap='+rideFareCap+' + 1)');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Initiate Over-Cap Rejected', function(){",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([400,422]);",
+              "  pm.expect(/cap/i.test(pm.response.text()), 'expected a refundable-cap rejection on the admin /initiate path: '+pm.response.text()).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"refundComponents\":[{\"component\":\"RIDE_FARE\",\"amount\":{\"amount\":{{rf3over}},\"currency\":\"{{currency}}\"}}],\"deductFromDriver\":false}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{rideId}}/initiate",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{dashboard_city}}",
+            "payment",
+            "refundRequest",
+            "{{rideId}}",
+            "initiate"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
       "name": "RIDE_FARE-only refund still succeeds while TOLL is capped (caps are per-component, not a shared pool)",
       "event": [
         {
@@ -1534,32 +1598,42 @@
       "response": []
     },
     {
-      "name": "Over-Cap On Initiate Path Rejected (RIDE_FARE cap+1 -> 400)",
+      "name": "Close the RIDE_FARE-only request — only one open request at a time",
       "event": [
         {
           "listen": "prerequest",
           "script": {
-            "type": "text/javascript",
             "exec": [
-              "// Change 4: the per-component cap must be enforced on the ADMIN /initiate path too, not just customer create.",
-              "// rf3over = rideFareCap + 1 exceeds the RIDE_FARE cap regardless of prior refunds -> validateRefundComponents 400.",
-              "function _r2(x){ return Math.round(x*100)/100; }",
-              "var rideFareCap = Number(pm.environment.get('rideFareCap'));",
-              "pm.environment.set('rf3over', String(_r2(rideFareCap + 1)));",
-              "console.log('Initiate over-cap: rf3over='+pm.environment.get('rf3over')+' (rideFareCap='+rideFareCap+' + 1)');"
-            ]
+              "// Find the OPEN request left by the accept-test (KV->PG drain may lag) and stash its id;",
+              "// the main request rejects it via the dashboard so the order frees up (one open request at a time).",
+              "pm.environment.set('closeRequestId', '');",
+              "function _deT(v){ return (v||'').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "var _mock = _deT(pm.environment.get('mockServerUrl'));",
+              "var _sel = {url:_mock+'/mock/sql/select',method:'POST',header:{'Content-Type':'application/json'},body:{mode:'raw',raw:JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'refund_request',select:['id','status'],where_clause:[{column_name:'order_id',val:pm.environment.get('orderId'),op:'='},{column_name:'status',val:'OPEN',op:'='}]})}};",
+              "function _poll(k){",
+              "  pm.sendRequest(_sel, function(err,res){",
+              "    var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){}",
+              "    if(rows.length){ pm.environment.set('closeRequestId', rows[0].id); console.log('closing OPEN request ' + rows[0].id); }",
+              "    else if(k>0){ setTimeout(function(){ _poll(k-1); }, 1500); }",
+              "    else { console.log('no OPEN request drained for order ' + pm.environment.get('orderId')); }",
+              "  });",
+              "}",
+              "_poll(10);"
+            ],
+            "type": "text/javascript"
           }
         },
         {
           "listen": "test",
           "script": {
-            "type": "text/javascript",
             "exec": [
-              "pm.test('Initiate Over-Cap Rejected', function(){",
-              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([400,422]);",
-              "  pm.expect(/cap/i.test(pm.response.text()), 'expected a refundable-cap rejection on the admin /initiate path: '+pm.response.text()).to.be.true;",
+              "var d={}; try{ d=pm.response.json(); }catch(e){}",
+              "pm.test('Request closed — order freed for the next request (only one open at a time)', function(){",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+              "  pm.expect(d.status).to.eql('REJECTED');",
               "});"
-            ]
+            ],
+            "type": "text/javascript"
           }
         }
       ],
@@ -1577,10 +1651,10 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"refundComponents\":[{\"component\":\"RIDE_FARE\",\"amount\":{\"amount\":{{rf3over}},\"currency\":\"{{currency}}\"}}],\"deductFromDriver\":false}"
+          "raw": "{\"approve\":false,\"responseDescription\":\"closing test request - only one open request at a time\"}"
         },
         "url": {
-          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{rideId}}/initiate",
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{closeRequestId}}/respond",
           "host": [
             "{{bap_dashboard_url}}"
           ],
@@ -1590,10 +1664,11 @@
             "{{dashboard_city}}",
             "payment",
             "refundRequest",
-            "{{rideId}}",
-            "initiate"
+            "{{closeRequestId}}",
+            "respond"
           ]
-        }
+        },
+        "description": "The previous step's request tested only create-time acceptance; close it so the reset and the boundary tests run without a pending request."
       },
       "response": []
     },
@@ -1633,6 +1708,66 @@
             "mock",
             "refunds",
             "clear"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Over Cap Rejected (RIDE_FARE > cap)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Request round(rideFareCap)+0.02 — safely above the backend cap regardless of the env-vs-backend rounding gap.",
+              "var rideFareCap = Number(pm.environment.get('rideFareCap'));",
+              "var rfOver = Math.round(rideFareCap*100)/100 + 0.02;",
+              "pm.environment.set('rfOver', String(Math.round(rfOver*100)/100));",
+              "console.log('Over-cap: rfOver='+pm.environment.get('rfOver')+' (> rideFareCap='+rideFareCap+')');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('One-Cent-Over-Cap Rejected', function(){",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([400,422]);",
+              "  pm.expect(/cap/i.test(pm.response.text()), 'expected a refundable-cap rejection one cent past the RIDE_FARE cap: '+pm.response.text()).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{riderToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"refundComponents\":[{\"component\":\"RIDE_FARE\",\"amount\":{\"amount\":{{rfOver}},\"currency\":\"{{currency}}\"}}],\"requestedAmount\":{\"amount\":{{rfOver}},\"currency\":\"{{currency}}\"},\"code\":\"CUSTOMER_REQUEST\",\"description\":\"one cent over the RIDE_FARE cap (rejected)\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "{{rideId}}",
+            "refundRequest",
+            "create"
           ]
         }
       },
@@ -1684,66 +1819,6 @@
         "body": {
           "mode": "raw",
           "raw": "{\"refundComponents\":[{\"component\":\"RIDE_FARE\",\"amount\":{\"amount\":{{rfExact}},\"currency\":\"{{currency}}\"}}],\"requestedAmount\":{\"amount\":{{rfExact}},\"currency\":\"{{currency}}\"},\"code\":\"CUSTOMER_REQUEST\",\"description\":\"exact-cap boundary: refund the full RIDE_FARE cap (accepted, inclusive)\"}"
-        },
-        "url": {
-          "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create",
-          "host": [
-            "{{baseUrl_app}}"
-          ],
-          "path": [
-            "payment",
-            "{{rideId}}",
-            "refundRequest",
-            "create"
-          ]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "Over Cap Rejected (RIDE_FARE > cap)",
-      "event": [
-        {
-          "listen": "prerequest",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "// Request round(rideFareCap)+0.02 — safely above the backend cap regardless of the env-vs-backend rounding gap.",
-              "var rideFareCap = Number(pm.environment.get('rideFareCap'));",
-              "var rfOver = Math.round(rideFareCap*100)/100 + 0.02;",
-              "pm.environment.set('rfOver', String(Math.round(rfOver*100)/100));",
-              "console.log('Over-cap: rfOver='+pm.environment.get('rfOver')+' (> rideFareCap='+rideFareCap+')');"
-            ]
-          }
-        },
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('One-Cent-Over-Cap Rejected', function(){",
-              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([400,422]);",
-              "  pm.expect(/cap/i.test(pm.response.text()), 'expected a refundable-cap rejection one cent past the RIDE_FARE cap: '+pm.response.text()).to.be.true;",
-              "});"
-            ]
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "token",
-            "value": "{{riderToken}}"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\"refundComponents\":[{\"component\":\"RIDE_FARE\",\"amount\":{\"amount\":{{rfOver}},\"currency\":\"{{currency}}\"}}],\"requestedAmount\":{\"amount\":{{rfOver}},\"currency\":\"{{currency}}\"},\"code\":\"CUSTOMER_REQUEST\",\"description\":\"one cent over the RIDE_FARE cap (rejected)\"}"
         },
         "url": {
           "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create",
