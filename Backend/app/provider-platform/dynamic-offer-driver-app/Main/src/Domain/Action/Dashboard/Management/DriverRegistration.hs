@@ -2110,26 +2110,36 @@ approveAndUpdateLocalResidenceProof req merchantId merchantOperatingCityId = do
   image <- findApproveImage imageId
   QImage.updateVerificationStatusByIdAndType VALID imageId DVC.LocalResidenceProof
   now <- getCurrentTime
-  mbInfo <- QDII.findByPrimaryKey image.personId
-  case mbInfo of
-    Just info ->
-      QDII.updateByPrimaryKey info {DII.addressState = req.state <|> info.addressState, DII.addressDocumentType = (DDriver.castFromCommon <$> req.proofDocumentType) <|> info.addressDocumentType, DII.address = req.address <|> info.address, DII.updatedAt = now}
-    Nothing ->
-      QDII.create
-        DII.DriverIdentityInfo
-          { DII.driverId = image.personId,
-            DII.merchantId = merchantId,
-            DII.merchantOperatingCityId = merchantOperatingCityId,
-            DII.addressState = req.state,
-            DII.addressDocumentType = DDriver.castFromCommon <$> req.proofDocumentType,
-            DII.address = req.address,
-            DII.courtRecord = Nothing,
-            DII.nomineeDob = Nothing,
-            DII.nomineeName = Nothing,
-            DII.nomineeRelationship = Nothing,
-            DII.createdAt = now,
-            DII.updatedAt = now
-          }
+  person <- QPerson.findById image.personId >>= fromMaybeM (PersonNotFound image.personId.getId)
+  if DCommon.checkFleetOwnerRole person.role
+    then do
+      fleetInfo <- QFOI.findByPrimaryKey image.personId >>= fromMaybeM (FleetOwnerNotFound image.personId.getId)
+      QFOI.updateLocalAddressDetails
+        (req.address <|> fleetInfo.address)
+        (req.state <|> fleetInfo.addressState)
+        ((DDriver.castFromCommon <$> req.proofDocumentType) <|> fleetInfo.addressDocumentType)
+        image.personId
+    else do
+      mbInfo <- QDII.findByPrimaryKey image.personId
+      case mbInfo of
+        Just info ->
+          QDII.updateByPrimaryKey info {DII.addressState = req.state <|> info.addressState, DII.addressDocumentType = (DDriver.castFromCommon <$> req.proofDocumentType) <|> info.addressDocumentType, DII.address = req.address <|> info.address, DII.updatedAt = now}
+        Nothing ->
+          QDII.create
+            DII.DriverIdentityInfo
+              { DII.driverId = image.personId,
+                DII.merchantId = merchantId,
+                DII.merchantOperatingCityId = merchantOperatingCityId,
+                DII.addressState = req.state,
+                DII.addressDocumentType = DDriver.castFromCommon <$> req.proofDocumentType,
+                DII.address = req.address,
+                DII.courtRecord = Nothing,
+                DII.nomineeDob = Nothing,
+                DII.nomineeName = Nothing,
+                DII.nomineeRelationship = Nothing,
+                DII.createdAt = now,
+                DII.updatedAt = now
+              }
 
 handleApproveRequest :: Common.ApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 handleApproveRequest approveReq merchantId merchantOperatingCityId =
@@ -2244,10 +2254,10 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
           QGstin.updateVerificationStatusAndRejectReason INVALID (Just reason) imageId
         DVC.LocalResidenceProof -> do
           rejectImage imageId
-          now <- getCurrentTime
-          mbInfo <- QDII.findByPrimaryKey image.personId
-          whenJust mbInfo $ \info ->
-            QDII.updateByPrimaryKey info {DII.addressState = Nothing, DII.addressDocumentType = Nothing, DII.updatedAt = now}
+          person <- QPerson.findById image.personId >>= fromMaybeM (PersonNotFound image.personId.getId)
+          if DCommon.checkFleetOwnerRole person.role
+            then QFOI.updateLocalAddressDetails Nothing Nothing Nothing image.personId
+            else QDII.updateLocalAddressDetails Nothing Nothing Nothing image.personId
         DVC.UDYAMCertificate -> do
           rejectImage imageId
           mbUdyam <- QUdyam.findByImageId (Just imageId)
