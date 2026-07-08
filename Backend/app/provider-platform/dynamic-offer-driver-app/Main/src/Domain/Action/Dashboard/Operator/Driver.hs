@@ -82,6 +82,7 @@ import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.DriverOnboarding.VehicleDocs as VDocs
 import qualified SharedLogic.FleetOperatorStats as FleetOpStats
 import SharedLogic.MediaFileDocument (finalizeInspectionMedia)
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -1145,6 +1146,8 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
             DVC.VehicleRegistrationCertificate -> do
               mbDoc <- QVRC.findByPrimaryKey rcId
               forM_ mbDoc $ \doc -> QVRC.updateByPrimaryKey doc {DVRC.verificationStatus = Documents.INVALID}
+            DVC.VehicleInspectionForm ->
+              IQuery.updateVerificationStatusByRcIdAndImageTypes Documents.INVALID rcId VDocs.vehicleDocsByRcIdList
             DVC.InspectionHub -> do
               mbRc <- QVRC.findByPrimaryKey rcId
               forM_ mbRc $ \rc -> do
