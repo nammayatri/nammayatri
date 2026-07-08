@@ -455,6 +455,9 @@ buildSpecialLocationTag :: MonadFlow m => Spec.Item -> m (Maybe Text)
 buildSpecialLocationTag item =
   return $ Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_TAG item.itemTags
 
+getPickupArea :: Spec.Item -> Maybe Text
+getPickupArea item = Utils.getTagV2 Tag.INFO Tag.PICKUP_AREA item.itemTags
+
 getSpecialLocationName :: Spec.Item -> Maybe Text
 getSpecialLocationName item = Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_NAME item.itemTags
 
