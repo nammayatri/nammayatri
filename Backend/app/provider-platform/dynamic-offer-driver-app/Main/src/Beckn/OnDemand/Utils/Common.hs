@@ -70,6 +70,7 @@ import Kernel.Types.Confidence
 import Kernel.Types.Id
 import qualified Kernel.Types.Price
 import Kernel.Utils.Common hiding (mkPrice)
+import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
@@ -101,6 +102,7 @@ data Pricing = Pricing
     isAirConditioned :: Maybe Bool,
     specialLocationName :: Maybe Text,
     specialLocationSupportNumber :: Maybe Text,
+    fareSettlementType :: Maybe SL.FareSettlementType,
     vehicleIconUrl :: Maybe BaseUrl,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
@@ -927,8 +929,8 @@ tfItemDescriptor booking =
         descriptorName = Just $ show booking.vehicleServiceTier
       }
 
-convertEstimateToPricing :: Maybe Text -> Maybe Text -> (DEst.Estimate, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl) -> Pricing
-convertEstimateToPricing _specialLocationName specialLocationSupportNumber (DEst.Estimate {..}, serviceTier, mbDriverLocations, vehicleIconUrl) =
+convertEstimateToPricing :: Maybe Text -> Maybe Text -> Maybe SL.FareSettlementType -> (DEst.Estimate, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl) -> Pricing
+convertEstimateToPricing _specialLocationName specialLocationSupportNumber fareSettlementType (DEst.Estimate {..}, serviceTier, mbDriverLocations, vehicleIconUrl) =
   Pricing
     { pricingId = id.getId,
       pricingMaxFare = maxFare,
@@ -945,8 +947,8 @@ convertEstimateToPricing _specialLocationName specialLocationSupportNumber (DEst
       ..
     }
 
-convertQuoteToPricing :: Maybe Text -> Maybe Text -> (DQuote.Quote, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl) -> Pricing
-convertQuoteToPricing specialLocationName specialLocationSupportNumber (DQuote.Quote {..}, serviceTier, mbDriverLocations, vehicleIconUrl) =
+convertQuoteToPricing :: Maybe Text -> Maybe Text -> Maybe SL.FareSettlementType -> (DQuote.Quote, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl) -> Pricing
+convertQuoteToPricing specialLocationName specialLocationSupportNumber fareSettlementType (DQuote.Quote {..}, serviceTier, mbDriverLocations, vehicleIconUrl) =
   Pricing
     { pricingId = id.getId,
       pricingMaxFare = estimatedFare,
@@ -988,6 +990,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       isBlockedRoute = Nothing,
       specialLocationName = Nothing,
       specialLocationSupportNumber = Nothing,
+      fareSettlementType = Nothing,
       vehicleIconUrl = Nothing,
       smartTipSuggestion = Nothing,
       smartTipReason = Nothing,
@@ -1005,17 +1008,18 @@ mkGeneralInfoTagGroup pricing isValueAddNP =
         [ Tags.SPECIAL_LOCATION_TAG Tags.~=? pricing.specialLocationTag,
           Tags.SPECIAL_LOCATION_NAME Tags.~=? pricing.specialLocationName,
           Tags.SPECIAL_LOCATION_SUPPORT_NUMBER Tags.~=? pricing.specialLocationSupportNumber,
-          Tags.BUSINESS_DISCOUNT Tags.~=? (guardVNP (show <$> pricing.businessDiscount)),
-          Tags.PERSONAL_DISCOUNT Tags.~=? (guardVNP (show <$> pricing.personalDiscount)),
+          Tags.PAYMENT_COLLECTION_MODE Tags.~=? (show <$> pricing.fareSettlementType),
+          Tags.BUSINESS_DISCOUNT Tags.~=? guardVNP (show <$> pricing.businessDiscount),
+          Tags.PERSONAL_DISCOUNT Tags.~=? guardVNP (show <$> pricing.personalDiscount),
           Tags.DISTANCE_TO_NEAREST_DRIVER_METER Tags.~=? (show . double2Int . realToFrac <$> pricing.distanceToNearestDriver),
-          Tags.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE Tags.~=? (guardVNP (show <$> pricing.isCustomerPrefferedSearchRoute)),
-          Tags.IS_BLOCKED_SEARCH_ROUTE Tags.~=? (guardVNP (show <$> pricing.isBlockedRoute)),
-          Tags.TOLL_NAMES Tags.~=? (guardVNP (show <$> pricing.tollNames)),
-          Tags.TIP_OPTIONS Tags.~=? (guardVNP (show <$> pricing.tipOptions)),
-          Tags.DURATION_TO_NEAREST_DRIVER_MINUTES Tags.~=? (guardVNP (getDuration pricing.distanceToNearestDriver 25)),
-          Tags.SMART_TIP_SUGGESTION Tags.~=? (guardVNP (show <$> pricing.smartTipSuggestion)),
+          Tags.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE Tags.~=? guardVNP (show <$> pricing.isCustomerPrefferedSearchRoute),
+          Tags.IS_BLOCKED_SEARCH_ROUTE Tags.~=? guardVNP (show <$> pricing.isBlockedRoute),
+          Tags.TOLL_NAMES Tags.~=? guardVNP (show <$> pricing.tollNames),
+          Tags.TIP_OPTIONS Tags.~=? guardVNP (show <$> pricing.tipOptions),
+          Tags.DURATION_TO_NEAREST_DRIVER_MINUTES Tags.~=? guardVNP (getDuration pricing.distanceToNearestDriver 25),
+          Tags.SMART_TIP_SUGGESTION Tags.~=? guardVNP (show <$> pricing.smartTipSuggestion),
           Tags.SMART_TIP_REASON Tags.~=? (guardVNP pricing.smartTipReason),
-          Tags.QAR Tags.~=? (guardVNP (show <$> pricing.qar))
+          Tags.QAR Tags.~=? guardVNP (show <$> pricing.qar)
         ]
   where
     getDuration :: Maybe Meters -> Int -> Maybe Text

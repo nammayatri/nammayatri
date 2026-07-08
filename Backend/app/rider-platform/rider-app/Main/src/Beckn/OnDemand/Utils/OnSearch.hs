@@ -36,6 +36,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Common
 import Kernel.Utils.Common
+import qualified Lib.Types.SpecialLocation as SL
 import Tools.Error
 
 getProviderName :: MonadFlow m => Spec.OnSearchReq -> m Text
@@ -459,6 +460,9 @@ getSpecialLocationName item = Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_NAME 
 
 getspecialLocationSupportNumber :: Spec.Item -> Maybe Text
 getspecialLocationSupportNumber item = Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_SUPPORT_NUMBER item.itemTags
+
+getFareSettlementType :: Spec.Item -> Maybe SL.FareSettlementType
+getFareSettlementType item = Utils.getTagV2 Tag.INFO Tag.PAYMENT_COLLECTION_MODE item.itemTags >>= readMaybe
 
 getIsCustomerPrefferedSearchRoute :: Spec.Item -> Maybe Bool
 getIsCustomerPrefferedSearchRoute item = do

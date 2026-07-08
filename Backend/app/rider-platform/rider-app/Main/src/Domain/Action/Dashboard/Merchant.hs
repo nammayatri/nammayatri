@@ -428,6 +428,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             render = request.render,
             supportNumber = request.supportNumber,
             paymentModes = request.paymentModes <|> (mbExistingSpLoc >>= (.paymentModes)) <|> Just SL.defaultPaymentModes,
+            fareSettlementType = request.fareSettlementType <|> (mbExistingSpLoc >>= (.fareSettlementType)),
             ..
           }
 
@@ -1560,7 +1561,8 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     enforceTollRoute :: Maybe Text,
     render :: Maybe Text,
     enableQueueFilter :: Maybe Text,
-    paymentModes :: Maybe Text
+    paymentModes :: Maybe Text,
+    fareSettlementType :: Maybe Text
   }
   deriving (Show)
 
@@ -1607,6 +1609,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> optional (r .: "render")
       <*> optional (r .: "enable_queue_filter")
       <*> optional (r .: "payment_modes")
+      <*> optional (r .: "payment_collection_mode")
 
 postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
@@ -1660,6 +1663,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
           supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
           mbRender :: Maybe DSL.RenderType = readMaybeCSVField idx (fromMaybe "" row.render) "Render"
+          mbFareSettlementType :: Maybe DSL.FareSettlementType = readMaybeCSVField idx (fromMaybe "" row.fareSettlementType) "Payment Collection Mode"
       enabled :: Bool <- readCSVField idx row.enabled "Enabled"
       resolvedPaymentModes <- resolvePaymentModes idx row.paymentModes
       gateInfoId <- maybe generateGUID (pure . Id) (cleanField =<< row.gateInfoId)
@@ -1703,7 +1707,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 enforceTollRoute = mbEnforceTollRoute,
                 render = mbRender,
                 supportNumber = supportNumber,
-                paymentModes = resolvedPaymentModes
+                paymentModes = resolvedPaymentModes,
+                fareSettlementType = mbFareSettlementType
               }
           gateInfo =
             DGI.GateInfo
@@ -1796,7 +1801,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
       new{DSL.paymentModes = new.paymentModes <|> Just SL.defaultPaymentModes}
     mergeSpecialLocationWithExisting new (Just old) =
       new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled,
-          DSL.paymentModes = new.paymentModes <|> old.paymentModes
+          DSL.paymentModes = new.paymentModes <|> old.paymentModes,
+          DSL.fareSettlementType = new.fareSettlementType <|> old.fareSettlementType
          }
 
     mergeGateInfoWithExisting :: DGI.GateInfo -> Maybe DGI.GateInfo -> DGI.GateInfo
