@@ -18,6 +18,7 @@ module Tools.Ticket
     updateTicket,
     updateSosTicket,
     updateTicketOnService,
+    updateTicketStatus,
     addAndUpdateKaptureCustomer,
     kaptureEncryption,
     kapturePullTicket,
@@ -110,6 +111,12 @@ updateSosTicket = resolveAndCallTicketService (\cfg -> fromMaybe cfg.issueTicket
 -- Zendesk (which does not want duplicate comments).
 updateTicketOnService :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> TicketTypes.IssueTicketService -> Ticket.UpdateTicketReq -> m Ticket.UpdateTicketResp
 updateTicketOnService = callUpdateTicket
+
+-- | Status-only update. Targets XyneSpaces directly since it is the only
+-- provider with a dedicated status endpoint; a merchant whose XyneSpaces
+-- runs as a secondary (e.g. primary=Zendesk) still gets the status sync.
+updateTicketStatus :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.UpdateTicketStatusReq -> m ()
+updateTicketStatus merchantId mocId = callServiceSpecific TI.updateTicketStatus merchantId mocId TicketTypes.XyneSpaces
 
 addAndUpdateKaptureCustomer :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.KaptureCustomerReq -> m Ticket.KaptureCustomerResp
 addAndUpdateKaptureCustomer = resolveAndCallTicketService (.issueTicketService) TI.addAndUpdateKaptureCustomer

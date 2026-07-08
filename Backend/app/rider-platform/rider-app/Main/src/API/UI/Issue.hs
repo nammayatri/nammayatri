@@ -131,7 +131,8 @@ customerIssueHandle =
       mbSendChatNotification = Just (\pid payload -> Notify.notifyOnIssueChatMessage (cast pid) payload),
       mbShouldForwardChatToTicketService = Just isXyneTicketService,
       mbFetchMediaBase64 = Just fetchMediaBase64FromS3,
-      mbUpdateTicketOnService = Just castUpdateTicketOnService
+      mbUpdateTicketOnService = Just castUpdateTicketOnService,
+      mbUpdateTicketStatus = Just castUpdateTicketStatus
     }
 
 -- | Fetch a MediaFile's bytes directly from S3 (returning the base64 payload
@@ -417,6 +418,9 @@ castUpdateTicket merchantId merchantOperatingCityId = TT.updateTicket (cast merc
 
 castUpdateTicketOnService :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TicketTypes.IssueTicketService -> TIT.UpdateTicketReq -> Flow TIT.UpdateTicketResp
 castUpdateTicketOnService merchantId merchantOperatingCityId = TT.updateTicketOnService (cast merchantId) (cast merchantOperatingCityId)
+
+castUpdateTicketStatus :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketStatusReq -> Flow ()
+castUpdateTicketStatus merchantId merchantOperatingCityId = TT.updateTicketStatus (cast merchantId) (cast merchantOperatingCityId)
 
 castKaptureGetTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.GetTicketReq -> Flow [TIT.GetTicketResp]
 castKaptureGetTicket merchantId merchantOperatingCityId = TT.kaptureGetTicket (cast merchantId) (cast merchantOperatingCityId)

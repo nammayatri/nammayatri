@@ -557,7 +557,7 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
               void $
                 withTryCatch "updateTicket:sendSosTracking" $
                   withShortRetry $
-                    Ticket.updateSosTicket (person.merchantId) person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = "Audio recording/shared media uploaded.", ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Just Ticket.UpdateIssueDetails {mediaFiles = Just mediaLinks, issueDescription = Nothing, issueId = Nothing, subCategory = Nothing, vehicleCategory = Nothing, category = Nothing}, requesterId = sosDetails.requesterId, ticketContext = Just Ticket.SOSAlert}
+                    Ticket.updateSosTicket (person.merchantId) person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = "Audio recording/shared media uploaded.", ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Just Ticket.UpdateIssueDetails {mediaFiles = Just mediaLinks, issueDescription = Nothing, issueId = Nothing, subCategory = Nothing, vehicleCategory = Nothing, category = Nothing}, requesterId = sosDetails.requesterId, ticketContext = Just Ticket.SOSAlert, name = Nothing, phoneNo = Nothing}
             Nothing -> do
               -- Fallback: create a separate ticket only when SOS has no ticketId (e.g. ticket creation failed earlier)
               void $
@@ -592,7 +592,7 @@ callUpdateTicket person sosDetails mbComment = do
   case sosDetails.ticketId of
     Just ticketId -> do
       fork "update ticket request" $
-        void $ Ticket.updateSosTicket (person.merchantId) person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = fromMaybe "" mbComment, ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Nothing, requesterId = sosDetails.requesterId, ticketContext = Just Ticket.SOSAlert}
+        void $ Ticket.updateSosTicket (person.merchantId) person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = fromMaybe "" mbComment, ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Nothing, requesterId = sosDetails.requesterId, ticketContext = Just Ticket.SOSAlert, name = Nothing, phoneNo = Nothing}
       pure APISuccess.Success
     Nothing -> pure APISuccess.Success
 
@@ -1064,7 +1064,7 @@ postSosUpdateToRide (mbPersonId, merchantId) sosId UpdateToRideReq {..} = do
         void $
           withTryCatch "updateTicket:sosUpdateToRide" $
             Ticket.updateSosTicket person.merchantId person.merchantOperatingCityId
-              Ticket.UpdateTicketReq {comment = "SOS converted from non-ride to ride", ticketId = existingTicketId, status = Ticket.Pending, rideDescription = Just rideInfo, issueDetails = Nothing, requesterId = sosDetails.requesterId, ticketContext = Just Ticket.SOSAlert}
+              Ticket.UpdateTicketReq {comment = "SOS converted from non-ride to ride", ticketId = existingTicketId, status = Ticket.Pending, rideDescription = Just rideInfo, issueDetails = Nothing, requesterId = sosDetails.requesterId, ticketContext = Just Ticket.SOSAlert, name = Nothing, phoneNo = Nothing}
       Nothing -> do
         -- No existing ticket: create fresh ticket and notify emergency contacts
         ticketResponse <-

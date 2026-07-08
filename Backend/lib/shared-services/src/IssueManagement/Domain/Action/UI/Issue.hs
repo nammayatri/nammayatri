@@ -107,7 +107,16 @@ data ServiceHandle m = ServiceHandle
     -- support S3 fetches (e.g. Beckn IGM flow) — the shared handler then
     -- falls back to @mediaFile.url@.
     mbFetchMediaBase64 :: Maybe (D.MediaFile -> m (Maybe Text)),
-    mbUpdateTicketOnService :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.IssueTicketService -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp)
+    mbUpdateTicketOnService :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.IssueTicketService -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp),
+    -- | Optional status-only sync via XyneSpaces' @POST
+    -- /api/apps/ticket/updateTicket@. Deliberately decoupled from
+    -- 'updateTicket' (which posts a comment/media via @appDeskInbound@): the
+    -- domain-level 'updateTicketStatus' invokes this on true status
+    -- transitions (e.g. Reopened / Closed) so we do not re-sync status on
+    -- every chat message. @Nothing@ makes the call a no-op. Only XyneSpaces
+    -- has a matching endpoint; Kapture/Zendesk fold status into
+    -- 'updateTicket' already.
+    mbUpdateTicketStatus :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketStatusReq -> m ())
   }
 
 getLanguage :: EsqDBReplicaFlow m r => Id Person -> Maybe Language -> ServiceHandle m -> m Language
@@ -971,10 +980,23 @@ updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHa
           -- dispatcher fans out to each secondary and logs their failures
           -- separately without affecting this Right/Left outcome (which reflects
           -- only the primary update).
-          (issueHandle.updateTicket merchantId merchantOperatingCityId (fromMaybe [] issueReport.additionalTicketIds) TIT.UpdateTicketReq {comment = comment, ticketId = ticketId, status = status, rideDescription = Nothing, issueDetails = Nothing, requesterId = Nothing, ticketContext = Nothing})
+          (issueHandle.updateTicket merchantId merchantOperatingCityId (fromMaybe [] issueReport.additionalTicketIds) TIT.UpdateTicketReq {comment = comment, ticketId = ticketId, status = status, rideDescription = Nothing, issueDetails = Nothing, requesterId = Nothing, ticketContext = Nothing, name = Nothing, phoneNo = Nothing})
       case ticketResponse of
         Left err -> logTagInfo "Update Ticket API failed - " $ show err
         Right _ -> return ()
+      -- Additionally sync status via the XyneSpaces status-only endpoint when
+      -- the app wires it. Best-effort — a failure here must not shadow the
+      -- comment-write above. Uses whichever ticketId is stored on the primary
+      -- (or the Xyne secondary entry when present) as Xyne's identifier.
+      whenJust issueHandle.mbUpdateTicketStatus $ \syncStatus -> do
+        let xyneTicketId =
+              case find (\e -> e.service == TicketTypes.XyneSpaces) (fromMaybe [] issueReport.additionalTicketIds) of
+                Just entry -> entry.ticketId
+                Nothing -> ticketId
+        void $
+          withTryCatch
+            "updateTicketStatus:xyne"
+            (syncStatus merchantId merchantOperatingCityId TIT.UpdateTicketStatusReq {xyneTicketId = xyneTicketId, status = status})
 
 processIssueReportTypeActions ::
   BeamFlow m r =>
@@ -1358,6 +1380,15 @@ forwardChatToTicketService issueReport identifier issueHandle messageText mediaI
       mediaUrls <- fmap catMaybes . forM mediaIds $ \mfId -> do
         mbFile <- CQMF.findById mfId identifier
         traverse (mediaFileToTicketUri issueHandle) mbFile
+      mbSender <- issueHandle.findPersonById issueReport.personId
+      mbSenderName <- case mbSender of
+        Just p ->
+          let full = T.strip $ fromMaybe "" p.firstName <> " " <> fromMaybe "" p.lastName
+           in pure $ if T.null full then Nothing else Just full
+        Nothing -> pure Nothing
+      mbSenderPhone <- case mbSender of
+        Just p -> traverse decrypt p.mobileNumber
+        Nothing -> pure Nothing
       -- When Xyne runs as a secondary its ticketId is in additionalTicketIds;
       -- when it runs as the primary its ticketId is in 'ticketId'. Falling back
       -- to 'issueReport.id.getId' preserves the historical behaviour of using
@@ -1384,7 +1415,9 @@ forwardChatToTicketService issueReport identifier issueHandle messageText mediaI
                         category = (.category) <$> mbCategory
                       },
                 requesterId = Nothing,
-                ticketContext = Just TIT.IssueTicket
+                ticketContext = Just TIT.IssueTicket,
+                name = mbSenderName,
+                phoneNo = mbSenderPhone
               }
       -- Prefer the targeted-service handle so we hit Xyne regardless of
       -- whether it is the primary or a secondary. Fall back to the general
