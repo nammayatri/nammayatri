@@ -83,6 +83,7 @@ updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do
       Se.Set Beam.validTill validTill,
       Se.Set Beam.vehicleIconUrl (Kernel.Prelude.fmap showBaseUrl vehicleIconUrl),
       Se.Set Beam.vehicleServiceTierAirConditioned vehicleServiceTierAirConditioned,
+      Se.Set Beam.vehicleServiceTierLuggageCapacity vehicleServiceTierLuggageCapacity,
       Se.Set Beam.vehicleServiceTierSeatingCapacity vehicleServiceTierSeatingCapacity,
       Se.Set Beam.vehicleVariant vehicleServiceTierType
     ]

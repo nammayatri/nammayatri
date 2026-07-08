@@ -42,7 +42,8 @@ tfFulfillmentVehicle uiConfirm = do
   let vehicleRegistration_ = Nothing
   let vehicleVariant_ = Just variant
   let vehicleCapacity_ = Nothing
-  BecknV2.OnDemand.Types.Vehicle {vehicleCategory = vehicleCategory_, vehicleColor = vehicleColor_, vehicleEnergyType = Nothing, vehicleMake = vehicleMake_, vehicleModel = vehicleModel_, vehicleRegistration = vehicleRegistration_, vehicleVariant = vehicleVariant_, vehicleCapacity = vehicleCapacity_}
+  let vehicleLuggageCapacity_ = Nothing
+  BecknV2.OnDemand.Types.Vehicle {vehicleCategory = vehicleCategory_, vehicleColor = vehicleColor_, vehicleEnergyType = Nothing, vehicleMake = vehicleMake_, vehicleModel = vehicleModel_, vehicleRegistration = vehicleRegistration_, vehicleVariant = vehicleVariant_, vehicleCapacity = vehicleCapacity_, vehicleLuggageCapacity = vehicleLuggageCapacity_}
 
 tfOrder :: SharedLogic.Confirm.DConfirmRes -> Bool -> DBC.BecknConfig -> DRC.RiderConfig -> BecknV2.OnDemand.Types.Order
 tfOrder uiConfirm isValueAddNP bapConfig riderConfig = do

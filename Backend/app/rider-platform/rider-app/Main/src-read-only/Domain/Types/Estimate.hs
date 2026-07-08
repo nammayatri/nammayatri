@@ -81,6 +81,7 @@ data Estimate = Estimate
     vehicleCategory :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory,
     vehicleIconUrl :: Kernel.Prelude.Maybe Servant.Client.Core.BaseUrl,
     vehicleServiceTierAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    vehicleServiceTierLuggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleServiceTierType :: Domain.Types.ServiceTierType.ServiceTierType,
     waitingCharges :: Domain.Types.Estimate.WaitingCharges
