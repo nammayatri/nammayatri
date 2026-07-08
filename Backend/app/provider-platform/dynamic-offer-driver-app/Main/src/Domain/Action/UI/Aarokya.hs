@@ -1,7 +1,6 @@
 module Domain.Action.UI.Aarokya where
 
 import Control.Applicative ((<|>))
-import Control.Monad (guard)
 import qualified Data.Aeson as A
 import Data.Char (isAlphaNum)
 import qualified Data.Map as M
@@ -17,15 +16,11 @@ import qualified Kernel.External.PartnerSdk.Interface.Types as PartnerSdk
 import qualified Kernel.External.Verification.HyperVerge.Types as HV
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
-import qualified Storage.Queries.DriverIdentityInfo as QDII
-import qualified Storage.Queries.DriverInformationExtra as QDI
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.HyperVergeVerification as QHVV
 import qualified Storage.Queries.IdfyVerificationExtra as QIV
@@ -57,12 +52,11 @@ generateToken ::
     EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    MonadFlow m,
-    Redis.HedisLTSFlowEnv r
+    MonadFlow m
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   m AarokyaTokenRes
-generateToken (personId, merchantId, merchantOpCityId) = do
+generateToken (personId, _merchantId, merchantOpCityId) = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mobileNumber <-
     mapM decrypt person.mobileNumber
@@ -81,7 +75,7 @@ generateToken (personId, merchantId, merchantOpCityId) = do
   -- Best-effort: a failure here (e.g. driver_identity_info not yet migrated in this
   -- environment, KV hiccup, unparseable document data) must never fail token generation.
   -- withTryCatch logs and we fall back to no address.
-  mbAddress <- either (const Nothing) (\addr -> addr) <$> withTryCatch "aarokya:resolveDriverAddress" (resolveDriverAddress personId merchantId merchantOpCityId person mbAadhaarAddress)
+  mbAddress <- either (const Nothing) (\addr -> addr) <$> withTryCatch "aarokya:getDriverAddress" (getDriverAddress personId person mbAadhaarAddress)
   -- DOB is the driver's own identity attribute, so it is read directly by driverId
   -- (no name match needed): Aadhaar first (raw text, parsed & normalised to ISO),
   -- then Driving License. All optional.
@@ -283,42 +277,3 @@ normalizeGender raw = case T.toUpper (T.strip raw) of
     | g `elem` ["F", "FEMALE"] -> Just "FEMALE"
     | g `elem` ["O", "OTHER", "TRANSGENDER", "T"] -> Just "OTHER"
     | otherwise -> Nothing
-
--- | Returns the driver's address, resolving it lazily: if one is already stored
--- (DriverIdentityInfo.address, falling back to the legacy DriverInformation.address)
--- it is reused as-is and no Idfy parsing happens. Only when nothing is stored do
--- we extract from the Idfy response and persist it for next time. Optional
--- throughout — never fails the token call.
-resolveDriverAddress ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
-  Id DP.Person ->
-  Id DM.Merchant ->
-  Id DMOC.MerchantOperatingCity ->
-  DP.Person ->
-  Maybe Text ->
-  m (Maybe Text)
-resolveDriverAddress personId merchantId merchantOpCityId person mbAadhaarAddress = do
-  mbDriverInfo <- QDI.findById (cast personId)
-  mbIdentityInfo <- QDII.findByDriverId personId
-  let mbStored = (mbIdentityInfo >>= (.address)) <|> (mbDriverInfo >>= (.address))
-  case mbStored of
-    Just stored -> pure (Just stored)
-    Nothing -> do
-      mbResolved <- getDriverAddress personId person mbAadhaarAddress
-      whenJust ((,) <$> mbResolved <*> mbDriverInfo) $ \(address, driverInfo) ->
-        Redis.withLockRedis (DIInfo.driverIdentityInfoLockKey personId) 10 $ do
-          mbExisting <- QDII.findByDriverId personId
-          void $
-            DIInfo.upsertDriverIdentityInfo
-              mbExisting
-              personId
-              merchantId
-              merchantOpCityId
-              driverInfo
-              Nothing
-              Nothing
-              Nothing
-              (Just address)
-              Nothing
-              Nothing
-      pure mbResolved
