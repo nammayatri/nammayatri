@@ -62,11 +62,12 @@ data MerchantD (s :: UsageSafety) = Merchant
     signingPublicKey :: Kernel.Types.Base64.Base64,
     stuckRideAutoCancellationBuffer :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     subscriberId :: Kernel.Types.Id.ShortId Kernel.Types.Registry.Subscriber,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    useFareBreakupLineItems :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, Show)
 
-type Merchant = MerchantD ('Safe)
+type Merchant = MerchantD 'Safe
 
 instance FromJSON (MerchantD 'Unsafe)
 

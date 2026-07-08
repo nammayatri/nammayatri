@@ -2,7 +2,7 @@
   Finance.RideReceipt (BPP twin of rider-app SharedLogic.Finance.RideReceipt)
 
   Itemized ride-receipt assembly for the config-driven invoice PDF
-  (TransporterConfig.invoiceConfig.useFareBreakupLineItems). BPP has no
+  (Merchant.useFareBreakupLineItems). BPP has no
   fare_breakup table — display line items derive from the booking's
   FareParameters via FareCalculator.mkFareParamsBreakups (the same display
   tags the BAP receives over Beckn), classified like the consumer app's

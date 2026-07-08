@@ -109,6 +109,7 @@ Merchant:
     fleetOwnerEnabledCheck: Maybe Bool
     prepaidSubscriptionAndWalletEnabled: Maybe Bool
     overwriteAssociation: Maybe Bool
+    useFareBreakupLineItems: Maybe Bool
     mediaFileDocumentLinkExpires: Seconds
     signingPublicKey: Base64
     signingPrivateKey: Maybe Base64
@@ -1025,7 +1026,6 @@ TransporterConfig:
       driverInvoiceLineItemsVatInclusive: Bool
       emitLedgerEntries: Bool
       showVatInputLineItem: Maybe Bool
-      useFareBreakupLineItems: Maybe Bool
       logoUrl: Maybe BaseUrl
       commissionAggregationEnabled: Maybe Bool
       commissionAggregationFrequency: Maybe CommissionAggregationFrequency

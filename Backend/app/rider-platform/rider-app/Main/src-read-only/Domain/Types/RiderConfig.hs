@@ -242,8 +242,7 @@ data RiderInvoiceConfig = RiderInvoiceConfig
     logoUrl :: Kernel.Prelude.Maybe Servant.Client.Core.BaseUrl,
     supplierAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     supplierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    supplierVatNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    useFareBreakupLineItems :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    supplierVatNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 

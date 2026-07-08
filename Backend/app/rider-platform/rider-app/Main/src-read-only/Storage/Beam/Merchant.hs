@@ -66,7 +66,8 @@ data MerchantT f = MerchantT
     signingPublicKey :: B.C f Kernel.Types.Base64.Base64,
     stuckRideAutoCancellationBuffer :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     subscriberId :: B.C f Kernel.Prelude.Text,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    useFareBreakupLineItems :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)
   }
   deriving (Generic, B.Beamable)
 

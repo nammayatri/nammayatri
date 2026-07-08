@@ -2,7 +2,7 @@
   Finance.RideReceipt
 
   Itemized ride-receipt assembly for the config-driven invoice PDF
-  (RiderInvoiceConfig.useFareBreakupLineItems). Line items are built from the
+  (Merchant.useFareBreakupLineItems). Line items are built from the
   ride's fareBreakup display tags — a faithful port of the consumer app's
   getInvoiceFare (ny-react-native fareEntityHelper.ts) so the backend PDF
   matches the in-app receipt. The finance_invoice row is intentionally NOT the
@@ -106,6 +106,10 @@ synthFinanceInvoice invoiceType ride booking mbRiderName items =
           merchantOperatingCityId = booking.merchantOperatingCityId.getId,
           createdAt = issuedAt,
           updatedAt = issuedAt,
+          createdBy = Nothing,
+          createdById = Nothing,
+          updatedBy = Nothing,
+          updatedById = Nothing,
           irn = Nothing,
           signedQRCode = Nothing,
           paymentMode = Nothing
