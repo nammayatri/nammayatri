@@ -71,6 +71,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as ACOverlay
 import SharedLogic.Analytics as Analytics
+import qualified SharedLogic.Association.Change as AC
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -273,6 +274,8 @@ createDriverRCAssociationIfPossible transporterConfig driverId rc = do
       throwError (InvalidRequest "Fleet drivers cannot onboard their own vehicle. Use a fleet vehicle.")
   if canCreateRCAssociation transporterConfig rc
     then do
+      when (transporterConfig.blockDriverOwnRCForFleetDrivers == Just True) $
+        AC.guardRCNotOwnedByAnotherFleet driverId rc.id
       driverRCAssoc <- makeRCAssociation transporterConfig.merchantId transporterConfig.merchantOperatingCityId rc.id defaultAssociationEnd
       DAQuery.create driverRCAssoc
     else do
@@ -309,6 +312,8 @@ createFleetRCAssociationIfPossible ::
 createFleetRCAssociationIfPossible transporterConfig fleetOwnerId rc = do
   if canCreateRCAssociation transporterConfig rc
     then do
+      when (transporterConfig.blockDriverOwnRCForFleetDrivers == Just True) $
+        AC.guardRCNotActiveWithAnotherDriver rc.id
       fleetRCAssoc <- makeFleetRCAssociation transporterConfig.merchantId transporterConfig.merchantOperatingCityId rc.id defaultAssociationEnd
       FRCAssoc.create fleetRCAssoc
     else do
