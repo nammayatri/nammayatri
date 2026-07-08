@@ -36,6 +36,7 @@ import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.DriverOnboarding.CourtRecordCheck as CourtRecordCheck
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import qualified Domain.Action.UI.DriverOnboardingV2 as DOnboarding
 import qualified Domain.Action.UI.OperationHub as Domain
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.AadhaarCard as DAadhaarCard
@@ -1023,6 +1024,8 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
         when (rcInfo.verified /= Just True) $ throwError (InvalidRequest "RC is not verified")
         if isDocReqEmpty
           then do
+            (_, verified, _, _) <- DOnboarding.rcVerifyStatus (DOnboarding.DashboardCaller merchantOpCity.id) Nothing (Just reqId)
+            unless verified $ throwError (InvalidRequest "RC is not verified")
             unless (rcInfo.approved == Just True) $ QVRC.updateByPrimaryKey rcInfo {DVRC.approved = Just True}
             pure (DRR.COMPLETED, rcInfo.unencryptedCertificateNumber, Nothing)
           else do
