@@ -91,6 +91,7 @@ import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Vector as V
 import qualified Domain.Action.Dashboard.Common as DCommon
+import Domain.Action.Dashboard.Common.AddressDocumentType (castFromCommon, castToCommon)
 import qualified Domain.Action.Dashboard.Driver.Notification as DDN
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
@@ -1623,24 +1624,6 @@ getDriverIdentityInfo merchantShortId _opCity driverId requestorId = do
         addressDocumentType = castToCommon <$> info.addressDocumentType,
         addressState = info.addressState
       }
-
-castToCommon :: DrInfo.AddressDocumentType -> Common.AddressDocumentType
-castToCommon = \case
-  DrInfo.RationCard -> Common.RationCard
-  DrInfo.UtilityBill -> Common.UtilityBill
-  DrInfo.Passport -> Common.Passport
-  DrInfo.VoterId -> Common.VoterId
-  DrInfo.LifeInsurancePolicy -> Common.LifeInsurancePolicy
-  DrInfo.Others -> Common.Others
-
-castFromCommon :: Common.AddressDocumentType -> DrInfo.AddressDocumentType
-castFromCommon = \case
-  Common.RationCard -> DrInfo.RationCard
-  Common.UtilityBill -> DrInfo.UtilityBill
-  Common.Passport -> DrInfo.Passport
-  Common.VoterId -> DrInfo.VoterId
-  Common.LifeInsurancePolicy -> DrInfo.LifeInsurancePolicy
-  Common.Others -> DrInfo.Others
 
 postDriverIdentityInfoUpdate ::
   ShortId DM.Merchant ->

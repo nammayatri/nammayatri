@@ -4,6 +4,7 @@
 module API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2 where
 
 import qualified Dashboard.Common
+import qualified Dashboard.Common.Driver
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -14,6 +15,7 @@ import qualified Kernel.External.Payment.Interface.Types
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
@@ -69,7 +71,10 @@ data FleetOwnerRegisterReqV2 = FleetOwnerRegisterReqV2
     operatorReferralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     adminApprovalRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     setIsEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    addressState :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState,
+    addressDocumentType :: Kernel.Prelude.Maybe Dashboard.Common.Driver.AddressDocumentType
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

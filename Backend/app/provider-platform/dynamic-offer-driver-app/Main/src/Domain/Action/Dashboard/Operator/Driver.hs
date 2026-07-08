@@ -1137,7 +1137,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
         pure (mbImage, doc.rejectedReason, docDetail)
     applyDocRejections entityType reqId validatedDocs =
       forM_ validatedDocs $ \(mbImage, rejectedReason, docDetail) -> do
-        forM_ mbImage $ \image -> IQuery.updateByPrimaryKey image {DImage.verificationStatus = Just Documents.INVALID}
+        forM_ mbImage $ \image -> IQuery.updateByPrimaryKey image {DImage.verificationStatus = Just Documents.INVALID, DImage.failureReason = Just (ImageNotValid rejectedReason)}
         invalidateSpecificDocument entityType reqId docDetail.documentType (Just rejectedReason)
 
     invalidateSpecificDocument entityType entityIdTxt docType rejectReason = do
@@ -1184,6 +1184,13 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
             DVC.DriverInspectionHub -> do
               mbReq <- SQOH.findLatestByDriverIdAndRequestType personId DRIVER_ONBOARDING_INSPECTION
               forM_ mbReq $ \hubReq -> SQOHR.updateByPrimaryKey hubReq {requestStatus = REJECTED, updatedAt = now, remarks = rejectReason}
+            DVC.LocalResidenceProof -> do
+              proofImages <- IQuery.findRecentByPersonIdAndImageType personId DVC.LocalResidenceProof
+              forM_ proofImages $ \img ->
+                whenJust rejectReason $ \r -> IQuery.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid r) img.id
+              case entityType of
+                API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> QFOI.updateLocalAddressDetails Nothing Nothing Nothing personId
+                _ -> QDII.updateLocalAddressDetails Nothing Nothing Nothing personId
             _ -> pure ()
 
 getDriverRequestReviewHistory ::

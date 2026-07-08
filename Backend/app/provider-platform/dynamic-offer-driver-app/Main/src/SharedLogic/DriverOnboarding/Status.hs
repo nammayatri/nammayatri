@@ -82,6 +82,7 @@ import Kernel.Types.Error hiding (Unauthorized)
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (HasField)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
 import SharedLogic.DriverOnboarding.VehicleDocs
@@ -1385,14 +1386,24 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
       return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
     DVC.LocalResidenceProof -> do
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.LocalResidenceProof
-      mbIdentityInfo <- QDII.findByDriverId driverId
+      -- Fleet owners store the local address triplet in fleet_owner_information; drivers in driver_identity_info.
+      mbAddressFields <-
+        if isFleetRole role
+          then do
+            mbFleetInfo <- QFOI.findByPrimaryKey driverId
+            pure $ mbFleetInfo <&> \info -> (info.address, info.addressState, info.addressDocumentType)
+          else do
+            mbIdentityInfo <- QDII.findByDriverId driverId
+            driverInfo <- DIQuery.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+            let idInfo = DIInfo.getIdentityInfo mbIdentityInfo driverInfo
+            pure $ Just (idInfo.address, idInfo.addressState, idInfo.addressDocumentType)
       let hasAddressDetails =
-            maybe False (\info -> isJust info.address && isJust info.addressDocumentType && isJust info.addressState) mbIdentityInfo
+            maybe False (\(address, addressState, addressDocumentType) -> isJust address && isJust addressDocumentType && isJust addressState) mbAddressFields
       let mbLocalMetadata =
             if enableMetadata
               then
-                mbIdentityInfo <&> \info ->
-                  LocalAddressProofMetadata LocalAddressProofDocumentMetadata {state = info.addressState, proofDocumentType = info.addressDocumentType, address = info.address}
+                mbAddressFields <&> \(address, addressState, addressDocumentType) ->
+                  LocalAddressProofMetadata LocalAddressProofDocumentMetadata {state = addressState, proofDocumentType = addressDocumentType, address = address}
               else Nothing
       return (if hasAddressDetails then status else Just NO_DOC_AVAILABLE, reason, url, Nothing, mbS3Path, mbImageId, Nothing, mbLocalMetadata)
     DVC.DriverVehicleNOC -> do
