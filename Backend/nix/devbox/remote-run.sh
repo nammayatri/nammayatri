@@ -13,6 +13,11 @@ CLEAN="${2:-0}"
 # Ensure nix is on PATH for a non-login ssh shell.
 export PATH="$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:$PATH"
 
+NIX_REMOTE_SOCK="$HOME/.nix-remote/socket"
+if [ -S "$NIX_REMOTE_SOCK" ]; then
+  export NIX_REMOTE="unix://$NIX_REMOTE_SOCK"
+fi
+
 cd "$BACKEND_DIR"
 
 HERE="$BACKEND_DIR/nix/devbox"
