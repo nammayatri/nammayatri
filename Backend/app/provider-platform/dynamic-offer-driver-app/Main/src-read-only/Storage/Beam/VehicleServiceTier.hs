@@ -23,6 +23,7 @@ data VehicleServiceTierT f = VehicleServiceTierT
     allowedVehicleVariant :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],
     autoSelectedVehicleVariant :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],
     baseVehicleServiceTier :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    cancellationRateConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     defaultForVehicleVariant :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],
     driverRating :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     fareAdditionPerKmOverBaseServiceTier :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

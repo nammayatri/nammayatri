@@ -54,6 +54,7 @@ imports:
   TripCategory: Dashboard.Common
   Months: Kernel.Types.Time
   SpecialZone: Dashboard.Common
+  CancellationRateConfig: Dashboard.Common
   Language: Kernel.External.Types
 
 module: Merchant
@@ -1295,6 +1296,7 @@ types:
     - allowedAreas: Maybe [Area]
     - vehicleAgeThreshold: Maybe Months
     - specialZone: Maybe SpecialZone
+    - cancellationRateConfig: Maybe CancellationRateConfig
     - allowNullVehicleRating: Maybe Bool
   VehicleServiceTierConfigUpdateReq:
     - name: Maybe Text
@@ -1325,6 +1327,7 @@ types:
     - isEnabled: Maybe Bool
     - allowedAreas: Maybe [Area]
     - specialZone: Maybe SpecialZone
+    - cancellationRateConfig: Maybe CancellationRateConfig
     - vehicleAgeThreshold: Maybe Months
     - allowNullVehicleRating: Maybe Bool
     - derive: "'HideSecrets"
@@ -1360,6 +1363,7 @@ types:
     - derive: "'HideSecrets"
     - vehicleAgeThreshold: Maybe Months
     - specialZone: Maybe SpecialZone
+    - cancellationRateConfig: Maybe CancellationRateConfig
     - allowNullVehicleRating: Maybe Bool
   VehicleServiceTierListRes:
     - recordType: Type
