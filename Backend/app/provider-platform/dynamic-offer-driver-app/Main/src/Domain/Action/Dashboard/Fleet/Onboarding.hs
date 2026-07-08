@@ -62,8 +62,10 @@ getOnboardingDocumentConfigs ::
   Maybe Bool ->
   Maybe Bool ->
   Maybe CommonOnboarding.Role ->
+  Maybe CommonOnboarding.DocumentOnboardingStage ->
+  Maybe CommonOnboarding.DocumentSubGroup ->
   Environment.Flow CommonOnboarding.DocumentVerificationConfigList
-getOnboardingDocumentConfigs merchantShortId opCity fleetOwnerId makeSelfieAadhaarPanMandatory mbOnlyVehicle role = do
+getOnboardingDocumentConfigs merchantShortId opCity fleetOwnerId makeSelfieAadhaarPanMandatory mbOnlyVehicle role documentOnboardingStage documentSubGroup = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   mbPerson <- runInReplica $ PersonQuery.findById (Id fleetOwnerId)
@@ -74,21 +76,34 @@ getOnboardingDocumentConfigs merchantShortId opCity fleetOwnerId makeSelfieAadha
     Just CommonOnboarding.BUSINESS_FLEET -> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, role = Just FLEET_BUSINESS}) (Just (FODVC.findAllByMerchantOpCityIdAndRole merchantOpCityId FLEET_BUSINESS (Just [])))
     _ -> pure []
 
-  fleetConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (SDO.mkFleetOwnerDocumentVerificationConfigAPIEntity personLanguage) fleetConfigsRaw
+  fleetConfigs <- filterByStageAndSubGroup documentOnboardingStage documentSubGroup . SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (SDO.mkFleetOwnerDocumentVerificationConfigAPIEntity personLanguage) fleetConfigsRaw
 
   Onboarding.DocumentVerificationConfigList {..} <- DOnboarding.getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandatory mbOnlyVehicle
+  let castAndFilter = filterByStageAndSubGroup documentOnboardingStage documentSubGroup . fmap castDocumentVerificationConfigAPIEntity
   return $
     CommonOnboarding.DocumentVerificationConfigList
       { fleet = SDO.toMaybe fleetConfigs,
-        ambulances = fmap (castDocumentVerificationConfigAPIEntity <$>) ambulances,
-        autos = fmap (castDocumentVerificationConfigAPIEntity <$>) autos,
-        bikes = fmap (castDocumentVerificationConfigAPIEntity <$>) bikes,
-        bus = fmap (castDocumentVerificationConfigAPIEntity <$>) bus,
-        cabs = fmap (castDocumentVerificationConfigAPIEntity <$>) cabs,
-        trucks = fmap (castDocumentVerificationConfigAPIEntity <$>) trucks,
-        boat = fmap (castDocumentVerificationConfigAPIEntity <$>) boat,
-        toto = fmap (castDocumentVerificationConfigAPIEntity <$>) toto
+        ambulances = fmap castAndFilter ambulances,
+        autos = fmap castAndFilter autos,
+        bikes = fmap castAndFilter bikes,
+        bus = fmap castAndFilter bus,
+        cabs = fmap castAndFilter cabs,
+        trucks = fmap castAndFilter trucks,
+        boat = fmap castAndFilter boat,
+        toto = fmap castAndFilter toto
       }
+
+filterByStageAndSubGroup ::
+  Maybe CommonOnboarding.DocumentOnboardingStage ->
+  Maybe CommonOnboarding.DocumentSubGroup ->
+  [CommonOnboarding.DocumentVerificationConfigAPIEntity] ->
+  [CommonOnboarding.DocumentVerificationConfigAPIEntity]
+filterByStageAndSubGroup mbStage mbSubGroup =
+  filter
+    ( \doc ->
+        maybe True (\stage -> doc.documentOnboardingStage == Just stage) mbStage
+          && maybe True (\subGroup -> doc.documentSubGroup == Just subGroup) mbSubGroup
+    )
 
 castDocumentVerificationConfigAPIEntity :: Onboarding.DocumentVerificationConfigAPIEntity -> CommonOnboarding.DocumentVerificationConfigAPIEntity
 castDocumentVerificationConfigAPIEntity Onboarding.DocumentVerificationConfigAPIEntity {..} =
@@ -100,6 +115,7 @@ castDocumentVerificationConfigAPIEntity Onboarding.DocumentVerificationConfigAPI
       dependencyDocumentType = SDO.castDocumentType <$> dependencyDocumentType,
       disableWarning = disableWarning,
       documentCategory = SDO.castDocumentCategory <$> documentCategory,
+      documentSubGroup = SDO.castDocumentSubGroup <$> documentSubGroup,
       documentType = SDO.castDocumentType documentType,
       filterForOldApks = filterForOldApks,
       isDisabled = isDisabled,
@@ -110,6 +126,7 @@ castDocumentVerificationConfigAPIEntity Onboarding.DocumentVerificationConfigAPI
       applicableTo = SDO.castDocumentApplicableType applicableTo,
       documentFields = fmap (map SDO.castDocumentFieldInfo) documentFields,
       documentFlowGrouping = SDO.castDocumentFlowGrouping documentFlowGrouping,
+      documentOnboardingStage = SDO.castDocumentOnboardingStage <$> documentOnboardingStage,
       isReminderSupported = isReminderSupported,
       isApprovalSupported = isApprovalSupported,
       rolesAllowedToUploadDocument = fmap (mapMaybe SDO.castPersonRoleToDashboardAccessType) rolesAllowedToUploadDocument

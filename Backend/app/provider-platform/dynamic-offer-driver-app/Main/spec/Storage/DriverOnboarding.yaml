@@ -28,6 +28,7 @@ imports:
   MediaFile: IssueManagement.Domain.Types.MediaFile
   HighPrecMoney: Kernel.Types.Common
   Centesimal: Kernel.Types.Common
+  CommonDocumentData: Domain.Types.CommonDocumentData
 IdfyVerification:
   tableName: idfy_verification
   fields:
@@ -460,6 +461,7 @@ DriverRCAssociation:
 
 Image:
   tableName: image
+  derives: "Generic, Show, ToJSON, FromJSON"
   types:
     SelfieFetchStatus:
       enum: "APPROVED,NEEDS_REVIEW"
@@ -621,17 +623,24 @@ DocumentVerificationConfig:
       enum: "Infix,Prefix,Suffix,Exact"
     DocumentCategory:
       enum: "Driver,Vehicle,Permission,Training"
+    DocumentSubGroup:
+      enum: "INDIVIDUAL_LEGAL_STRUCTURE,LEGAL_ENTITY_STRUCTURE"
     DocumentFlowGrouping:
       enum: "COMMON,STANDARD"
     DocumentApplicableType:
       enum: "FLEET,INDIVIDUAL,FLEET_AND_INDIVIDUAL"
+    DocumentOnboardingStage:
+      enum: "DRIVER_ONBOARDING,VEHICLE_DETAILS,OPERATOR_PERMIT,TAX_AND_LEGAL,BANK_DETAILS"
     FieldType:
-      enum: "FieldText,FieldInt,FieldDouble"
+      enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage"
     FieldInfo:
       name: Text
       _type: FieldType
       isMandatory: Bool
       regexValidation: Maybe Text
+      description: Maybe Text
+      placeholder: Maybe Text
+      dropdownValues: Maybe [Text]
       derive': "Eq,Ord,Show,Read,Generic,ToJSON,FromJSON,ToSchema"
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -660,7 +669,9 @@ DocumentVerificationConfig:
     order: Int
     filterForOldApks: Maybe Bool
     documentCategory: Maybe DocumentCategory
+    documentSubGroup: Maybe DocumentSubGroup
     documentFlowGrouping: Maybe DocumentFlowGrouping
+    documentOnboardingStage: Maybe DocumentOnboardingStage
     applicableTo: DocumentApplicableType
     # For RC: read regex from FieldInfo.regexValidation; prefix list remains fallback.
     documentFields: Maybe [FieldInfo]
@@ -1568,11 +1579,13 @@ CommonDriverOnboardingDocuments:
     documentImageId: Maybe (Id Image)
     driverId: Maybe (Id Person)
     documentType: DocumentType
-    documentData: Text  # JSON string containing all document data
+    documentData: CommonDocumentData|NoRelation  # typed per-documentType payload (was a raw JSON Text blob)
     rejectReason: Maybe Text
     verificationStatus: VerificationStatus  # PENDING, VERIFIED, REJECTED
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
+  sqlType:
+    documentData: json
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey

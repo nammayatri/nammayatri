@@ -37,9 +37,9 @@ data AadhaarCardE e = AadhaarCard
   }
   deriving (Generic)
 
-type AadhaarCard = AadhaarCardE 'AsEncrypted
+type AadhaarCard = AadhaarCardE ('AsEncrypted)
 
-type DecryptedAadhaarCard = AadhaarCardE 'AsUnencrypted
+type DecryptedAadhaarCard = AadhaarCardE ('AsUnencrypted)
 
 instance EncryptedItem AadhaarCard where
   type Unencrypted AadhaarCard = (DecryptedAadhaarCard, HashSalt)

@@ -85,6 +85,15 @@ data DocumentMetadata
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DocumentOnboardingStage
+  = DRIVER_ONBOARDING
+  | VEHICLE_DETAILS
+  | OPERATOR_PERMIT
+  | TAX_AND_LEGAL
+  | BANK_DETAILS
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
 data DocumentStatusItem = DocumentStatusItem
   { documentType :: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType,
     expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -99,6 +108,12 @@ data DocumentStatusItem = DocumentStatusItem
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DocumentSubGroup
+  = INDIVIDUAL_LEGAL_STRUCTURE
+  | LEGAL_ENTITY_STRUCTURE
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
 data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
   { applicableTo :: DocumentApplicableType,
     checkExpiry :: Kernel.Prelude.Bool,
@@ -109,6 +124,8 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     documentCategory :: Kernel.Prelude.Maybe DocumentCategory,
     documentFields :: Kernel.Prelude.Maybe [FieldInfo],
     documentFlowGrouping :: DocumentFlowGrouping,
+    documentOnboardingStage :: Kernel.Prelude.Maybe DocumentOnboardingStage,
+    documentSubGroup :: Kernel.Prelude.Maybe DocumentSubGroup,
     documentType :: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType,
     filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isApprovalSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -138,7 +155,15 @@ data DocumentVerificationConfigList = DocumentVerificationConfigList
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FieldInfo = FieldInfo {_type :: FieldType, isMandatory :: Kernel.Prelude.Bool, name :: Kernel.Prelude.Text, regexValidation :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+data FieldInfo = FieldInfo
+  { _type :: FieldType,
+    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dropdownValues :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    isMandatory :: Kernel.Prelude.Bool,
+    name :: Kernel.Prelude.Text,
+    placeholder :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    regexValidation :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -146,6 +171,8 @@ data FieldType
   = FieldText
   | FieldInt
   | FieldDouble
+  | FieldDropdown
+  | FieldImage
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -307,7 +334,13 @@ type GetOnboardingDocumentConfigs =
       :> QueryParam
            "role"
            Role
-      :> Get '[JSON] DocumentVerificationConfigList
+      :> QueryParam "documentOnboardingStage" DocumentOnboardingStage
+      :> QueryParam
+           "documentSubGroup"
+           DocumentSubGroup
+      :> Get
+           ('[JSON])
+           DocumentVerificationConfigList
   )
 
 type GetOnboardingDocumentConfigsHelper =
@@ -317,7 +350,15 @@ type GetOnboardingDocumentConfigsHelper =
            Kernel.Prelude.Bool
       :> QueryParam "onlyVehicle" Kernel.Prelude.Bool
       :> QueryParam "role" Role
-      :> Get '[JSON] DocumentVerificationConfigList
+      :> QueryParam
+           "documentOnboardingStage"
+           DocumentOnboardingStage
+      :> QueryParam
+           "documentSubGroup"
+           DocumentSubGroup
+      :> Get
+           ('[JSON])
+           DocumentVerificationConfigList
   )
 
 type GetOnboardingRegisterStatus =
@@ -339,7 +380,7 @@ type GetOnboardingRegisterStatus =
            "enableDocumentMetadata"
            Kernel.Prelude.Bool
       :> Get
-           '[JSON]
+           ('[JSON])
            StatusRes
   )
 
@@ -365,7 +406,7 @@ type GetOnboardingRegisterStatusHelper =
            "enableDocumentMetadata"
            Kernel.Prelude.Bool
       :> Get
-           '[JSON]
+           ('[JSON])
            StatusRes
   )
 
@@ -375,10 +416,10 @@ type GetOnboardingRegisterVehicleStatus =
            "rcId"
            Kernel.Prelude.Text
       :> QueryParam "enableDocumentMetadata" Kernel.Prelude.Bool
-      :> Get '[JSON] RcVerifyStatusResp
+      :> Get ('[JSON]) RcVerifyStatusResp
   )
 
-type PostOnboardingVerify = ("verify" :> Capture "verifyType" VerifyType :> ReqBody '[JSON] VerifyReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostOnboardingVerify = ("verify" :> Capture "verifyType" VerifyType :> ReqBody ('[JSON]) VerifyReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
 type PostOnboardingVerifyHelper =
   ( "verify" :> Capture "verifyType" VerifyType
@@ -386,9 +427,9 @@ type PostOnboardingVerifyHelper =
            "accessType"
            API.Types.ProviderPlatform.Management.Endpoints.Account.DashboardAccessType
       :> QueryParam "adminApprovalRequired" Kernel.Prelude.Bool
-      :> ReqBody '[JSON] VerifyReq
+      :> ReqBody ('[JSON]) VerifyReq
       :> Post
-           '[JSON]
+           ('[JSON])
            VerifyDocumentRes
   )
 
@@ -397,25 +438,25 @@ type GetOnboardingVehicleDocuments =
       :> QueryParam
            "enableDocumentMetadata"
            Kernel.Prelude.Bool
-      :> Get '[JSON] VehicleDocumentStatusRes
+      :> Get ('[JSON]) VehicleDocumentStatusRes
   )
 
-type GetOnboardingGetReferralDetails = ("get" :> "referralDetails" :> MandatoryQueryParam "referralCode" Kernel.Prelude.Text :> Get '[JSON] ReferralInfoRes)
+type GetOnboardingGetReferralDetails = ("get" :> "referralDetails" :> MandatoryQueryParam "referralCode" Kernel.Prelude.Text :> Get ('[JSON]) ReferralInfoRes)
 
 type GetOnboardingGetReferralDetailsHelper =
   ( "get" :> "referralDetails" :> Capture "requestorId" Kernel.Prelude.Text :> MandatoryQueryParam "referralCode" Kernel.Prelude.Text
       :> Get
-           '[JSON]
+           ('[JSON])
            ReferralInfoRes
   )
 
 data OnboardingAPIs = OnboardingAPIs
-  { getOnboardingDocumentConfigs :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Role -> EulerHS.Types.EulerClient DocumentVerificationConfigList,
-    getOnboardingRegisterStatus :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient StatusRes,
-    getOnboardingRegisterVehicleStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient RcVerifyStatusResp,
-    postOnboardingVerify :: VerifyType -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Endpoints.Account.DashboardAccessType -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> VerifyReq -> EulerHS.Types.EulerClient VerifyDocumentRes,
-    getOnboardingVehicleDocuments :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient VehicleDocumentStatusRes,
-    getOnboardingGetReferralDetails :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient ReferralInfoRes
+  { getOnboardingDocumentConfigs :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Role) -> Kernel.Prelude.Maybe (DocumentOnboardingStage) -> Kernel.Prelude.Maybe (DocumentSubGroup) -> EulerHS.Types.EulerClient DocumentVerificationConfigList),
+    getOnboardingRegisterStatus :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Domain.Types.VehicleCategory.VehicleCategory) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Dashboard.Common.DocsVerificationStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> EulerHS.Types.EulerClient StatusRes),
+    getOnboardingRegisterVehicleStatus :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> EulerHS.Types.EulerClient RcVerifyStatusResp),
+    postOnboardingVerify :: (VerifyType -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Endpoints.Account.DashboardAccessType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> VerifyReq -> EulerHS.Types.EulerClient VerifyDocumentRes),
+    getOnboardingVehicleDocuments :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> EulerHS.Types.EulerClient VehicleDocumentStatusRes),
+    getOnboardingGetReferralDetails :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient ReferralInfoRes)
   }
 
 mkOnboardingAPIs :: (Client EulerHS.Types.EulerClient API -> OnboardingAPIs)
@@ -433,8 +474,12 @@ data OnboardingUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(mkHttpInstancesForEnum ''Role)
+$(mkHttpInstancesForEnum (''DocumentOnboardingStage))
 
-$(mkHttpInstancesForEnum ''VerifyType)
+$(mkHttpInstancesForEnum (''DocumentSubGroup))
 
-$(Data.Singletons.TH.genSingletons [''OnboardingUserActionType])
+$(mkHttpInstancesForEnum (''Role))
+
+$(mkHttpInstancesForEnum (''VerifyType))
+
+$(Data.Singletons.TH.genSingletons [(''OnboardingUserActionType)])

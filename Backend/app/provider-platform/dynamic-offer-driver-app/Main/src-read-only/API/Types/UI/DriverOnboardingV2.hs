@@ -97,6 +97,8 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     documentCategory :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory,
     documentFields :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo],
     documentFlowGrouping :: Domain.Types.DocumentVerificationConfig.DocumentFlowGrouping,
+    documentOnboardingStage :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentOnboardingStage,
+    documentSubGroup :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentSubGroup,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isApprovalSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

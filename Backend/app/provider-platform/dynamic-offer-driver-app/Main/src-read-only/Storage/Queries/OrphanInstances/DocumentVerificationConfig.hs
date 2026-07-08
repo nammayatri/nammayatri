@@ -18,7 +18,7 @@ import Storage.Queries.Transformers.DocumentVerificationConfig
 
 instance FromTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig where
   fromTType' (Beam.DocumentVerificationConfigT {..}) = do
-    supportedVehicleClasses' <- getConfigFromJSON documentType supportedVehicleClassesJSON
+    supportedVehicleClasses' <- (getConfigFromJSON documentType) supportedVehicleClassesJSON
     pure $
       Just
         Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig
@@ -33,6 +33,8 @@ instance FromTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerific
             documentCategory = documentCategory,
             documentFields = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< documentFieldsJSON,
             documentFlowGrouping = documentFlowGrouping,
+            documentOnboardingStage = documentOnboardingStage,
+            documentSubGroup = documentSubGroup,
             documentType = documentType,
             faceMatchSourceDoc = faceMatchSourceDoc,
             filterForOldApks = filterForOldApks,
@@ -51,7 +53,7 @@ instance FromTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerific
             onlyImageVerificationStatusLookupRequired = onlyImageVerificationStatusLookupRequired,
             order = order,
             rcNumberPrefixList = rcNumberPrefixList,
-            rolesAllowedToUploadDocument = rolesAllowedToUploadDocumentText >>= traverse (readMaybe . Data.Text.unpack),
+            rolesAllowedToUploadDocument = (rolesAllowedToUploadDocumentText >>= traverse (readMaybe . Data.Text.unpack)),
             supportedVehicleClasses = supportedVehicleClasses',
             title = title,
             vehicleCategory = vehicleCategory,
@@ -74,6 +76,8 @@ instance ToTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerificat
         Beam.documentCategory = documentCategory,
         Beam.documentFieldsJSON = Data.Aeson.toJSON <$> documentFields,
         Beam.documentFlowGrouping = documentFlowGrouping,
+        Beam.documentOnboardingStage = documentOnboardingStage,
+        Beam.documentSubGroup = documentSubGroup,
         Beam.documentType = documentType,
         Beam.faceMatchSourceDoc = faceMatchSourceDoc,
         Beam.filterForOldApks = filterForOldApks,
@@ -92,7 +96,7 @@ instance ToTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerificat
         Beam.onlyImageVerificationStatusLookupRequired = onlyImageVerificationStatusLookupRequired,
         Beam.order = order,
         Beam.rcNumberPrefixList = rcNumberPrefixList,
-        Beam.rolesAllowedToUploadDocumentText = Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show) Kernel.Prelude.<$> rolesAllowedToUploadDocument,
+        Beam.rolesAllowedToUploadDocumentText = ((Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show)) Kernel.Prelude.<$> rolesAllowedToUploadDocument),
         Beam.supportedVehicleClassesJSON = getConfigJSON supportedVehicleClasses,
         Beam.title = title,
         Beam.vehicleCategory = vehicleCategory,

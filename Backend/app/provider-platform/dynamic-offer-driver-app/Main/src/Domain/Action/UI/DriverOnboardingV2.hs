@@ -22,6 +22,7 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Types.AadhaarCard
 import Domain.Types.BackgroundVerification
 import Domain.Types.Common
+import qualified Domain.Types.CommonDocumentData as DCommonDocData
 import qualified Domain.Types.CommonDriverOnboardingDocuments
 import qualified Domain.Types.DigilockerVerification as DDV
 import qualified Domain.Types.DocStatus as DocStatus
@@ -1303,13 +1304,14 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
     buildCommonDocument driverId = do
       id <- generateGUID
       now <- getCurrentTime
+      typedDocumentData <- either (throwError . InvalidRequest) pure (DCommonDocData.parseCommonDocumentDataByType documentType documentData)
       return $
         Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments
           { id = id,
             documentImageId = imageId,
             driverId = Just driverId,
             documentType = documentType,
-            documentData = documentData,
+            documentData = typedDocumentData,
             rejectReason = Nothing,
             verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
             merchantOperatingCityId = merchantOperatingCityId,

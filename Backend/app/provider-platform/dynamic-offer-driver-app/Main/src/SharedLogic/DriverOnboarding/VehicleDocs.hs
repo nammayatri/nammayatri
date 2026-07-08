@@ -9,9 +9,6 @@ import Data.Time (Day)
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
-import qualified Domain.Types.DriverInformation as DI
-import qualified Domain.Types.DriverPanCard as DPan
-import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as FODVC
 import qualified Domain.Types.HyperVergeVerification as HV
 import qualified Domain.Types.IdfyVerification as IV
@@ -29,7 +26,6 @@ import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption
 import Kernel.External.Types (Language)
 import Kernel.Prelude
-import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error hiding (Unauthorized)
 import Kernel.Types.Id
@@ -81,97 +77,10 @@ data VehicleDocumentItem = VehicleDocumentItem
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
-data DLDocumentMetadata = DLDocumentMetadata
-  { driverLicenseNumber :: Text,
-    driverDateOfBirth :: Maybe UTCTime,
-    dateOfExpiry :: UTCTime
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
-data AadhaarDocumentMetadata = AadhaarDocumentMetadata
-  { aadhaarNumber :: Maybe Text,
-    nameOnCard :: Maybe Text,
-    dateOfBirth :: Maybe Text,
-    address :: Maybe Text
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
-data PanDocumentMetadata = PanDocumentMetadata
-  { panNumber :: Text,
-    panDocType :: Maybe DPan.PanType,
-    driverDob :: Maybe UTCTime
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
-data LocalAddressProofDocumentMetadata = LocalAddressProofDocumentMetadata
-  { state :: Maybe Context.IndianState,
-    proofDocumentType :: Maybe DI.AddressDocumentType,
-    address :: Maybe Text
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
-newtype GSTDocumentMetadata = GSTDocumentMetadata
-  { gstNumber :: Text
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
-data RCDocumentMetadata = RCDocumentMetadata
-  { fitnessExpiry :: UTCTime,
-    vehicleNumberPlate :: Text,
-    vehicleVariant :: Maybe Text,
-    vehicleManufacturer :: Maybe Text,
-    vehicleModel :: Maybe Text,
-    vehicleModelYear :: Maybe Int,
-    vehicleColor :: Maybe Text
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
-data VehiclePUCDocumentMetadata = VehiclePUCDocumentMetadata
-  { pucNumber :: Maybe Text,
-    pucExpiry :: UTCTime
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
-data VehicleFitnessCertificateDocumentMetadata = VehicleFitnessCertificateDocumentMetadata
-  { fitnessExpiry :: UTCTime,
-    applicationNumber :: Text,
-    rcNumber :: Text
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
-data VehicleInsuranceDocumentMetadata = VehicleInsuranceDocumentMetadata
-  { policyNumber :: Text,
-    insuranceExpiry :: UTCTime,
-    insuranceProvider :: Text,
-    rcNumber :: Text
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
-data VehiclePermitDocumentMetadata = VehiclePermitDocumentMetadata
-  { permitNumber :: Text,
-    permitExpiry :: UTCTime,
-    regionCovered :: Text,
-    rcNumber :: Text
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
-data UDYAMDocumentMetadata = UDYAMDocumentMetadata
-  { udyamNumber :: Maybe Text,
-    tdsRate :: Maybe Double
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
-data TANDocumentMetadata = TANDocumentMetadata
-  { documentId :: Text,
-    tdsRate :: Maybe Double
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
-data LDCDocumentMetadata = LDCDocumentMetadata
-  { documentId :: Text,
-    tdsRate :: Maybe Double
-  }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+-- Per-document-type payload records (DLDocumentMetadata, PanDocumentMetadata, etc.) moved to
+-- Domain.Types.CommonDocumentData so both this status-reporting DocumentMetadata and the
+-- persisted CommonDocumentData share one set of records without a SharedLogic -> Domain.Types
+-- dependency inversion.
 
 data NomineeDetailsDocumentMetadata = NomineeDetailsDocumentMetadata
   { nomineeName :: Maybe Text,
@@ -451,7 +360,7 @@ fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs 
   mbVerificationReqRecord <- case entityImagesInfo.entity of
     IQuery.PersonEntity person -> do
       -- Driver inspection or status handler
-      inprogressVehicleIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing person.id (docTypeToText DVC.VehicleRegistrationCertificate)
+      inprogressVehicleIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing person.id (IV.docTypeToText DVC.VehicleRegistrationCertificate)
       inprogressVehicleHV <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing person.id DVC.VehicleRegistrationCertificate
       pure $ getLatestVerificationRecord inprogressVehicleIdfy inprogressVehicleHV
     IQuery.VehicleRCEntity _rc -> do
@@ -797,7 +706,7 @@ checkIfUnderProgress entityImagesInfo docType = do
     IQuery.PersonEntity person -> do
       -- Driver inspection or status handler: docType: DriverLicense/VehicleRegistrationCertificate
       let driverId = person.id
-      mbVerificationReqIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing driverId (docTypeToText docType)
+      mbVerificationReqIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing driverId (IV.docTypeToText docType)
       mbVerificationReqHV <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing driverId docType
       pure $ getLatestVerificationRecord mbVerificationReqIdfy mbVerificationReqHV
     IQuery.VehicleRCEntity _rc -> do

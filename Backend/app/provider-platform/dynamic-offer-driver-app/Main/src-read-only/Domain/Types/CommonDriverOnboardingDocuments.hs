@@ -4,6 +4,7 @@
 module Domain.Types.CommonDriverOnboardingDocuments where
 
 import Data.Aeson
+import qualified Domain.Types.CommonDocumentData
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
@@ -15,7 +16,7 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data CommonDriverOnboardingDocuments = CommonDriverOnboardingDocuments
-  { documentData :: Kernel.Prelude.Text,
+  { documentData :: Domain.Types.CommonDocumentData.CommonDocumentData,
     documentImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     driverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
