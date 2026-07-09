@@ -19,6 +19,7 @@ import qualified Domain.Types.Booking as DBooking
 import "beckn-spec" Domain.Types.Invoice (IssuedToType (..))
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
 import Domain.Types.Ride (Ride)
+import qualified Domain.Types.TransporterConfig as DTC
 import Environment
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.Prelude
@@ -92,7 +93,7 @@ refundLedger rideId req apiKey = do
         -- When the approval doesn't specify who bears the refund, the merchant config decides;
         -- with no config either, the platform absorbs.
         deductFromDriver = fromMaybe (fromMaybe False transporterConfig.defaultRefundDeductFromDriver) req.deductFromDriver
-        legs = refundLegs deductFromDriver req ride
+        legs = refundLegs deductFromDriver transporterConfig.taxConfig.commissionVatPercentage req ride
     existing <- getRefundEntries referenceId
     case req.refundRequestStatus of
       APPROVED ->
@@ -111,7 +112,7 @@ refundLedger rideId req apiKey = do
         -- the fleet/driver-visible refund invoice + (Case-2) the negative Commission invoice, once per refund
         unless alreadyDone $ do
           createRefundInvoice ctx booking req.refundRequestId (fromMaybe [] req.refundComponents)
-          when deductFromDriver $ createCommissionRefundInvoice ctx req ride
+          when deductFromDriver $ createCommissionRefundInvoice ctx req ride booking transporterConfig
       FAILED ->
         -- Failed: void the pending APPROVED leg(s). Only PENDING → idempotent.
         forM_ (filter (\e -> e.status == LE.PENDING && entryMatchesRefundRequest req.refundRequestId e) existing) $ \e ->
@@ -135,9 +136,10 @@ postLegs ctx mode meta legs refundRequestId = do
 -- | Per-component refund legs. Case 1 (platform absorbs) posts every component on
 --   SellerExpense→BuyerExternal. Case 2 (clawback) posts driver legs on OwnerLiability→BuyerExternal
 --   (reducing the next payout) plus, for ride-fare only, a SellerExpense→BuyerExternal commission
---   slice the platform bears; toll/parking are 100% driver.
-refundLegs :: Bool -> RefundLedgerReq -> Ride -> [(AccountRole, AccountRole, HighPrecMoney, Text)]
-refundLegs deductFromDriver req ride =
+--   slice the platform bears (base + ALV split when commissionVatPercentage is set; the driver
+--   clawback uses the GROSS slice, so payout is rate-independent); toll/parking are 100% driver.
+refundLegs :: Bool -> Maybe Double -> RefundLedgerReq -> Ride -> [(AccountRole, AccountRole, HighPrecMoney, Text)]
+refundLegs deductFromDriver mbCommissionVatPct req ride =
   concatMap componentLegs (fromMaybe [] req.refundComponents)
   where
     commission = fromMaybe 0 ride.commission
@@ -154,18 +156,21 @@ refundLegs deductFromDriver req ride =
               if comp.component == RIDE_FARE
                 then -- Case 2 ride-fare: driver bears all but the prorated commission slice
 
-                  -- Full precision, no rounding: legs must sum to the component exactly, and a
-                  -- full refund must claw back exactly the forward commission (agg nets to zero).
-                  -- Rounding the complement over-debits the driver by the rounding residue.
+                -- Full precision, no rounding: legs must sum to the component exactly, and a
+                -- full refund must claw back exactly the forward commission (agg nets to zero).
+                -- Rounding the complement over-debits the driver by the rounding residue.
+
                   let commissionSlice =
                         if rideFareTotal > 0
                           then commission * comp.fareAmount / rideFareTotal
                           else 0
                       driverBase = comp.fareAmount - commissionSlice
+                      (commissionSliceBase, commissionSliceVat) = Wallet.splitGrossByVatPct mbCommissionVatPct commissionSlice
                    in [ (OwnerLiability, BuyerExternal, driverBase, baseRef),
                         (OwnerLiability, BuyerExternal, comp.vatAmount, vatRef),
-                        (SellerExpense, BuyerExternal, commissionSlice, Wallet.walletReferenceRideFareRefundCommission)
+                        (SellerExpense, BuyerExternal, commissionSliceBase, Wallet.walletReferenceRideFareRefundCommission)
                       ]
+                        <> [(SellerExpense, BuyerExternal, commissionSliceVat, Wallet.walletReferenceRideFareRefundCommissionVAT) | commissionSliceVat > 0]
                 else -- Case 2 toll/parking: 100% driver
 
                   [ (OwnerLiability, BuyerExternal, comp.fareAmount, baseRef),
@@ -179,7 +184,7 @@ refundRefTypesForComponent fc = case fc of
   TOLL -> (Wallet.walletReferenceTollRefund, Wallet.walletReferenceTollRefundVAT)
   PARKING -> (Wallet.walletReferenceParkingRefund, Wallet.walletReferenceParkingRefundVAT)
 
--- | All refund ledger entries for a booking, across the 7 refund refTypes.
+-- | All refund ledger entries for a booking, across the 8 refund refTypes.
 getRefundEntries :: Text -> Flow [LE.LedgerEntry]
 getRefundEntries referenceId =
   concat
@@ -191,7 +196,8 @@ getRefundEntries referenceId =
         Wallet.walletReferenceTollRefundVAT,
         Wallet.walletReferenceParkingRefund,
         Wallet.walletReferenceParkingRefundVAT,
-        Wallet.walletReferenceRideFareRefundCommission
+        Wallet.walletReferenceRideFareRefundCommission,
+        Wallet.walletReferenceRideFareRefundCommissionVAT
       ]
 
 -- | Links a ledger leg to its refund request. Legs carry only the id; request state lives
@@ -300,29 +306,29 @@ refundInvoiceLineMeta fc = case fc of
 -- | On a Case-2 ride-fare refund, record the returned commission slice as a NEGATIVE Commission
 --   invoice, left Draft so the agg-commission scheduler nets it in. A record, not a second cash
 --   movement (the cash is the RideFareRefundCommission ledger leg); issuedTo mirrors the per-ride
---   Commission invoice so it aggregates against the same recipient.
-createCommissionRefundInvoice :: FinanceCtx -> RefundLedgerReq -> Ride -> Flow ()
-createCommissionRefundInvoice ctx req ride = do
+--   Commission invoice so it aggregates against the same recipient. Mirrors the forward
+--   base + ALV split as a negative Fare + Tax pair.
+createCommissionRefundInvoice :: FinanceCtx -> RefundLedgerReq -> Ride -> DBooking.Booking -> DTC.TransporterConfig -> Flow ()
+createCommissionRefundInvoice ctx req ride booking transporterConfig = do
   let commission = fromMaybe 0 ride.commission
       rideFareTotal = fromMaybe 0 req.rideFareComponentTotal
       rideFareRefundedFare = maybe 0 (sum . map (.fareAmount) . filter (\c -> c.component == RIDE_FARE)) req.refundComponents
       -- Full precision (same operands as refundLegs' slice — the ledger legs and this
       -- invoice must agree to the last digit).
       commissionSlice = if rideFareTotal > 0 then commission * rideFareRefundedFare / rideFareTotal else 0
+      (commissionSliceBase, commissionSliceVat) = Wallet.splitGrossByVatPct transporterConfig.taxConfig.commissionVatPercentage commissionSlice
   when (commissionSlice > 0) $ do
     let issuedToType' = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER
         issuedToId' = maybe ride.driverId.getId (.getId) ride.fleetOwnerId
-        commissionRefundLine =
-          InvoiceI.InvoiceLineItem
-            { description = "Commission Refund",
-              descriptionType = Just InvoiceI.CommissionRefund,
-              quantity = 1,
-              unitPrice = negate commissionSlice,
-              lineTotal = negate commissionSlice,
-              isExternalCharge = False,
-              groupId = Just "g-commission-refund",
-              itemType = Just InvoiceI.Fare
-            }
+        mkNegLine desc dtype amt typ =
+          if amt > 0
+            then Just InvoiceI.InvoiceLineItem {description = desc, descriptionType = Just dtype, quantity = 1, unitPrice = negate amt, lineTotal = negate amt, isExternalCharge = False, groupId = Just "g-commission-refund", itemType = Just typ}
+            else Nothing
+        commissionRefundLines =
+          catMaybes
+            [ mkNegLine "Commission Refund" InvoiceI.CommissionRefund commissionSliceBase InvoiceI.Fare,
+              mkNegLine "Commission VAT Refund" InvoiceI.CommissionRefundTax commissionSliceVat InvoiceI.Tax
+            ]
     -- Parent = the per-ride Commission invoice (keyed by bookingId; refund-commissions are keyed
     -- by refundRequestId, so they don't collide here); Nothing if none found.
     mbParentCommissionInvoice <-
@@ -354,7 +360,7 @@ createCommissionRefundInvoice ctx req ride = do
             counterpartyId = issuedToId',
             tdsRateReason = Nothing,
             tanOfDeductee = Nothing,
-            lineItems = [commissionRefundLine],
+            lineItems = commissionRefundLines,
             gstBreakdown = Nothing,
             currency = ctx.currency,
             dueAt = Nothing,
@@ -363,7 +369,7 @@ createCommissionRefundInvoice ctx req ride = do
             merchantId = ctx.merchantId,
             merchantOperatingCityId = ctx.merchantOpCityId,
             merchantShortId = fromMaybe ctx.merchantId ctx.merchantShortId,
-            isVat = False,
+            isVat = fromMaybe False booking.fareParams.isVatTaxType,
             issuedToTaxNo = Nothing,
             issuedByTaxNo = Nothing,
             paymentMode = Nothing

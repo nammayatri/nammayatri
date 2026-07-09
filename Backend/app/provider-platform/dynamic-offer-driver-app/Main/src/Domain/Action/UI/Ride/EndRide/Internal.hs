@@ -456,6 +456,8 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       parkingAmount = fromMaybe 0 fareParams.parkingCharge
       parkingVatAmount = fromMaybe 0 fareParams.parkingChargeTax
       commissionAmount = fromMaybe 0 (ride.commission <|> booking.commission)
+      -- Commission is stored ALV-inclusive; split only at emission (pct unset ⇒ vat 0, behaviour unchanged).
+      (commissionBaseAmount, commissionVatAmount) = splitGrossByVatPct transporterConfig.taxConfig.commissionVatPercentage commissionAmount
       mbProjectedBreakup = FC.projectFareParamsBreakup fareParams
       rawBaseFare = case mbProjectedBreakup of
         Just b -> b.discountApplicableRideFareTaxExclusive + b.nonDiscountApplicableRideFareTaxExclusive
@@ -641,7 +643,8 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               showVatInput = isVat && maybe False (fromMaybe False . (.showVatInputLineItem)) transporterConfig.invoiceConfig
               commonLines =
                 [ mkAdjustment "Tip" Tip tipAmount,
-                  if issuedToType == CUSTOMER then Nothing else mkAdjustment "Platform Commission" PlatformCommission (negate commissionAmount),
+                  if issuedToType == CUSTOMER then Nothing else mkAdjustment "Platform Commission" PlatformCommission (negate commissionBaseAmount),
+                  if issuedToType == CUSTOMER then Nothing else mkAdjustment "Commission VAT" PlatformCommissionTax (negate commissionVatAmount),
                   if showVatInput then mkStandaloneFare "VAT Input" VatInput serviceVatAmount else Nothing
                 ]
            in catMaybes (rideAndTollLines <> commonLines)
@@ -772,6 +775,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
     let commissionAlreadyCollectedAtBooth = booking.fareSettlementType == Just CommissionOnly
     when (commissionAmount > 0) $ do
       let commissionRef = if isOnline then walletReferenceCommissionOnline else walletReferenceCommissionCash
+          commissionVatRef = if isOnline then walletReferenceCommissionVATOnline else walletReferenceCommissionVATCash
           onlineCommissionPaidOutDirectly = isOnline && fromMaybe False transporterConfig.driverWalletConfig.onlineCommissionPaidOutDirectly
           shouldReverseCommissionWalletDebit = onlineCommissionPaidOutDirectly || commissionAlreadyCollectedAtBooth
           commissionInvoiceConfig =
@@ -784,7 +788,10 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 referenceId = Just booking.id.getId,
                 lineItems =
                   catMaybes
-                    [ Just InvoiceLineItem {description = "Platform Commission", descriptionType = Just PlatformCommission, quantity = 1, unitPrice = commissionAmount, lineTotal = commissionAmount, isExternalCharge = False, groupId = Just "g-commission", itemType = Just Fare}
+                    [ Just InvoiceLineItem {description = "Platform Commission", descriptionType = Just PlatformCommission, quantity = 1, unitPrice = commissionBaseAmount, lineTotal = commissionBaseAmount, isExternalCharge = False, groupId = Just "g-commission", itemType = Just Fare},
+                      if commissionVatAmount > 0
+                        then Just InvoiceLineItem {description = "Commission VAT", descriptionType = Just PlatformCommissionTax, quantity = 1, unitPrice = commissionVatAmount, lineTotal = commissionVatAmount, isExternalCharge = False, groupId = Just "g-commission", itemType = Just Tax}
+                        else Nothing
                     ],
                 gstBreakdown = Nothing,
                 isVat = isVat,
@@ -795,9 +802,14 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 periodEnd = Nothing
               }
       commissionResult <- runFinance ctx $ do
-        void $ transfer OwnerLiability SellerRevenue commissionAmount commissionRef
-        when shouldReverseCommissionWalletDebit $
-          void $ transfer SellerRevenue OwnerLiability commissionAmount walletReferenceDeductedAtPaymentByPlatform
+        void $ transfer OwnerLiability SellerRevenue commissionBaseAmount commissionRef
+        when (commissionVatAmount > 0) $
+          void $ transfer OwnerLiability SellerRevenue commissionVatAmount commissionVatRef
+        -- Reversal mirrors every posted leg; shared refType, so the wallet still shows one summed row.
+        when shouldReverseCommissionWalletDebit $ do
+          void $ transfer SellerRevenue OwnerLiability commissionBaseAmount walletReferenceDeductedAtPaymentByPlatform
+          when (commissionVatAmount > 0) $
+            void $ transfer SellerRevenue OwnerLiability commissionVatAmount walletReferenceDeductedAtPaymentByPlatform
         invoice commissionInvoiceConfig
       case commissionResult of
         Left err -> fromEitherM (\e -> InternalError ("Failed to create commission invoice: " <> show e)) (Left err)

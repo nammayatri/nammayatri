@@ -237,7 +237,7 @@ emitInvoice merchant sellerName sellerAddress currency mocId info recipientId re
                 counterpartyId = recipientId,
                 tdsRateReason = Nothing,
                 tanOfDeductee = Nothing,
-                lineItems = map mkLineItem commissions,
+                lineItems = concatMap flattenInvoice commissions,
                 gstBreakdown = Nothing, -- per-line VAT already booked on underlying Commission rows
                 currency = currency,
                 dueAt = Nothing,
@@ -256,28 +256,38 @@ emitInvoice merchant sellerName sellerAddress currency mocId info recipientId re
         Left err -> throwError $ InternalError $ "AggCom: createInvoice failed for " <> show recipientType <> " " <> recipientId <> " [" <> show pStart <> ", " <> show pEnd <> "]: " <> show err
         Right inv -> logInfo $ "AggCom: " <> inv.invoiceNumber <> " for " <> show recipientType <> " " <> recipientId <> " [" <> show pStart <> ", " <> show pEnd <> "]"
 
--- | One agg line per underlying Commission invoice. Propagates the Fare line's
--- description/descriptionType/groupId so the agg_comm JL groups by type.
-mkLineItem :: FInvoice.Invoice -> InvoiceI.InvoiceLineItem
-mkLineItem inv =
-  let mbParsedFareLineItem = parseInvoiceLineItem inv
-   in InvoiceI.InvoiceLineItem
-        { description = maybe "Platform commission" (\li -> li.description) mbParsedFareLineItem <> " - " <> fromMaybe inv.invoiceNumber inv.referenceId,
-          descriptionType = mbParsedFareLineItem >>= (\li -> li.descriptionType),
-          quantity = 1,
-          unitPrice = inv.totalAmount,
-          lineTotal = inv.totalAmount,
-          isExternalCharge = False,
-          groupId = maybe (Just "g-commission") (\li -> li.groupId) mbParsedFareLineItem,
-          itemType = Just InvoiceI.Fare
-        }
-
--- | The underlying invoice's Fare line — source of the type-specific description/descriptionType/groupId.
-parseInvoiceLineItem :: FInvoice.Invoice -> Maybe InvoiceI.InvoiceLineItem
-parseInvoiceLineItem inv =
+-- | Re-emit every line item of an underlying Commission invoice as-is — the agg_comm JL sums
+-- per descriptionType tag, and a summary-line-per-invoice would collapse base+VAT and
+-- commission-vs-cancellation rows. Unparseable line_items ⇒ one untyped line with the invoice total.
+flattenInvoice :: FInvoice.Invoice -> [InvoiceI.InvoiceLineItem]
+flattenInvoice inv =
   case (A.fromJSON inv.lineItems :: A.Result [InvoiceI.InvoiceLineItem]) of
-    A.Success items -> listToMaybe (filter (\li -> li.itemType == Just InvoiceI.Fare) items)
-    A.Error _ -> Nothing
+    A.Success items | not (null items) -> map withRefSuffix items
+    _ ->
+      [ InvoiceI.InvoiceLineItem
+          { description = "Platform commission" <> refSuffix,
+            descriptionType = Nothing,
+            quantity = 1,
+            unitPrice = inv.totalAmount,
+            lineTotal = inv.totalAmount,
+            isExternalCharge = False,
+            groupId = Just "g-commission",
+            itemType = Just InvoiceI.Fare
+          }
+      ]
+  where
+    refSuffix = " - " <> fromMaybe inv.invoiceNumber inv.referenceId
+    withRefSuffix li =
+      InvoiceI.InvoiceLineItem
+        { description = li.description <> refSuffix,
+          descriptionType = li.descriptionType,
+          quantity = li.quantity,
+          unitPrice = li.unitPrice,
+          lineTotal = li.lineTotal,
+          isExternalCharge = li.isExternalCharge,
+          groupId = li.groupId,
+          itemType = li.itemType
+        }
 
 -- | Page through Commission rows for [from, to] in chunks of @batchSize@.
 -- Terminates on empty page (codebase null-termination convention).

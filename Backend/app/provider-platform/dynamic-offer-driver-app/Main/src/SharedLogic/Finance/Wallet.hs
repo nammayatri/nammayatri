@@ -109,6 +109,8 @@ module SharedLogic.Finance.Wallet
     resolveIsOnlineFromBooking,
     walletReferenceCommissionOnline,
     walletReferenceCommissionCash,
+    walletReferenceCommissionVATOnline,
+    walletReferenceCommissionVATCash,
     walletReferenceVATOnline,
     walletReferenceVATCash,
     walletReferenceD2DReferral,
@@ -128,6 +130,8 @@ module SharedLogic.Finance.Wallet
     walletReferenceParkingRefund,
     walletReferenceParkingRefundVAT,
     walletReferenceRideFareRefundCommission,
+    walletReferenceRideFareRefundCommissionVAT,
+    splitGrossByVatPct,
     getRedeemableEntryIds,
     settleWalletEntries,
     getPayoutEligibilityData,
@@ -228,6 +232,12 @@ walletReferenceCommissionOnline = "CommissionOnline"
 walletReferenceCommissionCash :: Text
 walletReferenceCommissionCash = "CommissionCash"
 
+walletReferenceCommissionVATOnline :: Text
+walletReferenceCommissionVATOnline = "CommissionVATOnline"
+
+walletReferenceCommissionVATCash :: Text
+walletReferenceCommissionVATCash = "CommissionVATCash"
+
 walletReferenceDeductedAtPaymentByPlatform :: Text
 walletReferenceDeductedAtPaymentByPlatform = "DeductedAtPaymentByPlatform"
 
@@ -297,6 +307,9 @@ walletReferenceParkingRefundVAT = "ParkingRefundVAT"
 walletReferenceRideFareRefundCommission :: Text
 walletReferenceRideFareRefundCommission = "RideFareRefundCommission"
 
+walletReferenceRideFareRefundCommissionVAT :: Text
+walletReferenceRideFareRefundCommissionVAT = "RideFareRefundCommissionVAT"
+
 -- | Single source of truth: all wallet reference types that represent
 --   redeemable credit entries (i.e. entries that increase driver wallet balance
 --   and should be tracked for settlement/payout).
@@ -321,6 +334,8 @@ walletCreditRefs =
     walletReferenceCustomerCancellationGST,
     walletReferenceCommissionOnline,
     walletReferenceCommissionCash,
+    walletReferenceCommissionVATOnline,
+    walletReferenceCommissionVATCash,
     walletReferenceWalletIncentive,
     walletReferenceVATOnline,
     walletReferenceVATCash,
@@ -342,6 +357,17 @@ walletTransferFromMerchantRefs =
     walletReferenceDiscountsOnline,
     walletReferenceDiscountsCash
   ]
+
+-- | Split a VAT-inclusive gross into (base, vat); the rate is inclusive ("25.5" ⇒ vat = gross × 25.5/125.5).
+--   Neither side is rounded: renderers derive the shown VAT % from the stored pair, and rounding
+--   one side skews it (25.5 prints as 25.65). Nothing / non-positive rate ⇒ (gross, 0).
+splitGrossByVatPct :: Maybe Double -> HighPrecMoney -> (HighPrecMoney, HighPrecMoney)
+splitGrossByVatPct mbPct gross = case mbPct of
+  Just pct
+    | pct > 0 ->
+      let vat = HighPrecMoney (gross.getHighPrecMoney * (toRational pct / toRational (100 + pct)))
+       in (gross - vat, vat)
+  _ -> (gross, 0)
 
 -- Time helpers (shared across getWalletTransactions, postWalletPayout, postWalletTopup)
 

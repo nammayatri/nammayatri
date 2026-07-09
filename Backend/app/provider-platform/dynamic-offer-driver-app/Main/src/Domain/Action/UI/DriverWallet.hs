@@ -402,6 +402,8 @@ referenceTypeToItemName ref
   | ref == walletReferenceDiscountsCash = "Discounts Incl. Vat (Cash)"
   | ref == walletReferenceCommissionOnline = "Commission (Online)"
   | ref == walletReferenceCommissionCash = "Commission (Cash)"
+  | ref == walletReferenceCommissionVATOnline = "Commission VAT (Online)"
+  | ref == walletReferenceCommissionVATCash = "Commission VAT (Cash)"
   | ref == walletReferenceDeductedAtPaymentByPlatform = "Commission Deducted at Payment"
   | otherwise = ref
 

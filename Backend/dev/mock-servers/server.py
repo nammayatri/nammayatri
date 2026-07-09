@@ -1100,6 +1100,7 @@ class MockHandler(BaseHTTPRequestHandler):
         refund_ref_types = (
             "RideFareRefund", "RideFareRefundVAT", "TollRefund", "TollRefundVAT",
             "ParkingRefund", "ParkingRefundVAT", "RideFareRefundCommission",
+            "RideFareRefundCommissionVAT",
         )
         if refunds_only:
             deletes = [
