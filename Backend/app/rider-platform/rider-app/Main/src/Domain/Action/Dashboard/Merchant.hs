@@ -596,8 +596,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
       _ -> return Nothing
 
   -- merchant service config
+
   mbMerchantServiceConfig <-
-    getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, merchantId = newMerchantId.getId, serviceName = Nothing}) (Just (SQMSC.findAllByMerchantOperatingCityId newMerchantOperatingCityId)) >>= \case
+    SQMSC.findAllByMerchantOperatingCityId newMerchantOperatingCityId >>= \case
       [] -> do
         merchantServiceConfigs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, merchantId = baseRequestedCityMerchant.id.getId, serviceName = Nothing}) (Just (SQMSC.findAllByMerchantOperatingCityId baseOperatingCityId))
         let newMerchantServiceConfigs = map (buildMerchantServiceConfigs newMerchantId newMerchantOperatingCityId now) merchantServiceConfigs
@@ -854,6 +855,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           bapId = T.replace id.getId merchantId.getId bapId,
           bapUniqueKeyId = merchantData.uniqueKeyId,
           driverOfferMerchantId = merchantData.networkParticipantId,
+          gatewayAndRegistryPriorityList = maybe gatewayAndRegistryPriorityList (map castNetworkEnums) req.gatewayAndRegistryPriorityList,
           createdAt = currentTime,
           updatedAt = currentTime,
           ..
