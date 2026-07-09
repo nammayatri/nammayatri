@@ -1751,6 +1751,7 @@ approveAndUpdatePan req mId mOpCityId = do
                 driverId = driverId,
                 id = uuid,
                 verificationStatus = VALID,
+                rejectReason = Nothing,
                 merchantId = Just mId,
                 merchantOperatingCityId = Just mOpCityId,
                 createdAt = now,
@@ -1829,6 +1830,7 @@ approveAndUpdateAadhaar req mId mOpCityId = do
                 DAadhaar.dateOfBirth = req.dateOfBirth,
                 DAadhaar.address = req.address,
                 DAadhaar.verificationStatus = VALID,
+                DAadhaar.rejectReason = Nothing,
                 DAadhaar.consent = True,
                 DAadhaar.consentTimestamp = now,
                 DAadhaar.aadhaarFrontImageId = Just imageId,
@@ -2233,10 +2235,13 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
           QBL.updateVerificationStatusByImageId INVALID imageId
         DVC.PanCard -> do
           rejectImage imageId
-          QPan.updateVerificationStatusByImageId INVALID imageId
+          QPan.updateVerificationStatusAndRejectReason INVALID (Just reason) imageId
         DVC.AadhaarCard -> do
           rejectImage imageId
-          QAadhaarCard.updateVerificationStatus INVALID image.personId
+          QAadhaarCard.updateVerificationStatusAndRejectReason INVALID (Just reason) image.personId
+        DVC.GSTCertificate -> do
+          rejectImage imageId
+          QGstin.updateVerificationStatusAndRejectReason INVALID (Just reason) imageId
         DVC.LocalResidenceProof -> do
           rejectImage imageId
           now <- getCurrentTime
@@ -2627,6 +2632,7 @@ approveGST req merchantId merchantOperatingCityId = do
                 DGstin.documentImageId2 = Nothing,
                 DGstin.gstin = gstEnc,
                 DGstin.verificationStatus = VALID,
+                DGstin.rejectReason = Nothing,
                 DGstin.verifiedBy = Just DPan.DASHBOARD,
                 DGstin.driverName = Nothing,
                 DGstin.legalName = Nothing,

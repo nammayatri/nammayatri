@@ -80,6 +80,7 @@ tfQuotesInfo provider fulfillments validTill item = do
   specialLocationTag_ <- Beckn.OnDemand.Utils.OnSearch.buildSpecialLocationTag item
   let specialLocationName_ = Beckn.OnDemand.Utils.OnSearch.getSpecialLocationName item
       specialLocationSupportNumber_ = Beckn.OnDemand.Utils.OnSearch.getspecialLocationSupportNumber item
+      fareSettlementType_ = Beckn.OnDemand.Utils.OnSearch.getFareSettlementType item
   (vehicleVariant_, vehicleCapacity_) <- Beckn.OnDemand.Utils.OnSearch.getVehicleVariant provider item
   vehicleServiceTierAirConditioned_ <- Beckn.OnDemand.Utils.OnSearch.getVehicleServiceTierAirConditioned provider item
   isAirConditioned_ <- Beckn.OnDemand.Utils.OnSearch.getIsAirConditioned provider item
@@ -124,6 +125,7 @@ tfQuotesInfo provider fulfillments validTill item = do
               nightShiftInfo = nightShiftInfo_,
               specialLocationTag = specialLocationTag_,
               specialLocationName = specialLocationName_,
+              fareSettlementType = fareSettlementType_,
               totalFareRange = totalFareRange_,
               vehicleVariant = vehicleVariant_,
               waitingCharges = waitingCharges_,
@@ -175,6 +177,7 @@ tfQuotesInfo provider fulfillments validTill item = do
               specialLocationTag = specialLocationTag_,
               specialLocationName = specialLocationName_,
               specialLocationSupportNumber = specialLocationSupportNumber_,
+              fareSettlementType = fareSettlementType_,
               vehicleVariant = vehicleVariant_,
               validTill,
               serviceTierName = mbServiceTierName,

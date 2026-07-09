@@ -30,6 +30,7 @@ data AadhaarCardT f = AadhaarCardT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     nameOnCard :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    rejectReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     verificationStatus :: B.C f Kernel.Types.Documents.VerificationStatus
   }

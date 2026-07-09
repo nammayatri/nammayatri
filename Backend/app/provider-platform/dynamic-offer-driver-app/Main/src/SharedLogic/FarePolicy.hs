@@ -76,6 +76,7 @@ data FarePoliciesProduct = FarePoliciesProduct
     specialLocationTag :: Maybe Text,
     specialLocationName :: Maybe Text,
     specialLocationSupportNumber :: Maybe Text,
+    fareSettlementType :: Maybe SL.FareSettlementType,
     mbPickupDropArea :: Maybe SL.Area
   }
 
@@ -224,6 +225,7 @@ getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mb
         specialLocationTag = allFareProducts.specialLocationTag,
         specialLocationName = allFareProducts.specialLocationName,
         specialLocationSupportNumber = allFareProducts.specialLocationSupportNumber,
+        fareSettlementType = allFareProducts.fareSettlementType,
         mbPickupDropArea = allFareProducts.mbPickupDropArea
       }
 

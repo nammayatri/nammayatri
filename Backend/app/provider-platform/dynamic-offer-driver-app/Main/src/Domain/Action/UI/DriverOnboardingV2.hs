@@ -866,6 +866,7 @@ buildPanCard merchantId person API.Types.UI.DriverOnboardingV2.DriverPanReq {..}
         verificationStatus = verificationStatus,
         driverNameOnGovtDB = nameOnGovtDB,
         panAadhaarLinkage = Nothing,
+        rejectReason = Nothing,
         ..
       }
 
@@ -968,6 +969,7 @@ buildGstCard merchantId person API.Types.UI.DriverOnboardingV2.DriverGstinReq {.
         createdAt = now,
         updatedAt = now,
         verificationStatus = verificationStatus,
+        rejectReason = Nothing,
         ..
       }
 
@@ -1124,6 +1126,7 @@ createAadhaarRecord personId merchantId merchantOperatingCityId API.Types.UI.Dri
             driverGender = Nothing,
             driverImage = Nothing,
             driverImagePath = Nothing,
+            rejectReason = Nothing,
             ..
           }
   QAadhaarCard.upsertAadhaarRecord aadhaarCard

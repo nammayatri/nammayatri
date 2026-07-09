@@ -31,14 +31,15 @@ data AadhaarCardE e = AadhaarCard
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     nameOnCard :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
     verificationStatus :: Kernel.Types.Documents.VerificationStatus
   }
   deriving (Generic)
 
-type AadhaarCard = AadhaarCardE ('AsEncrypted)
+type AadhaarCard = AadhaarCardE 'AsEncrypted
 
-type DecryptedAadhaarCard = AadhaarCardE ('AsUnencrypted)
+type DecryptedAadhaarCard = AadhaarCardE 'AsUnencrypted
 
 instance EncryptedItem AadhaarCard where
   type Unencrypted AadhaarCard = (DecryptedAadhaarCard, HashSalt)
@@ -62,6 +63,7 @@ instance EncryptedItem AadhaarCard where
           merchantId = merchantId entity,
           merchantOperatingCityId = merchantOperatingCityId entity,
           nameOnCard = nameOnCard entity,
+          rejectReason = rejectReason entity,
           updatedAt = updatedAt entity,
           verificationStatus = verificationStatus entity
         }
@@ -85,6 +87,7 @@ instance EncryptedItem AadhaarCard where
             merchantId = merchantId entity,
             merchantOperatingCityId = merchantOperatingCityId entity,
             nameOnCard = nameOnCard entity,
+            rejectReason = rejectReason entity,
             updatedAt = updatedAt entity,
             verificationStatus = verificationStatus entity
           },

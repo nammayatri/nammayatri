@@ -53,6 +53,13 @@ $(mkBeamInstancesForEnum ''PaymentMode)
 defaultPaymentModes :: [PaymentMode]
 defaultPaymentModes = [CASH]
 
+data FareSettlementType
+  = CommissionOnly
+  | FullPayment
+  deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForEnum ''FareSettlementType)
+
 parsePaymentModes :: Maybe Text -> Either Text (Maybe [PaymentMode])
 parsePaymentModes mbRaw =
   case mbRaw >>= cleanCell of
@@ -90,6 +97,7 @@ data SpecialLocation = SpecialLocation
     priority :: Int,
     supportNumber :: Maybe Text,
     paymentModes :: Maybe [PaymentMode],
+    fareSettlementType :: Maybe FareSettlementType,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
