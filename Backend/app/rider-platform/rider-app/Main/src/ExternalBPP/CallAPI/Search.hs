@@ -64,7 +64,12 @@ search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails in
           _ -> callOndcSearch networkHostUrl
     _ -> do
       onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig Nothing Nothing searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId
-      processOnSearch onSearchReq
+      if null onSearchReq.quotes
+        then do
+          logDebug $ "Quotes are null, calling Multimodal Discovery Search"
+          onSearchReq' <- Flow.multimodalDiscoverySearch merchant merchantOperatingCity integratedBPPConfig bapConfig Nothing Nothing searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId
+          processOnSearch onSearchReq'
+        else processOnSearch onSearchReq
   where
     processOnSearch :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => DOnSearch.DOnSearch -> m ()
     processOnSearch onSearchReq = do

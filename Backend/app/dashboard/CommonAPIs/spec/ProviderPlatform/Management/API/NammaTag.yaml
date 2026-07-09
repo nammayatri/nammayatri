@@ -35,6 +35,8 @@ imports:
   UiDevicePlatformReq: Lib.Yudhishthira.Types
   GetPatchedElementReq: Lib.Yudhishthira.Types
   GetPatchedElementResp: Lib.Yudhishthira.Types
+  ConfigPilotGetConfigRequest: Lib.Yudhishthira.Types
+  ConfigPilotCreateRowRequest: Lib.Yudhishthira.Types
   UiConfigGetVersionResponse: Lib.Yudhishthira.Types
   NammaTagV2: Lib.Yudhishthira.Types.NammaTagV2
   NammaTagDetailsResp: Lib.Yudhishthira.Types
@@ -356,6 +358,27 @@ apis:
         type: GetPatchedElementResp
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+  - POST:
+      endpoint: /configPilot/getConfigWithDimensions
+      auth: ApiAuthV2
+      request:
+        type: ConfigPilotGetConfigRequest
+      response:
+        type: TableDataResp
+  - GET:
+      endpoint: /configPilot/getDimensionSchema
+      auth: ApiAuthV2
+      mandatoryQuery:
+        configType: ConfigType
+      response:
+        type: DomainSchemaResp
+  - POST:
+      endpoint: /configPilot/createRow
+      auth: ApiAuthV2
+      request:
+        type: ConfigPilotCreateRowRequest
+      response:
+        type: APISuccess
   - GET:
       endpoint: /behaviorVisibility/{entityType}/{entityId}
       auth: ApiAuthV2

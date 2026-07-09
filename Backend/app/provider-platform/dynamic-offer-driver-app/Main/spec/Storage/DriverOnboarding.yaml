@@ -1013,6 +1013,7 @@ DriverPanCard:
     docType: Maybe PanType
     driverNameOnGovtDB: Maybe Text
     panAadhaarLinkage: Maybe PanAadhaarLinkage
+    rejectReason: Maybe Text
   excludedFields: [merchantOperatingCityId]
   constraints:
     id: PrimaryKey
@@ -1042,6 +1043,10 @@ DriverPanCard:
     updateVerificationStatusByImageId:
       kvFunction: updateOneWithKV
       params: [verificationStatus]
+      where: documentImageId1
+    updateVerificationStatusAndRejectReason:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus, rejectReason]
       where: documentImageId1
     updateMerchantIdAndCityIdByDriverId:
       kvFunction: updateWithKV
@@ -1077,6 +1082,7 @@ DriverGstin:
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     pincode : Maybe Text
     stateName : Maybe Text
+    rejectReason: Maybe Text
   excludedFields: [merchantOperatingCityId]
   constraints:
     id: PrimaryKey
@@ -1105,6 +1111,10 @@ DriverGstin:
     updateVerificationStatusByImageId:
       kvFunction: updateOneWithKV
       params: [verificationStatus]
+      where: documentImageId1
+    updateVerificationStatusAndRejectReason:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus, rejectReason]
       where: documentImageId1
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -1325,6 +1335,7 @@ AadhaarCard:
     merchantId: Id Merchant
     createdAt: UTCTime
     updatedAt: UTCTime
+    rejectReason: Maybe Text
   derives: "Generic"
   constraints:
     driverId: PrimaryKey
@@ -1354,6 +1365,10 @@ AadhaarCard:
     updateVerificationStatus:
       kvFunction: updateWithKV
       params: [verificationStatus, updatedAt]
+      where: driverId
+    updateVerificationStatusAndRejectReason:
+      kvFunction: updateWithKV
+      params: [verificationStatus, rejectReason]
       where: driverId
     deleteByPersonId:
       kvFunction: deleteWithKV

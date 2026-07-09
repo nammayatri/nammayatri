@@ -81,6 +81,7 @@ import Kernel.Utils.Common
 -- import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.CallBPPInternal as Est
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified SharedLogic.Type as SLT
@@ -168,6 +169,7 @@ data EstimateInfo = EstimateInfo
     isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     specialLocationName :: Maybe Text,
+    fareSettlementType :: Maybe SL.FareSettlementType,
     tripCategory :: DT.TripCategory,
     vehicleCategory :: Enums.VehicleCategory,
     vehicleIconUrl :: Maybe BaseUrl,
@@ -240,6 +242,7 @@ data QuoteInfo = QuoteInfo
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     specialLocationName :: Maybe Text,
     specialLocationSupportNumber :: Maybe Text,
+    fareSettlementType :: Maybe SL.FareSettlementType,
     quoteBreakupList :: [QuoteBreakupInfo],
     tripCategory :: DT.TripCategory,
     -- petCharges :: Maybe Price,

@@ -194,6 +194,7 @@ library
       Domain.Action.Dashboard.AppManagement.Passetto
       Domain.Action.Dashboard.AppManagement.PassOrganization
       Domain.Action.Dashboard.AppManagement.Payment
+      Domain.Action.Dashboard.AppManagement.SeatLayout
       Domain.Action.Dashboard.AppManagement.StopRouteDetails
       Domain.Action.Dashboard.AppManagement.TicketDashboard
       Domain.Action.Dashboard.AppManagement.Tickets
@@ -838,6 +839,7 @@ library
       API.Action.Dashboard.AppManagement.Passetto
       API.Action.Dashboard.AppManagement.PassOrganization
       API.Action.Dashboard.AppManagement.Payment
+      API.Action.Dashboard.AppManagement.SeatLayout
       API.Action.Dashboard.AppManagement.StopRouteDetails
       API.Action.Dashboard.AppManagement.TicketDashboard
       API.Action.Dashboard.AppManagement.Tickets
@@ -944,6 +946,7 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.Passetto
       API.Types.Dashboard.AppManagement.Endpoints.PassOrganization
       API.Types.Dashboard.AppManagement.Endpoints.Payment
+      API.Types.Dashboard.AppManagement.Endpoints.SeatLayout
       API.Types.Dashboard.AppManagement.Endpoints.StopRouteDetails
       API.Types.Dashboard.AppManagement.Endpoints.TicketDashboard
       API.Types.Dashboard.AppManagement.Endpoints.Tickets
@@ -956,6 +959,7 @@ library
       API.Types.Dashboard.AppManagement.Passetto
       API.Types.Dashboard.AppManagement.PassOrganization
       API.Types.Dashboard.AppManagement.Payment
+      API.Types.Dashboard.AppManagement.SeatLayout
       API.Types.Dashboard.AppManagement.StopRouteDetails
       API.Types.Dashboard.AppManagement.TicketDashboard
       API.Types.Dashboard.AppManagement.Tickets

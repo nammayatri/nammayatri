@@ -19,6 +19,7 @@ import Data.Ord (Down (..))
 import Data.Time (diffDays, utctDay)
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverStats as DDriverStats
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTPC
@@ -35,8 +36,8 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
 
-selectVehicleTierForDriverWithUsageRestriction :: Bool -> DI.DriverInformation -> DV.Vehicle -> [DVST.VehicleServiceTier] -> Maybe Centesimal -> UTCTime -> [(DVST.VehicleServiceTier, Bool)]
-selectVehicleTierForDriverWithUsageRestriction onlyAutoSelected driverInfo vehicle cityVehicleServiceTiers mbDriverRating now =
+selectVehicleTierForDriverWithUsageRestriction :: Bool -> DI.DriverInformation -> DV.Vehicle -> [DVST.VehicleServiceTier] -> Maybe DDriverStats.DriverStats -> UTCTime -> [(DVST.VehicleServiceTier, Bool)]
+selectVehicleTierForDriverWithUsageRestriction onlyAutoSelected driverInfo vehicle cityVehicleServiceTiers mbDriverStats now =
   map mapUsageRestriction $ filter filterVehicleTier cityVehicleServiceTiers
   where
     vehicleAgeInMonths = getVehicleAge vehicle.mYManufacturing now
@@ -50,13 +51,18 @@ selectVehicleTierForDriverWithUsageRestriction onlyAutoSelected driverInfo vehic
               || ( (compareNumber vehicleServiceTier.airConditionedThreshold driverInfo.airConditionScore)
                      && (isNothing vehicleServiceTier.airConditionedThreshold || vehicle.airConditioned /= Just False)
                  )
-          driverRatingCheck = compareNumber' False mbDriverRating vehicleServiceTier.driverRating
+          driverRatingCheck = compareNumber' False (mbDriverStats >>= (.rating)) vehicleServiceTier.driverRating
           vehicleRatingCheck = compareNumber' (fromMaybe False vehicleServiceTier.allowNullVehicleRating) vehicle.vehicleRating vehicleServiceTier.vehicleRating
           mfcCheck = case (vehicleAgeInMonths, vehicleServiceTier.vehicleAgeThreshold) of
             (Just (Months age), Just (Months threshold)) -> age < threshold
             _ -> True
+          cancellationRateCheck =
+            case (vehicleServiceTier.cancellationRateConfig, mbDriverStats) of
+              (Just cfg, Just stats) ->
+                not (stats.totalRides > cfg.cancellationRideThreshold && driverCancellationRate stats > cfg.cancellationRate)
+              _ -> True
 
-      let usageRestricted = not (luggageCapacityCheck && airConditionedCheck && driverRatingCheck && vehicleRatingCheck && mfcCheck)
+      let usageRestricted = not (luggageCapacityCheck && airConditionedCheck && driverRatingCheck && vehicleRatingCheck && mfcCheck && cancellationRateCheck)
       (vehicleServiceTier, usageRestricted)
 
     filterVehicleTier vehicleServiceTier = vehicle.variant `elem` (if onlyAutoSelected then vehicleServiceTier.autoSelectedVehicleVariant else vehicleServiceTier.allowedVehicleVariant)
@@ -74,23 +80,27 @@ selectVehicleTierForDriverWithUsageRestriction onlyAutoSelected driverInfo vehic
         (Nothing, Just _) -> allow
         _ -> True
 
+    driverCancellationRate :: DDriverStats.DriverStats -> Centesimal
+    driverCancellationRate stats =
+      (fromIntegral (fromMaybe 0 stats.ridesCancelled) / fromIntegral stats.totalRides)
+
 fetchVehicleTierForDriverWithUsageRestriction ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Bool ->
   Maybe DI.DriverInformation ->
   Maybe DV.Vehicle ->
-  Maybe (Maybe Centesimal) ->
+  Maybe DDriverStats.DriverStats ->
   Maybe [DVST.VehicleServiceTier] ->
   Id DP.Person ->
   Id DMOC.MerchantOperatingCity ->
   m [(DVST.VehicleServiceTier, Bool)]
-fetchVehicleTierForDriverWithUsageRestriction onlyAutoSelected mbDriverInfo mbVehicle mbRating mbCityServiceTiers personId merchantOpCityId = do
+fetchVehicleTierForDriverWithUsageRestriction onlyAutoSelected mbDriverInfo mbVehicle mbDriverStats mbCityServiceTiers personId merchantOpCityId = do
   driverInfo <- maybe (QDI.findById personId >>= fromMaybeM DriverInfoNotFound) pure mbDriverInfo
   vehicle <- maybe (QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)) pure mbVehicle
-  rating <- maybe ((>>= (.rating)) <$> QDriverStats.findById vehicle.driverId) pure mbRating
+  driverStats <- maybe (QDriverStats.findById personId) (pure . Just) mbDriverStats
   cityServiceTiers <- maybe (CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing) pure mbCityServiceTiers
   now <- getCurrentTime
-  pure $ selectVehicleTierForDriverWithUsageRestriction onlyAutoSelected driverInfo vehicle cityServiceTiers rating now
+  pure $ selectVehicleTierForDriverWithUsageRestriction onlyAutoSelected driverInfo vehicle cityServiceTiers driverStats now
 
 -- | Mirrors Driver.hs's default-tier derivation. Picks the highest-AC tier
 -- whose `defaultForVehicleVariant` contains the driver's variant *and* whose
