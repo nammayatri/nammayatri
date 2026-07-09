@@ -877,8 +877,8 @@ getDriverReviewQueueRequest merchantShortId opCity entityType reviewRequestType 
       mbPersonIdsForMobile <- case mbMobileNumberHash of
         Nothing -> pure Nothing
         Just hash -> do
-          mbPerson <- runInReplica $ QPerson.findByMobileNumberAndMerchant hash merchantId
-          pure $ Just $ maybe [] (\p -> [p.id.getId]) mbPerson
+          persons <- runInReplica $ QPerson.findAllByMobileNumberAndMerchant hash merchantId
+          pure $ Just $ map (\p -> p.id.getId) persons
 
       pure $ case (mbPersonIdsForMobile, mbPersonId) of
         (Nothing, Nothing) -> Nothing
@@ -1222,8 +1222,8 @@ getDriverRequestReviewHistory merchantShortId opCity apiEntityType reviewRequest
     Just mob -> do
       mobHash <- getDbHash mob
       let countryCode = fromMaybe "+91" mbMobileCountryCode
-      mbPerson <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRoles countryCode mobHash merchant.id [DP.DRIVER, DP.FLEET_OWNER, DP.FLEET_BUSINESS]
-      pure $ Just $ maybe [] (\p -> [p.id.getId]) mbPerson
+      persons <- B.runInReplica $ QPerson.findAllByMobileNumberAndMerchantAndRoles countryCode mobHash merchant.id [DP.DRIVER, DP.FLEET_OWNER, DP.FLEET_BUSINESS]
+      pure $ Just $ map (\p -> p.id.getId) persons
 
   case mbPersonIdsForMobile of
     Just [] -> pure API.Types.ProviderPlatform.Operator.Driver.ReviewRequestHistoryList {reviewHistory = []}
