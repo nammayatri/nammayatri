@@ -33,7 +33,8 @@ data ReviewRequest = ReviewRequest
 data DocumentDetail = DocumentDetail
   { documentDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
-    imageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
+    imageId1 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
+    imageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
     mediaId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rejectedReason :: Kernel.Prelude.Text,
     remarks :: Kernel.Prelude.Maybe Kernel.Prelude.Text
