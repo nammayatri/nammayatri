@@ -1496,12 +1496,18 @@ callGetDLGetStatus driverId merchantOpCityId = do
   latestReq <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing driverId DVC.DriverLicense
   whenJust latestReq $ \verificationReq -> do
     when (verificationReq.status == "pending" || verificationReq.status == "source_down_retrying") $ do
-      rsp <- Verification.getTask merchantOpCityId KEV.HyperVergeRCDL (KEV.GetTaskReq (Just "checkDL") verificationReq.requestId) HVQuery.updateResponse
-      case rsp of
-        KEV.DLResp resp -> do
-          logDebug $ "callGetDLGetStatus: getTask api response for request id : " <> verificationReq.requestId <> " is : " <> show resp
-          unless ("still being processed" `T.isInfixOf` (fromMaybe "" resp.message)) (void $ DDL.onVerifyDL (SDO.makeHVVerificationReqRecord verificationReq) resp KEV.HyperVergeRCDL)
-        _ -> throwError $ InternalError "Document and apiEndpoint mismatch occurred !!!!!!!!"
+      -- statusHandler reaches this twice per render (getDLAndStatus + getProcessedDriverDocuments) and the
+      -- app polls status: dedupe to one getTask per requestId per window (key shared with reconcilePending).
+      firstPullInWindow <- Hedis.setNxExpire (SDO.getTaskPullKey verificationReq.requestId) (round SDO.getTaskPullWindow) ()
+      when firstPullInWindow $ do
+        allowed <- SDO.allowGetTaskAttempt verificationReq.requestId
+        when allowed $ do
+          rsp <- Verification.getTask merchantOpCityId KEV.HyperVergeRCDL (KEV.GetTaskReq (Just "checkDL") verificationReq.requestId) HVQuery.updateResponse
+          case rsp of
+            KEV.DLResp resp -> do
+              logDebug $ "callGetDLGetStatus: getTask api response for request id : " <> verificationReq.requestId <> " is : " <> show resp
+              unless ("still being processed" `T.isInfixOf` (fromMaybe "" resp.message)) (void $ DDL.onVerifyDL (SDO.makeHVVerificationReqRecord verificationReq) resp KEV.HyperVergeRCDL)
+            _ -> throwError $ InternalError "Document and apiEndpoint mismatch occurred !!!!!!!!"
 
 checkImageValidity :: IQuery.EntityImagesInfo -> DVC.DocumentType -> (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl)
 checkImageValidity entityImagesInfo docType = do
