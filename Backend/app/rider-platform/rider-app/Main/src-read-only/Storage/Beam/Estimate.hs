@@ -16,6 +16,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Version
+import qualified Lib.Types.SpecialLocation
 import Tools.Beam.UtilsTH
 
 data EstimateT f = EstimateT
@@ -45,6 +46,7 @@ data EstimateT f = EstimateT
     estimatedPickupDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     estimatedStaticDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     estimatedTotalFare :: B.C f Kernel.Types.Common.HighPrecMoney,
+    fareSettlementType :: B.C f (Kernel.Prelude.Maybe Lib.Types.SpecialLocation.FareSettlementType),
     id :: B.C f Kernel.Prelude.Text,
     insuredAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

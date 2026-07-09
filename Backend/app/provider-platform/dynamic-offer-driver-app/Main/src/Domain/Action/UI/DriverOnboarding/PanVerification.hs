@@ -352,6 +352,7 @@ buildPanCard person panType panName panDob verifyBy image1 panNumber verificatio
         driverId = person.id,
         id = uuid,
         verificationStatus = fromMaybe Documents.MANUAL_VERIFICATION_REQUIRED verificationStatus,
+        rejectReason = Nothing,
         merchantId = Just person.merchantId,
         merchantOperatingCityId = Just person.merchantOperatingCityId,
         createdAt = now,

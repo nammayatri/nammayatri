@@ -849,12 +849,18 @@ fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceT
       OnlineRideHailing -> DMSC.PaymentService Payment.Stripe
       STCL -> DMSC.MembershipPaymentService Payment.Juspay
 
+offerSKUVehicleServiceTierTypePlaceholder :: Text
+offerSKUVehicleServiceTierTypePlaceholder = MessageBuilder.templateText "VEHICLE_SERVICE_TIER_TYPE"
+
 offerSKUVehicleTypePlaceholder :: Text
 offerSKUVehicleTypePlaceholder = MessageBuilder.templateText "VEHICLE_TYPE"
 
-substituteVehicleTypeInOfferSKU :: Show a => a -> Maybe Text -> Maybe Text
-substituteVehicleTypeInOfferSKU vehicleType =
-  fmap (T.replace offerSKUVehicleTypePlaceholder (T.pack (show vehicleType)))
+substituteVehicleTypeInOfferSKU :: (Show a, Show b) => a -> Maybe b -> Maybe Text -> Maybe Text
+substituteVehicleTypeInOfferSKU vehicleType mbVehicleServiceTierType =
+  fmap
+    ( T.replace offerSKUVehicleTypePlaceholder (T.pack (show vehicleType))
+        . T.replace offerSKUVehicleServiceTierTypePlaceholder (maybe "" (T.pack . show) mbVehicleServiceTierType)
+    )
 
 mkOfferBasket ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>

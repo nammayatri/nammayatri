@@ -29,6 +29,7 @@ data DriverPanCardT f = DriverPanCardT
     panAadhaarLinkage :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverPanCard.PanAadhaarLinkage),
     panCardNumberEncrypted :: B.C f Kernel.Prelude.Text,
     panCardNumberHash :: B.C f Kernel.External.Encryption.DbHash,
+    rejectReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     verificationStatus :: B.C f Kernel.Types.Documents.VerificationStatus,
     verifiedBy :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverPanCard.VerifiedBy),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
