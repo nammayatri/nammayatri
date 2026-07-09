@@ -303,6 +303,7 @@ library
       Domain.Action.UI.DriverWallet
       Domain.Action.UI.EditBooking
       Domain.Action.UI.ExotelEndRide
+      Domain.Action.UI.Faq
       Domain.Action.UI.FareCalculator
       Domain.Action.UI.FeedbackForm
       Domain.Action.UI.FinanceInvoice
@@ -1027,6 +1028,7 @@ library
       API.Action.UI.DriverSafetySettings
       API.Action.UI.DriverWallet
       API.Action.UI.EditBooking
+      API.Action.UI.Faq
       API.Action.UI.FareCalculator
       API.Action.UI.FinanceInvoice
       API.Action.UI.FleetOwnerList
@@ -1105,6 +1107,7 @@ library
       API.Types.UI.DriverSafetySettings
       API.Types.UI.DriverWallet
       API.Types.UI.EditBooking
+      API.Types.UI.Faq
       API.Types.UI.FareCalculator
       API.Types.UI.FinanceInvoice
       API.Types.UI.FleetOwnerList
@@ -1206,6 +1209,7 @@ library
       Domain.Types.EntityInfo
       Domain.Types.Estimate
       Domain.Types.Exophone
+      Domain.Types.Faq
       Domain.Types.FareProduct
       Domain.Types.Feedback
       Domain.Types.FeedbackBadge
@@ -1391,6 +1395,7 @@ library
       Storage.Beam.EntityInfo
       Storage.Beam.Estimate
       Storage.Beam.Exophone
+      Storage.Beam.Faq
       Storage.Beam.FareProduct
       Storage.Beam.Feedback
       Storage.Beam.FeedbackBadge
@@ -1581,6 +1586,7 @@ library
       Storage.Queries.EntityInfo
       Storage.Queries.Estimate
       Storage.Queries.Exophone
+      Storage.Queries.Faq
       Storage.Queries.FareProduct
       Storage.Queries.Feedback
       Storage.Queries.FeedbackBadge
