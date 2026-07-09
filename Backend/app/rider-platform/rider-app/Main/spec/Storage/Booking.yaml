@@ -471,6 +471,7 @@ Booking:
     riderId: "!SecondaryKey" # forcing to be a secondary key
     quoteId: "!SecondaryKey" # forcing to be a secondary key
     riderTransactionId: "!SecondaryKey" # forcing to be a secondary key
+    otpCode: "!SecondaryKey" # forcing to be a secondary key
 
   queries:
     updateIsBookingUpdated:

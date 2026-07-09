@@ -180,7 +180,7 @@ findByOtpAndMerchantAndCity ::
 findByOtpAndMerchantAndCity otpVal (Id merchantId) (Id merchantOpCityId) = do
   now <- getCurrentTime
   let oneHourAgo = addUTCTime (- (60 * 60) :: NominalDiffTime) now
-  findOneWithKVRedis
+  findOneWithKV
     [ Se.And
         [ Se.Is BeamB.otpCode $ Se.Eq (Just otpVal),
           Se.Is BeamB.merchantId $ Se.Eq merchantId,
