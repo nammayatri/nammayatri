@@ -529,7 +529,7 @@ transfer fromRole toRole amount refType =
 
 -- | Like 'transfer' but attaches optional per-entry metadata (e.g. for dedup discriminator).
 transferWithMetadata ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   AccountRole ->
   AccountRole ->
   HighPrecMoney ->
@@ -648,7 +648,7 @@ transferPending fromRole toRole amount refType =
 -- | Like 'transferPending' but attaches optional per-entry metadata (e.g. a
 --   dedup discriminator). Needed for PENDING entries that are matched/settled later.
 transferPendingWithMetadata ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   AccountRole ->
   AccountRole ->
   HighPrecMoney ->

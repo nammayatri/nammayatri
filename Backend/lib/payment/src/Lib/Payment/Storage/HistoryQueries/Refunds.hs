@@ -78,7 +78,7 @@ updateIsApiCallSuccess merchantOpCityId isApiCallSuccess refunds mbAction = do
   RefundsHistory.recordRefundsHistory merchantOpCityId (Just refunds.status) refunds.status (Just historyMessage) refunds
 
 updateRefundStatus ::
-  BeamFlow m r =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   Id MerchantOperatingCity ->
   Payment.RefundStatus ->
   DRefunds.Refunds ->

@@ -1051,7 +1051,7 @@ settledRefundByComponent entries component =
    in sum [e.amount | e <- entries, e.status == LE.SETTLED, e.referenceType `elem` [baseRef, vatRef], isNothing e.reversalOf]
 
 createRefundRaisedLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, MonadFlow m, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   Id DRefundRequest.RefundRequest ->
   [RefundComponentSplit] -> -- per-component split (always present; caller throws on no breakup)
@@ -1078,7 +1078,7 @@ createRefundRaisedLedger ctx refundRequestId splits = do
         Right (_, entryIds) -> pure $ Right entryIds
 
 createRefundSucceededLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, MonadFlow m, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   Id DRefundRequest.RefundRequest ->
   m (Either FinanceError [Id LE.LedgerEntry])
@@ -1113,7 +1113,7 @@ refundSucceededAlreadyRecorded rideId refundRequestId = do
 -- | On FAILED, void this refund's pending APPROVED leg(s) — the raised obligation never
 --   materialized. Only PENDING legs → idempotent.
 voidRefundRaisedLedger ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Text -> -- rideId
   Id DRefundRequest.RefundRequest ->
   m ()
@@ -1390,7 +1390,7 @@ regenerateRideTipInvoice rideId tipAmount = do
 --   negative line items (Fare + inline Tax via a shared groupId so 'attachTaxToFares' renders
 --   the VAT inline); referenceInvoiceNumber = the parent ride invoice number.
 createRefundInvoice ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, MonadFlow m, Finance.HasActorInfo m r) =>
   Text -> -- rideId
   Text -> -- refundsRequestId
   [RefundComponentSplit] -> -- per-component split (always present; caller throws on no breakup)
