@@ -19,6 +19,7 @@ module Domain.Action.UI.DriverOnboarding.DriverLicense
     verifyDL,
     onVerifyDL,
     cacheExtractedDl,
+    cacheExtractedDlName,
     onVerifyDLHandler,
     convertUTCTimetoDate,
   )
@@ -152,7 +153,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
   checkDLFormat <- isDLNumberFormatValid documentVerificationConfig normalizedDLNumber
   unless checkDLFormat $
     throwError (InvalidRequest "DL number format is not valid")
-  (nameOnTheCard, dateOfBirth) <-
+  (extractedNameOnCard, dateOfBirth) <-
     if isJust nameOnCardFromSdk
       then return (nameOnCardFromSdk, Nothing)
       else
@@ -183,6 +184,11 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
                     return (_nameOnCard, extractedDL.dateOfBirth)
                   Nothing -> throwImageError imageId1 ImageExtractionFailed
           else return (Nothing, Nothing)
+  cachedNameOnCard <- getCachedExtractedDlName person.id
+  let nameOnTheCard =
+        case extractedNameOnCard of
+          Just n | not (T.null n) -> Just n
+          _ -> cachedNameOnCard
   decryptedPanNumber <- mapM decrypt driverInfo.panNumber
   decryptedAadhaarNumber <- mapM decrypt driverInfo.aadhaarNumber
   decryptedDlNumber <- mapM decrypt driverInfo.dlNumber
@@ -500,6 +506,19 @@ cacheExtractedDl personId extractedDL operatingCity = do
   let key = dlCacheKey personId
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
   Redis.setExp key (extractedDL, operatingCity) authTokenCacheExpiry
+
+dlNameCacheKey :: Id Person.Person -> Text
+dlNameCacheKey personId =
+  "providerPlatform:dlNameCacheKey:" <> personId.getId
+
+cacheExtractedDlName :: Id Person.Person -> Maybe Text -> Flow ()
+cacheExtractedDlName personId (Just name) | not (T.null name) = do
+  authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
+  Redis.setExp (dlNameCacheKey personId) name authTokenCacheExpiry
+cacheExtractedDlName _ _ = return ()
+
+getCachedExtractedDlName :: Id Person.Person -> Flow (Maybe Text)
+getCachedExtractedDlName personId = Redis.safeGet (dlNameCacheKey personId)
 
 dlNotFoundFallback :: UTCTime -> (Text, Text) -> UTCTime -> VerificationReqRecord -> Person.Person -> Flow AckResponse
 dlNotFoundFallback issueDate (extractedDL, operatingCity) dob verificationReq person = do
