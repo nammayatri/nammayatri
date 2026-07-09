@@ -1609,7 +1609,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> optional (r .: "render")
       <*> optional (r .: "enable_queue_filter")
       <*> optional (r .: "payment_modes")
-      <*> optional (r .: "payment_collection_mode")
+      <*> optional (r .: "fare_settlement_type")
 
 postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
