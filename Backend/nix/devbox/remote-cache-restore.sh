@@ -15,7 +15,7 @@ DIST_DIR="dist-newstyle"
 # Re-downloading the CI cache would lose them and trigger a
 # full rebuild. Only download when HIE files are missing.
 if [ -d "$DIST_DIR/build" ]; then
-  HIE_FILE=$(find . -name "*.hie" -path "*/.hie/*" -print -quit 2>/dev/null || true)
+  HIE_FILE=$(find -L . -name "*.hie" -path "*/.hie/*" -print -quit 2>/dev/null || true)
   if [ -n "$HIE_FILE" ]; then
     echo "cache-restore: .hie files found, skipping download"
     exit 0

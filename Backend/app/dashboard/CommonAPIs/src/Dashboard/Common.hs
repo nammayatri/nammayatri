@@ -43,6 +43,7 @@ import Domain.Types.VehicleCategory
 import Domain.Types.VehicleVariant
 import Kernel.Prelude
 import Kernel.ServantMultipart
+import Kernel.Types.Common (Centesimal)
 import Kernel.Types.HideSecrets
 import Kernel.Types.HideSecrets as Reexport
 import qualified Kernel.Types.Id as Id
@@ -373,5 +374,11 @@ data VehicleServiceTierOrderConfig = VehicleServiceTierOrderConfig
 data SpecialZone = SpecialZone
   { serviceTierNameForZone :: Text,
     specialZoneId :: Text
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
+
+data CancellationRateConfig = CancellationRateConfig
+  { cancellationRate :: Centesimal,
+    cancellationRideThreshold :: Int
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)

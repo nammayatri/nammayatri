@@ -34,6 +34,7 @@ instance FromTType' Beam.AadhaarCard Domain.Types.AadhaarCard.AadhaarCard where
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             nameOnCard = nameOnCard,
+            rejectReason = rejectReason,
             updatedAt = updatedAt,
             verificationStatus = verificationStatus
           }
@@ -58,6 +59,7 @@ instance ToTType' Beam.AadhaarCard Domain.Types.AadhaarCard.AadhaarCard where
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.nameOnCard = nameOnCard,
+        Beam.rejectReason = rejectReason,
         Beam.updatedAt = updatedAt,
         Beam.verificationStatus = verificationStatus
       }

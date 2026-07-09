@@ -18,6 +18,7 @@ import Data.Aeson (Value (Null), object, (.=))
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error as Tools.Error hiding (PersonError, SosError, SosIdDoesNotExist)
 import Kernel.Types.Error.BaseError.HTTPError
 import Kernel.Utils.Common (Meters)
@@ -1304,6 +1305,7 @@ data DriverOnboardingError
   | GstInvalid
   | VehicleServiceTierNotFound Text
   | DocumentUnderManualReview Text
+  | SelfieReuploadNotAllowed Text Documents.VerificationStatus
   | DocumentAlreadyValidated Text
   | InvalidWebhookPayload Text Text
   | InvalidReviewStatus Text Text
@@ -1396,6 +1398,12 @@ instance IsBaseError DriverOnboardingError where
     GstInvalid -> Just "Contact Customer Support, GST certificate has been rejected"
     VehicleServiceTierNotFound serviceTier -> Just $ "Service tier config not found for vehicle service tier \"" <> serviceTier <> "\"."
     DocumentUnderManualReview docName -> Just $ "Your " <> docName <> " is under manual review."
+    SelfieReuploadNotAllowed docName status ->
+      let reason = case status of
+            Documents.VALID -> "already validated"
+            Documents.MANUAL_VERIFICATION_REQUIRED -> "under manual review"
+            _ -> "under verification"
+       in Just $ "You can't update your selfie because your " <> docName <> " is " <> reason <> ". Please contact support if you need to make changes."
     DocumentAlreadyValidated docName -> Just $ "Your " <> docName <> " is already validated."
     InvalidWebhookPayload svcName errMsg -> Just $ "Unable to parse webhook payload from  " <> svcName <> ". Error: " <> errMsg
     InvalidReviewStatus svcName status -> Just $ "Invalid review status from svc : " <> svcName <> ". Value : " <> status
@@ -1484,6 +1492,7 @@ instance IsHTTPError DriverOnboardingError where
     GstInvalid -> "GST_INVALID"
     VehicleServiceTierNotFound _ -> "VEHICLE_SERVICE_TIER_NOT_FOUND"
     DocumentUnderManualReview _ -> "DOCUMENT_UNDER_MANUAL_REVIEW"
+    SelfieReuploadNotAllowed _ _ -> "SELFIE_REUPLOAD_NOT_ALLOWED"
     DocumentAlreadyValidated _ -> "DOCUMENT_ALREADY_VALIDATED"
     InvalidWebhookPayload _ _ -> "INVALID_WEBHOOK_PAYLOAD"
     InvalidReviewStatus _ _ -> "INVALID_REVIEW_STATUS"
@@ -1570,6 +1579,7 @@ instance IsHTTPError DriverOnboardingError where
     GstInvalid -> E400
     VehicleServiceTierNotFound _ -> E500
     DocumentUnderManualReview _ -> E400
+    SelfieReuploadNotAllowed _ _ -> E400
     DocumentAlreadyValidated _ -> E400
     InvalidWebhookPayload _ _ -> E400
     InvalidReviewStatus _ _ -> E400

@@ -192,6 +192,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
             driverId = person.id,
             id = uuid,
             verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
+            rejectReason = Nothing,
             merchantId = Just person.merchantId,
             merchantOperatingCityId = Just merchantOpCityId,
             createdAt = now,

@@ -14,20 +14,26 @@
 
 module SharedLogic.Scheduler.Jobs.CheckMultimodalConfirmFail where
 
+import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
+import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.JourneyModule.Utils as JMU
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import Lib.Scheduler
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.JobScheduler
 import SharedLogic.Payment as SPayment
+import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -42,6 +48,7 @@ checkMultimodalConfirmFailJob ::
     EncFlow m r,
     SchedulerFlow r,
     EsqDBReplicaFlow m r,
+    ServiceFlow m r,
     HasLongDurationRetryCfg r c,
     HasShortDurationRetryCfg r c,
     CallFRFSBPP.BecknAPICallFlow m r,
@@ -50,8 +57,11 @@ checkMultimodalConfirmFailJob ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
+    HasField "cloudType" r (Maybe CloudType),
     HasField "isMetroTestTransaction" r Bool,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasMasterCloudForwarder r
   ) =>
   Job 'CheckMultimodalConfirmFail ->
   m ExecutionResult
@@ -59,14 +69,21 @@ checkMultimodalConfirmFailJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
   let jobData = jobInfo.jobData
       bookingId = jobData.bookingId
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest $ "booking not found for id: " <> show bookingId)
-  frfsTickets <- QFRFSTicket.findAllByTicketBookingId bookingId
-
   paymentBooking <- QFRFSTicketBookingPayment.findTicketBookingPayment booking >>= fromMaybeM (InvalidRequest $ "payment booking not found for booking id: " <> show bookingId)
-
-  let isPaymentInTerminalState = paymentBooking.status == DFRFSTicketBookingPayment.SUCCESS || paymentBooking.status == DFRFSTicketBookingPayment.REFUND_PENDING
-
-  if ((booking.status == DFRFSTicketBooking.FAILED || null frfsTickets) && isPaymentInTerminalState)
+  if paymentBooking.status == DFRFSTicketBookingPayment.PENDING
     then do
-      void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
+      paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest $ "payment order not found for id: " <> show paymentBooking.paymentOrderId)
+      let fulfillmentHandler resp = FRFSTicketService.frfsOrderStatusHandler booking.merchantId resp JMU.switchFRFSQuoteTierUtil
+      result <- withTryCatch "checkMultimodalConfirmFailJob:syncOrderStatus" $ SPayment.syncOrderStatus fulfillmentHandler booking.merchantId booking.riderId paymentOrder
+      case result of
+        Left err -> logError $ "order status sync failed for booking: " <> bookingId.getId <> ", error: " <> show err
+        Right _ -> logInfo $ "order status re-driven for booking: " <> bookingId.getId
       return Complete
-    else return Complete
+    else do
+      frfsTickets <- QFRFSTicket.findAllByTicketBookingId booking.id
+      let isPaymentInTerminalState = paymentBooking.status == DFRFSTicketBookingPayment.SUCCESS || paymentBooking.status == DFRFSTicketBookingPayment.REFUND_PENDING
+      if ((booking.status == DFRFSTicketBooking.FAILED || null frfsTickets) && isPaymentInTerminalState)
+        then do
+          void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
+          return Complete
+        else return Complete
