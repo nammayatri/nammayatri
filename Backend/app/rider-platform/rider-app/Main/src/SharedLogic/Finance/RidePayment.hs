@@ -301,7 +301,7 @@ createRidePaymentLedger ::
   HighPrecMoney -> -- cashbackPayoutAmount (amount to pay back to rider, 0 for DISCOUNT)
   HighPrecMoney -> -- rideVatAbsorbedOnDiscount (platform-absorbed VAT on the discount portion)
   m (Either FinanceError RidePaymentLedgerResult)
-createRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platformFee offerDiscountAmount cashbackPayoutAmount _rideVatAbsorbedOnDiscount = do
+createRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platformFee offerDiscountAmount cashbackPayoutAmount rideVatAbsorbedOnDiscount = do
   result <- runFinance ctx $ do
     let (riderSrc, riderDst) =
           if ctx.isOnline
@@ -330,6 +330,7 @@ createRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platformFe
         platformFee
         offerDiscountAmount
         cashbackPayoutAmount
+        rideVatAbsorbedOnDiscount
   case result of
     Left err -> do
       logError $ "Failed to create ride payment ledger: " <> show err
@@ -351,18 +352,6 @@ mkDeductionLineItem :: Text -> LineItemDescription -> HighPrecMoney -> Bool -> M
 mkDeductionLineItem desc descType amt isExt
   | amt > 0 = Just InvoiceLineItem {description = desc, descriptionType = Just descType, quantity = 1, unitPrice = - amt, lineTotal = - amt, isExternalCharge = isExt, groupId = Nothing, itemType = Just Adjustment}
   | otherwise = Nothing
-
--- | Ride-fare invoice line. Discount, when present, is captured in the
---   'RideFarePostDiscount' description so the renderer shows the post-discount
---   fare with a human-readable discount summary (no separate deduction line).
-mkRideFareLineItem :: HighPrecMoney -> Currency -> HighPrecMoney -> Maybe InvoiceLineItem
-mkRideFareLineItem amt currency discountAmount
-  | amt <= 0 = Nothing
-  | discountAmount > 0 =
-    let desc = "Ride Fare Post Discount (" <> show currency <> " " <> show discountAmount <> ")"
-        descType = RideFarePostDiscount currency discountAmount
-     in Just InvoiceLineItem {description = desc, descriptionType = Just descType, quantity = 1, unitPrice = amt, lineTotal = amt, isExternalCharge = False, groupId = Just "g-ride", itemType = Just Fare}
-  | otherwise = Just InvoiceLineItem {description = "Ride Fare", descriptionType = Just RideFare, quantity = 1, unitPrice = amt, lineTotal = amt, isExternalCharge = False, groupId = Just "g-ride", itemType = Just Fare}
 
 -- ---------------------------------------------------------------------------
 -- 1a. Upsert core ride payment ledger on amount change
@@ -497,12 +486,12 @@ upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platfo
 createFullyDiscountedRidePaymentLedger ::
   (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
-  HighPrecMoney -> -- rideFare (original, before discount)
-  HighPrecMoney -> -- gstAmount
+  HighPrecMoney -> -- rideFare (post-discount, from the ledger info — 0 for the fully-discounted portion)
+  HighPrecMoney -> -- gstAmount (post-discount)
   HighPrecMoney -> -- tollFare
   HighPrecMoney -> -- tollVatAmount
   HighPrecMoney -> -- platformFee
-  HighPrecMoney -> -- offerDiscountAmount (should equal rideFare + gstAmount + platformFee)
+  HighPrecMoney -> -- offerDiscountAmount (the full clamped gross discount)
   HighPrecMoney -> -- rideVatAbsorbedOnDiscount (platform-absorbed VAT on the discount portion)
   m (Either FinanceError RidePaymentLedgerResult)
 createFullyDiscountedRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platformFee offerDiscountAmount rideVatAbsorbedOnDiscount = do
@@ -761,33 +750,41 @@ buildRidePaymentInvoiceConfig ::
   HighPrecMoney -> -- tollFare
   HighPrecMoney -> -- tollVatAmount
   HighPrecMoney -> -- platformFee
-  HighPrecMoney -> -- offerDiscountAmount (for ride-fare description suffix)
+  HighPrecMoney -> -- offerDiscountAmount (rendered as its own deduction line)
   HighPrecMoney -> -- cashbackPayoutAmount (rendered as deduction line)
+  HighPrecMoney -> -- rideVatAbsorbedOnDiscount (reconstructs the pre-discount fare/tax)
   InvoiceConfig
-buildRidePaymentInvoiceConfig ctx rideFare gstAmount tollFare tollVatAmount platformFee offerDiscountAmount cashbackPayoutAmount =
-  InvoiceConfig
-    { invoiceType = Ride,
-      issuedToType = DInvType.RIDER,
-      issuedToId = ctx.counterpartyId,
-      issuedToName = ctx.issuedToName,
-      issuedToAddress = ctx.fromLocationAddress,
-      referenceId = Just ctx.referenceId,
-      lineItems =
-        catMaybes
-          [ mkRideFareLineItem (rideFare + platformFee) ctx.currency offerDiscountAmount,
-            mkLineItem "Ride Tax" RideTax gstAmount False Tax (Just "g-ride"),
-            mkLineItem "Toll Fare" TollFare tollFare True Fare (Just "g-toll"),
-            mkLineItem "Toll Tax" TollTax tollVatAmount True Tax (Just "g-toll"),
-            mkDeductionLineItem "Cashback Offer" CashbackOffer cashbackPayoutAmount False
-          ],
-      gstBreakdown = Nothing,
-      isVat = gstAmount > 0 || tollVatAmount > 0,
-      issuedToTaxNo = Nothing,
-      issuedByTaxNo = Nothing,
-      paymentMode = Just $ if ctx.isOnline then "ONLINE" else "CASH",
-      periodStart = Nothing,
-      periodEnd = Nothing
-    }
+buildRidePaymentInvoiceConfig ctx rideFare gstAmount tollFare tollVatAmount platformFee offerDiscountAmount cashbackPayoutAmount rideVatAbsorbedOnDiscount =
+  -- The main table shows the FULL pre-discount fare and its full VAT; the discount is a
+  -- separate negative Adjustment below the total.
+  -- Reconstruction is universal: every caller passes post-discount amounts + the clamped
+  -- gross discount + the VAT absorbed inside it (fully-discounted path included).
+  let preDiscountTax = gstAmount + rideVatAbsorbedOnDiscount
+      preDiscountFareLine = rideFare + platformFee + (offerDiscountAmount - rideVatAbsorbedOnDiscount)
+   in InvoiceConfig
+        { invoiceType = Ride,
+          issuedToType = DInvType.RIDER,
+          issuedToId = ctx.counterpartyId,
+          issuedToName = ctx.issuedToName,
+          issuedToAddress = ctx.fromLocationAddress,
+          referenceId = Just ctx.referenceId,
+          lineItems =
+            catMaybes
+              [ mkLineItem "Ride Fare" RideFare preDiscountFareLine False Fare (Just "g-ride"),
+                mkLineItem "Ride Tax" RideTax preDiscountTax False Tax (Just "g-ride"),
+                mkLineItem "Toll Fare" TollFare tollFare True Fare (Just "g-toll"),
+                mkLineItem "Toll Tax" TollTax tollVatAmount True Tax (Just "g-toll"),
+                mkDeductionLineItem "Discount" OfferDiscount offerDiscountAmount False,
+                mkDeductionLineItem "Cashback Offer" CashbackOffer cashbackPayoutAmount False
+              ],
+          gstBreakdown = Nothing,
+          isVat = preDiscountTax > 0 || tollVatAmount > 0,
+          issuedToTaxNo = Nothing,
+          issuedByTaxNo = Nothing,
+          paymentMode = Just $ if ctx.isOnline then "ONLINE" else "CASH",
+          periodStart = Nothing,
+          periodEnd = Nothing
+        }
 
 -- ---------------------------------------------------------------------------
 -- 3. Void ledger entries when payment intent is cancelled
