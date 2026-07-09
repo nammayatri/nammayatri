@@ -626,8 +626,9 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
           mbStats <- QDriverStats.findByPrimaryKey (cast ride.driverId)
           pure $ (.totalEarnings) <$> mbStats
       let rideGst = transporterConfig.taxConfig.rideGst
+          cancelIsVat = fromMaybe False booking.fareParams.isVatTaxType
           -- VAT stays with the driver (OwnerLiability), GST is remitted to govt (GovtIndirect) — mirrors createDriverWalletTransaction.
-          cancellationTaxDest = if fromMaybe False booking.fareParams.isVatTaxType then OwnerLiability else GovtIndirect
+          cancellationTaxDest = if cancelIsVat then OwnerLiability else GovtIndirect
           cancellationComponents =
             [ (baseCancellation, walletReferenceCustomerCancellationCharges, OwnerLiability),
               (gstOnCancellation, walletReferenceCustomerCancellationGST, cancellationTaxDest)
@@ -698,11 +699,22 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
                               then Just InvoiceLineItem {description = "Customer Cancellation Fee", descriptionType = Just CustomerCancellationFee, quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, isExternalCharge = False, groupId = Just "g-cancel", itemType = Just Fare}
                               else Nothing,
                             if gstOnCancellation > 0
-                              then Just InvoiceLineItem {description = "GST on Cancellation Fee", descriptionType = Just GstOnCancellationFee, quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, isExternalCharge = False, groupId = Just "g-cancel", itemType = Just Tax}
+                              then
+                                Just
+                                  InvoiceLineItem
+                                    { description = if cancelIsVat then "Cancellation Fee VAT" else "GST on Cancellation Fee",
+                                      descriptionType = Just (if cancelIsVat then CancellationFeeVat else GstOnCancellationFee),
+                                      quantity = 1,
+                                      unitPrice = gstOnCancellation,
+                                      lineTotal = gstOnCancellation,
+                                      isExternalCharge = False,
+                                      groupId = Just "g-cancel",
+                                      itemType = Just Tax
+                                    }
                               else Nothing
                           ],
               referenceId = Nothing,
-              isVat = False,
+              isVat = cancelIsVat,
               issuedToTaxNo = Nothing,
               issuedByTaxNo = Nothing,
               paymentMode = Just (if isOnline then "ONLINE" else "CASH"),
