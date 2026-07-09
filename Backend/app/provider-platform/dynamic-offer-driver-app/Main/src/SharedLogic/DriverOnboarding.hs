@@ -719,6 +719,32 @@ makeHVVerificationReqRecord DHV.HyperVergeVerification {..} =
       ..
     }
 
+-- | Dedupe key for getTask pulls, per verification requestId — every pull path shares it, so a row is
+--   pulled at most once per 'getTaskPullWindow'.
+getTaskPullKey :: Text -> Text
+getTaskPullKey requestId = "verifyPull:req:" <> requestId
+
+getTaskPullWindow :: NominalDiffTime
+getTaskPullWindow = 30
+
+-- | Fixed-window cap: at most 'getTaskAttemptLimit' getTask pulls per requestId per
+--   'getTaskAttemptWindow'; on hitting it, pulls pause until the window expires — never a permanent
+--   stop. 10 covers ~5 min of the sync DL backstop's tightest (30s-deduped) polling.
+allowGetTaskAttempt :: (CacheFlow m r) => Text -> m Bool
+allowGetTaskAttempt requestId = do
+  let key = "verifyPull:attempts:" <> requestId
+  -- SET NX EX before INCR: the TTL is established atomically with key creation, so a crash between
+  -- the two calls can never leave a counter without expiry (= this requestId blocked forever).
+  void $ Redis.setNxExpire key getTaskAttemptWindow (0 :: Int)
+  attempts <- Redis.incr key
+  pure (attempts <= getTaskAttemptLimit)
+
+getTaskAttemptLimit :: Integer
+getTaskAttemptLimit = 10
+
+getTaskAttemptWindow :: Int
+getTaskAttemptWindow = 7200 -- 2 hours
+
 toMaybe :: [a] -> Kernel.Prelude.Maybe [a]
 toMaybe [] = Kernel.Prelude.Nothing
 toMaybe xs = Kernel.Prelude.Just xs

@@ -295,6 +295,7 @@ verifyGstFlow person merchantOpCityId checkExtraction gstNumber imageId1 = do
   logDebug $ "verifyRes: " <> show verifyRes
   case verifyRes.requestor of
     VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntityGst person imageId1 verifyRes.requestId now imageExtractionValidation encryptedGst
+    -- Adding an async provider branch? Extend pullSourcesFor + hvWorkflowHint in SyncVerificationStatus.
     _ -> throwError $ InternalError ("Service provider not configured to return GST verification async responses. Provider Name : " <> (show verifyRes.requestor))
   pure ()
 

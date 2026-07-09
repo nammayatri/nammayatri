@@ -101,6 +101,7 @@ verifyUdyamFlow person merchantOpCityId uamNumber imageId1 = do
       Verification.VerifyUdyamAadhaarAsyncReq {uamNumber, driverId = person.id.getId}
   case verifyRes.requestor of
     VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntityUdyam person imageId1 verifyRes.requestId now imageExtractionValidation encryptedUam
+    -- Adding an async provider branch? Extend pullSourcesFor + hvWorkflowHint in SyncVerificationStatus.
     _ -> throwError $ InternalError ("Service provider not configured to return Udyam Aadhaar verification async responses. Provider Name : " <> show verifyRes.requestor)
   pure ()
 
