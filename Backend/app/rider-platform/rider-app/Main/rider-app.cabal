@@ -329,6 +329,7 @@ library
       Domain.Action.UI.Ride
       Domain.Action.UI.RidePayment
       Domain.Action.UI.RiderLocation
+      Domain.Action.UI.RiderPreferences
       Domain.Action.UI.Route
       Domain.Action.UI.SavedReqLocation
       Domain.Action.UI.Search
@@ -378,6 +379,7 @@ library
       Domain.Types.Extra.RentalDetails
       Domain.Types.Extra.Ride
       Domain.Types.Extra.RiderConfig
+      Domain.Types.Extra.RiderPreferences
       Domain.Types.Extra.TicketBooking
       Domain.Types.Extra.VendorSplitDetails
       Domain.Types.FarePolicy.FareProductType
@@ -730,6 +732,7 @@ library
       Storage.Queries.RewardCouponUploadBatchExtra
       Storage.Queries.RewardUnlockExtra
       Storage.Queries.RideExtra
+      Storage.Queries.RiderPreferencesExtra
       Storage.Queries.RouteDetailsExtra
       Storage.Queries.RoutePolylinesExtra
       Storage.Queries.SavedReqLocationExtra
@@ -892,6 +895,7 @@ library
       API.Action.UI.Rewards
       API.Action.UI.RidePayment
       API.Action.UI.RiderLocation
+      API.Action.UI.RiderPreferences
       API.Action.UI.SocialLogin
       API.Action.UI.Sos
       API.Action.UI.SVP
@@ -992,6 +996,7 @@ library
       API.Types.UI.Rewards
       API.Types.UI.RidePayment
       API.Types.UI.RiderLocation
+      API.Types.UI.RiderPreferences
       API.Types.UI.SocialLogin
       API.Types.UI.Sos
       API.Types.UI.SVP
@@ -1137,6 +1142,7 @@ library
       Domain.Types.Ride
       Domain.Types.RiderConfig
       Domain.Types.RideRelatedNotificationConfig
+      Domain.Types.RiderPreferences
       Domain.Types.RouteDetails
       Domain.Types.RoutePolylines
       Domain.Types.RouteStopCalender
@@ -1303,6 +1309,7 @@ library
       Storage.Beam.Ride
       Storage.Beam.RiderConfig
       Storage.Beam.RideRelatedNotificationConfig
+      Storage.Beam.RiderPreferences
       Storage.Beam.RouteDetails
       Storage.Beam.RoutePolylines
       Storage.Beam.RouteStopCalender
@@ -1491,6 +1498,7 @@ library
       Storage.Queries.OrphanInstances.RewardCouponUploadBatch
       Storage.Queries.OrphanInstances.RewardUnlock
       Storage.Queries.OrphanInstances.Ride
+      Storage.Queries.OrphanInstances.RiderPreferences
       Storage.Queries.OrphanInstances.RouteDetails
       Storage.Queries.OrphanInstances.RoutePolylines
       Storage.Queries.OrphanInstances.SavedReqLocation
@@ -1547,6 +1555,7 @@ library
       Storage.Queries.Ride
       Storage.Queries.RiderConfig
       Storage.Queries.RideRelatedNotificationConfig
+      Storage.Queries.RiderPreferences
       Storage.Queries.RouteDetails
       Storage.Queries.RoutePolylines
       Storage.Queries.RouteStopCalender
