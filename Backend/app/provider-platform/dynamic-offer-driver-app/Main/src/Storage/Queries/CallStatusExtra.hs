@@ -1,9 +1,7 @@
 module Storage.Queries.CallStatusExtra where
 
-import qualified Database.Beam as B
 import Domain.Types.CallStatus
 import Domain.Types.Ride
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -11,7 +9,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Sequelize as Se
 import qualified Storage.Beam.CallStatus as BeamCT
-import qualified Storage.Beam.Common as BeamCommon
 import Storage.Queries.OrphanInstances.CallStatus ()
 
 -- Extra code goes here --
@@ -28,18 +25,8 @@ findByCallSid callSid = findOneWithKV [Se.Is BeamCT.callId $ Se.Eq callSid]
 
 countCallsByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> m Int
 countCallsByEntityId entityID = do
-  dbConf <- getReplicaBeamConfig
-  resp <-
-    L.runDB dbConf $
-      L.findRow $
-        B.select $
-          B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
-            B.filter_'
-              ( \cs ->
-                  cs.entityId B.==?. B.val_ (Just entityID.getId)
-              )
-              $ B.all_ (BeamCommon.callStatus BeamCommon.atlasDB)
-  pure $ either (const 0) (fromMaybe 0) resp
+  calls <- findAllWithOptionsKV [Se.Is BeamCT.entityId $ Se.Eq (Just entityID.getId)] (Se.Desc BeamCT.createdAt) Nothing Nothing
+  pure $ length calls
 
 findOneByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> m (Maybe CallStatus)
 findOneByEntityId rideId = findAllWithOptionsKV [Se.Is BeamCT.entityId $ Se.Eq rideId] (Se.Desc BeamCT.createdAt) (Just 1) Nothing <&> listToMaybe
