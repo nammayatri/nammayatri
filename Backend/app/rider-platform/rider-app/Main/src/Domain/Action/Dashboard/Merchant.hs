@@ -568,6 +568,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
       _ -> return Nothing
 
   -- merchant service config
+
   mbMerchantServiceConfig <-
     SQMSC.findAllByMerchantOperatingCityId newMerchantOperatingCityId >>= \case
       [] -> do
@@ -825,6 +826,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           bapId = T.replace id.getId merchantId.getId bapId,
           bapUniqueKeyId = merchantData.uniqueKeyId,
           driverOfferMerchantId = merchantData.networkParticipantId,
+          gatewayAndRegistryPriorityList = maybe gatewayAndRegistryPriorityList (map castNetworkEnums) req.gatewayAndRegistryPriorityList,
           createdAt = currentTime,
           updatedAt = currentTime,
           ..
