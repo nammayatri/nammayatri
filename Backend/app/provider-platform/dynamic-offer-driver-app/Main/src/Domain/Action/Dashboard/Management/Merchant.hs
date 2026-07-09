@@ -3814,6 +3814,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
                 destination = Regions [show req.city]
               },
           uniqueKeyId = merchantData.uniqueKeyId,
+          gatewayAndRegistryPriorityList = maybe gatewayAndRegistryPriorityList (map castNetworkEnums) req.gatewayAndRegistryPriorityList,
           createdAt = currentTime,
           updatedAt = currentTime,
           ..
