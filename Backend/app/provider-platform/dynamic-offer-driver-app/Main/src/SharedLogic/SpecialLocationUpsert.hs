@@ -98,7 +98,8 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     enforceTollRoute :: Maybe Text,
     render :: Maybe Text,
     enableQueueFilter :: Maybe Text,
-    paymentModes :: Maybe Text
+    paymentModes :: Maybe Text,
+    fareSettlementType :: Maybe Text
   }
   deriving (Show)
 
@@ -145,6 +146,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> optional (r .: "render")
       <*> optional (r .: "enable_queue_filter")
       <*> optional (r .: "payment_modes")
+      <*> optional (r .: "fare_settlement_type")
 
 ---------------------------------------------------------------------
 -- CSV Helper Functions
@@ -266,6 +268,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
       mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
       supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
       mbRender :: Maybe DSL.RenderType = readMaybeCSVField idx (fromMaybe "" row.render) "Render"
+      mbFareSettlementType :: Maybe DSL.FareSettlementType = readMaybeCSVField idx (fromMaybe "" row.fareSettlementType) "Payment Collection Mode"
   pickupPriority :: Int <- readCSVField idx row.pickupPriority "Pickup Priority"
   dropPriority :: Int <- readCSVField idx row.dropPriority "Drop Priority"
   gateInfoId <- maybe generateGUID (pure . Id) (cleanField =<< row.gateInfoId)
@@ -311,7 +314,8 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             enforceTollRoute = mbEnforceTollRoute,
             render = mbRender,
             supportNumber = supportNumber,
-            paymentModes = resolvedPaymentModes
+            paymentModes = resolvedPaymentModes,
+            fareSettlementType = mbFareSettlementType
           }
       gateInfo =
         DGI.GateInfo
@@ -447,7 +451,8 @@ mergeSpecialLocationWithExisting new Nothing =
   new{DSL.paymentModes = new.paymentModes <|> Just SL.defaultPaymentModes}
 mergeSpecialLocationWithExisting new (Just old) =
   new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled,
-      DSL.paymentModes = new.paymentModes <|> old.paymentModes
+      DSL.paymentModes = new.paymentModes <|> old.paymentModes,
+      DSL.fareSettlementType = new.fareSettlementType <|> old.fareSettlementType
      }
 
 mergeGateInfoWithExisting :: DGI.GateInfo -> Maybe DGI.GateInfo -> DGI.GateInfo

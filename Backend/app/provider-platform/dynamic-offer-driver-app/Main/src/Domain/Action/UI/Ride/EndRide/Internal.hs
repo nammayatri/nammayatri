@@ -769,10 +769,11 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       Left err -> fromEitherM (\e -> InternalError ("Failed to create driver ride invoice: " <> show e)) (Left err)
       Right _ -> pure ()
 
+    let commissionAlreadyCollectedAtBooth = booking.fareSettlementType == Just CommissionOnly
     when (commissionAmount > 0) $ do
       let commissionRef = if isOnline then walletReferenceCommissionOnline else walletReferenceCommissionCash
-          onlineCommissionPaidOutDirectly =
-            isOnline && fromMaybe False transporterConfig.driverWalletConfig.onlineCommissionPaidOutDirectly
+          onlineCommissionPaidOutDirectly = isOnline && fromMaybe False transporterConfig.driverWalletConfig.onlineCommissionPaidOutDirectly
+          shouldReverseCommissionWalletDebit = onlineCommissionPaidOutDirectly || commissionAlreadyCollectedAtBooth
           commissionInvoiceConfig =
             InvoiceConfig
               { invoiceType = BeckInvoice.Commission,
@@ -795,7 +796,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               }
       commissionResult <- runFinance ctx $ do
         void $ transfer OwnerLiability SellerRevenue commissionAmount commissionRef
-        when onlineCommissionPaidOutDirectly $
+        when shouldReverseCommissionWalletDebit $
           void $ transfer SellerRevenue OwnerLiability commissionAmount walletReferenceDeductedAtPaymentByPlatform
         invoice commissionInvoiceConfig
       case commissionResult of

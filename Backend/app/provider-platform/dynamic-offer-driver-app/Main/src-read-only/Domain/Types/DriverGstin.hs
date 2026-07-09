@@ -30,6 +30,7 @@ data DriverGstinE e = DriverGstin
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     panNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     pincode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     stateName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tradeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     typeOfRegistration :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -43,9 +44,9 @@ data DriverGstinE e = DriverGstin
   }
   deriving (Generic)
 
-type DriverGstin = DriverGstinE ('AsEncrypted)
+type DriverGstin = DriverGstinE 'AsEncrypted
 
-type DecryptedDriverGstin = DriverGstinE ('AsUnencrypted)
+type DecryptedDriverGstin = DriverGstinE 'AsUnencrypted
 
 instance EncryptedItem DriverGstin where
   type Unencrypted DriverGstin = (DecryptedDriverGstin, HashSalt)
@@ -67,6 +68,7 @@ instance EncryptedItem DriverGstin where
           merchantOperatingCityId = merchantOperatingCityId entity,
           panNumber = panNumber entity,
           pincode = pincode entity,
+          rejectReason = rejectReason entity,
           stateName = stateName entity,
           tradeName = tradeName entity,
           typeOfRegistration = typeOfRegistration entity,
@@ -96,6 +98,7 @@ instance EncryptedItem DriverGstin where
             merchantOperatingCityId = merchantOperatingCityId entity,
             panNumber = panNumber entity,
             pincode = pincode entity,
+            rejectReason = rejectReason entity,
             stateName = stateName entity,
             tradeName = tradeName entity,
             typeOfRegistration = typeOfRegistration entity,

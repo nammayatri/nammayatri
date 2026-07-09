@@ -1,0 +1,744 @@
+{
+  "info": {
+    "name": "Airport Taxi App Flow (Special Zone)",
+    "description": "Real app-level airport taxi flow: fresh driver + rider onboard through the actual apps (not the dashboard booth proxy), search from an airport special zone, get a queue-based quote+OTP (no upfront driver assignment), and whichever driver enters the rider's OTP claims the ride -> starts -> ends.\n\nThis mirrors how a real airport taxi rank queue works: the rider books and receives an OTP; the driver at the front of the physical queue enters that OTP to claim the ride at ride-start time.\n\nPrerequisites:\n- Special zone geometry must be seeded for the pickup point (see AirportTaxiFlow collection notes for common geometry issues)\n- A fare_product with trip_category='OneWay_OneWayRideOtp' must exist for the special zone's pickup area\n- Environment must have sz_origin_lat/sz_origin_lon within an enabled airport special zone\n- If no special zone is configured / geom_geo_json is stale, this will fail at the 'Has quotes for special zone' assertion with empty quotes",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Auto-skip mock-server requests when envType is not Local.",
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    console.log('[skip] mock-only request on envType=' + envType + ': ' + (pm.info && pm.info.requestName));",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();",
+          "",
+          "// Generate random values ONCE per collection run",
+          "if (!pm.collectionVariables.get('_test_driver_number')) {",
+          "    var dNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var rNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var regNo = 'KA' + String(Math.floor(10 + Math.random() * 89)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String(Math.floor(1000 + Math.random() * 8999));",
+          "    pm.collectionVariables.set('_test_driver_number', dNum);",
+          "    pm.collectionVariables.set('_test_rider_number', rNum);",
+          "    pm.collectionVariables.set('_test_reg_no', regNo);",
+          "    console.log('Test driver:', dNum, 'rider:', rNum, 'reg:', regNo);",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Driver Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_authId', d.authId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_driver_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["auth"]
+        }
+      }
+    },
+    {
+      "name": "Driver OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_token', d.token);",
+              "pm.environment.set('driver_id', d.person.id);",
+              "console.log('Driver ID:', d.person.id);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-device\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["auth", "{{driver_authId}}", "verify"]
+        }
+      }
+    },
+    {
+      "name": "Switch City (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('dashboard_token', d.authToken);",
+              "console.log('Switched to', d.merchantId, d.city);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+          "host": ["{{dashboard_base_url}}"],
+          "path": ["user", "switchMerchantAndCity"]
+        }
+      }
+    },
+    {
+      "name": "Add Vehicle (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"variant\": \"{{vehicle_variant}}\", \"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"{{vehicle_class}}\", \"vehicleCategory\": \"{{vehicle_category}}\", \"make\": \"{{vehicle_make}}\", \"model\": \"{{vehicle_model}}\", \"driverName\": \"Test Airport Driver\", \"colour\": \"White\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "addVehicle"]
+        }
+      }
+    },
+    {
+      "name": "Enable Driver (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"canDowngradeToSedan\": false, \"canDowngradeToHatchback\": false, \"canDowngradeToTaxi\": false}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "enable"]
+        }
+      }
+    },
+    {
+      "name": "Subscribe Plan (Driver)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.orderId) { pm.environment.set('payment_order_id', d.orderId); }",
+              "if (d.orderResp && d.orderResp.order_id) { pm.environment.set('juspay_mock_order_id', d.orderResp.order_id); }",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/plan/{{plan_id}}/subscribe?serviceName=%22{{plan_service_name}}%22",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["plan", "{{plan_id}}", "subscribe"],
+          "query": [
+            { "key": "serviceName", "value": "%22{{plan_service_name}}%22" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Force Payment Success (Mock Override)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Forced juspay order', pm.environment.get('juspay_mock_order_id'), 'to CHARGED');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"value\": \"{{juspay_mock_order_id}}\", \"match\": \"/orders\", \"response\": {\"status\": \"CHARGED\"}}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/override",
+          "host": ["{{mockServerUrl}}"],
+          "path": ["mock", "override"]
+        }
+      }
+    },
+    {
+      "name": "Check Payment Status (Driver)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Give the mock payment gateway a moment before checking status.",
+              "setTimeout(function(){}, 1000);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Payment status:', pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/payment/{{payment_order_id}}/status",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["payment", "{{payment_order_id}}", "status"]
+        }
+      }
+    },
+    {
+      "name": "Set Driver Online",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Driver set online');",
+              "// Wait for driver mode to propagate",
+              "const start = Date.now();",
+              "while (Date.now() - start < 2000) { /* busy wait */ }"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["driver", "setActivity"],
+          "query": [
+            { "key": "active", "value": "true" },
+            { "key": "mode", "value": "%22ONLINE%22" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Airport Cash Recharge (Dashboard)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.environment.set('_recharge_ref', 'test-recharge-' + Date.now() + '-' + Math.floor(Math.random() * 100000));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Airport cash recharge of 300 INR done');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"amount\": 300, \"referenceId\": \"{{_recharge_ref}}\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driverWallet/wallet/{{driver_id}}/airportCashRecharge",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driverWallet", "wallet", "{{driver_id}}", "airportCashRecharge"]
+        }
+      }
+    },
+    {
+      "name": "Rider Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_authId', d.authId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{bap_short_id}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["auth"]
+        }
+      }
+    },
+    {
+      "name": "Rider OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_token', d.token);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-rider-device\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["auth", "{{rider_authId}}", "verify"]
+        }
+      }
+    },
+    {
+      "name": "Ride Search (Airport Special Zone Pickup)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": ["setTimeout(function(){}, 2000);"],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('searchId', d.searchId);",
+              "console.log('Search ID:', d.searchId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "// Wait for async beckn search + quote generation",
+              "const _delay = 8000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"fareProductType\": \"ONE_WAY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Airport Special Zone Pickup\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{sz_origin_lat}}, \"lon\": {{sz_origin_lon}}}}, \"destination\": {\"address\": {\"area\": \"Test Destination\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}}}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["rideSearch"]
+        }
+      }
+    },
+    {
+      "name": "Get Search Results (Expect Quotes)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": ["setTimeout(function(){}, 3000);"],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "",
+              "// Airport special-zone flow returns quotes (not estimates) -- no driver search needed",
+              "var quotes = d.quotes || [];",
+              "var wantVariant = pm.environment.get('vehicle_variant') || 'SEDAN';",
+              "var szQuote = null;",
+              "for (var i = 0; i < quotes.length; i++) {",
+              "    var inner = quotes[i].onDemandCab || quotes[i].onRentalCab || quotes[i].onMeterRide;",
+              "    if (!inner) continue;",
+              "    if (inner.vehicleVariant === wantVariant) {",
+              "        szQuote = inner;",
+              "        break;",
+              "    }",
+              "}",
+              "if (!szQuote && quotes.length > 0) {",
+              "    szQuote = quotes[0].onDemandCab || quotes[0].onRentalCab || quotes[0].onMeterRide;",
+              "}",
+              "if (szQuote) {",
+              "    pm.environment.set('sz_quoteId', szQuote.id);",
+              "    console.log('Selected Quote:', szQuote.id, 'variant:', szQuote.vehicleVariant, 'fare:', szQuote.estimatedTotalFare, '(wanted:', wantVariant + ')');",
+              "    console.log('Available quotes:', quotes.map(function(q) { var i = q.onDemandCab || q.onRentalCab; return i ? i.vehicleVariant + '=' + i.estimatedTotalFare : '?'; }).join(', '));",
+              "}",
+              "pm.test('Has quotes for airport special zone', function () {",
+              "    pm.expect(pm.environment.get('sz_quoteId')).to.be.a('string').that.is.not.empty;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["rideSearch", "{{searchId}}", "results"]
+        }
+      }
+    },
+    {
+      "name": "Confirm Quote (No Driver Assignment Yet)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('customer_bookingId', d.bookingId);",
+              "console.log('Booking ID:', d.bookingId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "// Wait for booking to be created on BPP side",
+              "const _delay = 5000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch/quotes/{{sz_quoteId}}/confirm",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["rideSearch", "quotes", "{{sz_quoteId}}", "confirm"]
+        }
+      }
+    },
+    {
+      "name": "Get Booking (Extract Airport Queue OTP)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now();",
+              "while (Date.now() - start < 3000) { /* busy wait */ }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "",
+              "if (d.list && d.list.length > 0) {",
+              "    var booking = d.list[0];",
+              "    pm.environment.set('customer_bookingId', booking.id);",
+              "    var szOtp = null;",
+              "    if (booking.bookingDetails && booking.bookingDetails.contents && booking.bookingDetails.contents.otpCode) {",
+              "        szOtp = booking.bookingDetails.contents.otpCode;",
+              "    }",
+              "    pm.environment.set('sz_otp', szOtp || '');",
+              "    console.log('Booking:', booking.id, 'Status:', booking.status, 'OTP:', szOtp, 'tripCategory:', JSON.stringify(booking.tripCategory));",
+              "    pm.test('Booking status is NEW or CONFIRMED', function () {",
+              "        pm.expect(booking.status).to.be.oneOf(['NEW', 'CONFIRMED']);",
+              "    });",
+              "}",
+              "pm.test('Has airport queue OTP', function () {",
+              "    pm.expect(pm.environment.get('sz_otp')).to.be.a('string').that.is.not.empty;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["rideBooking", "list"],
+          "query": [
+            { "key": "limit", "value": "1" },
+            { "key": "onlyActive", "value": "true" },
+            { "key": "offset", "value": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Enters Queue OTP (Claims Ride + Starts)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "if (d.id) {",
+              "    pm.environment.set('driver_ride_id', d.id);",
+              "    console.log('Ride claimed and started! Ride ID:', d.id);",
+              "}",
+              "console.log('Ride started with airport queue OTP!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"specialZoneOtpCode\": \"{{sz_otp}}\", \"point\": {\"lat\": {{sz_origin_lat}}, \"lon\": {{sz_origin_lon}}}}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/otpRide/start",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["driver", "otpRide", "start"]
+        }
+      }
+    },
+    {
+      "name": "End Ride",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now();",
+              "while (Date.now() - start < 1000) { /* busy wait */ }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Ride ended!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"point\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/end",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["driver", "ride", "{{driver_ride_id}}", "end"]
+        }
+      }
+    },
+    {
+      "name": "Verify Booking Completed (Rider)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now();",
+              "while (Date.now() - start < 3000) { /* busy wait */ }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Booking status is COMPLETED', function () {",
+              "    pm.expect(d.bookingStatus).to.equal('COMPLETED');",
+              "});",
+              "pm.test('Ride status is COMPLETED', function () {",
+              "    pm.expect(d.rideStatus).to.equal('COMPLETED');",
+              "});",
+              "console.log('Airport Taxi App Flow completed! Booking:', d.bookingStatus, 'Ride:', d.rideStatus);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/v2/{{customer_bookingId}}",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["rideBooking", "v2", "{{customer_bookingId}}"]
+        }
+      }
+    }
+  ]
+}

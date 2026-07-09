@@ -28,3 +28,8 @@ ALTER TABLE atlas_driver_offer_bpp.aadhaar_card ADD COLUMN aadhaar_number_hash t
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.aadhaar_card ADD COLUMN aadhaar_number_encrypted text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.aadhaar_card ADD COLUMN reject_reason text ;
