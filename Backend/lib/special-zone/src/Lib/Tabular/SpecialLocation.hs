@@ -28,6 +28,7 @@ derivePersistField "Domain.GatesInfo"
 derivePersistField "Domain.SpecialLocationType"
 derivePersistField "Domain.RenderType"
 derivePersistField "Domain.PaymentMode"
+derivePersistField "Domain.FareSettlementType"
 
 mkPersist
   defaultSqlSettings
@@ -49,6 +50,7 @@ mkPersist
       render Domain.RenderType Maybe
       supportNumber Text Maybe
       paymentModes (PostgresList Domain.PaymentMode) Maybe
+      fareSettlementType Domain.FareSettlementType Maybe
       geomGeoJson Text Maybe
       createdAt UTCTime
       updatedAt UTCTime

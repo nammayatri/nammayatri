@@ -38,6 +38,26 @@ inputs:
     label: Android package id
     type: text
     default: "in.mobility.lynxdriver.debug"
+  - key: DOT_ENV
+    label: .env content
+    type: textarea
+    default: |
+      UI_BASE_URL=
+      APP_MONITOR_URL=
+      OTA_BASE_URL=
+      CLARITY_KEY=
+      CUSTOMER_REGISTRATION_TOKEN=
+      CUSTOMER_UI_BASE_URL=
+      CAC_CONFIG_URL=
+      CAC_ORG_ID=
+      CAC_API_KEY=
+      PLASMA_URL=
+      GOOGLE_WEB_CLIENT_ID=
+      PLASMA_API_KEY=
+      MERCHANT_ID_DRIVER=
+      MOENGAGE_APP_ID=
+      FIREBASE_CHAT_CONFIG=
+    required: true
   - key: LOCAL_PROPERTIES
     label: local.properties content
     type: textarea
@@ -67,23 +87,15 @@ stages:
       cp "configs/master/android/nammaYatri/local.properties" "$conf_dir/local.properties" 2>/dev/null || true
       cp "${inputs.GOOGLE_SERVICES_JSON}" "$conf_dir/google-services.json"
 
-      # Ensure all keys from .env.template exist in variant .env
-      template_env="configs/.env.template"
+      # Write .env from user input
       variant_env="$conf_dir/.env"
-      touch "$variant_env"
-      if [ -f "$template_env" ]; then
-        while IFS='=' read -r key _; do
-          [ -z "$key" ] && continue
-          if ! grep -q "^$key=" "$variant_env"; then
-            echo "$key=" >> "$variant_env"
-          fi
-        done < "$template_env"
-      fi
+      printf '%s\n' "${inputs.DOT_ENV}" > "$variant_env"
 
       # Override base URLs to point at devbox caddy
-      sed -i.bak -E "s|UI_BASE_URL=.*|UI_BASE_URL=http://${host}:${ports.caddy}/dynamic-offer-driver-app/ui|" "$conf_dir/.env"
-      sed -i.bak -E "s|CUSTOMER_UI_BASE_URL=.*|CUSTOMER_UI_BASE_URL=http://${host}:${ports.caddy}/rider-app/v2|" "$conf_dir/.env"
-      rm -f "$conf_dir/.env.bak"
+      sed -i.bak -E "s|UI_BASE_URL=.*|UI_BASE_URL=http://${host}:${ports.caddy}/dynamic-offer-driver-app/ui|" "$variant_env"
+      sed -i.bak -E "s|CUSTOMER_UI_BASE_URL=.*|CUSTOMER_UI_BASE_URL=http://${host}:${ports.caddy}/rider-app/v2|" "$variant_env"
+      rm -f "$variant_env.bak"
+      echo ".env written ($(wc -l < "$variant_env") lines)"
 
       # Write local.properties from user input, auto-append sdk.dir if missing
       props="android/local.properties"
@@ -106,7 +118,7 @@ stages:
 
       echo "materialized for variant=$variant (lc=$variant_lc)"
     lifecycle: one-shot
-    invalidatedBy: [inputs.GOOGLE_SERVICES_JSON, inputs.VARIANT, inputs.LOCAL_PROPERTIES, ports.driver, ports.caddy]
+    invalidatedBy: [inputs.GOOGLE_SERVICES_JSON, inputs.VARIANT, inputs.DOT_ENV, inputs.LOCAL_PROPERTIES, ports.driver, ports.caddy]
 
   - id: install
     needs: [sync-source]

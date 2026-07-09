@@ -2,7 +2,7 @@
   "info": {
     "name": "FaceMatchOnboardingFlow - Deferred",
     "_postman_id": "facematch-deferred-flow",
-    "description": "DEFERRED face match via Aadhaar (synchronous -> AadhaarCard record reaches VALID without the async webhook). FLAT structure. Seed: face_match_source_doc='ProfilePhoto' on AadhaarCard. Deferred runs in a fork after selfie upload, so status checks wait ~2.5s.\n  G Aadhaar VALID -> NON-matching selfie -> AadhaarCard INVALID (deferred FAIL)\n  H Aadhaar VALID -> MATCHING selfie -> AadhaarCard stays VALID (deferred PASS)\n\nPENDING-until-face-match model: sync Aadhaar (and non-strict flows) write PENDING when no selfie exists yet; the deferred run on selfie upload promotes PENDING->VALID on a match or flips INVALID on a mismatch. For strict PAN/DL with the 3P webhook still in flight (this harness never fires webhooks), the deferred run does NOTHING - the webhook handler resolves the face match itself on a positive verdict.",
+    "description": "DEFERRED face match via Aadhaar (synchronous -> AadhaarCard record reaches VALID without the async webhook). FLAT structure. Seed: face_match_source_doc='ProfilePhoto' on AadhaarCard. Deferred runs in a fork after selfie upload, so status checks wait ~2.5s.\n  G Aadhaar VALID -> NON-matching selfie -> AadhaarCard INVALID (deferred FAIL)\n  H Aadhaar VALID -> MATCHING selfie -> AadhaarCard stays VALID (deferred PASS)\n\nPENDING-until-face-match model: sync Aadhaar (and non-strict flows) write PENDING when no selfie exists yet; the deferred run on selfie upload promotes PENDING->VALID on a match or flips INVALID on a mismatch. For strict PAN/DL with the 3P webhook still in flight (this harness never fires webhooks), the deferred run does NOTHING - the webhook handler resolves the face match itself on a positive verdict.\n\nSELFIE RE-UPLOAD GATE (enforceSelfieReuploadPolicy): once a DRIVER has a VALID selfie, a new ProfilePhoto upload is allowed ONLY while every face-match-bound doc (DL/PAN/Aadhaar with faceMatchSourceDoc set) is absent or INVALID. Error is state-specific on the strongest blocking doc: VALID->DOCUMENT_ALREADY_VALIDATED (H), MANUAL_VERIFICATION_REQUIRED->DOCUMENT_UNDER_MANUAL_REVIEW, PENDING/other->DOCUMENT_UNDER_VERIFICATION. Covered here: VALID block (H) and INVALID recovery-allow (M last step). MVR/PENDING routing is not API-reproducible in this harness (no doc can hold MVR/PENDING alongside a VALID selfie without a live async webhook) -> verified via manual DB-flip probe; legacy cities (no faceMatchSourceDoc) are a no-op.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -617,6 +617,48 @@
       ]
     },
     {
+      "name": "H: Upload 2nd selfie (blocked - Aadhaar VALID)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_H}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"ProfilePhoto\",\n  \"validationStatus\": \"AUTO_APPROVED\",\n  \"workflowTransactionId\": \"{{$guid}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('selfie re-upload blocked while a face-match doc is not INVALID',()=>pm.response.to.have.status(400)); var b={}; try{b=pm.response.json()}catch(e){}; pm.test('VALID doc -> DOCUMENT_ALREADY_VALIDATED',()=>pm.expect(b.errorCode||'','body '+JSON.stringify(b)).to.eql('DOCUMENT_ALREADY_VALIDATED'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "M: Auth (sendOTP)",
       "request": {
         "method": "POST",
@@ -1018,6 +1060,48 @@
           "script": {
             "exec": [
               "pm.test('status ok',()=>pm.response.to.have.status(200)); var doc=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='PanCard')||{}; pm.test('sticky INVALID: a later matching selfie never rescues; recovery is via re-upload',()=>pm.expect(['INVALID','FAILED'],'doc '+JSON.stringify(doc)).to.include(doc.verificationStatus));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "M: Re-upload selfie after PAN INVALID (recovery -> allowed)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_M}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"ProfilePhoto\",\n  \"validationStatus\": \"AUTO_APPROVED\",\n  \"workflowTransactionId\": \"facematch-M-recovery\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('selfie re-upload allowed once every face-match doc is INVALID (recovery path)',()=>pm.response.to.have.status(200)); pm.test('imageId returned',()=>pm.expect((pm.response.json()||{}).imageId,'body '+JSON.stringify(pm.response.json())).to.be.a('string'));"
             ]
           }
         }

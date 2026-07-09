@@ -72,6 +72,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as ACOverlay
 import SharedLogic.Analytics as Analytics
+import qualified SharedLogic.Association.Change as AC
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -274,6 +275,8 @@ createDriverRCAssociationIfPossible transporterConfig driverId rc = do
       throwError (InvalidRequest "Fleet drivers cannot onboard their own vehicle. Use a fleet vehicle.")
   if canCreateRCAssociation transporterConfig rc
     then do
+      when (transporterConfig.blockDriverOwnRCForFleetDrivers == Just True) $
+        AC.guardRCNotOwnedByAnotherFleet driverId rc.id
       driverRCAssoc <- makeRCAssociation transporterConfig.merchantId transporterConfig.merchantOperatingCityId rc.id defaultAssociationEnd
       DAQuery.create driverRCAssoc
     else do
@@ -310,6 +313,8 @@ createFleetRCAssociationIfPossible ::
 createFleetRCAssociationIfPossible transporterConfig fleetOwnerId rc = do
   if canCreateRCAssociation transporterConfig rc
     then do
+      when (transporterConfig.blockDriverOwnRCForFleetDrivers == Just True) $
+        AC.guardRCNotActiveWithAnotherDriver rc.id
       fleetRCAssoc <- makeFleetRCAssociation transporterConfig.merchantId transporterConfig.merchantOperatingCityId rc.id defaultAssociationEnd
       FRCAssoc.create fleetRCAssoc
     else do
@@ -1054,10 +1059,13 @@ resolveFaceMatchVerificationStatus person config docImageId mbDocImage mbPlainDo
     _ -> Documents.VALID
 
 -- | On selfie upload, face-match earlier non-SDK doc images: skip while the doc's webhook is pending (the handler resolves it), else run now and promote PENDING->VALID or flip INVALID.
+faceMatchBoundConfigs :: Person.Person -> Flow [ODC.DocumentVerificationConfig]
+faceMatchBoundConfigs person =
+  DL.nubBy (\a b -> a.documentType == b.documentType) . filter (\c -> isJust c.faceMatchSourceDoc && isJust (faceCompareDocTag c.documentType)) <$> CQDVC.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
+
 runDeferredFaceMatchOnSelfie :: Person.Person -> UTCTime -> Flow ()
 runDeferredFaceMatchOnSelfie person selfieCreatedAt = do
-  -- Config-driven doc list (faceMatchSourceDoc set), intersected with the DL/PAN/Aadhaar hard bound.
-  faceMatchConfigs <- DL.nubBy (\a b -> a.documentType == b.documentType) . filter (\c -> isJust c.faceMatchSourceDoc && isJust (faceCompareDocTag c.documentType)) <$> CQDVC.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
+  faceMatchConfigs <- faceMatchBoundConfigs person
   forM_ faceMatchConfigs $ \config -> do
     result <- try @_ @SomeException $ matchDeferredDoc config
     case result of
@@ -1100,6 +1108,28 @@ runDeferredFaceMatchOnSelfie person selfieCreatedAt = do
           when (aadhaar.aadhaarFrontImageId == Just docImg.id && aadhaar.verificationStatus == Documents.PENDING) $
             QAadhaarCard.updateVerificationStatus Documents.VALID person.id
       _ -> pure ()
+
+-- | Once a VALID selfie exists, a DRIVER may upload a new one only while every face-match-bound doc (DL/PAN/Aadhaar with faceMatchSourceDoc set) is absent or INVALID.
+enforceSelfieReuploadPolicy :: Person.Person -> [Image.Image] -> Flow ()
+enforceSelfieReuploadPolicy person priorSelfies =
+  when (person.role == Person.DRIVER && any ((== Just Documents.VALID) . (.verificationStatus)) priorSelfies) $ do
+    faceMatchDocTypes <- fmap (.documentType) <$> faceMatchBoundConfigs person
+    docStatuses <- catMaybes <$> mapM lookupDocStatus faceMatchDocTypes
+    let blockingDocs = filter ((/= Documents.INVALID) . snd) docStatuses
+    whenJust (pickBlockingDoc blockingDocs) $ \(docType, status) -> do
+      logInfo $ "Selfie re-upload blocked for driver " <> person.id.getId <> "; non-INVALID face-match docs: " <> show blockingDocs
+      throwError $ SelfieReuploadNotAllowed (show docType) status
+  where
+    lookupDocStatus docType = case docType of
+      ODC.DriverLicense -> fmap (\dl -> (docType, dl.verificationStatus)) <$> DLQuery.findByDriverId person.id
+      ODC.PanCard -> fmap (\pan -> (docType, pan.verificationStatus)) <$> DPQuery.findByDriverId person.id
+      ODC.AadhaarCard -> fmap (\aadhaar -> (docType, aadhaar.verificationStatus)) <$> QAadhaarCard.findByPrimaryKey person.id
+      _ -> pure Nothing
+    -- Highest-severity blocker names the error: VALID > MANUAL_VERIFICATION_REQUIRED > in-flight (PENDING/etc.).
+    pickBlockingDoc docs =
+      DL.find ((== Documents.VALID) . snd) docs
+        <|> DL.find ((== Documents.MANUAL_VERIFICATION_REQUIRED) . snd) docs
+        <|> listToMaybe docs
 
 mkRCIdfyVerificationEntity :: MonadFlow m => Person.Person -> Text -> UTCTime -> DIdfy.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> m DIdfy.IdfyVerification
 mkRCIdfyVerificationEntity person requestId now imageExtractionValidation encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbStatus = do

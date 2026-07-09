@@ -205,6 +205,7 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
             vehicleServiceTierSeatingCapacity = estimate.vehicleServiceTierSeatingCapacity,
             specialLocationName = estimate.specialLocationName,
             specialLocationSupportNumber = Nothing,
+            fareSettlementType = estimate.fareSettlementType,
             quoteBreakupList = quoteBreakups,
             tripCategory = Just tripCategory,
             vehicleIconUrl = estimate.vehicleIconUrl,
