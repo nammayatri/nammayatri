@@ -72,6 +72,8 @@ data LineItemDescription
   | CommissionRefund
   | PlatformCommissionTax
   | CommissionRefundTax
+  | CancellationCommission
+  | CancellationCommissionTax
   deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON)
 
 -- | groupId is required for Fare/Tax (pairing); Nothing for Adjustment.

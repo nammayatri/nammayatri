@@ -572,6 +572,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     -- Airport/parking charge is already in fareParams and finalFare from estimate/quote.
     mbFarePolicy <- FarePolicy.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
     finalCommission <- Fare.calculateCommission baseFareParams mbFarePolicy
+    finalCancellationCommission <- Fare.calculateCancellationCommission baseFareParams mbFarePolicy
     clearEditDestinationWayAndSnappedPointsFork <- awaitableFork "endRide->clearEditDestinationWayAndSnappedPoints" $ withTimeAPI "endRide" "clearEditDestinationWayAndSnappedPoints" $ clearEditDestinationWayAndSnappedPoints driverId
     clearReachedStopLocationsFork <- awaitableFork "endRide->clearReachedStopLocations" $ withTimeAPI "endRide" "clearReachedStopLocations" $ clearReachedStopLocations rideOld.id
     let updRide' =
@@ -589,6 +590,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                driverGoHomeRequestId = ghInfo.driverGoHomeRequestId,
                hasStops = Just (not $ null ride.stops),
                commission = finalCommission,
+               cancellationCommission = finalCancellationCommission,
                discountAmount = discountAmount
               }
     let mbDriverFromReq = case req of

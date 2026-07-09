@@ -31,6 +31,7 @@ module SharedLogic.FareCalculator
     countFullFareOfParamsDetails,
     calculateFareParameters,
     calculateCommission,
+    calculateCancellationCommission,
     mkFareParamsBreakups,
     mkFareParamsDisplayBreakups,
     mkProjectFareParamsTagBreakupItems,
@@ -1398,6 +1399,22 @@ calculateCommission fareParams mbFarePolicy = do
       case farePolicy.commissionChargeConfig of
         Just config -> do
           commAmount <- computeConfiguredCharge "commissionCharge" componentMap (Just config)
+          pure $ if commAmount > 0 then Just commAmount else Nothing
+        Nothing -> pure Nothing
+
+-- | Commission on the CustomerCancellationChargeComponent alone — a past cancellation due folded
+--   into this ride's fare — at its own configured rate. GROSS (ALV-inclusive); split at emission.
+--   Config invariant: the component must appear in exactly one of the two commission configs —
+--   keep it out of commissionChargeConfig.appliesOn or the due is commissioned twice.
+calculateCancellationCommission :: MonadFlow m => FareParameters -> Maybe FullFarePolicy -> m (Maybe HighPrecMoney)
+calculateCancellationCommission fareParams mbFarePolicy = do
+  case mbFarePolicy of
+    Nothing -> pure Nothing
+    Just farePolicy -> do
+      let componentMap = buildComponentMap fareParams
+      case farePolicy.cancellationCommissionChargeConfig of
+        Just config -> do
+          commAmount <- computeConfiguredCharge "cancellationCommissionCharge" componentMap (Just config)
           pure $ if commAmount > 0 then Just commAmount else Nothing
         Nothing -> pure Nothing
 

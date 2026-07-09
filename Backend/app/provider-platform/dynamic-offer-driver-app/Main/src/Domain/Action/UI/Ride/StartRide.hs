@@ -277,7 +277,10 @@ startRideHandler ServiceHandle {..} rideId req = do
             when (isNothing existingPayout && isNothing existingScheduledPayout) $ do
               mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
               commission <- FC.calculateCommission booking.fareParams mbFarePolicy
-              let payoutAmountBase = maybe booking.estimatedFare (\c -> booking.estimatedFare - c) commission
+              cancellationCommission <- FC.calculateCancellationCommission booking.fareParams mbFarePolicy
+              -- The payout base is the fare minus every commission the platform takes: ride AND cancellation.
+              let totalCommission = fromMaybe 0 commission + fromMaybe 0 cancellationCommission
+                  payoutAmountBase = if totalCommission > 0 then booking.estimatedFare - totalCommission else booking.estimatedFare
                   payoutAmount =
                     toHighPrecMoney
                       (roundToIntegral (getHighPrecMoney payoutAmountBase) :: Integer)

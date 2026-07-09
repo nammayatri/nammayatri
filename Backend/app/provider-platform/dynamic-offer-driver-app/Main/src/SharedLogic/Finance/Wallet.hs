@@ -111,6 +111,8 @@ module SharedLogic.Finance.Wallet
     walletReferenceCommissionCash,
     walletReferenceCommissionVATOnline,
     walletReferenceCommissionVATCash,
+    walletReferenceCancellationCommission,
+    walletReferenceCancellationCommissionVAT,
     walletReferenceVATOnline,
     walletReferenceVATCash,
     walletReferenceD2DReferral,
@@ -239,6 +241,13 @@ walletReferenceCommissionVATOnline = "CommissionVATOnline"
 walletReferenceCommissionVATCash :: Text
 walletReferenceCommissionVATCash = "CommissionVATCash"
 
+-- Commission on a cancellation fee (no Online/Cash suffix — matches the cancellation ref family).
+walletReferenceCancellationCommission :: Text
+walletReferenceCancellationCommission = "CancellationCommission"
+
+walletReferenceCancellationCommissionVAT :: Text
+walletReferenceCancellationCommissionVAT = "CancellationCommissionVAT"
+
 walletReferenceDeductedAtPaymentByPlatform :: Text
 walletReferenceDeductedAtPaymentByPlatform = "DeductedAtPaymentByPlatform"
 
@@ -341,6 +350,8 @@ walletCreditRefs =
     walletReferenceCommissionCash,
     walletReferenceCommissionVATOnline,
     walletReferenceCommissionVATCash,
+    walletReferenceCancellationCommission,
+    walletReferenceCancellationCommissionVAT,
     walletReferenceWalletIncentive,
     walletReferenceVATOnline,
     walletReferenceVATCash,

@@ -246,6 +246,7 @@ handler merchantId req validatedReq = do
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
       mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback quoteId
       commission <- FC.calculateCommission driverQuote.fareParams mbFarePolicy
+      cancellationCommission <- FC.calculateCancellationCommission driverQuote.fareParams mbFarePolicy
       mbSpecialLocation <- maybe (pure Nothing) (QSpecialLocation.findById . Id) (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea)
       let fareSettlementType = mbSpecialLocation >>= (.fareSettlementType)
       let bapUri = showBaseUrl searchRequest.bapUri
@@ -315,6 +316,7 @@ handler merchantId req validatedReq = do
             parcelQuantity = searchRequest.parcelQuantity,
             isSafetyPlus = DTCC.SAFETY_PLUS_CHARGES `elem` map (.chargeCategory) driverQuote.fareParams.conditionalCharges,
             commission = commission,
+            cancellationCommission = cancellationCommission,
             isInsured = fromMaybe False req.isInsured,
             insuredAmount = req.insuredAmount,
             exotelDeclinedCallStatusReceivingTime = Nothing,

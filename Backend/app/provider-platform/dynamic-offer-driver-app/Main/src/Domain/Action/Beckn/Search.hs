@@ -880,7 +880,12 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
   estimateId <- Id <$> generateGUID
   now <- getCurrentTime
   void $ cacheFarePolicyByEstimateId estimateId.getId fullFarePolicy
-  commissionCharges <- FC.calculateCommission minFareParams (Just fullFarePolicy)
+  rideCommissionCharges <- FC.calculateCommission minFareParams (Just fullFarePolicy)
+  cancellationCommissionCharges <- FC.calculateCancellationCommission minFareParams (Just fullFarePolicy)
+  -- The estimate carries ONE commission figure: ride + cancellation.
+  let commissionCharges = case (rideCommissionCharges, cancellationCommissionCharges) of
+        (Nothing, Nothing) -> Nothing
+        (a, b) -> Just (fromMaybe 0 a + fromMaybe 0 b)
   let pickupChargesMaxx = case fullFarePolicy.farePolicyDetails of
         DFP.ProgressiveDetails progressiveDetails ->
           if progressiveDetails.pickupCharges.pickupChargesMin == progressiveDetails.pickupCharges.pickupChargesMax then 0 else progressiveDetails.pickupCharges.pickupChargesMax - progressiveDetails.pickupCharges.pickupChargesMin
