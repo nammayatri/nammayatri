@@ -71,6 +71,7 @@ types:
     priceWithCurrency: PriceAPIEntity
     stations: [FRFSStationAPI]
     routeStations: "Maybe [FRFSRouteStationsAPI]"
+    interchangeStations: "Maybe [FRFSStationAPI]"
     validTill: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
