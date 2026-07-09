@@ -31,6 +31,7 @@ library
       API.RiderPlatform
       App
       Domain.Action.RiderPlatform.AppManagement.Customer
+      Domain.Action.RiderPlatform.AppManagement.DepotManager
       Domain.Action.RiderPlatform.AppManagement.EDCMachine
       Domain.Action.RiderPlatform.AppManagement.EventManagement
       Domain.Action.RiderPlatform.AppManagement.FRFSTicketService
@@ -79,6 +80,7 @@ library
       Storage.Beam.CommonInstances
       API.Action.RiderPlatform.AppManagement
       API.Action.RiderPlatform.AppManagement.Customer
+      API.Action.RiderPlatform.AppManagement.DepotManager
       API.Action.RiderPlatform.AppManagement.EDCMachine
       API.Action.RiderPlatform.AppManagement.EventManagement
       API.Action.RiderPlatform.AppManagement.FRFSTicketService

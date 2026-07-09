@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.DepotManager where
+module Storage.Queries.DepotManager (module Storage.Queries.DepotManager, module ReExport) where
 
 import qualified Domain.Types.Depot
 import qualified Domain.Types.DepotManager
@@ -15,6 +15,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DepotManager as Beam
+import Storage.Queries.DepotManagerExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DepotManager.DepotManager -> m ())
 create = createWithKV
@@ -23,10 +24,15 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Depo
 createMany = traverse_ create
 
 findByDepotCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Depot.Depot -> m (Maybe Domain.Types.DepotManager.DepotManager))
-findByDepotCode depotCode = do findOneWithKV [Se.Is Beam.depotCode $ Se.Eq (Kernel.Types.Id.getId depotCode)]
+findByDepotCode depotCode = do findOneWithDb [Se.Is Beam.depotCode $ Se.Eq (Kernel.Types.Id.getId depotCode)]
 
 findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DepotManager.DepotManager))
-findByPersonId personId = do findOneWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
+findByPersonId personId = do findOneWithDb [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
+
+findByPersonIdAndDepotCode ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Depot.Depot -> m (Maybe Domain.Types.DepotManager.DepotManager))
+findByPersonIdAndDepotCode personId depotCode = do findOneWithDb [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId), Se.Is Beam.depotCode $ Se.Eq (Kernel.Types.Id.getId depotCode)]]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -45,33 +51,3 @@ updateByPrimaryKey (Domain.Types.DepotManager.DepotManager {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.depotCode $ Se.Eq (Kernel.Types.Id.getId depotCode), Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]]
-
-instance FromTType' Beam.DepotManager Domain.Types.DepotManager.DepotManager where
-  fromTType' (Beam.DepotManagerT {..}) = do
-    pure $
-      Just
-        Domain.Types.DepotManager.DepotManager
-          { createdAt = createdAt,
-            depotCode = Kernel.Types.Id.Id depotCode,
-            enabled = enabled,
-            isAdmin = isAdmin,
-            isBlockAllowed = isBlockAllowed,
-            merchantId = Kernel.Types.Id.Id merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            personId = Kernel.Types.Id.Id personId,
-            updatedAt = updatedAt
-          }
-
-instance ToTType' Beam.DepotManager Domain.Types.DepotManager.DepotManager where
-  toTType' (Domain.Types.DepotManager.DepotManager {..}) = do
-    Beam.DepotManagerT
-      { Beam.createdAt = createdAt,
-        Beam.depotCode = Kernel.Types.Id.getId depotCode,
-        Beam.enabled = enabled,
-        Beam.isAdmin = isAdmin,
-        Beam.isBlockAllowed = isBlockAllowed,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.personId = Kernel.Types.Id.getId personId,
-        Beam.updatedAt = updatedAt
-      }

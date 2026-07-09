@@ -183,6 +183,7 @@ library
       Domain.Action.Beckn.OnUpdate
       Domain.Action.Dashboard.AlertIncident
       Domain.Action.Dashboard.AppManagement.Customer
+      Domain.Action.Dashboard.AppManagement.DepotManager
       Domain.Action.Dashboard.AppManagement.EDCMachine
       Domain.Action.Dashboard.AppManagement.EventManagement
       Domain.Action.Dashboard.AppManagement.EventManagement.Utils
@@ -698,6 +699,7 @@ library
       Storage.Queries.BusinessHourExtra
       Storage.Queries.CallStatusExtra
       Storage.Queries.CancellationReasonExtra
+      Storage.Queries.DepotManagerExtra
       Storage.Queries.DisabilityExtra
       Storage.Queries.EDCMachineMappingExtra
       Storage.Queries.EstimateBreakup
@@ -830,6 +832,7 @@ library
       Tools.Whatsapp
       API.Action.Dashboard.AppManagement
       API.Action.Dashboard.AppManagement.Customer
+      API.Action.Dashboard.AppManagement.DepotManager
       API.Action.Dashboard.AppManagement.EDCMachine
       API.Action.Dashboard.AppManagement.EventManagement
       API.Action.Dashboard.AppManagement.FRFSTicketService
@@ -934,8 +937,10 @@ library
       API.Action.UnifiedDashboard.RideBooking.HealthCheck
       API.Types.Dashboard.AppManagement
       API.Types.Dashboard.AppManagement.Customer
+      API.Types.Dashboard.AppManagement.DepotManager
       API.Types.Dashboard.AppManagement.EDCMachine
       API.Types.Dashboard.AppManagement.Endpoints.Customer
+      API.Types.Dashboard.AppManagement.Endpoints.DepotManager
       API.Types.Dashboard.AppManagement.Endpoints.EDCMachine
       API.Types.Dashboard.AppManagement.Endpoints.EventManagement
       API.Types.Dashboard.AppManagement.Endpoints.FRFSTicketService
@@ -1484,6 +1489,7 @@ library
       Storage.Queries.OrphanInstances.BusinessHour
       Storage.Queries.OrphanInstances.CallStatus
       Storage.Queries.OrphanInstances.CancellationReason
+      Storage.Queries.OrphanInstances.DepotManager
       Storage.Queries.OrphanInstances.Disability
       Storage.Queries.OrphanInstances.EDCMachineMapping
       Storage.Queries.OrphanInstances.Estimate
