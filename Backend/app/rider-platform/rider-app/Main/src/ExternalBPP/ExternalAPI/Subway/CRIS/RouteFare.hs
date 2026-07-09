@@ -39,6 +39,7 @@ import Kernel.Utils.Common
 import Servant.API
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
+import Tools.MultiModal (measureLatency)
 
 -- API type with updated endpoint
 type RouteFareAPI =
@@ -85,15 +86,12 @@ getRouteFare config merchantOperatingCityId request getAllFares = do
 
   encryptionKey <- decrypt config.encryptionKey
   decryptionKey <- decrypt config.decryptionKey
-  payload <- encryptPayload jsonStr encryptionKey
+  payload <- measureLatency (encryptPayload jsonStr encryptionKey) "CRIS getRouteFare encryptPayload"
 
   let eulerClientFn payload' token =
         let client = ET.client routeFareAPI
          in client (Just $ "Bearer " <> token) (Just "application/json") (Just "CUMTA") payload'
-  startTime <- getCurrentTime
-  encryptedResponse <- callCRISAPI config routeFareAPI (eulerClientFn payload) "getRouteFare"
-  endTime <- getCurrentTime
-  logDebug $ "CRIS getRouteFare Latency: " <> show (diffUTCTime endTime startTime) <> " seconds"
+  encryptedResponse <- measureLatency (callCRISAPI config routeFareAPI (eulerClientFn payload) "getRouteFare") "CRIS getRouteFare API"
 
   logInfo $ "getRouteFare Resp: " <> show encryptedResponse
 
@@ -132,7 +130,7 @@ getRouteFare config merchantOperatingCityId request getAllFares = do
         fareAmount <- mbFareAmount & fromMaybeM (CRISError $ "Failed to parse fare amount: " <> show fare.adultFare)
         childFareAmount <- mbChildFareAmount & fromMaybeM (CRISError $ "Failed to parse fare amount: " <> show fare.childFare)
         classCode <- pure fare.classCode & fromMaybeM (CRISError $ "Failed to parse class code: " <> show fare.classCode)
-        serviceTiers <- QFRFSVehicleServiceTier.findByProviderCodeAndTrainType classCode (Just fare.trainTypeCode) merchantOperatingCityId
+        serviceTiers <- measureLatency (QFRFSVehicleServiceTier.findByProviderCodeAndTrainType classCode (Just fare.trainTypeCode) merchantOperatingCityId) ("CRIS getRouteFare findByProviderCodeAndTrainType classCode=" <> show classCode <> " trainTypeCode=" <> show fare.trainTypeCode)
         let fareQuoteType = if fare.ticketTypeCode == "R" then DQuote.ReturnJourney else DQuote.SingleJourney
         serviceTier <- serviceTiers & listToMaybe & fromMaybeM (CRISError $ "Failed to find service tier: " <> show classCode <> " " <> show fare.trainTypeCode)
         return $

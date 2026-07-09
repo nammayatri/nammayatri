@@ -30,7 +30,6 @@ PayoutOrder:
     transferStatus : Maybe TransferStatus
     accountDetailsType : Maybe AccountDetailsType
     entityName : Maybe EntityName
-    entityId : Maybe Text
     vpa : Maybe Text
     mobileNo : (EncryptedHashedField e Text)
     customerEmail : (EncryptedHashedField e Text)
@@ -50,7 +49,6 @@ PayoutOrder:
       price: HighPrecMoney
   fromTType:
     amount: Kernel.Types.Common.mkPrice currency price|E
-    entityId: Kernel.Prelude.maybe (entityIds Kernel.Prelude.>>= Kernel.Prelude.listToMaybe) Kernel.Prelude.Just entityId|E
   toTType:
     price: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
@@ -66,7 +64,7 @@ PayoutOrder:
     id: SecondaryKey
     orderId: PrimaryKey
     customerId: "!SecondaryKey"
-    entityId: "!SecondaryKey"
+    entityIds: "!SecondaryKey"
   queries:
     findById:
       kvFunction: findOneWithKV

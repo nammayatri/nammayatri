@@ -571,7 +571,10 @@ def _run_source_stage(slug: str, spec: dict, stage: dict, fp: str,
     No-ops when destDir is a symlink."""
     src = spec.get("source") or {}
     url = src.get("url")
-    ref = src.get("ref") or "main"
+    # Check for user-pinned ref override (from "Set ref" button in dashboard)
+    state = _load_state(slug)
+    ref = state.get("sourceRefOverride") or src.get("ref") or "main"
+    print(f"  [source-stage] ref={ref!r} (override={state.get('sourceRefOverride')!r}, yaml={src.get('ref')!r})")
     dest_rel = src.get("destDir")
     if not (url and dest_rel):
         return {"skipped": True, "reason": "no source"}
@@ -602,6 +605,7 @@ def _run_source_stage(slug: str, spec: dict, stage: dict, fp: str,
         script = (
             f'set -e; '
             f'git -C {dest_q} fetch --progress origin && '
+            f'git -C {dest_q} checkout -- . && '
             f'git -C {dest_q} checkout {ref_q} && '
             f'git -C {dest_q} pull --ff-only --progress'
         )

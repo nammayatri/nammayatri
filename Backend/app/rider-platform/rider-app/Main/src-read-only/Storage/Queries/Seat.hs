@@ -21,6 +21,12 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Seat.Seat] -> m ())
 createMany = traverse_ create
 
+deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Seat.Seat -> m ())
+deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+deleteBySeatLayoutId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout -> m ())
+deleteBySeatLayoutId seatLayoutId = do deleteWithKV [Se.Is Beam.seatLayoutId $ Se.Eq (Kernel.Types.Id.getId seatLayoutId)]
+
 findAllByIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id Domain.Types.Seat.Seat] -> m [Domain.Types.Seat.Seat])
 findAllByIds id = do findAllWithKV [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> id)]
 

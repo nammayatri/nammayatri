@@ -37,6 +37,9 @@ module Domain.Action.ProviderPlatform.Management.NammaTag
     getNammaTagTagDetails,
     getNammaTagQueryDetails,
     getNammaTagBehaviorVisibility,
+    postNammaTagConfigPilotGetConfigWithDimensions,
+    getNammaTagConfigPilotGetDimensionSchema,
+    postNammaTagConfigPilotCreateRow,
   )
 where
 
@@ -253,3 +256,20 @@ getNammaTagBehaviorVisibility :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.
 getNammaTagBehaviorVisibility merchantShortId opCity apiTokenInfo entityType entityId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagBehaviorVisibility) entityType entityId
+
+postNammaTagConfigPilotGetConfigWithDimensions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.ConfigPilotGetConfigRequest -> Environment.Flow Lib.Yudhishthira.Types.TableDataResp)
+postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.postNammaTagConfigPilotGetConfigWithDimensions) req)
+
+getNammaTagConfigPilotGetDimensionSchema :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.ConfigType -> Environment.Flow Lib.Yudhishthira.Types.DomainSchemaResp)
+getNammaTagConfigPilotGetDimensionSchema merchantShortId opCity apiTokenInfo configType = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagConfigPilotGetDimensionSchema) configType
+
+postNammaTagConfigPilotCreateRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.ConfigPilotCreateRowRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postNammaTagConfigPilotCreateRow merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.postNammaTagConfigPilotCreateRow) req)

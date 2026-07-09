@@ -539,3 +539,22 @@ ALTER TABLE atlas_app.booking ADD COLUMN supplier_address text ;
 ALTER TABLE atlas_app.booking ADD COLUMN issued_by_name text ;
 ALTER TABLE atlas_app.booking ADD COLUMN issued_by_id text ;
 ALTER TABLE atlas_app.booking ADD COLUMN issued_by_address text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN fare_settlement_type text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

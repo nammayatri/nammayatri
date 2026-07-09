@@ -976,6 +976,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
       API.Types.ProviderPlatform.Operator.Driver.DRIVER -> do
         let driverId = Kernel.Types.Id.Id reqId
         driverInfo <- QDI.findByPrimaryKey driverId >>= fromMaybeM (PersonNotFound reqId)
+        unless driverInfo.verified $ throwError (InvalidRequest "Driver is not verified")
         if isDocReqEmpty
           then do
             -- Two-phase: phase 1 durably commits `approved`; phase 2 (approved == True) does the fast
@@ -986,8 +987,8 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
                   transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
                   -- Throws (naming the offending docs) if any BotApproval dependency doc isn't VALID.
                   SStatus.botApproveAndReconcile merchantOpCity person transporterConfig
+                  QDI.updateByPrimaryKey driverInfo {DDI.enabled = True}
                   pure (DRR.COMPLETED, Nothing, Nothing)
-            unless driverInfo.verified $ throwError (InvalidRequest "Driver is not verified")
             if driverInfo.approved == Just True
               then runReconcile
               else do
@@ -1001,6 +1002,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
       API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> do
         let fleetOwnerId = Kernel.Types.Id.Id reqId
         fleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId >>= fromMaybeM (PersonNotFound reqId)
+        unless fleetOwnerInfo.verified $ throwError (InvalidRequest "Fleet Owner is not verified")
         if isDocReqEmpty
           then do
             -- Sync dependency-docs check; the heavy fleet recompute (sets `enabled` + cascades) is forked.
@@ -1008,6 +1010,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
             transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
             -- Throws (naming the offending docs) if any BotApproval dependency doc isn't VALID.
             SStatus.botApproveAndReconcile merchantOpCity fleetPerson transporterConfig
+            QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.enabled = True}
             pure (DRR.COMPLETED, Nothing, Nothing)
           else do
             applyDocRejections req.entityType reqId validatedDocs
@@ -1017,9 +1020,9 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
       API.Types.ProviderPlatform.Operator.Driver.VEHICLE -> do
         let rcId = Kernel.Types.Id.Id reqId
         rcInfo <- QVRC.findByPrimaryKey rcId >>= fromMaybeM (VehicleNotFound reqId)
+        when (rcInfo.verified /= Just True) $ throwError (InvalidRequest "RC is not verified")
         if isDocReqEmpty
           then do
-            when (rcInfo.verified /= Just True) $ throwError (InvalidRequest "RC is not verified")
             unless (rcInfo.approved == Just True) $ QVRC.updateByPrimaryKey rcInfo {DVRC.approved = Just True}
             pure (DRR.COMPLETED, rcInfo.unencryptedCertificateNumber, Nothing)
           else do
@@ -1145,7 +1148,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
           case docType of
             DVC.VehicleRegistrationCertificate -> do
               mbDoc <- QVRC.findByPrimaryKey rcId
-              forM_ mbDoc $ \doc -> QVRC.updateByPrimaryKey doc {DVRC.verificationStatus = Documents.INVALID}
+              forM_ mbDoc $ \doc -> QVRC.updateByPrimaryKey doc {DVRC.verificationStatus = Documents.INVALID, DVRC.rejectReason = rejectReason}
             DVC.VehicleInspectionForm ->
               IQuery.updateVerificationStatusByRcIdAndImageTypes Documents.INVALID rcId VDocs.vehicleDocsByRcIdList
             DVC.InspectionHub -> do
@@ -1162,10 +1165,10 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
           case docType of
             DVC.AadhaarCard -> do
               mbDoc <- QAadhaarCard.findByPrimaryKey personId
-              forM_ mbDoc $ \doc -> QAadhaarCard.updateByPrimaryKey doc {DAadhaarCard.verificationStatus = Documents.INVALID}
+              forM_ mbDoc $ \doc -> QAadhaarCard.updateByPrimaryKey doc {DAadhaarCard.verificationStatus = Documents.INVALID, DAadhaarCard.rejectReason = rejectReason}
             DVC.PanCard -> do
               mbDoc <- QDPC.findByDriverId personId
-              forM_ mbDoc $ \doc -> QDPC.updateByPrimaryKey doc {DDPC.verificationStatus = Documents.INVALID}
+              forM_ mbDoc $ \doc -> QDPC.updateByPrimaryKey doc {DDPC.verificationStatus = Documents.INVALID, DDPC.rejectReason = rejectReason}
             DVC.DriverLicense -> do
               mbDoc <- DLQuery.findByDriverId personId
               forM_ mbDoc $ \doc -> DLQuery.updateByPrimaryKey doc {DDL.verificationStatus = Documents.INVALID, DDL.rejectReason = rejectReason}
@@ -1174,7 +1177,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
               forM_ mbDoc $ \doc -> QDSSN.updateByPrimaryKey doc {DDSSN.verificationStatus = Documents.INVALID, DDSSN.rejectReason = rejectReason}
             DVC.GSTCertificate -> do
               mbDoc <- QDGST.findByDriverId personId
-              forM_ mbDoc $ \doc -> QDGST.updateByPrimaryKey doc {DDGST.verificationStatus = Documents.INVALID}
+              forM_ mbDoc $ \doc -> QDGST.updateByPrimaryKey doc {DDGST.verificationStatus = Documents.INVALID, DDGST.rejectReason = rejectReason}
             DVC.UDYAMCertificate -> do
               mbDoc <- QUDYAM.findByDriverId personId
               forM_ mbDoc $ \doc -> QUDYAM.updateByPrimaryKey doc {DDUDYAM.verificationStatus = Documents.INVALID, DDUDYAM.rejectReason = rejectReason}

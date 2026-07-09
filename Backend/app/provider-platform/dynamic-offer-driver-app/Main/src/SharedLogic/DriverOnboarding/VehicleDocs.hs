@@ -8,9 +8,9 @@ import qualified Data.Text as T
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
-import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPan
+import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as FODVC
 import qualified Domain.Types.HyperVergeVerification as HV
 import qualified Domain.Types.IdfyVerification as IV
@@ -622,8 +622,8 @@ getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo =
       return (Just status, reason, url, Nothing, Nothing, Nothing, Nothing)
     DVC.InspectionHub -> do
       registrationNo <- decrypt vehicleRC.certificateNumber
-      status <- getInspectionHubStatusForResponseStatus DOHR.ONBOARDING_INSPECTION Nothing (Just registrationNo)
-      return (status, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+      (status, reason) <- getInspectionHubStatusAndReason DOHR.ONBOARDING_INSPECTION Nothing (Just registrationNo)
+      return (status, reason, Nothing, Nothing, Nothing, Nothing, Nothing)
     DVC.BotApproval -> do
       registrationNo <- decrypt vehicleRC.certificateNumber
       status <- getBotApprovalStatusForVehicle vehicleRC.id.getId registrationNo
@@ -745,9 +745,9 @@ getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerific
         Nothing -> return Nothing
       case mbRegistrationNo of
         Just registrationNo -> do
-          mbStatus <- getInspectionHubStatusForResponseStatus DOHR.ONBOARDING_INSPECTION Nothing (Just registrationNo)
+          (mbStatus, reason) <- getInspectionHubStatusAndReason DOHR.ONBOARDING_INSPECTION Nothing (Just registrationNo)
           let status = fromMaybe INVALID mbStatus
-          return (status, Nothing, Nothing)
+          return (status, reason, Nothing)
         Nothing -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
     DVC.BotApproval -> do
       mbRc <- case mbRcImagesInfo of
@@ -807,10 +807,14 @@ checkIfUnderProgress entityImagesInfo docType = do
           then return (INVALID, extractImageFailReason latestImage.failureReason, Nothing)
           else return (NO_DOC_AVAILABLE, Nothing, Nothing)
 
+-- | Blank/whitespace-only reject reason -> Nothing, so the status read falls through to the next fallback (image reason / translated status) instead of a blank message.
+nonEmptyReason :: Text -> Maybe Text
+nonEmptyReason t = if T.null (T.strip t) then Nothing else Just t
+
 extractImageFailReason :: Maybe DriverOnboardingError -> Maybe Text
 extractImageFailReason imageError =
   case imageError of
-    Just (ImageNotValid reason) -> Just reason -- manual reject reason from the update-documents dashboard api
+    Just (ImageNotValid reason) -> nonEmptyReason reason -- manual reject reason from the update-documents dashboard api
     Just FaceMatchFailed -> toMessage FaceMatchFailed -- surfaces the face-match failure in the status API's verificationMessage
     _ -> Nothing
 
@@ -899,17 +903,19 @@ getLatestVerificationRecord mbIdfyVerificationReq mbHvVerificationReq = do
 
 -- Convert CommonDriverOnboardingDocuments to CommonDocumentItem
 
+findLatestInspectionHubRequest :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DOHR.RequestType -> Maybe (Id DP.Person) -> Maybe Text -> m (Maybe DOHR.OperationHubRequests)
+findLatestInspectionHubRequest requestType mbDriverId mbRegistrationNo = case requestType of
+  DOHR.DRIVER_ONBOARDING_INSPECTION -> case mbDriverId of
+    Just driverId -> runInReplica $ QOHRE.findLatestByDriverIdAndRequestType driverId requestType
+    Nothing -> pure Nothing
+  DOHR.ONBOARDING_INSPECTION -> case mbRegistrationNo of
+    Just registrationNo -> runInReplica $ QOHRE.findLatestByRegistrationNoAndRequestType registrationNo requestType
+    Nothing -> pure Nothing
+  _ -> pure Nothing
+
 checkInspectionHubRequestCreated :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DOHR.RequestType -> Maybe (Id DP.Person) -> Maybe Text -> m (Maybe DOHR.RequestStatus)
-checkInspectionHubRequestCreated requestType mbDriverId mbRegistrationNo = do
-  mbInspectionReq <- case requestType of
-    DOHR.DRIVER_ONBOARDING_INSPECTION -> case mbDriverId of
-      Just driverId -> runInReplica $ QOHRE.findLatestByDriverIdAndRequestType driverId requestType
-      Nothing -> pure Nothing
-    DOHR.ONBOARDING_INSPECTION -> case mbRegistrationNo of
-      Just registrationNo -> runInReplica $ QOHRE.findLatestByRegistrationNoAndRequestType registrationNo requestType
-      Nothing -> pure Nothing
-    _ -> pure Nothing
-  pure $ (.requestStatus) <$> mbInspectionReq
+checkInspectionHubRequestCreated requestType mbDriverId mbRegistrationNo =
+  ((.requestStatus) <$>) <$> findLatestInspectionHubRequest requestType mbDriverId mbRegistrationNo
 
 mapInspectionHubRequestStatusToResponseStatus :: Maybe DOHR.RequestStatus -> Maybe ResponseStatus
 mapInspectionHubRequestStatusToResponseStatus mbRequestStatus = case mbRequestStatus of
@@ -918,10 +924,11 @@ mapInspectionHubRequestStatusToResponseStatus mbRequestStatus = case mbRequestSt
   Just DOHR.REJECTED -> Just INVALID
   Nothing -> Just NO_DOC_AVAILABLE
 
-getInspectionHubStatusForResponseStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DOHR.RequestType -> Maybe (Id DP.Person) -> Maybe Text -> m (Maybe ResponseStatus)
-getInspectionHubStatusForResponseStatus requestType mbDriverId mbRegistrationNo = do
-  mbRequestStatus <- checkInspectionHubRequestCreated requestType mbDriverId mbRegistrationNo
-  pure $ mapInspectionHubRequestStatusToResponseStatus mbRequestStatus
+-- | Inspection-hub status plus the operator's remarks (the rejection reason surfaced to the status APIs).
+getInspectionHubStatusAndReason :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DOHR.RequestType -> Maybe (Id DP.Person) -> Maybe Text -> m (Maybe ResponseStatus, Maybe Text)
+getInspectionHubStatusAndReason requestType mbDriverId mbRegistrationNo = do
+  mbReq <- findLatestInspectionHubRequest requestType mbDriverId mbRegistrationNo
+  pure (mapInspectionHubRequestStatusToResponseStatus ((.requestStatus) <$> mbReq), (mbReq >>= (.remarks)) >>= nonEmptyReason)
 
 -- | BotApproval status, from the latest BOT_REVIEW ReviewRequest for the entity:
 --   COMPLETED -> VALID, IN_PROGRESS -> PENDING, REJECTED -> INVALID, none -> NO_DOC_AVAILABLE.

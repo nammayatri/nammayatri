@@ -39,6 +39,9 @@ module Domain.Action.Dashboard.Management.NammaTag
     getNammaTagConfigPilotUiConfigDetails,
     getNammaTagConfigPilotGetUiTableData,
     postNammaTagConfigPilotGetPatchedElement,
+    postNammaTagConfigPilotGetConfigWithDimensions,
+    getNammaTagConfigPilotGetDimensionSchema,
+    postNammaTagConfigPilotCreateRow,
     getNammaTagBehaviorVisibility,
   )
 where
@@ -46,6 +49,7 @@ where
 import qualified ConfigPilotFrontend.Flow as CPF
 import qualified ConfigPilotFrontend.Types as CPT
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Types as AT
 import qualified Data.ByteString.Lazy as BSL
 import Data.Default.Class (Default (..))
 import qualified Data.List.NonEmpty as NE
@@ -57,6 +61,7 @@ import Data.Time (UTCTime (..), fromGregorian)
 import qualified Domain.Types.Coins.CoinsConfig as DCC
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DriverPoolConfig as DTD
+import qualified Domain.Types.Exophone as DTEXO
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as DFODVC
 import qualified Domain.Types.GoHomeConfig as DGHC
 import qualified "beckn-spec" Domain.Types.Invoice as DTI
@@ -65,16 +70,20 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantMessage as DTM
 import qualified Domain.Types.MerchantPushNotification as DTPN
 import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
+import qualified Domain.Types.Overlay as DTOVL
 import qualified Domain.Types.PayoutConfig as DTP
 import qualified Domain.Types.ReminderConfig as DRMC
 import qualified Domain.Types.RideRelatedNotificationConfig as DTRN
 import qualified Domain.Types.ScheduledPayoutConfig as DSPC
+import qualified Domain.Types.Translations as DTTR
 import qualified Domain.Types.TransporterConfig as DTT
 import Domain.Types.UiDriverConfig (UiDriverConfig (..))
 import qualified Domain.Types.UiDriverConfig as DTDC
 import qualified Domain.Types.Yudhishthira
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import qualified "shared-services" IssueManagement.Domain.Types.Issue.IssueConfig as DIC
+import qualified "shared-services" IssueManagement.Storage.Queries.Issue.IssueConfig as SQICfg
 import Kernel.External.Types (Language (ENGLISH))
 import qualified Kernel.Prelude as Prelude
 import qualified Kernel.Types.APISuccess
@@ -84,7 +93,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.BehaviorEngine.Types as BET
 import qualified Lib.BehaviorTracker.Types as BTT
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import Lib.Scheduler.Types (AnyJob (..))
@@ -95,6 +105,7 @@ import Lib.Yudhishthira.SchemaUtils
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTagTriggerV2 as QNammaTagTriggerV2
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTagV2 as QNammaTagV2
+import qualified Lib.Yudhishthira.Storage.Queries.TagActionNotificationConfig as SQTANC
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types.Common as C
 import qualified Lib.Yudhishthira.Types.NammaTagV2
@@ -113,7 +124,46 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.UiDriverConfig as QUiConfig
+import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.DriverPoolConfig (DriverPoolConfigDimensions (..))
+import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
+import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
+import Storage.ConfigPilot.Config.IssueConfig (IssueConfigDimensions (..))
+import Storage.ConfigPilot.Config.LeaderBoardConfigs (LeaderBoardConfigsDimensions (..))
+import Storage.ConfigPilot.Config.MerchantMessage (MerchantMessageDimensions (..))
+import Storage.ConfigPilot.Config.MerchantPushNotification (MerchantPushNotificationDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.Overlay (OverlayDimensions (..))
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
+import Storage.ConfigPilot.Config.ReminderConfig (ReminderConfigDimensions (..))
+import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.ScheduledPayoutConfig (ScheduledPayoutConfigDimensions (..))
+import Storage.ConfigPilot.Config.TagActionNotificationConfig (TagActionNotificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import Storage.ConfigPilot.Config.UiDriverConfig (UiDriverConfigDimensions (..))
+import qualified Storage.Queries.Coins.CoinsConfig as SQCCfg
+import qualified Storage.Queries.DocumentVerificationConfig as SQDVC
+import qualified Storage.Queries.DriverPoolConfig as SQDPC
+import qualified Storage.Queries.Exophone as SQEXO
+import qualified Storage.Queries.FleetOwnerDocumentVerificationConfig as SQFODVC
+import qualified Storage.Queries.GoHomeConfig as SQGHC
+import qualified Storage.Queries.LeaderBoardConfigs as SQLBC
+import qualified Storage.Queries.MerchantMessage as SQMM
+import qualified Storage.Queries.MerchantPushNotification as SQMPN
+import qualified Storage.Queries.MerchantServiceConfigExtra as SQMSCE
+import qualified Storage.Queries.MerchantServiceUsageConfig as SQMSUC
+import qualified Storage.Queries.Overlay as SQOVL
+import qualified Storage.Queries.PayoutConfig as SQPC
+import qualified Storage.Queries.ReminderConfig as SQRMC
+import qualified Storage.Queries.RideRelatedNotificationConfig as SQRRNC
+import qualified Storage.Queries.ScheduledPayoutConfig as SQSPC
+import qualified Storage.Queries.Translations as SQTR
+import qualified Storage.Queries.TranslationsExtra as SQTRE
+import qualified Storage.Queries.TransporterConfig as SQTC
 import qualified Storage.Queries.UiDriverConfig as SQU
 import qualified Tools.ConfigPilot as TC
 import qualified Tools.DynamicLogic as TDL
@@ -148,6 +198,7 @@ $(genToSchema ''DSPC.ScheduledPayoutConfig)
 $(genToSchema ''DTANC.TagActionNotificationConfig)
 $(genToSchema ''DFODVC.FleetOwnerDocumentVerificationConfig)
 $(genToSchema ''DCC.CoinsConfig)
+$(genToSchema ''MerchantServiceConfigDimensions)
 $(genToSchema ''TaggedDriverPoolInput)
 $(genToSchema ''CancellationCoinData)
 $(genToSchema ''DynamicPricingData)
@@ -824,6 +875,210 @@ postNammaTagConfigPilotGetPatchedElement _merchantShortId _opCity req = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
   YudhishthiraFlow.postNammaTagConfigPilotGetPatchedElement (cast merchantOpCityId) req
+
+postNammaTagConfigPilotGetConfigWithDimensions :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ConfigPilotGetConfigRequest -> Environment.Flow LYT.TableDataResp
+postNammaTagConfigPilotGetConfigWithDimensions _merchantShortId _opCity req = do
+  merchant <- findMerchantByShortId _merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
+  let mocId = merchantOpCityId.getId
+      dims = parseDims req.dimensions
+  case req.configType of
+    LYT.DriverPoolConfig -> do
+      cfgs <- getConfig (DriverPoolConfigDimensions {merchantOperatingCityId = mocId, tripDistance = dimLookup "tripDistance" dims, area = dimLookup "area" dims, vehicleVariant = dimLookup "vehicleVariant" dims, tripCategory = dimLookup "tripCategory" dims}) (Just (SQDPC.findAllByMerchantOpCityId Nothing Nothing merchantOpCityId))
+      pure LYT.TableDataResp {configs = map A.toJSON cfgs}
+    LYT.TransporterConfig -> do
+      cfg <- getConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId}) (Just (SQTC.findByMerchantOpCityId merchantOpCityId))
+      pure LYT.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
+    LYT.PayoutConfig -> do
+      cfgs <- getConfig (PayoutConfigDimensions {merchantOperatingCityId = mocId, vehicleCategory = dimLookup "vehicleCategory" dims, isPayoutEnabled = dimLookup "isPayoutEnabled" dims}) (Just (SQPC.findAllByMerchantOpCityId merchantOpCityId))
+      pure LYT.TableDataResp {configs = map A.toJSON cfgs}
+    LYT.RideRelatedNotificationConfig -> do
+      cfgs <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = mocId, timeDiffEvent = dimLookup "timeDiffEvent" dims}) (Just (SQRRNC.findAllByMerchantOperatingCityId merchantOpCityId))
+      pure LYT.TableDataResp {configs = map A.toJSON cfgs}
+    LYT.MerchantMessage -> do
+      cfgs <- getConfig (MerchantMessageDimensions {merchantOperatingCityId = mocId, messageKey = dimLookup "messageKey" dims, vehicleCategory = dimLookup "vehicleCategory" dims}) (Just (SQMM.findAllByMerchantOpCityId merchantOpCityId))
+      pure LYT.TableDataResp {configs = map A.toJSON cfgs}
+    LYT.MerchantPushNotification -> do
+      cfgs <- getConfig (MerchantPushNotificationDimensions {merchantOperatingCityId = mocId, key = dimLookup "key" dims, tripCategory = dimLookup "tripCategory" dims}) (Just (SQMPN.findAllByMerchantOpCityId merchantOpCityId))
+      pure LYT.TableDataResp {configs = map A.toJSON cfgs}
+    LYT.MerchantServiceUsageConfigDriver -> do
+      cfg <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId}) (Just (SQMSUC.findByMerchantOpCityId merchantOpCityId))
+      pure LYT.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
+    LYT.DocumentVerificationConfig -> do
+      cfgs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = mocId, documentType = dimLookup "documentType" dims, vehicleCategory = dimLookup "vehicleCategory" dims}) (Just (SQDVC.findAllByMerchantOpCityId Nothing Nothing merchantOpCityId))
+      pure LYT.TableDataResp {configs = map A.toJSON cfgs}
+    LYT.GoHomeConfig -> do
+      cfg <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = mocId}) (Just (SQGHC.findByMerchantOpCityId merchantOpCityId))
+      pure LYT.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
+    LYT.LeaderBoardConfig -> do
+      cfgs <- getConfig (LeaderBoardConfigsDimensions {merchantOperatingCityId = mocId, leaderBoardType = dimLookup "leaderBoardType" dims}) (Just (SQLBC.findAllByMerchantOpCityId merchantOpCityId))
+      pure LYT.TableDataResp {configs = map A.toJSON cfgs}
+    LYT.ReminderConfig -> do
+      cfgs <- getConfig (ReminderConfigDimensions {merchantOperatingCityId = mocId, documentType = dimLookup "documentType" dims}) (Just (SQRMC.findAllByMerchantOpCityId merchantOpCityId))
+      pure LYT.TableDataResp {configs = map A.toJSON cfgs}
+    LYT.ScheduledPayoutConfig -> do
+      cfgs <- getConfig (ScheduledPayoutConfigDimensions {merchantOperatingCityId = mocId, isEnabled = dimLookup "isEnabled" dims, payoutCategory = dimLookup "payoutCategory" dims}) (Just (SQSPC.findAllByMerchantOpCityId merchantOpCityId))
+      pure LYT.TableDataResp {configs = map A.toJSON cfgs}
+    LYT.TagActionNotificationConfig -> do
+      cfgs <- getConfig (TagActionNotificationConfigDimensions {merchantOperatingCityId = mocId, notificationKey = dimLookup "notificationKey" dims}) (Just (SQTANC.findAllByMerchantOperatingCityId (cast merchantOpCityId)))
+      pure LYT.TableDataResp {configs = map A.toJSON cfgs}
+    LYT.FleetOwnerDocumentVerificationConfig -> do
+      cfgs <- getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = mocId, documentType = dimLookup "documentType" dims, role = dimLookup "role" dims}) (Just (SQFODVC.findAllByMerchantOpCityId Nothing Nothing merchantOpCityId))
+      pure LYT.TableDataResp {configs = map A.toJSON cfgs}
+    LYT.CoinsConfig -> do
+      cfgs <- getConfig (CoinsConfigDimensions {merchantOptCityId = mocId, eventFunction = dimLookup "eventFunction" dims, merchantId = dimLookup "merchantId" dims, active = dimLookup "active" dims, vehicleCategory = dimLookup "vehicleCategory" dims, serviceTierType = dimLookup "serviceTierType" dims, eventName = dimLookup "eventName" dims, tripCategoryType = dimLookup "tripCategoryType" dims, configId = dimLookup "configId" dims}) (Just (SQCCfg.findAllByMerchantOptCityId merchantOpCityId))
+      pure LYT.TableDataResp {configs = map A.toJSON cfgs}
+    LYT.MerchantServiceConfigDriver -> do
+      cfgs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mocId, merchantId = dimLookup "merchantId" dims, serviceName = dimLookup "serviceName" dims}) (Just (SQMSCE.findAllMerchantOpCityId merchantOpCityId))
+      pure LYT.TableDataResp {configs = map A.toJSON cfgs}
+    LYT.Exophone -> do
+      cfgs <- getConfig (ExophoneDimensions {merchantOperatingCityId = mocId, phoneNumber = dimLookup "phoneNumber" dims, callService = dimLookup "callService" dims, exophoneType = dimLookup "exophoneType" dims}) (Just (SQEXO.findAllByMerchantOpCityId merchantOpCityId))
+      pure LYT.TableDataResp {configs = map A.toJSON cfgs}
+    LYT.Overlay -> do
+      cfgs <- getConfig (OverlayDimensions {merchantOperatingCityId = mocId, overlayKey = dimLookup "overlayKey" dims, language = dimLookup "language" dims, udf1 = dimLookup "udf1" dims, vehicleCategory = dimLookup "vehicleCategory" dims}) (Just (SQOVL.findAllByMerchantOpCityId merchantOpCityId))
+      pure LYT.TableDataResp {configs = map A.toJSON cfgs}
+    LYT.Translation -> do
+      cfg <- getConfig (TranslationDimensions {merchantOperatingCityId = Just mocId, messageKey = fromMaybe "" (dimLookup "messageKey" dims), language = dimLookup "language" dims}) (Just (Prelude.listToMaybe <$> SQTRE.findAllByMessageKey (fromMaybe "" (dimLookup "messageKey" dims))))
+      pure LYT.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
+    LYT.IssueConfig -> do
+      cfg <- getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId, identifier = fromMaybe "" (dimLookup "identifier" dims)}) (Just (SQICfg.findByMerchantOpCityId (cast merchantOpCityId)))
+      pure LYT.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
+    _ -> throwError $ InvalidRequest $ "Config type " <> show req.configType <> " is not supported for getConfigWithDimensions"
+  where
+    parseDims :: A.Value -> Maybe A.Object
+    parseDims (A.Object o) = Just o
+    parseDims _ = Nothing
+
+    dimLookup :: A.FromJSON a => A.Key -> Maybe A.Object -> Maybe a
+    dimLookup key obj = obj >>= AT.parseMaybe (A..: key)
+
+getNammaTagConfigPilotGetDimensionSchema :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ConfigType -> Environment.Flow LYT.DomainSchemaResp
+getNammaTagConfigPilotGetDimensionSchema _merchantShortId _opCity configType =
+  case configType of
+    LYT.DriverPoolConfig -> pure $ mkDimSchema (Proxy @DriverPoolConfigDimensions)
+    LYT.TransporterConfig -> pure $ mkDimSchema (Proxy @TransporterConfigDimensions)
+    LYT.PayoutConfig -> pure $ mkDimSchema (Proxy @PayoutConfigDimensions)
+    LYT.RideRelatedNotificationConfig -> pure $ mkDimSchema (Proxy @RideRelatedNotificationConfigDimensions)
+    LYT.MerchantMessage -> pure $ mkDimSchema (Proxy @MerchantMessageDimensions)
+    LYT.MerchantPushNotification -> pure $ mkDimSchema (Proxy @MerchantPushNotificationDimensions)
+    LYT.MerchantServiceUsageConfigDriver -> pure $ mkDimSchema (Proxy @MerchantServiceUsageConfigDimensions)
+    LYT.DocumentVerificationConfig -> pure $ mkDimSchema (Proxy @DocumentVerificationConfigDimensions)
+    LYT.GoHomeConfig -> pure $ mkDimSchema (Proxy @GoHomeConfigDimensions)
+    LYT.LeaderBoardConfig -> pure $ mkDimSchema (Proxy @LeaderBoardConfigsDimensions)
+    LYT.ReminderConfig -> pure $ mkDimSchema (Proxy @ReminderConfigDimensions)
+    LYT.ScheduledPayoutConfig -> pure $ mkDimSchema (Proxy @ScheduledPayoutConfigDimensions)
+    LYT.TagActionNotificationConfig -> pure $ mkDimSchema (Proxy @TagActionNotificationConfigDimensions)
+    LYT.FleetOwnerDocumentVerificationConfig -> pure $ mkDimSchema (Proxy @FleetOwnerDocumentVerificationConfigDimensions)
+    LYT.CoinsConfig -> pure $ mkDimSchema (Proxy @CoinsConfigDimensions)
+    LYT.MerchantServiceConfigDriver -> pure $ mkDimSchema (Proxy @MerchantServiceConfigDimensions)
+    LYT.Exophone -> pure $ mkDimSchema (Proxy @ExophoneDimensions)
+    LYT.Overlay -> pure $ mkDimSchema (Proxy @OverlayDimensions)
+    LYT.Translation -> pure $ mkDimSchema (Proxy @TranslationDimensions)
+    LYT.IssueConfig -> pure $ mkDimSchema (Proxy @IssueConfigDimensions)
+    LYT.UiDriverConfig -> pure $ mkDimSchema (Proxy @UiDriverConfigDimensions)
+    _ -> throwError $ InvalidRequest $ "Dimension schema not available for " <> show configType
+  where
+    mkDimSchema :: forall a. (A.ToJSON a, Prelude.ToSchema a) => Proxy a -> LYT.DomainSchemaResp
+    mkDimSchema p =
+      LYT.DomainSchemaResp
+        { LYT.defaultValue = A.Null,
+          LYT.schema = toInlinedSchemaValue p
+        }
+
+postNammaTagConfigPilotCreateRow :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ConfigPilotCreateRowRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagConfigPilotCreateRow _merchantShortId _opCity req = do
+  merchant <- findMerchantByShortId _merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
+  case req.configType of
+    LYT.DriverPoolConfig -> do
+      cfg :: DTD.DriverPoolConfig <- parseConfigData req.configData
+      SQDPC.create cfg
+      invalidateConfigInMem LYT.DriverPoolConfig
+    LYT.TransporterConfig -> do
+      cfg :: DTT.TransporterConfig <- parseConfigData req.configData
+      existing <- SQTC.findByMerchantOpCityId merchantOpCityId
+      when (isJust existing) $ throwError $ InvalidRequest "TransporterConfig already exists for this merchantOperatingCityId"
+      SQTC.create cfg
+      invalidateConfigInMem LYT.TransporterConfig
+    LYT.PayoutConfig -> do
+      cfg :: DTP.PayoutConfig <- parseConfigData req.configData
+      SQPC.create cfg
+      invalidateConfigInMem LYT.PayoutConfig
+    LYT.RideRelatedNotificationConfig -> do
+      cfg :: DTRN.RideRelatedNotificationConfig <- parseConfigData req.configData
+      SQRRNC.create cfg
+      invalidateConfigInMem LYT.RideRelatedNotificationConfig
+    LYT.MerchantMessage -> do
+      cfg :: DTM.MerchantMessage <- parseConfigData req.configData
+      SQMM.create cfg
+      invalidateConfigInMem LYT.MerchantMessage
+    LYT.MerchantPushNotification -> do
+      cfg :: DTPN.MerchantPushNotification <- parseConfigData req.configData
+      SQMPN.create cfg
+      invalidateConfigInMem LYT.MerchantPushNotification
+    LYT.MerchantServiceUsageConfigDriver -> do
+      cfg :: DMSUC.MerchantServiceUsageConfig <- parseConfigData req.configData
+      existing <- SQMSUC.findByMerchantOpCityId merchantOpCityId
+      when (isJust existing) $ throwError $ InvalidRequest "MerchantServiceUsageConfig already exists for this merchantOperatingCityId"
+      SQMSUC.create cfg
+      invalidateConfigInMem LYT.MerchantServiceUsageConfigDriver
+    LYT.DocumentVerificationConfig -> do
+      cfg :: DDVC.DocumentVerificationConfig <- parseConfigData req.configData
+      SQDVC.create cfg
+      invalidateConfigInMem LYT.DocumentVerificationConfig
+    LYT.GoHomeConfig -> do
+      cfg :: DGHC.GoHomeConfig <- parseConfigData req.configData
+      existing <- SQGHC.findByMerchantOpCityId merchantOpCityId
+      when (isJust existing) $ throwError $ InvalidRequest "GoHomeConfig already exists for this merchantOperatingCityId"
+      SQGHC.create cfg
+      invalidateConfigInMem LYT.GoHomeConfig
+    LYT.LeaderBoardConfig -> do
+      cfg :: DLBC.LeaderBoardConfigs <- parseConfigData req.configData
+      SQLBC.create cfg
+      invalidateConfigInMem LYT.LeaderBoardConfig
+    LYT.ReminderConfig -> do
+      cfg :: DRMC.ReminderConfig <- parseConfigData req.configData
+      SQRMC.create cfg
+      invalidateConfigInMem LYT.ReminderConfig
+    LYT.ScheduledPayoutConfig -> do
+      cfg :: DSPC.ScheduledPayoutConfig <- parseConfigData req.configData
+      SQSPC.create cfg
+      invalidateConfigInMem LYT.ScheduledPayoutConfig
+    LYT.FleetOwnerDocumentVerificationConfig -> do
+      cfg :: DFODVC.FleetOwnerDocumentVerificationConfig <- parseConfigData req.configData
+      SQFODVC.create cfg
+      invalidateConfigInMem LYT.FleetOwnerDocumentVerificationConfig
+    LYT.TagActionNotificationConfig -> do
+      cfg :: DTANC.TagActionNotificationConfig <- parseConfigData req.configData
+      SQTANC.create cfg
+      invalidateConfigInMem LYT.TagActionNotificationConfig
+    LYT.Exophone -> do
+      cfg :: DTEXO.Exophone <- parseConfigData req.configData
+      SQEXO.create cfg
+      invalidateConfigInMem LYT.Exophone
+    LYT.Overlay -> do
+      cfg :: DTOVL.Overlay <- parseConfigData req.configData
+      SQOVL.create cfg
+      invalidateConfigInMem LYT.Overlay
+    LYT.Translation -> do
+      cfg :: DTTR.Translations <- parseConfigData req.configData
+      SQTR.create cfg
+      invalidateConfigInMem LYT.TranslationDriver
+    LYT.IssueConfig -> do
+      cfg :: DIC.IssueConfig <- parseConfigData req.configData
+      SQICfg.create cfg
+      invalidateConfigInMem LYT.IssueConfigDriver
+    LYT.UiDriverConfig -> do
+      cfg :: DTDC.UiDriverConfig <- parseConfigData req.configData
+      SQU.create cfg
+      invalidateConfigInMem LYT.UiDriverConfig
+    _ -> throwError $ InvalidRequest $ "Config type " <> show req.configType <> " is not supported for createRow"
+  pure Kernel.Types.APISuccess.Success
+  where
+    parseConfigData :: forall a m. (A.FromJSON a, MonadFlow m) => A.Value -> m a
+    parseConfigData val = case A.fromJSON val of
+      A.Success cfg -> pure cfg
+      A.Error err -> throwError $ InvalidRequest $ "Invalid config data: " <> show err
 
 -- { os :: DeviceType,
 --     language :: Language,
