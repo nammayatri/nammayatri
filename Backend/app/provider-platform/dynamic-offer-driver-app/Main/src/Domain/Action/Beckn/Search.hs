@@ -214,6 +214,7 @@ data DSearchRes = DSearchRes
   { specialLocationTag :: Maybe Text,
     specialLocationName :: Maybe Text,
     specialLocationSupportNumber :: Maybe Text,
+    fareSettlementType :: Maybe SL.FareSettlementType,
     searchMetricsMVar :: Metrics.SearchMetricsMVar,
     paymentMethodsInfo :: [DMPM.PaymentMethodInfo],
     provider :: DM.Merchant,
@@ -389,7 +390,7 @@ handler ValidatedDSearchReq {..} sReq = do
   forM_ estimates $ \est -> triggerEstimateEvent EstimateEventData {estimate = est, merchantId = merchantId'}
   driverInfoQuotes <- addNearestDriverInfo merchantOpCityId driverPool quotes configVersionMap (mbAreaForVST >>= SL.pickupSpecialZoneIdFromArea)
   driverInfoEstimates <- addNearestDriverInfo merchantOpCityId driverPool estimates configVersionMap (mbAreaForVST >>= SL.pickupSpecialZoneIdFromArea)
-  buildDSearchResp sReq.pickupLocation sReq.dropLocation (stopsLatLong sReq.stops) spcllocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocName specialLocationSupportNumber now possibleTripOption.schedule sReq.fareParametersInRateCard sReq.isMultimodalSearch
+  buildDSearchResp sReq.pickupLocation sReq.dropLocation (stopsLatLong sReq.stops) spcllocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocName specialLocationSupportNumber allFarePoliciesProduct.fareSettlementType now possibleTripOption.schedule sReq.fareParametersInRateCard sReq.isMultimodalSearch
   where
     stopsLatLong = map (.gps)
     --   Check if the pickup gate supports queueing and get default driver extra.
@@ -427,6 +428,7 @@ handler ValidatedDSearchReq {..} sReq = do
           specialLocationTag = listToMaybe products >>= (.specialLocationTag),
           specialLocationName = listToMaybe products >>= (.specialLocationName),
           specialLocationSupportNumber = listToMaybe products >>= (.specialLocationSupportNumber),
+          fareSettlementType = listToMaybe products >>= (.fareSettlementType),
           mbPickupDropArea = listToMaybe products >>= (.mbPickupDropArea)
         }
 
@@ -458,7 +460,7 @@ handler ValidatedDSearchReq {..} sReq = do
           logError $ "Vehicle service tier not found for " <> show fp'.vehicleServiceTier
           pure (estimates, quotes)
 
-    buildDSearchResp fromLocation toLocation stops specialLocationTag searchMetricsMVar quotes estimates specialLocationName specialLocationSupportNumber now startTime fareParametersInRateCard isMultimodalSearch = do
+    buildDSearchResp fromLocation toLocation stops specialLocationTag searchMetricsMVar quotes estimates specialLocationName specialLocationSupportNumber fareSettlementType now startTime fareParametersInRateCard isMultimodalSearch = do
       merchantPaymentMethods <- CQMPM.findAllByMerchantOpCityId merchantOpCityId
       let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
       return $

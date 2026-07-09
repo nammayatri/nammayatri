@@ -622,7 +622,8 @@ data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
     baseRequestMerchant :: Maybe Text,
     replicateFareProducts :: Maybe Bool,
     issueCategorySourceMerchant :: Maybe Text,
-    issueCategorySourceCity :: Maybe Context.City
+    issueCategorySourceCity :: Maybe Context.City,
+    gatewayAndRegistryPriorityList :: Maybe [NetworkEnums]
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -653,6 +654,7 @@ instance FromMultipart Tmp CreateMerchantOperatingCityReq where
       <*> parseMaybeInput "replicateFareProducts" form
       <*> parseMaybeInput "issueCategorySourceMerchant" form
       <*> parseMaybeInput "issueCategorySourceCity" form
+      <*> parseMaybeInput "gatewayAndRegistryPriorityList" form
 
 parseInput :: Read b => Text -> MultipartData tag -> Either String b
 parseInput fieldName form = case lookupInput fieldName form of
@@ -701,7 +703,8 @@ data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
     baseRequestMerchant :: Maybe Text,
     replicateFareProducts :: Maybe Bool,
     issueCategorySourceMerchant :: Maybe Text,
-    issueCategorySourceCity :: Maybe Context.City
+    issueCategorySourceCity :: Maybe Context.City,
+    gatewayAndRegistryPriorityList :: Maybe [NetworkEnums]
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -720,7 +723,8 @@ data UpsertSpecialLocationReq = UpsertSpecialLocationReq
     isQueueEnabled :: Maybe Bool,
     supportNumber :: Maybe Text,
     render :: Maybe SLT.RenderType,
-    paymentModes :: Maybe [SLT.PaymentMode]
+    paymentModes :: Maybe [SLT.PaymentMode],
+    fareSettlementType :: Maybe SLT.FareSettlementType
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -738,6 +742,7 @@ instance FromMultipart Tmp UpsertSpecialLocationReq where
       <*> parseMaybeInput "supportNumber" form
       <*> parseMaybeInput "render" form
       <*> parseMaybeInput "paymentModes" form
+      <*> parseMaybeInput "fareSettlementType" form
 
 instance HideSecrets UpsertSpecialLocationReq where
   hideSecrets = identity
@@ -759,7 +764,8 @@ data UpsertSpecialLocationReqT = UpsertSpecialLocationReqT
     isQueueEnabled :: Maybe Bool,
     supportNumber :: Maybe Text,
     render :: Maybe SLT.RenderType,
-    paymentModes :: Maybe [SLT.PaymentMode]
+    paymentModes :: Maybe [SLT.PaymentMode],
+    fareSettlementType :: Maybe SLT.FareSettlementType
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

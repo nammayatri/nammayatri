@@ -50,7 +50,8 @@ data SpecialLocationFull = SpecialLocationFull
     enforceTollRoute :: Maybe Bool,
     supportNumber :: Maybe Text,
     render :: Maybe D.RenderType,
-    paymentModes :: Maybe [D.PaymentMode]
+    paymentModes :: Maybe [D.PaymentMode],
+    fareSettlementType :: Maybe D.FareSettlementType
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 

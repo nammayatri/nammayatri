@@ -28,6 +28,7 @@ derivePersistField "Domain.GatesInfo"
 derivePersistField "Domain.SpecialLocationType"
 derivePersistField "Domain.RenderType"
 derivePersistField "Domain.PaymentMode"
+derivePersistField "Domain.FareSettlementType"
 
 mkPersist
   defaultSqlSettings
@@ -51,6 +52,7 @@ mkPersist
       enforceTollRoute Bool Maybe
       supportNumber Text Maybe
       paymentModes (PostgresList Domain.PaymentMode) Maybe
+      fareSettlementType Domain.FareSettlementType Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
