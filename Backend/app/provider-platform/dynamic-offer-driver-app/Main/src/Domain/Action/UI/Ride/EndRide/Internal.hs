@@ -85,7 +85,6 @@ import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Variant
 import qualified Domain.Types.VendorFee as DVF
 import qualified Domain.Types.VendorSplitDetails as DVSD
-import qualified Environment
 import EulerHS.Prelude hiding (elem, foldr, id, length, map, mapM_, null)
 import GHC.Float (double2Int)
 import GHC.Num.Integer (integerFromInt, integerToInt)
