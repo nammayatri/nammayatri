@@ -18,6 +18,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error (GenericError (InvalidRequest))
 import qualified Kernel.Types.Id as ID
+import qualified Kernel.Types.TimeBound as TB
 import qualified Kernel.Utils.Common as UC
 import qualified Lib.DriverCoins.Types as DCT
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -59,7 +60,8 @@ buildCoinsConfigListItem coinsConfig =
       expirationAt = coinsConfig.expirationAt,
       active = coinsConfig.active,
       vehicleCategory = coinsConfig.vehicleCategory,
-      tripCategoryType = coinsConfig.tripCategoryType
+      tripCategoryType = coinsConfig.tripCategoryType,
+      timeBounds = fromMaybe TB.Unbounded coinsConfig.timeBounds
     }
 
 putCoinsConfigUpdate ::
@@ -85,7 +87,15 @@ postCoinsConfigCreate merchantShortId opCity req = do
   uuid <- UC.generateGUIDText
   (newCoinsConfig, eventMessageLs) <- case req of
     Common.NewCoinsConfig (Common.NewCoinsConfigReq {..}) ->
-      let newConfig = DTCC.CoinsConfig {id = ID.Id uuid, merchantId = merchant.id.getId, merchantOptCityId = merchantOpCityId.getId, vehicleCategory = Just vehicleCategory, ..}
+      let newConfig =
+            DTCC.CoinsConfig
+              { id = ID.Id uuid,
+                merchantId = merchant.id.getId,
+                merchantOptCityId = merchantOpCityId.getId,
+                vehicleCategory = Just vehicleCategory,
+                timeBounds = timeBounds,
+                ..
+              }
        in pure (newConfig, eventMessages)
     Common.DuplicateCoinsConfig (Common.DuplicateCoinsConfigsReq {..}) -> do
       let findCoinsConfig = QConfig.findById $ ID.cast entriesId

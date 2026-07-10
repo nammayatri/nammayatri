@@ -17,6 +17,7 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.TimeBound
 import Servant
 import Servant.Client
 
@@ -28,7 +29,8 @@ data CoinsConfigListItem = CoinsConfigListItem
     expirationAt :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     active :: Kernel.Prelude.Bool,
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
-    tripCategoryType :: Kernel.Prelude.Maybe Dashboard.Common.DriverCoins.TripCategoryType
+    tripCategoryType :: Kernel.Prelude.Maybe Dashboard.Common.DriverCoins.TripCategoryType,
+    timeBounds :: Kernel.Types.TimeBound.TimeBound
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -63,6 +65,7 @@ data NewCoinsConfigReq = NewCoinsConfigReq
     vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
     tripCategoryType :: Kernel.Prelude.Maybe Dashboard.Common.DriverCoins.TripCategoryType,
     serviceTierType :: Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType,
+    timeBounds :: Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound,
     eventMessages :: [EventMessage]
   }
   deriving stock (Generic)

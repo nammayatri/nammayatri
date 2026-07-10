@@ -441,6 +441,7 @@ library
       Domain.Types.Yudhishthira
       Environment
       Lib.DriverCoins.Coins
+      Lib.DriverCoins.IncentiveMetrics
       Lib.DriverCoins.Types
       Lib.DriverScore
       Lib.DriverScore.Types

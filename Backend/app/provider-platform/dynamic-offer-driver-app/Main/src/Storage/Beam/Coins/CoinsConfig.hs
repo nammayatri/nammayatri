@@ -21,6 +21,7 @@ import Domain.Types.VehicleCategory as DTV
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common ()
+import qualified Kernel.Types.TimeBound as TB
 import Lib.DriverCoins.Types as DCT
 
 data CoinsConfigT f = CoinsConfigT
@@ -34,7 +35,8 @@ data CoinsConfigT f = CoinsConfigT
     active :: B.C f Bool,
     vehicleCategory :: B.C f (Maybe DTV.VehicleCategory),
     tripCategoryType :: B.C f (Maybe DCT.TripCategoryType),
-    serviceTierType :: B.C f (Maybe DTC.ServiceTierType)
+    serviceTierType :: B.C f (Maybe DTC.ServiceTierType),
+    timeBounds :: B.C f (Maybe TB.TimeBound)
   }
   deriving (Generic, B.Beamable)
 

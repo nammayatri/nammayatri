@@ -37,3 +37,8 @@ CREATE TABLE atlas_driver_offer_bpp.coin_history (
 ALTER TABLE atlas_driver_offer_bpp.coin_config
 ALTER COLUMN event_function SET NOT NULL,
 ALTER COLUMN event_name SET NOT NULL;
+
+-- Add optional time_bounds to coin_config for peak-window incentive awards.
+-- Backend treats NULL as Unbounded for backward compatibility.
+ALTER TABLE atlas_driver_offer_bpp.coin_config
+  ADD COLUMN IF NOT EXISTS time_bounds text;

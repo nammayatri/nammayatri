@@ -18,6 +18,7 @@ import qualified Domain.Types.Common as DTC
 import Domain.Types.VehicleCategory as DTV
 import EulerHS.Prelude hiding (id, state)
 import Kernel.Types.Id
+import qualified Kernel.Types.TimeBound as TB
 import qualified Lib.DriverCoins.Types as DCT
 
 data CoinsConfig = CoinsConfig
@@ -31,6 +32,7 @@ data CoinsConfig = CoinsConfig
     active :: Bool,
     vehicleCategory :: Maybe DTV.VehicleCategory,
     tripCategoryType :: Maybe DCT.TripCategoryType,
-    serviceTierType :: Maybe DTC.ServiceTierType
+    serviceTierType :: Maybe DTC.ServiceTierType,
+    timeBounds :: Maybe TB.TimeBound
   }
   deriving (Generic, Show, FromJSON, ToJSON)
