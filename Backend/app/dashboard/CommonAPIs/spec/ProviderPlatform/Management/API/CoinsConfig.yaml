@@ -5,6 +5,7 @@ imports:
   Language: Kernel.External.Types
   VehicleCategory: Domain.Types.VehicleCategory
   ServiceTierType: Domain.Types.ServiceTierType
+  TimeBound: Kernel.Types.TimeBound
 
 module: CoinsConfig
 
@@ -53,6 +54,7 @@ types:
     - vehicleCategory: VehicleCategory
     - tripCategoryType: Maybe TripCategoryType
     - serviceTierType: Maybe ServiceTierType
+    - timeBounds: Maybe TimeBound
     - eventMessages: [EventMessage]
   DuplicateCoinsConfigsReq:
     - entriesId: Id CoinsConfig
@@ -72,3 +74,4 @@ types:
     - active: Bool
     - vehicleCategory: Maybe VehicleCategory
     - tripCategoryType: Maybe TripCategoryType
+    - timeBounds: TimeBound
