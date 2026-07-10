@@ -372,12 +372,21 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
 
     buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCityId booking = do
       personEmail <- mapM decrypt person.email
-      personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+      -- Conductor counter-sale persons are keyed by operator badge and carry no stored phone;
+      -- use a throwaway placeholder for the Juspay order (see FRFSUtils.createPaymentOrder).
+      personPhone <- case person.mobileNumber of
+        Just encryptedPhone -> decrypt encryptedPhone
+        Nothing | isJust person.operatorBadgeToken -> pure FRFSUtils.conductorCounterSalePhone
+        Nothing -> throwError (PersonFieldNotPresent "mobileNumber")
       isSplitEnabled_ <- Payment.getIsSplitEnabled merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
       isPercentageSplitEnabled <- Payment.getIsPercentageSplit merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
       let isSingleMode = fromMaybe False booking.isSingleMode
       splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled isSingleMode
-      staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
+      -- Key conductor Juspay customers on the unique person id, not the throwaway phone.
+      staticCustomerId <-
+        if isJust person.operatorBadgeToken
+          then pure person.id.getId
+          else SLUtils.getStaticCustomerId person personPhone
       nwAddress <- asks (.nwAddress)
       udf1 <- SLUtils.getPersonUdf1 person
       let createOrderReq =

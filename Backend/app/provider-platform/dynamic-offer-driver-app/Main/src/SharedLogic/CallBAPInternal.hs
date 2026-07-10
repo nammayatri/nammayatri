@@ -424,3 +424,102 @@ getFrfsTripManifest apiKey internalUrl tripId routeId = do
   logInfo $ "CallBAPInternal: Getting FRFS trip manifest for tripId: " <> tripId <> ", routeId: " <> routeId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsTripManifestClient tripId routeId (Just apiKey)) "GetFrfsTripManifest" frfsTripManifestAPI
+
+-- FRFS Conductor Booking (proxy to rider-app / BAP — search → quote → confirm → status).
+-- Request/response bodies are the driver-app's own copies of the rider-app FRFS
+-- booking shapes (generated from spec/API/FRFSFleetOperator.yaml). They are wire-
+-- identical to the rider-app internal endpoints they call.
+
+-- POST /internal/frfs/booking/search
+type FrfsBookingSearchAPI =
+  "internal"
+    :> "frfs"
+    :> "booking"
+    :> "search"
+    :> Header "token" Text
+    :> ReqBody '[JSON] FRFSFleetOperatorAPI.FRFSBookingSearchReq
+    :> Post '[JSON] FRFSFleetOperatorAPI.FRFSSearchAPIRes
+
+frfsBookingSearchClient :: Maybe Text -> FRFSFleetOperatorAPI.FRFSBookingSearchReq -> EulerClient FRFSFleetOperatorAPI.FRFSSearchAPIRes
+frfsBookingSearchClient = client (Proxy @FrfsBookingSearchAPI)
+
+frfsBookingSearchAPI :: Proxy FrfsBookingSearchAPI
+frfsBookingSearchAPI = Proxy
+
+-- GET /internal/frfs/booking/search/{searchId}/quote
+type FrfsBookingQuoteAPI =
+  "internal"
+    :> "frfs"
+    :> "booking"
+    :> "search"
+    :> Capture "searchId" Text
+    :> "quote"
+    :> Header "token" Text
+    :> Get '[JSON] [FRFSFleetOperatorAPI.FRFSQuoteAPIRes]
+
+frfsBookingQuoteClient :: Text -> Maybe Text -> EulerClient [FRFSFleetOperatorAPI.FRFSQuoteAPIRes]
+frfsBookingQuoteClient = client (Proxy @FrfsBookingQuoteAPI)
+
+frfsBookingQuoteAPI :: Proxy FrfsBookingQuoteAPI
+frfsBookingQuoteAPI = Proxy
+
+-- POST /internal/frfs/booking/quote/{quoteId}/confirm
+type FrfsBookingConfirmAPI =
+  "internal"
+    :> "frfs"
+    :> "booking"
+    :> "quote"
+    :> Capture "quoteId" Text
+    :> "confirm"
+    :> Header "token" Text
+    :> ReqBody '[JSON] FRFSFleetOperatorAPI.FRFSQuoteConfirmReq
+    :> Post '[JSON] FRFSFleetOperatorAPI.FRFSTicketBookingStatusAPIRes
+
+frfsBookingConfirmClient :: Text -> Maybe Text -> FRFSFleetOperatorAPI.FRFSQuoteConfirmReq -> EulerClient FRFSFleetOperatorAPI.FRFSTicketBookingStatusAPIRes
+frfsBookingConfirmClient = client (Proxy @FrfsBookingConfirmAPI)
+
+frfsBookingConfirmAPI :: Proxy FrfsBookingConfirmAPI
+frfsBookingConfirmAPI = Proxy
+
+-- GET /internal/frfs/booking/{bookingId}/status
+type FrfsBookingStatusAPI =
+  "internal"
+    :> "frfs"
+    :> "booking"
+    :> Capture "bookingId" Text
+    :> "status"
+    :> Header "token" Text
+    :> Get '[JSON] FRFSFleetOperatorAPI.FRFSTicketBookingStatusAPIRes
+
+frfsBookingStatusClient :: Text -> Maybe Text -> EulerClient FRFSFleetOperatorAPI.FRFSTicketBookingStatusAPIRes
+frfsBookingStatusClient = client (Proxy @FrfsBookingStatusAPI)
+
+frfsBookingStatusAPI :: Proxy FrfsBookingStatusAPI
+frfsBookingStatusAPI = Proxy
+
+type FrfsBookingInternalFlow m r =
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  )
+
+frfsBookingSearch :: FrfsBookingInternalFlow m r => Text -> BaseUrl -> FRFSFleetOperatorAPI.FRFSBookingSearchReq -> m FRFSFleetOperatorAPI.FRFSSearchAPIRes
+frfsBookingSearch apiKey internalUrl body = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsBookingSearchClient (Just apiKey) body) "FrfsBookingSearch" frfsBookingSearchAPI
+
+frfsBookingQuote :: FrfsBookingInternalFlow m r => Text -> BaseUrl -> Text -> m [FRFSFleetOperatorAPI.FRFSQuoteAPIRes]
+frfsBookingQuote apiKey internalUrl searchId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsBookingQuoteClient searchId (Just apiKey)) "FrfsBookingQuote" frfsBookingQuoteAPI
+
+frfsBookingConfirm :: FrfsBookingInternalFlow m r => Text -> BaseUrl -> Text -> FRFSFleetOperatorAPI.FRFSQuoteConfirmReq -> m FRFSFleetOperatorAPI.FRFSTicketBookingStatusAPIRes
+frfsBookingConfirm apiKey internalUrl quoteId body = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsBookingConfirmClient quoteId (Just apiKey) body) "FrfsBookingConfirm" frfsBookingConfirmAPI
+
+frfsBookingStatus :: FrfsBookingInternalFlow m r => Text -> BaseUrl -> Text -> m FRFSFleetOperatorAPI.FRFSTicketBookingStatusAPIRes
+frfsBookingStatus apiKey internalUrl bookingId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsBookingStatusClient bookingId (Just apiKey)) "FrfsBookingStatus" frfsBookingStatusAPI

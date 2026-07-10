@@ -59,4 +59,4 @@ onSelect onSelectReq merchant quote isSingleMode mbEnableOffer crisSdkResponse i
                 <&> (\category' -> (FRFSCategorySelectionReq {quantity = category.quantity, quoteCategoryId = category'.id, seatIds = category'.seatIds}))
           )
           onSelectReq.categories
-  void $ postFrfsQuoteV2ConfirmUtil (Just quote.riderId, merchant.id) quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer Nothing integratedBppConfig Nothing
+  void $ postFrfsQuoteV2ConfirmUtil (Just quote.riderId, merchant.id) quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer Nothing integratedBppConfig Nothing Nothing

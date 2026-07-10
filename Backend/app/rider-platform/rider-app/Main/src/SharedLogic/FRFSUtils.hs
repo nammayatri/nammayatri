@@ -829,6 +829,14 @@ getAllJourneyFrfsBookings booking = do
       return (Just leg.journeyId, bookings)
     Nothing -> pure (Nothing, [booking])
 
+-- Throwaway phone used solely as the Juspay customerPhone for conductor counter-sales,
+-- which have no real customer number. It is never stored on a person nor used as a lookup
+-- key, and the conductor's Juspay customerId is keyed on person.id (see createPaymentOrder),
+-- so this value is pure order metadata. It deliberately starts with '1': Indian mobile
+-- numbers are 10 digits beginning 6-9, so this can never be an allocated subscriber number.
+conductorCounterSalePhone :: Text
+conductorCounterSalePhone = "1111111111"
+
 createPaymentOrder ::
   ( EsqDBReplicaFlow m r,
     BeamFlow m r,
@@ -853,7 +861,14 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
   nwAddress <- asks (.nwAddress)
   logInfo $ "createPayments vendorSplitArr" <> show vendorSplitArr
   logInfo $ "createPayments basket" <> show basket
-  personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+  -- Conductor counter-sale persons are resolved by operator badge and carry no stored
+  -- phone (avoids a fabricated number colliding with a real customer on the mobileNumberHash
+  -- secondary key). Juspay only needs a syntactically-valid phone on the order, so use a
+  -- throwaway placeholder for them; any other phone-less person is still a hard error.
+  personPhone <- case person.mobileNumber of
+    Just encryptedPhone -> decrypt encryptedPhone
+    Nothing | isJust person.operatorBadgeToken -> pure conductorCounterSalePhone
+    Nothing -> throwError (PersonFieldNotPresent "mobileNumber")
   personEmail <- mapM decrypt person.email
   (orderId, orderShortId) <- getPaymentIds
   results <- processPayments orderId `mapM` bookings
@@ -866,7 +881,15 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
         [_] -> True
         _ -> False
   splitSettlementDetails <- Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amount vendorSplitArr isPercentageSplitEnabled isSingleMode
-  staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
+  -- Conductor persons are unique and stable by operator badge (never by phone), so key their
+  -- Juspay customer on the person id directly. getStaticCustomerId can otherwise hash
+  -- (phone <> merchantId) into the customerId (when staticCustomerIdThresholdDay is set),
+  -- which would collapse every conductor sharing the throwaway phone — and any real owner of
+  -- that number — into one Juspay customer.
+  staticCustomerId <-
+    if isJust person.operatorBadgeToken
+      then pure person.id.getId
+      else SLUtils.getStaticCustomerId person personPhone
   udf1 <- SLUtils.getPersonUdf1 person
   let createOrderReq =
         Payment.CreateOrderReq

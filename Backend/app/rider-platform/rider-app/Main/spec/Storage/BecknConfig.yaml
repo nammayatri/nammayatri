@@ -142,9 +142,12 @@ IntegratedBPPConfig:
   constraints:
     id: PrimaryKey
     agencyKey: SecondaryKey
+    feedKey: SecondaryKey
 
   extraIndexes:
     - columns: [agencyKey]
+      unique: false
+    - columns: [feedKey]
       unique: false
 
   extraOperations:
@@ -166,4 +169,8 @@ IntegratedBPPConfig:
       kvFunction: findOneWithKV
       where:
         and: [agencyKey]
+    findByFeedKeyAndVehicleCategoryAndPlatformType:
+      kvFunction: findOneWithKV
+      where:
+        and: [feedKey, vehicleCategory, platformType]
 
