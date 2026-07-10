@@ -37,6 +37,7 @@ data AuditEntityType
   | IndirectTaxTransaction
   | PgPaymentSettlementReport
   | SapJournalEntry
+  | SubscriptionPurchase
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AuditAction))
