@@ -399,6 +399,7 @@ types:
     - requestorId : Maybe Text
     - blockReasonFlag : Maybe Text
     - actionType: Maybe ActionType
+    - specialZoneId : Maybe Text
   DriverRCAssociationAPIEntity:
     - associatedOn: UTCTime
     - associatedTill: Maybe UTCTime

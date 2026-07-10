@@ -49,7 +49,8 @@ data AirportPreferenceReq = AirportPreferenceReq
   { enableForAirport :: AirportRestrictionType,
     blockReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     blockExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    specialZoneId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    specialZoneId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    requestorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
