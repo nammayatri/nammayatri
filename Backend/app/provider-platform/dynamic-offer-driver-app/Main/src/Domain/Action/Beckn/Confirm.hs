@@ -142,11 +142,11 @@ handler merchant req validatedQuote = do
       QRB.updateSpecialZoneOtpCode booking.id otpCode
       updateBookingDetails isNewRider booking riderDetails
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-      -- Special-zone OTP: customer is committed at this gate (demand fulfilled).
-      -- No driver assigned yet — supply is decremented later when a driver enters the
-      -- OTP and StartRide fires. SETNX-idempotent on bookingId, so safe vs StartRide.
-      fork "specialZoneDemandDecrementOnOtpConfirm" $
-        SpecialZoneDriverDemand.runDemandDecrementForBooking uBooking.id.getId uBooking.pickupGateId (show $ DV.castServiceTierToVariant uBooking.vehicleServiceTier)
+      -- Special-zone OTP: no driver is assigned at Confirm, so demand stays live. It is
+      -- decremented only when a driver actually takes the ride (enters the OTP → StartRide
+      -- fires → completePickupZoneRequestsForDriver) or when the booking is cancelled
+      -- (releasePickupZoneCountersOnCancel). This keeps pendingDemand reflecting unassigned
+      -- demand rather than dropping it the moment the customer confirms.
       mkDConfirmResp Nothing uBooking riderDetails
 
     handleMeterRideFlow isNewRider driver _ booking riderDetails = do
@@ -211,11 +211,10 @@ handler merchant req validatedQuote = do
       searchTry <- initiateDriverSearchBatch driverSearchBatchInput
       QRB.updateSearchTryId booking.id searchTry.id
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-      -- Static offer Confirm: customer is committed at this gate (demand fulfilled).
-      -- Driver gets matched later via the new search batch; supply tracking happens
-      -- through that flow's StartRide. SETNX-idempotent on bookingId.
-      fork "specialZoneDemandDecrementOnStaticConfirm" $
-        SpecialZoneDriverDemand.runDemandDecrementForBooking uBooking.id.getId uBooking.pickupGateId (show $ DV.castServiceTierToVariant uBooking.vehicleServiceTier)
+      -- Static offer Confirm: no driver is assigned at Confirm (matched later via the new
+      -- search batch), so demand stays live. It is decremented only when that driver takes
+      -- the ride (StartRide → completePickupZoneRequestsForDriver) or when the booking is
+      -- cancelled (releasePickupZoneCountersOnCancel).
       mkDConfirmResp Nothing uBooking riderDetails
 
     updateBookingDetails isNewRider booking riderDetails = do
