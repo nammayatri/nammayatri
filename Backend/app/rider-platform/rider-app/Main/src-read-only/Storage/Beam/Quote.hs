@@ -19,7 +19,8 @@ import qualified SharedLogic.Type
 import Tools.Beam.UtilsTH
 
 data QuoteT f = QuoteT
-  { backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+  { area :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     billingCategory :: B.C f (Kernel.Prelude.Maybe SharedLogic.Type.BillingCategory),
     clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

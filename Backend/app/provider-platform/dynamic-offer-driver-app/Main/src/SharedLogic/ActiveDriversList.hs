@@ -53,7 +53,7 @@ getTTLForActiveDriversList diffTimeFromUTC = do
   now <- getCurrentTime
   let localTime = addUTCTime diffTimeFromUTC now
   let localDate = utctDay localTime
-  let tomorrowLocalDate = addDays 1 localDate
+  let tomorrowLocalDate = addDays 2 localDate
   let tomorrowLocalEnd = UTCTime tomorrowLocalDate (secondsToDiffTime 0)
   let tomorrowUTC = addUTCTime (negate diffTimeFromUTC) tomorrowLocalEnd
   pure $ ceiling (realToFrac (diffUTCTime tomorrowUTC now) :: Double)
