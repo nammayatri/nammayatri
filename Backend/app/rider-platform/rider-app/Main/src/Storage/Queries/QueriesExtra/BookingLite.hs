@@ -10,6 +10,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.Quote
+import qualified Domain.Types.ServiceTierType
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -34,6 +35,10 @@ data BookingLite = BookingLite
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     providerId :: Kernel.Prelude.Text,
+    providerUrl :: Kernel.Prelude.BaseUrl,
+    bppBookingId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Booking.BPPBooking),
+    transactionId :: Kernel.Prelude.Text,
+    vehicleServiceTierType :: Domain.Types.ServiceTierType.ServiceTierType,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     quoteId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Quote.Quote),
     tripCategory :: Kernel.Prelude.Maybe Domain.Types.Common.TripCategory,
@@ -48,6 +53,7 @@ type BookingLiteTable = Beam.BookingT Identity
 instance FromTType' BookingLiteTable BookingLite where
   fromTType' (Beam.BookingT {..}) = do
     merchantOperatingCityId' <- Storage.Queries.Transformers.Booking.backfillMOCId merchantOperatingCityId merchantId
+    providerUrl' <- parseBaseUrl providerUrl
     pure $
       Just
         BookingLite
@@ -56,6 +62,10 @@ instance FromTType' BookingLiteTable BookingLite where
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = merchantOperatingCityId',
             providerId = providerId,
+            providerUrl = providerUrl',
+            bppBookingId = Kernel.Types.Id.Id <$> bppBookingId,
+            transactionId = riderTransactionId,
+            vehicleServiceTierType = vehicleVariant,
             riderId = Kernel.Types.Id.Id riderId,
             quoteId = Kernel.Types.Id.Id <$> quoteId,
             tripCategory = tripCategory,

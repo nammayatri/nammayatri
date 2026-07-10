@@ -763,7 +763,10 @@ data FleetOwnerInfoRes = FleetOwnerInfoRes
     upiId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     linkedDriverIds :: [Kernel.Prelude.Text],
     fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    docsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus
+    docsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus,
+    address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    addressState :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState,
+    addressDocumentType :: Kernel.Prelude.Maybe Dashboard.Common.Driver.AddressDocumentType
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

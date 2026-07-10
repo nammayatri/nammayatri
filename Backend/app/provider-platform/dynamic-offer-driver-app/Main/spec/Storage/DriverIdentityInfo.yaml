@@ -57,6 +57,10 @@ DriverIdentityInfo:
       kvFunction: updateOneWithKV
       params: [courtRecord]
       where: driverId
+    updateLocalAddressDetails:
+      kvFunction: updateOneWithKV
+      params: [address, addressState, addressDocumentType]
+      where: driverId
     deleteByDriverId:
       kvFunction: deleteWithKV
       where: driverId

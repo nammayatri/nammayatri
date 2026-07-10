@@ -45,6 +45,7 @@ mkPersist
       geom Text Maybe
       geomGeoJson Text Maybe
       render Domain.RenderType Maybe
+      fetchAllGateFareProduct Bool Maybe
       priority Int
       enabled Bool
       isOpenMarketEnabled Bool Maybe
