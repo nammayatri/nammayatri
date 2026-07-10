@@ -18,6 +18,7 @@ import qualified Data.HashMap.Strict as HM
 import Data.List (groupBy, sort, sortOn)
 import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Person as DP
+import qualified Domain.Types.Entity as Entity
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
 import Domain.Types.Person as DP
@@ -28,7 +29,7 @@ import qualified Domain.Types.ServerName as DTServer
 import qualified Domain.Types.Transaction as DTransaction
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt, encrypt)
+import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -44,6 +45,7 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import qualified SharedLogic.Transaction as STransaction
 import Storage.Beam.BeamFlow
+import qualified Storage.Queries.Entity as QEntity
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
@@ -59,7 +61,10 @@ import qualified Tools.Utils as Utils
 
 data LoginReq = LoginReq
   { email :: Maybe Text,
-    password :: Text,
+    mobileNumber :: Maybe Text,
+    mobileCountryCode :: Maybe Text,
+    password :: Maybe Text,
+    tokenNo :: Maybe Text,
     otp :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
@@ -112,6 +117,8 @@ data Pending2FASetupData = Pending2FASetupData
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 
+-- The four trailing fields are Maybe so the legacy email+password wire shape
+-- stays additive; tokenNo login populates them for the PT welcome screen.
 data LoginRes = LoginRes
   { authToken :: Text,
     is2faMandatory :: Bool,
@@ -119,7 +126,11 @@ data LoginRes = LoginRes
     message :: Text,
     city :: City.City,
     merchantId :: ShortId DMerchant.Merchant,
-    enforcementDeadline :: Maybe UTCTime
+    enforcementDeadline :: Maybe UTCTime,
+    role :: Maybe Text,
+    firstName :: Maybe Text,
+    lastName :: Maybe Text,
+    entityName :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -168,7 +179,7 @@ login ::
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
-    HasFlowEnv m r '["sendEmailRateLimitOptions" ::: APIRateLimitOptions],
+    HasFlowEnv m r '["loginRateLimitOptions" ::: APIRateLimitOptions],
     HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int],
     HasFlowEnv m r '["is2faMandatory" ::: Bool],
     HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
@@ -179,12 +190,34 @@ login ::
   ) =>
   LoginReq ->
   m LoginRes
-login LoginReq {..} = do
-  sendEmailRateLimitOptions <- asks (.sendEmailRateLimitOptions)
-  checkSlidingWindowLimitWithOptions (makeEmailHitsCountKey email) sendEmailRateLimitOptions
-  email_ <- email & fromMaybeM (InvalidRequest "Email cannot be empty when login type is email")
-  person <- QP.findByEmailAndPassword email_ password >>= fromMaybeM (PersonDoesNotExist email_)
-  Auth.checkPasswordExpiry person
+login rawReq = do
+  let LoginReq {..} = sanitizeLoginReq rawReq
+  person <-
+    case (mobileNumber, mobileCountryCode, tokenNo, email, password) of
+      -- tokenNo branch keeps the error generic so callers can't tell
+      -- "phone not registered" from "wrong token".
+      (Just mob, Just cc, Just tkn, _, _) -> do
+        rateLimitOpts <- asks (.loginRateLimitOptions)
+        checkSlidingWindowLimitWithOptions (makeMobileHitsCountKey cc mob) rateLimitOpts
+        tokenDbHash <- getDbHash tkn
+        mbPerson <- QP.findByMobileNumber mob cc
+        case mbPerson of
+          -- Defense in depth: require DASHBOARD_USER tier so a mistakenly-set
+          -- tokenNoHash on any admin never becomes a login credential.
+          Just p
+            | p.tokenNoHash == Just tokenDbHash,
+              p.dashboardAccessType == Just DRole.DASHBOARD_USER ->
+              pure p
+          _ -> throwError (InvalidRequest "Invalid mobile number or token")
+      (_, _, _, Just em, Just pwd) -> do
+        loginRateLimitOptions <- asks (.loginRateLimitOptions)
+        checkSlidingWindowLimitWithOptions (makeEmailHitsCountKey (Just em)) loginRateLimitOptions
+        p <- QP.findByEmailAndPassword em pwd >>= fromMaybeM (PersonDoesNotExist em)
+        Auth.checkPasswordExpiry p
+        pure p
+      _ ->
+        throwError $
+          InvalidRequest "Provide email+password, or mobileNumber+mobileCountryCode+tokenNo"
   merchantAccessList <- B.runInReplica $ QAccess.findAllMerchantAccessByPersonId person.id
   (merchant', city') <- case merchantAccessList of
     [] -> throwError (InvalidRequest "No access to any merchant")
@@ -209,6 +242,24 @@ login LoginReq {..} = do
 
 makeEmailHitsCountKey :: Maybe Text -> Text
 makeEmailHitsCountKey email = "Email:" <> fromMaybe "" email <> ":hitsCount"
+
+makeMobileHitsCountKey :: Text -> Text -> Text
+makeMobileHitsCountKey cc mobile = "MobileTokenLogin:" <> cc <> ":" <> mobile <> ":hitsCount"
+
+-- Trims every field and collapses Just "" to Nothing so blank submissions
+-- don't slip into the lookup branches with empty credentials.
+sanitizeLoginReq :: LoginReq -> LoginReq
+sanitizeLoginReq r =
+  LoginReq
+    { email = nonBlank r.email,
+      mobileNumber = nonBlank r.mobileNumber,
+      mobileCountryCode = nonBlank r.mobileCountryCode,
+      password = nonBlank r.password,
+      tokenNo = nonBlank r.tokenNo,
+      otp = nonBlank r.otp
+    }
+  where
+    nonBlank = (>>= \v -> let s = T.strip v in if T.null s then Nothing else Just s)
 
 -- Merchant / city switching happens post-authentication (the request carries
 -- a valid TokenInfo). We do NOT re-check 2FA here — the user already passed
@@ -277,7 +328,21 @@ generateLoginRes person merchant otp city = do
     if isToken
       then generateToken person.id merchant city
       else pure ""
-  pure $ LoginRes token twoFaRequired person.is2faEnabled msg city merchant.shortId deadline
+  (mbRoleName, mbEntity) <- lookupRoleAndEntity person
+  pure
+    LoginRes
+      { authToken = token,
+        is2faMandatory = twoFaRequired,
+        is2faEnabled = person.is2faEnabled,
+        message = msg,
+        city = city,
+        merchantId = merchant.shortId,
+        enforcementDeadline = deadline,
+        role = mbRoleName,
+        firstName = Just person.firstName,
+        lastName = Just person.lastName,
+        entityName = mbEntity <&> (.entityName)
+      }
 
 generateLoginResWithoutOtp ::
   ( BeamFlow m r,
@@ -297,7 +362,30 @@ generateLoginResWithoutOtp person merchant city = do
   token <- generateToken person.id merchant city
   twoFaRequired <- is2FARequired person
   deadline <- asks (.twoFaEnforcementDeadline)
-  pure $ LoginRes token twoFaRequired person.is2faEnabled "Logged in successfully" city merchant.shortId deadline
+  (mbRoleName, mbEntity) <- lookupRoleAndEntity person
+  pure
+    LoginRes
+      { authToken = token,
+        is2faMandatory = twoFaRequired,
+        is2faEnabled = person.is2faEnabled,
+        message = "Logged in successfully",
+        city = city,
+        merchantId = merchant.shortId,
+        enforcementDeadline = deadline,
+        role = mbRoleName,
+        firstName = Just person.firstName,
+        lastName = Just person.lastName,
+        entityName = mbEntity <&> (.entityName)
+      }
+
+-- Best-effort: a missing Role or Entity does not fail the login.
+lookupRoleAndEntity :: BeamFlow m r => DP.Person -> m (Maybe Text, Maybe Entity.Entity)
+lookupRoleAndEntity person = do
+  mbRole <- QRole.findById person.roleId
+  mbEntity <- case person.entityId of
+    Just eId -> QEntity.findById eId
+    Nothing -> pure Nothing
+  pure (mbRole <&> (.name), mbEntity)
 
 -- 2FA is required for a person when the deployment enforces it AND the
 -- person's role name isn't in the deployment-configured exempt list
@@ -445,7 +533,7 @@ initiate2FASetup ::
   ( BeamFlow m r,
     Redis.HedisFlow m r,
     Auth.AuthFlow m r,
-    HasFlowEnv m r '["sendEmailRateLimitOptions" ::: APIRateLimitOptions],
+    HasFlowEnv m r '["loginRateLimitOptions" ::: APIRateLimitOptions],
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
@@ -466,8 +554,8 @@ initiate2FASetup Initiate2FASetupReq {..} = do
     Nothing -> do
       email_ <- email & fromMaybeM (InvalidRequest "Email is required when token is not provided")
       password_ <- password & fromMaybeM (InvalidRequest "Password is required when token is not provided")
-      sendEmailRateLimitOptions <- asks (.sendEmailRateLimitOptions)
-      checkSlidingWindowLimitWithOptions (makeEmailHitsCountKey (Just email_)) sendEmailRateLimitOptions
+      loginRateLimitOptions <- asks (.loginRateLimitOptions)
+      checkSlidingWindowLimitWithOptions (makeEmailHitsCountKey (Just email_)) loginRateLimitOptions
       p <- QP.findByEmailAndPassword email_ password_ >>= fromMaybeM (PersonDoesNotExist email_)
       pure (p, Nothing, Nothing)
   personEmail <- case email of
@@ -718,7 +806,9 @@ buildFleetOwner req pid roleId dashboardAccessType = do
         rejectedBy = Nothing,
         language = Nothing,
         secretKey = Nothing,
-        is2faEnabled = False
+        is2faEnabled = False,
+        tokenNoHash = Nothing,
+        entityId = Nothing
       }
 
 validateFleetOwner :: Validate FleetRegisterReq

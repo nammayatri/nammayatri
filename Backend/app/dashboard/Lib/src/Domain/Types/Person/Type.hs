@@ -16,6 +16,7 @@
 module Domain.Types.Person.Type where
 
 import Data.Aeson
+import qualified Domain.Types.Entity as Entity
 import qualified Domain.Types.Role as DRole
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
@@ -46,7 +47,9 @@ data PersonE e = Person
     rejectedBy :: Maybe (Id Person),
     language :: Maybe KET.Language,
     secretKey :: Maybe Text,
-    is2faEnabled :: Bool
+    is2faEnabled :: Bool,
+    tokenNoHash :: Maybe DbHash,
+    entityId :: Maybe (Id Entity.Entity)
   }
   deriving (Generic)
 

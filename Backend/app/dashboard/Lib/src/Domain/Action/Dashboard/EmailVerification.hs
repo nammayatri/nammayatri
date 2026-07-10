@@ -62,7 +62,7 @@ sendEmailVerificationOtp ::
     CoreMetrics m,
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["sendEmailRateLimitOptions" ::: APIRateLimitOptions],
+    HasFlowEnv m r '["loginRateLimitOptions" ::: APIRateLimitOptions],
     HasFlowEnv m r '["twoFaOtpTTLInSecs" ::: Maybe Int]
   ) =>
   TokenInfo ->
@@ -71,8 +71,8 @@ sendEmailVerificationOtp ::
 sendEmailVerificationOtp tokenInfo req = do
   runRequestValidation validateEmailOtpSendReq req
   let email = T.toLower req.email
-  sendEmailRateLimitOptions <- asks (.sendEmailRateLimitOptions)
-  checkSlidingWindowLimitWithOptions (makeEmailOtpHitsCountKey tokenInfo.personId email) sendEmailRateLimitOptions
+  loginRateLimitOptions <- asks (.loginRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (makeEmailOtpHitsCountKey tokenInfo.personId email) loginRateLimitOptions
   merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantDoesNotExist tokenInfo.merchantId.getId)
   let callInternalSendEmailOTP =
         if DTServer.APP_BACKEND `elem` merchant.serverNames
