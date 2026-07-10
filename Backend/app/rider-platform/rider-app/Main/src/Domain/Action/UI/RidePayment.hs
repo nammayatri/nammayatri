@@ -820,7 +820,10 @@ validateRefundComponents rideId booking comps = do
     let cap = componentTotal li c.component
         requested = c.amount.amount
         already = RidePaymentFinance.settledRefundByComponent refundEntries c.component
-    when (already + requested > cap) $
+    -- Compare at currency precision: the app only ever sees cent-rounded totals (PriceAPIEntity
+    -- rounds at serialization) and echoes them back, so a raw comparison spuriously rejects a
+    -- full-component refund whenever the true cap rounds up (e.g. cap 25.7953 shown as 25.80).
+    when (roundAmountByCurrency' booking.estimatedFare.currency (already + requested) > roundAmountByCurrency' booking.estimatedFare.currency cap) $
       throwError
         ( InvalidRequest $
             "Refund for " <> show c.component <> " (already " <> show already <> " + requested " <> show requested
