@@ -74,6 +74,7 @@ import SharedLogic.Allocator.Jobs.Settlement.SettlementReportIngestion (runSettl
 import SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival (checkPickupZoneArrival)
 import SharedLogic.Allocator.Jobs.SpecialZoneQueue.TriggerSpecialZoneNotify (triggerSpecialZoneNotify)
 import SharedLogic.Allocator.Jobs.Subscription.ExpireSubscriptionPurchase (expireSubscriptionPurchase)
+import SharedLogic.Allocator.Jobs.Subscription.RetrySubscriptionPurchaseProcessing (retrySubscriptionPurchaseProcessing)
 import SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
 import SharedLogic.Allocator.Jobs.TDSDistribution.ScheduledTDSDistribution (scheduledTDSDistribution)
 import SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
@@ -169,6 +170,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env sendSpecialZonePayout
           & putJobHandlerInListWrapper flowRt env processReminder
           & putJobHandlerInListWrapper flowRt env expireSubscriptionPurchase
+          & putJobHandlerInListWrapper flowRt env retrySubscriptionPurchaseProcessing
           & putJobHandlerInListWrapper flowRt env sendScheduledBatchPayout
           & putJobHandlerInListWrapper flowRt env runReconciliationJob
           & putJobHandlerInListWrapper flowRt env runSettlementReportIngestionJob
