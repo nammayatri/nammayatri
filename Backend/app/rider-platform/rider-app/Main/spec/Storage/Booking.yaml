@@ -215,6 +215,7 @@ Booking:
     isScheduled: Bool
     vehicleServiceTierType: ServiceTierType|NoRelation
     vehicleServiceTierSeatingCapacity: Maybe Int
+    vehicleServiceTierLuggageCapacity: Maybe Int
     vehicleServiceTierAirConditioned: Maybe Double
     vehicleCategory: Maybe VehicleCategory
     vehicleIconUrl: Maybe BaseUrl

@@ -71,6 +71,7 @@ data QuoteT f = QuoteT
     validTill :: B.C f Kernel.Prelude.UTCTime,
     vehicleIconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleServiceTierAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    vehicleServiceTierLuggageCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleVariant :: B.C f Domain.Types.ServiceTierType.ServiceTierType
   }

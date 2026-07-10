@@ -558,3 +558,4 @@ ALTER TABLE atlas_app.booking ADD COLUMN fare_settlement_type text ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.booking ADD COLUMN vehicle_service_tier_luggage_capacity integer ;

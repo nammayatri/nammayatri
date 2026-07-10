@@ -943,7 +943,8 @@ minimalVehicle =
       vehicleModel = Nothing,
       vehicleRegistration = Nothing,
       vehicleVariant = Nothing,
-      vehicleCapacity = Nothing
+      vehicleCapacity = Nothing,
+      vehicleLuggageCapacity = Nothing
     }
 
 minimalStop :: Spec.Stop

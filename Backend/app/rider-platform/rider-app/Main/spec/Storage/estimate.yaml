@@ -95,6 +95,7 @@ Estimate:
     providerCompletedRidesCount : Int
     vehicleServiceTierType : ServiceTierType
     vehicleServiceTierSeatingCapacity : Maybe Int
+    vehicleServiceTierLuggageCapacity : Maybe Int
     vehicleServiceTierAirConditioned : Maybe Double
     vehicleCategory: Maybe VehicleCategory
     isAirConditioned: Maybe Bool

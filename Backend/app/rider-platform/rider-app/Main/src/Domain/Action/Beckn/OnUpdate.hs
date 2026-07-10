@@ -637,8 +637,9 @@ onUpdate = \case
         mbIsAirConditioned = mbNewQuote >>= (.isAirConditioned)
         mbVehicleServiceTierAC = mbNewQuote >>= (.vehicleServiceTierAirConditioned)
         mbSeatingCapacity = mbNewQuote >>= (.vehicleServiceTierSeatingCapacity)
+        mbLuggageCapacity = mbNewQuote >>= (.vehicleServiceTierLuggageCapacity)
     -- Single DB update with all changed fields after BPP confirms
-    QEBooking.updateServiceTierOnChange booking.id newVehicleServiceTier newEstimatedFare mbBapQuoteId mbServiceTierName mbServiceTierShortDesc mbIsAirConditioned mbVehicleServiceTierAC mbSeatingCapacity
+    QEBooking.updateServiceTierOnChange booking.id newVehicleServiceTier newEstimatedFare mbBapQuoteId mbServiceTierName mbServiceTierShortDesc mbIsAirConditioned mbVehicleServiceTierAC mbSeatingCapacity mbLuggageCapacity
     let newServiceTierName = fromMaybe (show newVehicleServiceTier) mbServiceTierName
     Notify.notifyOnServiceTierChange booking newServiceTierName
   OUValidatedAddBaggageReq ValidatedAddBaggageReq {..} -> do
