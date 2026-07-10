@@ -90,6 +90,7 @@ getConfigImpl _dimensions wrappedConfig logicDomain merchantOpCityId = do
       let selectedRollout = find (\(_, cumulativePerc) -> toss <= cumulativePerc) cumulativeRollouts
       let baseRollout = find (\rollout -> rollout.isBaseVersion == Just True) allActiveRollouts
       let selectedRollouts = maybeToList (fst <$> selectedRollout) <> maybeToList baseRollout
+      logDebug $ "[GETCONFIG_SELECT] domain=" <> show logicDomain <> " active=" <> show (map (\r -> (r.version, r.isBaseVersion)) allActiveRollouts) <> " toss=" <> show toss <> " base=" <> show ((.version) <$> baseRollout) <> " selected=" <> show ((.version) <$> selectedRollouts)
       pure $ (.version) <$> selectedRollouts
     buildCumulativeRollouts rollouts =
       snd $
