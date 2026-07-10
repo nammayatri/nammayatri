@@ -2109,6 +2109,9 @@ types:
     - linkedDriverIds: "[Text]"
     - fleetName: Maybe Text
     - docsVerificationStatus: Maybe DocsVerificationStatus
+    - address: Maybe Text
+    - addressState: Maybe IndianState
+    - addressDocumentType: Maybe AddressDocumentType
     - derive: "'HideSecrets"
   FleetConfig:
     - allowAutomaticRoundTripAssignment: Bool

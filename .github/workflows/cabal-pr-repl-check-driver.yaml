@@ -5,6 +5,20 @@ on:
     types: [opened, synchronize, reopened]
     branches:
       - "main"
+    paths:
+      # Driver app sources
+      - "Backend/app/provider-platform/**"
+      # Shared libraries + dashboard CommonAPIs that the driver repl pulls in
+      - "Backend/lib/**"
+      - "Backend/app/dashboard/CommonAPIs/**"
+      # Cabal / nix build inputs that affect compilation
+      - "Backend/cabal.project"
+      - "Backend/default.nix"
+      - "Backend/nix/**"
+      - "flake.nix"
+      - "flake.lock"
+      # This workflow itself
+      - ".github/workflows/cabal-pr-repl-check-driver.yaml"
   workflow_dispatch:
 
 concurrency:
