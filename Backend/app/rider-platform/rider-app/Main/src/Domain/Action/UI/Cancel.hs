@@ -17,6 +17,7 @@ module Domain.Action.UI.Cancel
     softCancel,
     CancelReq (..),
     CancelRes (..),
+    SoftCancelRes (..),
     CancelSearch (..),
     CancellationDuesDetailsRes (..),
     CancellationDueBreakup (..),
@@ -30,6 +31,7 @@ module Domain.Action.UI.Cancel
   )
 where
 
+import qualified API.Types.UI.CancellationReasons as CancellationReasons
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.HashMap.Strict as HM
 import Domain.Action.UI.CancelLogic
@@ -70,11 +72,11 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
-import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverOffer as QDOffer
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Maps as Maps
@@ -114,6 +116,12 @@ data CancelSearch = CancelSearch
     vehicleVariant :: DVeh.VehicleVariant
   }
 
+data SoftCancelRes = SoftCancelRes
+  { result :: Text,
+    cancellationReasons :: [CancellationReasons.CancellationReasonEntity]
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
 data CancellationDuesDetailsRes = CancellationDuesDetailsRes
   { cancellationDues :: PriceAPIEntity,
     cancellationDuesPaid :: HighPrecMoney,
@@ -133,9 +141,8 @@ data CancellationDueBreakup = CancellationDueBreakup
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-softCancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> m CancelRes
-softCancel bookingId _ = do
-  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+softCancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => QBookingLite.BookingLite -> (Id Person.Person, Id Merchant.Merchant) -> m CancelRes
+softCancel booking _ = do
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   bppBookingId <- fromMaybeM (BookingFieldNotPresent "bppBookingId") booking.bppBookingId
   city <-

@@ -411,6 +411,17 @@ findByMobileNumberAndMerchantAndRoles countryCode mobileNumberHash (Id merchantI
         ]
     ]
 
+findAllByMobileNumberAndMerchantAndRoles :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DbHash -> Id Merchant -> [Role] -> m [Person]
+findAllByMobileNumberAndMerchantAndRoles countryCode mobileNumberHash (Id merchantId) roles =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
+          Se.Is BeamP.merchantId $ Se.Eq merchantId,
+          Se.Or [Se.Is BeamP.mobileNumberHash $ Se.Eq $ Just mobileNumberHash, Se.Is BeamP.alternateMobileNumberHash $ Se.Eq $ Just mobileNumberHash],
+          Se.Is BeamP.role $ Se.In roles
+        ]
+    ]
+
 updatePersonName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe Text -> Maybe Text -> m ()
 updatePersonName (Id personId) mbFirstName mbLastName = do
   now <- getCurrentTime
@@ -703,6 +714,15 @@ updateMerchantIdAndCityId personId merchantId merchantOperatingCityId = do
 findByMobileNumberAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> Id Merchant -> m (Maybe Person)
 findByMobileNumberAndMerchant mobileNumberHash (Id merchantId) =
   findOneWithKV
+    [ Se.And
+        [ Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash),
+          Se.Is BeamP.merchantId $ Se.Eq merchantId
+        ]
+    ]
+
+findAllByMobileNumberAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> Id Merchant -> m [Person]
+findAllByMobileNumberAndMerchant mobileNumberHash (Id merchantId) =
+  findAllWithKV
     [ Se.And
         [ Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash),
           Se.Is BeamP.merchantId $ Se.Eq merchantId

@@ -24,12 +24,14 @@ where
 
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Domain.Action.UI.Cancel as DCancel
+import qualified Domain.Action.UI.CancellationReasons as DCancellationReasons
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import Environment
 import qualified Kernel.Beam.Functions as B
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
@@ -38,6 +40,7 @@ import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Ride as QR
 import Tools.Auth
 import Tools.Error
@@ -59,7 +62,8 @@ type SoftCancelAPI =
     :> Capture "rideBookingId" (Id SRB.Booking)
     :> "softCancel"
     :> TokenAuth
-    :> Post '[JSON] APISuccess
+    :> Header "x-language" Language
+    :> Post '[JSON] DCancel.SoftCancelRes
 
 type CancelAPI =
   "rideBooking"
@@ -80,13 +84,16 @@ handler =
 softCancel ::
   Id SRB.Booking ->
   (Id Person.Person, Id Merchant.Merchant) ->
-  FlowHandler APISuccess
-softCancel bookingId (personId, merchantId) =
+  Maybe Language ->
+  FlowHandler DCancel.SoftCancelRes
+softCancel bookingId (personId, merchantId) mbLanguage =
   withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
-    dCancelRes <- DCancel.softCancel bookingId (personId, merchantId)
+    booking <- QBookingLite.findByIdLite bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+    dCancelRes <- DCancel.softCancel booking (personId, merchantId)
     cancelBecknReq <- ACL.buildCancelReqV2 dCancelRes Nothing
     void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl cancelBecknReq
-    return Success
+    cancellationReasons <- DCancellationReasons.getCancellationReasonsForBooking booking mbLanguage
+    return $ DCancel.SoftCancelRes {result = "Success", cancellationReasons}
 
 getCancellationDuesDetails ::
   (Id Person.Person, Id Merchant.Merchant) ->

@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Action.UI.CancellationReasons (getRideBookingCancellationReasons) where
+module Domain.Action.UI.CancellationReasons (getRideBookingCancellationReasons, getCancellationReasonsForBooking) where
 
 import qualified API.Types.UI.CancellationReasons as API
 import qualified Data.Char as Char
@@ -42,7 +42,14 @@ getRideBookingCancellationReasons ::
   Flow [API.CancellationReasonEntity]
 getRideBookingCancellationReasons _authInfo bookingId mbLang = do
   booking <- B.runInReplica $ QBookingLite.findByIdLite bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
-  mbActiveRide <- B.runInReplica $ QRide.findActiveByRBId bookingId
+  getCancellationReasonsForBooking booking mbLang
+
+getCancellationReasonsForBooking ::
+  QBookingLite.BookingLite ->
+  Maybe Lang.Language ->
+  Flow [API.CancellationReasonEntity]
+getCancellationReasonsForBooking booking mbLang = do
+  mbActiveRide <- B.runInReplica $ QRide.findActiveByRBId booking.id
   let merchantOperatingCityId = booking.merchantOperatingCityId
       hasRideAssigned = isJust mbActiveRide
       isAC = fromMaybe False booking.isAirConditioned

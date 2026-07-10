@@ -275,7 +275,7 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceN
             throwError $ InvalidRequest "Status of some id is not PAYMENT_OVERDUE."
           return duePaymentIds
     let totalFee = sum $ map (\fee -> fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) driverFees
-    now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+    now <- getCurrentTime
     QDriverInfo.updatePendingPayment False driverId
     QDriverInfo.updateSubscription True driverId
     mapM_ (QDF.updateCollectedPaymentStatus (paymentStatus isExempted) (Just requestorId) now mbVendorId) ((.id) <$> driverFees)
