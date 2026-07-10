@@ -570,7 +570,9 @@ buildPerson req dashboardAccessType = do
         rejectedBy = Nothing,
         language = Nothing,
         secretKey = Nothing,
-        is2faEnabled = False
+        is2faEnabled = False,
+        tokenNoHash = Nothing,
+        entityId = Nothing
       }
 
 data UpdatePersonReq = UpdatePersonReq
