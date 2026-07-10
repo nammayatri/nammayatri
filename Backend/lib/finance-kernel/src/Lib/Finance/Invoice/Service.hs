@@ -64,19 +64,48 @@ import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirect
 import qualified Lib.Finance.Storage.Queries.Invoice as QInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceLedgerLink as QLink
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedger
+import qualified Lib.Finance.Utils.SensitiveData as SD
 
 --------------------------------------------------------------------------------
 -- AUDIT HELPERS
 --------------------------------------------------------------------------------
 
 invoiceToAuditValue :: Invoice -> Aeson.Value
-invoiceToAuditValue invoice = Aeson.toJSON (toTType' invoice :: BeamInvoice.Invoice)
+invoiceToAuditValue = Aeson.toJSON . toTType' @BeamInvoice.Invoice . hideInvoiceSensitiveFields
+  where
+    hideInvoiceSensitiveFields :: Invoice -> Invoice
+    hideInvoiceSensitiveFields Invoice {..} =
+      Invoice
+        { issuedToName = Nothing,
+          issuedToAddress = Nothing,
+          supplierGSTIN = SD.maskTaxNo <$> supplierGSTIN,
+          supplierTaxNo = SD.maskTaxNo <$> supplierTaxNo,
+          irn = Nothing,
+          signedQRCode = Nothing,
+          ..
+        }
 
 indirectTaxToAuditValue :: IndirectTaxTransaction -> Aeson.Value
-indirectTaxToAuditValue txn = Aeson.toJSON (toTType' txn :: BeamIndirectTax.IndirectTaxTransaction)
+indirectTaxToAuditValue = Aeson.toJSON . toTType' @BeamIndirectTax.IndirectTaxTransaction . hideIndirectTaxTransactionSensiveFields
+  where
+    hideIndirectTaxTransactionSensiveFields :: IndirectTaxTransaction -> IndirectTaxTransaction
+    hideIndirectTaxTransactionSensiveFields IndirectTaxTransaction {..} =
+      IndirectTaxTransaction
+        { gstinOfParty = SD.maskTaxNo <$> gstinOfParty,
+          issuedToTaxNo = SD.maskTaxNo <$> issuedToTaxNo,
+          ..
+        }
 
 directTaxToAuditValue :: DirectTaxTransaction -> Aeson.Value
-directTaxToAuditValue txn = Aeson.toJSON (toTType' txn :: BeamDirectTax.DirectTaxTransaction)
+directTaxToAuditValue = Aeson.toJSON . toTType' @BeamDirectTax.DirectTaxTransaction . hideDirectTaxTransactionSensitiveFields
+  where
+    hideDirectTaxTransactionSensitiveFields :: DirectTaxTransaction -> DirectTaxTransaction
+    hideDirectTaxTransactionSensitiveFields DirectTaxTransaction {..} =
+      DirectTaxTransaction
+        { panOfParty = SD.maskTaxNo <$> panOfParty,
+          tanOfDeductee = SD.maskTaxNo <$> tanOfDeductee,
+          ..
+        }
 
 logFinanceEntityAudit ::
   BeamFlow.BeamFlow m r =>

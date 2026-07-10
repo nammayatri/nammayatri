@@ -23,6 +23,7 @@ DirectTaxTransaction:
       enum: "PAN,PAN_AADHAR_LINKAGE,LDC_CERTIFICATE,NO_PAN"
       derive: "ToParamSchema"
 
+  # NOTE: Mask sensitive values in directTaxToAuditValue (Invoice.Service)
   fields:
     id: Id DirectTaxTransaction
     transactionDate: UTCTime
@@ -34,9 +35,9 @@ DirectTaxTransaction:
     netAmountPaid: HighPrecMoney
     tdsTreatment: TdsTreatment
     counterpartyId: Text
-    panOfParty: Maybe Text
+    panOfParty: Maybe Text # SENSITIVE
     panType: Maybe Text
-    tanOfDeductee: Maybe Text
+    tanOfDeductee: Maybe Text # SENSITIVE
     paymentDate: Maybe UTCTime
     invoiceNumber: Maybe Text
     merchantId: Text
