@@ -30,7 +30,8 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
     pure $
       Just
         Domain.Types.Estimate.Estimate
-          { backendAppVersion = backendAppVersion,
+          { area = area,
+            backendAppVersion = backendAppVersion,
             backendConfigVersion = backendConfigVersion',
             boostSearchPreSelectionServiceTierConfig = boostSearchPreSelectionServiceTierConfig,
             bppEstimateId = Kernel.Types.Id.Id bppEstimateId,
@@ -96,7 +97,8 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
 instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
   toTType' (Domain.Types.Estimate.Estimate {..}) = do
     Beam.EstimateT
-      { Beam.backendAppVersion = backendAppVersion,
+      { Beam.area = area,
+        Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
         Beam.boostSearchPreSelectionServiceTierConfig = boostSearchPreSelectionServiceTierConfig,
         Beam.bppEstimateId = Kernel.Types.Id.getId bppEstimateId,

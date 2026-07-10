@@ -43,6 +43,7 @@ import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Id as KTI
 import Kernel.Utils.GenericPretty
+import qualified Lib.Types.SpecialLocation as SL
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForJSON)
 
 data ReturnFee
@@ -281,7 +282,8 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     mbActualQARCity :: Maybe Double,
     conditionalCharges :: [DTAC.ConditionalCharges],
     congestionChargeData :: Maybe CongestionChargeData,
-    driverCancellationPenaltyAmount :: Maybe HighPrecMoney
+    driverCancellationPenaltyAmount :: Maybe HighPrecMoney,
+    mbArea :: Maybe SL.Area
   }
   deriving (Generic, Show)
 
@@ -337,6 +339,7 @@ farePolicyToFullFarePolicy :: Id Merchant -> DVST.ServiceTierType -> DTC.TripCat
 farePolicyToFullFarePolicy merchantId' vehicleServiceTier tripCategory cancellationFarePolicy CongestionChargeDetails {..} congestionChargeData FarePolicy {..} disableRecompute =
   FullFarePolicy
     { merchantId = merchantId',
+      mbArea = Nothing,
       ..
     }
 

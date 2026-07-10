@@ -18,6 +18,7 @@ module Domain.Action.Beckn.Select
   )
 where
 
+import Control.Applicative ((<|>))
 import Data.Either.Extra (eitherToMaybe)
 import Data.Text as Text hiding (find)
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
@@ -36,6 +37,7 @@ import qualified Kernel.Tools.Metrics.AppMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
+import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
@@ -110,6 +112,12 @@ handler merchant sReq searchReq estimates = do
           personalDiscount = if sReq.billingCategory == SLT.PERSONAL then fromMaybe 0.0 estimate.personalDiscount else 0.0
       buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 sReq.customerExtraFee + fromMaybe 0 petCharges' - businessDiscount - personalDiscount) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId driverAdditionalCharges False ((.congestionCharge) =<< estimate.fareParams) petCharges' (estimate.fareParams >>= (.priorityCharges)) estimate.commissionCharges (estimate.fareParams >>= (.tollCharges)) (estimate.fareParams >>= (.govtCharges))
   let parcelType = (fst sReq.parcelDetails) >>= \rpt -> readMaybe @DParcel.ParcelType $ unpack rpt
+      -- Quotes-first airport flow: the picked estimate carries its own gate area (e.g.
+      -- Pickup_<slId>_Gate_<gateId>). Refine the SearchRequest.area/pickupGateId from
+      -- that so per-gate driver-queue routing (Redis DriverDemand:Gate:<gateId>:<variant>)
+      -- dispatches to the right pool.
+      mbEstimateArea = listToMaybe estimates >>= (.area) >>= (readMaybe . Text.unpack)
+      mbEstimateGateId = mbEstimateArea >>= SL.pickupGateIdFromArea
       updatedSearchRequest =
         searchReq
           { DSR.disabilityTag = if sReq.disabilityDisable == Just True then Nothing else searchReq.disabilityTag,
@@ -118,7 +126,9 @@ handler merchant sReq searchReq estimates = do
             DSR.riderId = riderId,
             DSR.parcelType = if isJust parcelType then parcelType else searchReq.parcelType,
             DSR.parcelQuantity = if isJust parcelType then snd sReq.parcelDetails else searchReq.parcelQuantity,
-            DSR.preferSafetyPlus = sReq.preferSafetyPlus
+            DSR.preferSafetyPlus = sReq.preferSafetyPlus,
+            DSR.area = mbEstimateArea <|> searchReq.area,
+            DSR.pickupGateId = mbEstimateGateId <|> searchReq.pickupGateId
           }
   QSR.updateMultipleByRequestId updatedSearchRequest searchReq.isScheduled
   QSR.updateByPrimaryKey updatedSearchRequest
