@@ -94,6 +94,7 @@ data SpecialLocation = SpecialLocation
     isQueueEnabled :: Maybe Bool,
     enforceTollRoute :: Maybe Bool,
     render :: Maybe RenderType,
+    fetchAllGateFareProduct :: Maybe Bool,
     priority :: Int,
     supportNumber :: Maybe Text,
     paymentModes :: Maybe [PaymentMode],

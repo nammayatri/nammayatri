@@ -63,7 +63,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.businessDiscount businessDiscount,
+    [ Se.Set Beam.area area,
+      Se.Set Beam.businessDiscount businessDiscount,
       Se.Set Beam.commissionCharges commissionCharges,
       Se.Set Beam.congestionMultiplier congestionMultiplier,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
@@ -127,7 +128,8 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
     pure $
       Just
         Domain.Types.Estimate.Estimate
-          { businessDiscount = businessDiscount,
+          { area = area,
+            businessDiscount = businessDiscount,
             commissionCharges = commissionCharges,
             congestionMultiplier = congestionMultiplier,
             createdAt = createdAt,
@@ -181,7 +183,8 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
 instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
   toTType' (Domain.Types.Estimate.Estimate {..}) = do
     Beam.EstimateT
-      { Beam.businessDiscount = businessDiscount,
+      { Beam.area = area,
+        Beam.businessDiscount = businessDiscount,
         Beam.commissionCharges = commissionCharges,
         Beam.congestionMultiplier = congestionMultiplier,
         Beam.createdAt = createdAt,

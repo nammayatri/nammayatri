@@ -30,6 +30,7 @@ import qualified API.Action.UI.DriverSafetySettings as DriverSafetySettings
 import qualified API.Action.UI.DriverWallet as DriverWallet
 import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.FRFSFleetOperator as FRFSFleetOperator
+import qualified API.Action.UI.Faq as Faq
 import qualified API.Action.UI.FareCalculator as FareCalculator
 import qualified API.Action.UI.FinanceInvoice as FinanceInvoice
 import qualified API.Action.UI.FleetOwnerList as FleetOwnerList
@@ -148,6 +149,7 @@ type API =
            :<|> SpecialLocation.API
            :<|> SpecialZoneQueue.API
            :<|> Reels.API
+           :<|> Faq.API
            :<|> Cac.API
            :<|> EditBooking.API
            :<|> SocialLogin.API
@@ -224,6 +226,7 @@ handler =
     :<|> SpecialLocation.handler
     :<|> SpecialZoneQueue.handler
     :<|> Reels.handler
+    :<|> Faq.handler
     :<|> Cac.handler
     :<|> EditBooking.handler
     :<|> SocialLogin.handler

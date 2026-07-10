@@ -48,6 +48,7 @@ mkPersist
       isQueueEnabled Bool Maybe
       enforceTollRoute Bool Maybe
       render Domain.RenderType Maybe
+      fetchAllGateFareProduct Bool Maybe
       supportNumber Text Maybe
       paymentModes (PostgresList Domain.PaymentMode) Maybe
       fareSettlementType Domain.FareSettlementType Maybe
