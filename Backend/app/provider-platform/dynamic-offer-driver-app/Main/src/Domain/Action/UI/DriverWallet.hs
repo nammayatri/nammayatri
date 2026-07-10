@@ -209,7 +209,7 @@ fetchWalletRowsFromLedger ::
   UTCTime ->
   m [CHLE.WalletEntryRow]
 fetchWalletRowsFromLedger accountIds mbConcernedIndividualId fromDate toDate = do
-  let allRefs = walletCreditRefs ++ [walletReferencePayout]
+  let allRefs = walletCreditRefs ++ [walletReferencePayout, walletReferenceAirportCashWithdrawal]
   entries <-
     QLedgerEntry.findByAccountsWithConcernedIndividual
       accountIds
@@ -239,7 +239,7 @@ fetchWalletRowsFromCH ::
   UTCTime ->
   m [CHLE.WalletEntryRow]
 fetchWalletRowsFromCH accountIds mbConcernedIndividualId fromDate toDate = do
-  let allRefs = walletCreditRefs ++ [walletReferencePayout]
+  let allRefs = walletCreditRefs ++ [walletReferencePayout, walletReferenceAirportCashWithdrawal]
   CHLE.findWalletEntries accountIds mbConcernedIndividualId fromDate toDate allRefs
 
 -- | Aggregate raw entries into the WalletSummary fields:
@@ -394,6 +394,7 @@ referenceTypeToItemName ref
   | ref == walletReferenceTDSDeductionCash = "TDS (Cash)"
   | ref == walletReferencePayout = "Withdrawal"
   | ref == walletReferenceAirportCashRecharge = "Airport cash recharge (booth)"
+  | ref == walletReferenceAirportCashWithdrawal = "Airport cash withdrawal (booth)"
   | ref == walletReferenceDiscountsOnline = "Discounts Incl. Vat (Online)"
   | ref == walletReferenceDiscountsCash = "Discounts Incl. Vat (Cash)"
   | ref == walletReferenceCommissionOnline = "Commission (Online)"
@@ -820,6 +821,8 @@ mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId = do
 
 -- | Record airport booth cash recharge: credit driver wallet (PlatformAsset → OwnerLiability)
 --   with referenceType = walletReferenceAirportCashRecharge. Idempotent by referenceId (e.g. booth receipt id).
+--   A negative amount performs a reversal: the accounts are swapped (OwnerLiability → PlatformAsset)
+--   for the absolute amount and no invoice is generated.
 recordAirportCashRecharge ::
   ( BeamFlow m r,
     CacheFlow m r,
@@ -837,9 +840,16 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
   now <- getCurrentTime
   effectiveAirport <- QDI.resolveAirportRestriction now driverInfo
   when (effectiveAirport == DI.BLOCKED) $ throwError DriverNotEnabledForAirport
-  when (amount <= 0) $ throwError $ InvalidRequest "Cash recharge amount must be greater than zero"
-  existing <- getEntriesByReference walletReferenceAirportCashRecharge referenceId
+  when (amount == 0) $ throwError $ InvalidRequest "Cash recharge amount must not be zero"
+  let isReversal = amount < 0
+      absAmount = abs amount
+      referenceType = if isReversal then walletReferenceAirportCashWithdrawal else walletReferenceAirportCashRecharge
+  existing <- getEntriesByReference referenceType referenceId
   when (null existing) $ do
+    when isReversal $ do
+      currentBalance <- fromMaybe 0 <$> getWalletBalanceByOwner FAccount.DRIVER driverId.getId
+      when (currentBalance < absAmount) $
+        throwError $ InvalidRequest "Insufficient wallet balance for airport cash withdrawal"
     merchantOpCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
     let currency = merchantOpCity.currency
     ctx <- mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId
@@ -860,7 +870,11 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
               periodStart = Nothing,
               periodEnd = Nothing
             }
-    result <- runFinance ctx $ do
-      _ <- transfer PlatformAsset OwnerLiability amount walletReferenceAirportCashRecharge
-      invoice cashRechargeInvoiceConfig
+    result <-
+      runFinance ctx $
+        if isReversal
+          then void $ transfer OwnerLiability PlatformAsset absAmount referenceType
+          else do
+            _ <- transfer PlatformAsset OwnerLiability amount referenceType
+            void $ invoice cashRechargeInvoiceConfig
     void $ fromEitherM (\e -> WalletLedgerEntryFailed ("airport cash recharge: " <> show e)) result

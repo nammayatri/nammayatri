@@ -109,6 +109,7 @@ module SharedLogic.Finance.Wallet
     walletReferenceVATCash,
     walletReferenceD2DReferral,
     walletReferenceAirportCashRecharge,
+    walletReferenceAirportCashWithdrawal,
     walletReferenceAirportEntryFeeGST,
     walletReferenceAirportEntryFee,
     walletReferenceVATInput,
@@ -232,6 +233,10 @@ walletReferenceD2DReferral = "D2DReferral"
 -- | Reference type for airport booth cash recharge (idempotent by referenceId; booth operator took amount)
 walletReferenceAirportCashRecharge :: Text
 walletReferenceAirportCashRecharge = "AirportCashRecharge"
+
+-- | Reference type for airport booth cash withdrawal/reversal (debit; idempotent by referenceId)
+walletReferenceAirportCashWithdrawal :: Text
+walletReferenceAirportCashWithdrawal = "AirportCashWithdrawal"
 
 -- | Reference type for airport entry fee GST ledger entry at EndRide (third party GST)
 walletReferenceAirportEntryFeeGST :: Text
