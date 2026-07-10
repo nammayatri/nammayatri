@@ -7,7 +7,7 @@ on:
       - "prodHotPush-BAP"
       - "prodHotPush-BPP"
       - "prodHotPush-International"
-      - "fix/revert-build-flags-bap" # temp: remove after testing
+      - "ci/cabal-cache-copy" # temp: remove after testing
   workflow_dispatch:
 
 # Cancel in-progress Pull Request workflows if a new workflow is triggered, or a new commit is pushed to the branch.
@@ -73,7 +73,7 @@ jobs:
             name: Cabal Incremental Prod Release Build
             continue-on-error: false
       fail-fast: false
-    runs-on: ${{ startsWith(github.ref_name, 'prodHotPush-') && format('x86_64_{0}_push', github.ref_name) || 'x86_64_prodHotPush-BAP_push' }}
+    runs-on: ${{ startsWith(github.ref_name, 'prodHotPush-') && format('x86_64_{0}_push', github.ref_name) || 'x86_64_prodHotPush-BAP_push' }} # temp: remove after testing
     outputs:
       docker-image-name: ${{ steps.docker.outputs.base_image }}
     steps:
