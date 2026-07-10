@@ -231,6 +231,9 @@ updateFleetOwnerInfo fleetOwnerInfo = do
       Se.Set Beam.businessLicenseNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash fleetOwnerInfo.businessLicenseNumber),
       Se.Set Beam.businessLicenseNumber Nothing,
       Se.Set Beam.vatNumber fleetOwnerInfo.vatNumber,
+      Se.Set Beam.address fleetOwnerInfo.address,
+      Se.Set Beam.addressState fleetOwnerInfo.addressState,
+      Se.Set Beam.addressDocumentType fleetOwnerInfo.addressDocumentType,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerInfo.fleetOwnerPersonId)]
@@ -285,7 +288,10 @@ updateByPrimaryKey fleetOwnerInfo = do
           Se.Set Beam.docsVerificationStatus docsVerificationStatus,
           Se.Set Beam.createdAt createdAt,
           Se.Set Beam.updatedAt _now,
-          Se.Set Beam.fleetName fleetName
+          Se.Set Beam.fleetName fleetName,
+          Se.Set Beam.address address,
+          Se.Set Beam.addressState addressState,
+          Se.Set Beam.addressDocumentType addressDocumentType
         ]
         [Se.And [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]]
 
