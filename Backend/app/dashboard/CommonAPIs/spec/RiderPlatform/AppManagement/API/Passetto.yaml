@@ -1,0 +1,30 @@
+module: Passetto
+
+types:
+  PassettoEncryptReq:
+    - value: Text
+    - derive: "'HideSecrets"
+  PassettoEncryptResp:
+    encryptedValue: Text
+  PassettoDecryptReq:
+    - encryptedValue: Text
+    - derive: "'HideSecrets"
+  PassettoDecryptResp:
+    - value: Text
+    - derive: "'HideSecrets"
+
+apis:
+  - POST:
+      endpoint: /encrypt
+      auth: ApiAuthV2
+      request:
+        type: PassettoEncryptReq
+      response:
+        type: PassettoEncryptResp
+  - POST:
+      endpoint: /decrypt
+      auth: ApiAuthV2
+      request:
+        type: PassettoDecryptReq
+      response:
+        type: PassettoDecryptResp
