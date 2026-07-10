@@ -24,6 +24,7 @@ imports:
   PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
   SearchTry: Domain.Types.SearchTry
   FareSettlementType: Lib.Types.SpecialLocation
+  Language: Tools.Maps
 
 Booking:
   derives: "Generic,Show,FromJSON,ToJSON"
@@ -120,6 +121,7 @@ Booking:
     financeInvoiceId: Maybe Text
     emailDomain: Maybe Text
     businessEmailDomain: Maybe Text
+    customerLanguage: Maybe Language
 
   excludedFields:
     - merchantId

@@ -25,6 +25,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Types.Beckn.Context as Context
@@ -88,7 +89,8 @@ data OnInitRes = OnInitRes
     paymentMode :: Maybe DMPM.PaymentMode,
     paymentInstrument :: Maybe DMPM.PaymentInstrument,
     driverPreference :: Maybe [Text],
-    discount :: Maybe Price
+    discount :: Maybe Price,
+    riderLanguage :: Maybe Maps.Language
   }
   deriving (Generic, Show)
 
@@ -164,6 +166,7 @@ onInit req = do
             paymentMode = booking.paymentMode,
             driverPreference = booking.driverPreference,
             discount = booking.discount,
+            riderLanguage = decRider.language,
             ..
           }
   Metrics.finishMetricsBap Metrics.INIT merchant.name booking.transactionId booking.merchantOperatingCityId.getId
@@ -254,7 +257,8 @@ buildOnInitResFromBooking bookingId = do
         paymentMode = booking.paymentMode,
         paymentInstrument = booking.paymentInstrument,
         driverPreference = booking.driverPreference,
-        discount = booking.discount
+        discount = booking.discount,
+        riderLanguage = decRider.language
       }
   where
     convertToPersonRideShareOptions :: SafetyCommon.RideShareOptions -> Person.RideShareOptions
