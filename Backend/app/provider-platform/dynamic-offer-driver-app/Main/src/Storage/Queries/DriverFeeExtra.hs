@@ -304,12 +304,12 @@ updateFee ::
   HighPrecMoney ->
   HighPrecMoney ->
   HighPrecMoney ->
-  UTCTime ->
   Bool ->
   SRB.Booking ->
   Bool ->
   m ()
-updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd _booking isSpecialZoneCharge = do
+updateFee driverFeeId mbFare govtCharges platformFee cgst sgst isRideEnd _booking isSpecialZoneCharge = do
+  now <- getCurrentTime
   driverFeeObject <- findById driverFeeId
   case driverFeeObject of
     Just df -> do
@@ -455,17 +455,12 @@ updateAutopayPaymentStageAndRetryCountByIds autopayPaymentStage retryCount drive
 --- note :- bad debt recovery date set in fork pls remeber to add fork in all places with driver fee status update in future----
 updateStatusByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverFeeStatus -> [Id DriverFee] -> UTCTime -> m ()
 updateStatusByIds status driverFeeIds now = do
-  case status of
-    CLEARED -> do
-      updateWithKV
-        [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now, Se.Set BeamDF.collectedAt (Just now)]
-        [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
-    _ -> do
-      updateWithKV
-        ( [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
-            <> [Se.Set BeamDF.badDebtDeclarationDate $ Just now | status `elem` [EXEMPTED, INACTIVE]]
-        )
-        [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
+  updateWithKV
+    ( [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
+        <> [Se.Set BeamDF.collectedAt (Just now) | status `elem` [CLEARED, COLLECTED_CASH]]
+        <> [Se.Set BeamDF.badDebtDeclarationDate $ Just now | status `elem` [EXEMPTED, INACTIVE]]
+    )
+    [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
   fork "set bad recovery date" $ do updateBadDebtRecoveryDate status driverFeeIds
 
 updateFeeTypeByIds :: (MonadFlow m, EsqDBFlow m r) => FeeType -> [Id DriverFee] -> UTCTime -> m ()
@@ -646,6 +641,7 @@ updateStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverFeeStatus -
 updateStatus status (Id driverFeeId) now = do
   updateOneWithKV
     ( [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
+        <> [Se.Set BeamDF.collectedAt (Just now) | status `elem` [CLEARED, COLLECTED_CASH]]
         <> [Se.Set BeamDF.badDebtDeclarationDate $ Just now | status == EXEMPTED]
     )
     [Se.Is BeamDF.id (Se.Eq driverFeeId)]

@@ -84,6 +84,8 @@ import Domain.Types.TransporterConfig hiding (InvoiceConfig)
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Variant
 import qualified Domain.Types.VendorFee as DVF
+import qualified Domain.Types.VendorSplitDetails as DVSD
+import qualified Environment
 import EulerHS.Prelude hiding (elem, foldr, id, length, map, mapM_, null)
 import GHC.Float (double2Int)
 import GHC.Num.Integer (integerFromInt, integerToInt)
@@ -1410,8 +1412,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
         _ -> return (0, 0, 0, False)
       let totalDriverFee = govtCharges + platformFee + cgst + sgst
       now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-      vehicle <- QV.findById driverId
-      let currentVehicleCategory = vehicle >>= (.category)
+      let currentVehicleCategory = Just $ Variant.castVehicleVariantToVehicleCategory $ Variant.castServiceTierToVariant booking.vehicleServiceTier
       subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId (Just booking.configInExperimentVersions) serviceName
       let isPlanMandatoryForVariant = maybe False (\vcList -> isJust $ DL.find (\enabledVc -> maybe False (enabledVc ==) currentVehicleCategory) vcList) (subscriptionConfig >>= (.executionEnabledForVehicleCategories))
       (mbDriverPlan, isOnFreeTrial) <- getPlanAndPushToDefualtIfEligible transporterConfig subscriptionConfig freeTrialDaysLeft' isSpecialZoneCharge isPlanMandatoryForVariant currentVehicleCategory
@@ -1434,7 +1435,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
           Just ldFee ->
             if now >= ldFee.startTime && now < ldFee.endTime
               then do
-                QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now True booking isSpecialZoneCharge
+                QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst True booking isSpecialZoneCharge
                 return (ldFee.numRides + 1)
               else do
                 createWithMbSibling driverFee lastElderSiblingDriverFee ldFee
@@ -1442,35 +1443,39 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
           Nothing -> do
             createWithMbSibling driverFee lastElderSiblingDriverFee driverFee
             return 1
-        fork "Updating vendor fees" $
-          when (fromMaybe False (subscriptionConfig >>= (.isVendorSplitEnabled))) $ do
-            let vehicleVariant = Variant.castServiceTierToVariant booking.vehicleServiceTier
-            allVendorSplitDetails <- CQVSD.findAllByAreaIncludingDefaultAndCityAndVariant booking.area merchantOpCityId vehicleVariant
-            let allVendorSplitDetailsExcludingDailyPlan = DL.filter (\d -> isNothing d.dailyPlanId) allVendorSplitDetails
-            let vendorSplitDetails = case booking.area of
-                  Just area ->
-                    let areaDetails = DL.filter (\detail -> detail.area == area) allVendorSplitDetailsExcludingDailyPlan
-                        baseAreaDetails =
-                          if null areaDetails && hasGateId area
-                            then DL.filter (\detail -> detail.area == stripGateId area) allVendorSplitDetailsExcludingDailyPlan
-                            else areaDetails
-                     in if null baseAreaDetails
-                          then DL.filter (\detail -> detail.area == Default) allVendorSplitDetailsExcludingDailyPlan
-                          else baseAreaDetails
-                  Nothing -> DL.filter (\detail -> detail.area == Default) allVendorSplitDetailsExcludingDailyPlan
-            unless (null vendorSplitDetails) $ do
-              let vendorData = DL.map (\vendor -> (vendor.vendorId, toRational vendor.splitValue, vendor.maxVendorFeeAmount)) vendorSplitDetails
-                  -- Pass vendor fee along with its maxVendorFeeAmount limit for cumulative validation
-                  vendorFeesWithLimit = DL.map (\(vendorId, amount, maxLimit) -> (mkVendorFee (maybe driverFee.id (.id) lastDriverFee) now (vendorId, amount, maxLimit), maxLimit)) vendorData
-              unless (null vendorFeesWithLimit) $ do
-                case lastDriverFee of
-                  Just ldFee | now >= ldFee.startTime && now < ldFee.endTime -> QVF.updateManyVendorFeeWithMaxLimit merchantOpCityId vendorFeesWithLimit
-                  _ -> QVF.createManyWithMaxLimit vendorFeesWithLimit
+        when (fromMaybe False (subscriptionConfig >>= (.isVendorSplitEnabled))) $ do
+          let vehicleVariant = Variant.castServiceTierToVariant booking.vehicleServiceTier
+          allVendorSplitDetails <- CQVSD.findAllByAreaIncludingDefaultAndCityAndVariant booking.area merchantOpCityId vehicleVariant
+          let allVendorSplitDetailsExcludingDailyPlan = DL.filter (\d -> isNothing d.dailyPlanId) allVendorSplitDetails
+          let vendorSplitDetails = case booking.area of
+                Just area ->
+                  let areaDetails = DL.filter (\detail -> detail.area == area) allVendorSplitDetailsExcludingDailyPlan
+                      baseAreaDetails =
+                        if null areaDetails && hasGateId area
+                          then DL.filter (\detail -> detail.area == stripGateId area) allVendorSplitDetailsExcludingDailyPlan
+                          else areaDetails
+                   in if null baseAreaDetails
+                        then DL.filter (\detail -> detail.area == Default) allVendorSplitDetailsExcludingDailyPlan
+                        else baseAreaDetails
+                Nothing -> DL.filter (\detail -> detail.area == Default) allVendorSplitDetailsExcludingDailyPlan
+          unless (null vendorSplitDetails) $ do
+            let vendorFeeBase = platformFee + cgst + sgst
+                vendorData = DL.map (\vendor -> (vendor.vendorId, vendor.splitType, toRational vendor.splitValue, vendor.maxVendorFeeAmount)) vendorSplitDetails
+                -- Pass vendor fee along with its maxVendorFeeAmount limit for cumulative validation
+                vendorFeesWithLimit = DL.map (\(vendorId, splitType, amount, maxLimit) -> (mkVendorFee (maybe driverFee.id (.id) lastDriverFee) now vendorFeeBase (vendorId, splitType, amount, maxLimit), maxLimit)) vendorData
+            unless (null vendorFeesWithLimit) $ do
+              case lastDriverFee of
+                Just ldFee | now >= ldFee.startTime && now < ldFee.endTime -> QVF.updateManyVendorFeeWithMaxLimit merchantOpCityId vendorFeesWithLimit
+                _ -> QVF.createManyWithMaxLimit vendorFeesWithLimit
 
         plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing currentVehicleCategory
         fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides serviceName
         scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now
-    mkVendorFee driverFeeId now (vendorId, amount, _) = DVF.VendorFee {amount = HighPrecMoney amount, driverFeeId = driverFeeId, vendorId = vendorId, createdAt = now, updatedAt = now}
+    mkVendorFee driverFeeId now vendorFeeBase (vendorId, splitType, splitValue, _) =
+      let amount = case splitType of
+            DVSD.FIXED -> HighPrecMoney splitValue
+            DVSD.PERCENTAGE -> vendorFeeBase * HighPrecMoney (splitValue / 100)
+       in DVF.VendorFee {amount = amount, driverFeeId = driverFeeId, vendorId = vendorId, createdAt = now, updatedAt = now}
     isEligibleForCharge transporterConfig isOnFreeTrial isSpecialZoneCharge = do
       let notOnFreeTrial = not isOnFreeTrial
       if isSpecialZoneCharge
@@ -1576,6 +1581,7 @@ mkDriverFee ::
   m DF.DriverFee
 mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare govtCharges platformFee cgst sgst currency transporterConfig _mbBooking isSpecialZoneCharge currentVehicleCategory subsConfig = do
   id <- generateGUID
+  nowUtc <- getCurrentTime
   let potentialStart = addUTCTime transporterConfig.driverPaymentCycleStartTime (UTCTime (utctDay now) (secondsToDiffTime 0))
       startTime = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) potentialStart
       endTime = addUTCTime transporterConfig.driverPaymentCycleDuration startTime
@@ -1593,8 +1599,8 @@ mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare gov
       { status = DF.ONGOING,
         collectedBy = Nothing,
         collectedAt = Nothing,
-        createdAt = now,
-        updatedAt = now,
+        createdAt = nowUtc,
+        updatedAt = nowUtc,
         platformFee = platformFee_,
         totalEarnings = fromMaybe 0 rideFare,
         feeType = case (plan, isPlanMandatory) of

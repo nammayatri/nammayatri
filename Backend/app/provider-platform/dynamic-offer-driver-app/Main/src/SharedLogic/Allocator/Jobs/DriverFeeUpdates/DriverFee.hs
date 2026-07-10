@@ -44,6 +44,7 @@ import Domain.Types.Plan (BasedOnEntity (..), PaymentMode (AUTOPAY, MANUAL), Pla
 import Domain.Types.SubscriptionConfig
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.VendorFee as DVF
+import qualified Domain.Types.VendorSplitDetails as DVSD
 import Kernel.Beam.Functions (runInMasterDbAndRedis)
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as PaymentInterface
@@ -168,7 +169,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             (feeWithoutDiscount, totalFee, offerId, offerTitle) <- do
               calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFeeWithPenalties waiveOffPercentage waiveOffMode waiveOffValidTill isMemberEligibleForOffers
             when (totalFee /= 0 && fromMaybe False subscriptionConfigs.isVendorSplitEnabled && fromMaybe False subscriptionConfigs.enableDailyPlanVendorSplit) $
-              recomputeVendorFeesForPlan driverFee.id plan driverFee.merchantOperatingCityId
+              recomputeVendorFeesForPlan driverFee plan driverFee.merchantOperatingCityId
             ---------------------------------------------------------------------
             ------------- update driver fee with offer and plan details ---------
             let offerAndPlanTitle = Just plan.name <> Just "-*@*-" <> offerTitle ---- this we will send in payment history ----
@@ -493,13 +494,16 @@ splitPlatformFee feeWithoutDiscount_ totalFee plan DriverFee {..} maxAmountPerDr
    in mapM
         ( \(driverFeeId, (fee, coinPaidAmount, vendorFeeData)) -> do
             let (platformFee_, cgst, sgst) = calculatePlatformFeeAttr fee plan
+                isChild = driverFeeId /= id
                 dfee =
                   DriverFee
                     { platformFee = PlatformFee {fee = platformFee_, ..},
                       feeType = feeType,
                       feeWithoutDiscount = Just feeWithoutDiscount_, -- same for all splitted ones, not remaining fee
                       amountPaidByCoin = coinPaidAmount,
-                      splitOfDriverFeeId = if driverFeeId /= id then Just id else Nothing,
+                      splitOfDriverFeeId = if isChild then Just id else Nothing,
+                      -- Cancellation penalty stays on the parent only; children must not re-trigger cancellation handling.
+                      cancellationPenaltyAmount = if isChild then Nothing else cancellationPenaltyAmount,
                       id = driverFeeId,
                       ..
                     }
@@ -534,7 +538,9 @@ driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandate
   let amountForSpiltting = if isNothing mbCoinAmountUsed then Just $ roundToHalf driverFee.currency totalFee else roundToHalf driverFee.currency <$> (mandate <&> (.maxAmount))
       coinAmountUsed = fromMaybe 0 mbCoinAmountUsed
       totalFeeWithCoinDeduction = roundToHalf driverFee.currency $ totalFee - coinAmountUsed
-  vendorFees <- runInMasterDbAndRedis $ QVF.findAllByDriverFeeId driverFee.id
+  allVendorFees <- runInMasterDbAndRedis $ QVF.findAllByDriverFeeId driverFee.id
+  -- Cancellation vendor fee must not be proportionally split; it stays wholly on the parent.
+  let vendorFees = maybe allVendorFees (\c -> filter (\vf -> vf.vendorId /= c) allVendorFees) transporterConfig.cancellationFeeVendor
   splittedFeesWithRespectiveVendorFee <- splitPlatformFee feeWithoutDiscount totalFeeWithCoinDeduction plan driverFee amountForSpiltting mbCoinAmountUsed vendorFees now
   case splittedFeesWithRespectiveVendorFee of
     [] -> throwError (InternalError "No driver fee entity with non zero total fee")
@@ -931,6 +937,9 @@ mkPaymentLinkRateLimitKey driverId = "SendPaymentLink:RateLimit:DriverId:" <> dr
 getsetManualLinkErrorTrackingKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Maybe Int)
 getsetManualLinkErrorTrackingKey driverId = Hedis.get (mkManualLinkErrorTrackingByDriverIdKey driverId)
 
+cancellationVendorFeeGuardKey :: Id DriverFee -> Text
+cancellationVendorFeeGuardKey driverFeeId = "VendorFee:CancellationApplied:" <> driverFeeId.getId
+
 makeVendorFeeForCancellationPenalty ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
   DriverFee ->
@@ -940,9 +949,9 @@ makeVendorFeeForCancellationPenalty ::
 makeVendorFeeForCancellationPenalty driverFee subscriptionConfig transporterConfig = when (fromMaybe False subscriptionConfig.isVendorSplitEnabled && isJust transporterConfig.cancellationFeeVendor && fromMaybe 0 driverFee.cancellationPenaltyAmount > 0) $ do
   let vendorId = fromMaybe "CANCELLATION_PENALTY_VENDOR" transporterConfig.cancellationFeeVendor
       cancellationAmount = fromMaybe 0 driverFee.cancellationPenaltyAmount
-      cancellationVendorFeeGuardKey = "VendorFee:CancellationApplied:" <> driverFee.id.getId
+      guardKey = cancellationVendorFeeGuardKey driverFee.id
   -- Guard against scheduler retries double-adding. Set after write so a crash re-applies, not skips.
-  alreadyApplied <- Hedis.get cancellationVendorFeeGuardKey
+  alreadyApplied <- Hedis.get guardKey
   case (alreadyApplied :: Maybe Bool) of
     Just True -> logError $ "makeVendorFeeForCancellationPenalty: cancellation already applied for driverFee " <> driverFee.id.getId <> ", skipping"
     _ -> do
@@ -958,7 +967,7 @@ makeVendorFeeForCancellationPenalty driverFee subscriptionConfig transporterConf
                 createdAt = driverFee.createdAt,
                 updatedAt = driverFee.updatedAt
               }
-      Hedis.setExp cancellationVendorFeeGuardKey True (3600 * 24)
+      Hedis.setExp guardKey True (3600 * 24)
 
 updateCancellationPenaltyAccumulationFees :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) => ServiceNames -> TransporterConfig -> Id Merchant -> Id MerchantOperatingCity -> m ()
 updateCancellationPenaltyAccumulationFees serviceName transporterConfig merchantId merchantOperatingCityId = do
@@ -976,21 +985,29 @@ updateCancellationPenaltyAccumulationFees serviceName transporterConfig merchant
 
 recomputeVendorFeesForPlan ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Id DriverFee ->
+  DriverFee ->
   Plan ->
   Id MerchantOperatingCity ->
   m ()
-recomputeVendorFeesForPlan driverFeeId plan cityId = do
+recomputeVendorFeesForPlan driverFee plan cityId = do
   planSplits <- CQVSD.findAllByCityAndPlan cityId plan.id
   unless (null planSplits) $ do
     now <- getCurrentTime
-    QVF.deleteAllByDriverFeeId driverFeeId
+    let vendorFeeBase = driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst
+    QVF.deleteAllByDriverFeeId driverFee.id
+    -- Reset cancellation-vendor guard so a later makeVendorFeeForCancellationPenalty re-applies
+    -- the cancellation portion on top of the freshly-recreated plan-split rows. The cancellation
+    -- vendor may overlap with a subscription vendor, so we cannot preserve rows selectively.
+    Hedis.del (cancellationVendorFeeGuardKey driverFee.id)
     forM_ planSplits $ \vsd -> do
-      let amount = maybe (HighPrecMoney (toRational vsd.splitValue)) (min (HighPrecMoney (toRational vsd.splitValue))) vsd.maxVendorFeeAmount
+      let rawAmount = case vsd.splitType of
+            DVSD.FIXED -> HighPrecMoney (toRational vsd.splitValue)
+            DVSD.PERCENTAGE -> vendorFeeBase * HighPrecMoney (toRational vsd.splitValue / 100)
+          amount = maybe rawAmount (min rawAmount) vsd.maxVendorFeeAmount
       QVF.create
         DVF.VendorFee
           { amount = SPayment.roundToTwoDecimalPlaces amount,
-            driverFeeId = driverFeeId,
+            driverFeeId = driverFee.id,
             vendorId = vsd.vendorId,
             createdAt = now,
             updatedAt = now
