@@ -13,6 +13,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
+import Kernel.Utils.Logging (logDebug)
 import Lib.ConfigPilot.Config.GetterInternal (PersonIdKey (..), TxnIdKey (..), configPilotInMemKey, getConfigImpl, invalidateConfigInMem)
 import Lib.ConfigPilot.Interface.Types (ConfigDimensions (..))
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as BeamFlow
@@ -65,13 +66,15 @@ resolveConfigList ::
   -- | Optional fallback matchers: used when primary matchers yield no results.
   Maybe [DimMatcher dims cfg] ->
   m [cfg]
-resolveConfigList dims logicDomain mocId fetch matchers fallback =
+resolveConfigList dims logicDomain mocId fetch matchers fallback = do
+  logDebug $ "CP Log: [READ] domain=" <> show logicDomain <> " dims=" <> dimensionsCacheKey dims
   -- Two-layer cache: per-pod in-mem (L1) wraps a cross-pod Redis hash (L2).
   -- L2 hash prefix mirrors 'configPilotInMemKey' ("ConfigPilot:<configType>");
   -- the dimensions form the hash field and 'withRedisCache' appends the cached
   -- type name. L2 currently relies on its TTL; explicit invalidation is TODO.
   IM.withInMemCache cacheKey 3600 $
     Hedis.withRedisCache redisHashPrefix [dimensionsCacheKey dims] 1800 $ do
+      logDebug $ "CP Log: [FILL] domain=" <> show logicDomain <> " dims=" <> dimensionsCacheKey dims
       cfgs <- fetch
       let applyMatchers ms = filter (\c -> all (matchesDim dims c) ms) cfgs
       let filtered = case (applyMatchers matchers, fallback) of
