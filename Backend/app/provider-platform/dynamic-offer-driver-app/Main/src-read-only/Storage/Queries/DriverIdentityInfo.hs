@@ -6,11 +6,13 @@ module Storage.Queries.DriverIdentityInfo where
 
 import qualified Data.Aeson
 import qualified Domain.Types.DriverIdentityInfo
+import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -37,6 +39,19 @@ updateCourtRecord :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prel
 updateCourtRecord courtRecord driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.courtRecord (Data.Aeson.toJSON <$> courtRecord), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+updateLocalAddressDetails ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState -> Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateLocalAddressDetails address addressState addressDocumentType driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.address address,
+      Se.Set Beam.addressState addressState,
+      Se.Set Beam.addressDocumentType addressDocumentType,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverIdentityInfo.DriverIdentityInfo))
 findByPrimaryKey driverId = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]

@@ -433,6 +433,7 @@ data BecknTag
   | SPECIAL_LOCATION_NAME
   | SPECIAL_LOCATION_SUPPORT_NUMBER
   | FARE_SETTLEMENT_TYPE
+  | PICKUP_AREA
   | IS_CUSTOMER_PREFFERED_SEARCH_ROUTE
   | IS_BLOCKED_SEARCH_ROUTE
   | TOLL_NAMES
@@ -638,6 +639,7 @@ instance CompleteTag BecknTag where
     DISTANCE_TO_NEAREST_DRIVER_METER -> (Just "Distance To Nearest Driver In Meters", Nothing)
     ETA_TO_NEAREST_DRIVER_MIN -> (Just "Agent Duration to Pickup in Seconds", Nothing)
     SPECIAL_LOCATION_TAG -> (Just "Special Zone Tag", Nothing)
+    PICKUP_AREA -> (Just "Pickup Area", Nothing)
     UPGRADE_TO_CAB -> (Just "Request upgraded to cab", Nothing)
     PARCEL_TYPE -> (Just "Delivery Parcel Type", Nothing)
     PARCEL_QUANTITY -> (Just "Delivery Parcel Quantity", Nothing)
@@ -707,6 +709,7 @@ instance CompleteTag BecknTag where
     SPECIAL_LOCATION_NAME -> INFO
     SPECIAL_LOCATION_SUPPORT_NUMBER -> INFO
     FARE_SETTLEMENT_TYPE -> INFO
+    PICKUP_AREA -> INFO
     UPGRADE_TO_CAB -> GENERAL_INFO
     CUSTOMER_DISABILITY_DISABLE -> CUSTOMER_INFO
     IS_PET_RIDE -> PET_ORDER_INFO

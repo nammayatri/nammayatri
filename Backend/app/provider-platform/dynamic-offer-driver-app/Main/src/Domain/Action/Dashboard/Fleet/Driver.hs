@@ -2643,7 +2643,10 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
             upiId = upiId',
             linkedDriverIds = map (\assoc -> assoc.driverId.getId) linkedDrivers,
             fleetName = Nothing,
-            docsVerificationStatus = Nothing
+            docsVerificationStatus = Nothing,
+            address = Nothing,
+            addressState = Nothing,
+            addressDocumentType = Nothing
           }
     Just fleetOwnerInfo -> do
       fleetConfig <- QFC.findByPrimaryKey personId
@@ -2748,6 +2751,7 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
             upiId = upiId',
             linkedDriverIds = map (\assoc -> assoc.driverId.getId) linkedDrivers,
             docsVerificationStatus = castDocsVerificationStatus <$> docsVerificationStatus,
+            addressDocumentType = DDriver.castToCommon <$> addressDocumentType,
             ..
           }
 
@@ -4593,7 +4597,7 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
           let dob = fmap (\d -> UTCTime d 0) req.dob <|> driverInfo.driverDob
           Redis.withLockRedis (DIInfo.driverIdentityInfoLockKey personId) 10 $ do
             mbExisting <- QDII.findByDriverId personId
-            void $ DIInfo.upsertDriverIdentityInfo mbExisting personId driver.merchantId driver.merchantOperatingCityId driverInfo req.nomineeName req.nomineeRel req.nomineeDob req.address (castAddressDocumentType <$> req.addressDocumentType) req.addressState
+            void $ DIInfo.upsertDriverIdentityInfo mbExisting personId driver.merchantId driver.merchantOperatingCityId driverInfo req.nomineeName req.nomineeRel req.nomineeDob req.address (DDriver.castFromCommon <$> req.addressDocumentType) req.addressState
           QDriverInfo.updateDriverDobAndAddress dob Nothing Nothing personId
         role | DCommon.checkFleetOwnerRole role -> do
           fleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
@@ -4605,7 +4609,10 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
                     DFOI.stripeAddress = req.stripeAddress <|> fleetOwnerInfo.stripeAddress,
                     DFOI.stripeIdNumber = reqStripeIdNumber <|> fleetOwnerInfo.stripeIdNumber,
                     DFOI.fleetName = req.fleetName <|> fleetOwnerInfo.fleetName,
-                    DFOI.fleetType = newFleetType
+                    DFOI.fleetType = newFleetType,
+                    DFOI.address = req.address <|> fleetOwnerInfo.address,
+                    DFOI.addressState = req.addressState <|> fleetOwnerInfo.addressState,
+                    DFOI.addressDocumentType = (DDriver.castFromCommon <$> req.addressDocumentType) <|> fleetOwnerInfo.addressDocumentType
                   }
           FOI.updateFleetOwnerInfo updFleetOwnerInfo
           -- Keep person.role in sync with fleet_type so role-based config lookups don't drift.
@@ -4614,15 +4621,6 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
         _ -> pure ()
 
   pure Success
-  where
-    castAddressDocumentType :: Common.AddressDocumentType -> DI.AddressDocumentType
-    castAddressDocumentType = \case
-      Common.RationCard -> DI.RationCard
-      Common.UtilityBill -> DI.UtilityBill
-      Common.Passport -> DI.Passport
-      Common.VoterId -> DI.VoterId
-      Common.LifeInsurancePolicy -> DI.LifeInsurancePolicy
-      Common.Others -> DI.Others
 
 getDriverFleetVehicleListStats :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Day -> Day -> Flow Common.FleetVehicleStatsRes
 getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId mbRequestorId mbVehicleNo mbLimit mbOffset fromDay toDay = do

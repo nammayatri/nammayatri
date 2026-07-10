@@ -22,6 +22,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Fleet.RegistrationV2 as Common
 import qualified API.Types.UI.DriverOnboardingV2 as Onboarding
+import qualified Domain.Action.Dashboard.Common.AddressDocumentType as AddrCast
 import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import Domain.Action.Dashboard.Fleet.Referral
 import qualified Domain.Action.Dashboard.Fleet.Registration as DRegistration
@@ -393,7 +394,10 @@ createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId mbTds
             tollRouteBlockedTill = Nothing,
             weeklyCancellationRateBlockingCooldown = Nothing,
             payoutRegistrationOrderId = Nothing,
-            docsVerificationStatus = mbDocsVerificationStatus
+            docsVerificationStatus = mbDocsVerificationStatus,
+            address = Nothing,
+            addressState = Nothing,
+            addressDocumentType = Nothing
           }
   QFOI.create fleetOwnerInfo
   -- Bootstrap the AggregatedCommission scheduler chain for this fleet owner.
@@ -484,7 +488,10 @@ updateFleetOwnerInfo fleetOwnerInfo Common.FleetOwnerRegisterReqV2 {..} = do
         fleetOwnerInfo
           { FOI.fleetType = newFleetType,
             FOI.registeredAt = Just now,
-            FOI.fleetName = fleetName
+            FOI.fleetName = fleetName,
+            FOI.address = address <|> fleetOwnerInfo.address,
+            FOI.addressState = addressState <|> fleetOwnerInfo.addressState,
+            FOI.addressDocumentType = (AddrCast.castFromCommon <$> addressDocumentType) <|> fleetOwnerInfo.addressDocumentType
           }
   void $ QFOI.updateByPrimaryKey updFleetOwnerInfo -- this update will backfill encrypted docs numbers
   -- Keep person.role in sync with fleet_type so role-based config lookups don't drift.

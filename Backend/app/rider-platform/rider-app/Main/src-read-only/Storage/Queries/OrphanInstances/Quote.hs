@@ -32,7 +32,8 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
     pure $
       Just
         Domain.Types.Quote.Quote
-          { backendAppVersion = backendAppVersion,
+          { area = area,
+            backendAppVersion = backendAppVersion,
             backendConfigVersion = backendConfigVersion',
             billingCategory = Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory,
             clientBundleVersion = clientBundleVersion',
@@ -78,7 +79,8 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
 instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
   toTType' (Domain.Types.Quote.Quote {..}) = do
     Beam.QuoteT
-      { Beam.backendAppVersion = backendAppVersion,
+      { Beam.area = area,
+        Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
         Beam.billingCategory = Kernel.Prelude.Just billingCategory,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,

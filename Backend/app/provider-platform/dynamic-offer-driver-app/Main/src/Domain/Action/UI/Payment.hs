@@ -608,8 +608,8 @@ processPayment merchantId driver orderId sendNotification (serviceName, subsConf
     Redis.whenWithLockRedis (DADriver.mkPayoutLockKeyByDriverAndService driver.id serviceName) 60 $ do
       driverFees <- QDF.findAllByDriverFeeIds driverFeeIds
       let nonClearedDriverFees = filter (\df -> df.status /= CLEARED) driverFees
-      QDF.updateStatusByIds CLEARED driverFeeIds now
-      -- let utcTime = addUTCTime (secondsToNominalDiffTime $ -1 * transporterConfig.timeDiffFromUtc) now
+      nowUtc <- getCurrentTime
+      QDF.updateStatusByIds CLEARED driverFeeIds nowUtc
       mapM_ (processNonClearedDriverFees merchantId driver) nonClearedDriverFees
     QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
     updatePaymentStatus driver.id driver.merchantOperatingCityId serviceName
