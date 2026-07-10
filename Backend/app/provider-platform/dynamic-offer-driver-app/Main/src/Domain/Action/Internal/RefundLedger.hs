@@ -154,11 +154,14 @@ refundLegs deductFromDriver req ride =
               if comp.component == RIDE_FARE
                 then -- Case 2 ride-fare: driver bears all but the prorated commission slice
 
+                  -- Full precision, no rounding: legs must sum to the component exactly, and a
+                  -- full refund must claw back exactly the forward commission (agg nets to zero).
+                  -- Rounding the complement over-debits the driver by the rounding residue.
                   let commissionSlice =
                         if rideFareTotal > 0
-                          then roundAmountByCurrency' ride.currency (commission * comp.fareAmount / rideFareTotal)
+                          then commission * comp.fareAmount / rideFareTotal
                           else 0
-                      driverBase = roundAmountByCurrency' ride.currency (comp.fareAmount - commissionSlice)
+                      driverBase = comp.fareAmount - commissionSlice
                    in [ (OwnerLiability, BuyerExternal, driverBase, baseRef),
                         (OwnerLiability, BuyerExternal, comp.vatAmount, vatRef),
                         (SellerExpense, BuyerExternal, commissionSlice, Wallet.walletReferenceRideFareRefundCommission)
@@ -303,7 +306,9 @@ createCommissionRefundInvoice ctx req ride = do
   let commission = fromMaybe 0 ride.commission
       rideFareTotal = fromMaybe 0 req.rideFareComponentTotal
       rideFareRefundedFare = maybe 0 (sum . map (.fareAmount) . filter (\c -> c.component == RIDE_FARE)) req.refundComponents
-      commissionSlice = if rideFareTotal > 0 then roundAmountByCurrency' ride.currency (commission * rideFareRefundedFare / rideFareTotal) else 0
+      -- Full precision (same operands as refundLegs' slice — the ledger legs and this
+      -- invoice must agree to the last digit).
+      commissionSlice = if rideFareTotal > 0 then commission * rideFareRefundedFare / rideFareTotal else 0
   when (commissionSlice > 0) $ do
     let issuedToType' = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER
         issuedToId' = maybe ride.driverId.getId (.getId) ride.fleetOwnerId
