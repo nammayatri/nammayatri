@@ -40,7 +40,7 @@ Seed only: `./run-tests.sh --setup` (runs toll dashboard SQL + `provider-dashboa
 |------|----------------|
 | `01-TollDashboardCrud.json` | Reject legacy LineSegment create; LineString + Polygon create/list/update/delete; CSV upsert |
 
-First request is **Switch City** (`POST .../user/switchMerchantAndCity`), then toll CRUD on the internal dashboard API. Same pattern as `RideBookingFlow/01-AutoRideFlow.json`.
+First request is **Switch City** (`POST .../user/switchMerchantAndCity`), then toll CRUD on the internal dashboard API. Same pattern as `AutoRideFlow/01-AutoRideFlow.json`.
 
 ## Related
 
