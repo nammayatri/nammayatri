@@ -93,7 +93,7 @@ import qualified Domain.Types.VehiclePUC as DPUC
 import qualified Domain.Types.VehiclePermit as DVPermit
 import qualified Domain.Types.VehicleRegistrationCertificate as DRC
 import Environment
-import EulerHS.Prelude hiding (elem, find, foldl', map, whenJust)
+import EulerHS.Prelude hiding (elem, find, foldl', map, null, whenJust)
 import Kernel.Beam.Functions
 import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash, hash)
@@ -2055,37 +2055,37 @@ runStatusEventSafely logTag mbPerson mbTransporterConfig event =
       logTag
       (void $ SStatus.processStatusEvent mbPerson mbTransporterConfig event)
 
-getImageIdFromApproveDetails :: Common.ApproveDetails -> Maybe (Id Common.Image)
-getImageIdFromApproveDetails = \case
-  Common.DL req -> Just req.documentImageId
-  Common.RC req -> Just req.documentImageId
-  Common.VehicleInsurance req -> Just req.documentImageId
-  Common.VehiclePUC req -> Just req.documentImageId
-  Common.VehiclePermit req -> Just req.documentImageId
-  Common.VehicleFitnessCertificate req -> Just req.documentImageId
-  Common.VehicleInspectionForm req -> Just req.documentImageId
-  Common.Pan req -> Just req.documentImageId
-  Common.NOC req -> Just req.documentImageId
-  Common.BusinessLicenseImg req -> Just req.documentImageId
-  Common.Aadhaar req -> Just req.documentImageId
-  Common.UploadProfile imgId -> Just imgId
-  Common.ProfilePhoto imgId -> Just imgId
-  Common.VehicleFrontImg imgId -> Just imgId
-  Common.VehicleBackImg imgId -> Just imgId
-  Common.VehicleRightImg imgId -> Just imgId
-  Common.VehicleLeftImg imgId -> Just imgId
-  Common.VehicleFrontInteriorImg imgId -> Just imgId
-  Common.VehicleBackInteriorImg imgId -> Just imgId
-  Common.OdometerImg imgId -> Just imgId
-  Common.LocalResidenceProofApprove req -> Just req.documentImageId
-  Common.PoliceVerificationCertificateImg imgId -> Just imgId
-  Common.DriverVehicleNOCImg imgId -> Just imgId
-  Common.SSNApprove _ -> Nothing
-  Common.CommonDocument _ -> Nothing
-  Common.UDYAMApprove req -> Just req.documentImageId
-  Common.LDCApprove _ -> Nothing
-  Common.GSTApprove req -> Just req.documentImageId
-  Common.TANApprove _ -> Nothing
+getImageIdsFromApproveDetails :: Common.ApproveDetails -> [Id Common.Image]
+getImageIdsFromApproveDetails = \case
+  Common.DL req -> [req.documentImageId]
+  Common.RC req -> [req.documentImageId]
+  Common.VehicleInsurance req -> [req.documentImageId]
+  Common.VehiclePUC req -> [req.documentImageId]
+  Common.VehiclePermit req -> [req.documentImageId]
+  Common.VehicleFitnessCertificate req -> [req.documentImageId]
+  Common.VehicleInspectionForm req -> [req.documentImageId]
+  Common.Pan req -> [req.documentImageId]
+  Common.NOC req -> [req.documentImageId]
+  Common.BusinessLicenseImg req -> [req.documentImageId]
+  Common.Aadhaar req -> req.documentImageId : maybeToList req.documentImageId2
+  Common.UploadProfile imgId -> [imgId]
+  Common.ProfilePhoto imgId -> [imgId]
+  Common.VehicleFrontImg imgId -> [imgId]
+  Common.VehicleBackImg imgId -> [imgId]
+  Common.VehicleRightImg imgId -> [imgId]
+  Common.VehicleLeftImg imgId -> [imgId]
+  Common.VehicleFrontInteriorImg imgId -> [imgId]
+  Common.VehicleBackInteriorImg imgId -> [imgId]
+  Common.OdometerImg imgId -> [imgId]
+  Common.LocalResidenceProofApprove req -> [req.documentImageId]
+  Common.PoliceVerificationCertificateImg imgId -> [imgId]
+  Common.DriverVehicleNOCImg imgId -> [imgId]
+  Common.SSNApprove _ -> []
+  Common.CommonDocument _ -> []
+  Common.UDYAMApprove req -> [req.documentImageId]
+  Common.LDCApprove _ -> []
+  Common.GSTApprove req -> [req.documentImageId]
+  Common.TANApprove _ -> []
 
 validatePersonForDocumentApproval :: Id DP.Person -> Id DM.Merchant -> Flow DP.Person
 validatePersonForDocumentApproval personId merchantId = do
@@ -2144,7 +2144,7 @@ approveAndUpdateLocalResidenceProof req merchantId merchantOperatingCityId = do
 
 handleApproveRequest :: Common.ApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 handleApproveRequest approveReq merchantId merchantOperatingCityId =
-  doApproveWithRevert (getImageIdFromApproveDetails approveReq) $
+  doApproveWithRevert (getImageIdsFromApproveDetails approveReq) $
     case approveReq of
       Common.DL dlReq -> approveAndUpdateDL merchantId merchantOperatingCityId dlReq
       Common.RC rcApproveReq -> approveAndUpdateRC rcApproveReq merchantId merchantOperatingCityId
@@ -2180,15 +2180,16 @@ handleApproveRequest approveReq merchantId merchantOperatingCityId =
       Common.GSTApprove gstReq -> approveGST gstReq merchantId merchantOperatingCityId
       Common.TANApprove req -> approveAndUpdateTanDocument req merchantId merchantOperatingCityId
 
--- | On any exception from the approval action, delete the uploaded image and re-throw
+-- | On any exception from the approval action, mark the uploaded image(s) INVALID and re-throw
 -- so the caller receives an error response. withTryCatch ensures the error is logged.
-doApproveWithRevert :: Maybe (Id Common.Image) -> Flow () -> Flow ()
-doApproveWithRevert mbImageId action = do
+doApproveWithRevert :: [Id Common.Image] -> Flow () -> Flow ()
+doApproveWithRevert imageIds action = do
   result <- withTryCatch "handleApproveRequest" action
   case result of
     Right () -> pure ()
     Left err -> do
-      whenJust mbImageId $ \imgId -> QImage.deleteById (Id imgId.getId)
+      unless (null imageIds) $
+        QImage.updateVerificationStatusByIds (Just INVALID) (map (Id . (.getId)) imageIds)
       throwM err
 
 handleRejectRequest :: Common.RejectDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
@@ -2474,7 +2475,7 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
   case _req of
     Common.Approve approveReq -> do
       handleApproveRequest approveReq merchant.id merchantOpCityId
-      whenJust (getImageIdFromApproveDetails approveReq) $ \imgId -> do
+      whenJust (listToMaybe (getImageIdsFromApproveDetails approveReq)) $ \imgId -> do
         mbImage <- QImage.findById (Id imgId.getId)
         whenJust mbImage $ \image -> do
           person <- QPerson.findById image.personId >>= fromMaybeM (PersonNotFound image.personId.getId)
@@ -2514,7 +2515,7 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
               Nothing -> pure Nothing
           _ -> pure Nothing
       req
-        | Just imgId <- getImageIdFromApproveDetails req -> do
+        | (imgId : _) <- getImageIdsFromApproveDetails req -> do
           mbImage <- QImage.findById (Id imgId.getId)
           case mbImage of
             Just image | isVehicleDocType image.imageType -> resolveRcIdFromDocument image.imageType (Id imgId.getId)
@@ -2567,7 +2568,7 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
         mbDoc <- QCommonDriverOnboardingDocuments.findById (Id req.documentId.getId)
         pure $ join ((.driverId) <$> mbDoc)
       req
-        | Just imgId <- getImageIdFromApproveDetails req -> do
+        | (imgId : _) <- getImageIdsFromApproveDetails req -> do
           mbImage <- QImage.findById (Id imgId.getId)
           pure $ (.personId) <$> mbImage
       _ -> pure Nothing
