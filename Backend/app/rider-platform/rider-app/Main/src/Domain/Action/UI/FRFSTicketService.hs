@@ -721,7 +721,7 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ = do
         -- Interchange (line-change) points, derived at response time only (storage is unchanged).
         -- buildStations marks segment boundary stops as TRANSIT; dedupe by code, preserving order.
         let interchangeStations :: Maybe [FRFSStationAPI] =
-              (\sts -> nubBy (\a b -> a.code == b.code) (filter (\s -> s.stationType == Just TRANSIT) sts)) <$> stations
+              (\sts -> nubBy (\a b -> a.code == b.code) (filter (\s -> s.stationType == Just TRANSIT) sts)) <$> (stations <|> decodeFromText quote.stationsJson)
         let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
             categories = map mkCategoryInfoResponse quoteCategories
         singleAdultTicketPrice <- (find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice)) & fromMaybeM (InternalError "Adult Ticket Unit Price not found.")
