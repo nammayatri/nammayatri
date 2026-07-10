@@ -9,6 +9,8 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   BlockReasonFlag: Tools.Error
   DocsVerificationStatus: Domain.Types.DocsVerificationStatus
+  AddressDocumentType: Domain.Types.DriverInformation
+  IndianState: Kernel.Types.Beckn.Context
 
 FleetOwnerInformation:
   tableName: fleet_owner_information
@@ -58,6 +60,9 @@ FleetOwnerInformation:
     isBlockedForReferralPayout: Maybe Bool
     payoutRegistrationOrderId: Maybe Text
     docsVerificationStatus: Maybe DocsVerificationStatus
+    address: Maybe Text
+    addressState: Maybe IndianState
+    addressDocumentType: Maybe AddressDocumentType
 
   excludedFields: [merchantOperatingCityId]
   default:
@@ -171,6 +176,10 @@ FleetOwnerInformation:
       kvFunction: findAllWithKV
       where:
         in: [fleetOwnerPersonId]
+    updateLocalAddressDetails:
+      kvFunction: updateOneWithKV
+      params: [address, addressState, addressDocumentType, updatedAt]
+      where: fleetOwnerPersonId
 
   excludedDefaultQueries:
     - updateByPrimaryKey

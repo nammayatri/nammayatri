@@ -1,0 +1,22 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+
+module: Faq
+
+types:
+  FaqAPIEntity:
+    faqGroupId: Text
+    category: Maybe Text
+    question: Text
+    answer: Text
+
+apis:
+  # GET /faq  -> FAQs for the driver's language (English fallback), optional category filter
+  - GET:
+      endpoint: /faq
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        category: Text
+      response:
+        type: "[API.Types.UI.Faq.FaqAPIEntity]"
