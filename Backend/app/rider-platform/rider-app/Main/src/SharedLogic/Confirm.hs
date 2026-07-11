@@ -439,6 +439,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           serviceTierName = quote.serviceTierName,
           vehicleServiceTierType = quote.vehicleServiceTierType,
           vehicleServiceTierSeatingCapacity = quote.vehicleServiceTierSeatingCapacity,
+          vehicleServiceTierLuggageCapacity = quote.vehicleServiceTierLuggageCapacity,
           vehicleServiceTierAirConditioned = quote.vehicleServiceTierAirConditioned,
           vehicleIconUrl = quote.vehicleIconUrl,
           isAirConditioned = quote.isAirConditioned,

@@ -31,6 +31,6 @@ instance B.Table FaqT where
 
 type Faq = FaqT Identity
 
-$(enableKVPG (''FaqT) [('id)] [[('faqGroupId)], [('language)]])
+$(enableKVPG (''FaqT) [('id)] [[('language)]])
 
 $(mkTableInstances (''FaqT) "faq")

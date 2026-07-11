@@ -985,6 +985,7 @@ types:
     - blockReason: Maybe Text
     - blockExpiryTime: Maybe UTCTime
     - specialZoneId: Maybe Text
+    - requestorId: Maybe Text
     - derive: "'HideSecrets"
   SearchRequestForDriverResponse:
     - enum: "Accept, Reject, Pulled"

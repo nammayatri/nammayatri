@@ -122,6 +122,7 @@ data BookingT f = BookingT
     vehicleCategory :: B.C f (Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory),
     vehicleIconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleServiceTierAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    vehicleServiceTierLuggageCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleVariant :: B.C f Domain.Types.ServiceTierType.ServiceTierType
   }
@@ -133,6 +134,6 @@ instance B.Table BookingT where
 
 type Booking = BookingT Identity
 
-$(enableKVPG ''BookingT ['id] [['bppBookingId], ['quoteId], ['riderId], ['riderTransactionId]])
+$(enableKVPG ''BookingT ['id] [['otpCode], ['bppBookingId], ['quoteId], ['riderId], ['riderTransactionId]])
 
 $(mkTableInstancesWithTModifier ''BookingT "booking" [("bppBookingId", "bpp_ride_booking_id"), ("riderTransactionId", "transaction_id")])

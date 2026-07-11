@@ -180,7 +180,7 @@ findByOtpAndMerchantAndCity ::
 findByOtpAndMerchantAndCity otpVal (Id merchantId) (Id merchantOpCityId) = do
   now <- getCurrentTime
   let oneHourAgo = addUTCTime (- (60 * 60) :: NominalDiffTime) now
-  findOneWithKVRedis
+  findOneWithKV
     [ Se.And
         [ Se.Is BeamB.otpCode $ Se.Eq (Just otpVal),
           Se.Is BeamB.merchantId $ Se.Eq merchantId,
@@ -522,8 +522,9 @@ updateServiceTierOnChange ::
   Maybe Bool ->
   Maybe Double ->
   Maybe Int ->
+  Maybe Int ->
   m ()
-updateServiceTierOnChange bookingId newServiceTier mbNewFare mbNewQuoteId mbServiceTierName mbServiceTierShortDesc mbIsAC mbAirConditioned mbSeatingCapacity = do
+updateServiceTierOnChange bookingId newServiceTier mbNewFare mbNewQuoteId mbServiceTierName mbServiceTierShortDesc mbIsAC mbAirConditioned mbSeatingCapacity mbLuggageCapacity = do
   now <- getCurrentTime
   let baseSets =
         [ Se.Set BeamB.vehicleVariant newServiceTier,
@@ -536,7 +537,8 @@ updateServiceTierOnChange bookingId newServiceTier mbNewFare mbNewQuoteId mbServ
       acSets = maybe [] (\ac -> [Se.Set BeamB.isAirConditioned (Just ac)]) mbIsAC
       acThresholdSets = maybe [] (\ac -> [Se.Set BeamB.vehicleServiceTierAirConditioned (Just ac)]) mbAirConditioned
       seatSets = maybe [] (\s -> [Se.Set BeamB.vehicleServiceTierSeatingCapacity (Just s)]) mbSeatingCapacity
-  updateOneWithKV (baseSets <> fareSets <> quoteSets <> nameSets <> descSets <> acSets <> acThresholdSets <> seatSets) [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+      luggageSets = maybe [] (\l -> [Se.Set BeamB.vehicleServiceTierLuggageCapacity (Just l)]) mbLuggageCapacity
+  updateOneWithKV (baseSets <> fareSets <> quoteSets <> nameSets <> descSets <> acSets <> acThresholdSets <> seatSets <> luggageSets) [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
 updateEstimatedFare ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
