@@ -688,20 +688,15 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
         merchantOperatingCity <- CQMOC.findById latestPurchase.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist latestPurchase.merchantOperatingCityId.getId)
         let issuedToAddress = Just $ show merchantOperatingCity.city <> ", " <> show merchantOperatingCity.state <> ", " <> show merchantOperatingCity.country
             issuedByAddress = Just $ show merchant.city <> ", " <> show merchant.state <> ", " <> show merchant.country
-        -- Fetch fleet owner GSTIN if applicable
-        gstinOfParty <-
-          if isFleetOwner
-            then do
-              mbFleetInfo <- QFOI.findByPrimaryKey person.id
-              case mbFleetInfo of
-                Just fleetInfo -> mapM decrypt fleetInfo.gstNumber
-                Nothing -> pure Nothing
-            else pure Nothing
+        mbFleetInfo <- if isFleetOwner then QFOI.findByPrimaryKey person.id else pure Nothing
+        gstinOfParty <- maybe (pure Nothing) (mapM decrypt . (.gstNumber)) mbFleetInfo
+        -- For fleet invoices show the registered fleet name; fall back to the owner's first name when unset
+        let resolvedIssuedToName = Just $ fromMaybe person.firstName (mbFleetInfo >>= (.fleetName))
         let invoiceParams =
               InvoiceCreationParams
                 { paymentOrderId = latestPurchase.paymentOrderId.getId,
                   issuedToType = if isFleetOwner then BecknInvoice.FLEET_OWNER else BecknInvoice.DRIVER,
-                  issuedToName = Just person.firstName,
+                  issuedToName = resolvedIssuedToName,
                   issuedToAddress = issuedToAddress,
                   issuedByType = "SELLER",
                   issuedById = merchantId.getId,
