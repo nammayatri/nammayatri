@@ -1036,8 +1036,8 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
 
     when (not isDocReqEmpty) $ do
       forM_ mbPersonToNotify $ \person -> do
-        forM_ validatedDocs $ \(docType, _mbImage, docDetail) -> do
-          sendDocumentRejectionNotification merchantOpCity.id (show docType) docDetail.rejectedReason person
+        forM_ validatedDocs $ \(_mbImage, _rejectedReason, docDetail) -> do
+          sendDocumentRejectionNotification merchantOpCity.id (show docDetail.documentType) docDetail.rejectedReason person
 
     let domainEntityType = case req.entityType of
           API.Types.ProviderPlatform.Operator.Driver.DRIVER -> DRR.DRIVER

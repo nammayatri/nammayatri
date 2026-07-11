@@ -47,6 +47,7 @@ data QuoteAPIEntity = QuoteAPIEntity
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
+    vehicleServiceTierLuggageCapacity :: Maybe Int,
     tripCategory :: Maybe DTC.TripCategory,
     customerOffers :: Maybe SOffer.CumulativeOfferResp,
     createdAt :: UTCTime,

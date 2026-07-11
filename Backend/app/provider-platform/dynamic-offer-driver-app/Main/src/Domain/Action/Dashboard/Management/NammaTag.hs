@@ -368,7 +368,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let mbMerchantId = Just $ cast merchant.id
-  case req.domain of
+  resp <- case req.domain of
     LYT.POOLING -> do
       driversData :: [DriverPoolWithActualDistResult] <- mapM (YudhishthiraFlow.createLogicData def . Just) req.inputData
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy TaggedDriverPoolInput) transporterConfig.referralLinkPassword req (TaggedDriverPoolInput driversData False 0)
@@ -492,6 +492,14 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DCC.CoinsConfig)) transporterConfig.referralLinkPassword req logicData
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
+  when resp.isRuleUpdated $ case req.domain of
+    LYT.DRIVER_CONFIG cfgType -> do
+      TDL.deleteConfigHashKey (cast merchantOpCityId) req.domain
+      invalidateConfigInMem cfgType
+      logDebug $ "CP Log: Cleared Cache for " <> show cfgType
+    _ -> pure ()
+  pure resp
+
 getNammaTagAppDynamicLogic :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Int -> LYT.LogicDomain -> Environment.Flow [LYT.GetLogicsResp]
 getNammaTagAppDynamicLogic merchantShortId opCity mbVersion domain = do
   merchant <- findMerchantByShortId merchantShortId
@@ -568,7 +576,14 @@ postNammaTagAppDynamicLogicUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.
 postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  YudhishthiraFlow.upsertLogicRollout (Just $ cast merchant.id) (cast merchantOpCityId) rolloutReq TC.returnConfigs opCity
+  result <- YudhishthiraFlow.upsertLogicRollout (Just $ cast merchant.id) (cast merchantOpCityId) rolloutReq TC.returnConfigs opCity
+  forM_ rolloutReq $ \rolloutObj -> case rolloutObj.domain of
+    LYT.DRIVER_CONFIG cfgType -> do
+      TDL.deleteConfigHashKey (cast merchantOpCityId) rolloutObj.domain
+      invalidateConfigInMem cfgType
+      logDebug $ "CP Log: Cleared Cache for " <> show cfgType
+    _ -> pure ()
+  pure result
 
 getNammaTagAppDynamicLogicVersions :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Int -> Prelude.Maybe Prelude.Int -> LYT.LogicDomain -> Environment.Flow LYT.AppDynamicLogicVersionResp
 getNammaTagAppDynamicLogicVersions merchantShortId opCity mbLimit mbOffset domain = do
@@ -848,7 +863,18 @@ postNammaTagConfigPilotActionChange :: Kernel.Types.Id.ShortId Domain.Types.Merc
 postNammaTagConfigPilotActionChange _merchantShortId _opCity req = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
-  YudhishthiraFlow.postNammaTagConfigPilotActionChange (Just $ cast merchant.id) (cast merchantOpCityId) req TC.handleConfigDBUpdate TC.returnConfigs _opCity
+  result <- YudhishthiraFlow.postNammaTagConfigPilotActionChange (Just $ cast merchant.id) (cast merchantOpCityId) req TC.handleConfigDBUpdate TC.returnConfigs _opCity
+  let domain = case req of
+        LYT.Conclude c -> c.domain
+        LYT.Abort a -> a.domain
+        LYT.Revert r -> r.domain
+  case domain of
+    LYT.DRIVER_CONFIG cfgType -> do
+      TDL.deleteConfigHashKey (cast merchantOpCityId) domain
+      invalidateConfigInMem cfgType
+      logDebug $ "CP Log: Cleared Cache for " <> show cfgType
+    _ -> pure ()
+  pure result
 
 getNammaTagConfigPilotAllUiConfigs :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Bool -> Environment.Flow [LYT.LogicDomain]
 getNammaTagConfigPilotAllUiConfigs _merchantShortId _opCity mbUnderExp = do

@@ -215,6 +215,7 @@ Booking:
     isScheduled: Bool
     vehicleServiceTierType: ServiceTierType|NoRelation
     vehicleServiceTierSeatingCapacity: Maybe Int
+    vehicleServiceTierLuggageCapacity: Maybe Int
     vehicleServiceTierAirConditioned: Maybe Double
     vehicleCategory: Maybe VehicleCategory
     vehicleIconUrl: Maybe BaseUrl
@@ -471,6 +472,7 @@ Booking:
     riderId: "!SecondaryKey" # forcing to be a secondary key
     quoteId: "!SecondaryKey" # forcing to be a secondary key
     riderTransactionId: "!SecondaryKey" # forcing to be a secondary key
+    otpCode: "!SecondaryKey" # forcing to be a secondary key
 
   queries:
     updateIsBookingUpdated:

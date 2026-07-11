@@ -18,7 +18,6 @@ Faq:
 
   constraints:
     id: PrimaryKey
-    faqGroupId: "!SecondaryKey"
     language: SecondaryKey
 
   queries:

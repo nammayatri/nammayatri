@@ -688,3 +688,4 @@ ALTER TABLE atlas_app.estimate ADD COLUMN fare_settlement_type text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.estimate ADD COLUMN area text ;
+ALTER TABLE atlas_app.estimate ADD COLUMN vehicle_service_tier_luggage_capacity integer ;
