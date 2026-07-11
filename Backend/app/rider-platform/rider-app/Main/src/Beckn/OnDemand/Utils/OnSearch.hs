@@ -54,7 +54,7 @@ getQuoteFulfillmentId item =
     >>= listToMaybe
     & fromMaybeM (InvalidRequest "Missing Fulfillment Ids")
 
-getVehicleVariant :: MonadFlow m => Spec.Provider -> Spec.Item -> m (VehicleVariant.VehicleVariant, Maybe Int)
+getVehicleVariant :: MonadFlow m => Spec.Provider -> Spec.Item -> m (VehicleVariant.VehicleVariant, Maybe Int, Maybe Int)
 getVehicleVariant provider item = do
   let vehicle =
         item.itemFulfillmentIds >>= listToMaybe
@@ -63,10 +63,11 @@ getVehicleVariant provider item = do
       variant' = vehicle >>= (.vehicleVariant)
       category = vehicle >>= (.vehicleCategory)
       capacity = vehicle >>= (.vehicleCapacity)
+      luggageCapacity = vehicle >>= (.vehicleLuggageCapacity)
   let variant = map T.toUpper variant'
       mbDVehVariant = Common.parseVehicleVariant category variant
   vehicleVariant <- mbDVehVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicle category:-" <> show category <> ",vehicle variant:-" <> show variant)
-  pure (vehicleVariant, capacity)
+  pure (vehicleVariant, capacity, luggageCapacity)
 
 isValidVehVariant :: MonadFlow m => Spec.Fulfillment -> m Bool
 isValidVehVariant fulfillment = do

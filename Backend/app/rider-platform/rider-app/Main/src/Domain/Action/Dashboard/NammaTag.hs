@@ -345,7 +345,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let merchantOpCityId = merchantOperatingCity.id
   _riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SQRiderConfig.findByMerchantOperatingCityId merchantOpCityId)) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
-  case req.domain of
+  resp <- case req.domain of
     LYTU.UI_RIDER dt pt -> do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchant.id, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
       defaultConfig <- SQU.getUiConfig uiConfigReq merchantOpCityId >>= fromMaybeM (InvalidRequest "No default found for UiRiderConfig")
@@ -443,6 +443,14 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DPC.PassCategory)) _riderConfig.dynamicLogicUpdatePassword req logicData
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
+  when resp.isRuleUpdated $ case req.domain of
+    LYTU.RIDER_CONFIG cfgType -> do
+      TDL.deleteConfigHashKey (cast merchantOpCityId) req.domain
+      invalidateConfigInMem cfgType
+      logDebug $ "CP Log: Cleared Cache for " <> show cfgType
+    _ -> pure ()
+  pure resp
+
 getNammaTagAppDynamicLogic :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Int -> LYTU.LogicDomain -> Environment.Flow [LYTU.GetLogicsResp]
 getNammaTagAppDynamicLogic merchantShortId opCity mbVersion domain = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
@@ -517,7 +525,14 @@ getNammaTagAppDynamicLogicGetLogicRollout merchantShortId opCity activeOnly time
 postNammaTagAppDynamicLogicUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> [LYTU.LogicRolloutObject] -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  YudhishthiraFlow.upsertLogicRollout (Just $ cast merchantOperatingCity.merchantId) (cast merchantOperatingCity.id) rolloutReq TC.returnConfigs opCity
+  result <- YudhishthiraFlow.upsertLogicRollout (Just $ cast merchantOperatingCity.merchantId) (cast merchantOperatingCity.id) rolloutReq TC.returnConfigs opCity
+  forM_ rolloutReq $ \rolloutObj -> case rolloutObj.domain of
+    LYTU.RIDER_CONFIG cfgType -> do
+      TDL.deleteConfigHashKey (cast merchantOperatingCity.id) rolloutObj.domain
+      invalidateConfigInMem cfgType
+      logDebug $ "CP Log: Cleared Cache for " <> show cfgType
+    _ -> pure ()
+  pure result
 
 getNammaTagAppDynamicLogicVersions :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Int -> Prelude.Maybe Prelude.Int -> LYTU.LogicDomain -> Environment.Flow LYTU.AppDynamicLogicVersionResp
 getNammaTagAppDynamicLogicVersions merchantShortId opCity mbLimit mbOffset domain = do
@@ -792,7 +807,18 @@ postNammaTagConfigPilotActionChange :: Kernel.Types.Id.ShortId Domain.Types.Merc
 postNammaTagConfigPilotActionChange _merchantShortId _opCity req = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId merchant (Just _opCity)
-  YudhishthiraFlow.postNammaTagConfigPilotActionChange (Just $ cast merchant.id) (cast merchantOpCityId) req TC.handleConfigDBUpdate TC.returnConfigs _opCity
+  result <- YudhishthiraFlow.postNammaTagConfigPilotActionChange (Just $ cast merchant.id) (cast merchantOpCityId) req TC.handleConfigDBUpdate TC.returnConfigs _opCity
+  let domain = case req of
+        LYTU.Conclude c -> c.domain
+        LYTU.Abort a -> a.domain
+        LYTU.Revert r -> r.domain
+  case domain of
+    LYTU.RIDER_CONFIG cfgType -> do
+      TDL.deleteConfigHashKey (cast merchantOpCityId) domain
+      invalidateConfigInMem cfgType
+      logDebug $ "CP Log: Cleared Cache for " <> show cfgType
+    _ -> pure ()
+  pure result
 
 getNammaTagConfigPilotAllUiConfigs :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Bool -> Environment.Flow [LYTU.LogicDomain]
 getNammaTagConfigPilotAllUiConfigs _merchantShortId _opCity mbUnderExp = do
