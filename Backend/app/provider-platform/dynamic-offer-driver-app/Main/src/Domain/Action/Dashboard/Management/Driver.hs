@@ -1517,7 +1517,7 @@ getDriverAirportPreference merchantShortId _opCity mbPhoneNumber mbVehicleNumber
       Common.AirportBlockHistoryItem
         { blockReason = h.blockReason,
           blockLiftTime = h.blockLiftTime,
-          blockedBy = Just (show h.blockedBy),
+          blockedBy = h.requestorId,
           actionType = show <$> h.actionType,
           reportedAt = h.reportedAt
         }
@@ -1539,7 +1539,7 @@ postDriverAirportPreference merchantShortId opCity driverId req = do
           { blockedBy = DTDBT.Dashboard,
             reason = if req.enableForAirport == Common.BLOCKED then req.blockReason else Just "MANUAL_UNBLOCK",
             specialZoneId = req.specialZoneId,
-            requestorId = Nothing,
+            requestorId = req.requestorId,
             merchantId = merchant.id,
             merchantOperatingCityId = merchantOpCityId
           }
