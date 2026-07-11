@@ -82,7 +82,7 @@ tfQuotesInfo provider fulfillments validTill item = do
       specialLocationSupportNumber_ = Beckn.OnDemand.Utils.OnSearch.getspecialLocationSupportNumber item
       fareSettlementType_ = Beckn.OnDemand.Utils.OnSearch.getFareSettlementType item
       area_ = Beckn.OnDemand.Utils.OnSearch.getPickupArea item
-  (vehicleVariant_, vehicleCapacity_) <- Beckn.OnDemand.Utils.OnSearch.getVehicleVariant provider item
+  (vehicleVariant_, vehicleCapacity_, vehicleLuggageCapacity_) <- Beckn.OnDemand.Utils.OnSearch.getVehicleVariant provider item
   vehicleServiceTierAirConditioned_ <- Beckn.OnDemand.Utils.OnSearch.getVehicleServiceTierAirConditioned provider item
   isAirConditioned_ <- Beckn.OnDemand.Utils.OnSearch.getIsAirConditioned provider item
   let mbServiceTierType = Beckn.OnDemand.Utils.OnSearch.getServiceTierType item
@@ -143,6 +143,7 @@ tfQuotesInfo provider fulfillments validTill item = do
               estimatedPickupDuration = estimatedPickupDuration,
               vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned_,
               vehicleServiceTierSeatingCapacity = vehicleCapacity_,
+              vehicleServiceTierLuggageCapacity = vehicleLuggageCapacity_,
               tripCategory = tripCategory,
               vehicleCategory,
               vehicleIconUrl = vehicleIconUrl,
@@ -192,6 +193,7 @@ tfQuotesInfo provider fulfillments validTill item = do
               isAirConditioned = isAirConditioned_,
               vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned_,
               vehicleServiceTierSeatingCapacity = vehicleCapacity_,
+              vehicleServiceTierLuggageCapacity = vehicleLuggageCapacity_,
               quoteBreakupList = quoteBreakupList_,
               tripCategory = tripCategory,
               vehicleCategory,

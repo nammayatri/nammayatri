@@ -85,6 +85,7 @@ Quote:
     merchantId : Id Merchant
     vehicleServiceTierType : ServiceTierType
     vehicleServiceTierSeatingCapacity : Maybe Int
+    vehicleServiceTierLuggageCapacity : Maybe Int
     vehicleServiceTierAirConditioned : Maybe Double
     isAirConditioned: Maybe Bool
     serviceTierName: Maybe Text

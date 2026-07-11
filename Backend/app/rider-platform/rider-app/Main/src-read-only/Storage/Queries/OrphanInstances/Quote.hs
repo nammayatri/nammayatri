@@ -72,6 +72,7 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
             validTill = validTill,
             vehicleIconUrl = vehicleIconUrl',
             vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
+            vehicleServiceTierLuggageCapacity = vehicleServiceTierLuggageCapacity,
             vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
             vehicleServiceTierType = vehicleVariant
           }
@@ -131,6 +132,7 @@ instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
         Beam.validTill = validTill,
         Beam.vehicleIconUrl = Kernel.Prelude.fmap showBaseUrl vehicleIconUrl,
         Beam.vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
+        Beam.vehicleServiceTierLuggageCapacity = vehicleServiceTierLuggageCapacity,
         Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
         Beam.vehicleVariant = vehicleServiceTierType
       }
