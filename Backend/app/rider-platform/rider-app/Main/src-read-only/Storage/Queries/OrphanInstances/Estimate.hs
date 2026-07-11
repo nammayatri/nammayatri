@@ -89,6 +89,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             vehicleCategory = vehicleCategory,
             vehicleIconUrl = vehicleIconUrl',
             vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
+            vehicleServiceTierLuggageCapacity = vehicleServiceTierLuggageCapacity,
             vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
             vehicleServiceTierType = vehicleVariant,
             waitingCharges = Domain.Types.Estimate.WaitingCharges $ Kernel.Types.Common.mkPriceWithDefault waitingChargePerMinAmount currency <$> waitingChargePerMin
@@ -169,6 +170,7 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.vehicleCategory = vehicleCategory,
         Beam.vehicleIconUrl = Kernel.Prelude.fmap showBaseUrl vehicleIconUrl,
         Beam.vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
+        Beam.vehicleServiceTierLuggageCapacity = vehicleServiceTierLuggageCapacity,
         Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
         Beam.vehicleVariant = vehicleServiceTierType,
         Beam.waitingChargePerMin = (.waitingChargePerMin) waitingCharges <&> (.amountInt),

@@ -203,6 +203,7 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
             vehicleServiceTierAirConditioned = estimate.vehicleServiceTierAirConditioned,
             isAirConditioned = estimate.isAirConditioned,
             vehicleServiceTierSeatingCapacity = estimate.vehicleServiceTierSeatingCapacity,
+            vehicleServiceTierLuggageCapacity = estimate.vehicleServiceTierLuggageCapacity,
             specialLocationName = estimate.specialLocationName,
             specialLocationSupportNumber = Nothing,
             fareSettlementType = estimate.fareSettlementType,

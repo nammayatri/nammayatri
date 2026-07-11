@@ -34,7 +34,8 @@ emptyVehicle =
       vehicleModel = Nothing,
       vehicleRegistration = Nothing,
       vehicleVariant = Nothing,
-      vehicleCapacity = Nothing
+      vehicleCapacity = Nothing,
+      vehicleLuggageCapacity = Nothing
     }
 
 -- | An empty 'Person' with all fields set to @Nothing@.
