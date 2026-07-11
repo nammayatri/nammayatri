@@ -1009,7 +1009,9 @@ postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req handleConf
               }
       LYSQADLR.updateByPrimaryKey concludedRollout
       CADLR.clearCache (cast merchantOpCityId) concludeReq.domain
-      makeConfigHistory concludeReq.domain concludeReq.version
+      logDebug $ "CP Log: Cache CLeared for " <> merchantOpCityId.getId <> " " <> show concludeReq.domain
+      logDebug $ "[CONCLUDE] promoted v" <> show concludedRollout.version <> " to base(100%), demoted v" <> show updatedBaseRollout.version <> "; cleared :Active. Correct next :Active/:BaseRollout refill = base v" <> show concludedRollout.version
+    -- makeConfigHistory concludeReq.domain concludeReq.version
     LYT.Abort abortReq -> do
       expRollout <- LYSQADLR.findByPrimaryKey abortReq.domain merchantOpCityId "Unbounded" abortReq.version >>= fromMaybeM (InvalidRequest $ "Rollout not found for Domain: " <> show abortReq.domain <> " City: " <> show merchantOpCityId <> " TimeBounds: " <> "Unbounded" <> " Version: " <> show abortReq.version)
       let abortedRollout =
@@ -1045,6 +1047,7 @@ postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req handleConf
   where
     makeConfigHistory domain version = do
       fork "pushing config history" $ do
+        logDebug $ "[HISTORY_FORK] domain=" <> show domain <> " version=" <> show version <> " -> calling giveConfigs (will re-read :Active/:BaseRollout)"
         when (isNothing mbMerchantId) $ throwError $ InternalError "Merchant not found"
         configsJson <- (.configs) <$> _giveConfigs domain (cast merchantOpCityId) (fromJust mbMerchantId) opCity
         case req of

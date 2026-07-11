@@ -115,8 +115,9 @@ tfVehicle pricing = do
       vehicleRegistration_ = Nothing
       vehicleVariant_ = Just variant
       vehicleCapacity_ = pricing.vehicleServiceTierSeatingCapacity
+      vehicleLuggageCapacity_ = pricing.vehicleServiceTierLuggageCapacity
       vehicleEnergyType_ = Nothing -- TODO: populate when Pricing includes energy_type
-      returnData = BecknV2.OnDemand.Types.Vehicle {vehicleCategory = vehicleCategory_, vehicleColor = vehicleColor_, vehicleEnergyType = vehicleEnergyType_, vehicleMake = vehicleMake_, vehicleModel = vehicleModel_, vehicleRegistration = vehicleRegistration_, vehicleVariant = vehicleVariant_, vehicleCapacity = vehicleCapacity_}
+      returnData = BecknV2.OnDemand.Types.Vehicle {vehicleCategory = vehicleCategory_, vehicleColor = vehicleColor_, vehicleEnergyType = vehicleEnergyType_, vehicleMake = vehicleMake_, vehicleModel = vehicleModel_, vehicleRegistration = vehicleRegistration_, vehicleVariant = vehicleVariant_, vehicleCapacity = vehicleCapacity_, vehicleLuggageCapacity = vehicleLuggageCapacity_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
     then Nothing
