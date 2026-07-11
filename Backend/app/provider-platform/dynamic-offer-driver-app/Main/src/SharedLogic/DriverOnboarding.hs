@@ -127,33 +127,40 @@ validateAadhaarOnboarding person mbAadhaarNumber = do
   when blocked $ throwError AccountBlocked
   pure driverDocument
 
+isActiveAadhaarConflict :: Person -> DAadhaarCard.AadhaarCard -> Bool
+isActiveAadhaarConflict person aadhaarInfo =
+  aadhaarInfo.driverId /= person.id
+    && aadhaarInfo.merchantId == person.merchantId
+    && aadhaarInfo.verificationStatus `elem` [Documents.VALID, Documents.MANUAL_VERIFICATION_REQUIRED, Documents.PENDING]
+
+validateAadhaarPreExtraction :: Person -> DTC.TransporterConfig -> Maybe Text -> Flow () -> Flow ()
+validateAadhaarPreExtraction person transporterConfig mbAadhaarNumber cleanupOnConflict =
+  whenJust mbAadhaarNumber $ \aadhaarNumber ->
+    if isFullAadhaar aadhaarNumber
+      then when (transporterConfig.allowDuplicateAadhaar == Just False) $ do
+        aadhaarHash <- getDbHash aadhaarNumber
+        aadhaarInfoList <- QAadhaarCard.findAllByEncryptedAadhaarNumber (Just aadhaarHash)
+        unless (null (filter (isActiveAadhaarConflict person) aadhaarInfoList)) $
+          cleanupOnConflict >> throwError AadhaarAlreadyLinked
+      else
+        when (transporterConfig.allowMaskedAadhaar == Just False) $
+          cleanupOnConflict >> throwError MaskedAadhaarNotAllowed
+
 validateMaskedAadhaarPolicy :: DTC.TransporterConfig -> AadhaarExtractedData -> Flow () -> Flow ()
 validateMaskedAadhaarPolicy transporterConfig aadhaarData cleanupOnConflict =
   whenJust aadhaarData.aedAadhaarNumber $ \aadhaarNumber ->
     unless (isFullAadhaar aadhaarNumber) $
-      if transporterConfig.allowMaskedAadhaar == Just False
-        then cleanupOnConflict >> throwError MaskedAadhaarNotAllowed
-        else
-          when (isNothing aadhaarData.aedNameOnCard || isNothing aadhaarData.aedDateOfBirth) $
-            cleanupOnConflict >> throwError AadhaarNameAndDobRequired
+      when (transporterConfig.allowMaskedAadhaar /= Just False && (isNothing aadhaarData.aedNameOnCard || isNothing aadhaarData.aedDateOfBirth)) $
+        cleanupOnConflict >> throwError AadhaarNameAndDobRequired
 
 checkDuplicateAadhaar :: Person -> DTC.TransporterConfig -> AadhaarExtractedData -> Flow () -> Flow ()
 checkDuplicateAadhaar person transporterConfig aadhaarData cleanupOnConflict =
   case (transporterConfig.allowDuplicateAadhaar, aadhaarData.aedAadhaarNumber) of
     (Just False, Just aadhaarNumber)
-      | isFullAadhaar aadhaarNumber -> checkByHash aadhaarNumber
-      | otherwise -> checkByIdentity aadhaarNumber
+      | not (isFullAadhaar aadhaarNumber) -> checkByIdentity aadhaarNumber
     _ -> pure ()
   where
     onConflict = cleanupOnConflict >> throwError AadhaarAlreadyLinked
-    isActiveConflict aadhaarInfo =
-      aadhaarInfo.driverId /= person.id
-        && aadhaarInfo.merchantId == person.merchantId
-        && aadhaarInfo.verificationStatus `elem` [Documents.VALID, Documents.MANUAL_VERIFICATION_REQUIRED, Documents.PENDING]
-    checkByHash aadhaarNumber = do
-      aadhaarHash <- getDbHash aadhaarNumber
-      aadhaarInfoList <- QAadhaarCard.findAllByEncryptedAadhaarNumber (Just aadhaarHash)
-      unless (null (filter isActiveConflict aadhaarInfoList)) onConflict
     checkByIdentity aadhaarNumber =
       whenJust aadhaarData.aedDateOfBirth $ \dateOfBirth -> do
         candidates <- QAadhaarCard.findAllByMerchantIdAndDateOfBirth person.merchantId dateOfBirth
@@ -165,7 +172,7 @@ checkDuplicateAadhaar person transporterConfig aadhaarData cleanupOnConflict =
             conflicts =
               filter
                 ( \aadhaarInfo ->
-                    isActiveConflict aadhaarInfo
+                    isActiveAadhaarConflict person aadhaarInfo
                       && (T.takeEnd 3 <$> aadhaarInfo.maskedAadhaarNumber) == Just newLastThree
                       && namesEqual aadhaarInfo
                 )
@@ -333,6 +340,7 @@ verifyAadhaarCommon isDashboard verifyBy person transporterConfig merchantId mer
     when (existing.verificationStatus == Documents.VALID && not (fromMaybe False transporterConfig.allowAadhaarReupload)) $ do
       cleanupOnConflict
       throwError $ DocumentAlreadyValidated "Aadhaar"
+  validateAadhaarPreExtraction person transporterConfig mbAadhaarPlain cleanupOnConflict
   aadhaarData <- case input of
     AadhaarExtractInput aviAadhaarNumber aviFrontImageId aviBackImageId aviConsent aviAadhaarName -> do
       image1 <- getValidDocumentImage person.id aviFrontImageId ODC.AadhaarCard
