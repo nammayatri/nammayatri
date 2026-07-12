@@ -71,7 +71,7 @@ types:
     priceWithCurrency: PriceAPIEntity
     stations: [FRFSStationAPI]
     routeStations: "Maybe [FRFSRouteStationsAPI]"
-    interchangeStations: "Maybe [FRFSStationAPI]"
+    journeyStations: "Maybe [FRFSStationAPI]" # Start, interchange (line-change) and end stops, each annotated with the route boarded there.
     validTill: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
@@ -233,6 +233,7 @@ types:
     address: Maybe Text
     stationType: Maybe StationType
     color: Maybe Text
+    routeDetails: Maybe Text # Route long name for the route boarded at this stop (populated for journeyStations).
     distance: Maybe Meters
     sequenceNum: Maybe Int
     towards: Maybe Text
