@@ -37,11 +37,11 @@ import Kernel.External.AadhaarVerification.Gridline.Config
 import Kernel.External.Insurance.Interface (prepareIffcoTokioHttpManager)
 import Kernel.External.SharedLogic.HyperVerge.Functions (prepareHyperVergeHttpManager)
 import Kernel.External.Tokenize (prepareJourneyMonitoringHttpManager)
+import Kernel.External.Verification.Ekatra.Types (prepareEkatraHttpManager)
 import Kernel.External.Verification.Interface (prepareMorthHttpManager)
 import Kernel.External.Verification.Interface.Idfy
 import Kernel.External.Verification.InternalScripts.FaceVerification (prepareInternalScriptsHttpManager)
 import Kernel.External.Verification.SafetyPortal.Config (prepareSafetyPortalHttpManager)
-import Kernel.External.Verification.Ekatra.Types (prepareEkatraHttpManager)
 import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
 import Kernel.Storage.Queries.SystemConfigs
