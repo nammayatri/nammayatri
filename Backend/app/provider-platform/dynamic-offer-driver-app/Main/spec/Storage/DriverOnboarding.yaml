@@ -537,6 +537,15 @@ Image:
       kvFunction: deleteWithKV
       where:
         and: [id, personId]
+    updateVerificationStatusAndFailureReasonForIds:
+      kvFunction: updateWithKV
+      params: [verificationStatus, failureReason]
+      where:
+        in: [id]
+    findImagesByIds:
+      kvFunction: findAllWithKV
+      where:
+        in: [id]
   extraOperations:
     - EXTRA_QUERY_FILE
   domainInstance:

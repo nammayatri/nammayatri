@@ -365,6 +365,7 @@ types:
     - documentDescription: Maybe Text
     - rejectedReason: Text
     - remarks: Maybe Text
-    - imageId: Maybe (Id Image)
+    - imageId1: Maybe (Id Image)
+    - imageId2: Maybe (Id Image)
     - mediaId: Maybe Text
     - derive: "Show"
