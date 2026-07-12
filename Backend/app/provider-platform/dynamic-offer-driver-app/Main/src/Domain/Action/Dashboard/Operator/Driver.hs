@@ -49,7 +49,6 @@ import qualified Domain.Types.DriverPanCard as DDPC
 import qualified Domain.Types.DriverSSN as DDSSN
 import qualified Domain.Types.DriverUdyam as DDUDYAM
 import qualified Domain.Types.FleetOwnerInformation as DFOI
-import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -1036,7 +1035,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
 
     when (not isDocReqEmpty) $ do
       forM_ mbPersonToNotify $ \person -> do
-        forM_ validatedDocs $ \(_mbImage, _rejectedReason, docDetail) -> do
+        forM_ validatedDocs $ \(_images, _rejectedReason, docDetail) -> do
           sendDocumentRejectionNotification merchantOpCity.id (show docDetail.documentType) docDetail.rejectedReason person
 
     let domainEntityType = case req.entityType of
@@ -1105,8 +1104,10 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
 
       forM req.rejectDocumentUpdateReq $ \doc -> do
         let domainDocType = mapDocumentType doc.documentType
-        mbImage <- forM doc.imageId $ \imgId -> do
-          IQuery.findById (Kernel.Types.Id.cast imgId) >>= fromMaybeM (InvalidRequest "Image ID not found")
+        let imageIds = catMaybes [Kernel.Types.Id.cast <$> doc.imageId1, Kernel.Types.Id.cast <$> doc.imageId2]
+        images <- IQuery.findImagesByIds imageIds
+        let retrievedIds = map (.id) images
+        unless (all (`elem` retrievedIds) imageIds) $ throwError (InvalidRequest "Image ID not found")
 
         when (domainDocType == DVC.ProfilePhoto) $ throwError (InvalidRequest "Cannot reject Profile Photo")
 
@@ -1131,13 +1132,15 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
                   documentDescription = Nothing,
                   rejectedReason = doc.rejectedReason,
                   remarks = doc.remarks,
-                  imageId = fmap Kernel.Types.Id.cast doc.imageId,
+                  imageId1 = fmap Kernel.Types.Id.cast doc.imageId1,
+                  imageId2 = fmap Kernel.Types.Id.cast doc.imageId2,
                   mediaId = Nothing
                 }
-        pure (mbImage, doc.rejectedReason, docDetail)
+        pure (images, doc.rejectedReason, docDetail)
     applyDocRejections entityType reqId validatedDocs =
-      forM_ validatedDocs $ \(mbImage, rejectedReason, docDetail) -> do
-        forM_ mbImage $ \image -> IQuery.updateByPrimaryKey image {DImage.verificationStatus = Just Documents.INVALID, DImage.failureReason = Just (ImageNotValid rejectedReason)}
+      forM_ validatedDocs $ \(images, rejectedReason, docDetail) -> do
+        let imageIds = map (.id) images
+        IQuery.updateVerificationStatusAndFailureReasonForIds (Just Documents.INVALID) (Just $ ImageNotValid rejectedReason) imageIds
         invalidateSpecificDocument entityType reqId docDetail.documentType (Just rejectedReason)
 
     invalidateSpecificDocument entityType entityIdTxt docType rejectReason = do
@@ -1296,7 +1299,8 @@ getDriverRequestReviewHistory merchantShortId opCity apiEntityType reviewRequest
           documentDescription = doc.documentDescription,
           rejectedReason = doc.rejectedReason,
           remarks = doc.remarks,
-          imageId = fmap Kernel.Types.Id.cast doc.imageId,
+          imageId1 = fmap Kernel.Types.Id.cast doc.imageId1,
+          imageId2 = fmap Kernel.Types.Id.cast doc.imageId2,
           mediaId = doc.mediaId
         }
 
