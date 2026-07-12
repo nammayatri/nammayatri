@@ -775,6 +775,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
         currency = searchRequest.currency,
         distanceUnit = searchRequest.distanceUnit,
         merchantOperatingCityId = Just merchantOpCityId,
+        area = SL.areaToText <$> fullFarePolicy.mbArea,
         ..
       }
 
@@ -903,6 +904,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
         mbCongestionFromLocGeohashDistance = (.mbCongestionFromLocGeohashDistance) =<< fullFarePolicy.congestionChargeData,
         mbCongestionFromLocGeohashDistancePast = (.mbCongestionFromLocGeohashDistancePast) =<< fullFarePolicy.congestionChargeData,
         mbCongestionFromLocGeohashPast = (.mbCongestionFromLocGeohashPast) =<< fullFarePolicy.congestionChargeData,
+        area = SL.areaToText <$> fullFarePolicy.mbArea,
         ..
       }
 
@@ -1175,6 +1177,7 @@ transformReserveRideEsttoEst DBppEstimate.BppEstimate {..} = do
   return
     DEst.Estimate
       { commissionCharges = Nothing,
+        area = Nothing,
         ..
       }
 

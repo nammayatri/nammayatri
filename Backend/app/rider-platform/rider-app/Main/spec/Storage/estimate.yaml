@@ -108,6 +108,7 @@ Estimate:
     driversLocation : "[LatLong]"
     specialLocationTag : Maybe Text
     specialLocationName : Maybe Text
+    area : Maybe Text
     serviceTierName : Maybe Text
     serviceTierShortDesc : Maybe Text
     clientSdkVersion: Maybe Version
