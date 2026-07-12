@@ -49,7 +49,8 @@ data QuoteAPIEntity = QuoteAPIEntity
     createdAt :: UTCTime,
     isValueAddNP :: Bool,
     validTill :: UTCTime,
-    vehicleIconUrl :: Maybe Text
+    vehicleIconUrl :: Maybe Text,
+    area :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

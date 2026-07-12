@@ -170,7 +170,8 @@ data EstimateInfo = EstimateInfo
     qar :: Maybe Double,
     -- petCharges :: Maybe Price,
     smartTipSuggestion :: Maybe HighPrecMoney,
-    smartTipReason :: Maybe Text
+    smartTipReason :: Maybe Text,
+    area :: Maybe Text
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -239,7 +240,8 @@ data QuoteInfo = QuoteInfo
     tripCategory :: DT.TripCategory,
     -- petCharges :: Maybe Price,
     vehicleCategory :: Enums.VehicleCategory,
-    vehicleIconUrl :: Maybe BaseUrl
+    vehicleIconUrl :: Maybe BaseUrl,
+    area :: Maybe Text
   }
 
 data QuoteDetails

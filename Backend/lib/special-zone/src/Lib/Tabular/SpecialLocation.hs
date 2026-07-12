@@ -46,6 +46,7 @@ mkPersist
       isQueueEnabled Bool Maybe
       enforceTollRoute Bool Maybe
       render Domain.RenderType Maybe
+      fetchAllGateFareProduct Bool Maybe
       supportNumber Text Maybe
       geomGeoJson Text Maybe
       createdAt UTCTime
