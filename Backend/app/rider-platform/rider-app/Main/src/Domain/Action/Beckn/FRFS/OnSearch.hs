@@ -443,6 +443,7 @@ castStationToAPI integratedBppConfigId DStation {..} =
       API.parentStopCode = Nothing,
       API.routeCodes = Nothing,
       API.color = Nothing,
+      API.routeDetails = Nothing,
       API.lat = stationLat,
       API.lon = stationLon,
       API.name = Just stationName,
