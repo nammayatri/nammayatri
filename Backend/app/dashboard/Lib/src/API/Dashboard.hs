@@ -16,6 +16,7 @@ module API.Dashboard where
 
 import qualified API.Dashboard.AccessMatrix as AccessMatrix
 import qualified API.Dashboard.EmailVerification as EmailVerification
+import qualified API.Dashboard.InternalAuth as InternalAuth
 import qualified API.Dashboard.Merchant as Merchant
 import qualified API.Dashboard.Person as Person
 import qualified API.Dashboard.Registration as Registration
@@ -31,6 +32,7 @@ type API =
     :<|> AccessMatrix.API
     :<|> Roles.API
     :<|> Merchant.API
+    :<|> InternalAuth.API
 
 handler :: BeamFlow' => FlowServer API
 handler =
@@ -40,3 +42,4 @@ handler =
     :<|> AccessMatrix.handler
     :<|> Roles.handler
     :<|> Merchant.handler
+    :<|> InternalAuth.handler

@@ -13,6 +13,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Lib.Finance.Core.Types
 import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Sequelize as Se
 import qualified Storage.Beam.SubscriptionPurchase as Beam
@@ -48,8 +49,10 @@ updateReconciliationStatus reconciliationStatus id = do
 
 updateStatusById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.SubscriptionPurchase.SubscriptionPurchaseStatus -> Kernel.Types.Id.Id Domain.Types.SubscriptionPurchase.SubscriptionPurchase -> m ())
-updateStatusById status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  (Domain.Types.SubscriptionPurchase.SubscriptionPurchaseStatus -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.SubscriptionPurchase.SubscriptionPurchase -> m ())
+updateStatusById status updatedBy updatedById id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now, Se.Set Beam.updatedBy updatedBy, Se.Set Beam.updatedById updatedById] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

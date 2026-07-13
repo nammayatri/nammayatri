@@ -4,6 +4,7 @@ module Domain.Action.Dashboard.FRFSTicket
     putFRFSTicketFrfsRouteFareUpsert,
     getFRFSTicketFrfsRouteStations,
     postFRFSTicketFrfsStatusUpdate,
+    getFRFSTicketFrfsGtfs,
   )
 where
 
@@ -18,6 +19,7 @@ import Data.List (groupBy)
 import qualified Data.Text
 import qualified Data.Vector as V
 import qualified Domain.Action.Internal.FRFS as InternalFRFS
+import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.FRFSQuoteCategoryType as DTFRFSQuoteCategoryType
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
@@ -47,6 +49,39 @@ postFRFSTicketFrfsStatusUpdate :: (ShortId Domain.Types.Merchant.Merchant -> Ker
 postFRFSTicketFrfsStatusUpdate _merchantShortId _opCity mbRequestorId req =
   ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) $
     InternalFRFS.frfsStatusUpdate $ InternalFRFS.FRFSStatusUpdateReq {bookingIds = map cast req.bookingIds}
+
+gtfsDashboardWaitMaxSec :: Kernel.Prelude.Int
+gtfsDashboardWaitMaxSec = 10
+
+getFRFSTicketFrfsGtfs ::
+  ( ShortId Domain.Types.Merchant.Merchant ->
+    Kernel.Types.Beckn.Context.City ->
+    Kernel.Prelude.Maybe (Id Common.IntegratedBPPConfig) ->
+    Kernel.Prelude.Maybe Common.PlatformType ->
+    BecknV2.FRFS.Enums.VehicleCategory ->
+    Environment.Flow API.Types.RiderPlatform.Management.FRFSTicket.FRFSGtfsRes
+  )
+getFRFSTicketFrfsGtfs merchantShortId opCity mbIntegratedBppConfigId mbPlatformType vehicleType = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  uiRes <- FRFSTicketService.getFrfsGtfs (Kernel.Prelude.Nothing, merchant.id) (cast <$> mbIntegratedBppConfigId) (toDomainPlatformType <$> mbPlatformType) gtfsDashboardWaitMaxSec opCity vehicleType
+  pure $ toDashboardGtfsRes uiRes
+  where
+    toDomainPlatformType Common.MULTIMODAL = DIBC.MULTIMODAL
+    toDomainPlatformType Common.PARTNERORG = DIBC.PARTNERORG
+    toDomainPlatformType Common.APPLICATION = DIBC.APPLICATION
+    toDashboardGtfsRes r =
+      API.Types.RiderPlatform.Management.FRFSTicket.FRFSGtfsRes
+        { integratedBppConfigId = cast r.integratedBppConfigId,
+          ready = r.ready,
+          routes = map toRoute r.routes,
+          stops = map toStop r.stops,
+          routeStops = map toRouteStop r.routeStops,
+          fares = map toFare r.fares
+        }
+    toRoute x = API.Types.RiderPlatform.Management.FRFSTicket.FRFSGtfsRouteAPI {code = x.code, shortName = x.shortName, vehicleType = x.vehicleType, variant = x.variant}
+    toStop x = API.Types.RiderPlatform.Management.FRFSTicket.FRFSGtfsStopAPI {code = x.code, name = x.name, lat = x.lat, lon = x.lon}
+    toRouteStop x = API.Types.RiderPlatform.Management.FRFSTicket.FRFSGtfsRouteStopAPI {routeCode = x.routeCode, stopCode = x.stopCode, sequenceNum = x.sequenceNum, stopType = x.stopType}
+    toFare x = API.Types.RiderPlatform.Management.FRFSTicket.FRFSGtfsFareAPI {code = x.code, name = x.name, providerCode = x.providerCode, validityDuration = x.validityDuration}
 
 getFRFSTicketFrfsRoutes :: (ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow [API.Types.RiderPlatform.Management.FRFSTicket.FRFSDashboardRouteAPI])
 getFRFSTicketFrfsRoutes merchantShortId opCity searchStr limit offset vehicleType = do

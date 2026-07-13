@@ -23,7 +23,7 @@ import qualified Lib.Finance.Audit.Service as Audit
 import Lib.Finance.Core.Types (ActorInfo, HasActorInfo)
 import Lib.Finance.Domain.Types.AuditEntry (AuditAction (..))
 import qualified Lib.Finance.Domain.Types.AuditEntry as AuditDomain
-import Lib.Finance.Domain.Types.PgPaymentSettlementReport (PgPaymentSettlementReport)
+import Lib.Finance.Domain.Types.PgPaymentSettlementReport (PgPaymentSettlementReport (..))
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as Dom
 import Lib.Finance.Domain.Types.SettlementFileInfo (SettlementFileStatus (..))
 import Lib.Finance.Settlement.Fetch (SftpFetchMeta (..), fetchSettlementCsv)
@@ -32,10 +32,19 @@ import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Beam.PgPaymentSettlementReport as BeamPgReport
 import qualified Lib.Finance.Storage.Queries.PgPaymentSettlementReport as QPgReport
 import qualified Lib.Finance.Storage.Queries.SettlementFileInfo as QSFI
+import qualified Lib.Finance.Utils.SensitiveData as SD
 
 pgPaymentSettlementReportToAuditValue :: PgPaymentSettlementReport -> Aeson.Value
-pgPaymentSettlementReportToAuditValue report =
-  Aeson.toJSON (toTType' report :: BeamPgReport.PgPaymentSettlementReport)
+pgPaymentSettlementReportToAuditValue =
+  Aeson.toJSON . toTType' @BeamPgReport.PgPaymentSettlementReport . hidePgPaymentSettlementReportSensitiveFields
+  where
+    hidePgPaymentSettlementReportSensitiveFields :: PgPaymentSettlementReport -> PgPaymentSettlementReport
+    hidePgPaymentSettlementReportSensitiveFields PgPaymentSettlementReport {..} =
+      PgPaymentSettlementReport
+        { cardNumber = SD.maskCardNumber <$> cardNumber,
+          rawData = Nothing,
+          ..
+        }
 
 auditPgPaymentSettlementReportCreate ::
   BeamFlow.BeamFlow m r =>

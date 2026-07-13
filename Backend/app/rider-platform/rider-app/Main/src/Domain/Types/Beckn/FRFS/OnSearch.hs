@@ -39,7 +39,9 @@ data DiscoveryOnSearchReq = DiscoveryOnSearchReq
 data DiscoveryCounter = DiscoveryCounter
   { merchantId :: Text,
     pageNo :: Int,
-    maxPageNo :: Int
+    maxPageNo :: Int,
+    integratedBppConfigId :: Maybe Text,
+    storeGtfs :: Maybe Bool
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 

@@ -29,6 +29,7 @@ library
       Lib.CommunicationEngine.Dispatcher
       Lib.CommunicationEngine.Parser
       Lib.CommunicationEngine.Types
+      Lib.CommunicationEngine.Webhook
   other-modules:
       Paths_communication_engine
   hs-source-dirs:
@@ -72,6 +73,7 @@ library
     , base >=4.7 && <5
     , containers
     , euler-hs
+    , http-api-data
     , mobility-core
     , openapi3
     , record-dot-preprocessor

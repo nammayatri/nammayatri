@@ -80,6 +80,7 @@ import qualified "dynamic-offer-driver-app" Storage.Queries.Person as QPerson
 import qualified "dynamic-offer-driver-app" Storage.Queries.RCStatsExtra as QRCStats
 import qualified "dynamic-offer-driver-app" Storage.Queries.Ride as QRide
 import qualified "dynamic-offer-driver-app" Storage.Queries.RiderDetails as QRiderDetails
+import qualified "dynamic-offer-driver-app" Tools.ActorInfo as ActorInfo
 import qualified Tools.DynamicLogic as DL
 import "dynamic-offer-driver-app" Tools.Error
 import "dynamic-offer-driver-app" Tools.Event (BookingEventData (..), RideEventData (..))
@@ -414,7 +415,7 @@ handleReferral ::
   ) =>
   RideEndedEvent ->
   m ()
-handleReferral ev = withRideAndBooking ev $ \ride booking -> do
+handleReferral ev = ActorInfo.withMbActorInfo ev.actorInfo . withRideAndBooking ev $ \ride booking -> do
   thresholdConfig <- fetchTransporterConfig ride
   mbRiderDetails <- join <$> QRiderDetails.findById `mapM` booking.riderId
   IH.sendReferralFCM ev.isValidRide ride booking mbRiderDetails thresholdConfig

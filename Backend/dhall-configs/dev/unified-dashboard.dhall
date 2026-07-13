@@ -121,7 +121,7 @@ let cacConfig =
       , enableCac = False
       }
 
-let sendEmailRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
+let loginRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
 
 let inMemConfig = { enableInMem = False, maxInMemSize = +100000000 }
 
@@ -156,7 +156,7 @@ in  { esqDBCfg
     , registrationTokenExpiry = +365
     , registrationTokenInactivityTimeout = None Integer
     , updateRestrictedBppRoles = [ "FLEET_OWNER", "OPERATOR" ]
-    , sendEmailRateLimitOptions
+    , loginRateLimitOptions
     , encTools
     , exotelToken = secUnified.exotelToken
     , dataServers =
