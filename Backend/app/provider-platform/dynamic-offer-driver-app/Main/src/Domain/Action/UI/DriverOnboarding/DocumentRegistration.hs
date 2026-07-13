@@ -100,6 +100,7 @@ validateDocument isDashboard (personId, merchantId, merchantOpCityId) ValidateDo
               let dateOfBirth = fmap convertUTCTimetoDate (parseDateTime =<< extractedDL.dateOfBirth)
               let nameOnCard = extractedDL.nameOnCard
               DL.cacheExtractedDl personId documentNumber (show operatingCity.city)
+              DL.cacheExtractedDlName personId nameOnCard
               logDebug $ "DocumentRegistration.validateDocument: Validation completed, returning response with documentNumber=" <> show documentNumber <> ", dateOfBirth=" <> show dateOfBirth
               pure $ (emptyValidateDocumentImageResponse imageId) {documentNumber, dateOfBirth, nameOnCard}
             Nothing ->
