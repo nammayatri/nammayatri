@@ -214,7 +214,7 @@ data FRFSRouteAPI = FRFSRouteAPI
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSRouteServiceabilityReq = FRFSRouteServiceabilityReq {endStopCode :: Data.Text.Text, startStopCode :: Data.Text.Text}
+data FRFSRouteServiceabilityReq = FRFSRouteServiceabilityReq {allowUpcomingTrips :: Data.Maybe.Maybe Kernel.Prelude.Bool, endStopCode :: Data.Text.Text, startStopCode :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
