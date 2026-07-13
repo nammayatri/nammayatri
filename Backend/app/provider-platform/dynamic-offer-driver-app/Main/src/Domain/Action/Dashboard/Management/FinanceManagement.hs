@@ -62,12 +62,12 @@ import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirect
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtra
 import qualified Lib.Finance.Storage.Queries.InvoiceLedgerLink as QInvoiceLedgerLink
+import qualified Lib.Finance.Storage.Queries.JournalEntryTransactionExtra as QJournalEntryTransaction
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedgerEntry
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntryExtra
 import qualified Lib.Finance.Storage.Queries.PgPaymentSettlementReportExtra as QPgPaymentSettlementReport
 import qualified Lib.Finance.Storage.Queries.ReconciliationEntryExtra as QReconEntryExtra
 import qualified Lib.Finance.Storage.Queries.ReconciliationSummaryExtra as QReconSummaryExtra
-import qualified Lib.Finance.Storage.Queries.SapJournalEntryExtra as QSapJournalEntry
 import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as PaymentTransaction
 import qualified Lib.Payment.Domain.Types.Refunds as PaymentRefund
@@ -91,6 +91,7 @@ import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.SapJournalExtra as QSapJournalEntryBPP
 import qualified Storage.Queries.SubscriptionPurchase as QSubscriptionPurchase
 import Tools.Encryption (decryptWithDefault)
 import "beckn-services" Tools.InvoicePdf (generateFinanceInvoicePdf)
@@ -1685,22 +1686,21 @@ getFinanceManagementFinanceSapJournals ::
   Maybe Text ->
   Maybe UTCTime ->
   Maybe UTCTime ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Int ->
-  Maybe Text ->
-  Maybe Text ->
+  Maybe SJE.JournalEntryStatus ->
+  Maybe SJE.TransactionType ->
   Flow API.SapJournalListRes
-getFinanceManagementFinanceSapJournals merchantShortId opCity mbBatchId mbBelnr mbDateFrom mbDateTo mbLimit mbOffset mbStatus mbTransactionType = do
+getFinanceManagementFinanceSapJournals merchantShortId opCity mbBatchId mbBelnr mbDateFrom mbDateTo mbGlNumber mbLimit mbOffset mbStatus mbTransactionType = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let limitVal = mkPageLimit mbLimit
-      mbTxnType = mbTransactionType >>= readMaybe . toString
-      mbSt = mbStatus >>= readMaybe . toString
-  entries <- QSapJournalEntry.findByMerchantIdWithFilters merchant.id.getId merchantOpCityId.getId mbDateFrom mbDateTo mbTxnType mbSt mbBatchId mbBelnr (Just limitVal) mbOffset
+  entries <- QSapJournalEntryBPP.findByMerchantIdWithFilters merchant.id.getId merchantOpCityId.getId mbDateFrom mbDateTo mbTransactionType mbStatus mbBatchId mbBelnr mbGlNumber (Just limitVal) mbOffset
   let totalItems = length entries
       summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
       journals = map toSapJournalItem entries
-  pure API.SapJournalListRes {totalItems, summary, journals}
+  pure API.SapJournalListRes {journals, summary}
 
 getFinanceManagementFinanceSapJournalsTransactions ::
   ShortId DM.Merchant ->
@@ -1712,22 +1712,28 @@ getFinanceManagementFinanceSapJournalsTransactions ::
   Maybe UTCTime ->
   UTCTime ->
   UTCTime ->
-  Text ->
+  SJE.JournalEntryStatus ->
+  SJE.TransactionType ->
   Flow API.SapJournalTransactionsRes
-getFinanceManagementFinanceSapJournalsTransactions merchantShortId opCity mbFromTime mbLimit mbOffset mbSubscriptionId mbToTime periodEndTime periodStartTime transactionType = do
+getFinanceManagementFinanceSapJournalsTransactions merchantShortId opCity mbFromTime mbLimit mbOffset mbSubscriptionId mbToTime periodEndTime periodStartTime status transactionType = do
+  when (status == SJE.FAILED) $
+    throwError $ InvalidRequest "Cannot show transactions for failed SAP jobs"
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   (queryStartTime, queryEndTime) <- resolveTimeRange mbFromTime mbToTime periodStartTime periodEndTime
-  case transactionType of
-    "SubscriptionPurchase" -> do
-      rows <- QSubscriptionPurchase.findSubscriptionPurchasesWithTaxByDateRange merchantOpCityId queryStartTime queryEndTime mbSubscriptionId mbLimit mbOffset
-      let items = map subscriptionToTransactionItem rows
-      pure API.SapJournalTransactionsRes {total = length items, transactions = items}
-    _ -> do
-      txnType <- parseTxnType transactionType
-      reports <- QPgPaymentSettlementReport.findByTxnDateRangeAndTxnType merchant.id.getId merchantOpCityId.getId queryStartTime queryEndTime txnType mbSubscriptionId mbLimit mbOffset
-      let items = map pgSettlementToTransactionItem reports
-      pure API.SapJournalTransactionsRes {total = length items, transactions = items}
+  entries <-
+    QJournalEntryTransaction.findByMerchantIdWithFilters
+      merchant.id.getId
+      merchantOpCityId.getId
+      (Just queryStartTime)
+      (Just queryEndTime)
+      transactionType
+      mbSubscriptionId
+      Nothing
+      mbLimit
+      mbOffset
+  let items = map toTransactionItem entries
+  pure API.SapJournalTransactionsRes {total = length items, transactions = items}
   where
     resolveTimeRange :: Maybe UTCTime -> Maybe UTCTime -> UTCTime -> UTCTime -> Flow (UTCTime, UTCTime)
     resolveTimeRange mbFrom mbTo pStart pEnd = do
@@ -1737,40 +1743,16 @@ getFinanceManagementFinanceSapJournalsTransactions merchantShortId opCity mbFrom
         throwError $ InvalidRequest "Cannot filter in this time range"
       pure (from, to)
 
-    subscriptionToTransactionItem :: (Text, HighPrecMoney, HighPrecMoney, HighPrecMoney, HighPrecMoney, HighPrecMoney, UTCTime) -> API.SapJournalTransactionItem
-    subscriptionToTransactionItem (spId, planFee, cgst, sgst, igst, taxableValue, purchaseTimestamp) =
+    toTransactionItem entry =
       API.SapJournalTransactionItem
-        { debitAmount = planFee,
-          creditAmount = cgst + sgst + igst + taxableValue,
-          currency = "INR",
-          description = "Subscription Purchase",
-          subscriptionId = Just spId,
-          creationDate = purchaseTimestamp,
-          createdBy = "System"
+        { debitAmount = entry.debitAmount,
+          creditAmount = entry.creditAmount,
+          currency = show entry.currency,
+          description = entry.description,
+          subscriptionId = entry.subscriptionId,
+          creationDate = entry.createdAt,
+          createdBy = entry.createdBy
         }
-
-    pgSettlementToTransactionItem :: PgPaymentSettlementReport.PgPaymentSettlementReport -> API.SapJournalTransactionItem
-    pgSettlementToTransactionItem r =
-      let amount = case r.txnType of
-            PgPaymentSettlementReport.ORDER -> r.txnAmount
-            PgPaymentSettlementReport.REFUND -> fromMaybe 0 r.refundAmount
-            PgPaymentSettlementReport.CHARGEBACK -> fromMaybe 0 r.chargebackAmount
-       in API.SapJournalTransactionItem
-            { debitAmount = amount,
-              creditAmount = amount,
-              currency = show r.currency,
-              description = show r.txnType,
-              subscriptionId = r.subscriptionPurchaseId,
-              creationDate = r.createdAt,
-              createdBy = maybe "System" show r.createdBy
-            }
-
-    parseTxnType :: (MonadThrow m, Log m) => Text -> m PgPaymentSettlementReport.TxnType
-    parseTxnType = \case
-      "Order" -> pure PgPaymentSettlementReport.ORDER
-      "Refund" -> pure PgPaymentSettlementReport.REFUND
-      "Chargeback" -> pure PgPaymentSettlementReport.CHARGEBACK
-      other -> throwError $ InvalidRequest ("Invalid transactionType: " <> other)
 
 toSapJournalItem :: SJE.SapJournalEntry -> API.SapJournalItem
 toSapJournalItem entry =
@@ -1795,5 +1777,7 @@ toSapJournalItem entry =
       merchantId = entry.merchantId,
       merchantOperatingCityId = entry.merchantOperatingCityId,
       createdAt = entry.createdAt,
-      updatedAt = entry.updatedAt
+      updatedAt = entry.updatedAt,
+      periodEndTime = entry.periodEndTime,
+      periodStartTime = entry.periodStartTime
     }

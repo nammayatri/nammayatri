@@ -1,0 +1,48 @@
+# Finance Kernel - Journal Entry Transaction Table
+# Stores individual transaction-level data before SAP aggregation
+# Queried by time range for SAP transactional reports
+
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  TransactionType: Lib.Finance.Domain.Types.SapJournalEntry
+
+JournalEntryTransaction:
+  tableName: journal_entry_transaction
+  derives: "Generic"
+
+  fields:
+    id: Id JournalEntryTransaction
+    debitAmount: HighPrecMoney
+    creditAmount: HighPrecMoney
+    currency: Currency
+    description: Text
+    subscriptionId: Maybe Text
+    sapJournalEntryId: Text
+    sapBatchId: Text
+    transactionType: TransactionType
+    status: Text
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    createdBy: Text
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  default:
+    debitAmount: "0"
+    creditAmount: "0"
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema

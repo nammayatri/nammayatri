@@ -7,6 +7,7 @@ import Data.Aeson
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import Kernel.Utils.TH
 import qualified Lib.Finance.Core.Types
 import qualified Tools.Beam.UtilsTH
 
@@ -48,4 +49,8 @@ data TransactionType = SubscriptionPurchase | Order | Refund | Chargeback | Reve
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''JournalEntryStatus))
 
+$(mkHttpInstancesForEnum (''JournalEntryStatus))
+
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TransactionType))
+
+$(mkHttpInstancesForEnum (''TransactionType))

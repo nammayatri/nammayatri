@@ -19,6 +19,8 @@ imports:
   AuditAction: Lib.Finance.Domain.Types.AuditEntry
   AuditEntityType: Lib.Finance.Domain.Types.AuditEntry
   ActorType: Lib.Finance.Core.Types
+  TransactionType: Lib.Finance.Domain.Types.SapJournalEntry
+  JournalEntryStatus: Lib.Finance.Domain.Types.SapJournalEntry
 
 importPackageOverrides:
   Domain.Types.Invoice: "beckn-spec"
@@ -193,10 +195,11 @@ apis:
         dateTo: UTCTime
         limit: Int
         offset: Int
-        transactionType: Text
-        status: Text
+        transactionType: TransactionType
+        status: JournalEntryStatus
         batchId: Text
         belnr: Text
+        glNumber: Text
       auth: ApiAuthV2
       response:
         type: SapJournalListRes
@@ -205,9 +208,10 @@ apis:
   - GET: # SapJournalTransactionsAPI
       endpoint: /finance/sapJournals/transactions
       mandatoryQuery:
-        transactionType: Text
+        transactionType: TransactionType
         periodStartTime: UTCTime
         periodEndTime: UTCTime
+        status: JournalEntryStatus
       query:
         limit: Int
         offset: Int
@@ -582,9 +586,8 @@ types:
 
   # ----- SAP Journal Entries -----
   SapJournalListRes:
-    - totalItems: Int
-    - summary: Summary
     - journals: [SapJournalItem]
+    - summary: Summary
   SapJournalItem:
     - id: Text
     - belnr: Maybe Text
@@ -607,6 +610,8 @@ types:
     - merchantOperatingCityId: Text
     - createdAt: UTCTime
     - updatedAt: UTCTime
+    - periodEndTime: UTCTime
+    - periodStartTime: UTCTime
 
   # ----- SAP Journal Transactions (drill-down) -----
   SapJournalTransactionsRes:
