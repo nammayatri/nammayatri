@@ -192,6 +192,7 @@ library:
     - finance-kernel
     - utils
     - external
+    - communication-engine
 
 executables:
   rider-app-exe:
