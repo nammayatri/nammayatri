@@ -255,6 +255,7 @@ findActiveByDateRange merchantOpCityId startTime endTime =
 
 -- | Update the expiryDate and startDate for a specific subscription purchase.
 -- Used when activating a queued purchase's expiry timer (deferred FIFO logic).
+-- Called via SharedLogic.Finance.SubscriptionPurchase.activateSubscriptionPurchaseExpiry (audit)
 updateExpiryAndStartDateById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe UTCTime ->

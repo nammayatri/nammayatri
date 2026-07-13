@@ -62,6 +62,7 @@ library
       API.Internal.FRFS
       API.Internal.GetPickupInstructions
       API.Internal.InMemManagement
+      API.Internal.NotificationWebhook
       API.Internal.OfferDiscount
       API.Internal.Rating
       API.Internal.RideSearchExpired
@@ -240,6 +241,7 @@ library
       Domain.Action.Internal.FrequentLocUser
       Domain.Action.Internal.FRFS
       Domain.Action.Internal.GetPickupInstructions
+      Domain.Action.Internal.NotificationWebhook
       Domain.Action.Internal.OfferDiscount
       Domain.Action.Internal.Payout
       Domain.Action.Internal.PickupInstructionHandler
@@ -1688,6 +1690,7 @@ library
     , casing
     , cassava
     , cereal
+    , communication-engine
     , config-pilot
     , containers
     , cryptonite

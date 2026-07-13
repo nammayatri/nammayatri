@@ -4,6 +4,7 @@
 imports:
   UTCTime: Kernel.Prelude
   HighPrecMoney: Kernel.Types.Common
+  ActorType: Lib.Finance.Core.Types
 
 DirectTaxTransaction:
   tableName: direct_tax_transaction
@@ -22,6 +23,7 @@ DirectTaxTransaction:
       enum: "PAN,PAN_AADHAR_LINKAGE,LDC_CERTIFICATE,NO_PAN"
       derive: "ToParamSchema"
 
+  # NOTE: Mask sensitive values in directTaxToAuditValue (Invoice.Service)
   fields:
     id: Id DirectTaxTransaction
     transactionDate: UTCTime
@@ -33,9 +35,9 @@ DirectTaxTransaction:
     netAmountPaid: HighPrecMoney
     tdsTreatment: TdsTreatment
     counterpartyId: Text
-    panOfParty: Maybe Text
+    panOfParty: Maybe Text # SENSITIVE
     panType: Maybe Text
-    tanOfDeductee: Maybe Text
+    tanOfDeductee: Maybe Text # SENSITIVE
     paymentDate: Maybe UTCTime
     invoiceNumber: Maybe Text
     merchantId: Text
@@ -43,6 +45,12 @@ DirectTaxTransaction:
     createdAt: UTCTime
     tdsSection: Maybe Text
     tdsRateReason: Maybe TdsRateReason
+
+    # --- Audit ---
+    createdBy: Maybe ActorType                     # Who created this record
+    createdById: Maybe Text                        # requestId for UNKNOWN/SYSTEM, jobId for JOB, personId for PERSON/DASHBOARD_PERSON
+    updatedBy: Maybe ActorType                     # Who updated this record
+    updatedById: Maybe Text                        # requestId for UNKNOWN/SYSTEM, jobId for JOB, personId for PERSON/DASHBOARD_PERSON
 
   constraints:
     id: PrimaryKey

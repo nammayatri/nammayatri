@@ -28,8 +28,13 @@ library
   exposed-modules:
       API
       API.BharatTaxi.User
+      API.RiderDashboard
+      API.RiderDashboard.Entity
+      API.RiderDashboard.PTEmployee
       API.RiderPlatform
       App
+      Domain.Action.RiderDashboard.Entity
+      Domain.Action.RiderDashboard.PTEmployee
       Domain.Action.RiderPlatform.AppManagement.Customer
       Domain.Action.RiderPlatform.AppManagement.EDCMachine
       Domain.Action.RiderPlatform.AppManagement.EventManagement

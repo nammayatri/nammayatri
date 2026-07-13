@@ -107,6 +107,7 @@ import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.EventTracking as SEVT
 import SharedLogic.Finance.Prepaid
+import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
 import SharedLogic.Finance.Wallet
 import SharedLogic.Merchant
 import qualified SharedLogic.Merchant as SMerchant
@@ -760,7 +761,7 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                 }
         unless isFleetOwner $
           Analytics.incrementOperatorTotalActiveDriversIfFirstDriverSubscription transporterConfig person.id.getId
-        QSP.updateByPrimaryKey updatedPurchase
+        SubscriptionPurchaseSvc.updateSubscriptionPurchase latestPurchase updatedPurchase
         -- Schedule expiry job only if expiry was set (not queued)
         whenJust expiryDate $ \expiry -> do
           let delay = diffUTCTime expiry now
