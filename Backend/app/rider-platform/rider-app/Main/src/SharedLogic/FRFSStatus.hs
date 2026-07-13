@@ -232,7 +232,12 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                                 void $ QFRFSTicketBooking.updateFailureReasonById (Just err) booking.id
                                 void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
                                 return $ makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
-                              Right _ -> return $ makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
+                              Right _ ->
+                                case integratedBppConfig.providerConfig of
+                                  DIBC.ONDC _ -> return $ makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
+                                  _ -> do
+                                    latestStatus <- maybe DFRFSTicketBooking.CONFIRMING (.status) <$> QFRFSTicketBooking.findById booking.id
+                                    return $ makeUpdatedBooking booking latestStatus (Just updatedTTL) (Just txnId.getId)
                           buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
                         else buildFRFSTicketBookingStatusAPIRes booking quoteCategories (buildPaymentObject booking paymentBooking paymentBookingStatus)
                     else do
