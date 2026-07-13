@@ -20,13 +20,16 @@ module Domain.Action.UI.DriverOnboarding.BankAccountVerification
   )
 where
 
+import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DriverBankAccount as DDBA
 import qualified Domain.Types.DriverInformation as DDI
+import qualified Domain.Types.IdfyVerification as DIdfy
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.Beam.Functions (runInReplica)
+import Kernel.External.Encryption
 import qualified Kernel.External.Verification as KEV
 import Kernel.External.Verification.Interface.Types
 import qualified Kernel.External.Verification.Types as VerificationTypes
@@ -34,7 +37,7 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, getCurrentTime, throwError)
+import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, throwError)
 import Kernel.Utils.Logging (logDebug)
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
@@ -63,7 +66,43 @@ verifyBankAccount (personId, _merchantId, merchantOpCityId) req = do
           nfVerification = req.nfVerification,
           driverId = person.id.getId
         }
+  now <- getCurrentTime
+  encryptedBankAccountNo <- encrypt req.bankAccountNo
+  idfyVerificationEntity <- mkIdfyVerificationEntity person verifyRes.requestId encryptedBankAccountNo now
+  IVQuery.create idfyVerificationEntity
   return verifyRes
+
+-- | Builds the IdfyVerification row tracking an async bank account verification request.
+-- Bank account verification has no document image, so a placeholder image Id is used only
+-- to satisfy the IdfyVerification schema; the row is later updated by requestId in getInfoBankAccount.
+mkIdfyVerificationEntity :: Person.Person -> Text -> EncryptedHashedField 'AsEncrypted Text -> UTCTime -> Flow DIdfy.IdfyVerification
+mkIdfyVerificationEntity person requestId encryptedBankAccountNo now = do
+  entityId <- generateGUID
+  return $
+    DIdfy.IdfyVerification
+      { id = Id entityId,
+        driverId = person.id,
+        documentImageId1 = Id "",
+        documentImageId2 = Nothing,
+        requestId,
+        imageExtractionValidation = DIdfy.Skipped,
+        documentNumber = encryptedBankAccountNo,
+        issueDateOnDoc = Nothing,
+        driverDateOfBirth = Nothing,
+        docType = DTO.BankingDetails,
+        status = "pending",
+        idfyResponse = Nothing,
+        retryCount = Just 0,
+        nameOnCard = Nothing,
+        vehicleCategory = Nothing,
+        merchantId = Just person.merchantId,
+        merchantOperatingCityId = Just person.merchantOperatingCityId,
+        airConditioned = Nothing,
+        oxygen = Nothing,
+        ventilator = Nothing,
+        createdAt = now,
+        updatedAt = now
+      }
 
 -- | Placeholder image Id for bank account verification (no document image); used only to satisfy IdfyVerification schema.
 getInfoBankAccount :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> Flow VerificationTypes.BankAccountVerificationResponse
