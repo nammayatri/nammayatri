@@ -9,7 +9,6 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 import Storage.Beam.BeamFlow
-import Tools.Error
 
 type API =
   "internal"
