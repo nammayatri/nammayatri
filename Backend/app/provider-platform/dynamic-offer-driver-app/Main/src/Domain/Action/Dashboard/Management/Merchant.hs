@@ -3351,7 +3351,12 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             fetchAllGateFareProduct = mbExistingSpLoc >>= (.fetchAllGateFareProduct),
             supportNumber = request.supportNumber,
             paymentModes = request.paymentModes <|> (mbExistingSpLoc >>= (.paymentModes)) <|> Just SL.defaultPaymentModes,
-            fareSettlementType = request.fareSettlementType <|> (mbExistingSpLoc >>= (.fareSettlementType)),
+            -- Take the request value directly instead of falling back with `<|>` to the
+            -- existing value: `fareSettlementType` is `Maybe FareSettlementType` where
+            -- `Nothing` is the valid "none" selection. With `<|>`, `Nothing` from the
+            -- request would be clobbered by an existing `Just CommissionOnly`, making it
+            -- impossible to clear the setting back to none from the dashboard form.
+            fareSettlementType = request.fareSettlementType,
             ..
           }
 
