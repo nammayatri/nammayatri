@@ -2513,6 +2513,10 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                                 (nc, nt) = extractNight slab.nightShiftCharge
                                 (pfType, pfVal, pfCg, pfSg) = extractPlatformFee slab.platformFeeInfo
                              in (showT slab.startDistance, showT slab.baseFare, wc, wt, fw, nc, nt, pfType, pfVal, pfCg, pfSg, perKmOneWay)
+                          -- TODO: Ambulance slabs are age-banded by `vehicleAge`, but there is no CSV
+                          -- column for it, so it is not emitted here and the import side hardcodes
+                          -- vehicleAge = 0. Multi-band ambulance policies therefore do not round-trip
+                          -- faithfully. Add a vehicleAge column (export + import) to fix.
                           (_, _ : _) ->
                             let slab = ambulanceSlabsList !! min sectionIdx (length ambulanceSlabsList - 1)
                                 (wc, wt, fw) = extractWait slab.waitingChargeInfo
@@ -2936,7 +2940,6 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               -- new record instead of caching an empty result.
               forM_ oldFareProducts CQFProduct.clearCache
               CQFProduct.clearCache fareProduct
-              CQFP.clearCacheById finalFarePolicy.id
 
               return (newErrors, newBoundedAlreadyDeletedMap)
 
