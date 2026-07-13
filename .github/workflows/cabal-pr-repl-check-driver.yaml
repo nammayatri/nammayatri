@@ -8,9 +8,10 @@ on:
     paths:
       # Driver app sources
       - "Backend/app/provider-platform/**"
-      # Shared libraries + dashboard CommonAPIs that the driver repl pulls in
+      # Shared libraries + dashboard packages that the driver repl pulls in
       - "Backend/lib/**"
       - "Backend/app/dashboard/CommonAPIs/**"
+      - "Backend/app/dashboard/provider-dashboard/**"
       # Cabal / nix build inputs that affect compilation
       - "Backend/cabal.project"
       - "Backend/default.nix"
