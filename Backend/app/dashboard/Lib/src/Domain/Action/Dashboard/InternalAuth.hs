@@ -20,7 +20,6 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Role as QRole
 import qualified Tools.Auth.Common as Auth
 
-
 data InternalAuthReq = InternalAuthReq {token :: Text}
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
