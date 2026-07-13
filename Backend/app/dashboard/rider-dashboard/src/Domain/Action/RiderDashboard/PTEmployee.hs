@@ -14,7 +14,7 @@ import qualified "lib-dashboard" Domain.Types.MerchantAccess as DAccess
 import qualified "lib-dashboard" Domain.Types.Person as DP
 import qualified "lib-dashboard" Domain.Types.Person.Type as PT
 import qualified "lib-dashboard" Domain.Types.Role as DRole
-import Kernel.External.Encryption (EncFlow, encrypt, getDbHash)
+import Kernel.External.Encryption (encrypt, getDbHash)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.City as City
