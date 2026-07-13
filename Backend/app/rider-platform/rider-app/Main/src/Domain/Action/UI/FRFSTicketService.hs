@@ -568,8 +568,48 @@ postFrfsDiscoverySearch (_, merchantId) mbIntegratedBPPConfigId req = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory req.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOpCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory req.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory req.vehicleType) platformType
-  CallExternalBPP.discoverySearch merchant bapConfig integratedBPPConfig req
+  CallExternalBPP.discoverySearch merchant bapConfig integratedBPPConfig False req
   return Kernel.Types.APISuccess.Success
+
+gtfsRefreshMarkerTtlSec :: Int
+gtfsRefreshMarkerTtlSec = 60
+
+gtfsPollIntervalMicros :: Int
+gtfsPollIntervalMicros = 1000000
+
+getFrfsGtfs ::
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) ->
+  Kernel.Prelude.Maybe DIBC.PlatformType ->
+  Kernel.Prelude.Int ->
+  Context.City ->
+  Spec.VehicleCategory ->
+  Environment.Flow API.Types.UI.FRFSTicketService.FRFSGtfsRes
+getFrfsGtfs (_mbPersonId, merchantId) mbIntegratedBppConfigId mbPlatformType maxWaitSec city vehicleType = do
+  let platformType = fromMaybe DIBC.APPLICATION mbPlatformType
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> " ,city: " <> show city)
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBppConfigId merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) platformType
+  let key = frfsGtfsCacheKey integratedBPPConfig.id.getId
+  mbCached <- Hedis.safeGet key
+  case mbCached of
+    Just g | g.ready -> pure g
+    _ -> do
+      merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
+      bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOpCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
+      let discReq = API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq {city = city, vehicleType = vehicleType, platformType = Just platformType}
+      gotRefresh <- Hedis.setNxExpire (key <> ":refresh") gtfsRefreshMarkerTtlSec ()
+      when gotRefresh $
+        CallExternalBPP.discoverySearch merchant bapConfig integratedBPPConfig True discReq
+      waitForGtfs key integratedBPPConfig.id (max 0 maxWaitSec)
+  where
+    emptyResFor ibcTypedId = API.Types.UI.FRFSTicketService.FRFSGtfsRes {integratedBppConfigId = ibcTypedId, ready = False, routes = [], stops = [], routeStops = [], fares = []}
+    waitForGtfs key ibcTypedId 0 =
+      fromMaybe (emptyResFor ibcTypedId) <$> Hedis.safeGet key
+    waitForGtfs key ibcTypedId n = do
+      mb <- Hedis.safeGet key
+      case mb of
+        Just g | g.ready -> pure g
+        _ -> liftIO (EulerHS.Prelude.threadDelay gtfsPollIntervalMicros) >> waitForGtfs key ibcTypedId (n - 1)
 
 postFrfsSearchHandler ::
   (CallExternalBPP.FRFSSearchFlow m r, HasShortDurationRetryCfg r c, HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) =>
@@ -1483,7 +1523,7 @@ postFrfsRouteServiceability (mbPersonId, _merchantId) routeId req = do
   routesWithLiveVehicles <-
     catMaybes
       <$> mapConcurrently
-        (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s integratedBPPConfig req.startStopCode req.endStopCode frfsTierMap Nothing 5)
+        (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s integratedBPPConfig req.startStopCode req.endStopCode frfsTierMap Nothing 5 (fromMaybe False req.allowUpcomingTrips))
         (zip busesForRoutes schedulesForRoutes)
 
   case routesWithLiveVehicles of

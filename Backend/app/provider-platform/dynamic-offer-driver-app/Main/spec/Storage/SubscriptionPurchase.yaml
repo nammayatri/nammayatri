@@ -25,6 +25,8 @@ SubscriptionPurchase:
       enum: "DRIVER, FLEET_OWNER"
       derive': "Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read, ToParamSchema"
 
+  # Audit: SharedLogic.Finance.SubscriptionPurchase.
+  # NOTE: Do not use create/update queries directly (except updateReconciliationStatus). Mask sensitive values in subscriptionPurchaseToAuditValue
   fields:
     id: Id SubscriptionPurchase
     ownerId: Text
@@ -90,11 +92,11 @@ SubscriptionPurchase:
 
     updateStatusById:
       kvFunction: updateOneWithKV
-      params: [status, updatedAt]
+      params: [status, updatedAt, updatedBy, updatedById]
       where: id
     updateReconciliationStatus:
       kvFunction: updateOneWithKV
-      params: [reconciliationStatus, updatedAt]
+      params: [reconciliationStatus, updatedAt] # reconciliation snapshot only: no audit, no updatedBy/updatedById
       where: id
 
   extraOperations:

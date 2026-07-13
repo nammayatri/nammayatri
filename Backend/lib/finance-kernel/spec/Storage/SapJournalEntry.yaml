@@ -19,6 +19,7 @@ SapJournalEntry:
       enum: "SUCCESS, FAILED"
       derive: "ToParamSchema"
 
+  # NOTE: Mask sensitive values in sapJournalEntryToAuditValue (SapJournalEntry.Service)
   fields:
     id: Id SapJournalEntry
     belnr: Maybe Text                              # JV Number - Document number from SAP
@@ -39,7 +40,7 @@ SapJournalEntry:
     status: JournalEntryStatus                     # SUCCESS or FAILED
     periodStartTime: UTCTime
     periodEndTime: UTCTime
-    rawResponse: Maybe Text                        # Full SAP XML response for audit
+    rawResponse: Maybe Text                        # Full SAP XML response for audit SENSITIVE
     merchantId: Text
     merchantOperatingCityId: Text
     createdAt: UTCTime

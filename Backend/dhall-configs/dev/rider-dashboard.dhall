@@ -101,7 +101,7 @@ let kafkaProducerCfg =
 
 let secondaryKafkaProducerCfg = Some kafkaProducerCfg
 
-let sendEmailRateLimitOptions = { limit = +100, limitResetTimeInSec = +600 }
+let loginRateLimitOptions = { limit = +100, limitResetTimeInSec = +600 }
 
 let inMemConfig = { enableInMem = False, maxInMemSize = +100000000 }
 
@@ -136,7 +136,7 @@ in  { esqDBCfg
     , registrationTokenExpiry = +365
     , registrationTokenInactivityTimeout = None Integer
     , updateRestrictedBppRoles = [] : List Text
-    , sendEmailRateLimitOptions
+    , loginRateLimitOptions
     , encTools
     , exotelToken = ""
     , dataServers = [ appBackend, appBackendManagement, bharatTaxi ]

@@ -164,7 +164,6 @@ dashboardCancelRideHandler ::
   Bool ->
   Flow APISuccess.APISuccess
 dashboardCancelRideHandler shandle merchantId merchantOpCityId rideId req allowSnapshotVehicleFallback =
-  -- TODO ActorInfo.withDashboardPersonIdActorInfo requestorId $ do
   withLogTag ("merchantId-" <> merchantId.getId) $ do
     void $ cancelRideImpl shandle (DashboardRequestorId (merchantId, merchantOpCityId)) rideId req False allowSnapshotVehicleFallback
     return APISuccess.Success

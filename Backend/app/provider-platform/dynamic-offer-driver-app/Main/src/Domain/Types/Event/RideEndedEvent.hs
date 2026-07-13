@@ -15,6 +15,7 @@ module Domain.Types.Event.RideEndedEvent
 where
 
 import Kernel.Prelude
+import qualified Lib.Finance.Core.Types as Finance
 
 -- | IDs and enums are carried as Text to keep the cross-package JSON contract simple.
 -- Handlers convert back to typed Ids (`Id Ride`, `Id Person`, …) when needed.
@@ -40,7 +41,8 @@ data RideEndedEvent = RideEndedEvent
     customerExtraFee :: Maybe Double,
     currency :: Text,
     fleetOwnerId :: Maybe Text,
-    isValidRide :: Bool
+    isValidRide :: Bool,
+    actorInfo :: Maybe Finance.ActorInfo
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
