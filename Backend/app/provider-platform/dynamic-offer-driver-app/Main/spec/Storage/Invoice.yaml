@@ -50,6 +50,7 @@ Invoice:
     driverFeeId: SecondaryKey
     driverId: "!SecondaryKey" # forcing to be a secondary key
     invoiceShortId: SecondaryKey
+    invoiceStatus: "!SecondaryKeyPartial invoiceStatus:ACTIVE_INVOICE" # partial secondary key for findAllByStatusWithLimit
 
   fromTType:
     merchantOperatingCityId: Storage.Queries.Transformers.Invoice.getMerchantOperatingCityId merchantOperatingCityId driverFeeId id|EM
