@@ -795,11 +795,16 @@ mkJourneyStations integratedBppConfig quote mbRouteSegments mbFlatStations =
                 )
                 [0 ..]
                 perSegment
-      pure $ Just $ nubBy (\a b -> a.code == b.code) journeyStops
+      pure $ Just $ dedupeByCodeKeepLast journeyStops
     _ ->
       pure $
-        (\sts -> nubBy (\a b -> a.code == b.code) (filter (\s -> s.stationType == Just START || s.stationType == Just END || s.stationType == Just TRANSIT) sts))
+        (dedupeByCodeKeepLast . filter (\s -> s.stationType == Just START || s.stationType == Just END || s.stationType == Just TRANSIT))
           <$> (mbFlatStations <|> decodeFromText quote.stationsJson)
+  where
+    -- Dedupe by station code keeping the LAST occurrence so a repeated destination (circular or
+    -- backtracking journeys where START/TRANSIT shares a code with END) stays marked END.
+    dedupeByCodeKeepLast :: [FRFSStationAPI] -> [FRFSStationAPI]
+    dedupeByCodeKeepLast sts = reverse (nubBy (\a b -> a.code == b.code) (reverse sts))
 
 postFrfsQuoteV2Confirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasFlowEnv m r '["seatBookingConfirmAPIRateLimitOptions" ::: APIRateLimitOptions], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Maybe Bool -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2Confirm (mbPersonId, merchantId) quoteId mbIsMockPayment req =
