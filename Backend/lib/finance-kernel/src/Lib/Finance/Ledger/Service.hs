@@ -86,7 +86,14 @@ import qualified Sequelize as Se
 --------------------------------------------------------------------------------
 
 ledgerEntryToAuditValue :: LedgerEntry -> Aeson.Value
-ledgerEntryToAuditValue entry = Aeson.toJSON (toTType' entry :: BeamLE.LedgerEntry)
+ledgerEntryToAuditValue = Aeson.toJSON . toTType' @BeamLE.LedgerEntry . hideLedgerEntrySensitiveFields
+  where
+    hideLedgerEntrySensitiveFields :: LedgerEntry -> LedgerEntry
+    hideLedgerEntrySensitiveFields LedgerEntry {..} =
+      LedgerEntry
+        { metadata = Nothing,
+          ..
+        }
 
 logLedgerAudit ::
   BeamFlow.BeamFlow m r =>

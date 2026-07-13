@@ -43,7 +43,7 @@ let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let kvConfigUpdateFrequency = +10
 
-let sendEmailRateLimitOptions = { limit = +100, limitResetTimeInSec = +600 }
+let loginRateLimitOptions = { limit = +100, limitResetTimeInSec = +600 }
 
 let driverOfferBpp =
       { name = common.ServerName.DRIVER_OFFER_BPP
@@ -130,7 +130,7 @@ in  { esqDBCfg
     , registrationTokenExpiry = +365
     , registrationTokenInactivityTimeout = None Integer
     , updateRestrictedBppRoles = [] : List Text
-    , sendEmailRateLimitOptions
+    , loginRateLimitOptions
     , encTools
     , exotelToken = ""
     , dataServers = [ driverOfferBpp, driverOfferBppManagement ]

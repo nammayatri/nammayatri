@@ -20,6 +20,7 @@ where
 
 import qualified API.BharatTaxi.User as BharatTaxiUser
 import qualified "lib-dashboard" API.Dashboard as Dashboard
+import qualified API.RiderDashboard as RiderDashboard
 import qualified API.RiderPlatform as BAP
 import qualified Data.ByteString as BS
 import Data.OpenApi
@@ -38,6 +39,7 @@ type API =
 
 type MainAPI =
   Dashboard.API
+    :<|> RiderDashboard.API
     :<|> BAP.API
     :<|> BAP.APIV2
     :<|> BharatTaxiUser.API
@@ -52,6 +54,7 @@ handler =
 mainServer :: FlowServer MainAPI
 mainServer =
   Dashboard.handler
+    :<|> RiderDashboard.handler
     :<|> BAP.handler
     :<|> BAP.handlerV2
     :<|> BharatTaxiUser.handler

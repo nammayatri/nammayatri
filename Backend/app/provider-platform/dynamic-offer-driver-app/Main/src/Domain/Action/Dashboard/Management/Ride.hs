@@ -126,8 +126,8 @@ postRideEndMultiple merchantShortId opCity mbRequestorId req = ActorInfo.withDas
     pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
   pure $ Common.MultipleRideSyncResp {list = respItems}
 
-postRideCancelMultiple :: ShortId DM.Merchant -> Context.City -> Common.MultipleRideCancelReq -> Flow Common.MultipleRideCancelResp
-postRideCancelMultiple merchantShortId opCity req = do
+postRideCancelMultiple :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Common.MultipleRideCancelReq -> Flow Common.MultipleRideCancelResp
+postRideCancelMultiple merchantShortId opCity mbRequestorId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) $ do
   runRequestValidation Common.validateMultipleRideCancelReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
