@@ -1,6 +1,7 @@
 module Storage.Queries.FleetDriverAssociationExtra where
 
 import Control.Applicative (liftA2, liftA3)
+import qualified Data.Map as M
 import Data.Text (takeEnd, toLower)
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
@@ -28,6 +29,7 @@ import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.FleetDriverAssociation as BeamFDVA
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Vehicle as BeamV
+import qualified Storage.Queries.DriverInformationExtra as QDIE
 import Storage.Queries.OrphanInstances.DriverBankAccount ()
 import Storage.Queries.OrphanInstances.DriverInformation ()
 import Storage.Queries.OrphanInstances.FleetDriverAssociation ()
@@ -546,51 +548,93 @@ findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds merchantId merch
   now <- getCurrentTime
   dbConf <- getReplicaBeamConfig
   encryptedMobileNumberHash <- mapM getDbHash mbSearchString
+  let needsDriverInfoJoin = isJust mbMode || isJust mbEnabled || isJust mbApproved || isJust mbDocsVerificationStatus
 
-  res <-
-    L.runDB dbConf $
-      L.findRows $
-        B.select $
-          B.limit_ (toInteger limit) $
-            B.offset_ (toInteger offset) $
-              B.orderBy_ (\(fleetDriverAssociation', _, _) -> B.desc_ fleetDriverAssociation'.updatedAt) $
-                B.filter_'
-                  ( \(fleetDriverAssociation, driver, driverInformation) ->
-                      ( if null fleetOwnerIds
-                          then B.sqlBool_ (B.val_ True)
-                          else B.sqlBool_ (fleetDriverAssociation.fleetOwnerId `B.in_` (B.val_ <$> fleetOwnerIds))
+  if needsDriverInfoJoin
+    then do
+      res <-
+        L.runDB dbConf $
+          L.findRows $
+            B.select $
+              B.limit_ (toInteger limit) $
+                B.offset_ (toInteger offset) $
+                  B.orderBy_ (\(fleetDriverAssociation', _, _) -> B.desc_ fleetDriverAssociation'.updatedAt) $
+                    B.filter_'
+                      ( \(fleetDriverAssociation, driver, driverInformation) ->
+                          ( if null fleetOwnerIds
+                              then B.sqlBool_ (B.val_ True)
+                              else B.sqlBool_ (fleetDriverAssociation.fleetOwnerId `B.in_` (B.val_ <$> fleetOwnerIds))
+                          )
+                            B.&&?. driver.merchantId B.==?. B.val_ merchantId
+                            B.&&?. driver.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
+                            B.&&?. driverInformation.merchantId B.==?. B.val_ (Just merchantId)
+                            B.&&?. driverInformation.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverId -> driver.id B.==?. B.val_ driverId) mbDriverId
+                            B.&&?. B.sqlBool_ (fleetDriverAssociation.associatedTill B.>=. B.val_ (Just now))
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\from -> B.sqlBool_ (fleetDriverAssociation.associatedOn B.>=. B.val_ (Just from))) mbFrom
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\to -> B.sqlBool_ (fleetDriverAssociation.associatedOn B.<=. B.val_ (Just to))) mbTo
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mode -> driverInformation.mode B.==?. B.val_ (Just mode)) mbMode
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\isActive -> fleetDriverAssociation.isActive B.==?. B.val_ isActive) mbIsActive
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` B.lower_ (B.val_ ("%" <> name <> "%")))) mbName
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
+                            B.&&?. ( maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` (B.val_ ("%" <> toLower name <> "%")))) mbSearchString
+                                       B.||?. maybe (B.sqlBool_ $ B.val_ True) (\lastDigits -> B.sqlBool_ (B.like_ (B.coalesce_ [driver.maskedMobileDigits] (B.val_ "")) (B.val_ ("%" <> takeEnd 4 lastDigits <> "%")))) mbSearchString
+                                       B.||?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) encryptedMobileNumberHash
+                                   )
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hasRequestReason -> if hasRequestReason then fleetDriverAssociation.requestReason B./=?. B.val_ Nothing else B.sqlBool_ $ B.val_ True) mbHasRequestReason
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\enabled -> driverInformation.enabled B.==?. B.val_ enabled) mbEnabled
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\approved -> driverInformation.approved B.==?. B.val_ (Just approved)) mbApproved
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\docsVerificationStatus -> driverInformation.docsVerificationStatus B.==?. B.val_ (Just docsVerificationStatus)) mbDocsVerificationStatus
                       )
-                        B.&&?. driver.merchantId B.==?. B.val_ merchantId
-                        B.&&?. driver.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
-                        B.&&?. driverInformation.merchantId B.==?. B.val_ (Just merchantId)
-                        B.&&?. driverInformation.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverId -> driver.id B.==?. B.val_ driverId) mbDriverId
-                        B.&&?. B.sqlBool_ (fleetDriverAssociation.associatedTill B.>=. B.val_ (Just now))
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\from -> B.sqlBool_ (fleetDriverAssociation.associatedOn B.>=. B.val_ (Just from))) mbFrom
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\to -> B.sqlBool_ (fleetDriverAssociation.associatedOn B.<=. B.val_ (Just to))) mbTo
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mode -> driverInformation.mode B.==?. B.val_ (Just mode)) mbMode
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\isActive -> fleetDriverAssociation.isActive B.==?. B.val_ isActive) mbIsActive
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` B.lower_ (B.val_ ("%" <> name <> "%")))) mbName
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
-                        B.&&?. ( maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` (B.val_ ("%" <> toLower name <> "%")))) mbSearchString
-                                   B.||?. maybe (B.sqlBool_ $ B.val_ True) (\lastDigits -> B.sqlBool_ (B.like_ (B.coalesce_ [driver.maskedMobileDigits] (B.val_ "")) (B.val_ ("%" <> takeEnd 4 lastDigits <> "%")))) mbSearchString
-                                   B.||?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) encryptedMobileNumberHash
-                               )
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hasRequestReason -> if hasRequestReason then fleetDriverAssociation.requestReason B./=?. B.val_ Nothing else B.sqlBool_ $ B.val_ True) mbHasRequestReason
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\enabled -> driverInformation.enabled B.==?. B.val_ enabled) mbEnabled
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\approved -> driverInformation.approved B.==?. B.val_ (Just approved)) mbApproved
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\docsVerificationStatus -> driverInformation.docsVerificationStatus B.==?. B.val_ (Just docsVerificationStatus)) mbDocsVerificationStatus
-                  )
-                  do
-                    fleetDriverAssociation <- B.all_ (BeamCommon.fleetDriverAssociation BeamCommon.atlasDB)
-                    driver <- B.join_ (BeamCommon.person BeamCommon.atlasDB) (\driver -> BeamFDVA.driverId fleetDriverAssociation B.==. BeamP.id driver)
-                    driverInformation <- B.join_ (BeamCommon.driverInformation BeamCommon.atlasDB) (\driverInfo -> BeamP.id driver B.==. BeamDI.driverId driverInfo)
-                    pure (fleetDriverAssociation, driver, driverInformation)
-  case res of
-    Right res' -> do
-      let fleetDriverList = (\(fleetDriverAssociation, driver, driverInformation) -> (fleetDriverAssociation, driver, driverInformation)) <$> res'
-      catMaybes <$> mapM (\(f, d, di) -> liftA3 (,,) <$> fromTType' f <*> fromTType' d <*> fromTType' di) fleetDriverList
-    Left _ -> pure []
+                      do
+                        fleetDriverAssociation <- B.all_ (BeamCommon.fleetDriverAssociation BeamCommon.atlasDB)
+                        driver <- B.join_ (BeamCommon.person BeamCommon.atlasDB) (\driver -> BeamFDVA.driverId fleetDriverAssociation B.==. BeamP.id driver)
+                        driverInformation <- B.join_ (BeamCommon.driverInformation BeamCommon.atlasDB) (\driverInfo -> BeamP.id driver B.==. BeamDI.driverId driverInfo)
+                        pure (fleetDriverAssociation, driver, driverInformation)
+      case res of
+        Right res' -> catMaybes <$> mapM (\(f, d, di) -> liftA3 (,,) <$> fromTType' f <*> fromTType' d <*> fromTType' di) res'
+        Left _ -> pure []
+    else do
+      res <-
+        L.runDB dbConf $
+          L.findRows $
+            B.select $
+              B.limit_ (toInteger limit) $
+                B.offset_ (toInteger offset) $
+                  B.orderBy_ (\(fleetDriverAssociation', _) -> B.desc_ fleetDriverAssociation'.updatedAt) $
+                    B.filter_'
+                      ( \(fleetDriverAssociation, driver) ->
+                          ( if null fleetOwnerIds
+                              then B.sqlBool_ (B.val_ True)
+                              else B.sqlBool_ (fleetDriverAssociation.fleetOwnerId `B.in_` (B.val_ <$> fleetOwnerIds))
+                          )
+                            B.&&?. driver.merchantId B.==?. B.val_ merchantId
+                            B.&&?. driver.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverId -> driver.id B.==?. B.val_ driverId) mbDriverId
+                            B.&&?. B.sqlBool_ (fleetDriverAssociation.associatedTill B.>=. B.val_ (Just now))
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\from -> B.sqlBool_ (fleetDriverAssociation.associatedOn B.>=. B.val_ (Just from))) mbFrom
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\to -> B.sqlBool_ (fleetDriverAssociation.associatedOn B.<=. B.val_ (Just to))) mbTo
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\isActive -> fleetDriverAssociation.isActive B.==?. B.val_ isActive) mbIsActive
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` B.lower_ (B.val_ ("%" <> name <> "%")))) mbName
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberSearchStringHash
+                            B.&&?. ( maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.lower_ driver.firstName `B.like_` (B.val_ ("%" <> toLower name <> "%")))) mbSearchString
+                                       B.||?. maybe (B.sqlBool_ $ B.val_ True) (\lastDigits -> B.sqlBool_ (B.like_ (B.coalesce_ [driver.maskedMobileDigits] (B.val_ "")) (B.val_ ("%" <> takeEnd 4 lastDigits <> "%")))) mbSearchString
+                                       B.||?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) encryptedMobileNumberHash
+                                   )
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hasRequestReason -> if hasRequestReason then fleetDriverAssociation.requestReason B./=?. B.val_ Nothing else B.sqlBool_ $ B.val_ True) mbHasRequestReason
+                      )
+                      do
+                        fleetDriverAssociation <- B.all_ (BeamCommon.fleetDriverAssociation BeamCommon.atlasDB)
+                        driver <- B.join_ (BeamCommon.person BeamCommon.atlasDB) (\driver -> BeamFDVA.driverId fleetDriverAssociation B.==. BeamP.id driver)
+                        pure (fleetDriverAssociation, driver)
+      case res of
+        Right res' -> do
+          fdaPersonPairs <- catMaybes <$> mapM (\(f, d) -> liftA2 (,) <$> fromTType' f <*> fromTType' d) res'
+          let driverIds = (\(f, _) -> f.driverId.getId) <$> fdaPersonPairs
+          driverInfos <- QDIE.findAllByDriverIds driverIds
+          let driverInfoMap = M.fromList [(di.driverId.getId, di) | di <- driverInfos]
+          pure $ mapMaybe (\(f, d) -> (f,d,) <$> M.lookup d.id.getId driverInfoMap) fdaPersonPairs
+        Left _ -> pure []
 
 approveFleetDriverAssociation ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

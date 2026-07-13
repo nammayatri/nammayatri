@@ -55,6 +55,7 @@ import Lib.Finance.Error.Types
 import Lib.Finance.Invoice.Interface
 import Lib.Finance.Invoice.InvoiceNumber
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
+import qualified Lib.Finance.Storage.Beam.DirectTaxTransaction as BeamDirectTax
 import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamIndirectTax
 import qualified Lib.Finance.Storage.Beam.Invoice as BeamInvoice
 import qualified Lib.Finance.Storage.Queries.Account as QAccount
@@ -63,16 +64,48 @@ import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirect
 import qualified Lib.Finance.Storage.Queries.Invoice as QInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceLedgerLink as QLink
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedger
+import qualified Lib.Finance.Utils.SensitiveData as SD
 
 --------------------------------------------------------------------------------
 -- AUDIT HELPERS
 --------------------------------------------------------------------------------
 
 invoiceToAuditValue :: Invoice -> Aeson.Value
-invoiceToAuditValue invoice = Aeson.toJSON (toTType' invoice :: BeamInvoice.Invoice)
+invoiceToAuditValue = Aeson.toJSON . toTType' @BeamInvoice.Invoice . hideInvoiceSensitiveFields
+  where
+    hideInvoiceSensitiveFields :: Invoice -> Invoice
+    hideInvoiceSensitiveFields Invoice {..} =
+      Invoice
+        { issuedToName = Nothing,
+          issuedToAddress = Nothing,
+          supplierGSTIN = SD.maskTaxNo <$> supplierGSTIN,
+          supplierTaxNo = SD.maskTaxNo <$> supplierTaxNo,
+          irn = Nothing,
+          signedQRCode = Nothing,
+          ..
+        }
 
 indirectTaxToAuditValue :: IndirectTaxTransaction -> Aeson.Value
-indirectTaxToAuditValue txn = Aeson.toJSON (toTType' txn :: BeamIndirectTax.IndirectTaxTransaction)
+indirectTaxToAuditValue = Aeson.toJSON . toTType' @BeamIndirectTax.IndirectTaxTransaction . hideIndirectTaxTransactionSensiveFields
+  where
+    hideIndirectTaxTransactionSensiveFields :: IndirectTaxTransaction -> IndirectTaxTransaction
+    hideIndirectTaxTransactionSensiveFields IndirectTaxTransaction {..} =
+      IndirectTaxTransaction
+        { gstinOfParty = SD.maskTaxNo <$> gstinOfParty,
+          issuedToTaxNo = SD.maskTaxNo <$> issuedToTaxNo,
+          ..
+        }
+
+directTaxToAuditValue :: DirectTaxTransaction -> Aeson.Value
+directTaxToAuditValue = Aeson.toJSON . toTType' @BeamDirectTax.DirectTaxTransaction . hideDirectTaxTransactionSensitiveFields
+  where
+    hideDirectTaxTransactionSensitiveFields :: DirectTaxTransaction -> DirectTaxTransaction
+    hideDirectTaxTransactionSensitiveFields DirectTaxTransaction {..} =
+      DirectTaxTransaction
+        { panOfParty = SD.maskTaxNo <$> panOfParty,
+          tanOfDeductee = SD.maskTaxNo <$> tanOfDeductee,
+          ..
+        }
 
 logFinanceEntityAudit ::
   BeamFlow.BeamFlow m r =>
@@ -150,6 +183,22 @@ auditIndirectTaxCreate actorInfo txn =
     actorInfo
     Nothing
     (indirectTaxToAuditValue txn)
+    txn.merchantId
+    txn.merchantOperatingCityId
+
+auditDirectTaxCreate ::
+  BeamFlow.BeamFlow m r =>
+  ActorInfo ->
+  DirectTaxTransaction ->
+  m ()
+auditDirectTaxCreate actorInfo txn =
+  logFinanceEntityAudit
+    DAuditEntry.DirectTaxTransaction
+    txn.id.getId
+    Created
+    actorInfo
+    Nothing
+    (directTaxToAuditValue txn)
     txn.merchantId
     txn.merchantOperatingCityId
 
@@ -386,10 +435,11 @@ createIndirectTaxEntry input = do
 
 -- | Create a standalone direct tax (TDS) transaction without an invoice.
 createDirectTaxEntry ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   DirectTaxInput ->
   m DirectTaxTransaction
 createDirectTaxEntry input = do
+  actorInfo <- asks (.actorInfo)
   now <- getCurrentTime
   taxTxnId <- generateGUID
   let netAmountPaid = input.grossAmount - input.tdsAmount
@@ -415,10 +465,15 @@ createDirectTaxEntry input = do
             invoiceNumber = input.invoiceNumber,
             merchantId = input.merchantId,
             merchantOperatingCityId = input.merchantOperatingCityId,
+            createdBy = Just actorInfo.actorType,
+            createdById = actorInfo.actorId,
+            updatedBy = Just actorInfo.actorType,
+            updatedById = actorInfo.actorId,
             createdAt = now,
             updatedAt = now
           }
   QDirectTax.create directTaxTxn
+  auditDirectTaxCreate actorInfo directTaxTxn
   pure directTaxTxn
 
 -- | Get invoice by ID

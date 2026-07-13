@@ -20,8 +20,11 @@ where
 
 import qualified API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
+import qualified BecknV2.FRFS.Types as SpecT
+import qualified BecknV2.FRFS.Utils as SpecUtils
 import Data.Aeson
-import Data.List (partition, sortBy)
+import Data.List (nub, partition, sortBy)
+import qualified Data.Map.Strict as M
 import Data.Ord (Down (..))
 import qualified Data.Text as T
 import Domain.Types.Beckn.FRFS.OnSearch
@@ -44,6 +47,7 @@ import EulerHS.Prelude (comparing, toStrict)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
@@ -745,3 +749,113 @@ discoveryOnSearch ::
   DiscoveryOnSearchReq ->
   m ()
 discoveryOnSearch _discoveryReq = pure ()
+
+gtfsMergeLockTtlSec :: Int
+gtfsMergeLockTtlSec = 30
+
+gtfsMergeLockRetryMs :: Int
+gtfsMergeLockRetryMs = 100
+
+parseGtfsGps :: Maybe Text -> (Maybe Double, Maybe Double)
+parseGtfsGps Nothing = (Nothing, Nothing)
+parseGtfsGps (Just t) =
+  case map T.strip (T.splitOn "," t) of
+    (a : b : _) -> (readMaybe (T.unpack a), readMaybe (T.unpack b))
+    _ -> (Nothing, Nothing)
+
+gtfsPageInfo :: SpecT.OnSearchReq -> (Maybe Int, Maybe Int)
+gtfsPageInfo req =
+  case req.onSearchReqMessage of
+    Nothing -> (Nothing, Nothing)
+    Just msg ->
+      let tags = msg.onSearchReqMessageCatalog.catalogTags
+          curPage = (tags >>= SpecUtils.getTag "PAGINATION" "PAGINATION_ID") >>= (readMaybe . T.unpack) :: Maybe Int
+          maxPage = (tags >>= SpecUtils.getTag "PAGINATION" "MAX_PAGE_NUMBER") >>= (readMaybe . T.unpack) :: Maybe Int
+       in (curPage, maxPage)
+
+extractGtfsPage :: SpecT.OnSearchReq -> ([API.FRFSGtfsStopAPI], [API.FRFSGtfsRouteAPI], [API.FRFSGtfsRouteStopAPI], [API.FRFSGtfsFareAPI])
+extractGtfsPage req =
+  let providers = fromMaybe [] (req.onSearchReqMessage >>= (\m -> m.onSearchReqMessageCatalog.catalogProviders))
+      fulfillments = providers >>= (fromMaybe [] . (.providerFulfillments))
+      stopRows = mapMaybe toStop (fulfillments >>= (fromMaybe [] . (.fulfillmentStops)))
+      routeRows = mapMaybe toRoute fulfillments
+      routeStopRows = concatMap toRouteStops fulfillments
+      fareRows = concatMap toFares providers
+   in (stopRows, routeRows, routeStopRows, fareRows)
+  where
+    toStop s = do
+      code <- s.stopId
+      loc <- s.stopLocation
+      let desc = loc.locationDescriptor
+          (lat, lon) = parseGtfsGps loc.locationGps
+      pure API.FRFSGtfsStopAPI {code = code, name = desc >>= (.descriptorName), lat = lat, lon = lon}
+    routeCodeOf f = do
+      let tags = fromMaybe [] f.fulfillmentTags
+      rid <- SpecUtils.getTag "ROUTE_INFO" "ROUTE_ID" tags
+      pure $ T.strip rid <> maybe "" ("_" <>) (SpecUtils.getTag "ROUTE_INFO" "ROUTE_DIRECTION" tags)
+    toRoute f = do
+      let tags = fromMaybe [] f.fulfillmentTags
+      rid <- SpecUtils.getTag "ROUTE_INFO" "ROUTE_ID" tags
+      code <- routeCodeOf f
+      pure
+        API.FRFSGtfsRouteAPI
+          { code = code,
+            shortName = T.strip rid,
+            vehicleType = f.fulfillmentVehicle >>= (.vehicleCategory),
+            variant = f.fulfillmentVehicle >>= (.vehicleVariant)
+          }
+    toRouteStops f =
+      case routeCodeOf f of
+        Nothing -> []
+        Just code ->
+          mapMaybe
+            ( \(sq, s) -> do
+                stopCode <- s.stopId
+                pure API.FRFSGtfsRouteStopAPI {routeCode = code, stopCode = stopCode, sequenceNum = sq, stopType = s.stopType}
+            )
+            (zip [1 ..] (fromMaybe [] f.fulfillmentStops))
+    toFares p = mapMaybe (toFare p.providerId) (fromMaybe [] p.providerItems)
+    toFare providerCode item = do
+      desc <- item.itemDescriptor
+      code <- desc.descriptorCode
+      pure
+        API.FRFSGtfsFareAPI
+          { code = code,
+            name = desc.descriptorName,
+            providerCode = providerCode,
+            validityDuration = item.itemTime >>= (.timeDuration)
+          }
+
+dedupOn :: Ord k => (a -> k) -> [a] -> [a]
+dedupOn f = M.elems . M.fromList . map (\x -> (f x, x))
+
+storeDiscoveryGtfs :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => Text -> SpecT.OnSearchReq -> m ()
+storeDiscoveryGtfs ibcId req = do
+  let (stops, routes, routeStops, fares) = extractGtfsPage req
+      key = SFU.frfsGtfsCacheKey ibcId
+      pagesKey = SFU.frfsGtfsPagesKey ibcId
+      (mbCurPage, mbMaxPage) = gtfsPageInfo req
+  Hedis.withWaitAndLockRedis (key <> ":merge") gtfsMergeLockTtlSec gtfsMergeLockRetryMs $ do
+    mbExisting <- Hedis.safeGet key
+    seenPages <- fromMaybe [] <$> Hedis.safeGet pagesKey
+    let existing = fromMaybe (API.FRFSGtfsRes {integratedBppConfigId = Id ibcId, ready = False, routes = [], stops = [], routeStops = [], fares = []}) mbExisting
+        seenPages' = maybe seenPages (\p -> nub (p : seenPages)) mbCurPage
+        isReady = maybe True (\m -> length seenPages' >= m) mbMaxPage
+        mergedStops = dedupOn (.code) (existing.stops <> stops)
+        mergedRoutes = dedupOn (.code) (existing.routes <> routes)
+        mergedRouteStops = dedupOn (\rs -> (rs.routeCode, rs.stopCode, rs.sequenceNum)) (existing.routeStops <> routeStops)
+        mergedFares = dedupOn (\f -> (fromMaybe "" f.providerCode, f.code)) (existing.fares <> fares)
+    Hedis.setExp pagesKey seenPages' SFU.frfsGtfsCacheTtlSec
+    Hedis.setExp
+      key
+      ( API.FRFSGtfsRes
+          { integratedBppConfigId = Id ibcId,
+            ready = existing.ready || isReady,
+            routes = mergedRoutes,
+            stops = mergedStops,
+            routeStops = mergedRouteStops,
+            fares = mergedFares
+          } ::
+          API.FRFSGtfsRes
+      )
+      SFU.frfsGtfsCacheTtlSec

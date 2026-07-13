@@ -7,11 +7,14 @@ import Data.Aeson
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Lib.Finance.Core.Types
 import qualified Tools.Beam.UtilsTH
 
 data DirectTaxTransaction = DirectTaxTransaction
   { counterpartyId :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
+    createdBy :: Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType,
+    createdById :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     grossAmount :: Kernel.Types.Common.HighPrecMoney,
     id :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.DirectTaxTransaction.DirectTaxTransaction,
     invoiceNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -30,6 +33,8 @@ data DirectTaxTransaction = DirectTaxTransaction
     tdsTreatment :: Lib.Finance.Domain.Types.DirectTaxTransaction.TdsTreatment,
     transactionDate :: Kernel.Prelude.UTCTime,
     transactionType :: Lib.Finance.Domain.Types.DirectTaxTransaction.TransactionType,
+    updatedBy :: Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType,
+    updatedById :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic)

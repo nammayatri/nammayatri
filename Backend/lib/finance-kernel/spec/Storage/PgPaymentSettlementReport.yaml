@@ -59,6 +59,7 @@ PgPaymentSettlementReport:
 
   # ---------------------------------------------------------------------------
   # Fields
+  # NOTE: Mask sensitive values in pgPaymentSettlementReportToAuditValue (Settlement.Ingestion)
   # ---------------------------------------------------------------------------
   fields:
     id: Id PgPaymentSettlementReport
@@ -93,7 +94,7 @@ PgPaymentSettlementReport:
     paymentMethodSubType: Maybe Text               # e.g. "UPI-Bank Account", "VISA Debit"
     bankCode: Maybe Text                           # Bank code from PG report
     cardType: Maybe Text                           # e.g. "VISA", "MASTERCARD"
-    cardNumber: Maybe Text                         # Masked card number
+    cardNumber: Maybe Text                         # Masked card number SENSITIVE
 
     # --- Settlement details ---
     settlementType: Maybe SettlementType           # CREDIT | DEBIT
@@ -135,7 +136,7 @@ PgPaymentSettlementReport:
     reconMessage: Maybe Text                       # Mismatch notes / error details
 
     # --- Raw PG report row ---
-    rawData: Maybe Value                           # Full PG row stored as JSON for audit/debugging
+    rawData: Maybe Value                           # Full PG row stored as JSON for audit/debugging SENSITIVE
 
     # --- Audit ---
     createdBy: Maybe ActorType                     # Who created this record
