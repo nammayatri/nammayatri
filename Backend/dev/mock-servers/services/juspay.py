@@ -160,10 +160,16 @@ def _offer(handler, path_lower, body):
     """Handle offer_list, offer_apply, offer_notify endpoints."""
     if "offer_list" in path_lower or "list" in path_lower:
         # OfferListResp: {best_offer_combinations: [], offers: []}
-        handler._json({
+        # `extra` comes from a /mock/override rule (service=juspay), deep-merged
+        # into the default empty response so test collections can inject offers.
+        _, extra = handler._get_override("juspay")
+        base = {
             "best_offer_combinations": [],
             "offers": [],
-        })
+        }
+        if extra:
+            base = deep_merge(base, extra)
+        handler._json(base)
         return
 
     if "apply" in path_lower:
