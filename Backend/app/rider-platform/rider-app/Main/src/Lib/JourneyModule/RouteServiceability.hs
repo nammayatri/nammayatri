@@ -8,6 +8,7 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import qualified Domain.Types.FRFSVehicleServiceTier as DFRFSVehicleServiceTier
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import qualified Domain.Types.VehicleSeatLayoutMapping as DVSLM
+import Domain.Utils (mapConcurrently)
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (all, any, catMaybes, concatMap, elem, find, foldr, groupBy, id, length, map, mapM_, null, readMaybe, toList, whenJust)
@@ -64,15 +65,18 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
       else pure []
   let mergedBuses = routeInfo.buses <> upcomingBuses
   let vehicleNos = nub $ map (.vehicle_no) busScheduleDetails <> map (.vehicleNumber) mergedBuses
-  seatLayoutMappings <-
-    mapM
-      ( \vehicleNo ->
-          JMU.measureLatency
-            (CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vehicleNo integratedBPPConfig.feedKey)
-            ("buildRouteWithLiveVehicle: findByVehicleNoAndGtfsIdCached vehicle=" <> vehicleNo)
+  seatLayoutMappingsByVehicleNo <-
+    mapConcurrently
+      ( \vehicleNo -> do
+          mapping <-
+            JMU.measureLatency
+              (CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vehicleNo integratedBPPConfig.feedKey)
+              ("buildRouteWithLiveVehicle: findByVehicleNoAndGtfsIdCached vehicle=" <> vehicleNo)
+          pure (vehicleNo, mapping)
       )
       vehicleNos
-  let seatLayoutMappingByVehicleNo = Map.fromList (zip vehicleNos seatLayoutMappings)
+  let seatLayoutMappingByVehicleNo = Map.fromList seatLayoutMappingsByVehicleNo
+      seatLayoutMappings = map snd seatLayoutMappingsByVehicleNo
       shouldRunSeatHoldReaper = any ((== Just DVSLM.AUTO_ASSIGNED) . (>>= (.seatSelectionType))) seatLayoutMappings
       -- Map of vehicleNo -> active tripId, derived from the schedule details' active trip
       -- (same logic as the single-vehicle path), so live vehicles can carry their currentTripId.
