@@ -980,9 +980,8 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
   -- without relying on read replica synchronization
   updatedPassEntities <- forM passEntities $ \purchasedPass -> do
     (updatedPass, mbPayment, shouldUpdateDB) <- updatePurchasedPass purchasedPass today now
-
+    QPurchasedPassPayment.expireOlderPaymentsByPurchasedPassId purchasedPass.id today
     when shouldUpdateDB $ do
-      QPurchasedPassPayment.expireOlderPaymentsByPurchasedPassId purchasedPass.id today
       case (updatedPass.status, mbPayment) of
         (DPurchasedPass.Expired, _) ->
           QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id
