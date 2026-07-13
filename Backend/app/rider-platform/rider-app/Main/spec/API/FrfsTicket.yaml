@@ -203,6 +203,43 @@ types:
     sequenceNum: Maybe Int
     derive: "Show"
 
+  FRFSGtfsStopAPI:
+    code: Text
+    name: Maybe Text
+    lat: Maybe Double
+    lon: Maybe Double
+    derive: "Show,Eq"
+
+  FRFSGtfsRouteAPI:
+    code: Text
+    shortName: Text
+    vehicleType: Maybe Text
+    variant: Maybe Text
+    derive: "Show,Eq"
+
+  FRFSGtfsRouteStopAPI:
+    routeCode: Text
+    stopCode: Text
+    sequenceNum: Int
+    stopType: Maybe Text
+    derive: "Show,Eq"
+
+  FRFSGtfsFareAPI:
+    code: Text
+    name: Maybe Text
+    providerCode: Maybe Text
+    validityDuration: Maybe Text
+    derive: "Show,Eq"
+
+  FRFSGtfsRes:
+    integratedBppConfigId: Id IntegratedBPPConfig
+    ready: Bool
+    routes: [FRFSGtfsRouteAPI]
+    stops: [FRFSGtfsStopAPI]
+    routeStops: [FRFSGtfsRouteStopAPI]
+    fares: [FRFSGtfsFareAPI]
+    derive: "Show"
+
   FRFSTicketAPI:
     status: FRFSTicketStatus
     scannedByVehicleNumber: Maybe Text
@@ -317,6 +354,7 @@ types:
   FRFSRouteServiceabilityReq:
     startStopCode: Text
     endStopCode: Text
+    allowUpcomingTrips: Maybe Bool
 
   ActiveRouteRes:
     routeId: Text

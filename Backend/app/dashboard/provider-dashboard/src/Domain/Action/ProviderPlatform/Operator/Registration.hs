@@ -95,7 +95,9 @@ buildOperator emailUnencrypted mobileNumberUnencrypted mobileCountryCode firstNa
         rejectedBy = Nothing,
         language = Nothing,
         secretKey = Nothing,
-        is2faEnabled = False
+        is2faEnabled = False,
+        tokenNoHash = Nothing,
+        entityId = Nothing
       }
 
 postRegistrationDashboardRegister :: (ShortId DM.Merchant -> Context.City -> ApiTokenInfo -> Common.CreateDashboardOperatorReq -> Flow APISuccess)

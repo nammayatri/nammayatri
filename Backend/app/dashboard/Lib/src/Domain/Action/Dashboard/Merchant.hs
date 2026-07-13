@@ -235,5 +235,7 @@ buildPersonCreateReq req role = do
         rejectedBy = Nothing,
         language = Nothing,
         secretKey = Nothing,
-        is2faEnabled = False
+        is2faEnabled = False,
+        tokenNoHash = Nothing,
+        entityId = Nothing
       }

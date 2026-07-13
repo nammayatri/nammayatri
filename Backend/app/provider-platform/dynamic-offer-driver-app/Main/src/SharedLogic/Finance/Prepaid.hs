@@ -50,11 +50,11 @@ import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Finance.EInvoice
+import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
 import SharedLogic.Finance.Wallet (computeTdsRateReason)
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Plan as QPlan
-import qualified Storage.Queries.SubscriptionPurchase as QSP
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 
 -- | Optional parameters for creating a finance invoice during prepaid balance credit
@@ -871,7 +871,7 @@ handleSubscriptionExpiry purchase = do
           logInfo $ "Failed to get accounts for subscription expiry: " <> referenceId
           pure ()
 
-    QSP.updateStatusById DSP.EXPIRED purchase.id
+    SubscriptionPurchaseSvc.updateSubscriptionPurchaseStatus purchase DSP.EXPIRED
     logInfo $ "Subscription " <> purchase.id.getId <> " expired. Expired credits: " <> show expiredCredits
     when (purchase.ownerType == DSP.DRIVER) $
       void $
@@ -889,7 +889,8 @@ handleSubscriptionExpiry purchase = do
 -- If any were exhausted, the caller should call activateNextQueuedPurchaseExpiry
 -- and schedule follow-up jobs.
 checkAndMarkExhaustedSubscriptions ::
-  (BeamFlow m r) =>
+  forall m r.
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   CounterpartyType ->
   Text -> -- Owner ID
   DSP.SubscriptionOwnerType ->
@@ -903,6 +904,7 @@ checkAndMarkExhaustedSubscriptions counterpartyType ownerId ownerType mbVehicleC
       sorted = DL.sortOn (.purchaseTimestamp) allActive
   go sorted currentBalance [] False
   where
+    go :: [DSP.SubscriptionPurchase] -> HighPrecMoney -> [Id DSP.SubscriptionPurchase] -> Bool -> m ([Id DSP.SubscriptionPurchase], Bool)
     go [] _ acc exhausted = pure (acc, exhausted)
     go [single] _ acc exhausted = pure (acc <> [single.id], exhausted) -- Last one is always contributing
     go (oldest : rest) balance acc exhausted = do
@@ -910,7 +912,7 @@ checkAndMarkExhaustedSubscriptions counterpartyType ownerId ownerType mbVehicleC
       if balance <= restCredits
         then do
           -- Oldest subscription's credits are fully consumed
-          QSP.updateStatusById DSP.EXHAUSTED oldest.id
+          SubscriptionPurchaseSvc.updateSubscriptionPurchaseStatus oldest DSP.EXHAUSTED
           logInfo $ "Subscription " <> oldest.id.getId <> " marked EXHAUSTED"
           -- Continue checking (there might be more to exhaust)
           go rest balance (acc <> [oldest.id]) True
@@ -941,8 +943,7 @@ activateNextQueuedPurchaseExpiry ownerId ownerType mbVehicleCategory = do
         Just plan -> do
           now <- getCurrentTime
           let expiryDate = fmap (\days -> addUTCTime (fromIntegral (days * 60 * 60 * 24)) now) plan.validityInDays
-          actorInfo <- asks (.actorInfo)
-          QSPE.updateExpiryAndStartDateById expiryDate (Just now) actorInfo nextPurchase.id
+          SubscriptionPurchaseSvc.activateSubscriptionPurchaseExpiry nextPurchase expiryDate (Just now)
           logInfo $ "Activated expiry for queued subscription " <> nextPurchase.id.getId <> " with expiryDate: " <> show expiryDate <> " startDate: " <> show now
           pure $ (nextPurchase.id,) <$> expiryDate
         Nothing -> do

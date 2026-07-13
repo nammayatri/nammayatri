@@ -8,12 +8,15 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction
 import Tools.Beam.UtilsTH
 
 data DirectTaxTransactionT f = DirectTaxTransactionT
   { counterpartyId :: (B.C f Kernel.Prelude.Text),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    createdBy :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType)),
+    createdById :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     grossAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
     id :: (B.C f Kernel.Prelude.Text),
     invoiceNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
@@ -32,6 +35,8 @@ data DirectTaxTransactionT f = DirectTaxTransactionT
     tdsTreatment :: (B.C f Lib.Finance.Domain.Types.DirectTaxTransaction.TdsTreatment),
     transactionDate :: (B.C f Kernel.Prelude.UTCTime),
     transactionType :: (B.C f Lib.Finance.Domain.Types.DirectTaxTransaction.TransactionType),
+    updatedBy :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType)),
+    updatedById :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)

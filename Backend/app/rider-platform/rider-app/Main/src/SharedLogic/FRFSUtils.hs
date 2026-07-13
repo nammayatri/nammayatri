@@ -119,6 +119,15 @@ import Tools.Maps as Maps
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
 
+frfsGtfsCacheKey :: Text -> Text
+frfsGtfsCacheKey ibcId = "frfs:gtfs:" <> ibcId
+
+frfsGtfsPagesKey :: Text -> Text
+frfsGtfsPagesKey ibcId = "frfs:gtfs:pages:" <> ibcId
+
+frfsGtfsCacheTtlSec :: Int
+frfsGtfsCacheTtlSec = 3600
+
 adjustCfgMapForPreferredTier ::
   Ord Spec.ServiceTierType =>
   Maybe Spec.ServiceTierType ->
