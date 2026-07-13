@@ -312,6 +312,7 @@ types:
   FRFSRouteServiceabilityReq:
     startStopCode: Text
     endStopCode: Text
+    allowUpcomingTrips: Maybe Bool
 
   ActiveRouteRes:
     routeId: Text

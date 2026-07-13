@@ -230,9 +230,11 @@ data LegStatus = LegStatus
 data LiveVehicleInfo = LiveVehicleInfo
   { currentTripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
+    isUpcomingTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     locationUTCTimestamp :: Kernel.Prelude.UTCTime,
     number :: Kernel.Prelude.Text,
     position :: Kernel.External.Maps.Types.LatLong,
+    previousRouteId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     seatSelectionType :: Kernel.Prelude.Maybe Domain.Types.VehicleSeatLayoutMapping.SeatSelectionType,
     serviceSubTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceSubType],
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -344,7 +346,8 @@ data RouteCodesWithLeg = RouteCodesWithLeg {legOrder :: Kernel.Prelude.Int, rout
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RouteServiceabilityReq = RouteServiceabilityReq
-  { destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { allowUpcomingTrips :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeCodes :: Kernel.Prelude.Maybe [RouteCodesWithLeg],
     sourceStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
