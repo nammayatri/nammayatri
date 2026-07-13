@@ -1949,7 +1949,8 @@ data RouteServiceabilityContext = RouteServiceabilityContext
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     merchantId :: Id Domain.Types.Merchant.Merchant,
     maxLiveVehiclesPerRoute :: Int,
-    maxAlternateRouteVehicles :: Int
+    maxAlternateRouteVehicles :: Int,
+    allowUpcomingTrips :: Bool
   }
 
 data ResolvedLeg = ResolvedLeg
@@ -1980,7 +1981,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                   merchantOperatingCityId = person.merchantOperatingCityId,
                   merchantId = person.merchantId,
                   maxLiveVehiclesPerRoute = riderConfig.maxLiveVehiclesPerRoute,
-                  maxAlternateRouteVehicles = riderConfig.maxAlternateRouteVehicles
+                  maxAlternateRouteVehicles = riderConfig.maxAlternateRouteVehicles,
+                  allowUpcomingTrips = fromMaybe False req.allowUpcomingTrips
                 }
         let userRequestedCodes = maybe [] (concatMap (.routeCodes)) req.routeCodes
         case req.vehicleNumber of
@@ -2053,6 +2055,11 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
           >>= fromMaybeM (InvalidRequest $ "Route not found with id: " <> routeId)
       routeWithBuses <- CQMMB.getRoutesBuses routeId ctx.integratedBPPConfig
       let maybeBus = find (\b -> b.vehicleNumber == vno) routeWithBuses.buses
+      mbUpcomingBus <-
+        if ctx.allowUpcomingTrips && isNothing maybeBus
+          then find (\b -> b.vehicleNumber == vno) <$> JMRouteServiceability.getFreshUpcomingBuses routeId ctx.integratedBPPConfig (map (.vehicleNumber) routeWithBuses.buses)
+          else pure Nothing
+      let mbResolvedBus = maybeBus <|> mbUpcomingBus
       -- Always fetch schedules from bus-route-schedule API (for tripId)
       busScheduleDetails <- OTPRest.getRouteBusSchedule routeId (Just vno) ctx.integratedBPPConfig
       -- Get vehicle metadata for service tier (shared)
@@ -2101,7 +2108,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                   }
       let allSchedules = map buildScheduleInfo busScheduleDetails
       -- Build live vehicle info if live data exists
-      mbLiveVehicle <- case maybeBus of
+      mbLiveVehicle <- case mbResolvedBus of
         Nothing -> do
           -- No live data on the route hash; fall back to last-known location from the bus_metadata_v2 hash
           mbBusLiveInfo <- JLCF.getBusLiveInfo vno ctx.integratedBPPConfig
@@ -2125,7 +2132,9 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                       currentTripId = fallbackTripId,
                       serviceSubTypes = mbServiceSubTypes,
                       vehicleTagNumber = mbVehicleTagNumber,
-                      seatSelectionType = seatSelType
+                      seatSelectionType = seatSelType,
+                      isUpcomingTrip = Nothing,
+                      previousRouteId = Nothing
                     }
             _ -> return Nothing
         Just singleBus -> do
@@ -2150,7 +2159,9 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                       currentTripId = mbCurrentTripId,
                       serviceSubTypes = mbServiceSubTypes,
                       vehicleTagNumber = mbVehicleTagNumber,
-                      seatSelectionType = seatSelType
+                      seatSelectionType = seatSelType,
+                      isUpcomingTrip = singleBus.busData.is_upcoming_trip,
+                      previousRouteId = singleBus.busData.previous_route_id
                     }
       -- Return response with schedules (always) and live vehicle (if available)
       pure $
@@ -2366,7 +2377,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
               <$> mapConcurrently
                 ( \(r, s) ->
                     JMU.measureLatency
-                      (JMRouteServiceability.buildRouteWithLiveVehicle r s ctx.integratedBPPConfig rlFromStopCode rlToStopCode frfsTierMap mbSourceLatLong ctx.maxLiveVehiclesPerRoute)
+                      (JMRouteServiceability.buildRouteWithLiveVehicle r s ctx.integratedBPPConfig rlFromStopCode rlToStopCode frfsTierMap mbSourceLatLong ctx.maxLiveVehiclesPerRoute ctx.allowUpcomingTrips)
                       ("enrichResolvedLegs: buildRouteWithLiveVehicle route=" <> r.routeId)
                 )
                 (zip busesForRoutes schedulesForRoutes)
