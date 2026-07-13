@@ -3495,7 +3495,8 @@ data CreateDriversCSVRow = CreateDriversCSVRow
   }
 
 data DriverDetails = DriverDetails
-  { driverName :: Maybe Text,
+  { rowNumber :: Int,
+    driverName :: Maybe Text,
     driverPhoneNumber :: Text,
     driverOnboardingVehicleCategory :: Maybe DVC.VehicleCategory,
     fleetPhoneNo :: Maybe Text,
@@ -3527,15 +3528,20 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCity.id Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   driverDetails <- Csv.readCsv @CreateDriversCSVRow @DriverDetails req.file parseDriverInfo
   when (length driverDetails > 100) $ throwError $ MaxDriversLimitExceeded 100 -- TODO: Configure the limit
+  when (not (null driverDetails) && all (\d -> T.null d.driverPhoneNumber) driverDetails) $
+    throwError (InvalidRequest "No valid mobile numbers found in the uploaded file. Please check the file format.")
   let process func =
         foldlM
-          ( \unprocessedEntities driverDetail -> do
-              withTryCatch
-                "process:postDriverFleetAddDrivers"
-                (func driverDetail)
-                >>= \case
-                  Left err -> return $ unprocessedEntities <> ["Unable to add Driver (" <> driverDetail.driverPhoneNumber <> ") to the Fleet: " <> T.pack (displayException err)]
-                  Right _ -> return unprocessedEntities
+          ( \unprocessedEntities driverDetail ->
+              if T.null driverDetail.driverPhoneNumber
+                then return $ unprocessedEntities <> ["Row " <> show driverDetail.rowNumber <> ": Mobile number is required"]
+                else
+                  withTryCatch
+                    "process:postDriverFleetAddDrivers"
+                    (func driverDetail)
+                    >>= \case
+                      Left err -> return $ unprocessedEntities <> ["Unable to add Driver (" <> driverDetail.driverPhoneNumber <> ") to the Fleet: " <> T.pack (displayException err)]
+                      Right _ -> return unprocessedEntities
           )
           []
           driverDetails
@@ -3682,13 +3688,25 @@ validateDriverName mbDriverName isMandatory = do
 parseDriverInfo :: Int -> CreateDriversCSVRow -> Flow DriverDetails
 parseDriverInfo idx row = do
   let driverName :: Maybe Text = row.driverName >>= \name -> Csv.cleanMaybeCSVField idx name "Driver name"
-  driverPhoneNumber <- Csv.cleanCSVField idx row.driverPhoneNumber "Mobile number"
-  let driverOnboardingVehicleCategory :: Maybe DVC.VehicleCategory = Csv.readMaybeCSVField idx (fromMaybe "" row.driverOnboardingVehicleCategory) "Onboarding Vehicle Category"
+      -- Do not hard-fail the whole upload on a blank phone; keep the row (with an empty
+      -- phone) so it can be reported per-row in unprocessedEntities during processing.
+      driverPhoneNumber :: Text = fromMaybe "" (Csv.cleanMaybeCSVField idx row.driverPhoneNumber "Mobile number")
+      driverOnboardingVehicleCategory :: Maybe DVC.VehicleCategory = Csv.readMaybeCSVField idx (fromMaybe "" row.driverOnboardingVehicleCategory) "Onboarding Vehicle Category"
       fleetPhoneNo :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.fleetPhoneNo) "Fleet number"
       badgeName :: Maybe Text = Csv.readMaybeCSVField idx (fromMaybe "" row.badgeName) "Badge name"
       badgeRank :: Maybe Text = Csv.readMaybeCSVField idx (fromMaybe "" row.badgeRank) "Badge rank"
       badgeType :: Maybe DFBT.FleetBadgeType = Csv.readMaybeCSVField idx (fromMaybe "" row.badgeType) "Badge type"
-  pure $ DriverDetails driverName driverPhoneNumber driverOnboardingVehicleCategory fleetPhoneNo badgeName badgeRank badgeType
+  pure $
+    DriverDetails
+      { rowNumber = idx + 2, -- +1 for the header row, +1 to make the 0-based index human-readable (matches the CSV line)
+        driverName = driverName,
+        driverPhoneNumber = driverPhoneNumber,
+        driverOnboardingVehicleCategory = driverOnboardingVehicleCategory,
+        fleetPhoneNo = fleetPhoneNo,
+        badgeName = badgeName,
+        badgeRank = badgeRank,
+        badgeType = badgeType
+      }
 
 fetchOrCreatePerson :: DMOC.MerchantOperatingCity -> DriverDetails -> Flow (DP.Person, Bool)
 fetchOrCreatePerson moc req_ = do
