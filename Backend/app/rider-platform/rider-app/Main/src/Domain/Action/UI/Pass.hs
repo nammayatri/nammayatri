@@ -968,9 +968,8 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
   -- without relying on read replica synchronization
   updatedPassEntities <- forM passEntities $ \purchasedPass -> do
     (updatedPass, mbPayment, shouldUpdateDB) <- updatePurchasedPass purchasedPass today now
-
+    QPurchasedPassPayment.expireOlderPaymentsByPurchasedPassId purchasedPass.id today
     when shouldUpdateDB $ do
-      QPurchasedPassPayment.expireOlderPaymentsByPurchasedPassId purchasedPass.id today
       case (updatedPass.status, mbPayment) of
         (DPurchasedPass.Expired, _) ->
           QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id
@@ -1368,8 +1367,8 @@ computePassStatusFromRefunds :: DPurchasedPass.StatusType -> [PassAPI.RefundAPIE
 computePassStatusFromRefunds originalStatus refunds
   | null refunds = originalStatus
   | otherwise =
-      let latest = foldr1 pickLatest refunds
-       in mapStatus latest.status
+    let latest = foldr1 pickLatest refunds
+     in mapStatus latest.status
   where
     pickLatest r acc = if r.updatedAt >= acc.updatedAt then r else acc
     mapStatus PaymentInterface.REFUND_PENDING = DPurchasedPass.RefundPending
@@ -1406,10 +1405,14 @@ fetchRefundsForPayments payments = do
         then return Map.empty
         else do
           allRefunds <- QRefunds.findAllByOrderIds allShortIds
-          let refundsByOrderId = foldl' (\acc refund -> case Map.lookup refund.orderId shortIdMap of
-                  Just payOrderId -> Map.insertWith (++) payOrderId [buildRefundAPIEntity refund] acc
-                  Nothing -> acc
-                ) Map.empty allRefunds
+          let refundsByOrderId =
+                foldl'
+                  ( \acc refund -> case Map.lookup refund.orderId shortIdMap of
+                      Just payOrderId -> Map.insertWith (++) payOrderId [buildRefundAPIEntity refund] acc
+                      Nothing -> acc
+                  )
+                  Map.empty
+                  allRefunds
           return refundsByOrderId
 
 buildRefundAPIEntity :: DRefunds.Refunds -> PassAPI.RefundAPIEntity

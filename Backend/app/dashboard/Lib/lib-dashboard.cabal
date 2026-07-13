@@ -139,13 +139,13 @@ library
     , cereal
     , containers
     , cryptonite
-    , memory
     , dashboard-helper-api
     , dynamic-offer-driver-app
     , esqueleto
     , euler-hs
     , http-types
     , lens
+    , memory
     , mobility-core
     , openapi3
     , passetto-client

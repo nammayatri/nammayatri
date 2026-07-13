@@ -29,7 +29,7 @@ expireOlderPaymentsByPurchasedPassId purchasedPassId endDate = do
     [ Se.And
         [ Se.Is Beam.purchasedPassId $ Se.Eq purchasedPassId.getId,
           Se.Is Beam.status $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked],
-          Se.Is Beam.endDate $ Se.LessThanOrEq endDate
+          Se.Is Beam.endDate $ Se.LessThan endDate
         ]
     ]
 
@@ -46,7 +46,7 @@ expireOlderPaymentsByPurchasedPassIds purchasedPassIds endDate = do
     [ Se.And
         [ Se.Is Beam.purchasedPassId $ Se.In (map getId purchasedPassIds),
           Se.Is Beam.status $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked],
-          Se.Is Beam.endDate $ Se.LessThanOrEq endDate
+          Se.Is Beam.endDate $ Se.LessThan endDate
         ]
     ]
 
