@@ -19,7 +19,7 @@ import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Role as QRole
 import qualified Tools.Auth.Common as Auth
-import Tools.Error
+
 
 data InternalAuthReq = InternalAuthReq {token :: Text}
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
