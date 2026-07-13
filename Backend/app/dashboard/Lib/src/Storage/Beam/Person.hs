@@ -47,7 +47,9 @@ data PersonT f = PersonT
     rejectedBy :: B.C f (Maybe Text),
     language :: B.C f (Maybe KET.Language),
     secretKey :: B.C f (Maybe Text),
-    is2faEnabled :: B.C f Bool
+    is2faEnabled :: B.C f Bool,
+    tokenNoHash :: B.C f (Maybe DbHash),
+    entityId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

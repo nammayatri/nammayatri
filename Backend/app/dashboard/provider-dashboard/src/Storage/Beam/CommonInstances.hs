@@ -19,6 +19,7 @@ import Data.Text as T
 import Kernel.Beam.Lib.UtilsTH as Reexport
 import qualified Kernel.Storage.Beam.MerchantOperatingCity as BeamMOC
 import qualified "lib-dashboard" Storage.Beam.AccessMatrix as BeamAM
+import qualified "lib-dashboard" Storage.Beam.Entity as BeamE
 import qualified "lib-dashboard" Storage.Beam.Merchant as BeamM
 import qualified "lib-dashboard" Storage.Beam.MerchantAccess as BeamMA
 import qualified "lib-dashboard" Storage.Beam.Person as BeamP
@@ -27,6 +28,11 @@ import qualified "lib-dashboard" Storage.Beam.Role as BeamR
 import qualified "lib-dashboard" Storage.Beam.Transaction as BeamT
 
 instance HasSchemaName BeamAM.AccessMatrixT where
+  schemaName _ = T.pack "atlas_bpp_dashboard"
+
+-- Instance exists to satisfy shared Beam constraints; `entity` table is not
+-- created here. Any future SELECT against it will 500. See PT-employee PR notes.
+instance HasSchemaName BeamE.EntityT where
   schemaName _ = T.pack "atlas_bpp_dashboard"
 
 instance HasSchemaName BeamM.MerchantT where

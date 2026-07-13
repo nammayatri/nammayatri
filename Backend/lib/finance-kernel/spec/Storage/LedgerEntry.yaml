@@ -26,6 +26,7 @@ LedgerEntry:
       enum: "UNSETTLED,PROCESSING,PAID_OUT"
       derive: "HttpInstance"
 
+  # NOTE: Mask sensitive values in ledgerEntryToAuditValue (Ledger.Service)
   fields:
     id: Id LedgerEntry
     timestamp: UTCTime
@@ -41,7 +42,7 @@ LedgerEntry:
     reversalOf: Maybe (Id LedgerEntry)
     voidReason: Maybe Text
     settledAt: Maybe UTCTime
-    metadata: Maybe Value
+    metadata: Maybe Value # SENSITIVE
     fromStartingBalance: Maybe HighPrecMoney
     toStartingBalance: Maybe HighPrecMoney
     fromEndingBalance: Maybe HighPrecMoney
