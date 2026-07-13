@@ -727,6 +727,7 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
         Common.AadhaarCard -> QAadhaarCard.deleteByPersonId person.id
         Common.DriverLicense -> QDL.deleteByDriverId person.id
         _ -> throwError (InvalidRequest "Invalid document type")
+      QImage.deleteByPersonIdAndImageType person.id (mapDocumentType documentType)
       checkAndUpdateEnabledStatus merchantOpCityId documentType person
 
     checkAndUpdateEnabledStatus :: Id DMOC.MerchantOperatingCity -> Common.DocumentType -> DP.Person -> Flow Bool
