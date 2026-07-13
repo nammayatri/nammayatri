@@ -32,8 +32,15 @@ import qualified Lib.Finance.Storage.Queries.SapJournalEntry as QSJE
 --------------------------------------------------------------------------------
 
 sapJournalEntryToAuditValue :: SapJournalEntry -> Aeson.Value
-sapJournalEntryToAuditValue entry =
-  Aeson.toJSON (toTType' entry :: BeamSJE.SapJournalEntry)
+sapJournalEntryToAuditValue =
+  Aeson.toJSON . toTType' @BeamSJE.SapJournalEntry . hideSapJournalEntrySensitiveFields
+  where
+    hideSapJournalEntrySensitiveFields :: SapJournalEntry -> SapJournalEntry
+    hideSapJournalEntrySensitiveFields SapJournalEntry {..} =
+      SapJournalEntry
+        { rawResponse = Nothing,
+          ..
+        }
 
 auditSapJournalEntryCreate ::
   BeamFlow.BeamFlow m r =>

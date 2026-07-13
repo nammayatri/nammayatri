@@ -23,6 +23,7 @@ IndirectTaxTransaction:
       enum: "B2B,B2C"
       derive: "ToParamSchema"
 
+  # NOTE: Mask sensitive values in indirectTaxToAuditValue (Invoice.Service)
   fields:
     id: Id IndirectTaxTransaction
     transactionDate: UTCTime
@@ -36,7 +37,7 @@ IndirectTaxTransaction:
     totalGstAmount: HighPrecMoney
     gstCreditType: GstCreditType
     counterpartyId: Text
-    gstinOfParty: Maybe Text
+    gstinOfParty: Maybe Text # SENSITIVE
     saleType: Maybe SaleType
     invoiceNumber: Maybe Text
     creditOrDebitNoteNumber: Maybe Text
@@ -44,7 +45,7 @@ IndirectTaxTransaction:
     externalCharges: Maybe HighPrecMoney
     taxRate: Maybe Double
     taxCreditType: Maybe GstCreditType
-    issuedToTaxNo: Maybe Text
+    issuedToTaxNo: Maybe Text # SENSITIVE
     issuedByTaxNo: Maybe Text
     totalTaxAmount: Maybe HighPrecMoney
     merchantId: Text

@@ -61,6 +61,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as SOrder
 import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, getStartTimeAndEndTimeRange, mkCachedKeyTotalRidesByDriverId, roundToHalf)
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidBalanceByOwner, handleSubscriptionExpiry)
+import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
 import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.Payment
 import qualified SharedLogic.Payment as SPayment
@@ -1269,7 +1270,7 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
             updatedAt = now,
             reconciliationStatus = Nothing
           }
-  QSP.create subscriptionPurchase
+  SubscriptionPurchaseSvc.createSubscriptionPurchase subscriptionPurchase
   pure (createOrderResp', paymentOrderId)
 
 createMandateInvoiceAndOrder ::

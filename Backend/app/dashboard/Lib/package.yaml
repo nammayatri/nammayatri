@@ -103,6 +103,7 @@ dependencies:
   - random
   - base32
   - cryptonite
+  - memory
   - containers
   - unordered-containers
   - cereal
