@@ -717,7 +717,9 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId ser
       scheduleOverlay = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleOverlay
       scheduleManualPaymentLink = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleManualPaymentLink
       scheduleDriverFeeCalc = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleDriverFeeCalc
-  shardNums <- ADL.getShardNumsForFanOut
+  shardNums <- case serviceName of
+    YATRI_SUBSCRIPTION -> ADL.getShardNumsForFanOut
+    _ -> pure [Nothing]
   when scheduleNotification $
     Redis.runInMasterCloudRedisCell $
       forM_ shardNums $ \shardNum ->
