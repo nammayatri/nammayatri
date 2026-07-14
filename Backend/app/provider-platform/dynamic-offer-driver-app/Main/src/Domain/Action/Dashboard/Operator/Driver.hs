@@ -897,7 +897,8 @@ getDriverReviewQueueRequest merchantShortId opCity entityType reviewRequestType 
                   entityId = driverInfo.driverId.getId,
                   rcNo = Nothing,
                   courtRecord,
-                  pendingChallan = Nothing
+                  pendingChallan = Nothing,
+                  fleetType = Nothing
                 },
             createdAt = driverInfo.updatedAt,
             updatedAt = driverInfo.updatedAt,
@@ -918,7 +919,8 @@ getDriverReviewQueueRequest merchantShortId opCity entityType reviewRequestType 
                   entityId = fleetOwnerInfo.fleetOwnerPersonId.getId,
                   rcNo = Nothing,
                   courtRecord = Nothing,
-                  pendingChallan = Nothing
+                  pendingChallan = Nothing,
+                  fleetType = Just $ castToApiFleetType fleetOwnerInfo.fleetType
                 },
             createdAt = fleetOwnerInfo.updatedAt,
             updatedAt = fleetOwnerInfo.updatedAt,
@@ -938,7 +940,8 @@ getDriverReviewQueueRequest merchantShortId opCity entityType reviewRequestType 
                   entityId = rc.id.getId,
                   rcNo = rc.unencryptedCertificateNumber,
                   courtRecord = Nothing,
-                  pendingChallan = mkApiPendingChallan <$> rc.pendingChallan
+                  pendingChallan = mkApiPendingChallan <$> rc.pendingChallan,
+                  fleetType = Nothing
                 },
             createdAt = rc.updatedAt,
             updatedAt = rc.updatedAt,
@@ -952,6 +955,11 @@ getDriverReviewQueueRequest merchantShortId opCity entityType reviewRequestType 
 
     mkApiPendingChallan pc =
       API.Types.ProviderPlatform.Operator.Driver.PendingChallanResult {pendingChallanCount = pc.pendingChallanCount, errorMessage = pc.errorMessage}
+
+castToApiFleetType :: DFOI.FleetType -> API.Types.ProviderPlatform.Operator.Driver.FleetType
+castToApiFleetType DFOI.RENTAL_FLEET = API.Types.ProviderPlatform.Operator.Driver.RENTAL_FLEET
+castToApiFleetType DFOI.NORMAL_FLEET = API.Types.ProviderPlatform.Operator.Driver.NORMAL_FLEET
+castToApiFleetType DFOI.BUSINESS_FLEET = API.Types.ProviderPlatform.Operator.Driver.BUSINESS_FLEET
 
 postDriverSubmitReviewRequest ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -1255,13 +1263,18 @@ getDriverRequestReviewHistory merchantShortId opCity apiEntityType reviewRequest
       persons <- if null personIds then pure [] else B.runInReplica $ QPerson.getDriversByIdIn personIds
       let personByEntityId = HashMap.fromList [(p.id.getId, p) | p <- persons]
 
-      reviewHistory <- mapM (buildReviewHistoryItem personByEntityId) historyRecords
+      let fleetOwnerIds = [Id req.entityId | req <- historyRecords, req.entityType == DRR.FLEET_OWNER]
+      fleetOwnerInfos <- if null fleetOwnerIds then pure [] else B.runInReplica $ QFOI.findAllByPrimaryKeys fleetOwnerIds
+      let fleetTypeByEntityId = HashMap.fromList [(f.fleetOwnerPersonId.getId, f.fleetType) | f <- fleetOwnerInfos]
+
+      reviewHistory <- mapM (buildReviewHistoryItem personByEntityId fleetTypeByEntityId) historyRecords
       pure API.Types.ProviderPlatform.Operator.Driver.ReviewRequestHistoryList {reviewHistory}
   where
-    buildReviewHistoryItem personByEntityId req = do
+    buildReviewHistoryItem personByEntityId fleetTypeByEntityId req = do
       let mbPerson = if req.entityType == DRR.VEHICLE then Nothing else HashMap.lookup req.entityId personByEntityId
       mbPersonMobileNumber <- maybe (pure Nothing) (\p -> mapM decrypt p.mobileNumber) mbPerson
       let mbPersonName = (\p -> T.strip (p.firstName <> maybe "" (" " <>) p.middleName <> maybe "" (" " <>) p.lastName)) <$> mbPerson
+      let mbFleetType = if req.entityType == DRR.FLEET_OWNER then castToApiFleetType <$> HashMap.lookup req.entityId fleetTypeByEntityId else Nothing
       pure $
         API.Types.ProviderPlatform.Operator.Driver.ReviewRequestHistory
           { id = req.id.getId,
@@ -1274,7 +1287,8 @@ getDriverRequestReviewHistory merchantShortId opCity apiEntityType reviewRequest
                   mobileNumber = mbPersonMobileNumber,
                   rcNo = req.rcNo,
                   courtRecord = Nothing,
-                  pendingChallan = Nothing
+                  pendingChallan = Nothing,
+                  fleetType = mbFleetType
                 },
             requestStatus = castToApiReqStatus req.requestStatus,
             reviewerId = fmap (.getId) req.reviewerId,
