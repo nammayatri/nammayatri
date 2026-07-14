@@ -541,4 +541,32 @@ in  { esqDBCfg
     , bapHostRedirectMap = [] : List { mapKey : Text, mapValue : Optional Text }
     , xyneWebhookSigningSecret = "<XYNE_WEBHOOK_SIGNING_SECRET>"
     , xyneWebhookBearerToken = "<XYNE_WEBHOOK_BEARER_TOKEN>"
+    , metaAppSecret = env:META_APP_SECRET as Text ? ""
+    , metaVerifyToken = env:META_VERIFY_TOKEN as Text ? ""
+    , metaWebhookMerchants =
+      [ { phoneNumberId = "1112862375253677"
+        , merchantShortId = "NAMMA_YATRI"
+        , city = "Bangalore"
+        , botCfg =
+          { merchantLabel = "namma_yatri"
+          , rideMode = "both"
+          , flexiBaseFare = None Double
+          , flexiPerKm = None Double
+          , flexiServiceArea = None Text
+          , flexiServiceRadiusKm = None Double
+          , flexiRentalDistanceM = +10000
+          , flexiRentalDurationS = +3600
+          , flexiIntroVideoUrl = None Text
+          , flexiSupportPhone = Some "+91 80000 00000"
+          , nyTrackingUrl =
+              "https://www.nammayatri.in/u?vp=shareRide&rideId={rideId}"
+          }
+        }
+      ]
+    , metaBotEnabled = True
+    , metaAllowedPhones = [ "9361176218" ]
+    , metaTrackerEnabled = True
+    , metaTrackerPollMs = +3000
+    , metaSessionTtlSec = +1800
+    , metaTrackerMaxAgeSec = +10800
     }
