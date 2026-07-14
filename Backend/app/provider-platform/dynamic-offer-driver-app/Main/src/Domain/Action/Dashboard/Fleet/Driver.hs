@@ -2538,14 +2538,16 @@ getDriverFleetOperatorInfo ::
   Maybe Text ->
   Maybe Text ->
   Flow Common.FleetOwnerInfoRes
-getDriverFleetOperatorInfo merchantShortId opCity mbMobileCountryCode mbMobileNumber mbPersonId mbWalletId = do
+getDriverFleetOperatorInfo merchantShortId _opCity mbMobileCountryCode mbMobileNumber mbPersonId mbWalletId = do
   when (length (catMaybes [mbPersonId, mbMobileNumber, mbWalletId]) /= 1) $
     throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"personId\", \"walletId\" is required"
   when (isJust mbMobileCountryCode && isNothing mbMobileNumber) $
     throwError $ InvalidRequest "\"mobileCountryCode\" can be used only with \"mobileNumber\""
   merchant <- findMerchantByShortId merchantShortId
-  personId <- case (mbPersonId, mbMobileNumber, mbWalletId) of
-    (Just pid, _, _) -> pure pid
+  person <- case (mbPersonId, mbMobileNumber, mbWalletId) of
+    (Just pid, _, _) -> do
+      person <- QPerson.findById (Id pid) >>= fromMaybeM (PersonDoesNotExist pid)
+      pure person
     (_, Just mobileNumber, _) -> do
       mobileNumberHash <- getDbHash mobileNumber
       person <-
@@ -2555,15 +2557,16 @@ getDriverFleetOperatorInfo merchantShortId opCity mbMobileCountryCode mbMobileNu
           merchant.id
           [DP.FLEET_OWNER, DP.FLEET_BUSINESS, DP.OPERATOR]
           >>= fromMaybeM (PersonDoesNotExist mobileNumber)
-      pure person.id.getId
+      pure person
     (Nothing, Nothing, Just walletId) -> do
       account <- QFinanceAccount.findById (Id walletId) >>= fromMaybeM (InvalidRequest $ "Wallet account not found: " <> walletId)
       unless (account.counterpartyType == Just FLEET_OWNER && account.accountType == FinanceAccount.Liability) $
         throwError (InvalidRequest $ "WalletId does not belong to a FLEET_OWNER Liability account: " <> walletId)
       counterpartyId <- fromMaybeM (InvalidRequest $ "Wallet account missing counterpartyId: " <> walletId) account.counterpartyId
-      pure counterpartyId
+      person <- QPerson.findById (Id counterpartyId) >>= fromMaybeM (PersonDoesNotExist counterpartyId)
+      pure person
     _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"personId\", \"walletId\" is required"
-  getDriverFleetOwnerInfo merchantShortId opCity (Id personId)
+  getFleetOrOperatorInfo person
 
 getDriverFleetOwnerInfo :: -- Deprecated, use getDriverFleetOperatorInfo
   ShortId DM.Merchant ->
@@ -2577,7 +2580,12 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
     CQMOC.findById person.merchantOperatingCityId
       >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
   unless (merchantOpCity.merchantShortId == requestorMerchantShortId && merchantOpCity.city == requestorCity) $ throwError (PersonDoesNotExist personId.getId)
-  mbFleetOwnerInfo <- B.runInReplica $ FOI.findByPrimaryKey personId
+  getFleetOrOperatorInfo person
+
+getFleetOrOperatorInfo :: DP.Person -> Flow Common.FleetOwnerInfoRes
+getFleetOrOperatorInfo person = do
+  let personId = person.id
+  mbFleetOwnerInfo <- B.runInReplica $ FOI.findByPrimaryKey person.id
   case mbFleetOwnerInfo of
     Nothing -> do
       unless (person.role == DP.OPERATOR) $ throwError (InvalidRequest "Person is not a fleet owner or operator")
