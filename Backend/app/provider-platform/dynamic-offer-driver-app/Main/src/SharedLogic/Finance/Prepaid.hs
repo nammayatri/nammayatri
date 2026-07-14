@@ -15,6 +15,7 @@ module SharedLogic.Finance.Prepaid
     getPrepaidBalanceByOwner,
     getPrepaidPendingHoldByOwner,
     getPrepaidAvailableBalanceByOwner,
+    getSubscriptionRemainingAvailableBalance,
     createPrepaidHold,
     voidPrepaidHold,
     creditPrepaidBalance,
@@ -176,6 +177,61 @@ getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory = d
   mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId mbVehicleCategory
   pendingHold <- getPrepaidPendingHoldByOwner counterpartyType ownerId mbVehicleCategory
   pure $ (\balance -> balance - pendingHold) <$> mbBalance
+
+counterpartyTypeForSubscription :: DSP.SubscriptionPurchase -> CounterpartyType
+counterpartyTypeForSubscription subscription = case subscription.ownerType of
+  DSP.FLEET_OWNER -> counterpartyFleetOwner
+  DSP.DRIVER -> counterpartyDriver
+
+-- | Wallet FIFO slice attributable to the given subscription (FIFO head only).
+-- Prepaid wallet is shared per owner; ride debits consume the oldest ACTIVE purchase first.
+-- Subtract newer subscriptions' planRideCredit to reserve their entitlement before attributing
+-- the remaining ledger balance to this (oldest) purchase.
+getSubscriptionFifoWalletSlice ::
+  (BeamFlow m r) =>
+  DSP.SubscriptionPurchase ->
+  Maybe DVC.VehicleCategory ->
+  [DSP.SubscriptionPurchase] ->
+  m HighPrecMoney
+getSubscriptionFifoWalletSlice subscription prepaidScope allActiveSubscriptions = do
+  let counterpartyType = counterpartyTypeForSubscription subscription
+      ownerId = subscription.ownerId
+      otherActiveSubscriptions = filter (\p -> p.id /= subscription.id) allActiveSubscriptions
+      otherActiveCredits = sum $ map (.planRideCredit) otherActiveSubscriptions
+  -- Ledger balance (PENDING holds not taken into account): PENDING holds don't reduce account.balance until settle,
+  -- and recon consumed counts only SETTLED debits
+  mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId prepaidScope
+  let walletBalance = fromMaybe 0 mbBalance
+  pure $ max 0 (walletBalance - otherActiveCredits)
+
+-- | Remaining credit for purchase-vs-transaction reconciliation.
+-- Ride debits follow FIFO: only the oldest ACTIVE purchase is spent; queued purchases are not
+-- debited yet. FIFO head uses a wallet slice (cross-check with ledger); queued uses
+-- planRideCredit − settledConsumed (nominal remainder, no wallet attribution needed).
+-- EXPIRED / EXHAUSTED: remaining is zero. FAILED/PENDING: should not appear
+getSubscriptionRemainingAvailableBalance ::
+  (BeamFlow m r) =>
+  DSP.SubscriptionPurchase ->
+  HighPrecMoney -> -- settled consumed (ride debits + expiry transfers)
+  m (Maybe HighPrecMoney)
+getSubscriptionRemainingAvailableBalance subscription settledConsumed =
+  if subscription.status == DSP.ACTIVE
+    then do
+      prepaidScope <- resolvePrepaidScope subscription.merchantOperatingCityId subscription.vehicleCategory
+      allActiveSubscriptions <-
+        QSPE.findAllActiveByOwnerAndServiceName
+          subscription.ownerId
+          subscription.ownerType
+          PREPAID_SUBSCRIPTION
+          prepaidScope
+
+      -- True when this purchase is the oldest ACTIVE subscription in FIFO order for its scope.
+      let isFifoHeadActiveSubscription = maybe False (\oldest -> oldest.id == subscription.id) (listToMaybe allActiveSubscriptions)
+      if isFifoHeadActiveSubscription
+        then Just <$> getSubscriptionFifoWalletSlice subscription prepaidScope allActiveSubscriptions
+        else -- Queued ACTIVE: not debited on rides yet; wallet slice would belong to the oldest purchase.
+          pure . Just $ max 0 (subscription.planRideCredit - settledConsumed)
+    else pure Nothing
 
 getOrCreatePrepaidAccount ::
   (BeamFlow m r) =>

@@ -279,6 +279,7 @@ data ReconciliationEntry = ReconciliationEntry
     expectedValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     actualValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     variance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    disputeAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     reconStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mismatchReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     timestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -289,7 +290,25 @@ data ReconciliationEntry = ReconciliationEntry
     settlementDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     settlementMode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     transactionDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    rrn :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    pgTransactionDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    rrn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    utr :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    pgOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    pgTxnId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    paymentOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    subscriptionAmountExclGst :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    gstOnSubscription :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    totalTransactionAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    subscriptionPurchaseId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    purchaseTimestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    purchaseStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    planName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    entitledAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    consumedAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    remainingAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    transactionType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    linkedEntityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    mismatchCategory :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -304,7 +323,8 @@ data ReconciliationSummary = ReconciliationSummary
     matchRate :: Kernel.Prelude.Text,
     sourceTotal :: Kernel.Types.Common.HighPrecMoney,
     targetTotal :: Kernel.Types.Common.HighPrecMoney,
-    varianceAmount :: Kernel.Types.Common.HighPrecMoney
+    varianceAmount :: Kernel.Types.Common.HighPrecMoney,
+    disputeAmountTotal :: Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

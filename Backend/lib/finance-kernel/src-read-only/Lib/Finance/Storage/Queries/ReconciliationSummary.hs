@@ -54,7 +54,8 @@ updateByPrimaryKey :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.F
 updateByPrimaryKey (Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.errorMessage errorMessage,
+    [ Se.Set Beam.disputeAmountTotal disputeAmountTotal,
+      Se.Set Beam.errorMessage errorMessage,
       Se.Set Beam.matchRate matchRate,
       Se.Set Beam.matchedRecords matchedRecords,
       Se.Set Beam.merchantId merchantId,
@@ -76,6 +77,7 @@ instance FromTType' Beam.ReconciliationSummary Lib.Finance.Domain.Types.Reconcil
       Just
         Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary
           { createdAt = createdAt,
+            disputeAmountTotal = disputeAmountTotal,
             errorMessage = errorMessage,
             id = Kernel.Types.Id.Id id,
             matchRate = matchRate,
@@ -96,6 +98,7 @@ instance ToTType' Beam.ReconciliationSummary Lib.Finance.Domain.Types.Reconcilia
   toTType' (Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary {..}) = do
     Beam.ReconciliationSummaryT
       { Beam.createdAt = createdAt,
+        Beam.disputeAmountTotal = disputeAmountTotal,
         Beam.errorMessage = errorMessage,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.matchRate = matchRate,

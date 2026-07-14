@@ -34,6 +34,23 @@ findByReferenceIn referenceTypes referenceId =
         ]
     ]
 
+findByReferenceTypesAndDateRange ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  [Text] ->
+  Text ->
+  UTCTime ->
+  UTCTime ->
+  m [Domain.LedgerEntry]
+findByReferenceTypesAndDateRange referenceTypes merchantOperatingCityId startTime endTime =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.referenceType $ Se.In referenceTypes,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+          Se.Is Beam.timestamp $ Se.GreaterThanOrEq startTime,
+          Se.Is Beam.timestamp $ Se.LessThanOrEq endTime
+        ]
+    ]
+
 -- | Find ALL ledger entries by referenceId (no referenceType filter)
 findAllByReferenceId ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>

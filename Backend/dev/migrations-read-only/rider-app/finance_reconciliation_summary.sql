@@ -16,3 +16,9 @@ ALTER TABLE atlas_app.finance_reconciliation_summary ADD COLUMN total_discrepanc
 ALTER TABLE atlas_app.finance_reconciliation_summary ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.finance_reconciliation_summary ADD COLUMN variance_amount double precision NOT NULL;
 ALTER TABLE atlas_app.finance_reconciliation_summary ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_reconciliation_summary ADD COLUMN dispute_amount_total double precision ;

@@ -399,6 +399,7 @@ types:
     - sourceTotal: HighPrecMoney
     - targetTotal: HighPrecMoney
     - varianceAmount: HighPrecMoney
+    - disputeAmountTotal: HighPrecMoney
   ReconciliationEntry:
     - bookingId: Maybe Text
     - dcoId: Maybe Text
@@ -407,6 +408,7 @@ types:
     - expectedValue: Maybe HighPrecMoney
     - actualValue: Maybe HighPrecMoney
     - variance: Maybe HighPrecMoney
+    - disputeAmount: Maybe HighPrecMoney
     - reconStatus: Maybe Text
     - mismatchReason: Maybe Text
     - timestamp: Maybe UTCTime
@@ -417,7 +419,25 @@ types:
     - settlementDate: Maybe UTCTime
     - settlementMode: Maybe Text
     - transactionDate: Maybe UTCTime
+    - pgTransactionDate: Maybe UTCTime
     - rrn: Maybe Text
+    - utr: Maybe Text
+    - pgOrderId: Maybe Text
+    - pgTxnId: Maybe Text
+    - paymentOrderId: Maybe Text
+    - subscriptionAmountExclGst: Maybe HighPrecMoney
+    - gstOnSubscription: Maybe HighPrecMoney
+    - totalTransactionAmount: Maybe HighPrecMoney
+    - subscriptionPurchaseId: Maybe Text
+    - purchaseTimestamp: Maybe UTCTime
+    - purchaseStatus: Maybe Text
+    - planName: Maybe Text
+    - entitledAmount: Maybe HighPrecMoney
+    - consumedAmount: Maybe HighPrecMoney
+    - remainingAmount: Maybe HighPrecMoney
+    - transactionType: Maybe Text
+    - linkedEntityId: Maybe Text
+    - mismatchCategory: Maybe Text
 
   # ----- Payout list -----
   PayoutListRes:
