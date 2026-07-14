@@ -63,6 +63,7 @@ import System.Environment (lookupEnv)
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 import Tools.HTTPManager (prepareCRISHttpManager)
 import "utils" Utils.Common.Events as UE
+import WhatsappBot.Adapter.Tracker (startWhatsAppTracker)
 
 instance HasSchemaName Beam.MerchantOperatingCityT where
   schemaName _ = T.pack currentSchemaName
@@ -154,4 +155,11 @@ runRiderApp' appCfg = do
         pure flowRt'
     let timeoutMiddleware = UE.timeoutEvent flowRt appEnv (responseLBS status408 [] "") appCfg.incomingAPIResponseTimeout
     proxyManager <- HttpTLS.newTlsManager
+    -- Background WhatsApp ride tracker (per-pod, shutdown-aware; forks + returns).
+    -- Always started: enable/disable is per-merchant via meta_config.enabled
+    -- now, not a global dhall flag — the loop itself (WhatsappBot.Adapter.Tracker)
+    -- already re-checks that column every tick and just no-ops when nothing
+    -- is enabled, so a separate "should this process even start" switch was
+    -- redundant with logic the loop already has to do anyway.
+    runFlowR flowRt' appEnv startWhatsAppTracker
     runSettings settings $ timeoutMiddleware (App.run proxyManager (App.EnvR flowRt' appEnv))

@@ -2,6 +2,9 @@
   "_comment": "Config tables registry with primary key dimensions for upsert. Curated from YAML specs + migrations + Beam schemas.",
   "_last_reviewed": "2026-03-26",
   "atlas_app": {
+    "meta_config": {
+      "dim": []
+    },
     "special_location": {
       "dim": []
     },

@@ -1,0 +1,84 @@
+{
+  "scenario": "welcome-back",
+  "description": "A phone number already known to the real backend (found by Person.findByMobileNumberAndMerchantId) messages the bot for the first time on WhatsApp. ensureAuth's layer-3 authenticate call resolves isNewUser=False with a real displayName, so a one-time 'Welcome back' message is sent before the normal pickup prompt.",
+  "env": {
+    "merchant": "pn_flexi",
+    "systemTime": "2026-07-09T00:00:00.000Z"
+  },
+  "seed": {
+    "returningUser": true,
+    "phone": "917411122233"
+  },
+  "steps": [
+    {
+      "note": "tap Quick Ride -> silent auth resolves an already-known person -> Welcome back message -> pickup request",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "Priya"
+                      },
+                      "wa_id": "917411122233"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "917411122233",
+                      "id": "wamid.wb.1",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "ride_type:flexi",
+                          "title": "Quick Ride"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "text",
+          "to": "917411122233",
+          "merchant": "FLEXI"
+        },
+        {
+          "kind": "location_request",
+          "to": "917411122233",
+          "merchant": "FLEXI"
+        }
+      ],
+      "expectBackend": [
+        {
+          "method": "authenticate",
+          "args": [
+            "7411122233"
+          ]
+        },
+        {
+          "method": "getSavedLocations",
+          "args": []
+        }
+      ]
+    }
+  ]
+}

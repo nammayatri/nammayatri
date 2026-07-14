@@ -195,6 +195,15 @@ data AppCfg = AppCfg
     zendeskWebhookToken :: Text,
     xyneWebhookSigningSecret :: Text,
     xyneWebhookBearerToken :: Text,
+    -- No meta-prefixed config left here at all: metaBotEnabled was
+    -- redundant with meta_config.enabled (per-row), and metaTrackerEnabled
+    -- was redundant with the tracker loop's own per-tick check of that same
+    -- column (WhatsappBot.Adapter.Tracker just finds nothing to do when no
+    -- row is enabled, so it never needed a separate "should I start"
+    -- switch). Poll/session/tracker timing values moved into MetaBotCfg
+    -- (Domain.Types.Extra.MetaWebhookConfig) earlier for the same reason —
+    -- meta_config is now the single source of truth for all of this,
+    -- nothing WhatsApp-bot-related is hardcoded in dhall anymore.
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
     seatBookingConfirmAPIRateLimitOptions :: APIRateLimitOptions,
@@ -320,6 +329,15 @@ data AppEnv = AppEnv
     zendeskWebhookToken :: Text,
     xyneWebhookSigningSecret :: Text,
     xyneWebhookBearerToken :: Text,
+    -- No meta-prefixed config left here at all: metaBotEnabled was
+    -- redundant with meta_config.enabled (per-row), and metaTrackerEnabled
+    -- was redundant with the tracker loop's own per-tick check of that same
+    -- column (WhatsappBot.Adapter.Tracker just finds nothing to do when no
+    -- row is enabled, so it never needed a separate "should I start"
+    -- switch). Poll/session/tracker timing values moved into MetaBotCfg
+    -- (Domain.Types.Extra.MetaWebhookConfig) earlier for the same reason —
+    -- meta_config is now the single source of truth for all of this,
+    -- nothing WhatsApp-bot-related is hardcoded in dhall anymore.
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
     seatBookingConfirmAPIRateLimitOptions :: APIRateLimitOptions,

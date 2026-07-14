@@ -351,8 +351,9 @@ search ::
   Bool ->
   Maybe Text ->
   Maybe Bool ->
+  Maybe Bool ->
   m SearchRes
-search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion mbClient device isDashboardRequest_ justMultimodalSearch multimodalSearchRequestId mbEnableSyncSearch = do
+search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion mbClient device isDashboardRequest_ justMultimodalSearch multimodalSearchRequestId mbEnableSyncSearch mbIsWhatsappRequest = do
   now <- getCurrentTime
   let SearchDetails {..} = extractSearchDetails now req
   let isReservedRideSearch = case req of
@@ -461,6 +462,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       toSpecialLocationId
       mbDiscoveredSpecialLocId
       mbEnableSyncSearch
+      mbIsWhatsappRequest
 
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
@@ -756,8 +758,9 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Text ->
   Maybe Bool ->
+  Maybe Bool ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId busLocationData fromSpecialLocationId toSpecialLocationId discoveredSpecialLocationId mbEnableSyncSearch = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId busLocationData fromSpecialLocationId toSpecialLocationId discoveredSpecialLocationId mbEnableSyncSearch mbIsWhatsappRequest = do
   let searchMode =
         if isReservedRideSearch
           then Just SearchRequest.RESERVE
@@ -807,6 +810,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         stops,
         totalRidesCount,
         isDashboardRequest = Just isDashboardRequest,
+        isWhatsappRequest = mbIsWhatsappRequest,
         placeNameSource = mbPlaceNameSource,
         initiatedBy = Nothing,
         driverIdentifier = mbDriverReferredInfo,
