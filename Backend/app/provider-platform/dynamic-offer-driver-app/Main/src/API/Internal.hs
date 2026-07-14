@@ -84,6 +84,7 @@ type API =
            :<|> InMemManagement.API
            :<|> MasterCloudForward.API
            :<|> XyneWebhook.API
+           :<|> XyneWebhook.BearerAPI
        )
 
 handler :: AppEnv -> FlowServer API

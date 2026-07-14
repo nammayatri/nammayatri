@@ -557,4 +557,5 @@ in  { esqDBCfg
     , masterCloudProxyConfig =
       { masterUrl = None Text, masterSecret = Some "123" }
     , xyneWebhookSigningSecret = "<XYNE_WEBHOOK_SIGNING_SECRET>"
+    , xyneWebhookBearerToken = "<XYNE_WEBHOOK_BEARER_TOKEN>"
     }

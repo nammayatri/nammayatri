@@ -184,7 +184,8 @@ data AppCfg = AppCfg
     blackListedJobs :: [Text],
     ttenTokenCacheExpiry :: Seconds,
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
-    xyneWebhookSigningSecret :: Text
+    xyneWebhookSigningSecret :: Text,
+    xyneWebhookBearerToken :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -313,7 +314,8 @@ data AppEnv = AppEnv
     ttenTokenCacheExpiry :: Seconds,
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
     masterCloudForwarderManager :: Http.Manager,
-    xyneWebhookSigningSecret :: Text
+    xyneWebhookSigningSecret :: Text,
+    xyneWebhookBearerToken :: Text
   }
   deriving (Generic)
 

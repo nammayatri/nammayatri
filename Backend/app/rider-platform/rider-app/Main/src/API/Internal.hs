@@ -58,6 +58,7 @@ type API =
            :<|> FRFSInternal.API
            :<|> ZendeskWebhook.API
            :<|> XyneWebhook.API
+           :<|> XyneWebhook.BearerAPI
        )
 
 handler :: FlowServer API
@@ -86,3 +87,4 @@ handler =
     :<|> FRFSInternal.handler
     :<|> ZendeskWebhook.handler
     :<|> XyneWebhook.handler
+    :<|> XyneWebhook.bearerHandler
