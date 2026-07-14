@@ -136,6 +136,7 @@ module SharedLogic.Finance.RidePayment
     settledRefundByComponent,
     createPendingCancellationFeeLedger,
     markCancellationFeeInvoicePaid,
+    markCancellationFeeInvoicePaidForRide,
     voidRideInvoice,
     markRideInvoicePaid,
     markRideInvoiceIssued,
@@ -418,6 +419,9 @@ mkDeductionLineItem desc descType amt isExt
 data UpsertCoreLedgerResult = UpsertCoreLedgerResult
   { coreEntryIds :: [Id LE.LedgerEntry],
     invoiceId :: Maybe (Id FInvoice.Invoice),
+    -- | PENDING cancellation-fee entries (a due carried into this ride's fare). Outside
+    --   'coreRidePaymentRefTypes', so callers that settle an explicit id list must include these.
+    cancellationEntryIds :: [Id LE.LedgerEntry],
     -- | Whether a fresh 'createRidePaymentLedger' was issued on this call.
     didCreate :: Bool,
     -- | Whether stale PENDING core entries were voided (amount-change recreate).
@@ -448,8 +452,8 @@ upsertCoreRidePaymentLedger ::
   HighPrecMoney -> -- offerDiscountAmount
   HighPrecMoney -> -- cashbackPayoutAmount
   HighPrecMoney -> -- rideVatAbsorbedOnDiscount
-  HighPrecMoney -> -- cancellationCharge (0 for normal ride)
-  HighPrecMoney -> -- cancellationTax (0 for normal ride)
+  HighPrecMoney -> -- cancellationCharge (a due folded into this ride's fare; 0 when there is none)
+  HighPrecMoney -> -- cancellationTax
   m UpsertCoreLedgerResult
 upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount parkingCharge parkingChargeVat platformFee offerDiscountAmount cashbackPayoutAmount rideVatAbsorbedOnDiscount cancellationCharge cancellationTax = do
   let rideId = ctx.referenceId
@@ -491,10 +495,10 @@ upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount parkin
           then do
             (newIds, mbInv) <- doCreate
             logInfo $ "Created PENDING core ride payment ledger entries for ride: " <> rideId
-            pure UpsertCoreLedgerResult {coreEntryIds = newIds, invoiceId = mbInv, didCreate = True, didVoidStale = False}
+            pure UpsertCoreLedgerResult {coreEntryIds = newIds, invoiceId = mbInv, cancellationEntryIds = [], didCreate = True, didVoidStale = False}
           else do
             logInfo $ "Core ride payment total is zero, skipping create for ride: " <> rideId
-            pure UpsertCoreLedgerResult {coreEntryIds = [], invoiceId = Nothing, didCreate = False, didVoidStale = False}
+            pure UpsertCoreLedgerResult {coreEntryIds = [], invoiceId = Nothing, cancellationEntryIds = [], didCreate = False, didVoidStale = False}
       else
         if not (null pendingCoreEntries) && newTotal /= oldTotal
           then do
@@ -511,28 +515,39 @@ upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount parkin
             if newTotal > 0
               then do
                 (newIds, mbInv) <- doCreate
-                pure UpsertCoreLedgerResult {coreEntryIds = newIds, invoiceId = mbInv, didCreate = True, didVoidStale = True}
+                pure UpsertCoreLedgerResult {coreEntryIds = newIds, invoiceId = mbInv, cancellationEntryIds = [], didCreate = True, didVoidStale = True}
               else do
                 logInfo $ "Core ride payment total is zero, skipping create after void for ride: " <> rideId
-                pure UpsertCoreLedgerResult {coreEntryIds = [], invoiceId = Nothing, didCreate = False, didVoidStale = True}
+                pure UpsertCoreLedgerResult {coreEntryIds = [], invoiceId = Nothing, cancellationEntryIds = [], didCreate = False, didVoidStale = True}
           else do
             logInfo $ "Core ride payment ledger already up to date for ride: " <> rideId
             pure
               UpsertCoreLedgerResult
                 { coreEntryIds = map (.id) pendingCoreEntries,
                   invoiceId = Nothing,
+                  cancellationEntryIds = [],
                   didCreate = False,
                   didVoidStale = False
                 }
   -- Upsert cancellation fee entries when cancellationCharge is non-zero.
   -- Idempotent: if entries were already created (e.g. by createPendingCancellationFeeLedger
   -- before this call) the existing-entries check skips re-creation.
-  when (cancellationCharge > 0) $ do
-    let cancelEntries = filter (\e -> e.referenceType `elem` [ridePaymentRefCancellationFee, ridePaymentRefCancellationGST]) existingEntries
-    when (null cancelEntries) $ do
-      void $ createPendingCancellationFeeLedger ctx cancellationCharge cancellationTax
-      logInfo $ "Created PENDING cancellation fee ledger entries for ride: " <> rideId
-  pure coreResult
+  cancelIds <-
+    if cancellationCharge > 0
+      then do
+        let cancelEntries = filter (\e -> e.referenceType `elem` [ridePaymentRefCancellationFee, ridePaymentRefCancellationGST]) existingEntries
+        if null cancelEntries
+          then
+            createPendingCancellationFeeLedger ctx cancellationCharge cancellationTax >>= \case
+              Right (_mbInv, entryIds) -> do
+                logInfo $ "Created PENDING cancellation fee ledger entries for ride: " <> rideId
+                pure entryIds
+              Left err -> do
+                logError $ "Failed to create cancellation fee ledger for ride " <> rideId <> ": " <> show err
+                pure []
+          else pure (map (.id) (filter (\e -> e.status == LE.PENDING) cancelEntries))
+      else pure []
+  pure coreResult {cancellationEntryIds = cancelIds}
 
 -- ---------------------------------------------------------------------------
 -- 1b. Create SETTLED ledger entries for fully discounted rides (amount = 0)
@@ -941,6 +956,21 @@ markRideInvoicePaid rideId = do
     whenJust mbInvoice $ \inv -> do
       FInvoiceService.updateInvoiceStatus inv.id FInvoice.Paid
       logInfo $ "Marked Ride invoice as Paid for rideId: " <> rideId
+
+-- | Mark the RideCancellation invoice as Paid for a rideId. Unlike 'markCancellationFeeInvoicePaid',
+--   usable from the ride capture path, which has no invoice id and may be retrying over existing entries.
+markCancellationFeeInvoicePaidForRide ::
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
+  Text -> -- rideId
+  m ()
+markCancellationFeeInvoicePaidForRide rideId = do
+  rideEntries <- findRidePaymentEntries rideId
+  let settledEntry = find (\e -> e.referenceType == ridePaymentRefCancellationFee && e.status == LE.SETTLED) rideEntries
+  whenJust settledEntry $ \entry -> do
+    mbInvoice <- FInvoiceService.getInvoiceForEntry entry.id
+    whenJust mbInvoice $ \inv -> do
+      FInvoiceService.updateInvoiceStatus inv.id FInvoice.Paid
+      logInfo $ "Marked cancellation fee invoice as Paid for rideId: " <> rideId
 
 -- | Mark the Ride invoice as Issued when capture fails (entries now DUE for collection).
 markRideInvoiceIssued ::
