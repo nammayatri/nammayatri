@@ -29,6 +29,7 @@
 -- 'Nothing'; the chat row still persists.
 module IssueManagement.Domain.Action.UI.XyneWebhook
   ( processXyneWebhook,
+    processXyneBearerWebhook,
     XyneWebhookAck (..),
   )
 where
@@ -54,6 +55,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto.Config as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
+import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -201,3 +203,54 @@ mimeTypeToFileType (Just mt)
   | "video/" `T.isPrefixOf` mt = S3.Video
   | mt == "application/pdf" = S3.PDF
   | otherwise = S3.PDF
+
+-- | Payload for a Xyne @TICKET_STATUS_UPDATED@ event, delivered to the
+-- Bearer-token webhook. Independent of the DESK_REPLY event/payload used by
+-- 'processXyneWebhook' — Xyne sends this as a separate notification shape.
+data XyneTicketStatusUpdatedPayload = XyneTicketStatusUpdatedPayload
+  { ticketId :: Text,
+    xyneTicketId :: Text,
+    conversationId :: Text,
+    channelId :: Text,
+    status :: Text,
+    performedByUserId :: Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (A.FromJSON)
+
+data XyneBearerWebhookEvent = XyneBearerWebhookEvent
+  { eventType :: Text,
+    payload :: XyneTicketStatusUpdatedPayload
+  }
+  deriving stock (Generic)
+  deriving anyclass (A.FromJSON)
+
+-- | Bearer-token webhook for Xyne @TICKET_STATUS_UPDATED@ notifications,
+-- delivered at @/internal/xyne/webhook/bearer@. Deliberately self-contained:
+-- it does not share code with 'processXyneWebhook' beyond the pre-existing
+-- 'IssueManagement.Storage.Queries.Issue.IssueReport.updateIssueStatus' query,
+-- so the HMAC-signature DESK_REPLY endpoint is never touched by changes here.
+processXyneBearerWebhook ::
+  BeamFlow m r =>
+  -- | Global bearer token paired with the @/internal/xyne/webhook/bearer@ URL.
+  Text ->
+  -- | Value of the @Authorization@ header.
+  Maybe Text ->
+  -- | Raw bytes of the request body.
+  RawByteString ->
+  m APISuccess
+processXyneBearerWebhook bearerToken mbAuthHeader rawBody = do
+  unless (mbAuthHeader == Just ("Bearer " <> bearerToken)) $
+    throwError $ AuthBlocked "Invalid Authorization header"
+  event <- case A.eitherDecode (getRawByteString rawBody) of
+    Right e -> pure (e :: XyneBearerWebhookEvent)
+    Left err -> do
+      logError $ "Xyne bearer webhook: body parse failed: " <> T.pack err
+      throwError (InvalidRequest "XYNE_BEARER_WEBHOOK_PARSE_FAILED")
+  case event.eventType of
+    "TICKET_STATUS_UPDATED" ->
+      when (T.toLower event.payload.status `elem` ["solved", "closed"]) $
+        QIR.updateIssueStatus event.payload.ticketId Common.RESOLVED
+    other ->
+      logWarning $ "Xyne bearer webhook: ignoring unsupported eventType=" <> other
+  pure Success
