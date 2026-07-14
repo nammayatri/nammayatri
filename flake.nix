@@ -98,7 +98,6 @@
     inputs.common.lib.mkFlake { inherit inputs; } {
       imports = [
         ./Backend/default.nix
-        ./Frontend/default.nix
       ];
     };
 }
