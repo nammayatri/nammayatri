@@ -27,6 +27,7 @@ import qualified API.FRFS as FRFS
 import qualified API.FRFSMetrics as FRFSMetrics
 import qualified API.IGM as IGM
 import qualified API.Internal as Internal
+import qualified API.MetaWhatsappWebhook as MetaWhatsappWebhook
 import qualified API.UI as UI
 import qualified API.UnifiedDashboard as UnifiedDashboard
 import qualified Data.ByteString as BS
@@ -94,6 +95,7 @@ type MainAPI =
     :<|> Conductor.API
     :<|> Depot.API
     :<|> FRFSMetrics.API
+    :<|> MetaWhatsappWebhook.API
 
 riderAPI :: Proxy API
 riderAPI = Proxy
@@ -124,6 +126,7 @@ mainServer =
     :<|> Conductor.handler
     :<|> Depot.handler
     :<|> FRFSMetrics.handler
+    :<|> MetaWhatsappWebhook.handler
 
 type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString
 

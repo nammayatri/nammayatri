@@ -134,6 +134,7 @@ dependencies:
   - json-logic-hs
   - yudhishthira
   - config-pilot
+  - whatsapp-bot
   - text-format
   - scientific
   - resource-pool
