@@ -41,6 +41,7 @@ types:
     - active: Bool
     - expirationAt: Maybe Int
     - coins: Int
+    - timeBounds: Maybe TimeBound
     - derive: "'HideSecrets"
   CreateCoinsConfigReq:
     - enum: NewCoinsConfig NewCoinsConfigReq, DuplicateCoinsConfig DuplicateCoinsConfigsReq

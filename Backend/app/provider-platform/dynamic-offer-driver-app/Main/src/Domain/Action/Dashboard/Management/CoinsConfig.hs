@@ -6,7 +6,9 @@ module Domain.Action.Dashboard.Management.CoinsConfig
 where
 
 import qualified API.Types.ProviderPlatform.Management.CoinsConfig as Common
+import Data.List (intersect, nub)
 import qualified Data.Text as Text
+import Data.Time.Calendar.WeekDate (toWeekDate)
 import qualified Domain.Types.Coins.CoinsConfig as DTCC
 import qualified Domain.Types.Merchant
 import Domain.Types.Translations (Translations (..))
@@ -28,6 +30,9 @@ import qualified Storage.Queries.Coins.CoinsConfig as QConfig
 import qualified Storage.Queries.Coins.CoinsConfigExtra as QCoinsConfigExtra
 import Storage.Queries.Translations (create)
 import Storage.Queries.TranslationsExtra (isTranslationExist)
+
+incentiveCohortWindowConflictMsg :: Text
+incentiveCohortWindowConflictMsg = "Only 1 incentive cohort window is allowed per day currently."
 
 getCoinsConfigList ::
   ID.ShortId Domain.Types.Merchant.Merchant ->
@@ -72,6 +77,14 @@ putCoinsConfigUpdate ::
 putCoinsConfigUpdate _merchantShortId _opCity req = do
   let findCoinsConfig = QConfig.findById $ ID.cast req.entriesId
   coinsConfig <- findCoinsConfig >>= UC.fromMaybeM (InvalidRequest "Coins config does not exist")
+  let updatedConfig =
+        coinsConfig
+          { DTCC.active = req.active,
+            DTCC.expirationAt = req.expirationAt,
+            DTCC.coins = req.coins,
+            DTCC.timeBounds = req.timeBounds
+          }
+  validateIncentiveCohortTimeBoundWindow updatedConfig (Just coinsConfig.id)
   QConfig.updateCoinEntries req
   clearCache coinsConfig
   pure Success
@@ -102,6 +115,7 @@ postCoinsConfigCreate merchantShortId opCity req = do
       coinsConfig <- findCoinsConfig >>= UC.fromMaybeM (InvalidRequest "Coins config does not exist")
       let duplicatedConfig = coinsConfig {DTCC.id = ID.Id uuid, DTCC.eventFunction = eventFunction}
       pure (duplicatedConfig, eventMessages)
+  validateIncentiveCohortTimeBoundWindow newCoinsConfig Nothing
   QConfig.createCoinEntries newCoinsConfig
   clearCache newCoinsConfig
   processingTranslations newCoinsConfig eventMessageLs
@@ -132,3 +146,90 @@ processingTranslations coinsConfig eventMessageLs = do
               }
     )
     eventMessageLs
+
+-- | Timebound uniqueness for incentive cohort configs (same city/vehicle/trip):
+-- * DriverIncentiveCohortRidesCompleted N — conflict only with the exact same
+--   eventFunction (same threshold N) sharing a weekday.
+-- * DriverIncentiveCohortMetrics _ — conflict with any other Metrics config
+--   sharing a weekday (thresholds ignored; only one Metrics window per day).
+validateIncentiveCohortTimeBoundWindow ::
+  DTCC.CoinsConfig ->
+  Maybe (ID.Id DTCC.CoinsConfig) ->
+  Environment.Flow ()
+validateIncentiveCohortTimeBoundWindow candidate mbExcludeId = do
+  case (candidate.active, nonUnboundedTimeBound candidate.timeBounds) of
+    (True, Just candidateTb) ->
+      case incentiveCohortConflictKind candidate.eventFunction of
+        Nothing -> pure ()
+        Just conflictKind -> do
+          existing <-
+            QCoinsConfigExtra.findActiveConfigsByCityVehicleTrip
+              (ID.Id candidate.merchantOptCityId)
+              candidate.vehicleCategory
+              candidate.tripCategoryType
+          let conflicting =
+                filter
+                  ( \cc ->
+                      maybe True (cc.id /=) mbExcludeId
+                        && matchesIncentiveCohortConflict conflictKind candidate.eventFunction cc.eventFunction
+                        && maybe False (incentiveCohortDaysOverlap candidateTb) (nonUnboundedTimeBound cc.timeBounds)
+                  )
+                  existing
+          unless (null conflicting) $
+            UC.throwError (InvalidRequest incentiveCohortWindowConflictMsg)
+    _ -> pure ()
+
+data IncentiveCohortConflictKind
+  = ExactEventFunction
+  | AnyDriverIncentiveCohortMetrics
+
+incentiveCohortConflictKind :: DCT.DriverCoinsFunctionType -> Maybe IncentiveCohortConflictKind
+incentiveCohortConflictKind = \case
+  DCT.DriverIncentiveCohortRidesCompleted _ -> Just ExactEventFunction
+  DCT.DriverIncentiveCohortMetrics _ -> Just AnyDriverIncentiveCohortMetrics
+  _ -> Nothing
+
+matchesIncentiveCohortConflict ::
+  IncentiveCohortConflictKind ->
+  DCT.DriverCoinsFunctionType ->
+  DCT.DriverCoinsFunctionType ->
+  Bool
+matchesIncentiveCohortConflict ExactEventFunction candidateEf otherEf = otherEf == candidateEf
+matchesIncentiveCohortConflict AnyDriverIncentiveCohortMetrics _ otherEf =
+  case otherEf of
+    DCT.DriverIncentiveCohortMetrics _ -> True
+    _ -> False
+
+nonUnboundedTimeBound :: Maybe TB.TimeBound -> Maybe TB.TimeBound
+nonUnboundedTimeBound = \case
+  Just tb | tb /= TB.Unbounded -> Just tb
+  _ -> Nothing
+
+-- | Conflict if both timebounds occupy any of the same weekdays (Mon=1 .. Sun=7).
+incentiveCohortDaysOverlap :: TB.TimeBound -> TB.TimeBound -> Bool
+incentiveCohortDaysOverlap tb1 tb2 =
+  not . null $ intersect (occupiedWeekDays tb1) (occupiedWeekDays tb2)
+
+occupiedWeekDays :: TB.TimeBound -> [Int]
+occupiedWeekDays = \case
+  TB.Unbounded -> []
+  TB.BoundedByWeekday peaks -> nub $ weekDaysWithPeaks peaks
+  TB.BoundedByDay days ->
+    nub
+      [ dow
+        | (day, peaks) <- days,
+          not (null peaks),
+          let (_, _, dow) = toWeekDate day
+      ]
+
+weekDaysWithPeaks :: TB.BoundedPeaks -> [Int]
+weekDaysWithPeaks peaks =
+  concat
+    [ [1 | not (null peaks.monday)],
+      [2 | not (null peaks.tuesday)],
+      [3 | not (null peaks.wednesday)],
+      [4 | not (null peaks.thursday)],
+      [5 | not (null peaks.friday)],
+      [6 | not (null peaks.saturday)],
+      [7 | not (null peaks.sunday)]
+    ]
