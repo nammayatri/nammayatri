@@ -33,6 +33,7 @@ imports:
   TripParty: Domain.Types.Trip
   ConfigVersionMap: Lib.Yudhishthira.Types
   Value: Data.Aeson
+  FareSettlementType: Lib.Types.SpecialLocation
   ParcelType: Domain.Types.ParcelType
   JourneyLeg: Domain.Types.JourneyLeg
   RecentLocation: Domain.Types.RecentLocation
@@ -225,6 +226,7 @@ Booking:
     specialLocationTag: Maybe Text
     specialLocationName: Maybe Text
     specialLocationSupportNumber: Maybe Text
+    fareSettlementType: Maybe FareSettlementType
     createdAt: UTCTime
     updatedAt: UTCTime
     serviceTierName: Maybe Text

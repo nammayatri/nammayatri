@@ -40,6 +40,14 @@ data RenderType
 
 $(mkBeamInstancesForEnum ''RenderType)
 
+data FareSettlementType
+  = CommissionOnly
+  | FullPayment
+  deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForEnum ''FareSettlementType)
+
+
 data Merchant
 
 data MerchantOperatingCity
@@ -65,6 +73,7 @@ data SpecialLocation = SpecialLocation
     fetchAllGateFareProduct :: Maybe Bool,
     priority :: Int,
     supportNumber :: Maybe Text,
+    fareSettlementType :: Maybe FareSettlementType,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

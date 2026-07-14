@@ -18,6 +18,7 @@ import qualified Domain.Types.Trip as DTC
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.Offer as SOffer
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
@@ -39,6 +40,7 @@ data QuoteAPIEntity = QuoteAPIEntity
     tripTerms :: [Text],
     quoteDetails :: QuoteAPIDetails,
     specialLocationTag :: Maybe Text,
+    fareSettlementType :: Maybe SL.FareSettlementType,
     quoteFareBreakup :: [QuoteBreakupAPIEntity],
     agencyCompletedRidesCount :: Maybe Int,
     vehicleServiceTierAirConditioned :: Maybe Double,
