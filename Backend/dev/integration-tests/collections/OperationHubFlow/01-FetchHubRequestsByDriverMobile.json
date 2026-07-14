@@ -67,7 +67,7 @@
           "raw": "{\"mobileNumber\": \"{{_test_fleet_owner_number}}\", \"mobileCountryCode\": \"+91\"}"
         },
         "url": {
-          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp",
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp?enabled=true",
           "host": [
             "{{baseURL_BPP_Dashboard}}"
           ],
@@ -80,6 +80,12 @@
             "v2",
             "login",
             "otp"
+          ],
+          "query": [
+            {
+              "key": "enabled",
+              "value": "true"
+            }
           ]
         }
       }
@@ -237,7 +243,7 @@
           }
         ],
         "url": {
-          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/operation/getAllHubs",
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operation/getAllHubs",
           "host": [
             "{{baseURL_BPP_Dashboard}}"
           ],
@@ -246,6 +252,7 @@
             "driver-offer",
             "{{dashboard_merchant_id}}",
             "{{dashboard_city}}",
+            "driver",
             "operation",
             "getAllHubs"
           ]
@@ -262,7 +269,7 @@
               "pm.test('Create hub request returns 200', function () { pm.response.to.have.status(200); });",
               "var d = pm.response.json();",
               "pm.test('Request creation succeeds', function () { pm.expect(d.result).to.eql('Success'); });",
-              "console.log('Hub request created \u2014 creator (fleet owner):', pm.environment.get('fleet_owner_id'), 'driver:', pm.environment.get('driver_id'));"
+              "console.log('Hub request created \u2014 creator (fleet owner, resolved server-side from auth token, not from body creatorId):', 'driver:', pm.environment.get('driver_id'));"
             ],
             "type": "text/javascript"
           }
@@ -277,15 +284,15 @@
           },
           {
             "key": "token",
-            "value": "{{bpp_dashboard_token}}"
+            "value": "{{fleet_owner_dashboard_token}}"
           }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n    \"creatorId\": \"{{fleet_owner_id}}\",\n    \"operationHubId\": \"{{operation_hub_id}}\",\n    \"driverId\": \"{{driver_id}}\",\n    \"registrationNo\": null,\n    \"requestType\": \"DRIVER_ONBOARDING_INSPECTION\"\n}"
+          "raw": "{\n    \"creatorId\": \"\",\n    \"operationHubId\": \"{{operation_hub_id}}\",\n    \"driverId\": \"{{driver_id}}\",\n    \"registrationNo\": null,\n    \"requestType\": \"DRIVER_ONBOARDING_INSPECTION\"\n}"
         },
         "url": {
-          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/operator/createRequest",
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/createRequest",
           "host": [
             "{{baseURL_BPP_Dashboard}}"
           ],
@@ -294,6 +301,7 @@
             "driver-offer",
             "{{dashboard_merchant_id}}",
             "{{dashboard_city}}",
+            "driver",
             "operator",
             "createRequest"
           ]
@@ -370,7 +378,7 @@
           }
         ],
         "url": {
-          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/operator/fetch/hubRequests?mbDriverMobileNumber={{_test_driver_number}}&mbStatus=\"PENDING\"&mbLimit=10&mbOffset=0",
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/fetch/hubRequests?mbDriverMobileNumber={{_test_driver_number}}&mbStatus=\"PENDING\"&mbLimit=10&mbOffset=0",
           "host": [
             "{{baseURL_BPP_Dashboard}}"
           ],
@@ -379,6 +387,7 @@
             "driver-offer",
             "{{dashboard_merchant_id}}",
             "{{dashboard_city}}",
+            "driver",
             "operator",
             "fetch",
             "hubRequests"
@@ -431,7 +440,7 @@
           }
         ],
         "url": {
-          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/operator/fetch/hubRequests?mbDriverMobileNumber=0000000000&mbStatus=\"PENDING\"&mbLimit=10&mbOffset=0",
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/fetch/hubRequests?mbDriverMobileNumber=0000000000&mbStatus=\"PENDING\"&mbLimit=10&mbOffset=0",
           "host": [
             "{{baseURL_BPP_Dashboard}}"
           ],
@@ -440,6 +449,7 @@
             "driver-offer",
             "{{dashboard_merchant_id}}",
             "{{dashboard_city}}",
+            "driver",
             "operator",
             "fetch",
             "hubRequests"
@@ -528,7 +538,7 @@
           }
         ],
         "url": {
-          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/operator/fetch/hubRequests?mbMobileNumber={{_test_fleet_owner_number}}&mbStatus=\"PENDING\"&mbLimit=10&mbOffset=0",
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/fetch/hubRequests?mbMobileNumber={{_test_fleet_owner_number}}&mbStatus=\"PENDING\"&mbLimit=10&mbOffset=0",
           "host": [
             "{{baseURL_BPP_Dashboard}}"
           ],
@@ -537,6 +547,7 @@
             "driver-offer",
             "{{dashboard_merchant_id}}",
             "{{dashboard_city}}",
+            "driver",
             "operator",
             "fetch",
             "hubRequests"
@@ -601,7 +612,7 @@
           }
         ],
         "url": {
-          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/operator/fetch/hubRequests?mbStatus=\"PENDING\"&mbLimit=10&mbOffset=0",
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/fetch/hubRequests?mbStatus=\"PENDING\"&mbLimit=10&mbOffset=0",
           "host": [
             "{{baseURL_BPP_Dashboard}}"
           ],
@@ -610,6 +621,7 @@
             "driver-offer",
             "{{dashboard_merchant_id}}",
             "{{dashboard_city}}",
+            "driver",
             "operator",
             "fetch",
             "hubRequests"
@@ -664,7 +676,7 @@
           }
         ],
         "url": {
-          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/operator/fetch/hubRequests?mbMobileNumber={{_test_fleet_owner_number}}&mbDriverMobileNumber={{_test_driver_number}}&mbStatus=\"PENDING\"&mbLimit=10&mbOffset=0",
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/fetch/hubRequests?mbMobileNumber={{_test_fleet_owner_number}}&mbDriverMobileNumber={{_test_driver_number}}&mbStatus=\"PENDING\"&mbLimit=10&mbOffset=0",
           "host": [
             "{{baseURL_BPP_Dashboard}}"
           ],
@@ -673,6 +685,7 @@
             "driver-offer",
             "{{dashboard_merchant_id}}",
             "{{dashboard_city}}",
+            "driver",
             "operator",
             "fetch",
             "hubRequests"
