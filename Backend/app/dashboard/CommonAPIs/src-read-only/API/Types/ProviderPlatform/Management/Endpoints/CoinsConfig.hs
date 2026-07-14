@@ -71,7 +71,13 @@ data NewCoinsConfigReq = NewCoinsConfigReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data UpdateReq = UpdateReq {entriesId :: Kernel.Types.Id.Id Dashboard.Common.CoinsConfig, active :: Kernel.Prelude.Bool, expirationAt :: Kernel.Prelude.Maybe Kernel.Prelude.Int, coins :: Kernel.Prelude.Int}
+data UpdateReq = UpdateReq
+  { entriesId :: Kernel.Types.Id.Id Dashboard.Common.CoinsConfig,
+    active :: Kernel.Prelude.Bool,
+    expirationAt :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    coins :: Kernel.Prelude.Int,
+    timeBounds :: Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

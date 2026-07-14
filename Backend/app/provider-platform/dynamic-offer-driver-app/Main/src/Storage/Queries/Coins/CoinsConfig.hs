@@ -63,7 +63,8 @@ updateCoinEntries UpdateReq {..} =
   updateWithKV
     [ Se.Set BeamDC.active active,
       Se.Set BeamDC.expirationAt expirationAt,
-      Se.Set BeamDC.coins coins
+      Se.Set BeamDC.coins coins,
+      Se.Set BeamDC.timeBounds timeBounds
     ]
     [Se.Is BeamDC.id $ Se.Eq $ getId entriesId]
 
