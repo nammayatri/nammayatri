@@ -16,7 +16,6 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Kernel.Utils.Version
 import qualified SharedLogic.Type
 import qualified Storage.Beam.Quote as Beam
-import Storage.Queries.Transformers.Quote
 import qualified Storage.Queries.Transformers.Quote
 
 instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
@@ -25,7 +24,7 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
     clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
     clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
     clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
-    merchantOperatingCityId' <- backfillMOCId merchantOperatingCityId merchantId
+    merchantOperatingCityId' <- Storage.Queries.Transformers.Quote.backfillMOCId merchantOperatingCityId merchantId
     providerUrl' <- Kernel.Prelude.parseBaseUrl providerUrl
     quoteBreakupList' <- Storage.Queries.Transformers.Quote.loadQuoteBreakupList quoteBreakupListJson id
     quoteDetails' <- Storage.Queries.Transformers.Quote.toQuoteDetails fareProductType tripCategory distanceToNearestDriver rentalDetailsId meterRideBppQuoteId staticBppQuoteId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue
@@ -47,6 +46,7 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
             estimatedFare = Kernel.Types.Common.mkPrice currency estimatedFare,
             estimatedPickupDuration = estimatedPickupDuration,
             estimatedTotalFare = Kernel.Types.Common.mkPrice currency estimatedTotalFare,
+            fareSettlementType = fareSettlementType,
             id = Kernel.Types.Id.Id id,
             isAirConditioned = isAirConditioned,
             isBlockedRoute = isBlockedRoute,
@@ -66,7 +66,7 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
             specialLocationName = specialLocationName,
             specialLocationSupportNumber = specialLocationSupportNumber,
             specialLocationTag = specialLocationTag,
-            tollChargesInfo = mkTollChargesInfo tollCharges tollNames currency,
+            tollChargesInfo = Storage.Queries.Transformers.Quote.mkTollChargesInfo tollCharges tollNames currency,
             tripCategory = tripCategory,
             updatedAt = Kernel.Prelude.fromMaybe createdAt updatedAt,
             validTill = validTill,
@@ -105,6 +105,7 @@ instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
         Beam.estimatedFare = (.amount) estimatedFare,
         Beam.estimatedPickupDuration = estimatedPickupDuration,
         Beam.estimatedTotalFare = (.amount) estimatedTotalFare,
+        Beam.fareSettlementType = fareSettlementType,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAirConditioned = isAirConditioned,
         Beam.isBlockedRoute = isBlockedRoute,
