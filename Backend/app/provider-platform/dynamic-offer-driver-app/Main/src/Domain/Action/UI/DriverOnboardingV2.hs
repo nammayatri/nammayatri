@@ -1393,7 +1393,7 @@ getDriverRegisterVehicleStatus ::
   Flow APITypes.RcVerifyStatusResp
 getDriverRegisterVehicleStatus (mbPersonId, _, merchantOpCityId) mbRegistrationNo mbRcId = do
   callerId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  (registrationNo, verified, approved, documents) <- rcVerifyStatus (DriverCaller callerId merchantOpCityId) mbRegistrationNo mbRcId
+  (registrationNo, verified, approved, documents) <- rcVerifyStatus (DriverCaller callerId merchantOpCityId) mbRegistrationNo mbRcId False
   pure $ APITypes.RcVerifyStatusResp {registrationNo, verified, approved, documents}
 
 -- | Who is asking for RC verify-status; a sum type so driver-with-no-id / dashboard-with-id are
@@ -1407,14 +1407,14 @@ data RcVerifyCaller
 
 -- | Shared RC verify-status core (UI + dashboard): resolve the RC, authorize the caller, check all
 --   mandatory vehicle docs; under @enableBotFlow@ persist RC.verified.
-rcVerifyStatus :: RcVerifyCaller -> Maybe Text -> Maybe Text -> Flow (Text, Bool, Maybe Bool, [SStatus.DocumentStatusItem])
-rcVerifyStatus caller mbRegistrationNo mbRcId = do
+rcVerifyStatus :: RcVerifyCaller -> Maybe Text -> Maybe Text -> Bool -> Flow (Text, Bool, Maybe Bool, [SStatus.DocumentStatusItem])
+rcVerifyStatus caller mbRegistrationNo mbRcId enableDocumentMetadata = do
   mbRc <- case (mbRegistrationNo, mbRcId) of
     (Just registrationNo, _) -> VRCE.findLastVehicleRCWrapper registrationNo
     (Nothing, Just rcId) -> RCQuery.findById (Id rcId)
     (Nothing, Nothing) -> throwError (InvalidRequest "Either registrationNo or rcId must be provided")
   case mbRc of
-    Just rc -> rcVerifyStatusForRC caller rc
+    Just rc -> rcVerifyStatusForRC caller rc enableDocumentMetadata
     -- No RC entity yet (verification still pending, e.g. a missed webhook). Re-pull only the RC asked
     -- about — resolved by registration number from its still-pending row; no number or no row ⇒ nothing
     -- to sync. Reported NO_DOC_AVAILABLE now; it surfaces once onVerifyRC creates the RC.
@@ -1462,8 +1462,8 @@ noDocVehicleStatusItems = map mkNoDoc SDO.defaultVehicleDocumentTypes
           metadata = Nothing
         }
 
-rcVerifyStatusForRC :: RcVerifyCaller -> DVRC.VehicleRegistrationCertificate -> Flow (Text, Bool, Maybe Bool, [SStatus.DocumentStatusItem])
-rcVerifyStatusForRC caller rc = do
+rcVerifyStatusForRC :: RcVerifyCaller -> DVRC.VehicleRegistrationCertificate -> Bool -> Flow (Text, Bool, Maybe Bool, [SStatus.DocumentStatusItem])
+rcVerifyStatusForRC caller rc enableDocumentMetadata = do
   registrationNo <- decrypt rc.certificateNumber
   now <- getCurrentTime
   -- Only the dashboard's city is matched against the RC's resolved city — a driver may legitimately
@@ -1494,7 +1494,7 @@ rcVerifyStatusForRC caller rc = do
     when (passedCityId /= merchantOpCityId) $
       throwError (InvalidRequest $ "RC belongs to city: " <> show merchantOperatingCity.city)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  (vehicleDocItem, configs) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig ENGLISH registrationNo Nothing
+  (vehicleDocItem, configs) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig ENGLISH registrationNo Nothing enableDocumentMetadata
   -- Re-pull a stuck RC verification when it renders pending — keyed by this RC's image so a fleet
   -- driver's other RCs are untouched; the synced result shows on the next hit.
   let rcPending = any (\d -> d.documentType == DTO.VehicleRegistrationCertificate && SyncV.isPullableStatus d.verificationStatus) vehicleDocItem.documents

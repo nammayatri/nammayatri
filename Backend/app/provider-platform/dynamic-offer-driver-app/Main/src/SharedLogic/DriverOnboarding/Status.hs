@@ -290,12 +290,13 @@ fetchVehicleDocStatusesForRC ::
   Language ->
   Text ->
   Maybe Bool ->
+  Bool ->
   Flow (VehicleDocumentItem, [DVC.DocumentVerificationConfig])
-fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig language reqRegistrationNo onlyMandatoryDocs = do
+fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig language reqRegistrationNo onlyMandatoryDocs enableDocumentMetadata = do
   let entity = IQuery.VehicleRCEntity rc
   entityImages <- IQuery.findAllByEntityId transporterConfig entity
   now <- getCurrentTime
-  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now}
+  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now, enableDocumentMetadata}
   allDocumentVerificationConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, documentType = Nothing, vehicleCategory = Nothing}) (Just (CQDVC.findAllByMerchantOpCityId merchantOperatingCity.id Nothing))
   let skipMessages = True -- Skip translations, only need status check for inspection
   vehicleDocumentsUnverified <- fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language (Just reqRegistrationNo) onlyMandatoryDocs skipMessages
@@ -313,7 +314,7 @@ fetchAndCheckVehicleDocsValidForEnabling ::
   Text ->
   Flow Bool
 fetchAndCheckVehicleDocsValidForEnabling rc merchantOperatingCity transporterConfig language reqRegistrationNo = do
-  (vehicleDoc, allDocumentVerificationConfigs) <- fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig language reqRegistrationNo (Just True)
+  (vehicleDoc, allDocumentVerificationConfigs) <- fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig language reqRegistrationNo (Just True) False
   pure $ checkAllVehicleDocsValidForEnabling allDocumentVerificationConfigs vehicleDoc Nothing
 
 -- | All mandatory vehicle docs VALID, over already-fetched statuses (no fetch).
@@ -366,7 +367,7 @@ fetchDriverDocStatusesForPerson person merchantOperatingCity transporterConfig l
   let entity = IQuery.PersonEntity person
   entityImages <- IQuery.findAllByEntityId transporterConfig entity
   now <- getCurrentTime
-  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now}
+  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now, enableDocumentMetadata = False}
   let skipMessages = True -- Skip translations, only need status check for inspection
   VehicleDocsContext {allDocVerificationConfigs, vehicleDocumentsUnverified} <-
     buildVehicleDocsContext person entityImagesInfo language onlyMandatoryDocs skipMessages Nothing
@@ -398,7 +399,7 @@ refreshVehicleDocsVerificationStatusForRC mbTransporterConfig rcId = do
     let entity = IQuery.VehicleRCEntity rc
     entityImages <- IQuery.findAllByEntityId transporterConfig entity
     now <- getCurrentTime
-    let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now}
+    let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now, enableDocumentMetadata = False}
         language = merchantOperatingCity.language
         onlyMandatoryDocs = Just True
         skipMessages = True
@@ -518,7 +519,7 @@ loadPersonStatusContext mbPerson mbTransporterConfig personId = do
   let entity = IQuery.PersonEntity person
   entityImages <- IQuery.findAllByEntityId transporterConfig entity
   now <- getCurrentTime
-  let statusEntityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now}
+  let statusEntityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now, enableDocumentMetadata = False}
   pure PersonStatusContext {statusPerson = person, statusEntityImagesInfo}
 
 buildVehicleDocsContext ::
@@ -811,7 +812,7 @@ fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleC
       driverId = person.id
       transporterConfig = entityImagesInfo.transporterConfig
       isDigiLockerEnabled = fromMaybe False transporterConfig.digilockerEnabled
-      enableMetadata = fromMaybe False transporterConfig.enableDocumentMetadata
+      enableMetadata = entityImagesInfo.enableDocumentMetadata
 
   digilockerDocStatusMap <- if isDigiLockerEnabled then getDigilockerDocStatusMap driverId else pure DocStatus.emptyDocStatusMap
 

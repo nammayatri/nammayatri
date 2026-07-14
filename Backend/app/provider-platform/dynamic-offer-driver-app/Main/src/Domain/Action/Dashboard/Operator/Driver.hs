@@ -283,7 +283,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       (mbVehicleDocs, allVehicleDocsVerified) <-
         if enableBotFlow
           then do
-            (vehicleDocItem, allDocumentVerificationConfigs) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOpCity transporterConfig language registrationNo Nothing
+            (vehicleDocItem, allDocumentVerificationConfigs) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOpCity transporterConfig language registrationNo Nothing False
             let vehicleCategory = fromMaybe vehicleDocItem.userSelectedVehicleCategory vehicleDocItem.verifiedVehicleCategory
             -- Vehicle docs: no fleet-driver/individual applicableTo split → Nothing, [].
             -- Throws (naming the offending docs) if any InspectionHub dependency doc isn't VALID.
@@ -550,7 +550,7 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
           then do
             let entity = IQuery.PersonEntity person
             entityImages <- IQuery.findAllByEntityId transporterConfig entity
-            let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
+            let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now, enableDocumentMetadata = False}
             let shouldActivateRc = False
                 skipMessages = False -- Need translations for API response
             Just . castStatusRes <$> SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages

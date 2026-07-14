@@ -70,15 +70,15 @@ data StatusRes = StatusRes
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
-statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Flow StatusRes
-statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory useHVSdkForDL onlyMandatoryDocs useDriverLanguage = do
+statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Flow StatusRes
+statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory useHVSdkForDL onlyMandatoryDocs useDriverLanguage enableDocumentMetadata = do
   merchantOperatingCity <- SMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getCurrentTime
   let entity = IQuery.PersonEntity person
   entityImages <- IQuery.findAllByEntityId transporterConfig entity
-  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now}
+  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now, enableDocumentMetadata = fromMaybe False enableDocumentMetadata}
       language = if useDriverLanguage == Just True then fromMaybe merchantOperatingCity.language person.language else merchantOperatingCity.language
   (dlStatus, mDL, dlVerficationMessage) <- SStatus.getDLAndStatus personId entityImagesInfo language useHVSdkForDL
   (rcStatus, _, rcVerficationMessage) <- SStatus.getRCAndStatus personId entityImagesInfo language

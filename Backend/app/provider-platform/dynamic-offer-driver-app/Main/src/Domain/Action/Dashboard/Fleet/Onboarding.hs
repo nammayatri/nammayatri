@@ -143,8 +143,9 @@ getOnboardingRegisterStatus ::
   Maybe Bool ->
   Maybe Bool ->
   Maybe Dashboard.Common.DocsVerificationStatus ->
+  Maybe Bool ->
   Environment.Flow CommonOnboarding.StatusRes
-getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeSelfieAadhaarPanMandatory onboardingVehicleCategory prefillData onlyMandatoryDocs mbDocsVerificationStatusFilter = do
+getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeSelfieAadhaarPanMandatory onboardingVehicleCategory prefillData onlyMandatoryDocs mbDocsVerificationStatusFilter enableDocumentMetadata = do
   let personId = fromMaybe fleetOwnerId ((.getId) <$> mbPersonId)
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
@@ -154,7 +155,7 @@ getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeS
   let entity = IQuery.PersonEntity person
   entityImages <- IQuery.findAllByEntityId transporterConfig entity
   now <- getCurrentTime
-  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
+  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now, enableDocumentMetadata = fromMaybe False enableDocumentMetadata}
   let shouldActivateRc = True
       skipMessages = False -- Need translations for API response
   statusRes <- SStatus.statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
@@ -181,11 +182,12 @@ getOnboardingRegisterVehicleStatus ::
   Context.City ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Bool ->
   Environment.Flow CommonOnboarding.RcVerifyStatusResp
-getOnboardingRegisterVehicleStatus merchantShortId opCity mbRegistrationNo mbRcId = do
+getOnboardingRegisterVehicleStatus merchantShortId opCity mbRegistrationNo mbRcId enableDocumentMetadata = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  (registrationNo, verified, approved, documents) <- DOnboarding.rcVerifyStatus (DOnboarding.DashboardCaller merchantOpCity.id) mbRegistrationNo mbRcId
+  (registrationNo, verified, approved, documents) <- DOnboarding.rcVerifyStatus (DOnboarding.DashboardCaller merchantOpCity.id) mbRegistrationNo mbRcId (fromMaybe False enableDocumentMetadata)
   pure $
     CommonOnboarding.RcVerifyStatusResp
       { registrationNo,
@@ -370,8 +372,9 @@ getOnboardingVehicleDocuments ::
   Context.City ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Bool ->
   Environment.Flow CommonOnboarding.VehicleDocumentStatusRes
-getOnboardingVehicleDocuments merchantShortId opCity mbRcNo mbRcId = do
+getOnboardingVehicleDocuments merchantShortId opCity mbRcNo mbRcId enableDocumentMetadata = do
   when (isNothing mbRcNo && isNothing mbRcId) $ throwError (InvalidRequest "Either rcNo or rcId must be provided")
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
@@ -383,10 +386,14 @@ getOnboardingVehicleDocuments merchantShortId opCity mbRcNo mbRcId = do
         rcNoEnc <- encrypt rcNo
         RCQuery.findByCertificateNumberHash (rcNoEnc & hash) >>= fromMaybeM (InvalidRequest $ "RC not found for number: " <> rcNo)
       Nothing -> throwError (InvalidRequest "Either rcNo or rcId must be provided")
+  -- Dashboard callers are merchant/city-scoped by ApiAuthV2; the resolved RC must belong to the same operating city.
+  whenJust rc.merchantOperatingCityId $ \rcOpCityId ->
+    when (rcOpCityId /= merchantOpCity.id) $
+      throwError (InvalidRequest "RC does not belong to the requested operating city")
   let entity = IQuery.VehicleRCEntity rc
   entityImages <- IQuery.findAllByEntityId transporterConfig entity
   now <- getCurrentTime
-  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
+  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now, enableDocumentMetadata = fromMaybe False enableDocumentMetadata}
   allDocumentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId merchantOpCity.id Nothing
   registrationNo <- decrypt rc.certificateNumber
   let skipMessages = True
