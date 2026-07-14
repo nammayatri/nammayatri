@@ -76,6 +76,7 @@ import Kernel.Types.SlidingWindowLimiter
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
+import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
@@ -359,6 +360,15 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       SP.GIMS_EMAIL_PASSWORD -> throwError $ InvalidRequest "GIMS_EMAIL_PASSWORD does not use OTP auth"
       SP.GIMS_EMPLOYEE_ID_PASSWORD -> throwError $ InvalidRequest "GIMS_EMPLOYEE_ID_PASSWORD does not use OTP auth"
 
+  -- Phone-number-based auth rate limit (hashed phone, two configurable sliding windows).
+  whenJust ((.hash) <$> person.mobileNumber) $ \mobileNumberHash -> do
+    transporterConfig <-
+      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
+        >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    let phoneNumberHashText = Hex.encodeHex (unDbHash mobileNumberHash)
+    mbResetSeconds <- checkAuthLimitExceededByPhone merchantOpCityId.getId phoneNumberHashText transporterConfig
+    whenJust mbResetSeconds $ \resetSeconds -> throwError (HitsLimitError resetSeconds)
+    updateAuthCountersByPhone merchantOpCityId.getId phoneNumberHashText transporterConfig
   checkSlidingWindowLimit (authHitsCountKey person)
   void $ cachePersonOTPChannel person.id otpChannel
   let entityId = getId $ person.id
@@ -954,3 +964,46 @@ signatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVers
   decPerson <- decrypt person
   let personAPIEntity = SP.makePersonAPIEntity decPerson
   return $ AuthRes token.id token.attempts (Just token.token) (Just personAPIEntity)
+
+-- | Redis key for the phone-number-hashed auth sliding-window counter.
+-- The phone number is passed as a hash (never the raw number) so no PII is stored in Redis.
+-- Keyed by merchant-operating-city id for tenant isolation.
+mkPhoneAuthCounterKey :: Text -> Text -> Text -> Text
+mkPhoneAuthCounterKey mocId windowTag phoneNumberHash = "Driver:PhoneAuthCount:" <> phoneNumberHash <> ":" <> mocId <> ":" <> windowTag
+
+-- | Returns @Just resetSeconds@ (the tripped window's length in seconds) when the phone
+-- number has reached a configured sliding-window auth limit; @Nothing@ otherwise.
+-- A window is enforced only when BOTH its threshold and window options are configured.
+checkAuthLimitExceededByPhone ::
+  (CacheFlow m r, MonadFlow m) =>
+  Text ->
+  Text ->
+  TC.TransporterConfig ->
+  m (Maybe Int)
+checkAuthLimitExceededByPhone mocId phoneNumberHash transporterConfig = Redis.withNonCriticalCrossAppRedis $ do
+  r1 <- windowExceeded "W1" transporterConfig.authPhoneNumberCountWindow1 transporterConfig.authPhoneNumberCountThreshold1
+  case r1 of
+    Just _ -> pure r1
+    Nothing -> windowExceeded "W2" transporterConfig.authPhoneNumberCountWindow2 transporterConfig.authPhoneNumberCountThreshold2
+  where
+    windowExceeded windowTag mbWindow mbThreshold =
+      case (mbWindow, mbThreshold) of
+        (Just window, Just threshold) -> do
+          authCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkPhoneAuthCounterKey mocId windowTag phoneNumberHash) window
+          if authCount >= threshold
+            then do
+              logInfo $ "Phone-number auth rate limit hit for driver auth window " <> windowTag <> " with count " <> show authCount
+              pure $ Just (fromIntegral window.period * fromIntegral (SWC.convertPeriodTypeToSeconds window.periodType) :: Int)
+            else pure Nothing
+        _ -> pure Nothing
+
+-- | Increment both configured phone-number auth sliding windows. No-op for an unconfigured window.
+updateAuthCountersByPhone ::
+  (CacheFlow m r, MonadFlow m) =>
+  Text ->
+  Text ->
+  TC.TransporterConfig ->
+  m ()
+updateAuthCountersByPhone mocId phoneNumberHash transporterConfig = Redis.withNonCriticalCrossAppRedis $ do
+  whenJust transporterConfig.authPhoneNumberCountWindow1 $ SWC.incrementWindowCount (mkPhoneAuthCounterKey mocId "W1" phoneNumberHash)
+  whenJust transporterConfig.authPhoneNumberCountWindow2 $ SWC.incrementWindowCount (mkPhoneAuthCounterKey mocId "W2" phoneNumberHash)
