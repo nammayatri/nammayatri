@@ -34,7 +34,7 @@ Notification:
     id: PrimaryKey
     shortId: SecondaryKey
     driverFeeId: "!SecondaryKey"
-    status: "!SecondaryKeyPartial status:NOTIFICATION_CREATED,status:PENDING" # partial secondary key for findAllByStatusWithLimit
+    status: "!SecondaryKeyPartial status:NOTIFICATION_CREATED,status:PENDING"
 
   beamType:
     merchantOperatingCityId: Maybe Text

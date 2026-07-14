@@ -39,6 +39,6 @@ instance B.Table InvoiceT where
 
 type Invoice = InvoiceT Identity
 
-$(enableKVPGWithPartialIndex ''InvoiceT ['id] [['driverFeeId], ['driverId], ['invoiceShortId], ['invoiceStatus]] [SKeyPartial [('invoiceStatus, "ACTIVE_INVOICE")]])
+$(enableKVPGWithPartialIndex ''InvoiceT ['id] [['driverFeeId], ['driverId], ['invoiceShortId]] [SKeyPartial [('invoiceStatus, "ACTIVE_INVOICE")]])
 
 $(mkTableInstances ''InvoiceT "invoice")
