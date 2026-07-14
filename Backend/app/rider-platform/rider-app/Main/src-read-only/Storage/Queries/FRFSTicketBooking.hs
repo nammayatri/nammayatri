@@ -4,6 +4,7 @@
 
 module Storage.Queries.FRFSTicketBooking (module Storage.Queries.FRFSTicketBooking, module ReExport) where
 
+import qualified BecknV2.FRFS.Enums
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
@@ -124,15 +125,16 @@ updatePayoutStatusById cashbackStatus id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.cashbackStatus cashbackStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateQuoteAndBppItemIdAndRouteStationsJson ::
+updateQuoteBppItemIdRouteStationsAndServiceTierById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
-updateQuoteAndBppItemIdAndRouteStationsJson quoteId bppItemId routeStationsJson id = do
+  (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateQuoteBppItemIdRouteStationsAndServiceTierById quoteId bppItemId routeStationsJson serviceTierType id = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId),
       Se.Set Beam.bppItemId bppItemId,
       Se.Set Beam.routeStationsJson routeStationsJson,
+      Se.Set Beam.serviceTierType serviceTierType,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
