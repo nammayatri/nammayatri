@@ -75,6 +75,7 @@ library
       API.Internal.VerifyEmailUpdate
       API.Internal.ViolationDetection
       API.Internal.XyneWebhook
+      API.MetaWhatsappWebhook
       API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
       API.Types.Dashboard.AppManagement.OrphanInstances.TicketDashboard
       API.Types.Dashboard.AppManagement.OrphanInstances.TransitOperator
@@ -314,6 +315,7 @@ library
       Domain.Action.UI.Loyalty
       Domain.Action.UI.Maps
       Domain.Action.UI.MerchantPaymentMethod
+      Domain.Action.UI.MetaWhatsappWebhook
       Domain.Action.UI.MeterRideInternal
       Domain.Action.UI.Metrics
       Domain.Action.UI.Miscellaneous
@@ -823,6 +825,7 @@ library
       Tools.JSON
       Tools.LoyaltyWallet
       Tools.Maps
+      Tools.Meta
       Tools.Metrics
       Tools.Metrics.BAPMetrics
       Tools.Metrics.BAPMetrics.Types
@@ -841,6 +844,13 @@ library
       Tools.Ticket
       Tools.Wallet
       Tools.Whatsapp
+      WhatsappBot.Adapter.Backend
+      WhatsappBot.Adapter.Env
+      WhatsappBot.Adapter.PersonStore
+      WhatsappBot.Adapter.Registry
+      WhatsappBot.Adapter.Sender
+      WhatsappBot.Adapter.SessionStore
+      WhatsappBot.Adapter.Tracker
       API.Action.Dashboard.AppManagement
       API.Action.Dashboard.AppManagement.Customer
       API.Action.Dashboard.AppManagement.EDCMachine
@@ -1782,6 +1792,7 @@ library
     , wai-extra
     , wai-middleware-prometheus
     , warp
+    , whatsapp-bot
     , x509
     , xml-conduit
     , xmlbf
@@ -1921,6 +1932,7 @@ executable rider-app-exe
     , wai-extra
     , wai-middleware-prometheus
     , warp
+    , whatsapp-bot
     , x509
     , xml-conduit
     , xmlbf
@@ -2065,6 +2077,7 @@ test-suite rider-app-test
     , wai-extra
     , wai-middleware-prometheus
     , warp
+    , whatsapp-bot
     , x509
     , xml-conduit
     , xmlbf

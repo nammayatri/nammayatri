@@ -63,6 +63,7 @@ import System.Environment (lookupEnv)
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 import Tools.HTTPManager (prepareCRISHttpManager)
 import "utils" Utils.Common.Events as UE
+import WhatsappBot.Adapter.Tracker (startWhatsAppTracker)
 
 instance HasSchemaName Beam.MerchantOperatingCityT where
   schemaName _ = T.pack currentSchemaName
@@ -154,4 +155,6 @@ runRiderApp' appCfg = do
         pure flowRt'
     let timeoutMiddleware = UE.timeoutEvent flowRt appEnv (responseLBS status408 [] "") appCfg.incomingAPIResponseTimeout
     proxyManager <- HttpTLS.newTlsManager
+    -- Background WhatsApp ride tracker (per-pod, shutdown-aware; forks + returns).
+    when appCfg.metaTrackerEnabled $ runFlowR flowRt' appEnv startWhatsAppTracker
     runSettings settings $ timeoutMiddleware (App.run proxyManager (App.EnvR flowRt' appEnv))
