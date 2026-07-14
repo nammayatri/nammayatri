@@ -77,7 +77,7 @@ import Email.Types (EmailServiceConfig)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
+import Kernel.External.Encryption (decrypt, encrypt, getDbHash, unDbHash)
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Types as Language
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
@@ -94,6 +94,7 @@ import qualified Kernel.Types.Common as BC
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
+import qualified Text.Hex as Hex
 import Kernel.Types.Version
 import Kernel.Utils.App (lookupCloudType)
 import Kernel.Utils.Common
@@ -370,6 +371,12 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
         whenJust mbMerchantConfigId $ \mcId ->
           SMC.blockCustomerByIP clientIP (Just mcId) riderConfig.blockedUntilInMins
 
+  -- Phone-number-based auth rate limit (hashed phone, two configurable sliding windows).
+  whenJust ((.hash) <$> person.mobileNumber) $ \mobileNumberHash -> do
+    let phoneNumberHashText = Hex.encodeHex (unDbHash mobileNumberHash)
+    mbResetSeconds <- SMC.checkAuthLimitExceededByPhone merchantConfigs phoneNumberHashText
+    whenJust mbResetSeconds $ \resetSeconds -> throwError (HitsLimitError resetSeconds)
+    SMC.updateCustomerAuthCountersByPhone phoneNumberHashText merchantConfigs
   checkSlidingWindowLimit (authHitsCountKey person)
   smsCfg <- asks (.smsCfg)
   let entityId = getId $ person.id

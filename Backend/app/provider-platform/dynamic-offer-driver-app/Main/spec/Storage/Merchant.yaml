@@ -1061,6 +1061,10 @@ TransporterConfig:
   fields:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    authPhoneNumberCountThreshold1: Maybe Int
+    authPhoneNumberCountWindow1: Maybe SlidingWindowOptions
+    authPhoneNumberCountThreshold2: Maybe Int
+    authPhoneNumberCountWindow2: Maybe SlidingWindowOptions
     pickupLocThreshold: Meters
     dropLocThreshold: Meters
     editLocTimeThreshold: Seconds
@@ -1653,6 +1657,8 @@ TransporterConfig:
 
   sqlType:
     exotelAppIdMapping: json
+    authPhoneNumberCountWindow1: json
+    authPhoneNumberCountWindow2: json
     pickupLocThreshold: bigint
     dropLocThreshold: bigint
     rideTimeEstimatedThreshold: bigint
