@@ -46,7 +46,8 @@ data SpecialLocationFull = SpecialLocationFull
     enforceTollRoute :: Maybe Bool,
     fetchAllGateFareProduct :: Maybe Bool,
     supportNumber :: Maybe Text,
-    render :: Maybe D.RenderType
+    render :: Maybe D.RenderType,
+    fareSettlementType :: Maybe D.FareSettlementType
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 

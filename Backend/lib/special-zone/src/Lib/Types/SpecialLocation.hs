@@ -40,6 +40,14 @@ data RenderType
 
 $(mkBeamInstancesForEnum ''RenderType)
 
+data FareSettlementType
+  = CommissionOnly
+  | FullPayment
+  deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForEnum ''FareSettlementType)
+
+
 data Merchant
 
 data MerchantOperatingCity
@@ -65,6 +73,7 @@ data SpecialLocation = SpecialLocation
     fetchAllGateFareProduct :: Maybe Bool,
     priority :: Int,
     supportNumber :: Maybe Text,
+    fareSettlementType :: Maybe FareSettlementType,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -211,3 +220,9 @@ pickupGateIdFromArea :: Area -> Maybe Text
 pickupGateIdFromArea (Pickup _ mbGateId) = mbGateId
 pickupGateIdFromArea (PickupDrop _ _ mbGateId) = mbGateId
 pickupGateIdFromArea _ = Nothing
+
+pickupSpecialZoneIdFromArea :: Area -> Maybe Text
+pickupSpecialZoneIdFromArea (Pickup slId _) = Just slId.getId
+pickupSpecialZoneIdFromArea (Drop _) = Nothing
+pickupSpecialZoneIdFromArea (PickupDrop slId _ _) = Just slId.getId
+pickupSpecialZoneIdFromArea Default = Nothing

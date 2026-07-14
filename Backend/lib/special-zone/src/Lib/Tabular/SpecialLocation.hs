@@ -27,6 +27,7 @@ deriving instance Read Domain.GatesInfo
 derivePersistField "Domain.GatesInfo"
 derivePersistField "Domain.SpecialLocationType"
 derivePersistField "Domain.RenderType"
+derivePersistField "Domain.FareSettlementType"
 
 mkPersist
   defaultSqlSettings
@@ -48,6 +49,7 @@ mkPersist
       render Domain.RenderType Maybe
       fetchAllGateFareProduct Bool Maybe
       supportNumber Text Maybe
+      fareSettlementType Domain.FareSettlementType Maybe
       geomGeoJson Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
