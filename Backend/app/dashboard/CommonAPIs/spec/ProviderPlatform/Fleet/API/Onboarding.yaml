@@ -137,7 +137,7 @@ types:
     enum: "VERIFY_PAN,VERIFY_GST,VERIFY_AADHAAR,VERIFY_UDYAM"
     derive: "HttpInstance"
   Role:
-    enum: "RENTAL_FLEET, NORMAL_FLEET, BUSINESS_FLEET"
+    enum: "NORMAL_FLEET, BUSINESS_FLEET"
     derive: "HttpInstance"
   DocumentVerificationConfigList:
     fleet: Maybe [DocumentVerificationConfigAPIEntity]
