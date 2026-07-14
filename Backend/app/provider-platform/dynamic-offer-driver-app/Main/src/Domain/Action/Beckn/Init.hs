@@ -282,6 +282,7 @@ handler merchantId req validatedReq = do
             estimatedFare = driverQuote.estimatedFare,
             currency = driverQuote.currency,
             distanceUnit = searchRequest.distanceUnit,
+            customerLanguage = searchRequest.customerLanguage,
             riderName = Nothing,
             billingCategory = billingCategory,
             estimatedDuration = searchRequest.estimatedDuration,

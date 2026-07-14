@@ -27,6 +27,7 @@ import qualified Lib.Types.SpecialLocation
 import qualified Lib.Yudhishthira.Types
 import qualified SharedLogic.Type
 import qualified Tools.Beam.UtilsTH
+import qualified Tools.Maps
 
 data Booking = Booking
   { area :: Kernel.Prelude.Maybe Lib.Types.SpecialLocation.Area,
@@ -41,6 +42,7 @@ data Booking = Booking
     configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap],
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Utils.Common.Currency,
+    customerLanguage :: Kernel.Prelude.Maybe Tools.Maps.Language,
     disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     discountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     displayBookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
