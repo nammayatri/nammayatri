@@ -541,4 +541,30 @@ in  { esqDBCfg
     , bapHostRedirectMap = [] : List { mapKey : Text, mapValue : Optional Text }
     , xyneWebhookSigningSecret = "<XYNE_WEBHOOK_SIGNING_SECRET>"
     , xyneWebhookBearerToken = "<XYNE_WEBHOOK_BEARER_TOKEN>"
+    , metaAppSecret = env:META_APP_SECRET as Text ? ""
+    , metaVerifyToken = env:META_VERIFY_TOKEN as Text ? ""
+    , metaWebhookMerchants =
+        [] : List
+               { phoneNumberId : Text
+               , merchantShortId : Text
+               , city : Text
+               , botCfg :
+                   { merchantLabel : Text
+                   , rideMode : Text
+                   , flexiBaseFare : Optional Double
+                   , flexiPerKm : Optional Double
+                   , flexiServiceArea : Optional Text
+                   , flexiServiceRadiusKm : Optional Double
+                   , flexiRentalDistanceM : Integer
+                   , flexiRentalDurationS : Integer
+                   , flexiIntroVideoUrl : Optional Text
+                   , flexiSupportPhone : Optional Text
+                   }
+               }
+    , metaBotEnabled = False
+    , metaAllowedPhones = [ "9999999999" ]
+    , metaTrackerEnabled = False
+    , metaTrackerPollMs = +3000
+    , metaSessionTtlSec = +1800
+    , metaTrackerMaxAgeSec = +10800
     }

@@ -814,6 +814,7 @@ library
       Tools.JSON
       Tools.LoyaltyWallet
       Tools.Maps
+      Tools.Meta
       Tools.Metrics
       Tools.Metrics.BAPMetrics
       Tools.Metrics.BAPMetrics.Types

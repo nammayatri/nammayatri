@@ -21,6 +21,8 @@ module Environment
     AppEnv (..),
     BAPs (..),
     SFTPConfig (..),
+    MetaWebhookMerchant (..),
+    MetaBotCfg (..),
     buildAppEnv,
     releaseAppEnv,
     cacheRegistryKey,
@@ -99,6 +101,38 @@ data SFTPConfig = SFTPConfig
     privateKeyPath :: Maybe Text,
     password :: Maybe Text,
     remotePath :: Text
+  }
+  deriving (Generic, FromDhall, Show)
+
+-- | Per-merchant WhatsApp-bot config carried in app-env (dhall), mapped to the
+-- engine's @WhatsappBot.Types.MerchantCtx@ at webhook time. @rideMode@ is the
+-- SINGLE enablement source — a case-insensitive @flexi@ | @regular@ | @both@ tag
+-- (anything else => neither offered); the engine's @flexiEnabled@/@regularEnabled@
+-- bools are DERIVED from it by the Step-3 mapper (never configured independently,
+-- so they can't contradict — config.ts:19-20). @flexiServiceArea@ is a city/area
+-- NAME resolved via @WhatsappBot.Cities@ (not lat\/lon). Fares/radius optional.
+data MetaBotCfg = MetaBotCfg
+  { merchantLabel :: Text,
+    rideMode :: Text,
+    flexiBaseFare :: Maybe Double,
+    flexiPerKm :: Maybe Double,
+    flexiServiceArea :: Maybe Text,
+    flexiServiceRadiusKm :: Maybe Double,
+    flexiRentalDistanceM :: Int,
+    flexiRentalDurationS :: Int,
+    flexiIntroVideoUrl :: Maybe Text,
+    flexiSupportPhone :: Maybe Text
+  }
+  deriving (Generic, FromDhall, Show)
+
+-- | Maps a Meta @phone_number_id@ (from webhook metadata) to the rider-app
+-- merchant + city that owns it, plus that merchant's bot config. Static map
+-- (race-free for the 1-merchant pilot); mirrors the TS @merchantsByPhoneNumberId@.
+data MetaWebhookMerchant = MetaWebhookMerchant
+  { phoneNumberId :: Text,
+    merchantShortId :: Text,
+    city :: Text,
+    botCfg :: MetaBotCfg
   }
   deriving (Generic, FromDhall, Show)
 
@@ -194,6 +228,15 @@ data AppCfg = AppCfg
     zendeskWebhookToken :: Text,
     xyneWebhookSigningSecret :: Text,
     xyneWebhookBearerToken :: Text,
+    metaAppSecret :: Text,
+    metaVerifyToken :: Text,
+    metaWebhookMerchants :: [MetaWebhookMerchant],
+    metaBotEnabled :: Bool,
+    metaAllowedPhones :: [Text],
+    metaTrackerEnabled :: Bool,
+    metaTrackerPollMs :: Int,
+    metaSessionTtlSec :: Int,
+    metaTrackerMaxAgeSec :: Int,
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
     seatBookingConfirmAPIRateLimitOptions :: APIRateLimitOptions,
@@ -319,6 +362,15 @@ data AppEnv = AppEnv
     zendeskWebhookToken :: Text,
     xyneWebhookSigningSecret :: Text,
     xyneWebhookBearerToken :: Text,
+    metaAppSecret :: Text,
+    metaVerifyToken :: Text,
+    metaWebhookMerchants :: [MetaWebhookMerchant],
+    metaBotEnabled :: Bool,
+    metaAllowedPhones :: [Text],
+    metaTrackerEnabled :: Bool,
+    metaTrackerPollMs :: Int,
+    metaSessionTtlSec :: Int,
+    metaTrackerMaxAgeSec :: Int,
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
     seatBookingConfirmAPIRateLimitOptions :: APIRateLimitOptions,
