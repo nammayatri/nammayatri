@@ -45,7 +45,8 @@ data SpecialLocationFull = SpecialLocationFull
     isQueueEnabled :: Maybe Bool,
     enforceTollRoute :: Maybe Bool,
     supportNumber :: Maybe Text,
-    render :: Maybe D.RenderType
+    render :: Maybe D.RenderType,
+    fareSettlementType :: Maybe D.FareSettlementType
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 

@@ -414,6 +414,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             render = request.render,
             fetchAllGateFareProduct = mbExistingSpLoc >>= (.fetchAllGateFareProduct),
             supportNumber = request.supportNumber,
+            fareSettlementType = request.fareSettlementType,
             ..
           }
 
@@ -1534,7 +1535,8 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     enforceTollRoute :: Maybe Text,
     fetchAllGateFareProduct :: Maybe Text,
     render :: Maybe Text,
-    enableQueueFilter :: Maybe Text
+    enableQueueFilter :: Maybe Text,
+    fareSettlementType :: Maybe Text
   }
   deriving (Show)
 
@@ -1581,7 +1583,9 @@ instance FromNamedRecord SpecialLocationCSVRow where
     fetchAllGateFareProduct <- optional (r .: "fetch_all_gate_fare_product")
     render <- optional (r .: "render")
     enableQueueFilter <- optional (r .: "enable_queue_filter")
+    fareSettlementType <- optional (r .: "fare_settlement_type")
     pure SpecialLocationCSVRow {..}
+    
 
 postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
@@ -1636,6 +1640,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
           mbRender :: Maybe DSL.RenderType = readMaybeCSVField idx (fromMaybe "" row.render) "Render"
           mbFetchAllGateFareProduct :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.fetchAllGateFareProduct) "Fetch All Gate Fare Product"
+          mbFareSettlementType :: Maybe DSL.FareSettlementType = readMaybeCSVField idx (fromMaybe "" row.fareSettlementType) "Payment Collection Mode"
       enabled :: Bool <- readCSVField idx row.enabled "Enabled"
       gateInfoId <- maybe generateGUID (pure . Id) (cleanField =<< row.gateInfoId)
       gateInfoName :: Text <- cleanCSVField idx row.gateInfoName "Gate Info (name)"
@@ -1678,7 +1683,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 enforceTollRoute = mbEnforceTollRoute,
                 render = mbRender,
                 fetchAllGateFareProduct = mbFetchAllGateFareProduct,
-                supportNumber = supportNumber
+                supportNumber = supportNumber,
+                fareSettlementType = mbFareSettlementType
               }
           gateInfo =
             DGI.GateInfo

@@ -3299,6 +3299,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             render = request.render,
             fetchAllGateFareProduct = mbExistingSpLoc >>= (.fetchAllGateFareProduct),
             supportNumber = request.supportNumber,
+            fareSettlementType = request.fareSettlementType,
             ..
           }
 
