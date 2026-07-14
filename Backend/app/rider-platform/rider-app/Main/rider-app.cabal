@@ -74,6 +74,7 @@ library
       API.Internal.VerifyEmailUpdate
       API.Internal.ViolationDetection
       API.Internal.XyneWebhook
+      API.MetaWhatsappWebhook
       API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
       API.Types.Dashboard.AppManagement.OrphanInstances.TicketDashboard
       API.Types.Dashboard.AppManagement.OrphanInstances.TransitOperator
@@ -308,6 +309,7 @@ library
       Domain.Action.UI.Loyalty
       Domain.Action.UI.Maps
       Domain.Action.UI.MerchantPaymentMethod
+      Domain.Action.UI.MetaWhatsappWebhook
       Domain.Action.UI.MeterRideInternal
       Domain.Action.UI.Metrics
       Domain.Action.UI.Miscellaneous
@@ -1771,6 +1773,7 @@ library
     , wai-extra
     , wai-middleware-prometheus
     , warp
+    , whatsapp-bot
     , x509
     , xml-conduit
     , xmlbf
@@ -1910,6 +1913,7 @@ executable rider-app-exe
     , wai-extra
     , wai-middleware-prometheus
     , warp
+    , whatsapp-bot
     , x509
     , xml-conduit
     , xmlbf
@@ -2054,6 +2058,7 @@ test-suite rider-app-test
     , wai-extra
     , wai-middleware-prometheus
     , warp
+    , whatsapp-bot
     , x509
     , xml-conduit
     , xmlbf
