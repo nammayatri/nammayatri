@@ -663,3 +663,7 @@ ALTER TABLE atlas_app.estimate ADD COLUMN selected_offer_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.estimate ADD COLUMN area text ;
+
+
+ALTER TABLE atlas_app.estimate ADD COLUMN fare_settlement_type text ;
+

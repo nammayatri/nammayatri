@@ -47,6 +47,7 @@ import Kernel.External.Maps.Types
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Clickhouse.Config as CH
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -61,6 +62,7 @@ import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Payment.Payout.Request as PayoutRequest
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
+import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Allocator (AllocatorJobType (..), SpecialZonePayoutJobData (..))
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -124,7 +126,7 @@ buildStartRideHandle merchantId merchantOpCityId rideId = do
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
       }
 
-type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], Redis.HedisLTSFlowEnv r)
+type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], Redis.HedisLTSFlowEnv r)
 
 driverStartRide ::
   (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text]) =>
@@ -201,7 +203,7 @@ startRideHandler ServiceHandle {..} rideId req = do
     DashboardReq dashboardReq -> do
       unless (booking.providerId == dashboardReq.merchantId && booking.merchantOperatingCityId == dashboardReq.merchantOperatingCityId) $ throwError (RideDoesNotExist ride.id.getId)
 
-  if (isInProgress ride.status)
+  if isInProgress ride.status
     then pure APISuccess.Success
     else do
       unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus ("This ride cannot be started" <> Text.pack (show ride.status))
@@ -258,6 +260,7 @@ startRideHandler ServiceHandle {..} rideId req = do
         ( booking.isDashboardRequest
             && isRideOtpTrip booking.tripCategory
             && fromMaybe False transporterConfig.payoutRideMoneyToDriver
+            && booking.fareSettlementType /= Just SL.CommissionOnly
         )
         $ do
           -- Checking iff duplicate is there.

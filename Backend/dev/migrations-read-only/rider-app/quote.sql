@@ -119,3 +119,7 @@ ALTER TABLE atlas_app.quote ADD COLUMN special_location_support_number text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.quote ADD COLUMN area text ;
+
+ALTER TABLE atlas_app.quote ADD COLUMN fare_settlement_type text ;
+
+

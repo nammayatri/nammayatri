@@ -18,10 +18,9 @@ import qualified Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.Quote as Beam
 import Storage.Queries.QuoteExtra as ReExport
-import Storage.Queries.Transformers.Quote
 import qualified Storage.Queries.Transformers.Quote
 
-findAllBySRId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ([Domain.Types.Quote.Quote]))
+findAllBySRId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.Quote.Quote])
 findAllBySRId requestId = do findAllWithKVAndConditionalDB [Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId)] Nothing
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Quote.Quote -> m (Maybe Domain.Types.Quote.Quote))
@@ -59,6 +58,7 @@ updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do
       Se.Set Beam.estimatedFare (((.amount) estimatedFare)),
       Se.Set Beam.estimatedPickupDuration estimatedPickupDuration,
       Se.Set Beam.estimatedTotalFare (((.amount) estimatedTotalFare)),
+      Se.Set Beam.fareSettlementType fareSettlementType,
       Se.Set Beam.isAirConditioned isAirConditioned,
       Se.Set Beam.isBlockedRoute isBlockedRoute,
       Se.Set Beam.isCustomerPrefferedSearchRoute isCustomerPrefferedSearchRoute,

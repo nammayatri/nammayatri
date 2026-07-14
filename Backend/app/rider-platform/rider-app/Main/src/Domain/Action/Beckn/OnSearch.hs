@@ -80,8 +80,10 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 -- import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+
+import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.CallBPPInternal as Est
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
@@ -161,6 +163,7 @@ data EstimateInfo = EstimateInfo
     isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     specialLocationName :: Maybe Text,
+    fareSettlementType :: Maybe SL.FareSettlementType,
     tripCategory :: DT.TripCategory,
     vehicleCategory :: Enums.VehicleCategory,
     vehicleIconUrl :: Maybe BaseUrl,
@@ -234,6 +237,7 @@ data QuoteInfo = QuoteInfo
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     specialLocationName :: Maybe Text,
     specialLocationSupportNumber :: Maybe Text,
+    fareSettlementType :: Maybe SL.FareSettlementType,
     quoteBreakupList :: [QuoteBreakupInfo],
     tripCategory :: DT.TripCategory,
     -- petCharges :: Maybe Price,

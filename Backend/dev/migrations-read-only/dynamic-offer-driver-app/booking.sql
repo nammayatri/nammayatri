@@ -245,3 +245,8 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN discount_amount double pre
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN business_email_domain text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN fare_settlement_type text ;
