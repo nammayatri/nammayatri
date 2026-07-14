@@ -13,6 +13,7 @@ import Tools.Beam.UtilsTH
 
 data ReconciliationSummaryT f = ReconciliationSummaryT
   { createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    disputeAmountTotal :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     errorMessage :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     id :: (B.C f Kernel.Prelude.Text),
     matchRate :: (B.C f Kernel.Prelude.Text),
