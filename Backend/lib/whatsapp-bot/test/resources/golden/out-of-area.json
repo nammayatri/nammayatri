@@ -1,0 +1,134 @@
+{
+  "scenario": "out-of-area",
+  "description": "Pickup pin outside the Tumkur service area → geofence rejects it BEFORE auth/search (no backend call).",
+  "env": {
+    "merchant": "pn_flexi",
+    "systemTime": "2026-07-09T00:00:00.000Z"
+  },
+  "seed": {
+    "returningUser": true,
+    "phone": "919361176218"
+  },
+  "steps": [
+    {
+      "note": "tap Quick Ride → silent auth → pickup request",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.ooa.1",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "ride_type:flexi",
+                          "title": "Quick Ride"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "location_request",
+          "to": "919361176218",
+          "merchant": "FLEXI"
+        }
+      ],
+      "expectBackend": [
+        {
+          "method": "authenticate",
+          "args": [
+            "9361176218"
+          ]
+        },
+        {
+          "method": "getSavedLocations",
+          "args": []
+        }
+      ]
+    },
+    {
+      "note": "pin outside Tumkur → flexiOutOfArea + [Try again], back to IDLE (geofence BEFORE any backend call)",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.ooa.2",
+                      "timestamp": "1783545600",
+                      "type": "location",
+                      "location": {
+                        "latitude": 12.9716,
+                        "longitude": 77.5946
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "book"
+          ]
+        }
+      ],
+      "expectBackend": []
+    }
+  ],
+  "trackerSteps": []
+}

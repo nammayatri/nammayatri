@@ -1,0 +1,301 @@
+{
+  "scenario": "flexi-happy-path",
+  "description": "Quick Ride: book → search → confirm → driver assigned → arrived → started → ended.",
+  "env": {
+    "merchant": "pn_flexi",
+    "systemTime": "2026-07-09T00:00:00.000Z"
+  },
+  "seed": {
+    "returningUser": true,
+    "phone": "919361176218"
+  },
+  "steps": [
+    {
+      "note": "tap Quick Ride → silent auth → pickup request",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.flexi.1",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "ride_type:flexi",
+                          "title": "Quick Ride"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "location_request",
+          "to": "919361176218",
+          "merchant": "FLEXI"
+        }
+      ],
+      "expectBackend": [
+        {
+          "method": "authenticate",
+          "args": [
+            "9361176218"
+          ]
+        },
+        {
+          "method": "getSavedLocations",
+          "args": []
+        }
+      ]
+    },
+    {
+      "note": "share pickup pin (inside Tumkur) → confirm prompt",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.flexi.2",
+                      "timestamp": "1783545600",
+                      "type": "location",
+                      "location": {
+                        "latitude": 13.34,
+                        "longitude": 77.1
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "pickup_confirm",
+            "pickup_adjust"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "method": "reverseGeocode",
+          "args": [
+            13.34,
+            77.1
+          ]
+        }
+      ]
+    },
+    {
+      "note": "confirm pickup → search + confirm + driver card",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.flexi.3",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "pickup_confirm",
+                          "title": "Confirm pickup"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "cancel"
+          ]
+        },
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "cancel_confirm:mock-booking-001"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "method": "searchFlexi",
+          "args": [
+            {
+              "placeId": "mock-pin",
+              "lat": 13.34,
+              "lon": 77.1
+            }
+          ]
+        },
+        {
+          "method": "getFlexiQuotes",
+          "args": [
+            "mock-flexi-search-1"
+          ]
+        },
+        {
+          "method": "confirmQuote",
+          "args": [
+            "mock-flexi-quote-auto"
+          ]
+        },
+        {
+          "method": "getBookingDetails",
+          "args": [
+            "mock-booking-001"
+          ]
+        }
+      ]
+    }
+  ],
+  "trackerSteps": [
+    {
+      "advanceMs": 6000,
+      "note": "driver arrived",
+      "expectOutbound": [
+        {
+          "kind": "text",
+          "to": "919361176218",
+          "merchant": "FLEXI"
+        }
+      ],
+      "expectBackend": [
+        {
+          "method": "getBookingDetails",
+          "args": [
+            "mock-booking-001"
+          ]
+        }
+      ]
+    },
+    {
+      "advanceMs": 6000,
+      "note": "ride started",
+      "expectOutbound": [
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "flexi_end_otp:mock-booking-001"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "method": "getBookingDetails",
+          "args": [
+            "mock-booking-001"
+          ]
+        }
+      ]
+    },
+    {
+      "advanceMs": 8000,
+      "note": "ride ended",
+      "expectOutbound": [
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "book"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "method": "getBookingDetails",
+          "args": [
+            "mock-booking-001"
+          ]
+        }
+      ]
+    }
+  ]
+}

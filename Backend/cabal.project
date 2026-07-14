@@ -27,6 +27,7 @@ packages:
   lib/config-pilot
   lib/finance-kernel
   lib/producer
+  lib/whatsapp-bot
   lib/utils
   lib/external
   lib/webhook
