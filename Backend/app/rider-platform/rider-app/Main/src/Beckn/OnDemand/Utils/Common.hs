@@ -101,7 +101,7 @@ mkStops origin stops startTime mbScheduledPickupDuration =
 
 mkAddress :: DLoc.LocationAddress -> Text
 mkAddress DLoc.LocationAddress {..} =
-  let res = map replaceEmpty [door, building, street, area, city, state, country]
+  let res = map replaceEmpty [door, building, street, area, ward, city, state, country]
    in T.intercalate ", " $ catMaybes res
 
 -- | Re-export from shared library for backward compatibility
