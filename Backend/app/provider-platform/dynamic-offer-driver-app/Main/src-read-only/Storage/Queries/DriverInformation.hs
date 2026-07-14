@@ -231,10 +231,20 @@ updateTripEndLocation driverTripEndLocation driverId = do
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateUnhygienicVehicleViolationCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateUnhygienicVehicleViolationCount unhygienicVehicleViolationCount driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.unhygienicVehicleViolationCount unhygienicVehicleViolationCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateUpgradedTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Domain.Types.UpgradedTier.UpgradedTier] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateUpgradedTiers ruleBasedUpgradeTiers driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.ruleBasedUpgradeTiers (Kernel.Prelude.toJSON <$> ruleBasedUpgradeTiers), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+updateVehicleUnsafeViolationCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateVehicleUnsafeViolationCount vehicleUnsafeViolationCount driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.vehicleUnsafeViolationCount vehicleUnsafeViolationCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateWeeklyCancellationRateBlockingCooldown :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateWeeklyCancellationRateBlockingCooldown weeklyCancellationRateBlockingCooldown driverId = do
@@ -346,6 +356,8 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.totalReferred totalReferred,
       Se.Set Beam.tripDistanceMaxThreshold tripDistanceMaxThreshold,
       Se.Set Beam.tripDistanceMinThreshold tripDistanceMinThreshold,
+      Se.Set Beam.unhygienicVehicleViolationCount unhygienicVehicleViolationCount,
+      Se.Set Beam.vehicleUnsafeViolationCount vehicleUnsafeViolationCount,
       Se.Set Beam.verified verified,
       Se.Set Beam.weeklyCancellationRateBlockingCooldown weeklyCancellationRateBlockingCooldown,
       Se.Set Beam.weeklyExtraKms weeklyExtraKms,
