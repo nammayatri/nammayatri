@@ -21,7 +21,6 @@ import Kernel.Utils.Common
 import qualified "lib-dashboard" Storage.Beam.BeamFlow as BeamFlow
 import qualified "lib-dashboard" Storage.Queries.Entity as QE
 import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
-import "lib-dashboard" Tools.Error
 
 data CreateEntityReq = CreateEntityReq
   { entityName :: Text,
