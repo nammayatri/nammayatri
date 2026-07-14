@@ -505,4 +505,9 @@ ALTER TABLE atlas_app.search_request ADD COLUMN better_point_ride_distance_saved
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.search_request ADD COLUMN is_whatsapp_request boolean ;
+
+
+------- SQL updates -------
+
 CREATE INDEX CONCURRENTLY search_request_idx_parent_search_request_id ON atlas_app.search_request USING btree (parent_search_request_id);

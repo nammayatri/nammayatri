@@ -230,10 +230,13 @@ getDoMultimodalSearch = \case
   DSearch.EasyBookingSearch DSearch.EasyBookingSearchReq {} -> Nothing
 
 search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Maybe Bool -> Maybe Bool -> FlowHandler SearchResp
-search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch mbHasPasses = withFlowHandlerAPIPersonId personId $ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch mbHasPasses
+search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch mbHasPasses = withFlowHandlerAPIPersonId personId $ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch Nothing mbHasPasses
 
-search' :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Maybe Bool -> Maybe Bool -> Flow SearchResp
-search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch mbHasPasses = withPersonIdLogTag personId $ do
+-- mbIsWhatsappRequest is not a client-facing API param (this handler is the HTTP route);
+-- it's only ever True when the WhatsApp bot calls search' directly, in-process
+-- (WhatsappBot/Adapter/Backend.hs), bypassing this HTTP entry point entirely.
+search' :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Flow SearchResp
+search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch mbIsWhatsappRequest mbHasPasses = withPersonIdLogTag personId $ do
   let isDashboardRequest = fromMaybe False mbIsDashboardRequest
   unless isDashboardRequest $ checkSearchRateLimit personId
   fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
@@ -258,7 +261,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
           _ -> pure ()
   -- TODO : remove this code after multiple search req issue get fixed from frontend
   --END
-  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice isDashboardRequest False Nothing mbEnableSyncSearch
+  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice isDashboardRequest False Nothing mbEnableSyncSearch mbIsWhatsappRequest
   inlineResults <- dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch
   fork "Multimodal Search" $ do
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
@@ -465,7 +468,7 @@ multimodalSearchHandler (personId, _merchantId) req mbInitiateJourney mbBundleVe
     whenJust mbImeiNumber $ \imeiNumber -> do
       encryptedImeiNumber <- encrypt imeiNumber
       Person.updateImeiNumber (Just encryptedImeiNumber) personId
-    dSearchRes <- JMU.measureLatency (DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) True Nothing Nothing) "DSearch.search multimodalSearchHandler"
+    dSearchRes <- JMU.measureLatency (DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) True Nothing Nothing Nothing) "DSearch.search multimodalSearchHandler"
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     let initiateJourney = fromMaybe False mbInitiateJourney
     JMU.measureLatency (multiModalSearch dSearchRes.searchRequest riderConfig initiateJourney False req personId mbDepartureTime mbFilterServiceAndJrnyType mbNewServiceTiers mbHasPasses) "multiModalSearch"
@@ -1144,7 +1147,7 @@ searchTrigger' (personId, merchantId) req mbBundleVersion mbClientVersion mbClie
           _ -> pure ()
   -- TODO : remove this code after multiple search req issue get fixed from frontend
   --END
-  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) False Nothing Nothing
+  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) False Nothing Nothing Nothing
   fork "search cabs" . withShortRetry $ do
     becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
     let generatedJson = encode becknTaxiReqV2

@@ -1,0 +1,149 @@
+{
+  "scenario": "sos-no-select-time",
+  "description": "sos_trigger with ctx.selectStartedAt UNDEFINED (authenticated but never booked) -> getActiveBookings called with no createdAfter filter.",
+  "env": {
+    "merchant": "pn_flexi",
+    "systemTime": "2026-07-09T00:00:00.000Z"
+  },
+  "seed": {
+    "returningUser": true,
+    "phone": "919361176218"
+  },
+  "steps": [
+    {
+      "note": "tap Quick Ride -> silent auth (nyToken set, selectStartedAt undefined)",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.sosn.1",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "ride_type:flexi",
+                          "title": "Quick Ride"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "location_request",
+          "to": "919361176218",
+          "merchant": "FLEXI"
+        }
+      ],
+      "expectBackend": [
+        {
+          "method": "authenticate",
+          "args": [
+            "9361176218"
+          ]
+        },
+        {
+          "method": "getSavedLocations",
+          "args": []
+        }
+      ]
+    },
+    {
+      "note": "sos_trigger with no selectStartedAt -> getActiveBookings(undefined) -> triggerSOS",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.sosn.2",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "sos_trigger",
+                          "title": "Yes, trigger SOS"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "mark_safe_confirm"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "method": "getActiveBookings",
+          "args": [
+            null
+          ]
+        },
+        {
+          "method": "triggerSOS",
+          "args": [
+            "mock-ride-001"
+          ]
+        }
+      ]
+    }
+  ]
+}

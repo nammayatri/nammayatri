@@ -75,6 +75,7 @@ library
       API.Internal.VerifyEmailUpdate
       API.Internal.ViolationDetection
       API.Internal.XyneWebhook
+      API.MetaWhatsappWebhook
       API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
       API.Types.Dashboard.AppManagement.OrphanInstances.TicketDashboard
       API.Types.Dashboard.AppManagement.OrphanInstances.TransitOperator
@@ -314,6 +315,7 @@ library
       Domain.Action.UI.Loyalty
       Domain.Action.UI.Maps
       Domain.Action.UI.MerchantPaymentMethod
+      Domain.Action.UI.MetaWhatsappWebhook
       Domain.Action.UI.MeterRideInternal
       Domain.Action.UI.Metrics
       Domain.Action.UI.Miscellaneous
@@ -385,6 +387,7 @@ library
       Domain.Types.Extra.MerchantMessage
       Domain.Types.Extra.MerchantPaymentMethod
       Domain.Types.Extra.MerchantServiceConfig
+      Domain.Types.Extra.MetaWebhookConfig
       Domain.Types.Extra.NyRegularSubscription
       Domain.Types.Extra.PartnerOrgConfig
       Domain.Types.Extra.PersonFlowStatus
@@ -642,6 +645,7 @@ library
       Storage.CachedQueries.Merchant.PayoutConfig
       Storage.CachedQueries.Merchant.RiderConfig
       Storage.CachedQueries.MerchantConfig
+      Storage.CachedQueries.MetaWebhookConfig
       Storage.CachedQueries.OTPRest.Common
       Storage.CachedQueries.OTPRest.OTPRest
       Storage.CachedQueries.PartnerOrganization
@@ -742,6 +746,7 @@ library
       Storage.Queries.MerchantPaymentMethodExtra
       Storage.Queries.MerchantServiceConfigExtra
       Storage.Queries.MerchantServiceUsageConfigExtra
+      Storage.Queries.MetaWebhookConfigExtra
       Storage.Queries.NyRegularSubscriptionExtra
       Storage.Queries.PartnerOrganizationExtra
       Storage.Queries.PartnerOrgConfigExtra
@@ -798,6 +803,7 @@ library
       Storage.Queries.Transformers.MerchantMessage
       Storage.Queries.Transformers.MerchantPaymentMethod
       Storage.Queries.Transformers.MerchantServiceConfig
+      Storage.Queries.Transformers.MetaWebhookConfig
       Storage.Queries.Transformers.PartnerOrgConfig
       Storage.Queries.Transformers.Person
       Storage.Queries.Transformers.Quote
@@ -830,6 +836,7 @@ library
       Tools.JSON
       Tools.LoyaltyWallet
       Tools.Maps
+      Tools.Meta
       Tools.Metrics
       Tools.Metrics.BAPMetrics
       Tools.Metrics.BAPMetrics.Types
@@ -848,6 +855,14 @@ library
       Tools.Ticket
       Tools.Wallet
       Tools.Whatsapp
+      WhatsappBot.Adapter.Backend
+      WhatsappBot.Adapter.Env
+      WhatsappBot.Adapter.PersonStore
+      WhatsappBot.Adapter.Registry
+      WhatsappBot.Adapter.Sender
+      WhatsappBot.Adapter.SessionStore
+      WhatsappBot.Adapter.Tracker
+      WhatsappBot.Adapter.Translations
       API.Action.Dashboard.AppManagement
       API.Action.Dashboard.AppManagement.Customer
       API.Action.Dashboard.AppManagement.EDCMachine
@@ -1152,6 +1167,7 @@ library
       Domain.Types.MerchantServiceConfig
       Domain.Types.MerchantServiceUsageConfig
       Domain.Types.MerchantState
+      Domain.Types.MetaWebhookConfig
       Domain.Types.MultimodalPreferences
       Domain.Types.NotificationSoundsConfig
       Domain.Types.NyRegularInstanceLog
@@ -1322,6 +1338,7 @@ library
       Storage.Beam.MerchantServiceConfig
       Storage.Beam.MerchantServiceUsageConfig
       Storage.Beam.MerchantState
+      Storage.Beam.MetaWebhookConfig
       Storage.Beam.MultimodalPreferences
       Storage.Beam.NotificationSoundsConfig
       Storage.Beam.NyRegularInstanceLog
@@ -1496,6 +1513,7 @@ library
       Storage.Queries.MerchantServiceConfig
       Storage.Queries.MerchantServiceUsageConfig
       Storage.Queries.MerchantState
+      Storage.Queries.MetaWebhookConfig
       Storage.Queries.MultimodalPreferences
       Storage.Queries.NotificationSoundsConfig
       Storage.Queries.NyRegularInstanceLog
@@ -1535,6 +1553,7 @@ library
       Storage.Queries.OrphanInstances.MerchantPaymentMethod
       Storage.Queries.OrphanInstances.MerchantServiceConfig
       Storage.Queries.OrphanInstances.MerchantServiceUsageConfig
+      Storage.Queries.OrphanInstances.MetaWebhookConfig
       Storage.Queries.OrphanInstances.NyRegularSubscription
       Storage.Queries.OrphanInstances.PartnerOrganization
       Storage.Queries.OrphanInstances.PartnerOrgConfig
@@ -1793,6 +1812,7 @@ library
     , wai-extra
     , wai-middleware-prometheus
     , warp
+    , whatsapp-bot
     , x509
     , xml-conduit
     , xmlbf
@@ -1932,6 +1952,7 @@ executable rider-app-exe
     , wai-extra
     , wai-middleware-prometheus
     , warp
+    , whatsapp-bot
     , x509
     , xml-conduit
     , xmlbf
@@ -2076,6 +2097,7 @@ test-suite rider-app-test
     , wai-extra
     , wai-middleware-prometheus
     , warp
+    , whatsapp-bot
     , x509
     , xml-conduit
     , xmlbf

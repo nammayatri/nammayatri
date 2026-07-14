@@ -1,0 +1,121 @@
+# Triggers NammaDSL code generation for:
+#   src-read-only/Domain/Types/MetaWebhookConfig.hs
+#   src-read-only/Storage/Beam/MetaWebhookConfig.hs
+#   src-read-only/Storage/Queries/MetaWebhookConfig.hs
+#   src-read-only/Storage/Queries/OrphanInstances/MetaWebhookConfig.hs
+#
+# Per-phone-number Meta WhatsApp Cloud API webhook config: replaces the old
+# Dhall-sourced metaAppSecret/metaVerifyToken/metaWebhookMerchants (single
+# global secret, one merchant only) with a DB table keyed by phoneNumberId,
+# so multiple Meta Apps/phone numbers with different App Secrets can coexist
+# without a redeploy.
+#
+# tableName is meta_config, not meta_webhook_config: this table now holds
+# BOTH the inbound webhook-verification secrets (appSecret/verifyToken) AND
+# the outbound send credentials (accessToken/baseUrl/apiVersion, moved here
+# from merchant_service_config's Meta_CloudApi row) — "webhook config" only
+# described the inbound half. The Haskell type/module name stays
+# MetaWebhookConfig (avoids an import-site rename across ~8 files for a
+# cosmetic difference); only the physical table name changed.
+
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  DbHash: Kernel.External.Encryption
+  EncryptedField: Kernel.External.Encryption
+  AsEncrypted: Kernel.External.Encryption
+  Value: Data.Aeson
+  MetaBotCfg: Domain.Types.Extra.MetaWebhookConfig
+
+MetaWebhookConfig:
+  tableName: meta_config
+  # No ToSchema: appSecret/verifyToken/accessToken are EncryptedField
+  # 'AsEncrypted Text (= Encrypted Text), which has no ToSchema instance (only
+  # ToJSON/FromJSON via newtype-deriving) — same reason bbps_config.bbpsSignatureKey's
+  # table derives only bare "Generic". We DO need ToJSON/FromJSON (unlike
+  # BBPSConfig) since this table is cached in Redis on the hot inbound-webhook path.
+  derives: "Generic, Show, ToJSON, FromJSON"
+
+  fields:
+    id: Id MetaWebhookConfig
+    phoneNumberId: Text
+    # appSecret verifies X-Hub-Signature-256 on inbound webhooks (HMAC key).
+    # verifyToken answers the GET hub.challenge handshake. Both are genuine
+    # secrets, encrypted at rest via Passetto — never plaintext, matching the
+    # bbps_config.bbpsSignatureKey pattern.
+    appSecret: EncryptedField 'AsEncrypted Text
+    verifyToken: EncryptedField 'AsEncrypted Text
+    # Outbound send credentials (moved here from merchant_service_config's
+    # Meta_CloudApi row — this table already carries the phoneNumberId/
+    # merchantId/merchantOperatingCityId keys either lookup direction needs,
+    # so the two tables no longer have to agree on phoneNumberId at runtime).
+    accessToken: EncryptedField 'AsEncrypted Text
+    # Not secrets — plain text, unlike accessToken/appSecret/verifyToken.
+    # baseUrl parses to Servant's BaseUrl via Kernel.Prelude.parseBaseUrl at
+    # the Tools/Meta.hs boundary.
+    baseUrl: Text
+    apiVersion: Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    # botConfig is stored as JSONB; domain layer sees the MetaBotCfg record.
+    botConfig: MetaBotCfg
+    # Per-row kill-switch: lets one tenant be disabled without a redeploy and
+    # without affecting other rows. ANDed with the global metaBotEnabled flag
+    # (Environment.hs) at the call site.
+    enabled: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamType:
+    appSecret: Text
+    verifyToken: Text
+    accessToken: Text
+    botConfig: Value
+
+  sqlType:
+    appSecret: text
+    verifyToken: text
+    accessToken: text
+    botConfig: jsonb
+
+  fromTType:
+    appSecret: Encrypted appSecret|E
+    verifyToken: Encrypted verifyToken|E
+    accessToken: Encrypted accessToken|E
+    # |M (not |E): botConfig is a required (non-Maybe) field, so the decode
+    # needs a monadic fromMaybeM-guarded transformer (see
+    # Storage/Queries/Transformers/MetaWebhookConfig.hs's readBotConfig),
+    # not a plain expression — matches AppInstalls.yaml's bundleVersion/|M
+    # pattern (Storage/Queries/Transformers/AppInstalls.hs).
+    botConfig: readBotConfig|M
+
+  toTType:
+    appSecret: appSecret & unEncrypted|E
+    verifyToken: verifyToken & unEncrypted|E
+    accessToken: accessToken & unEncrypted|E
+    botConfig: Data.Aeson.toJSON botConfig|E
+
+  constraints:
+    id: PrimaryKey
+    # !SecondaryKey (quoted) — enables KV secondary index on phoneNumberId,
+    # the field Meta actually sends us and the primary lookup key for inbound
+    # routing. Must stay quoted or NammaDSL silently drops it (CLAUDE.md rule 11).
+    phoneNumberId: "!SecondaryKey"
+
+  queries:
+    findByPhoneNumberId:
+      kvFunction: findOneWithKV
+      where: phoneNumberId
+
+  extraOperations:
+    # EXTRA_DOMAIN_TYPE_FILE: tells the generator that
+    #   src/Domain/Types/Extra/MetaWebhookConfig.hs exists and should be re-exported.
+    - EXTRA_DOMAIN_TYPE_FILE
+    # EXTRA_QUERY_FILE: tells the generator that
+    #   src/Storage/Queries/MetaWebhookConfigExtra.hs exists and should be
+    #   re-exported. Routes fromTType'/toTType' generation through the split
+    #   Storage/Queries/OrphanInstances/MetaWebhookConfig.hs file instead of
+    #   inlining them into Storage/Queries/MetaWebhookConfig.hs — required for
+    #   botConfig's Maybe-producing decode to get correctly unwrapped with
+    #   fromMaybeM (matches RiderPreferences' generated shape).
+    - EXTRA_QUERY_FILE

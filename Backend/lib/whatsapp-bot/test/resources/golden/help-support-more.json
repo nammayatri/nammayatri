@@ -1,0 +1,207 @@
+{
+  "scenario": "help-support-more",
+  "description": "The static submenu arms: more -> help (intro video + how-it-works + menu loop-back) -> support (dialable phone + menu loop-back).",
+  "env": {
+    "merchant": "pn_flexi",
+    "systemTime": "2026-07-09T00:00:00.000Z"
+  },
+  "seed": {
+    "returningUser": true,
+    "phone": "919361176218"
+  },
+  "steps": [
+    {
+      "note": "more -> submenu (flexi-only merchant: no ride_type:regular row)",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.hsm.1",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "more",
+                          "title": "More"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "help",
+            "support",
+            "main_menu"
+          ]
+        }
+      ],
+      "expectBackend": []
+    },
+    {
+      "note": "help -> intro video + howItWorksText + menu loop-back",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.hsm.2",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "help",
+                          "title": "How it works"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "video",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "link": "https://videos.example/intro.mp4"
+        },
+        {
+          "kind": "text",
+          "to": "919361176218",
+          "merchant": "FLEXI"
+        },
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "ride_type:flexi",
+            "more",
+            "choose_language"
+          ]
+        }
+      ],
+      "expectBackend": []
+    },
+    {
+      "note": "support -> support phone + menu loop-back",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.hsm.3",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "support",
+                          "title": "Support"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "text",
+          "to": "919361176218",
+          "merchant": "FLEXI"
+        },
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "ride_type:flexi",
+            "more",
+            "choose_language"
+          ]
+        }
+      ],
+      "expectBackend": []
+    }
+  ]
+}

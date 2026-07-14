@@ -555,6 +555,14 @@
             }
           }
         ],
+        "meta_config": [
+          {
+            "where": {},
+            "set": {
+              "app_secret": "ENCRYPT:whatsapp-test-app-secret"
+            }
+          }
+        ],
         "merchant": [
           {
             "where": {},
@@ -2576,6 +2584,14 @@
             },
             "set": {
               "id": "atlas_app"
+            }
+          }
+        ],
+        "meta_config": [
+          {
+            "where": {},
+            "set": {
+              "app_secret": "ENCRYPT:whatsapp-test-app-secret"
             }
           }
         ],
@@ -4616,6 +4632,14 @@
             },
             "set": {
               "id": "atlas_app"
+            }
+          }
+        ],
+        "meta_config": [
+          {
+            "where": {},
+            "set": {
+              "app_secret": "ENCRYPT:whatsapp-test-app-secret"
             }
           }
         ],
