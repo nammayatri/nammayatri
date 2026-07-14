@@ -986,7 +986,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
                   transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
                   -- Throws (naming the offending docs) if any BotApproval dependency doc isn't VALID.
                   SStatus.botApproveAndReconcile merchantOpCity person transporterConfig
-                  QDI.updateByPrimaryKey driverInfo {DDI.enabled = True}
+                  QDIExtra.updateEnabledVerifiedState driverId True Nothing Nothing
                   pure (DRR.COMPLETED, Nothing, Nothing)
             if driverInfo.approved == Just True
               then runReconcile
@@ -1009,11 +1009,11 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
             transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
             -- Throws (naming the offending docs) if any BotApproval dependency doc isn't VALID.
             SStatus.botApproveAndReconcile merchantOpCity fleetPerson transporterConfig
-            QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.enabled = True}
+            QFOIExtra.updateFleetOwnerApprovedAndEnabledStatus (Just True) True fleetOwnerInfo.fleetOwnerPersonId
             pure (DRR.COMPLETED, Nothing, Nothing)
           else do
             applyDocRejections req.entityType reqId validatedDocs
-            QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.enabled = False, DFOI.verified = False}
+            QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.enabled = False, DFOI.verified = False, DFOI.approved = Just False}
             person <- QPerson.findById fleetOwnerInfo.fleetOwnerPersonId >>= fromMaybeM (PersonNotFound fleetOwnerInfo.fleetOwnerPersonId.getId)
             pure (DRR.REJECTED, Nothing, Just person)
       API.Types.ProviderPlatform.Operator.Driver.VEHICLE -> do
@@ -1022,11 +1022,11 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
         when (rcInfo.verified /= Just True) $ throwError (InvalidRequest "RC is not verified")
         if isDocReqEmpty
           then do
-            unless (rcInfo.approved == Just True) $ QVRC.updateByPrimaryKey rcInfo {DVRC.approved = Just True}
+            unless (rcInfo.approved == Just True) $ QVRC.updateApproved (Just True) rcId
             pure (DRR.COMPLETED, rcInfo.unencryptedCertificateNumber, Nothing)
           else do
             applyDocRejections req.entityType reqId validatedDocs
-            QVRC.updateByPrimaryKey rcInfo {DVRC.approved = Just False, DVRC.verified = Just False}
+            QVRCE.updateApprovedAndVerifiedById (Just False) (Just False) rcId
             mbPersonId <- resolvePersonIdViaRc rcId
             mbPerson <- case mbPersonId of
               Just pId -> QPerson.findById pId
