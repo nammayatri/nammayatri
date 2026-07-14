@@ -195,7 +195,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.toStationLat = (.lat) <$> toStationPoint,
         Beam.toStationLon = (.lon) <$> toStationPoint,
         Beam.toStopIdx = toStopIdx,
-        Beam.currency = ((Kernel.Prelude.Just . (.currency))) totalPrice,
+        Beam.currency = (Kernel.Prelude.Just . (.currency)) totalPrice,
         Beam.price = (.amount) totalPrice,
         Beam.tripId = tripId,
         Beam.validTill = validTill,

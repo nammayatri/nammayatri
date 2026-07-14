@@ -603,9 +603,9 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [googleWalletJWTUrl]
       where: id
-    updateQuoteAndBppItemIdAndRouteStationsJson:
+    updateQuoteBppItemIdRouteStationsAndServiceTierById:
       kvFunction: updateOneWithKV
-      params: [quoteId, bppItemId, routeStationsJson]
+      params: [quoteId, bppItemId, routeStationsJson, serviceTierType]
       where: id
     updateFailureReasonById:
       kvFunction: updateOneWithKV
