@@ -150,6 +150,19 @@ jobs:
             cabal build all --flags=-Local --dry-run 2>&1 | tail -20
             echo '--- real build ---'
             cabal build all --flags=-Local 2>&1
+            BUILD_EXIT=\$?
+            if [ \$BUILD_EXIT -ne 0 ]; then
+              # Stale cache detection: 'which is not loaded' or '<no location info>' means
+              # a previous cancelled build left dist-newstyle in an inconsistent state.
+              # Clear the entire dist-newstyle and do a clean rebuild.
+              if grep -qE 'which is not loaded|<no location info>' prod-build-log.txt 2>/dev/null; then
+                echo '--- stale cache detected, clearing dist-newstyle and retrying clean build ---'
+                rm -rf dist-newstyle
+                cabal build all --flags=-Local 2>&1
+                BUILD_EXIT=\$?
+              fi
+            fi
+            exit \$BUILD_EXIT
           " | while IFS= read -r line; do
             printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
           done | tee prod-build-log.txt
