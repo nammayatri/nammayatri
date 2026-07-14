@@ -140,7 +140,8 @@ buildFRFSTicketCancelOTPMessage merchantOperatingCityId req = do
 
 data BuildSendBookingOTPMessageReq = BuildSendBookingOTPMessageReq
   { otp :: Text,
-    amount :: Text
+    amount :: Text,
+    serviceTier :: Text
   }
   deriving (Generic)
 
@@ -149,14 +150,15 @@ buildSendBookingOTPMessage merchantOperatingCityId req = do
   merchantMessage <-
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_BOOKING_OTP Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_BOOKING_OTP))
-  buildSendSmsReq merchantMessage [("otp", req.otp), ("amount", req.amount)]
+  buildSendSmsReq merchantMessage [("otp", req.otp), ("amount", req.amount), ("serviceTier", req.serviceTier)]
 
 data BuildSendBookingOTPRentalMessageReq = BuildSendBookingOTPRentalMessageReq
   { otp :: Text,
     amount :: Text,
     durationHours :: Text,
     distanceKms :: Text,
-    appUrl :: Text
+    appUrl :: Text,
+    serviceTier :: Text
   }
   deriving (Generic)
 
@@ -175,14 +177,15 @@ buildSendBookingOTPRentalMessage merchantOperatingCityId req = do
         ]
     Nothing ->
       buildSendBookingOTPMessage merchantOperatingCityId $
-        BuildSendBookingOTPMessageReq {otp = req.otp, amount = req.amount}
+        BuildSendBookingOTPMessageReq {otp = req.otp, amount = req.amount, serviceTier = req.serviceTier}
 
 data BuildSendBookingOTPIntercityMessageReq = BuildSendBookingOTPIntercityMessageReq
   { otp :: Text,
     amount :: Text,
     destination :: Text,
     distanceKms :: Text,
-    appUrl :: Text
+    appUrl :: Text,
+    serviceTier :: Text
   }
   deriving (Generic)
 
@@ -201,7 +204,7 @@ buildSendBookingOTPIntercityMessage merchantOperatingCityId req = do
         ]
     Nothing ->
       buildSendBookingOTPMessage merchantOperatingCityId $
-        BuildSendBookingOTPMessageReq {otp = req.otp, amount = req.amount}
+        BuildSendBookingOTPMessageReq {otp = req.otp, amount = req.amount, serviceTier = req.serviceTier}
 
 buildBookingOtpSmsForCategory ::
   BuildMessageFlow m r =>
@@ -223,7 +226,8 @@ buildBookingOtpSmsForCategory merchantOperatingCityId booking otp = do
             amount = amountTxt,
             durationHours = durationHours,
             distanceKms = distanceKms,
-            appUrl = appUrl
+            appUrl = appUrl,
+            serviceTier = fromMaybe (show booking.vehicleServiceTierType) booking.serviceTierName
           }
     Just (DTC.InterCity _ mbCity) -> do
       appUrl <- getAppUrl merchantOperatingCityId
@@ -242,13 +246,15 @@ buildBookingOtpSmsForCategory merchantOperatingCityId booking otp = do
             amount = amountTxt,
             destination = destination,
             distanceKms = distanceKms,
-            appUrl = appUrl
+            appUrl = appUrl,
+            serviceTier = fromMaybe (show booking.vehicleServiceTierType) booking.serviceTierName
           }
     _ ->
       buildSendBookingOTPMessage merchantOperatingCityId $
         BuildSendBookingOTPMessageReq
           { otp = otpTxt,
-            amount = amountTxt
+            amount = amountTxt,
+            serviceTier = fromMaybe (show booking.vehicleServiceTierType) booking.serviceTierName
           }
   where
     getAppUrl mocId = do
