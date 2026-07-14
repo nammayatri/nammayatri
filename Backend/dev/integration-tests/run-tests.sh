@@ -6,6 +6,8 @@
 #   ./run-tests.sh rides                              # Run all ride booking suites for all cities
 #   ./run-tests.sh rides NY_Bangalore                 # Run ride suites for Bangalore only
 #   ./run-tests.sh rides NY_Bangalore 01-NYAutoRideFlow  # Run specific suite
+#   ./run-tests.sh auto                              # Run all Auto ride suites (Bangalore + Chennai)
+#   ./run-tests.sh auto NY_Chennai                    # Run Auto ride suites for Chennai only
 #   ./run-tests.sh bus                               # Run all bus ticket booking suites for all cities
 #   ./run-tests.sh bus FRFS_Chennai                   # Run bus suites for Chennai only
 #   ./run-tests.sh metro                              # Run all metro ticket booking suites
@@ -37,6 +39,7 @@ set -- "${args[@]+"${args[@]}"}"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 RIDE_DIR="$SCRIPT_DIR/collections/RideBookingFlow"
+AUTO_DIR="$SCRIPT_DIR/collections/AutoRideFlow"
 ONLINE_DIR="$SCRIPT_DIR/collections/OnlineRideBookingFlow"
 ONLINE_OFFERS_DIR="$SCRIPT_DIR/collections/OnlineRideBookingOffers"
 OFFLINE_OFFERS_DIR="$SCRIPT_DIR/collections/OfflineRideBookingOffers"
@@ -202,7 +205,7 @@ list_suites() {
             done
         fi
     done
-    for label_dir in "Toll Config:$TOLL_CONFIG_DIR" "Toll Ride:$TOLL_RIDE_DIR" "Rewards:$REWARDS_DIR" "Online Ride:$ONLINE_DIR" "Bus:$BUS_DIR" "Metro:$METRO_DIR" "Subway:$SUBWAY_DIR" "Scheduler:$SCHEDULER_DIR" "Fleet Management:$FLEET_DIR"; do
+    for label_dir in "Auto Ride:$AUTO_DIR" "Toll Config:$TOLL_CONFIG_DIR" "Toll Ride:$TOLL_RIDE_DIR" "Rewards:$REWARDS_DIR" "Online Ride:$ONLINE_DIR" "Bus:$BUS_DIR" "Metro:$METRO_DIR" "Subway:$SUBWAY_DIR" "Scheduler:$SCHEDULER_DIR" "Fleet Management:$FLEET_DIR"; do
         local label="${label_dir%%:*}"
         local dir="${label_dir#*:}"
         echo ""
@@ -544,6 +547,7 @@ run_pan_hard_check() {
     [ -x "$PAN_HARD_CHECK_DIR/run.sh" ] || { echo "No PanHardCheck runner at $PAN_HARD_CHECK_DIR/run.sh"; exit 1; }
     "$PAN_HARD_CHECK_DIR/run.sh" "${1:-NY_Bangalore}"
 }
+run_auto() { run_frfs "$AUTO_DIR" "AUTO RIDE" "${1:-}" "${2:-}"; }
 run_intercity() { run_frfs "$INTERCITY_DIR" "INTERCITY" "${1:-}" "${2:-}"; }
 run_rental() { run_frfs "$RENTAL_DIR" "RENTAL" "${1:-}" "${2:-}"; }
 run_fleet() { run_frfs "$FLEET_DIR" "FLEET MANAGEMENT" "${1:-}" "${2:-}"; }
@@ -612,6 +616,7 @@ show_help() {
     echo "Commands:"
     echo "  (none)              Run all ride booking suites for all cities"
     echo "  rides               Run all ride booking suites for all cities"
+    echo "  auto                Run Auto ride suites (AutoRideFlow, cancellations, RideNearby; Bangalore + Chennai only)"
     echo "  bus                 Run all bus ticket booking suites"
     echo "  metro               Run all metro ticket booking suites"
     echo "  subway              Run all subway ticket booking suites"
@@ -654,6 +659,9 @@ show_help() {
     echo "  ./run-tests.sh rides                              # All ride suites, all cities"
     echo "  ./run-tests.sh rides NY_Bangalore                 # All ride suites for Bangalore"
     echo "  ./run-tests.sh rides NY_Bangalore 01-AutoRideFlow # Specific suite + city"
+    echo "  ./run-tests.sh auto                               # All Auto ride suites (Bangalore + Chennai)"
+    echo "  ./run-tests.sh auto NY_Chennai                    # Auto ride suites for Chennai"
+    echo "  ./run-tests.sh auto NY_Chennai 04-RideNearby      # Specific Auto suite + city"
     echo "  ./run-tests.sh bus                                # All bus suites, all cities"
     echo "  ./run-tests.sh bus FRFS_Chennai                   # Bus suites for Chennai"
     echo "  ./run-tests.sh metro FRFS_Bangalore               # Metro suites for Bangalore"
@@ -728,6 +736,9 @@ case "${1:-}" in
         ;;
     stcl|stcl-membership)
         run_stcl "${2:-}" "${3:-}"
+        ;;
+    auto)
+        run_auto "${2:-}" "${3:-}"
         ;;
     intercity)
         run_intercity "${2:-}" "${3:-}"
