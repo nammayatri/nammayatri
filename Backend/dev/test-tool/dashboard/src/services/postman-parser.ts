@@ -103,8 +103,6 @@ const URL_VAR_TO_SERVICE: Record<string, { service: ParsedStep['service']; strip
   'baseUrl_dashboard': { service: 'rider' },
   'mockServerUrl': { service: 'mock-server' },
   'mock_server_url': { service: 'juspay-payment' },
-  // OperationHubFlow uses baseURL_BPP_Driver_Direct (http://localhost:8016/dashboard) — direct BPP dashboard endpoint
-  'baseURL_BPP_Driver_Direct': { service: 'driver' },
 };
 
 // ── Parser ──
