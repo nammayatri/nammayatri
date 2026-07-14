@@ -86,10 +86,10 @@ invoiceToAuditValue = Aeson.toJSON . toTType' @BeamInvoice.Invoice . hideInvoice
         }
 
 indirectTaxToAuditValue :: IndirectTaxTransaction -> Aeson.Value
-indirectTaxToAuditValue = Aeson.toJSON . toTType' @BeamIndirectTax.IndirectTaxTransaction . hideIndirectTaxTransactionSensiveFields
+indirectTaxToAuditValue = Aeson.toJSON . toTType' @BeamIndirectTax.IndirectTaxTransaction . hideIndirectTaxTransactionSensitiveFields
   where
-    hideIndirectTaxTransactionSensiveFields :: IndirectTaxTransaction -> IndirectTaxTransaction
-    hideIndirectTaxTransactionSensiveFields IndirectTaxTransaction {..} =
+    hideIndirectTaxTransactionSensitiveFields :: IndirectTaxTransaction -> IndirectTaxTransaction
+    hideIndirectTaxTransactionSensitiveFields IndirectTaxTransaction {..} =
       IndirectTaxTransaction
         { gstinOfParty = SD.maskTaxNo <$> gstinOfParty,
           issuedToTaxNo = SD.maskTaxNo <$> issuedToTaxNo,

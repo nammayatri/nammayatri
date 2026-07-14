@@ -42,6 +42,24 @@ findAllByReferenceId ::
 findAllByReferenceId refId =
   findAllWithKV [Se.Is Beam.referenceId $ Se.Eq refId]
 
+findLatestByAccount ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account ->
+  m (Maybe Domain.LedgerEntry)
+findLatestByAccount accountId =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Or
+            [ Se.Is Beam.toAccountId $ Se.Eq (Kernel.Types.Id.getId accountId),
+              Se.Is Beam.fromAccountId $ Se.Eq (Kernel.Types.Id.getId accountId)
+            ]
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    (Just 1)
+    (Just 0)
+    <&> listToMaybe
+
 findByAccountsWithOptions ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
   [Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account] ->

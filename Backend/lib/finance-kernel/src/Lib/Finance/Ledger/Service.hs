@@ -34,6 +34,7 @@ module Lib.Finance.Ledger.Service
     getEntriesByReferenceAndToAccount,
     getEntriesByReferenceAndFromAccount,
     getEntriesByAccount,
+    getLatestEntryByAccount,
     getEntriesBetween,
 
     -- * Query by account (the main way domain queries)
@@ -543,6 +544,13 @@ getEntriesByAccount accountId = do
   fromEntries <- QLedger.findByFromAccount accountId
   toEntries <- QLedger.findByToAccount accountId
   pure $ fromEntries <> toEntries
+
+-- | Latest ledger entry for an account (by createdAt)
+getLatestEntryByAccount ::
+  (BeamFlow.BeamFlow m r) =>
+  Id Account ->
+  m (Maybe LedgerEntry)
+getLatestEntryByAccount = QLedgerExtra.findLatestByAccount
 
 -- | Get entries for an account within a time range
 getEntriesBetween ::
