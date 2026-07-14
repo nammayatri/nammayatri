@@ -18,6 +18,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
 import qualified Kernel.Utils.GenericPretty
+import qualified Lib.Types.SpecialLocation
 import qualified Servant.Client.Core
 import qualified Tools.Beam.UtilsTH
 
@@ -45,6 +46,7 @@ data Estimate = Estimate
     estimatedPickupDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedStaticDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedTotalFare :: Kernel.Types.Common.Price,
+    fareSettlementType :: Kernel.Prelude.Maybe Lib.Types.SpecialLocation.FareSettlementType,
     id :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate,
     insuredAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

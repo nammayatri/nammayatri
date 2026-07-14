@@ -720,7 +720,8 @@ data UpsertSpecialLocationReq = UpsertSpecialLocationReq
     city :: Maybe Context.City,
     isQueueEnabled :: Maybe Bool,
     supportNumber :: Maybe Text,
-    render :: Maybe SLT.RenderType
+    render :: Maybe SLT.RenderType,
+    fareSettlementType :: Maybe SLT.FareSettlementType
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -737,6 +738,7 @@ instance FromMultipart Tmp UpsertSpecialLocationReq where
       <*> parseMaybeInput "isQueueEnabled" form
       <*> parseMaybeInput "supportNumber" form
       <*> parseMaybeInput "render" form
+      <*> parseMaybeInput "fareSettlementType" form
 
 instance HideSecrets UpsertSpecialLocationReq where
   hideSecrets = identity
@@ -757,7 +759,8 @@ data UpsertSpecialLocationReqT = UpsertSpecialLocationReqT
     city :: Maybe Context.City,
     isQueueEnabled :: Maybe Bool,
     supportNumber :: Maybe Text,
-    render :: Maybe SLT.RenderType
+    render :: Maybe SLT.RenderType,
+    fareSettlementType :: Maybe SLT.FareSettlementType
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

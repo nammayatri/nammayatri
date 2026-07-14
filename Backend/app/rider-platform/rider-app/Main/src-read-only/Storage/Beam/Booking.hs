@@ -22,6 +22,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Version
 import qualified Kernel.Utils.Common
+import qualified Lib.Types.SpecialLocation
 import qualified SharedLogic.Type
 import Tools.Beam.UtilsTH
 
@@ -65,6 +66,7 @@ data BookingT f = BookingT
     estimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     estimatedStaticDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     estimatedTotalFare :: B.C f Kernel.Types.Common.HighPrecMoney,
+    fareSettlementType :: B.C f (Kernel.Prelude.Maybe Lib.Types.SpecialLocation.FareSettlementType),
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fulfillmentId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     hasStops :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
