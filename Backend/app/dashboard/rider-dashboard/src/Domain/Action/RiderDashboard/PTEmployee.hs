@@ -81,10 +81,10 @@ requireBulkPersonFields :: MonadFlow m => Int -> BulkCreatePerson -> m ()
 requireBulkPersonFields idx p = do
   let rowTag = "Row " <> T.pack (show idx) <> ": "
       require label = maybe (throwError (InvalidRequest $ rowTag <> label <> " is missing or blank")) (const (pure ()))
-  require "mobileNumber" p.mobileNumber         -- login composite key
+  require "mobileNumber" p.mobileNumber -- login composite key
   require "mobileCountryCode" p.mobileCountryCode -- login composite key
-  require "tokenNo" p.tokenNo                   -- login credential
-  require "roleName" p.roleName                 -- Person.roleId is NOT NULL
+  require "tokenNo" p.tokenNo -- login credential
+  require "roleName" p.roleName -- Person.roleId is NOT NULL
 
 bulkCreate :: (BeamFlow m r, EncFlow m r) => Id DP.Person -> BulkCreatePersonReq -> m BulkCreatePersonResp
 bulkCreate actorPersonId req = do
@@ -155,8 +155,10 @@ bulkCreate actorPersonId req = do
   let ids = map ((.id) . fst) pairs
   logInfo $
     "[PTEmployee.bulkCreate] actor=" <> actorPersonId.getId
-      <> " merchant=" <> req.merchantId.getShortId
-      <> " count=" <> T.pack (show (length ids))
+      <> " merchant="
+      <> req.merchantId.getShortId
+      <> " count="
+      <> T.pack (show (length ids))
   pure BulkCreatePersonResp {totalCount = length ids, createdPersonIds = ids}
 
 buildMerchantAccess :: MonadFlow m => DMerchant.Merchant -> City.City -> UTCTime -> PT.Person -> m DAccess.MerchantAccess
