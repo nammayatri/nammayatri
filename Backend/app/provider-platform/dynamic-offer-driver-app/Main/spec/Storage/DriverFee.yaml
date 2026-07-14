@@ -152,6 +152,8 @@ DriverFee:
   constraints:
     id: PrimaryKey
     driverId: "!SecondaryKey" # forcing to be a secondary key
+    feeType: "!SecondaryKeyPartial feeType:CANCELLATION_PENALTY"
+    serviceName: "!SecondaryKeyPartial serviceName:YATRI_RENTAL"
 
   sqlType:
     platformFee: numeric(30,2)
