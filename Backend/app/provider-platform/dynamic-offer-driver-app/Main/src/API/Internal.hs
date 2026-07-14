@@ -89,6 +89,7 @@ type API =
            :<|> InMemManagement.API
            :<|> MasterCloudForward.API
            :<|> XyneWebhook.API
+           :<|> XyneWebhook.BearerAPI
            :<|> NotificationWebhook.API
        )
 
