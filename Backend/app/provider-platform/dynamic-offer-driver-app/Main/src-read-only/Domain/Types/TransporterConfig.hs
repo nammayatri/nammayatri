@@ -169,7 +169,6 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     enableCourtRecordCheck :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableDashboardSms :: Kernel.Prelude.Bool,
     enableDirectWalletIncentives :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    enableDocumentMetadata :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableExistingVehicleInBulkUpload :: Kernel.Prelude.Bool,
     enableFaceVerification :: Kernel.Prelude.Bool,
     enableFareCalculatorV2 :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

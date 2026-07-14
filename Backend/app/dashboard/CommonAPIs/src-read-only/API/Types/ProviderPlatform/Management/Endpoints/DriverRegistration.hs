@@ -346,9 +346,9 @@ data LDCApproveDetails = LDCApproveDetails {documentId :: Kernel.Types.Id.Id Das
 
 data LocalResidenceProofApproveDetails = LocalResidenceProofApproveDetails
   { documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image,
-    state :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState,
-    proofDocumentType :: Kernel.Prelude.Maybe Dashboard.Common.Driver.AddressDocumentType,
-    address :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    state :: Kernel.Types.Beckn.Context.IndianState,
+    proofDocumentType :: Dashboard.Common.Driver.AddressDocumentType,
+    address :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

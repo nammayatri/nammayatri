@@ -213,7 +213,7 @@ validateMandatoryVehicleDocsForRC transporterConfig rc =
     let entity = IQuery.VehicleRCEntity rc
     entityImages <- IQuery.findAllByEntityId transporterConfig entity
     now <- getCurrentTime
-    let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now}
+    let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now, enableDocumentMetadata = False}
         language = merchantOperatingCity.language
         onlyMandatoryDocs = Just True
         skipMessages = True
@@ -515,7 +515,7 @@ getProcessedVehicleDocuments :: IQuery.EntityImagesInfo -> DVC.DocumentType -> R
 getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo = do
   let entity = entityImagesInfo.entity
       (mbS3Path, mbImageId) = getImageMetaFromVehicleImage entityImagesInfo docType mbRcImagesInfo
-      enableMetadata = fromMaybe False entityImagesInfo.transporterConfig.enableDocumentMetadata
+      enableMetadata = entityImagesInfo.enableDocumentMetadata
       lookupImage imgId =
         let mbImg = find (\img -> img.id == imgId) entityImagesInfo.entityImages
             s3 = mbImg <&> (.s3Path)

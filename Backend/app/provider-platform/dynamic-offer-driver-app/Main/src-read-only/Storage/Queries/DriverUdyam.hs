@@ -48,8 +48,8 @@ findByDriverIdAndVerificationStatus driverId verificationStatus = do
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverUdyam.DriverUdyam -> m (Maybe Domain.Types.DriverUdyam.DriverUdyam))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image) -> m (Maybe Domain.Types.DriverUdyam.DriverUdyam))
-findByImageId documentImageId = do findOneWithKV [Se.Is Beam.documentImageId $ Se.Eq (Kernel.Types.Id.getId <$> documentImageId)]
+findByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.DriverUdyam.DriverUdyam))
+findByImageId documentImageId = do findOneWithKV [Se.Is Beam.documentImageId $ Se.Eq (Kernel.Types.Id.getId documentImageId)]
 
 updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateVerificationStatus verificationStatus driverId = do
@@ -70,7 +70,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.DriverUdyam.DriverUdyam {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.documentImageId (Kernel.Types.Id.getId <$> documentImageId),
+    [ Se.Set Beam.documentImageId (Kernel.Types.Id.getId documentImageId),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.enterpriseName enterpriseName,
       Se.Set Beam.enterpriseType enterpriseType,
@@ -90,7 +90,7 @@ instance FromTType' Beam.DriverUdyam Domain.Types.DriverUdyam.DriverUdyam where
     pure $
       Just
         Domain.Types.DriverUdyam.DriverUdyam
-          { documentImageId = Kernel.Types.Id.Id <$> documentImageId,
+          { documentImageId = Kernel.Types.Id.Id documentImageId,
             driverId = Kernel.Types.Id.Id driverId,
             enterpriseName = enterpriseName,
             enterpriseType = enterpriseType,
@@ -108,7 +108,7 @@ instance FromTType' Beam.DriverUdyam Domain.Types.DriverUdyam.DriverUdyam where
 instance ToTType' Beam.DriverUdyam Domain.Types.DriverUdyam.DriverUdyam where
   toTType' (Domain.Types.DriverUdyam.DriverUdyam {..}) = do
     Beam.DriverUdyamT
-      { Beam.documentImageId = Kernel.Types.Id.getId <$> documentImageId,
+      { Beam.documentImageId = Kernel.Types.Id.getId documentImageId,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.enterpriseName = enterpriseName,
         Beam.enterpriseType = enterpriseType,

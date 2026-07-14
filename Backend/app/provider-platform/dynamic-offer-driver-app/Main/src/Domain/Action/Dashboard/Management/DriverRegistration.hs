@@ -122,6 +122,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import SharedLogic.Analytics as Analytics
+import qualified SharedLogic.Association.Change as AC
 import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -895,7 +896,7 @@ getDriverRegistrationDocumentsInfo :: ShortId DM.Merchant -> Context.City -> Id 
 getDriverRegistrationDocumentsInfo merchantShortId opCity driverId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  statusRes <- DStatus.statusHandler (Id driverId.getId, merchant.id, merchantOpCity.id) Nothing Nothing Nothing Nothing Nothing Nothing
+  statusRes <- DStatus.statusHandler (Id driverId.getId, merchant.id, merchantOpCity.id) Nothing Nothing Nothing Nothing Nothing Nothing Nothing
   pure $ castToManagementStatusRes statusRes
 
 castToManagementStatusRes :: DStatus.StatusRes -> Common.StatusRes
@@ -1907,7 +1908,7 @@ approveAndUpdateUdyamDocument req merchantId merchantOpCityId = do
   let imageId = Id req.documentImageId.getId
   udyamImage <- findApproveImage imageId
   let driverId = udyamImage.personId
-  mbUdyamByImage <- QUdyam.findByImageId (Just imageId)
+  mbUdyamByImage <- QUdyam.findByImageId imageId
   -- Fallback for re-upload-after-reject: the UDYAM row's documentImageId still points at the
   -- prior (rejected) image. Look up by udyam number hash to recover the existing row.
   mbUdyamResolved <- case mbUdyamByImage of
@@ -1926,7 +1927,7 @@ approveAndUpdateUdyamDocument req merchantId merchantOpCityId = do
       encryptedUam <- encrypt uamNumber
       let updatedUdyam =
             udyam
-              { DUdyam.documentImageId = Just imageId,
+              { DUdyam.documentImageId = imageId,
                 DUdyam.udyamNumber = encryptedUam,
                 DUdyam.verificationStatus = VALID,
                 DUdyam.rejectReason = Nothing,
@@ -1947,7 +1948,7 @@ approveAndUpdateUdyamDocument req merchantId merchantOpCityId = do
             DUdyam.DriverUdyam
               { id = udyamId,
                 driverId = driverId,
-                documentImageId = Just imageId,
+                documentImageId = imageId,
                 udyamNumber = encryptedUam,
                 verificationStatus = VALID,
                 verifiedBy = Nothing,
@@ -2107,6 +2108,9 @@ updateFleetOwnerInfoOnDocApproval person updateAction =
 
 approveAndUpdateLocalResidenceProof :: Common.LocalResidenceProofApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateLocalResidenceProof req merchantId merchantOperatingCityId = do
+  let address = req.address
+      addressState = req.state
+      proofDocumentType = req.proofDocumentType
   let imageId = Id req.documentImageId.getId
   image <- findApproveImage imageId
   QImage.updateVerificationStatusByIdAndType VALID imageId DVC.LocalResidenceProof
@@ -2114,26 +2118,26 @@ approveAndUpdateLocalResidenceProof req merchantId merchantOperatingCityId = do
   person <- QPerson.findById image.personId >>= fromMaybeM (PersonNotFound image.personId.getId)
   if DCommon.checkFleetOwnerRole person.role
     then do
-      fleetInfo <- QFOI.findByPrimaryKey image.personId >>= fromMaybeM (FleetOwnerNotFound image.personId.getId)
+      void $ QFOI.findByPrimaryKey image.personId >>= fromMaybeM (FleetOwnerNotFound image.personId.getId)
       QFOI.updateLocalAddressDetails
-        (req.address <|> fleetInfo.address)
-        (req.state <|> fleetInfo.addressState)
-        ((DDriver.castFromCommon <$> req.proofDocumentType) <|> fleetInfo.addressDocumentType)
+        (Just address)
+        (Just addressState)
+        (Just (DDriver.castFromCommon proofDocumentType))
         image.personId
     else do
       mbInfo <- QDII.findByPrimaryKey image.personId
       case mbInfo of
         Just info ->
-          QDII.updateByPrimaryKey info {DII.addressState = req.state <|> info.addressState, DII.addressDocumentType = (DDriver.castFromCommon <$> req.proofDocumentType) <|> info.addressDocumentType, DII.address = req.address <|> info.address, DII.updatedAt = now}
+          QDII.updateByPrimaryKey info {DII.addressState = Just addressState, DII.addressDocumentType = Just (DDriver.castFromCommon proofDocumentType), DII.address = Just address, DII.updatedAt = now}
         Nothing ->
           QDII.create
             DII.DriverIdentityInfo
               { DII.driverId = image.personId,
                 DII.merchantId = merchantId,
                 DII.merchantOperatingCityId = merchantOperatingCityId,
-                DII.addressState = req.state,
-                DII.addressDocumentType = DDriver.castFromCommon <$> req.proofDocumentType,
-                DII.address = req.address,
+                DII.addressState = Just addressState,
+                DII.addressDocumentType = Just (DDriver.castFromCommon proofDocumentType),
+                DII.address = Just address,
                 DII.courtRecord = Nothing,
                 DII.nomineeDob = Nothing,
                 DII.nomineeName = Nothing,
@@ -2262,7 +2266,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
             else QDII.updateLocalAddressDetails Nothing Nothing Nothing image.personId
         DVC.UDYAMCertificate -> do
           rejectImage imageId
-          mbUdyam <- QUdyam.findByImageId (Just imageId)
+          mbUdyam <- QUdyam.findByImageId imageId
           whenJust mbUdyam $ \udyam ->
             QUdyam.updateVerificationStatusAndRejectReason INVALID (Just reason) udyam.id
         docType
@@ -2487,10 +2491,13 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
     Common.Reject rejectReq -> do
       mbPersonIdRaw <- getRejectTargetPersonId rejectReq
       whenJust mbPersonIdRaw $ \personId -> do
-        mbDriverInfo <- QDriverInfo.findById personId
-        whenJust mbDriverInfo $ \driverInfo ->
-          when driverInfo.onRide $
-            throwError (InvalidRequest "Cannot reject document for a driver who is currently on a ride")
+        mbDocType <- getRejectTargetDocumentType rejectReq
+        isMandatoryDoc <- case mbDocType of
+          Just docType -> do
+            docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId docType Nothing
+            pure $ Kernel.Prelude.any (\config -> fromMaybe config.isMandatory config.isMandatoryForEnabling) docConfigs
+          Nothing -> pure False
+        when isMandatoryDoc $ AC.guardNoLiveRideByDriver personId
       handleRejectRequest rejectReq merchant.id merchantOpCityId
       mbRcId <- getRejectTargetRcId rejectReq
       processPostUpdate mbPersonIdRaw mbRcId
@@ -2572,6 +2579,18 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
           mbImage <- QImage.findById (Id imgId.getId)
           pure $ (.personId) <$> mbImage
       _ -> pure Nothing
+
+    -- Document type of the rejected doc, used to gate the onRide guard to mandatory docs only.
+    getRejectTargetDocumentType :: Common.RejectDetails -> Flow (Maybe DVC.DocumentType)
+    getRejectTargetDocumentType = \case
+      Common.ImageDocuments imgReq -> do
+        mbImage <- QImage.findById (Id imgReq.documentImageId.getId)
+        pure $ (.imageType) <$> mbImage
+      Common.CommonDocumentReject req -> do
+        mbDoc <- QCommonDriverOnboardingDocuments.findById (Id req.documentId.getId)
+        pure $ (.documentType) <$> mbDoc
+      Common.SSNReject _ -> pure (Just DVC.SocialSecurityNumber)
+      Common.InspectionHubReject _ -> pure (Just DVC.InspectionHub)
 
     getRejectTargetPersonId :: Common.RejectDetails -> Flow (Maybe (Id DP.Person))
     getRejectTargetPersonId = \case
