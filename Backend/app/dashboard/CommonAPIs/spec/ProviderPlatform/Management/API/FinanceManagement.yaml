@@ -170,6 +170,7 @@ apis:
         - from: UTCTime
         - to: UTCTime
         - sourceType: Text
+        - subscriptionId: Id SubscriptionPurchase
       auth: ApiAuthV2
       response:
         type: WalletLedgerRes
@@ -526,12 +527,19 @@ types:
     - pgMerchantId: Maybe Text
 
   # ----- Wallet ledger (balance + ledger combined) -----
+  # normal mode (no subscriptionId): Liability wallet account — all entries on that account;
+  #   expiryEntries/creditEntries = Nothing.
+  # subscription mode (subscriptionId set): prepaid RideCredit account — RideSubscriptionDebit entries (ride <-> ledger join);
+  #   expiryEntries/creditEntries returned separately (not part of the join; mixing into one list would make limit/offset incorrect).
   WalletLedgerRes:
     - availableWalletBalance: Maybe HighPrecMoney
     - lockedWalletBalance: Maybe HighPrecMoney
     - lastWalletUpdatedAt: Maybe UTCTime
     - totalItems: Int
     - ledgerEntries: [WalletLedgerItem]
+    - expiryEntries: Maybe [WalletLedgerItem] # subscription filter only — ExpiryCreditTransfer entries
+    - creditEntries: Maybe [WalletLedgerItem] # subscription filter only — SubscriptionCredit entries
+    - subscriptionId: Maybe (Id SubscriptionPurchase) # echo of request filter; Just only in subscription mode
   WalletLedgerItem:
     - walletTxnId: Maybe Text
     - walletTxnDate: Maybe UTCTime
