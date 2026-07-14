@@ -1041,7 +1041,7 @@
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
               "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type','reversal_of'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}]}); }",
-              "var _RT = ['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission'];",
+              "var _RT = ['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission','RideFareRefundCommissionVAT'];",
               "function _isRefund(r){ return _RT.indexOf(r.reference_type) >= 0; }",
               "function _ok(rows){ var rr=rows.filter(_isRefund); return rr.some(function(r){return r.status==='VOIDED';}) && rr.some(function(r){return r.status==='SETTLED';}); }",
               "function _assert(rows){",
@@ -1063,7 +1063,7 @@
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
               "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type','reversal_of'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}]}); }",
-              "var _REFUND_RT = ['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission'];",
+              "var _REFUND_RT = ['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission','RideFareRefundCommissionVAT'];",
               "function _isRefund(r){ return _REFUND_RT.indexOf(r.reference_type) >= 0; }",
               "function _ok(rows){ var rr=rows.filter(_isRefund); return rr.some(function(r){return r.status==='VOIDED';}) && rr.filter(function(r){return r.status==='SETTLED' && !r.reversal_of;}).length>=2; }",
               "function _assert(rows){",
@@ -1093,7 +1093,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\",\"reversal_of\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
         },
         "url": {
           "raw": "{{mockServerUrl}}/mock/sql/select",

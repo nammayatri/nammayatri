@@ -715,7 +715,7 @@
               "if (rows.length) {",
               "  var arr = [];",
               "  try { arr = JSON.parse(rows[0].fare_breakups || '[]'); } catch(e) { arr = []; } arr = arr.filter(function(z){ var _d=(z&&z.description)||''; return _d.indexOf('TOLL_')!==0 && _d.indexOf('PARKING_')!==0; });",
-              "  var tollBase = _r2(0.08*T), tollVat = _r2(0.02*T), parkBase = _r2(0.04*T), parkVat = _r2(0.01*T);",
+              "  var TOLL_VAT_PCT = 0.25; // toll/parking carry the standard rate, deliberately != the ride's 13.5%\nvar tollBase = _r2(0.08*T), parkBase = _r2(0.04*T);\nvar tollVat = tollBase*TOLL_VAT_PCT, parkVat = parkBase*TOLL_VAT_PCT; // exact: the stored pair IS the rate (invoices derive VAT% by dividing it), so rounding the VAT slice skews the printed rate",
               "  arr.push({amount:tollBase,currency:cur,description:'TOLL_FARE_TAX_EXCLUSIVE'});",
               "  arr.push({amount:tollVat,currency:cur,description:'TOLL_FARE_TAX'});",
               "  arr.push({amount:parkBase,currency:cur,description:'PARKING_CHARGE_TAX_EXCLUSIVE'});",

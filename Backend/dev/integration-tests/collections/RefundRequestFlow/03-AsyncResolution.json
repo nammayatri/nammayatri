@@ -881,9 +881,9 @@
           "script": {
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
-              "var _REFUND_RT = ['RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideFareRefundCommission'];",
+              "var _REFUND_RT = ['RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideFareRefundCommission','RideFareRefundCommissionVAT'];",
               "function _isRefund(r){ return _REFUND_RT.indexOf(r.reference_type) >= 0; }",
-              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}]}); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='},{column_name:'entity_reference_type',val:'RefundRequest',op:'='},{column_name:'entity_reference_id',val:pm.environment.get('refundRequestId'),op:'='}]}); }",
               "function _ok(rows){ return rows.some(function(r){return r.status==='PENDING' && _isRefund(r);}); }",
               "function _log(rows){ try { console.log('  ↳ refund legs:', JSON.stringify(rows.filter(_isRefund).map(function(x){return {st:x.status, amt:x.amount, type:x.reference_type};}))); } catch(e){} }",
               "function _assert(rows){ _log(rows); pm.test('refund leg(s) PENDING after async approve', function(){ var pend = (rows||[]).filter(function(r){return r.status==='PENDING' && _isRefund(r);}); pm.expect(pend.length, 'expected PENDING provisional refund legs after async approve').to.be.above(0); }); }",
@@ -903,7 +903,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"},{\"column_name\":\"entity_reference_type\",\"val\":\"RefundRequest\",\"op\":\"=\"},{\"column_name\":\"entity_reference_id\",\"val\":\"{{refundRequestId}}\",\"op\":\"=\"}]}"
         },
         "url": {
           "raw": "{{mockServerUrl}}/mock/sql/select",
@@ -1074,7 +1074,7 @@
           "script": {
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
-              "var _REFUND_RT = ['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission'];",
+              "var _REFUND_RT = ['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission','RideFareRefundCommissionVAT'];",
               "function _isRefund(r){ return _REFUND_RT.indexOf(r.reference_type) >= 0; }",
               "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}]}); }",
               "function _ok(rows){ return rows.some(function(r){return r.status==='SETTLED' && _isRefund(r);}); }",
@@ -1098,7 +1098,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"},{\"column_name\":\"entity_reference_type\",\"val\":\"RefundRequest\",\"op\":\"=\"},{\"column_name\":\"entity_reference_id\",\"val\":\"{{refundRequestId}}\",\"op\":\"=\"}]}"
         },
         "url": {
           "raw": "{{mockServerUrl}}/mock/sql/select",
@@ -1129,9 +1129,9 @@
           "script": {
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
-              "var _REFUND_RT = ['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission'];",
+              "var _REFUND_RT = ['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission','RideFareRefundCommissionVAT'];",
               "function _isRefund(r){ return _REFUND_RT.indexOf(r.reference_type) >= 0; }",
-              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type'],where_clause:[{column_name:'reference_id',val:pm.environment.get('bppBookingId'),op:'='}]}); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type'],where_clause:[{column_name:'reference_id',val:pm.environment.get('bppBookingId'),op:'='},{column_name:'entity_reference_type',val:'RefundRequest',op:'='},{column_name:'entity_reference_id',val:pm.environment.get('refundRequestId'),op:'='}]}); }",
               "function _ok(rows){ return rows.some(function(r){return r.status==='SETTLED' && _isRefund(r);}); }",
               "function _log(rows){ try { console.log('  ↳ refund legs:', JSON.stringify(rows.filter(_isRefund).map(function(x){return {st:x.status, amt:x.amount, type:x.reference_type};}))); } catch(e){} }",
               "function _assert(rows){ _log(rows); var settled = (rows||[]).filter(function(r){return r.status==='SETTLED' && _isRefund(r);});",
@@ -1153,7 +1153,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{bppBookingId}}\",\"op\":\"=\"}]}"
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{bppBookingId}}\",\"op\":\"=\"},{\"column_name\":\"entity_reference_type\",\"val\":\"RefundRequest\",\"op\":\"=\"},{\"column_name\":\"entity_reference_id\",\"val\":\"{{refundRequestId}}\",\"op\":\"=\"}]}"
         },
         "url": {
           "raw": "{{mockServerUrl}}/mock/sql/select",
@@ -1815,7 +1815,7 @@
           "script": {
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
-              "var _REFUND_RT = ['RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideFareRefundCommission'];",
+              "var _REFUND_RT = ['RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideFareRefundCommission','RideFareRefundCommissionVAT'];",
               "function _isRefund(r){ return _REFUND_RT.indexOf(r.reference_type) >= 0; }",
               "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}]}); }",
               "function _ok(rows){ return rows.some(function(r){return r.status==='VOIDED' && _isRefund(r);}); }",
@@ -1837,7 +1837,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"},{\"column_name\":\"entity_reference_type\",\"val\":\"RefundRequest\",\"op\":\"=\"},{\"column_name\":\"entity_reference_id\",\"val\":\"{{refundRequestId}}\",\"op\":\"=\"}]}"
         },
         "url": {
           "raw": "{{mockServerUrl}}/mock/sql/select",
@@ -1868,7 +1868,7 @@
           "script": {
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
-              "var _REFUND_RT = ['RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideFareRefundCommission'];",
+              "var _REFUND_RT = ['RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideFareRefundCommission','RideFareRefundCommissionVAT'];",
               "function _isRefund(r){ return _REFUND_RT.indexOf(r.reference_type) >= 0; }",
               "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type'],where_clause:[{column_name:'reference_id',val:pm.environment.get('bppBookingId'),op:'='}]}); }",
               "function _ok(rows){ return rows.some(function(r){return r.status==='VOIDED' && _isRefund(r);}); }",
@@ -1894,7 +1894,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{bppBookingId}}\",\"op\":\"=\"}]}"
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{bppBookingId}}\",\"op\":\"=\"},{\"column_name\":\"entity_reference_type\",\"val\":\"RefundRequest\",\"op\":\"=\"},{\"column_name\":\"entity_reference_id\",\"val\":\"{{refundRequestId}}\",\"op\":\"=\"}]}"
         },
         "url": {
           "raw": "{{mockServerUrl}}/mock/sql/select",

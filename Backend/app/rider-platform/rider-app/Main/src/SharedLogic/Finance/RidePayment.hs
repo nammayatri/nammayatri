@@ -296,6 +296,8 @@ buildRiderFinanceCtx merchantId merchantOpCityId currency isOnline riderId refer
       counterpartyId = riderId,
       concernedIndividualId = Nothing,
       referenceId = referenceId,
+      entityReferenceId = Nothing,
+      entityReferenceType = Nothing,
       merchantName = merchantName,
       merchantShortId = merchantShortId,
       issuedByAddress = Nothing,
@@ -981,26 +983,27 @@ createTipLedger ctx tipAmount = do
 -- ---------------------------------------------------------------------------
 --
 -- Per refund_request (per-component refTypes RideFareRefund/TollRefund/ParkingRefund + VAT,
--- ref = rideId, {refundRequestId} metadata):
+-- ref = rideId, entityReference = (RefundRequest, refundRequestId)):
 -- raise → pending OwnerExpense→BuyerControl legs; success → settle them + post the kernel
 -- reversal (BuyerControl→OwnerExpense) so BAP nets to zero (pass-through); failure → void them.
 -- VOIDED legs are ignored by dedup/guards (so a retry re-raises); "done" = a SETTLED leg.
 
--- | Links a ledger leg to its refund request. Legs carry only the id; request state lives
---   solely in refund_request, and checks pair the id with the leg's own status column.
-newtype RefundLedgerMetadata = RefundLedgerMetadata {refundRequestId :: Text}
-  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+-- | Every entry of one refund request: its legs plus the reversals that zero them out.
+getRefundRequestLegsWithReversals ::
+  (BeamFlow.BeamFlow m r) =>
+  Id DRefundRequest.RefundRequest ->
+  m [LE.LedgerEntry]
+getRefundRequestLegsWithReversals refundRequestId =
+  Lib.Finance.Ledger.Service.getEntriesByEntityReference LE.RefundRequest refundRequestId.getId
 
-mkRefundMetadata :: Id DRefundRequest.RefundRequest -> Aeson.Value
-mkRefundMetadata refundRequestId = Aeson.toJSON (RefundLedgerMetadata refundRequestId.getId)
-
-entryMatchesRefundRequest :: Id DRefundRequest.RefundRequest -> LE.LedgerEntry -> Bool
-entryMatchesRefundRequest refundRequestId entry =
-  (metadataRefundRequestId =<< entry.metadata) == Just refundRequestId.getId
-  where
-    metadataRefundRequestId v = case Aeson.fromJSON v of
-      Aeson.Success (RefundLedgerMetadata rid) -> Just rid
-      _ -> Nothing
+-- | The legs of one refund request, at whatever status they hold (PENDING when raised, SETTLED
+--   on success, VOIDED on failure); the reversals that zero them out are excluded.
+getRefundRequestLegs ::
+  (BeamFlow.BeamFlow m r) =>
+  Id DRefundRequest.RefundRequest ->
+  m [LE.LedgerEntry]
+getRefundRequestLegs refundRequestId =
+  filter (isNothing . (.reversalOf)) <$> getRefundRequestLegsWithReversals refundRequestId
 
 -- | Per-component refund split (BAP). One base + one VAT leg per refunded component.
 data RefundComponentSplit = RefundComponentSplit
@@ -1054,20 +1057,19 @@ createRefundRaisedLedger ::
   [RefundComponentSplit] -> -- per-component split (always present; caller throws on no breakup)
   m (Either FinanceError [Id LE.LedgerEntry])
 createRefundRaisedLedger ctx refundRequestId splits = do
-  existing <- getRefundLegEntries ctx.referenceId
+  existing <- getRefundRequestLegs refundRequestId
   -- Skip VOIDED legs so a retry re-raises a fresh pending leg; a live leg de-dups a re-fire.
-  case List.find (\e -> e.status /= LE.VOIDED && entryMatchesRefundRequest refundRequestId e) existing of
+  case List.find (\e -> e.status /= LE.VOIDED) existing of
     Just e -> do
       logInfo $ "Refund APPROVED ledger already written for refundRequest " <> refundRequestId.getId
       pure $ Right [e.id]
     Nothing -> do
-      let meta = Just (mkRefundMetadata refundRequestId)
       result <-
-        runFinance ctx $
+        runFinance ctx {entityReferenceId = Just refundRequestId.getId, entityReferenceType = Just LE.RefundRequest} $
           forM_ splits $ \s -> do
             let (baseRef, vatRef) = refundRefTypesForComponent s.component
-            void $ transferPendingWithMetadata OwnerExpense BuyerControl s.fareAmount baseRef meta
-            void $ transferPendingWithMetadata OwnerExpense BuyerControl s.vatAmount vatRef meta
+            void $ transferPending OwnerExpense BuyerControl s.fareAmount baseRef
+            void $ transferPending OwnerExpense BuyerControl s.vatAmount vatRef
       case result of
         Left err -> do
           logError $ "Failed to create refund APPROVED ledger: " <> show err
@@ -1076,48 +1078,44 @@ createRefundRaisedLedger ctx refundRequestId splits = do
 
 createRefundSucceededLedger ::
   (BeamFlow.BeamFlow m r, MonadFlow m, Finance.HasActorInfo m r) =>
-  FinanceCtx ->
   Id DRefundRequest.RefundRequest ->
   m (Either FinanceError [Id LE.LedgerEntry])
-createRefundSucceededLedger ctx refundRequestId = do
-  existing <- getRefundLegEntries ctx.referenceId
-  let approvedEntries = filter (entryMatchesRefundRequest refundRequestId) existing
-      pendingApproved = filter (\e -> e.status == LE.PENDING) approvedEntries
-      hasReversal e = any (\r -> r.reversalOf == Just e.id) existing
-  -- Settle the pending leg(s), then zero out: BAP is a pass-through, so each settled leg gets the
-  -- kernel reversal (BuyerControl → OwnerExpense, same refType, reversalOf-linked). Both halves are
-  -- idempotent (settleEntry no-ops when settled; reversal deduped on reversalOf), so hook re-fires —
-  -- including a crash between settle and reversal — heal on the next delivery.
-  forM_ pendingApproved $ \e -> Lib.Finance.Ledger.Service.settleEntry e.id
-  forM_ (filter (\e -> e.status /= LE.VOIDED && not (hasReversal e)) approvedEntries) $ \e ->
+createRefundSucceededLedger refundRequestId = do
+  (reversals, legs) <- List.partition (isJust . (.reversalOf)) <$> getRefundRequestLegsWithReversals refundRequestId
+  let pendingLegs = filter (\e -> e.status == LE.PENDING) legs
+      hasReversal e = any (\r -> r.reversalOf == Just e.id) reversals
+  -- BAP is a pass-through, so each settled leg is zeroed out by a reversal (BuyerControl →
+  -- OwnerExpense, same refType). Runs on every REFUNDED delivery — the hooks re-deliver, and a crash
+  -- between the settle and the reversal must heal — so both halves have to tolerate a re-run:
+  -- pendingLegs is PENDING-only, and hasReversal is what stops a re-run from reversing a leg twice
+  -- (as createReversal writes a fresh row on every call; it does not dedup, so doing it this way).
+  forM_ pendingLegs $ \e -> Lib.Finance.Ledger.Service.settleEntry e.id
+  forM_ (filter (\e -> e.status /= LE.VOIDED && not (hasReversal e)) legs) $ \e ->
     Lib.Finance.Ledger.Service.createReversal e.id "RefundSucceededZeroOut" >>= \case
       Left err -> logError $ "Refund zero-out reversal failed for leg " <> e.id.getId <> ": " <> show err
       Right _ -> pure ()
-  pure $ Right (map (\e -> e.id) approvedEntries)
+  pure $ Right (map (\e -> e.id) legs)
 
 -- | True once this refund's APPROVED leg is SETTLED — the "success already done" signal that
 --   gates the one-shot REFUNDED side-effects (invoice, BPP call) against hook re-fires. The
 --   settle+zero-out itself is NOT gated on this (it self-heals in case of mid crash before reversal; see createRefundSucceededLedger).
 refundSucceededAlreadyRecorded ::
   (BeamFlow.BeamFlow m r) =>
-  Text -> -- rideId
   Id DRefundRequest.RefundRequest ->
   m Bool
-refundSucceededAlreadyRecorded rideId refundRequestId = do
-  existing <- getRefundLegEntries rideId
-  pure $ any (\e -> e.status == LE.SETTLED && entryMatchesRefundRequest refundRequestId e) existing
+refundSucceededAlreadyRecorded refundRequestId = do
+  existing <- getRefundRequestLegs refundRequestId
+  pure $ any (\e -> e.status == LE.SETTLED) existing
 
 -- | On FAILED, void this refund's pending APPROVED leg(s) — the raised obligation never
 --   materialized. Only PENDING legs → idempotent.
 voidRefundRaisedLedger ::
   (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
-  Text -> -- rideId
   Id DRefundRequest.RefundRequest ->
   m ()
-voidRefundRaisedLedger rideId refundRequestId = do
-  existing <- getRefundLegEntries rideId
-  let pendingApproved =
-        filter (\e -> e.status == LE.PENDING && entryMatchesRefundRequest refundRequestId e) existing
+voidRefundRaisedLedger refundRequestId = do
+  existing <- getRefundRequestLegs refundRequestId
+  let pendingApproved = filter (\e -> e.status == LE.PENDING) existing
   forM_ pendingApproved $ \e -> Lib.Finance.Ledger.Service.voidEntry e.id "RefundFailed"
 
 -- | Create PENDING Leg-1 ledger entries + RideCancellation invoice for a
@@ -1395,7 +1393,7 @@ createRefundInvoice ::
 createRefundInvoice rideId refundsRequestId splits = do
   let activeStatuses = [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid]
   -- Parent ride invoice: header source (customer/merchant/currency) + referenceInvoiceNumber.
-  mbSource <- listToMaybe <$> QInvoiceExtra.findByReferenceIdWithOptions rideId (Just DInvType.Ride) activeStatuses (Just 1) (Just 0)
+  mbSource <- listToMaybe <$> QInvoiceExtra.findByReferenceIdWithOptions rideId (Just DInvType.Ride) Nothing activeStatuses (Just 1) (Just 0)
   case mbSource of
     Nothing -> logInfo $ "createRefundInvoice: no ride invoice for ride " <> rideId <> "; skipping refund invoice"
     Just srcInv -> do

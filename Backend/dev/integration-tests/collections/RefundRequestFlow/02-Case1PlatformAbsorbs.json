@@ -845,7 +845,7 @@
           "script": {
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
-              "var _REFUND_RT = ['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission'];",
+              "var _REFUND_RT = ['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission','RideFareRefundCommissionVAT'];",
               "function _isRefund(r){ return _REFUND_RT.indexOf(r.reference_type) >= 0; }",
               "var _newRefTypes = ['RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT'];",
               "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type'],where_clause:[{column_name:'reference_id',val:pm.environment.get('bppBookingId'),op:'='}]}); }",
@@ -860,7 +860,7 @@
               "  // Case-1 (platform absorbs): per-component legs (RideFareRefund + RideFareRefundVAT, +Toll/Parking) ALL on SellerExpense->BuyerExternal (verify the role via the 📊 Finance view / a finance_account join), summing to gross rf1. NO driver clawback (OwnerLiability), NO RideFareRefundCommission slice.",
               "  pm.test('Case-1 BPP legs use the per-component refTypes, SUM to rf1, no commission slice', function () {",
               "      _settled.forEach(function (r) { pm.expect(_newRefTypes, 'unexpected refType ' + r.reference_type).to.include(r.reference_type); });",
-              "      pm.expect(_settled.some(function (r) { return r.reference_type === 'RideFareRefundCommission'; }), 'Case-1 must NOT post a RideFareRefundCommission slice (that is Case-2 only)').to.be.false;",
+              "      pm.expect(_settled.some(function (r) { return r.reference_type === 'RideFareRefundCommission' || r.reference_type === 'RideFareRefundCommissionVAT'; }), 'Case-1 must NOT post a commission slice, base or VAT (that is Case-2 only)').to.be.false;",
               "      var _sum = _settled.reduce(function (a, r) { return a + Number(r.amount); }, 0);",
               "      pm.expect(_sum).to.be.closeTo(Number(pm.environment.get('rf1')), 0.011);",
               "  });",
@@ -971,7 +971,7 @@
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
               "// Quick check only: the BAP role join (OwnerExpense->BuyerControl) + zero-out reversal model are asserted in 01. BAP is deductFromDriver-invariant,",
               "// so here we only confirm it settled identically to Case-2: >=1 SETTLED raise leg summing to rf1 (reversal legs excluded). No role-join re-check.",
-              "var _RT = ['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission'];",
+              "var _RT = ['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission','RideFareRefundCommissionVAT'];",
               "function _isRefund(r){ return _RT.indexOf(r.reference_type) >= 0; }",
               "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type','reversal_of'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}]}); }",
               "function _ok(rows){ return rows.some(function(r){return r.status==='SETTLED' && _isRefund(r);}); }",

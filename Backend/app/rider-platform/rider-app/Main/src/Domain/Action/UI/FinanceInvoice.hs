@@ -151,4 +151,4 @@ fetchInvoicesByRideId rideId personId mbInvoiceType = do
   booking <- QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   unless (booking.riderId == personId) $
     throwError $ InvalidRequest "Ride does not belong to this rider"
-  QInvoiceExtra.findByReferenceIdWithOptions rideId mbInvoiceType [Draft, Issued, Paid] (Just 1) (Just 0)
+  QInvoiceExtra.findByReferenceIdWithOptions rideId mbInvoiceType Nothing [Draft, Issued, Paid] (Just 1) (Just 0)

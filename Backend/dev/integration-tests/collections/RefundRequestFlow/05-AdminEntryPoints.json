@@ -946,20 +946,20 @@
       }
     },
     {
-      "name": "Assert reject created NO BAP refund leg for THIS request (metadata-scoped)",
+      "name": "Assert reject created NO BAP refund leg for THIS request (entity-ref scoped)",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
-              "// SCOPED to THIS reject's refundRequestId via leg metadata (contamination-proof: the shared ride may carry OTHER refunds' legs).",
-              "var _RT=['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission'];",
-              "var rid=pm.environment.get('refundRequestId');",
+              "// Scoped to THIS reject's refundRequestId via the leg's entity reference: the shared ride may carry OTHER refunds' legs.",
               "var rows=[]; try{ rows=(pm.response.json().rows)||[]; }catch(e){}",
-              "function _meta(m){ if(m==null) return {}; if(typeof m==='object') return m; try{ return JSON.parse(m); }catch(e){ return {}; } }",
-              "var mine=rows.filter(function(l){ return _RT.indexOf(l.reference_type)>=0 && _meta(l.metadata).refundRequestId===rid; });",
+              "// A 0-row result is the PASS condition here, so it is only meaningful if the query actually ran against a populated refundRequestId. Without these two guards a broken query (missing column -> 500) or an unset id would return 0 rows and pass for the wrong reason.",
+              "var _j={}; try{ _j=pm.response.json(); }catch(e){}",
+              "pm.test('reject-leg query actually ran (0 rows must mean no legs, not a failed query)', function(){ pm.expect(_j.error, 'mock SQL error: '+JSON.stringify(_j.error)).to.be.undefined; pm.expect(_j, 'response must carry rows').to.have.property('rows'); pm.expect(pm.environment.get('refundRequestId'), 'refundRequestId must be set, else the scope is empty').to.be.a('string').and.not.empty; });",
+              "var mine=rows.filter(function(l){ return l.reversal_of==null; });",
               "try{ console.log('  \\u21b3 BAP legs for THIS reject:', JSON.stringify(mine.map(function(x){return {st:x.status,type:x.reference_type};}))); }catch(e){}",
-              "pm.test('reject created NO BAP refund ledger leg for this request (metadata-scoped)', function(){ pm.expect(mine.length, 'a rejected request must post no BAP refund leg tagged with its refundRequestId').to.eql(0); });"
+              "pm.test('reject created NO BAP refund ledger leg for this request (entity-ref scoped)', function(){ pm.expect(mine.length, 'a rejected request must post no BAP refund leg stamped with its refundRequestId').to.eql(0); });"
             ]
           }
         }
@@ -974,7 +974,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"reference_type\",\"metadata\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"reference_type\",\"reversal_of\"],\"where_clause\":[{\"column_name\":\"entity_reference_type\",\"val\":\"RefundRequest\",\"op\":\"=\"},{\"column_name\":\"entity_reference_id\",\"val\":\"{{refundRequestId}}\",\"op\":\"=\"}]}"
         },
         "url": {
           "raw": "{{mockServerUrl}}/mock/sql/select",
@@ -990,20 +990,20 @@
       }
     },
     {
-      "name": "Assert reject created NO BPP refund leg for THIS request (metadata-scoped)",
+      "name": "Assert reject created NO BPP refund leg for THIS request (entity-ref scoped)",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
-              "// SCOPED to THIS reject's refundRequestId via leg metadata (contamination-proof: the shared ride may carry OTHER refunds' legs).",
-              "var _RT=['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission'];",
-              "var rid=pm.environment.get('refundRequestId');",
+              "// Scoped to THIS reject's refundRequestId via the leg's entity reference: the shared ride may carry OTHER refunds' legs.",
               "var rows=[]; try{ rows=(pm.response.json().rows)||[]; }catch(e){}",
-              "function _meta(m){ if(m==null) return {}; if(typeof m==='object') return m; try{ return JSON.parse(m); }catch(e){ return {}; } }",
-              "var mine=rows.filter(function(l){ return _RT.indexOf(l.reference_type)>=0 && _meta(l.metadata).refundRequestId===rid; });",
+              "// A 0-row result is the PASS condition here, so it is only meaningful if the query actually ran against a populated refundRequestId. Without these two guards a broken query (missing column -> 500) or an unset id would return 0 rows and pass for the wrong reason.",
+              "var _j={}; try{ _j=pm.response.json(); }catch(e){}",
+              "pm.test('reject-leg query actually ran (0 rows must mean no legs, not a failed query)', function(){ pm.expect(_j.error, 'mock SQL error: '+JSON.stringify(_j.error)).to.be.undefined; pm.expect(_j, 'response must carry rows').to.have.property('rows'); pm.expect(pm.environment.get('refundRequestId'), 'refundRequestId must be set, else the scope is empty').to.be.a('string').and.not.empty; });",
+              "var mine=rows.filter(function(l){ return l.reversal_of==null; });",
               "try{ console.log('  \\u21b3 BPP legs for THIS reject:', JSON.stringify(mine.map(function(x){return {st:x.status,type:x.reference_type};}))); }catch(e){}",
-              "pm.test('reject created NO BPP refund ledger leg for this request (metadata-scoped)', function(){ pm.expect(mine.length, 'a rejected request must post no BPP refund leg tagged with its refundRequestId').to.eql(0); });"
+              "pm.test('reject created NO BPP refund ledger leg for this request (entity-ref scoped)', function(){ pm.expect(mine.length, 'a rejected request must post no BPP refund leg stamped with its refundRequestId').to.eql(0); });"
             ]
           }
         }
@@ -1018,7 +1018,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"reference_type\",\"metadata\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{bppBookingId}}\",\"op\":\"=\"}]}"
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"reference_type\",\"reversal_of\"],\"where_clause\":[{\"column_name\":\"entity_reference_type\",\"val\":\"RefundRequest\",\"op\":\"=\"},{\"column_name\":\"entity_reference_id\",\"val\":\"{{refundRequestId}}\",\"op\":\"=\"}]}"
         },
         "url": {
           "raw": "{{mockServerUrl}}/mock/sql/select",
@@ -1198,16 +1198,16 @@
             "type": "text/javascript",
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
-              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_ledger_entry',select:['id','status','reference_type'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}]}); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_ledger_entry',select:['id','status','reference_type','reversal_of'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}]}); }",
               "// Quick check only: the BAP role-join + per-component sum are asserted in 01. Here just confirm money moved -> >=1 SETTLED refund-typed leg.",
-              "var _REFUND_RT = ['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission'];",
+              "var _REFUND_RT = ['RideRefund','RideFareRefund','RideFareRefundVAT','TollRefund','TollRefundVAT','ParkingRefund','ParkingRefundVAT','RideRefundDriverShare','RideRefundCommissionShare','RideFareRefundCommission','RideFareRefundCommissionVAT'];",
               "function _isRefund(r){ return _REFUND_RT.indexOf(r.reference_type) >= 0; }",
               "function _ok(rows){ return rows.some(function(r){ return r.status==='SETTLED' && _isRefund(r); }); }",
               "function _assert(rows){",
-              "  var settled = (rows||[]).filter(function(r){ return r.status==='SETTLED' && _isRefund(r); });",
+              "  var settled = (rows||[]).filter(function(r){ return r.status==='SETTLED' && _isRefund(r) && !r.reversal_of; });",
               "  try { console.log('  ↳ SETTLED refund legs:', JSON.stringify(settled.map(function(x){ return {st:x.status, type:x.reference_type}; }))); } catch(e) {}",
               "  pm.test('Initiate moved money: >=1 SETTLED refund leg (full model asserted in 01)', function () {",
-              "    pm.expect(settled.length, 'expected >=1 SETTLED refund-typed leg on the ride after /initiate auto-approve').to.be.above(0);",
+              "    pm.expect(settled.length, 'expected >=1 SETTLED refund raise leg (zero-out reversals excluded) on the ride after /initiate auto-approve').to.be.above(0);",
               "  });",
               "}",
               "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
@@ -1226,7 +1226,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"reference_type\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"reference_type\",\"reversal_of\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
         },
         "url": {
           "raw": "{{mockServerUrl}}/mock/sql/select",

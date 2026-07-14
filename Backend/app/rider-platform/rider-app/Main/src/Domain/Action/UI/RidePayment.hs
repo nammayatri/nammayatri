@@ -888,7 +888,7 @@ processRefundSucceeded refundRequest = do
   -- cumulative refund invoice would double-count, so gate the one-shot side-effects (invoice,
   -- BPP call) on the ledger dedup signal. The settle+zero-out is NOT gated: it is internally
   -- idempotent, so a re-fire heals a crash between the settle and the zero-out reversal.
-  alreadyRecorded <- RidePaymentFinance.refundSucceededAlreadyRecorded rideId.getId refundRequest.id
+  alreadyRecorded <- RidePaymentFinance.refundSucceededAlreadyRecorded refundRequest.id
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let amount = fromMaybe refundRequest.transactionAmount refundRequest.refundsAmount
@@ -903,7 +903,7 @@ processRefundSucceeded refundRequest = do
           Nothing
           Nothing
           (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
-  void $ RidePaymentFinance.createRefundSucceededLedger ctx refundRequest.id
+  void $ RidePaymentFinance.createRefundSucceededLedger refundRequest.id
   unless alreadyRecorded $ do
     (rideFareTotal, splits) <- computeRefundSplits rideId refundRequest ctx
     RidePaymentFinance.createRefundInvoice rideId.getId refundRequest.id.getId splits
@@ -926,7 +926,7 @@ processRefundFailed refundRequest = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let amount = fromMaybe refundRequest.transactionAmount refundRequest.refundsAmount
-  RidePaymentFinance.voidRefundRaisedLedger rideId.getId refundRequest.id
+  RidePaymentFinance.voidRefundRaisedLedger refundRequest.id
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   CallBPPInternal.refundLedger merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId $
     CallBPPInternal.RefundLedgerReq

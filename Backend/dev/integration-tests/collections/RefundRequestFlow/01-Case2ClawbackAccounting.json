@@ -1000,7 +1000,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\",\"from_account_id\",\"to_account_id\",\"reversal_of\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\",\"from_account_id\",\"to_account_id\",\"reversal_of\",\"entity_reference_id\",\"entity_reference_type\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
         },
         "url": {
           "raw": "{{mockServerUrl}}/mock/sql/select",
@@ -1036,6 +1036,16 @@
               "var refLegs = legs.filter(function(l){ return l.status==='SETTLED' && _REFUND_RT.indexOf(l.reference_type)>=0; });",
               "var raiseLegs = refLegs.filter(function(l){ return !l.reversal_of; });",
               "var mirrorLegs = refLegs.filter(function(l){ return !!l.reversal_of; });",
+              "// Every leg of this refund — and every zero-out mirror, which inherits it — is stamped with the refund request it belongs to. The refund-leg queries key on this, and 05's 'no leg for a rejected request' check is only meaningful if it is populated.",
+              "pm.test('BAP refund legs carry the RefundRequest entity reference (legs + zero-out mirrors)', function(){",
+              "  var rid = pm.environment.get('refundRequestId');",
+              "  pm.expect(refLegs.length, 'expected settled BAP refund legs to entity-ref-check').to.be.above(0);",
+              "  refLegs.forEach(function(l){",
+              "    var tag = l.reference_type + (l.reversal_of ? ' (mirror)' : '');",
+              "    pm.expect(l.entity_reference_type, tag + ' entity_reference_type').to.eql('RefundRequest');",
+              "    pm.expect(l.entity_reference_id, tag + ' entity_reference_id').to.eql(rid);",
+              "  });",
+              "});",
               "var ids=[];",
               "refLegs.forEach(function(l){ if(l.from_account_id && ids.indexOf(l.from_account_id)<0) ids.push(l.from_account_id); if(l.to_account_id && ids.indexOf(l.to_account_id)<0) ids.push(l.to_account_id); });",
               "if (!ids.length) {",
@@ -1076,7 +1086,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\",\"from_account_id\",\"to_account_id\",\"reversal_of\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\",\"from_account_id\",\"to_account_id\",\"reversal_of\",\"entity_reference_id\",\"entity_reference_type\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
         },
         "url": {
           "raw": "{{mockServerUrl}}/mock/sql/select",
@@ -1190,6 +1200,15 @@
               "function _acctBody(ids){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'finance_account',select:['id','account_type','counterparty_type'],where_clause:[{column_name:'id',val:ids,op:'IN'}]}); }",
               "var legs=[]; try{ legs=(pm.response.json().rows)||[]; }catch(e){}",
               "var refLegs = legs.filter(function(l){ return l.status==='SETTLED' && _DRIVER_RT.concat(['RideFareRefundCommission','RideFareRefundCommissionVAT']).indexOf(l.reference_type)>=0; });",
+              "// BPP legs are stamped by postLegs (RefundLedger.hs) exactly as BAP legs are; without this, a BPP-side stamping regression would leave the whole suite green.",
+              "pm.test('BPP refund legs carry the RefundRequest entity reference', function(){",
+              "  var rid = pm.environment.get('refundRequestId');",
+              "  pm.expect(refLegs.length, 'expected settled BPP refund legs to entity-ref-check').to.be.above(0);",
+              "  refLegs.forEach(function(l){",
+              "    pm.expect(l.entity_reference_type, l.reference_type + ' entity_reference_type').to.eql('RefundRequest');",
+              "    pm.expect(l.entity_reference_id, l.reference_type + ' entity_reference_id').to.eql(rid);",
+              "  });",
+              "});",
               "var ids = refLegs.map(function(l){ return l.from_account_id; }).filter(function(x){ return !!x; });",
               "if (!ids.length) {",
               "  pm.test('Case-2 role check: settled BPP refund legs present', function(){ pm.expect(ids.length, 'no settled BPP refund legs with from_account_id to role-check (BPP refundLedger may not have fired)').to.be.above(0); });",
@@ -1234,7 +1253,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\",\"from_account_id\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{bppBookingId}}\",\"op\":\"=\"}]}"
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\",\"from_account_id\",\"entity_reference_id\",\"entity_reference_type\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{bppBookingId}}\",\"op\":\"=\"}]}"
         },
         "url": {
           "raw": "{{mockServerUrl}}/mock/sql/select",

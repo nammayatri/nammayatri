@@ -14,7 +14,6 @@
 
 module Domain.Action.Internal.RefundLedger where
 
-import qualified Data.Aeson as Aeson
 import qualified Domain.Types.Booking as DBooking
 import "beckn-spec" Domain.Types.Invoice (IssuedToType (..))
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
@@ -28,7 +27,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Finance (AccountRole (..), FinanceCtx, runFinance, transferPendingWithMetadata, transferWithMetadata)
+import Lib.Finance (AccountRole (..), FinanceCtx (..), runFinance, transfer, transferPending)
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Invoice.Interface as InvoiceI
@@ -89,46 +88,45 @@ refundLedger rideId req apiKey = do
     mbDriverInfo <- QDI.findById (cast ride.driverId)
     -- online cab only; Case-2 clawback legs debit OwnerLiability (the driver wallet), reducing payout.
     ctx <- Wallet.buildFinanceCtx booking ride mbDriver Nothing mbDriverInfo transporterConfig True
-    let referenceId = booking.id.getId
-        -- When the approval doesn't specify who bears the refund, the merchant config decides;
-        -- with no config either, the platform absorbs.
-        deductFromDriver = fromMaybe (fromMaybe False transporterConfig.defaultRefundDeductFromDriver) req.deductFromDriver
+    -- When the approval doesn't specify who bears the refund, the merchant config decides;
+    -- with no config either, the platform absorbs.
+    let deductFromDriver = fromMaybe (fromMaybe False transporterConfig.defaultRefundDeductFromDriver) req.deductFromDriver
         legs = refundLegs deductFromDriver transporterConfig.taxConfig.commissionVatPercentage req ride
-    existing <- getRefundEntries referenceId
+    existing <- getRefundRequestLegs req.refundRequestId
     case req.refundRequestStatus of
       APPROVED ->
         -- VOIDED legs are skipped so a retry re-raises fresh; ANY live leg de-dups a re-fire.
-        unless (any (\e -> e.status /= LE.VOIDED && entryMatchesRefundRequest req.refundRequestId e) existing) $
-          postLegs ctx Pending (mkRefundMetadata req.refundRequestId) legs req.refundRequestId
+        unless (any (\e -> e.status /= LE.VOIDED) existing) $
+          postLegs ctx Pending legs req.refundRequestId
       REFUNDED -> do
         -- alreadyDone = this refund's live legs exist and are ALL settled (skip the invoice).
         -- Strictly none-PENDING, so a crash mid-settle still completes invoices on redelivery.
-        let idLegs = filter (\e -> e.status /= LE.VOIDED && entryMatchesRefundRequest req.refundRequestId e) existing
+        let idLegs = filter (\e -> e.status /= LE.VOIDED) existing
             alreadyDone = not (null idLegs) && not (any (\e -> e.status == LE.PENDING) idLegs)
         if not (null idLegs)
           then forM_ (filter (\e -> e.status == LE.PENDING) idLegs) $ \e -> LedgerSvc.settleEntry e.id
           else -- APPROVED was missed; post directly as SETTLED (reachable only with no live legs — fires at most once).
-            postLegs ctx Settled (mkRefundMetadata req.refundRequestId) legs req.refundRequestId
+            postLegs ctx Settled legs req.refundRequestId
         -- the fleet/driver-visible refund invoice + (Case-2) the negative Commission invoice, once per refund
         unless alreadyDone $ do
           createRefundInvoice ctx booking req.refundRequestId (fromMaybe [] req.refundComponents)
           when deductFromDriver $ createCommissionRefundInvoice ctx req ride booking transporterConfig
       FAILED ->
         -- Failed: void the pending APPROVED leg(s). Only PENDING → idempotent.
-        forM_ (filter (\e -> e.status == LE.PENDING && entryMatchesRefundRequest req.refundRequestId e) existing) $ \e ->
+        forM_ (filter (\e -> e.status == LE.PENDING) existing) $ \e ->
           LedgerSvc.voidEntry e.id "RefundFailed"
   pure Success
 
 data PostMode = Pending | Settled
 
 -- | Post the legs in one finance transaction; throws on failure so the caller redelivers.
-postLegs :: FinanceCtx -> PostMode -> Aeson.Value -> [(AccountRole, AccountRole, HighPrecMoney, Text)] -> Text -> Flow ()
-postLegs ctx mode meta legs refundRequestId = do
-  res <- runFinance ctx $
+postLegs :: FinanceCtx -> PostMode -> [(AccountRole, AccountRole, HighPrecMoney, Text)] -> Text -> Flow ()
+postLegs ctx mode legs refundRequestId = do
+  res <- runFinance ctx {entityReferenceId = Just refundRequestId, entityReferenceType = Just LE.RefundRequest} $
     forM_ legs $ \(fromRole, toRole, amount, refType) ->
       void $ case mode of
-        Pending -> transferPendingWithMetadata fromRole toRole amount refType (Just meta)
-        Settled -> transferWithMetadata fromRole toRole amount refType (Just meta)
+        Pending -> transferPending fromRole toRole amount refType
+        Settled -> transfer fromRole toRole amount refType
   case res of
     Left err -> throwError $ InternalError $ "Refund ledger write failed for " <> refundRequestId <> ": " <> show err
     Right _ -> pure ()
@@ -184,37 +182,10 @@ refundRefTypesForComponent fc = case fc of
   TOLL -> (Wallet.walletReferenceTollRefund, Wallet.walletReferenceTollRefundVAT)
   PARKING -> (Wallet.walletReferenceParkingRefund, Wallet.walletReferenceParkingRefundVAT)
 
--- | All refund ledger entries for a booking, across the 8 refund refTypes.
-getRefundEntries :: Text -> Flow [LE.LedgerEntry]
-getRefundEntries referenceId =
-  concat
-    <$> mapM
-      (`LedgerSvc.getEntriesByReference` referenceId)
-      [ Wallet.walletReferenceRideFareRefund,
-        Wallet.walletReferenceRideFareRefundVAT,
-        Wallet.walletReferenceTollRefund,
-        Wallet.walletReferenceTollRefundVAT,
-        Wallet.walletReferenceParkingRefund,
-        Wallet.walletReferenceParkingRefundVAT,
-        Wallet.walletReferenceRideFareRefundCommission,
-        Wallet.walletReferenceRideFareRefundCommissionVAT
-      ]
-
--- | Links a ledger leg to its refund request. Legs carry only the id; request state lives
---   solely in refund_request, and checks pair the id with the leg's own status column.
-newtype RefundLedgerMetadata = RefundLedgerMetadata {refundRequestId :: Text}
-  deriving (Generic, Show, Eq, ToJSON, FromJSON)
-
-mkRefundMetadata :: Text -> Aeson.Value
-mkRefundMetadata refundRequestId = Aeson.toJSON (RefundLedgerMetadata refundRequestId)
-
-entryMatchesRefundRequest :: Text -> LE.LedgerEntry -> Bool
-entryMatchesRefundRequest refundRequestId entry =
-  (metadataRefundRequestId =<< entry.metadata) == Just refundRequestId
-  where
-    metadataRefundRequestId v = case Aeson.fromJSON v of
-      Aeson.Success (RefundLedgerMetadata rid) -> Just rid
-      _ -> Nothing
+-- | The legs of one refund request. Every entry here is a leg: BPP refund legs are real debits
+--   against the driver or the platform, so nothing reverses them (the zero-out is BAP-only).
+getRefundRequestLegs :: Text -> Flow [LE.LedgerEntry]
+getRefundRequestLegs = LedgerSvc.getEntriesByEntityReference LE.RefundRequest
 
 -- | One lock per refund request: APPROVED/REFUNDED/FAILED deliveries serialize.
 refundLedgerLockKey :: Text -> Text
@@ -235,8 +206,8 @@ createRefundInvoice ctx booking refundsRequestId comps = do
       anyVat = any (\c -> c.vatAmount > 0) comps
   -- Parent = the ride's CUSTOMER invoice (keyed by bookingId); Nothing if none found.
   mbParentRideInvoice <-
-    listToMaybe . filter (\inv -> inv.issuedToType == CUSTOMER)
-      <$> QFinanceInvoiceExtra.findByReferenceIdWithOptions referenceId (Just BeckInvoice.Ride) [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid] (Just 10) (Just 0)
+    listToMaybe
+      <$> QFinanceInvoiceExtra.findByReferenceIdWithOptions referenceId (Just BeckInvoice.Ride) (Just CUSTOMER) [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid] (Just 1) (Just 0)
   createRes <-
     InvoiceSvc.createInvoice
       InvoiceI.InvoiceInput
@@ -332,7 +303,7 @@ createCommissionRefundInvoice ctx req ride booking transporterConfig = do
     -- Parent = the per-ride Commission invoice (keyed by bookingId; refund-commissions are keyed
     -- by refundRequestId, so they don't collide here); Nothing if none found.
     mbParentCommissionInvoice <-
-      listToMaybe <$> QFinanceInvoiceExtra.findByReferenceIdWithOptions ride.bookingId.getId (Just BeckInvoice.Commission) [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid] (Just 10) (Just 0)
+      listToMaybe <$> QFinanceInvoiceExtra.findByReferenceIdWithOptions ride.bookingId.getId (Just BeckInvoice.Commission) Nothing [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid] (Just 1) (Just 0)
     createRes <-
       InvoiceSvc.createInvoice
         InvoiceI.InvoiceInput
