@@ -24,8 +24,8 @@ import Kernel.Prelude hiding (mask, throwIO)
 import Kernel.Randomizer
 import Kernel.Storage.Beam.SystemConfigs
 import Kernel.Storage.Esqueleto.Config (prepareEsqDBEnv)
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Storage.Hedis (connectHedis, connectHedisCluster)
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Streaming.Kafka.Producer.Types
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
