@@ -18,7 +18,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan as Plan
-import qualified Domain.Types.ReviewRequest as DRR
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRegistrationCertificate as RC
@@ -39,13 +38,14 @@ import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPlan as QDPlan
 import qualified Storage.Queries.DriverRCAssociation as DRAQuery
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.OperationHubRequestsExtra as QOHRE
-import qualified Storage.Queries.ReviewRequestExtra as SQRR
 import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleFitnessCertificate as VFCQuery
@@ -624,10 +624,8 @@ getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo =
       registrationNo <- decrypt vehicleRC.certificateNumber
       (status, reason) <- getInspectionHubStatusAndReason DOHR.ONBOARDING_INSPECTION Nothing (Just registrationNo)
       return (status, reason, Nothing, Nothing, Nothing, Nothing, Nothing)
-    DVC.BotApproval -> do
-      registrationNo <- decrypt vehicleRC.certificateNumber
-      status <- getBotApprovalStatusForVehicle vehicleRC.id.getId registrationNo
-      return (status, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+    DVC.BotApproval ->
+      return (Just $ getBotApprovalStatusForVehicle vehicleRC.approved, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
     DVC.SubscriptionPlan -> case entity of
       IQuery.PersonEntity person -> do
         mbPlan <- QDPlan.findByDriverIdWithServiceName (cast person.id) Plan.YATRI_SUBSCRIPTION -- fix later on basis of vehicle category
@@ -754,10 +752,7 @@ getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerific
         Just rcImagesInfo -> RCQuery.findById rcImagesInfo.rcId
         Nothing -> return Nothing
       case mbRc of
-        Just rc -> do
-          registrationNo <- decrypt rc.certificateNumber
-          mbStatus <- getBotApprovalStatusForVehicle rc.id.getId registrationNo
-          return (fromMaybe NO_DOC_AVAILABLE mbStatus, Nothing, Nothing)
+        Just rc -> return (getBotApprovalStatusForVehicle rc.approved, Nothing, Nothing)
         Nothing -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
     _ | docType `elem` vehicleDocsByRcIdList -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo docType onlyImageLookup
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
@@ -930,24 +925,20 @@ getInspectionHubStatusAndReason requestType mbDriverId mbRegistrationNo = do
   mbReq <- findLatestInspectionHubRequest requestType mbDriverId mbRegistrationNo
   pure (mapInspectionHubRequestStatusToResponseStatus ((.requestStatus) <$> mbReq), (mbReq >>= (.remarks)) >>= nonEmptyReason)
 
--- | BotApproval status, from the latest BOT_REVIEW ReviewRequest for the entity:
---   COMPLETED -> VALID, IN_PROGRESS -> PENDING, REJECTED -> INVALID, none -> NO_DOC_AVAILABLE.
-mapReviewRequestStatusToResponseStatus :: Maybe DRR.RequestStatus -> Maybe ResponseStatus
-mapReviewRequestStatusToResponseStatus = \case
-  Just DRR.COMPLETED -> Just VALID
-  Just DRR.IN_PROGRESS -> Just PENDING
-  Just DRR.REJECTED -> Just INVALID
-  Nothing -> Just NO_DOC_AVAILABLE
+-- | BotApproval status is the BOT-owned `approved` flag on the entity: approved -> VALID, otherwise
+--   PENDING (the BOT hasn't approved yet, or approval was revoked when a doc was invalidated/rejected).
+mapApprovedToResponseStatus :: Maybe Bool -> ResponseStatus
+mapApprovedToResponseStatus approved = if approved == Just True then VALID else PENDING
 
--- | BotApproval for a driver / fleet-owner (person-keyed): FLEET_OWNER/FLEET_BUSINESS -> FLEET_OWNER, else DRIVER.
+-- | BotApproval for a driver / fleet-owner (person-keyed): fleet roles read FleetOwnerInformation, else DriverInformation.
 getBotApprovalStatusForPerson :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Role -> Id DP.Person -> m (Maybe ResponseStatus)
 getBotApprovalStatusForPerson role personId = do
-  let entityType = if role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS] then DRR.FLEET_OWNER else DRR.DRIVER
-  mbReq <- SQRR.findLatestByEntityAndType personId.getId entityType DRR.BOT_REVIEW Nothing
-  pure $ mapReviewRequestStatusToResponseStatus ((.requestStatus) <$> mbReq)
+  approved <-
+    if SDO.isFleetRole role
+      then (>>= (.approved)) <$> QFOI.findByPrimaryKey personId
+      else (>>= (.approved)) <$> QDI.findById (cast personId)
+  pure . Just $ mapApprovedToResponseStatus approved
 
--- | BotApproval for a vehicle (RC-keyed): entityId = rc id, rcNo = registration number.
-getBotApprovalStatusForVehicle :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> Text -> m (Maybe ResponseStatus)
-getBotApprovalStatusForVehicle rcId registrationNo = do
-  mbReq <- SQRR.findLatestByEntityAndType rcId DRR.VEHICLE DRR.BOT_REVIEW (Just registrationNo)
-  pure $ mapReviewRequestStatusToResponseStatus ((.requestStatus) <$> mbReq)
+-- | BotApproval for a vehicle (RC-keyed): the RC's own `approved` flag.
+getBotApprovalStatusForVehicle :: Maybe Bool -> ResponseStatus
+getBotApprovalStatusForVehicle = mapApprovedToResponseStatus

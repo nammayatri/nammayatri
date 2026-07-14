@@ -63,6 +63,7 @@ FleetOwnerInformation:
     address: Maybe Text
     addressState: Maybe IndianState
     addressDocumentType: Maybe AddressDocumentType
+    approved: Maybe Bool
 
   excludedFields: [merchantOperatingCityId]
   default:

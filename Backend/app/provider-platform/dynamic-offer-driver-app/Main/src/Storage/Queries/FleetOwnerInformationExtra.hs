@@ -385,8 +385,47 @@ updateFleetOwnerEnabledAndVerifiedStatus enabled verified fleetOwnerPersonId = d
     ]
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
+-- | Set `verified` and `approved` in a single write (`approved` only when given). Leaves `enabled` untouched.
+--   Mirrors the driver-side @updateVerifiedAndApprovedState@.
+updateFleetOwnerVerifiedAndApprovedStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Bool ->
+  Maybe Bool ->
+  Kernel.Types.Id.Id DP.Person ->
+  m ()
+updateFleetOwnerVerifiedAndApprovedStatus verified approved fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    ( [ Se.Set Beam.verified verified,
+        Se.Set Beam.updatedAt _now
+      ]
+        <> [Se.Set Beam.approved approved | isJust approved]
+    )
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
+-- | Set `approved` and `enabled` in a single targeted write. Used by the BOT-review approve path:
+--   a single `updateOneWithKV` patches just these two fields (not a full-row updateByPrimaryKey), so it
+--   never rebuilds the row from a stale snapshot and can't clobber concurrent field writes from the
+--   forked recompute.
+updateFleetOwnerApprovedAndEnabledStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe Bool ->
+  Bool ->
+  Kernel.Types.Id.Id DP.Person ->
+  m ()
+updateFleetOwnerApprovedAndEnabledStatus approved enabled fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    ( [ Se.Set Beam.enabled enabled,
+        Se.Set Beam.updatedAt _now
+      ]
+        <> [Se.Set Beam.approved approved | isJust approved]
+    )
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
 -- | Downgrade-only: set `enabled`/`verified` to False only when the corresponding flag is True,
 --   leaving the other field untouched. (For doc-invalidation; never re-enables/re-verifies.)
+--   Only reached under enableBotFlow, so downgrading either flag also revokes `approved` (re-approval required).
 updateFleetOwnerDowngradeStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Bool ->
@@ -399,6 +438,7 @@ updateFleetOwnerDowngradeStatus disableEnabled disableVerified fleetOwnerPersonI
     ( [Se.Set Beam.updatedAt _now]
         <> [Se.Set Beam.enabled False | disableEnabled]
         <> [Se.Set Beam.verified False | disableVerified]
+        <> [Se.Set Beam.approved (Just False) | disableEnabled || disableVerified]
     )
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
