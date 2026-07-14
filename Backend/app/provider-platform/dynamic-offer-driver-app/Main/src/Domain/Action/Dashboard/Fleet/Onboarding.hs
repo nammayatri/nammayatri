@@ -71,7 +71,6 @@ getOnboardingDocumentConfigs merchantShortId opCity fleetOwnerId makeSelfieAadha
   fleetConfigsRaw <- case role of
     Just CommonOnboarding.NORMAL_FLEET -> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, role = Just FLEET_OWNER}) (Just (FODVC.findAllByMerchantOpCityIdAndRole merchantOpCityId FLEET_OWNER (Just [])))
     Just CommonOnboarding.BUSINESS_FLEET -> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, role = Just FLEET_BUSINESS}) (Just (FODVC.findAllByMerchantOpCityIdAndRole merchantOpCityId FLEET_BUSINESS (Just [])))
-    Just CommonOnboarding.RENTAL_FLEET -> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, role = Just RENTAL_FLEET}) (Just (FODVC.findAllByMerchantOpCityIdAndRole merchantOpCityId RENTAL_FLEET (Just [])))
     _ -> pure []
 
   fleetConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (SDO.mkFleetOwnerDocumentVerificationConfigAPIEntity personLanguage) fleetConfigsRaw
