@@ -948,6 +948,8 @@ library
       Tools.Metrics
       Tools.Metrics.ARDUBPPMetrics
       Tools.Metrics.ARDUBPPMetrics.Types
+      Tools.Metrics.DriverSearchRequestResponseMetrics
+      Tools.Metrics.DriverSearchRequestResponseMetrics.Types
       Tools.Metrics.SendSearchRequestToDriverMetrics
       Tools.Metrics.SendSearchRequestToDriverMetrics.Types
       Tools.Notifications
