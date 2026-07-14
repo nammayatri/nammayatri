@@ -128,4 +128,24 @@ ALTER TABLE atlas_app.quote ADD COLUMN area text ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.quote ADD COLUMN fare_settlement_type text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_app.quote ADD COLUMN navigation_instruction text ;

@@ -26,6 +26,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
+import qualified Lib.Types.SpecialLocation
 import qualified Lib.Yudhishthira.Types
 import qualified SharedLogic.Type
 import qualified Tools.Beam.UtilsTH
@@ -57,6 +58,7 @@ data Booking = Booking
     estimatedFare :: Kernel.Types.Common.Price,
     estimatedStaticDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedTotalFare :: Kernel.Types.Common.Price,
+    fareSettlementType :: Kernel.Prelude.Maybe Lib.Types.SpecialLocation.FareSettlementType,
     fromLocation :: Domain.Types.Location.Location,
     fulfillmentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     hasStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

@@ -23,6 +23,7 @@ imports:
   PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
   PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
   SearchTry: Domain.Types.SearchTry
+  FareSettlementType: Lib.Types.SpecialLocation
 
 Booking:
   derives: "Generic,Show,FromJSON,ToJSON"
@@ -45,6 +46,7 @@ Booking:
     specialZoneOtpCode: Maybe Text
     specialLocationTag: Maybe Text
     specialLocationName: Maybe Text
+    fareSettlementType: Maybe FareSettlementType
     disabilityTag: Maybe Text
     area: Maybe Area
     pickupGateId: Maybe Text
