@@ -1,0 +1,284 @@
+{
+  "scenario": "driver-not-found",
+  "description": "Flexi search returns no quotes → flexiNoAuto + [Try again], back to IDLE.",
+  "env": {
+    "merchant": "pn_flexi",
+    "systemTime": "2026-07-09T00:00:00.000Z"
+  },
+  "seed": {
+    "returningUser": true,
+    "phone": "919361176218"
+  },
+  "knobs": [
+    {
+      "method": "getFlexiQuotes",
+      "behavior": "empty"
+    }
+  ],
+  "steps": [
+    {
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.dnf.1",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "ride_type:flexi",
+                          "title": "Quick Ride"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "location_request",
+          "to": "919361176218",
+          "merchant": "FLEXI"
+        }
+      ],
+      "expectBackend": [
+        {
+          "method": "authenticate",
+          "args": [
+            "9361176218"
+          ]
+        },
+        {
+          "method": "getSavedLocations",
+          "args": []
+        }
+      ]
+    },
+    {
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.dnf.2",
+                      "timestamp": "1783545600",
+                      "type": "location",
+                      "location": {
+                        "latitude": 13.34,
+                        "longitude": 77.1
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "pickup_confirm",
+            "pickup_adjust"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "method": "reverseGeocode",
+          "args": [
+            13.34,
+            77.1
+          ]
+        }
+      ]
+    },
+    {
+      "note": "confirm → search → empty quotes (10 polls) → flexiNoAuto + [Try again], back to IDLE",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.dnf.3",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "pickup_confirm",
+                          "title": "Confirm pickup"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "flush": true,
+      "expectOutbound": [
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "cancel"
+          ]
+        },
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "book"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "method": "searchFlexi",
+          "args": [
+            {
+              "placeId": "mock-pin",
+              "lat": 13.34,
+              "lon": 77.1
+            }
+          ]
+        },
+        {
+          "method": "getFlexiQuotes",
+          "args": [
+            "mock-flexi-search-1"
+          ]
+        },
+        {
+          "method": "getFlexiQuotes",
+          "args": [
+            "mock-flexi-search-1"
+          ]
+        },
+        {
+          "method": "getFlexiQuotes",
+          "args": [
+            "mock-flexi-search-1"
+          ]
+        },
+        {
+          "method": "getFlexiQuotes",
+          "args": [
+            "mock-flexi-search-1"
+          ]
+        },
+        {
+          "method": "getFlexiQuotes",
+          "args": [
+            "mock-flexi-search-1"
+          ]
+        },
+        {
+          "method": "getFlexiQuotes",
+          "args": [
+            "mock-flexi-search-1"
+          ]
+        },
+        {
+          "method": "getFlexiQuotes",
+          "args": [
+            "mock-flexi-search-1"
+          ]
+        },
+        {
+          "method": "getFlexiQuotes",
+          "args": [
+            "mock-flexi-search-1"
+          ]
+        },
+        {
+          "method": "getFlexiQuotes",
+          "args": [
+            "mock-flexi-search-1"
+          ]
+        },
+        {
+          "method": "getFlexiQuotes",
+          "args": [
+            "mock-flexi-search-1"
+          ]
+        }
+      ]
+    }
+  ],
+  "trackerSteps": []
+}

@@ -1,0 +1,138 @@
+name: whatsapp-bot
+version: 0.1.0.0
+github: "nammayatri/nammayatri"
+license: AllRightsReserved
+author: "nammayatri"
+maintainer: "nammayatri"
+copyright: "2023 Juspay Technologies Private Limited"
+
+# whatsapp-bot: a PURE, handle-parameterized port of the TypeScript WhatsApp
+# ride-booking connector (ny-connectors/connectors). The conversation engine,
+# i18n tables, session/DTO types and message builders live here and depend ONLY
+# on mobility-core (for Kernel.Prelude + Kernel.External.Meta wire types) — NEVER
+# on rider-app. rider-app supplies the effectful adapters (BackendHandle/WaSender/
+# stores) at its own layer. The golden replay suite is the equivalence gate.
+
+flags:
+  Local:
+    description: Enable this flag for faster compile times
+    manual: true
+    default: false
+
+description: Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+
+default-extensions:
+  - ConstraintKinds
+  - DataKinds
+  - DefaultSignatures
+  - DeriveAnyClass
+  - DeriveFunctor
+  - DeriveGeneric
+  - DuplicateRecordFields
+  - ExplicitNamespaces
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GADTs
+  - LambdaCase
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NamedFieldPuns
+  - NoImplicitPrelude
+  - OverloadedLabels
+  - OverloadedStrings
+  - PackageImports
+  - PatternSynonyms
+  - PolyKinds
+  - RankNTypes
+  - RecordWildCards
+  - ScopedTypeVariables
+  - TupleSections
+  - TypeApplications
+  - TypeFamilies
+  - TypeOperators
+  - ViewPatterns
+  - BlockArguments
+  - TypeSynonymInstances
+  - UndecidableInstances
+
+dependencies:
+  - base >= 4.7 && < 5
+  - mobility-core
+  - aeson
+  - text
+  - bytestring
+  - time
+  - containers
+  - unordered-containers
+  - record-dot-preprocessor
+  - record-hasfield
+
+ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Werror
+  - -Widentities
+  - -Wunused-imports
+  - -Wwarn=ambiguous-fields
+  - -fplugin=RecordDotPreprocessor
+  - -fwrite-ide-info
+  - -hiedir=.hie
+
+# Golden replay fixtures — embedded at compile time via file-embed
+# (Data.FileEmbed.embedDir), so no Paths_/getDataFileName and -Werror stays
+# strict. Listed as source inputs, not runtime data-files.
+extra-source-files:
+  - test/resources/golden/*.json
+
+library:
+  source-dirs: src
+  ghc-options:
+    - -Wincomplete-uni-patterns
+  when:
+    - condition: flag(Local)
+      then:
+        ghc-options:
+          - -Wno-ambiguous-fields
+          - -Wno-incomplete-uni-patterns
+          - -Wno-incomplete-record-updates
+          - -O0
+          - -funfolding-use-threshold20
+          - -fno-cse
+          - -fmax-simplifier-iterations1
+          - -fno-specialise-aggressively
+          - -j4
+      else:
+        ghc-options:
+          - -O2
+          - -j4
+
+tests:
+  whatsapp-bot-tests:
+    main: Main.hs
+    source-dirs:
+      - test/app
+      - test/src
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - '"-with-rtsopts=-N"'
+      - -Wincomplete-uni-patterns
+    dependencies:
+      - whatsapp-bot
+      - tasty
+      - tasty-hunit
+      - file-embed
+    when:
+      - condition: flag(Local)
+        then:
+          ghc-options:
+            - -Wno-ambiguous-fields
+            - -Wno-incomplete-uni-patterns
+            - -Wno-incomplete-record-updates
+            - -O0
+            - -j4
+        else:
+          ghc-options:
+            - -O2
+            - -j4

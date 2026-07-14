@@ -1,0 +1,173 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           whatsapp-bot
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2023 Juspay Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+extra-source-files:
+    test/resources/golden/cancel-mid-search.json
+    test/resources/golden/driver-not-found.json
+    test/resources/golden/flexi-happy-path.json
+    test/resources/golden/out-of-area.json
+    test/resources/golden/regular-happy-path.json
+    test/resources/golden/token-expiry-reauth.json
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+flag Local
+  description: Enable this flag for faster compile times
+  manual: True
+  default: False
+
+library
+  exposed-modules:
+      WhatsappBot.Cities
+      WhatsappBot.Engine
+      WhatsappBot.Env
+      WhatsappBot.Handles
+      WhatsappBot.I18n
+      WhatsappBot.I18n.Detect
+      WhatsappBot.I18n.En
+      WhatsappBot.I18n.Gu
+      WhatsappBot.I18n.Hi
+      WhatsappBot.I18n.Kn
+      WhatsappBot.I18n.Ta
+      WhatsappBot.I18n.Te
+      WhatsappBot.I18n.Types
+      WhatsappBot.Inbound
+      WhatsappBot.Messages
+      WhatsappBot.Tracker
+      WhatsappBot.Types
+      WhatsappBot.Util
+  other-modules:
+      Paths_whatsapp_bot
+  hs-source-dirs:
+      src
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedLabels
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -Wwarn=ambiguous-fields -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , containers
+    , mobility-core
+    , record-dot-preprocessor
+    , record-hasfield
+    , text
+    , time
+    , unordered-containers
+  default-language: Haskell2010
+  if flag(Local)
+    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4
+
+test-suite whatsapp-bot-tests
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      GoldenReplay
+      Paths_whatsapp_bot
+  hs-source-dirs:
+      test/app
+      test/src
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedLabels
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -Wwarn=ambiguous-fields -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N" -Wincomplete-uni-patterns
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , containers
+    , file-embed
+    , mobility-core
+    , record-dot-preprocessor
+    , record-hasfield
+    , tasty
+    , tasty-hunit
+    , text
+    , time
+    , unordered-containers
+    , whatsapp-bot
+  default-language: Haskell2010
+  if flag(Local)
+    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -j4
+  else
+    ghc-options: -O2 -j4

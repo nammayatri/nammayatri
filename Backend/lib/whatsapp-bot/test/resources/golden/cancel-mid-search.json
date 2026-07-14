@@ -1,0 +1,291 @@
+{
+  "scenario": "cancel-mid-search",
+  "description": "A \"Cancel search\" tap arrives while the flexi search is still in flight (before a driver is assigned). The search aborts cleanly: no ride is registered with the tracker and no driver card is sent.",
+  "env": {
+    "merchant": "pn_flexi",
+    "systemTime": "2026-07-09T00:00:00.000Z"
+  },
+  "seed": {
+    "returningUser": true,
+    "phone": "919361176218"
+  },
+  "knobs": [
+    {
+      "method": "getFlexiQuotes",
+      "behavior": "gate"
+    }
+  ],
+  "steps": [
+    {
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.cxl.1",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "ride_type:flexi",
+                          "title": "Quick Ride"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "location_request",
+          "to": "919361176218",
+          "merchant": "FLEXI"
+        }
+      ],
+      "expectBackend": [
+        {
+          "method": "authenticate",
+          "args": [
+            "9361176218"
+          ]
+        },
+        {
+          "method": "getSavedLocations",
+          "args": []
+        }
+      ]
+    },
+    {
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.cxl.2",
+                      "timestamp": "1783545600",
+                      "type": "location",
+                      "location": {
+                        "latitude": 13.34,
+                        "longitude": 77.1
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "pickup_confirm",
+            "pickup_adjust"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "method": "reverseGeocode",
+          "args": [
+            13.34,
+            77.1
+          ]
+        }
+      ]
+    },
+    {
+      "note": "pickup_confirm starts a search (gated). A Cancel tap lands mid-search; the search then aborts cleanly — no ride registered, no driver card. Outbound = [finding+Cancel, then cancelled+menu]; backend interleaves searchFlexi, getFlexiQuotes, getActiveBookings, cancelRide, confirmQuote.",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.cxl.3",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "pickup_confirm",
+                          "title": "Confirm pickup"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "concurrent": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.cxl.cancel",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "cancel",
+                          "title": "Cancel search"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "cancel"
+          ]
+        },
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "ride_type:flexi",
+            "more",
+            "choose_language"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
+          "method": "searchFlexi",
+          "args": [
+            {
+              "placeId": "mock-pin",
+              "lat": 13.34,
+              "lon": 77.1
+            }
+          ]
+        },
+        {
+          "method": "getFlexiQuotes",
+          "args": [
+            "mock-flexi-search-1"
+          ]
+        },
+        {
+          "method": "getActiveBookings",
+          "args": []
+        },
+        {
+          "method": "cancelRide",
+          "args": [
+            "mock-booking-001",
+            "TRIP_ASSIGNED"
+          ]
+        },
+        {
+          "method": "confirmQuote",
+          "args": [
+            "mock-flexi-quote-auto"
+          ]
+        }
+      ]
+    }
+  ],
+  "trackerSteps": []
+}
