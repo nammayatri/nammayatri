@@ -13,7 +13,11 @@ import qualified Kernel.Types.SlidingWindowCounters
 import Tools.Beam.UtilsTH
 
 data MerchantConfigT f = MerchantConfigT
-  { createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+  { authPhoneNumberCountThreshold1 :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    authPhoneNumberCountThreshold2 :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    authPhoneNumberCountWindow1 :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions)),
+    authPhoneNumberCountWindow2 :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions)),
+    createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     enabled :: B.C f Kernel.Prelude.Bool,
     fraudAuthCountThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     fraudAuthCountWindow :: B.C f (Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions),

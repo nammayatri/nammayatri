@@ -22,12 +22,17 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.City
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.SlidingWindowCounters
 import qualified Kernel.Types.Version
 import qualified SharedLogic.BehaviourManagement.IssueBreach
 import qualified Tools.Beam.UtilsTH
 
 data TransporterConfigD (s :: UsageSafety) = TransporterConfig
   { aaEnabledClientSdkVersion :: Kernel.Prelude.Text,
+    authPhoneNumberCountThreshold1 :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    authPhoneNumberCountThreshold2 :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    authPhoneNumberCountWindow1 :: Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
+    authPhoneNumberCountWindow2 :: Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
     aadhaarImageResizeConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.AadhaarImageResizeConfig,
     aadhaarVerificationRequired :: Kernel.Prelude.Bool,
     acStatusCheckGap :: Kernel.Prelude.Int,

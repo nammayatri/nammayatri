@@ -911,3 +911,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_tier_upg
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_mobility_billing boolean ;
+
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_phone_number_count_threshold1 integer;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_phone_number_count_window1 json;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_phone_number_count_threshold2 integer;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_phone_number_count_window2 json;

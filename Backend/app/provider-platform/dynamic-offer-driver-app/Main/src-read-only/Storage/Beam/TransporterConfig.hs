@@ -17,11 +17,16 @@ import qualified Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.City
+import qualified Kernel.Types.SlidingWindowCounters
 import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data TransporterConfigT f = TransporterConfigT
   { aaEnabledClientSdkVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    authPhoneNumberCountThreshold1 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    authPhoneNumberCountThreshold2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    authPhoneNumberCountWindow1 :: B.C f (Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions),
+    authPhoneNumberCountWindow2 :: B.C f (Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions),
     aadhaarImageResizeConfig :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     aadhaarVerificationRequired :: (B.C f Kernel.Prelude.Bool),
     acStatusCheckGap :: (B.C f Kernel.Prelude.Int),

@@ -40,7 +40,11 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.MerchantConfig.MerchantConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.enabled enabled,
+    [ Se.Set Beam.authPhoneNumberCountThreshold1 authPhoneNumberCountThreshold1,
+      Se.Set Beam.authPhoneNumberCountThreshold2 authPhoneNumberCountThreshold2,
+      Se.Set Beam.authPhoneNumberCountWindow1 authPhoneNumberCountWindow1,
+      Se.Set Beam.authPhoneNumberCountWindow2 authPhoneNumberCountWindow2,
+      Se.Set Beam.enabled enabled,
       Se.Set Beam.fraudAuthCountThreshold fraudAuthCountThreshold,
       Se.Set Beam.fraudAuthCountWindow fraudAuthCountWindow,
       Se.Set Beam.fraudBookingCancellationCountThreshold fraudBookingCancellationCountThreshold,
@@ -63,7 +67,11 @@ instance FromTType' Beam.MerchantConfig Domain.Types.MerchantConfig.MerchantConf
     pure $
       Just
         Domain.Types.MerchantConfig.MerchantConfig
-          { createdAt = createdAt,
+          { authPhoneNumberCountThreshold1 = authPhoneNumberCountThreshold1,
+            authPhoneNumberCountThreshold2 = authPhoneNumberCountThreshold2,
+            authPhoneNumberCountWindow1 = authPhoneNumberCountWindow1,
+            authPhoneNumberCountWindow2 = authPhoneNumberCountWindow2,
+            createdAt = createdAt,
             enabled = enabled,
             fraudAuthCountThreshold = fraudAuthCountThreshold,
             fraudAuthCountWindow = fraudAuthCountWindow,
@@ -85,7 +93,11 @@ instance FromTType' Beam.MerchantConfig Domain.Types.MerchantConfig.MerchantConf
 instance ToTType' Beam.MerchantConfig Domain.Types.MerchantConfig.MerchantConfig where
   toTType' (Domain.Types.MerchantConfig.MerchantConfig {..}) = do
     Beam.MerchantConfigT
-      { Beam.createdAt = createdAt,
+      { Beam.authPhoneNumberCountThreshold1 = authPhoneNumberCountThreshold1,
+        Beam.authPhoneNumberCountThreshold2 = authPhoneNumberCountThreshold2,
+        Beam.authPhoneNumberCountWindow1 = authPhoneNumberCountWindow1,
+        Beam.authPhoneNumberCountWindow2 = authPhoneNumberCountWindow2,
+        Beam.createdAt = createdAt,
         Beam.enabled = enabled,
         Beam.fraudAuthCountThreshold = fraudAuthCountThreshold,
         Beam.fraudAuthCountWindow = fraudAuthCountWindow,

@@ -12,7 +12,11 @@ import qualified Kernel.Types.SlidingWindowCounters
 import qualified Tools.Beam.UtilsTH
 
 data MerchantConfig = MerchantConfig
-  { createdAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+  { authPhoneNumberCountThreshold1 :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    authPhoneNumberCountThreshold2 :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    authPhoneNumberCountWindow1 :: Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
+    authPhoneNumberCountWindow2 :: Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
+    createdAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     enabled :: Kernel.Prelude.Bool,
     fraudAuthCountThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     fraudAuthCountWindow :: Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,

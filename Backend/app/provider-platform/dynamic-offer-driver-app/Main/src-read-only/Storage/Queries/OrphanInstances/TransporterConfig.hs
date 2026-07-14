@@ -32,6 +32,10 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
       Just
         Domain.Types.TransporterConfig.TransporterConfig
           { aaEnabledClientSdkVersion = fromMaybe Storage.Queries.Transformers.TransporterConfig.fallBackVersionInText aaEnabledClientSdkVersion,
+            authPhoneNumberCountThreshold1 = authPhoneNumberCountThreshold1,
+            authPhoneNumberCountThreshold2 = authPhoneNumberCountThreshold2,
+            authPhoneNumberCountWindow1 = authPhoneNumberCountWindow1,
+            authPhoneNumberCountWindow2 = authPhoneNumberCountWindow2,
             aadhaarImageResizeConfig = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< aadhaarImageResizeConfig,
             aadhaarVerificationRequired = aadhaarVerificationRequired,
             acStatusCheckGap = acStatusCheckGap,
@@ -326,6 +330,10 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
   toTType' (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
     Beam.TransporterConfigT
       { Beam.aaEnabledClientSdkVersion = Just aaEnabledClientSdkVersion,
+        Beam.authPhoneNumberCountThreshold1 = authPhoneNumberCountThreshold1,
+        Beam.authPhoneNumberCountThreshold2 = authPhoneNumberCountThreshold2,
+        Beam.authPhoneNumberCountWindow1 = authPhoneNumberCountWindow1,
+        Beam.authPhoneNumberCountWindow2 = authPhoneNumberCountWindow2,
         Beam.aadhaarImageResizeConfig = Kernel.Prelude.toJSON <$> aadhaarImageResizeConfig,
         Beam.aadhaarVerificationRequired = aadhaarVerificationRequired,
         Beam.acStatusCheckGap = acStatusCheckGap,

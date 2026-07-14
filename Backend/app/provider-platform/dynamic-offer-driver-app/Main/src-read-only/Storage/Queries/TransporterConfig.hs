@@ -38,7 +38,11 @@ update :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Transport
 update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
   _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.pickupLocThreshold pickupLocThreshold,
+    [ Se.Set Beam.authPhoneNumberCountThreshold1 authPhoneNumberCountThreshold1,
+      Se.Set Beam.authPhoneNumberCountThreshold2 authPhoneNumberCountThreshold2,
+      Se.Set Beam.authPhoneNumberCountWindow1 authPhoneNumberCountWindow1,
+      Se.Set Beam.authPhoneNumberCountWindow2 authPhoneNumberCountWindow2,
+      Se.Set Beam.pickupLocThreshold pickupLocThreshold,
       Se.Set Beam.dropLocThreshold dropLocThreshold,
       Se.Set Beam.rideTimeEstimatedThreshold rideTimeEstimatedThreshold,
       Se.Set Beam.defaultPopupDelay defaultPopupDelay,
