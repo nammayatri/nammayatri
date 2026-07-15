@@ -112,10 +112,8 @@ validateDriverPoolConfigUpdateReq DriverPoolConfigUpdateReq {..} =
   sequenceA_
     [ validateField "minRadiusOfSearch" minRadiusOfSearch $ InMaybe $ InValue $ Min @Meters 1,
       validateField "maxRadiusOfSearch" maxRadiusOfSearch $ InMaybe $ InValue $ Min @Meters (maybe 1 (.value) minRadiusOfSearch),
-      validateField "radiusStepSize" radiusStepSize $ InMaybe $ InValue $ Min @Meters 1,
       validateField "minRadiusOfSearchWithUnit" minRadiusOfSearchWithUnit $ InMaybe $ InValue $ Min @Distance (Distance 1 Meter),
       validateField "maxRadiusOfSearchWithUnit" maxRadiusOfSearchWithUnit $ InMaybe $ InValue $ Min @Distance (maybe (Distance 1 Meter) (.value) minRadiusOfSearchWithUnit),
-      validateField "radiusStepSizeWithUnit" radiusStepSizeWithUnit $ InMaybe $ InValue $ Min @Distance (Distance 1 Meter),
       validateField "driverPositionInfoExpiry" driverPositionInfoExpiry $ InMaybe $ InValue $ Min @Seconds 1,
       validateField "actualDistanceThreshold" actualDistanceThreshold $ InMaybe $ InValue $ Min @Meters 0,
       validateField "actualDistanceThresholdOnRide" actualDistanceThresholdOnRide $ InMaybe $ InValue $ Min @Meters 0,
@@ -139,10 +137,8 @@ validateDriverPoolConfigCreateReq DriverPoolConfigCreateReq {..} =
   sequenceA_
     [ validateField "minRadiusOfSearch" minRadiusOfSearch $ Min @Meters 1,
       validateField "maxRadiusOfSearch" maxRadiusOfSearch $ Min @Meters minRadiusOfSearch,
-      validateField "radiusStepSize" radiusStepSize $ Min @Meters 1,
       validateField "minRadiusOfSearchWithUnit" minRadiusOfSearchWithUnit $ InMaybe $ Min @Distance (Distance 1 Meter),
       validateField "maxRadiusOfSearchWithUnit" maxRadiusOfSearchWithUnit $ InMaybe $ Min @Distance $ fromMaybe (convertMetersToDistance Meter minRadiusOfSearch) minRadiusOfSearchWithUnit,
-      validateField "radiusStepSizeWithUnit" radiusStepSizeWithUnit $ InMaybe $ Min @Distance (Distance 1 Meter),
       validateField "driverPositionInfoExpiry" driverPositionInfoExpiry $ InMaybe $ Min @Seconds 1,
       validateField "actualDistanceThreshold" actualDistanceThreshold $ InMaybe $ Min @Meters 0,
       validateField "actualDistanceThresholdOnRide" actualDistanceThresholdOnRide $ InMaybe $ Min @Meters 0,

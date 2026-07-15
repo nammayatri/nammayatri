@@ -532,7 +532,6 @@ mkDriverPoolConfigRes DDPC.DriverPoolConfig {..} =
     { poolSortingType = Common.Tagged,
       minRadiusOfSearchWithUnit = convertMetersToDistance distanceUnit minRadiusOfSearch,
       maxRadiusOfSearchWithUnit = convertMetersToDistance distanceUnit maxRadiusOfSearch,
-      radiusStepSizeWithUnit = convertMetersToDistance distanceUnit radiusStepSize,
       actualDistanceThresholdWithUnit = convertMetersToDistance distanceUnit <$> actualDistanceThreshold,
       tripDistanceWithUnit = convertMetersToDistance distanceUnit tripDistance,
       radiusShrinkValueForDriversOnRideWithUnit = convertMetersToDistance distanceUnit radiusShrinkValueForDriversOnRide,
@@ -599,7 +598,6 @@ postMerchantConfigDriverPoolUpdate merchantShortId opCity reqTripDistanceValue r
   let updConfig =
         config{minRadiusOfSearch = mkDistanceField config.minRadiusOfSearch req.minRadiusOfSearchWithUnit req.minRadiusOfSearch,
                maxRadiusOfSearch = mkDistanceField config.maxRadiusOfSearch req.maxRadiusOfSearchWithUnit req.maxRadiusOfSearch,
-               radiusStepSize = mkDistanceField config.radiusStepSize req.radiusStepSizeWithUnit req.radiusStepSize,
                driverPositionInfoExpiry = maybe config.driverPositionInfoExpiry (.value) req.driverPositionInfoExpiry,
                actualDistanceThreshold = mkOptionalDistanceField config.actualDistanceThreshold req.actualDistanceThresholdWithUnit req.actualDistanceThreshold,
                actualDistanceThresholdOnRide = mkOptionalDistanceField config.actualDistanceThresholdOnRide req.actualDistanceThresholdOnRideWithUnit req.actualDistanceThresholdOnRide,
@@ -685,7 +683,7 @@ buildDriverPoolConfig merchantId merchantOpCityId tripDistance distanceUnit area
         timeBounds = Unbounded,
         minRadiusOfSearch = maybe minRadiusOfSearch distanceToMeters minRadiusOfSearchWithUnit,
         maxRadiusOfSearch = maybe maxRadiusOfSearch distanceToMeters maxRadiusOfSearchWithUnit,
-        radiusStepSize = maybe radiusStepSize distanceToMeters radiusStepSizeWithUnit,
+        radiusStepSize = Nothing,
         actualDistanceThreshold = distanceToMeters <$> actualDistanceThresholdWithUnit <|> actualDistanceThreshold,
         radiusShrinkValueForDriversOnRide = maybe radiusShrinkValueForDriversOnRide distanceToMeters radiusShrinkValueForDriversOnRideWithUnit,
         driverToDestinationDistanceThreshold = maybe driverToDestinationDistanceThreshold distanceToMeters driverToDestinationDistanceThresholdWithUnit,
@@ -744,7 +742,6 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
 
       minRadiusOfSearch :: Meters <- readCSVField idx row.minRadiusOfSearch "Min Radius Of Search"
       maxRadiusOfSearch :: Meters <- readCSVField idx row.maxRadiusOfSearch "Max Radius Of Search"
-      radiusStepSize :: Meters <- readCSVField idx row.radiusStepSize "Radius Step Size"
       driverBatchSize :: Int <- readCSVField idx row.driverBatchSize "Driver Batch Size"
       maxNumberOfBatches :: Int <- readCSVField idx row.maxNumberOfBatches "Max Number Of Batches"
       maxParallelSearchRequests :: Int <- readCSVField idx row.maxParallelSearchRequests "Max Parallel Search Requests"
@@ -784,7 +781,7 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
             vehicleVariant,
             minRadiusOfSearch,
             maxRadiusOfSearch,
-            radiusStepSize,
+            radiusStepSize = Nothing,
             driverBatchSize,
             maxNumberOfBatches,
             maxParallelSearchRequests,
@@ -830,7 +827,6 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
                 existingConfig
                   { DDPC.minRadiusOfSearch = config.minRadiusOfSearch,
                     DDPC.maxRadiusOfSearch = config.maxRadiusOfSearch,
-                    DDPC.radiusStepSize = config.radiusStepSize,
                     DDPC.driverBatchSize = config.driverBatchSize,
                     DDPC.maxNumberOfBatches = config.maxNumberOfBatches,
                     DDPC.maxParallelSearchRequests = config.maxParallelSearchRequests,
@@ -872,7 +868,6 @@ data DriverPoolConfigCSVRow = DriverPoolConfigCSVRow
     vehicleVariant :: Text,
     minRadiusOfSearch :: Text,
     maxRadiusOfSearch :: Text,
-    radiusStepSize :: Text,
     driverBatchSize :: Text,
     maxNumberOfBatches :: Text,
     maxParallelSearchRequests :: Text,
@@ -913,7 +908,6 @@ instance FromNamedRecord DriverPoolConfigCSVRow where
       <*> r .: "vehicleVariant"
       <*> r .: "minRadiusOfSearch"
       <*> r .: "maxRadiusOfSearch"
-      <*> r .: "radiusStepSize"
       <*> r .: "driverBatchSize"
       <*> r .: "maxNumberOfBatches"
       <*> r .: "maxParallelSearchRequests"

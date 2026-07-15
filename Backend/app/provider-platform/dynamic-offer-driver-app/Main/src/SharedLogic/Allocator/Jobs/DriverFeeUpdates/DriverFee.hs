@@ -44,7 +44,6 @@ import Domain.Types.Plan (BasedOnEntity (..), PaymentMode (AUTOPAY, MANUAL), Pla
 import Domain.Types.SubscriptionConfig
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.VendorFee as DVF
-import qualified Domain.Types.VendorSplitDetails as DVSD
 import Kernel.Beam.Functions (runInMasterDbAndRedis)
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as PaymentInterface
@@ -176,7 +175,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             (feeWithoutDiscount, totalFee, offerId, offerTitle) <- do
               calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFeeWithPenalties waiveOffPercentage waiveOffMode waiveOffValidTill isMemberEligibleForOffers
             when (totalFee /= 0 && fromMaybe False subscriptionConfigs.isVendorSplitEnabled && fromMaybe False subscriptionConfigs.enableDailyPlanVendorSplit) $
-              recomputeVendorFeesForPlan driverFee plan driverFee.merchantOperatingCityId
+              recomputeVendorFeesForPlan driverFee.id plan driverFee.merchantOperatingCityId
             ---------------------------------------------------------------------
             ------------- update driver fee with offer and plan details ---------
             let offerAndPlanTitle = Just plan.name <> Just "-*@*-" <> offerTitle ---- this we will send in payment history ----
@@ -1042,29 +1041,25 @@ updateCancellationPenaltyAccumulationFees serviceName transporterConfig merchant
 
 recomputeVendorFeesForPlan ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  DriverFee ->
+  Id DriverFee ->
   Plan ->
   Id MerchantOperatingCity ->
   m ()
-recomputeVendorFeesForPlan driverFee plan cityId = do
+recomputeVendorFeesForPlan driverFeeId plan cityId = do
   planSplits <- CQVSD.findAllByCityAndPlan cityId plan.id
   unless (null planSplits) $ do
     now <- getCurrentTime
-    let vendorFeeBase = driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst
-    QVF.deleteAllByDriverFeeId driverFee.id
+    QVF.deleteAllByDriverFeeId driverFeeId
     -- Reset cancellation-vendor guard so a later makeVendorFeeForCancellationPenalty re-applies
     -- the cancellation portion on top of the freshly-recreated plan-split rows. The cancellation
     -- vendor may overlap with a subscription vendor, so we cannot preserve rows selectively.
-    Hedis.del (cancellationVendorFeeGuardKey driverFee.id)
+    Hedis.del (cancellationVendorFeeGuardKey driverFeeId)
     forM_ planSplits $ \vsd -> do
-      let rawAmount = case vsd.splitType of
-            DVSD.FIXED -> HighPrecMoney (toRational vsd.splitValue)
-            DVSD.PERCENTAGE -> vendorFeeBase * HighPrecMoney (toRational vsd.splitValue / 100)
-          amount = maybe rawAmount (min rawAmount) vsd.maxVendorFeeAmount
+      let amount = maybe (HighPrecMoney (toRational vsd.splitValue)) (min (HighPrecMoney (toRational vsd.splitValue))) vsd.maxVendorFeeAmount
       QVF.create
         DVF.VendorFee
           { amount = SPayment.roundToTwoDecimalPlaces amount,
-            driverFeeId = driverFee.id,
+            driverFeeId = driverFeeId,
             vendorId = vsd.vendorId,
             createdAt = now,
             updatedAt = now
