@@ -207,6 +207,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                             vehicleNumber = detail.vehicle_no,
                             tripId = combinedTripId,
                             isActiveTrip = detail.is_active_trip,
+                            isCompleted = detail.is_completed,
                             serviceSubTypes = mbServiceSubTypes,
                             vehicleTagNumber = mbVehicleTagNumber,
                             availableSeats = availableSeatsCount,

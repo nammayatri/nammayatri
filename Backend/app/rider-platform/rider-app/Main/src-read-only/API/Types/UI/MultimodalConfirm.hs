@@ -379,6 +379,7 @@ data ScheduledVehicleInfo = ScheduledVehicleInfo
   { availableSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
     isActiveTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isCompleted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     locationUTCTimestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     position :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     seatSelectionType :: Kernel.Prelude.Maybe Domain.Types.VehicleSeatLayoutMapping.SeatSelectionType,

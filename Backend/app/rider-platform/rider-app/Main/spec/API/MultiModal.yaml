@@ -333,6 +333,7 @@ types:
     vehicleTagNumber: Maybe Text
     tripId: Maybe Text
     isActiveTrip: Maybe Bool
+    isCompleted: Maybe Bool
     serviceTierType: ServiceTierType
     serviceTierName: Maybe Text
     locationUTCTimestamp: Maybe UTCTime
