@@ -137,6 +137,7 @@ types:
     ticketQuantity: Maybe Int # TODO: To Be Deprecated
     childTicketQuantity: Maybe Int # TODO: To Be Deprecated
     tripId: Maybe Text
+    forceAutoAssignSeat: Maybe Bool # conductor fast-booking: auto-assign a random seat, skipping the seat-selection screen
 
   FRFSTicketCategoryMetadataAPIEntity:
     title: Text
@@ -365,6 +366,7 @@ types:
     phone: Text
     bookingId: Id FRFSTicketBooking
     checkedIn: Bool
+    conductorToken: Maybe Text
     derive: "Show"
 
   PassengerStopManifest:

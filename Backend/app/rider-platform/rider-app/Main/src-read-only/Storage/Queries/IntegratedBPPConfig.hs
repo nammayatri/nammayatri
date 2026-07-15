@@ -4,6 +4,7 @@
 
 module Storage.Queries.IntegratedBPPConfig (module Storage.Queries.IntegratedBPPConfig, module ReExport) where
 
+import qualified BecknV2.OnDemand.Enums
 import qualified Domain.Types.IntegratedBPPConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -25,6 +26,18 @@ createMany = traverse_ create
 
 findByAgencyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
 findByAgencyId agencyKey = do findOneWithKV [Se.And [Se.Is Beam.agencyKey $ Se.Eq agencyKey]]
+
+findByFeedKeyAndVehicleCategoryAndPlatformType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Domain.Types.IntegratedBPPConfig.PlatformType -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
+findByFeedKeyAndVehicleCategoryAndPlatformType feedKey vehicleCategory platformType = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.feedKey $ Se.Eq feedKey,
+          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory,
+          Se.Is Beam.platformType $ Se.Eq platformType
+        ]
+    ]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

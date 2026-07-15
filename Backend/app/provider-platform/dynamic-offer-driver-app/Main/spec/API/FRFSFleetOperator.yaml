@@ -5,6 +5,12 @@ imports:
   VehicleCategory: BecknV2.FRFS.Enums
   TimeBound: Kernel.Types.TimeBound
   FleetOperatorTripAction: Domain.Types.FleetOperatorTripAction
+  Value: Data.Aeson
+  ServiceTierType: BecknV2.FRFS.Enums
+  FRFSTicketStatus: Domain.Types.FRFSTicketStatus
+  FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
+  PriceAPIEntity: Kernel.Types.Common
+  CreateOrderResp: Kernel.External.Payment.Juspay.Types.CreateOrder
 
 module: FRFSFleetOperator
 
@@ -85,6 +91,7 @@ types:
     phone: Text
     bookingId: Text
     checkedIn: Bool
+    conductorToken: Maybe Text
     derive: "Show"
 
   PassengerStopManifest:
@@ -96,6 +103,135 @@ types:
 
   FRFSTripPassengerManifestResp:
     manifest: "[PassengerStopManifest]"
+    derive: "Show"
+
+  # ---- Conductor fast-booking (search -> quote -> confirm -> status) ----
+  # These mirror the rider-app FRFS ticket-service shapes wire-for-wire (the
+  # driver-app proxies to the rider-app internal endpoints). Deep, tablet-irrelevant
+  # sub-branches (offer, routeStations, quote categories, category metadata) are kept
+  # as opaque `Value` so they pass through verbatim without dropping fields.
+  FRFSQuoteType:
+    enum: "SingleJourney, ReturnJourney, Pass, SpecialFareSingleJourney"
+
+  FRFSBookingPaymentStatusAPI:
+    enum: "NEW, PENDING, SUCCESS, FAILURE, REFUND_PENDING, REFUNDED, REFUND_FAILED, REFUND_INITIATED"
+
+  FRFSSearchAPIReq:
+    fromStationCode: Text
+    toStationCode: Text
+    quantity: Int
+    routeCode: Maybe Text
+    vehicleNumber: Maybe Text
+    serviceTier: Maybe ServiceTierType
+    searchAsParentStops: Maybe Bool
+    derive: "Show"
+
+  FRFSBookingSearchReq:
+    feedKey: Text
+    vehicleType: VehicleCategory
+    operatorBadgeToken: Text
+    searchReq: FRFSSearchAPIReq
+    derive: "Show"
+
+  FRFSCategorySelectionReq:
+    quantity: Int
+    quoteCategoryId: Text
+    seatIds: Maybe [Text]
+    derive: "Show"
+
+  CrisSdkResponse:
+    bookAuthCode: Text
+    latency: Maybe Int
+    osBuildVersion: Text
+    osType: Text
+    derive: "Show"
+
+  FRFSQuoteConfirmReq:
+    childTicketQuantity: Maybe Int
+    crisSdkResponse: Maybe CrisSdkResponse
+    enableOffer: Maybe Bool
+    forceAutoAssignSeat: Maybe Bool
+    offered: Maybe [FRFSCategorySelectionReq]
+    ticketQuantity: Maybe Int
+    tripId: Maybe Text
+    derive: "Show"
+
+  FRFSQuoteAPIRes:
+    _type: FRFSQuoteType
+    categories: "[Value]"
+    discountedTickets: Maybe Int
+    eventDiscountAmount: Maybe HighPrecMoney
+    integratedBppConfigId: Text
+    observingFailures: Maybe Bool
+    offer: Maybe Value
+    price: HighPrecMoney
+    priceWithCurrency: PriceAPIEntity
+    quantity: Int
+    quoteId: Text
+    routeCode: Maybe Text
+    routeStations: Maybe [Value]
+    serviceTierName: Maybe Text
+    serviceTierType: Maybe ServiceTierType
+    stations: "[FRFSStationAPI]"
+    validTill: UTCTime
+    vehicleType: VehicleCategory
+    derive: "Show"
+
+  FRFSSearchAPIRes:
+    quotes: "[FRFSQuoteAPIRes]"
+    searchId: Text
+    derive: "Show"
+
+  FRFSBookingPaymentAPI:
+    paymentOrder: Maybe CreateOrderResp
+    status: FRFSBookingPaymentStatusAPI
+    transactionId: Maybe Text
+    derive: "Show"
+
+  FRFSTicketAPI:
+    createdAt: UTCTime
+    description: Maybe Text
+    isReturnTicket: Maybe Bool
+    qrData: Text
+    scannedByVehicleNumber: Maybe Text
+    status: FRFSTicketStatus
+    ticketNumber: Text
+    validTill: UTCTime
+    derive: "Show"
+
+  FRFSQuoteCategoryAPIEntity:
+    bppItemId: Text
+    categoryMetadata: Maybe Value
+    finalPrice: Maybe PriceAPIEntity
+    offeredPrice: PriceAPIEntity
+    price: PriceAPIEntity
+    seatIds: Maybe [Text]
+    seatLabels: Maybe [Text]
+    selectedQuantity: Int
+    derive: "Show"
+
+  FRFSTicketBookingStatusAPIRes:
+    _type: FRFSQuoteType
+    bookingId: Text
+    city: City
+    createdAt: UTCTime
+    discountedTickets: Maybe Int
+    eventDiscountAmount: Maybe HighPrecMoney
+    googleWalletJWTUrl: Maybe Text
+    integratedBppConfigId: Text
+    isFareChanged: Maybe Bool
+    payment: Maybe FRFSBookingPaymentAPI
+    price: Maybe HighPrecMoney
+    priceWithCurrency: Maybe PriceAPIEntity
+    quantity: Maybe Int
+    quoteCategories: "[FRFSQuoteCategoryAPIEntity]"
+    routeStations: Maybe [Value]
+    stations: "[FRFSStationAPI]"
+    status: FRFSTicketBookingStatus
+    tickets: "[FRFSTicketAPI]"
+    updatedAt: UTCTime
+    validTill: UTCTime
+    vehicleType: VehicleCategory
     derive: "Show"
 
 apis:
@@ -137,3 +273,42 @@ apis:
         type: FleetOperatorCurrentOperationReq
       response:
         type: FleetOperatorCurrentOperationResp
+
+  # Conductor-initiated FRFS ticket booking (proxied to rider-app / BAP).
+  # search -> quote -> confirm -> status; bodies are opaque Value passthroughs.
+  - POST:
+      endpoint: /frfs/fleetOperator/search
+      auth: TokenAuth PROVIDER_TYPE
+      mandatoryQuery:
+        city: City
+        vehicleType: VehicleCategory
+      request:
+        type: FRFSSearchAPIReq
+      response:
+        type: FRFSSearchAPIRes
+
+  - GET:
+      endpoint: /frfs/fleetOperator/search/{searchId}/quote
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        searchId: Text
+      response:
+        type: "[FRFSQuoteAPIRes]"
+
+  - POST:
+      endpoint: /frfs/fleetOperator/quote/{quoteId}/confirm
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        quoteId: Text
+      request:
+        type: FRFSQuoteConfirmReq
+      response:
+        type: FRFSTicketBookingStatusAPIRes
+
+  - GET:
+      endpoint: /frfs/fleetOperator/booking/{bookingId}/status
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        bookingId: Text
+      response:
+        type: FRFSTicketBookingStatusAPIRes

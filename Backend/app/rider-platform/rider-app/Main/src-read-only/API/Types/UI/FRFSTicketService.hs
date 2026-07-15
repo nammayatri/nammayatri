@@ -219,6 +219,7 @@ data FRFSQuoteConfirmReq = FRFSQuoteConfirmReq
   { childTicketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int,
     crisSdkResponse :: Data.Maybe.Maybe CrisSdkResponse,
     enableOffer :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    forceAutoAssignSeat :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     offered :: Data.Maybe.Maybe [FRFSCategorySelectionReq],
     ticketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int,
     tripId :: Data.Maybe.Maybe Data.Text.Text
@@ -421,6 +422,7 @@ data OperatorTripInfo = OperatorTripInfo
 data PassengerInfo = PassengerInfo
   { bookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     checkedIn :: Kernel.Prelude.Bool,
+    conductorToken :: Data.Maybe.Maybe Data.Text.Text,
     name :: Data.Text.Text,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     phone :: Data.Text.Text

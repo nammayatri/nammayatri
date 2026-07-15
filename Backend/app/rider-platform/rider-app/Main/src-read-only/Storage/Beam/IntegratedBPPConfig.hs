@@ -14,19 +14,19 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data IntegratedBPPConfigT f = IntegratedBPPConfigT
-  { agencyKey :: (B.C f Kernel.Prelude.Text),
-    domain :: (B.C f Kernel.Prelude.Text),
-    feedKey :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    isTicketValidOnMultipleRoutes :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    platformType :: (B.C f Domain.Types.IntegratedBPPConfig.PlatformType),
-    configJSON :: (B.C f Data.Aeson.Value),
-    providerName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    vehicleCategory :: (B.C f BecknV2.OnDemand.Enums.VehicleCategory),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { agencyKey :: B.C f Kernel.Prelude.Text,
+    domain :: B.C f Kernel.Prelude.Text,
+    feedKey :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    isTicketValidOnMultipleRoutes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    platformType :: B.C f Domain.Types.IntegratedBPPConfig.PlatformType,
+    configJSON :: B.C f Data.Aeson.Value,
+    providerName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    vehicleCategory :: B.C f BecknV2.OnDemand.Enums.VehicleCategory,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -36,6 +36,6 @@ instance B.Table IntegratedBPPConfigT where
 
 type IntegratedBPPConfig = IntegratedBPPConfigT Identity
 
-$(enableKVPG (''IntegratedBPPConfigT) [('id)] [[('agencyKey)]])
+$(enableKVPG ''IntegratedBPPConfigT ['id] [['agencyKey], ['feedKey]])
 
-$(mkTableInstances (''IntegratedBPPConfigT) "integrated_bpp_config")
+$(mkTableInstances ''IntegratedBPPConfigT "integrated_bpp_config")

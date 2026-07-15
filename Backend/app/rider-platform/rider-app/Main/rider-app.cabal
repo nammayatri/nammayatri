@@ -60,6 +60,7 @@ library
       API.Internal.EKDLiveCallFeedback
       API.Internal.FrequentLocUser
       API.Internal.FRFS
+      API.Internal.FRFSBooking
       API.Internal.GetPickupInstructions
       API.Internal.InMemManagement
       API.Internal.NotificationWebhook
@@ -240,6 +241,7 @@ library
       Domain.Action.Internal.DriverArrivalNotf
       Domain.Action.Internal.FrequentLocUser
       Domain.Action.Internal.FRFS
+      Domain.Action.Internal.FRFSBooking
       Domain.Action.Internal.GetPickupInstructions
       Domain.Action.Internal.NotificationWebhook
       Domain.Action.Internal.OfferDiscount

@@ -3,6 +3,10 @@ module Domain.Action.UI.FRFSFleetOperator
     getV2FrfsTripRouteManifest,
     postFrfsFleetOperatorTripAction,
     postFrfsFleetOperatorCurrentOperation,
+    postFrfsFleetOperatorSearch,
+    getFrfsFleetOperatorSearchQuote,
+    postFrfsFleetOperatorQuoteConfirm,
+    getFrfsFleetOperatorBookingStatus,
   )
 where
 
@@ -10,6 +14,7 @@ import API.Types.UI.FRFSFleetOperator
 import BecknV2.FRFS.Enums (VehicleCategory (..))
 import qualified Data.HashMap.Strict as HashMap
 import Data.Text (unpack)
+import qualified Data.Text as Text
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Types.FleetOperatorTripAction (FleetOperatorTripAction (..))
 import Domain.Types.IntegratedBPPConfig (PlatformType (..))
@@ -25,14 +30,16 @@ import Kernel.Prelude (listToMaybe)
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common (Seconds (..))
-import Kernel.Types.Id (Id (..), getId)
+import Kernel.Types.Id (Id (..))
 import Kernel.Types.TimeBound (TimeBound (..))
 import Kernel.Utils.Common (fromMaybeM, getCurrentTime, logError, logInfo, throwError)
 import qualified Lib.GtfsDataServer.Flow as NandiFlow
 import Lib.GtfsDataServer.Types
 import SharedLogic.CallBAPInternal (getFrfsTripManifest)
+import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, findIntegratedBPPConfig, getGimsBaseUrl)
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Storage.Queries.Person as QPerson
 import Tools.Error (GenericError (InvalidRequest))
 
 getV2FrfsRoute ::
@@ -141,7 +148,7 @@ getV2FrfsRoute (_, _merchantId, merchantOpCityId) routeCode mbConfigId mbPlatfor
         stops = Just $ map snd stops,
         timeBounds = Nothing,
         waypoints = route.encodedPolyline <&> decode <&> fmap (\point -> LatLong {lat = point.latitude, lon = point.longitude}),
-        integratedBppConfigId = getId integratedBPPConfig.id
+        integratedBppConfigId = integratedBPPConfig.id.getId
       }
 
 -- | Get trip manifest - still proxied to rider-app (needs booking data)
@@ -186,7 +193,7 @@ postFrfsFleetOperatorTripAction (_, _merchantId, merchantOpCityId) req = do
           }
   gimsOps <- NandiFlow.gimsCurrentOperation baseUrl gtfsId anchor
   let GimsCurrentOperationResp {waybill_no = wbNo, number_of_trips = numTrips} = gimsOps
-      configId = getId integratedBPPConfig.id
+      configId = integratedBPPConfig.id.getId
       redisKey = configId <> ":" <> wbNo <> ":tripnumber"
   now <- getCurrentTime
   let epochNow = round (utcTimeToPOSIXSeconds now * 1000) :: Int64
@@ -348,7 +355,7 @@ postFrfsFleetOperatorCurrentOperation (_, _merchantId, merchantOpCityId) req = d
             vehicleNumber = req.vehicleNumber
           }
   gimsOps <- NandiFlow.gimsCurrentOperation baseUrl gtfsId anchor
-  let configId = getId integratedBPPConfig.id
+  let configId = integratedBPPConfig.id.getId
       redisKey = configId <> ":" <> gimsOps.waybill_no <> ":tripnumber"
   mbPrevTrip <- Hedis.get redisKey
   let prevTrip = fromMaybe 0 (mbPrevTrip :: Maybe Int)
@@ -387,3 +394,90 @@ postFrfsFleetOperatorCurrentOperation (_, _merchantId, merchantOpCityId) req = d
           startTime = st,
           tripNumber = tn
         }
+
+-- | Tablet → rider-app (BAP) FRFS search. Resolves the driver-app FRFS config for
+--   the city/vehicle, reads its feedKey (the stable cross-service anchor), attaches
+--   the conductor's phone as the rider identity, and proxies to the rider-app
+--   internal search. Response JSON is forwarded verbatim.
+postFrfsFleetOperatorSearch ::
+  ( Maybe (Id Domain.Types.Person.Person),
+    Id Domain.Types.Merchant.Merchant,
+    Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ) ->
+  Kernel.Types.Beckn.Context.City ->
+  VehicleCategory ->
+  FRFSSearchAPIReq ->
+  Flow FRFSSearchAPIRes
+postFrfsFleetOperatorSearch (mbPersonId, _merchantId, merchantOpCityId) _city vehicleType searchReq = do
+  personId <- fromMaybeM (InvalidRequest "Conductor personId not found in token") mbPersonId
+  person <- QPerson.findById personId >>= fromMaybeM (InvalidRequest $ "Conductor person not found: " <> personId.getId)
+  operatorBadgeToken <- person.operatorBadgeToken & fromMaybeM (InvalidRequest "Operator is not linked with an operator badge token")
+  integratedBPPConfig <- findFirstIbppConfigByCityAndVehicle merchantOpCityId (show vehicleType)
+  let reqBody =
+        FRFSBookingSearchReq
+          { feedKey = DIBC.feedKey integratedBPPConfig,
+            vehicleType = vehicleType,
+            operatorBadgeToken = operatorBadgeToken,
+            searchReq = searchReq
+          }
+  bapInternal <- asks (.appBackendBapInternal)
+  CallBAPInternal.frfsBookingSearch bapInternal.apiKey bapInternal.url reqBody
+
+-- | Proxy to the rider-app internal quote fetch. The conductor identity is already
+--   recorded on the search entity, so only the searchId is forwarded.
+getFrfsFleetOperatorSearchQuote ::
+  ( Maybe (Id Domain.Types.Person.Person),
+    Id Domain.Types.Merchant.Merchant,
+    Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ) ->
+  Text ->
+  Flow [FRFSQuoteAPIRes]
+getFrfsFleetOperatorSearchQuote _ searchId = do
+  bapInternal <- asks (.appBackendBapInternal)
+  CallBAPInternal.frfsBookingQuote bapInternal.apiKey bapInternal.url searchId
+
+-- | Proxy to the rider-app internal confirm. The confirm body (category selection
+--   etc.) is forwarded verbatim; the response carries the Juspay payment payload.
+postFrfsFleetOperatorQuoteConfirm ::
+  ( Maybe (Id Domain.Types.Person.Person),
+    Id Domain.Types.Merchant.Merchant,
+    Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ) ->
+  Text ->
+  FRFSQuoteConfirmReq ->
+  Flow FRFSTicketBookingStatusAPIRes
+postFrfsFleetOperatorQuoteConfirm (_, _merchantId, merchantOpCityId) quoteId body = do
+  -- Trip gate: a conductor may only book on the trip that is currently ACTIVE (started
+  -- via tripAction). The tablet sends that trip's tripId in the confirm body; we validate
+  -- it against the active-trip number in Redis (written by tripAction START) so a booking
+  -- can never be attached to a non-active or client-fabricated trip.
+  tripId <- body.tripId & fromMaybeM (InvalidRequest "tripId is required for conductor booking (the active trip)")
+  (waybill, tripNumber) <- parseTripId tripId & fromMaybeM (InvalidRequest $ "Invalid tripId format: " <> tripId)
+  integratedBPPConfig <- findFirstIbppConfigByCityAndVehicle merchantOpCityId (show BUS)
+  let redisKey = integratedBPPConfig.id.getId <> ":" <> waybill <> ":tripnumber"
+  activeTripNumber <-
+    (Hedis.get redisKey :: Flow (Maybe Int))
+      >>= fromMaybeM (InvalidRequest "No active trip in progress; start a trip before booking")
+  unless (activeTripNumber == tripNumber) $
+    throwError $ InvalidRequest ("Booking is allowed only for the active trip (active=" <> show activeTripNumber <> ", requested=" <> show tripNumber <> ")")
+  bapInternal <- asks (.appBackendBapInternal)
+  CallBAPInternal.frfsBookingConfirm bapInternal.apiKey bapInternal.url quoteId body
+  where
+    -- tripId format is "<waybill>-<tripNumber>"; split on the LAST '-' so waybills containing '-' are handled.
+    parseTripId t =
+      let (waybillWithDash, tripNoText) = Text.breakOnEnd "-" t
+       in if Text.null waybillWithDash
+            then Nothing
+            else (Text.dropEnd 1 waybillWithDash,) <$> readMaybe (Text.unpack tripNoText)
+
+-- | Proxy to the rider-app internal booking status (the active state-machine driver).
+getFrfsFleetOperatorBookingStatus ::
+  ( Maybe (Id Domain.Types.Person.Person),
+    Id Domain.Types.Merchant.Merchant,
+    Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ) ->
+  Text ->
+  Flow FRFSTicketBookingStatusAPIRes
+getFrfsFleetOperatorBookingStatus _ bookingId = do
+  bapInternal <- asks (.appBackendBapInternal)
+  CallBAPInternal.frfsBookingStatus bapInternal.apiKey bapInternal.url bookingId

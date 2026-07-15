@@ -892,8 +892,12 @@ postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId) quoteId mbIsMockPayment
       mbMapping <- CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vNo integratedBppConfig.feedKey
       pure $ mbMapping >>= (.seatSelectionType)
     Nothing -> pure Nothing
-  let hasAutoAssignFlow = quote.vehicleType == Spec.BUS && isJust req.tripId && mbSeatSelectionType == Just DVSLM.AUTO_ASSIGNED
-  when (hasNonEmptySeatIds || hasAutoAssignFlow) $
+  let hasAutoAssignFlow = quote.vehicleType == Spec.BUS && isJust req.tripId && (mbSeatSelectionType == Just DVSLM.AUTO_ASSIGNED || req.forceAutoAssignSeat == Just True)
+  -- Conductor counter-sales (forceAutoAssignSeat) are exempt from the per-(person,trip)
+  -- confirm rate limit: a conductor sells many tickets on the same trip through one shared
+  -- rider person, whereas the limit (1 per 30s) is meant for a customer booking their own seat.
+  -- Seat double-booking is still prevented by the seat-hold/availability layer.
+  when ((hasNonEmptySeatIds || hasAutoAssignFlow) && req.forceAutoAssignSeat /= Just True) $
     whenJust req.tripId $ \tripId ->
       checkRateLimitSeatBooking (rateLimitKey personId.getId tripId)
 
@@ -902,11 +906,11 @@ postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId) quoteId mbIsMockPayment
       merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
       merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
       bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory quote.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory quote.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
-      (_, booking, _, _, _) <- confirmAndUpsertBooking personId quote selectedQuoteCategories req.crisSdkResponse (Just True) mbIsMockPayment integratedBppConfig Nothing
+      (_, booking, _, _, _) <- confirmAndUpsertBooking personId quote selectedQuoteCategories req.crisSdkResponse (Just True) mbIsMockPayment integratedBppConfig Nothing Nothing
       select merchant merchantOperatingCity bapConfig quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer
       getFrfsBookingStatusWithActor (Just personId, merchantId) booking.id
     _ -> do
-      postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer mbIsMockPayment integratedBppConfig req.tripId
+      postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer mbIsMockPayment integratedBppConfig req.tripId req.forceAutoAssignSeat
   where
     rateLimitKey :: Text -> Text -> Text
     rateLimitKey personId' tripId' = "BAP:FRFS_CONFIRM_RATE_LIMIT:" <> personId' <> ":" <> tripId'
@@ -914,7 +918,7 @@ postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId) quoteId mbIsMockPayment
 postFrfsQuoteConfirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasFlowEnv m r '["seatBookingConfirmAPIRateLimitOptions" ::: APIRateLimitOptions], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Maybe Bool -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId mbIsMockPayment =
   ActorInfo.withMbPersonIdActorInfo mbPersonId $
-    postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId_) quoteId mbIsMockPayment (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {offered = Nothing, ticketQuantity = Nothing, childTicketQuantity = Nothing, crisSdkResponse = Nothing, enableOffer = Nothing, tripId = Nothing})
+    postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId_) quoteId mbIsMockPayment (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {offered = Nothing, ticketQuantity = Nothing, childTicketQuantity = Nothing, crisSdkResponse = Nothing, enableOffer = Nothing, tripId = Nothing, forceAutoAssignSeat = Nothing})
 
 postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuotePaymentRetry = error "Logic yet to be decided"
@@ -1062,7 +1066,7 @@ getFrfsBookingList (mbPersonId, _merchantId) mbLimit mbOffset mbVehicleCategory 
 
 cancelFRFSTicketBooking :: DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow ()
 cancelFRFSTicketBooking booking = do
-  logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
+  logTagInfo ("BookingId-" <> booking.id.getId) ("Cancellation reason " <> show DBCR.ByApplication)
   void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
 
 postFrfsBookingCanCancel :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow APISuccess.APISuccess
@@ -1597,7 +1601,12 @@ buildManifestForBookings firstBooking bookings tripId routeId = do
     case Map.lookup booking.riderId personMap of
       Nothing -> pure Nothing
       Just person -> do
-        mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+        -- Conductor counter-sale riders have no stored phone; show a blank contact for them.
+        -- Ordinary riders must still surface the missing-field error as before.
+        mobileNumber <- case person.mobileNumber of
+          Just encryptedPhone -> decrypt encryptedPhone
+          Nothing | isJust person.operatorBadgeToken -> pure ""
+          Nothing -> throwError (PersonFieldNotPresent "mobileNumber")
         let frfsTickets = fromMaybe [] (Map.lookup booking.id ticketMap)
         let isCheckedIn = any (\t -> t.status == DFRFSTicket.USED) frfsTickets
         let pName = Data.Text.intercalate " " $ catMaybes [person.firstName, person.lastName]
@@ -1607,7 +1616,10 @@ buildManifestForBookings firstBooking bookings tripId routeId = do
                   name = pName,
                   phone = mobileNumber,
                   bookingId = booking.id,
-                  checkedIn = isCheckedIn
+                  checkedIn = isCheckedIn,
+                  -- Conductor counter-sales carry the operator badge instead of a phone,
+                  -- so the tablet can label the row as a conductor sale (badge X).
+                  conductorToken = person.operatorBadgeToken
                 }
         pure $ Just (booking.fromStationCode, booking.toStationCode, pInfo)
   let validPassengerData = catMaybes passengerData

@@ -34,3 +34,8 @@ ALTER TABLE atlas_app.integrated_bpp_config ADD CONSTRAINT integrated_bpp_config
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.integrated_bpp_config DROP CONSTRAINT integrated_bpp_config_unique_idx_agency_key;
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY integrated_bpp_config_idx_feed_key ON atlas_app.integrated_bpp_config USING btree (feed_key);
