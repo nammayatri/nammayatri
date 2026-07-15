@@ -284,7 +284,10 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
         Nothing -> do
           callStatusObj <- buildCallStatus id callId (Just rideId) (exotelStatusToInterfaceStatus callStatus') merchantOperatingCityId merchantId
           void $ QCallStatus.create callStatusObj
-        Just cs -> QCallStatus.updateCallStatusCallId callId cs.id
+        Just cs ->
+          QCallStatus.findByCallSid callId >>= \case
+            Just _ -> pure ()
+            Nothing -> QCallStatus.updateCallStatusCallId callId cs.id
 
     buildCallStatus id exotelCallId rideId exoStatus merchantOperatingCityId merchantId = do
       now <- getCurrentTime
