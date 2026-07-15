@@ -50,6 +50,7 @@ library
       API.Dashboard
       API.Dashboard.Exotel
       API.Depot
+      API.FleetEngineToken
       API.FRFS
       API.FRFSMetrics
       API.IGM
@@ -292,6 +293,7 @@ library
       Domain.Action.UI.FeedbackForm
       Domain.Action.UI.File
       Domain.Action.UI.FinanceInvoice
+      Domain.Action.UI.FleetEngineToken
       Domain.Action.UI.FollowRide
       Domain.Action.UI.FRFSInternal
       Domain.Action.UI.FRFSTicketService

@@ -214,6 +214,7 @@ getServiceName msc = case msc.serviceConfig of
   SettlementServiceConfig cfg -> SettlementService cfg.settlementService
   EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
     EventTrackingInterface.MoengageConfig _ -> EventTrackingService EventTracking.Moengage
+  FleetEngineServiceConfig _ -> FleetEngineService GoogleFleetEngine
 
 upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig cfg = do

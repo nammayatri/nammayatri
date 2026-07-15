@@ -57,6 +57,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.DriverPool as DP
+import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
@@ -199,6 +200,8 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
 
   fork "DriverScoreEventHandler OnNewRideAssigned" $
     DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency, distanceUnit = booking.distanceUnit}
+
+  fork "FleetEngine: create trip on ride assigned" $ FleetEngine.notifyTripCreated booking ride
 
   notifyRideRelatedNotificationOnEvent ride now DRN.RIDE_ASSIGNED
   notifyRideRelatedNotificationOnEvent ride now DRN.PICKUP_TIME
