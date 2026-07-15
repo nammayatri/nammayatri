@@ -335,10 +335,14 @@ verifyDLFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerifi
 verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard mbVehicleCategory mbReqId mbTxnId = do
   now <- getCurrentTime
   encryptedDL <- encrypt dlNumber
-  -- Upsert a PENDING DL record immediately so the license is claimed before async verification completes
+  -- Upsert a PENDING DL record immediately so the license is claimed before async verification completes.
+  -- Store it under the NORMALIZED DL hash so it matches the normalized comparison/lookup in verifyDL
+  -- (and the normalized final record in onVerifyDLHandler) — otherwise upsert keys on a different
+  -- licenseNumberHash and creates a duplicate row when the callback lands.
+  normalizedEncryptedDL <- encrypt (VC.normalizeDocumentNumber dlNumber)
   dlId <- generateGUID
   let farFutureExpiry = addUTCTime (nominalDay * 365 * 100) now
-  let pendingDL = (createDL person.merchantId documentVerificationConfig person.id Nothing Nothing Nothing dlId imageId1 imageId2 nameOnTheCard dateOfIssue mbVehicleCategory now encryptedDL farFutureExpiry) {Domain.verificationStatus = Documents.PENDING}
+  let pendingDL = (createDL person.merchantId documentVerificationConfig person.id Nothing Nothing Nothing dlId imageId1 imageId2 nameOnTheCard dateOfIssue mbVehicleCategory now normalizedEncryptedDL farFutureExpiry) {Domain.verificationStatus = Documents.PENDING}
   Query.upsert pendingDL
   case mbReqId of
     Just reqId -> HVQuery.create =<< mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard reqId now Domain.Success encryptedDL mbTxnId
@@ -454,7 +458,10 @@ onVerifyDLHandler :: Person.Person -> Maybe Text -> Maybe Text -> Maybe [Idfy.Co
 onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificationConfig imageId1 imageId2 nameOnTheCard dateOfIssue vehicleCategory = do
   now <- getCurrentTime
   id <- generateGUID
-  mEncryptedDL <- encrypt `mapM` dlNumber
+  -- Normalize before hashing/storing so this final record collides-and-updates the PENDING record
+  -- (stored under the normalized hash in verifyDLFlow) instead of creating a duplicate DL row, and
+  -- so it matches the normalized comparison/lookup in verifyDL.
+  mEncryptedDL <- encrypt `mapM` (VC.normalizeDocumentNumber <$> dlNumber)
   let mLicenseExpiry = convertTextToUTC dlExpiry
   let mDriverLicense = createDL person.merchantId documentVerificationConfig person.id covDetails name dob id imageId1 imageId2 nameOnTheCard dateOfIssue vehicleCategory now <$> mEncryptedDL <*> mLicenseExpiry
 
