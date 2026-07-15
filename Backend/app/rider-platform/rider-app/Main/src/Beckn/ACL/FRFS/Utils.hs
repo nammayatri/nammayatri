@@ -257,11 +257,11 @@ mkPaymentForSelectReq paymentStatus _ _ _ _ _ _ =
       paymentType = encodeToText' Spec.PRE_ORDER
     }
 
-mkPaymentForConfirmReq :: Spec.PaymentStatus -> Maybe Amount -> Maybe TxnId -> Maybe BknPaymentParams -> Maybe Text -> Maybe Currency -> Maybe DelayInterest -> Spec.Payment
-mkPaymentForConfirmReq paymentStatus mAmount mTxnId mPaymentParams mSettlementType mCurrency mbDelayInterest =
+mkPaymentForConfirmReq :: Spec.PaymentStatus -> Maybe Amount -> Maybe TxnId -> Maybe BknPaymentParams -> Maybe Text -> Maybe Currency -> Maybe DelayInterest -> Maybe Text -> Spec.Payment
+mkPaymentForConfirmReq paymentStatus mAmount mTxnId mPaymentParams mSettlementType mCurrency mbDelayInterest mPaymentId =
   Spec.Payment
     { paymentCollectedBy = Just $ show Enums.BAP,
-      paymentId = mTxnId,
+      paymentId = mPaymentId,
       paymentParams =
         if anyTrue [isJust mTxnId, isJust mAmount, isJust mPaymentParams]
           then Just $ mkPaymentParams mPaymentParams mTxnId mAmount mCurrency

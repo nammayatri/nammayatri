@@ -316,6 +316,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
             DFRFSTicketBooking.FRFSTicketBooking
               { id = uuid,
                 bppOrderId = Nothing,
+                bppPaymentId = Nothing,
                 quoteId = id,
                 status = DFRFSTicketBooking.NEW,
                 createdAt = now,

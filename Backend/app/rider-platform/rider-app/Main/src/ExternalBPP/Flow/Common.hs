@@ -270,7 +270,8 @@ init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, m
         messageId = booking.id.getId,
         bankAccNum = bankAccountNumber,
         bankCode = bankCode,
-        bppOrderId = bppOrderId
+        bppOrderId = bppOrderId,
+        bppPaymentId = Nothing
       }
   where
     mkDCategorySelect quoteCategory =
