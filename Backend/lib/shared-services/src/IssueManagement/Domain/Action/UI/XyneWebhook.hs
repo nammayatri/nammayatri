@@ -246,8 +246,9 @@ processXyneBearerWebhook bearerToken mbAuthHeader rawBody = do
       throwError (InvalidRequest "XYNE_BEARER_WEBHOOK_PARSE_FAILED")
   case event.eventType of
     "TICKET_STATUS_UPDATED" ->
-      when (T.toLower event.payload.status `elem` ["solved", "closed"]) $
-        QIR.updateIssueStatus event.payload.ticketId Common.RESOLVED
+      case readMaybe (T.unpack (T.toUpper event.payload.status)) :: Maybe Common.IssueStatus of
+        Just status -> QIR.updateIssueStatus event.payload.ticketId status
+        Nothing -> logWarning $ "Xyne bearer webhook: unrecognized status=" <> event.payload.status
     other ->
       logWarning $ "Xyne bearer webhook: ignoring unsupported eventType=" <> other
   pure Success
