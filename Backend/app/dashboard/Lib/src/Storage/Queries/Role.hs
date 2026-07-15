@@ -35,6 +35,9 @@ findById roleId = findOneWithKV [Se.Is BeamR.id $ Se.Eq $ getId roleId]
 findByName :: BeamFlow m r => Text -> m (Maybe Role)
 findByName name = findOneWithKV [Se.Is BeamR.name $ Se.Eq name]
 
+findAllByName :: BeamFlow m r => [Text] -> m [Role]
+findAllByName names = findAllWithKV [Se.Is BeamR.name $ Se.In names]
+
 findByDashboardAccessType :: BeamFlow m r => Role.DashboardAccessType -> m (Maybe Role)
 findByDashboardAccessType dashboardAccessType =
   findOneWithKV [Se.Is BeamR.dashboardAccessType $ Se.Eq dashboardAccessType]

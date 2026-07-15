@@ -43,6 +43,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.AccessMatrix as QMatrix
+import qualified Storage.Queries.Entity as QEntity
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
@@ -221,7 +222,7 @@ createPerson _ personEntity = do
   role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
   person <- buildPerson personEntity (role.dashboardAccessType)
   decPerson <- decrypt person
-  let personAPIEntity = AP.makePersonAPIEntity decPerson role [] Nothing
+  let personAPIEntity = AP.makePersonAPIEntity decPerson role [] Nothing Nothing Nothing
   QP.create person
   return $ CreatePersonRes personAPIEntity
 
@@ -239,7 +240,7 @@ listPerson _ mbSearchString mbLimit mbOffset mbPersonId = do
   res <- forM personAndRoleList $ \(encPerson, role, merchantAccessList, merchantCityAccessList) -> do
     decPerson <- decrypt encPerson
     let availableCitiesForMerchant = makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList
-    pure $ DP.makePersonAPIEntity decPerson role (nub merchantAccessList) (Just availableCitiesForMerchant)
+    pure $ DP.makePersonAPIEntity decPerson role (nub merchantAccessList) (Just availableCitiesForMerchant) Nothing Nothing
   let count = length res
   let summary = Summary {totalCount = 10000, count}
   pure $ ListPersonRes {list = res, summary = summary}
@@ -425,13 +426,18 @@ profile tokenInfo = do
   role <- B.runInReplica $ QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
   merchantAccessList <- B.runInReplica $ QAccess.findAllMerchantAccessByPersonId tokenInfo.personId
   decPerson <- decrypt encPerson
+  mbEntity <- case encPerson.entityId of
+    Just eId -> Just <$> (QEntity.findById eId >>= fromMaybeM (InvalidRequest $ "Entity " <> eId.getId <> " referenced by person " <> tokenInfo.personId.getId <> " does not exist"))
+    Nothing -> pure Nothing
+  let mbEntityId = mbEntity <&> (.id)
+      mbEntityName = mbEntity <&> (.entityName)
   case merchantAccessList of
     [] -> throwError (InvalidRequest "No access to any merchant")
     merchantAccessList' -> do
       let sortedMerchantAccessList = sortOn DAccess.merchantId merchantAccessList'
       let groupedByMerchant = groupBy ((==) `on` DAccess.merchantId) sortedMerchantAccessList
       let merchantAccesslistWithCity = map (\group -> DP.AvailableCitiesForMerchant ((.merchantShortId) (head group)) (map (.operatingCity) group)) groupedByMerchant
-      pure $ DP.makePersonAPIEntity decPerson role (merchantAccesslistWithCity <&> (.merchantShortId)) (Just merchantAccesslistWithCity)
+      pure $ DP.makePersonAPIEntity decPerson role (merchantAccesslistWithCity <&> (.merchantShortId)) (Just merchantAccesslistWithCity) mbEntityId mbEntityName
 
 updateProfile ::
   BeamFlow m r =>
