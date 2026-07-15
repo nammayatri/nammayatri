@@ -1830,7 +1830,8 @@ copyIssueCategory merchantShortId city req issueHandle identifier = do
         label = sourceCategory.label,
         igmCategory = sourceCategory.igmCategory,
         enableKapture = Nothing,
-        showInDefault = Nothing
+        showInDefault = Nothing,
+        xyneChannelId = sourceCategory.xyneChannelId
       }
   mapM_ (cloneTopLevelMessage newCategoryId targetMoc msgIdMap now) topLevelMessages
   mapM_ (cloneOption newCategoryId targetMoc msgIdMap optIdMap now) allOptions

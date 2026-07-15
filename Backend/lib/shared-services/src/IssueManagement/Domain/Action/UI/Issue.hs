@@ -699,7 +699,8 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             classification = castIdentifierToClassification identifier,
             rideDescription = Just info,
             becknIssueId,
-            ticketContext = Just TIT.IssueTicket
+            ticketContext = Just TIT.IssueTicket,
+            xyneChannelId = category.xyneChannelId
           }
 
     buildRideInfo :: (BeamFlow m r, EncFlow m r) => MerchantOperatingCity -> UTCTime -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> ServiceHandle m -> m TIT.RideInfo
@@ -969,7 +970,7 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
           QIR.updateIssueReopenedCount issueReportId (issueReport.reopenedCount + 1)
           QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
           whenJust customerResponse $ QIR.updateCustomerResponse issueReportId
-          updateTicketStatus issueReport TIT.Reopened merchantId merchantOpCityId issueHandle "Ticket reopened"
+          updateTicketStatus issueReport TIT.Reopened merchantId merchantOpCityId issueHandle identifier "Ticket reopened"
           issueConfig <- issueHandle.findIssueConfig merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
           issueMessageTranslation <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) issueConfig.onIssueReopenMsgs
           let issueMessages = mkIssueMessageList (sequence issueMessageTranslation) language issueConfig mbRideInfoRes
@@ -991,12 +992,16 @@ updateTicketStatus ::
   Id Merchant ->
   Id MerchantOperatingCity ->
   ServiceHandle m ->
+  Identifier ->
   Text ->
   m ()
-updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHandle comment =
+updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHandle identifier comment =
   case issueReport.ticketId of
     Nothing -> return ()
     Just ticketId -> do
+      mbCategoryChannelId <- case issueReport.categoryId of
+        Just cid -> ((.xyneChannelId) =<<) <$> CQIC.findById cid identifier
+        Nothing -> pure Nothing
       ticketResponse <-
         withTryCatch
           "updateTicket:updateIssue"
@@ -1005,7 +1010,7 @@ updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHa
           -- dispatcher fans out to each secondary and logs their failures
           -- separately without affecting this Right/Left outcome (which reflects
           -- only the primary update).
-          (issueHandle.updateTicket merchantId merchantOperatingCityId (fromMaybe [] issueReport.additionalTicketIds) TIT.UpdateTicketReq {comment = comment, ticketId = ticketId, status = status, rideDescription = Nothing, issueDetails = Nothing, requesterId = Nothing, ticketContext = Nothing, name = Nothing, phoneNo = Nothing})
+          (issueHandle.updateTicket merchantId merchantOperatingCityId (fromMaybe [] issueReport.additionalTicketIds) TIT.UpdateTicketReq {comment = comment, ticketId = ticketId, status = status, rideDescription = Nothing, issueDetails = Nothing, requesterId = Nothing, ticketContext = Nothing, name = Nothing, phoneNo = Nothing, xyneChannelId = mbCategoryChannelId})
       case ticketResponse of
         Left err -> logTagInfo "Update Ticket API failed - " $ show err
         Right _ -> return ()
@@ -1021,7 +1026,7 @@ updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHa
         void $
           withTryCatch
             "updateTicketStatus:xyne"
-            (syncStatus merchantId merchantOperatingCityId TIT.UpdateTicketStatusReq {xyneTicketId = xyneTicketId, status = status})
+            (syncStatus merchantId merchantOperatingCityId TIT.UpdateTicketStatusReq {xyneTicketId = xyneTicketId, status = status, xyneChannelId = mbCategoryChannelId})
 
 processIssueReportTypeActions ::
   BeamFlow m r =>
@@ -1448,7 +1453,8 @@ forwardChatToTicketService issueReport identifier issueHandle messageText mediaI
                 requesterId = Nothing,
                 ticketContext = Just TIT.IssueTicket,
                 name = mbSenderName,
-                phoneNo = mbSenderPhone
+                phoneNo = mbSenderPhone,
+                xyneChannelId = mbCategory >>= (.xyneChannelId)
               }
       -- Prefer the targeted-service handle so we hit Xyne regardless of
       -- whether it is the primary or a secondary. Fall back to the general
