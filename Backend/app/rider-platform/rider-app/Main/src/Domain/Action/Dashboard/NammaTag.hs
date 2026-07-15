@@ -446,7 +446,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   when resp.isRuleUpdated $ case req.domain of
     LYTU.RIDER_CONFIG cfgType -> do
       TDL.deleteConfigHashKey (cast merchantOpCityId) req.domain
-      invalidateConfigInMem cfgType
+      invalidateConfigInMem (TC.toCacheConfigType cfgType)
       logDebug $ "CP Log: Cleared Cache for " <> show cfgType
     _ -> pure ()
   pure resp
@@ -529,7 +529,7 @@ postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq 
   forM_ rolloutReq $ \rolloutObj -> case rolloutObj.domain of
     LYTU.RIDER_CONFIG cfgType -> do
       TDL.deleteConfigHashKey (cast merchantOperatingCity.id) rolloutObj.domain
-      invalidateConfigInMem cfgType
+      invalidateConfigInMem (TC.toCacheConfigType cfgType)
       logDebug $ "CP Log: Cleared Cache for " <> show cfgType
     _ -> pure ()
   pure result
@@ -815,7 +815,7 @@ postNammaTagConfigPilotActionChange _merchantShortId _opCity req = do
   case domain of
     LYTU.RIDER_CONFIG cfgType -> do
       TDL.deleteConfigHashKey (cast merchantOpCityId) domain
-      invalidateConfigInMem cfgType
+      invalidateConfigInMem (TC.toCacheConfigType cfgType)
       logDebug $ "CP Log: Cleared Cache for " <> show cfgType
     _ -> pure ()
   pure result
@@ -1035,11 +1035,11 @@ postNammaTagConfigPilotCreateRow merchantShortId opCity req = do
     LYTU.Translation -> do
       cfg :: DTL.Translations <- parseConfigData req.configData
       SQTL.create cfg
-      invalidateConfigInMem LYTU.Translation
+      invalidateConfigInMem LYTU.TranslationRider
     LYTU.IssueConfig -> do
       cfg :: DIC.IssueConfig <- parseConfigData req.configData
       SQIC.create cfg
-      invalidateConfigInMem LYTU.IssueConfig
+      invalidateConfigInMem LYTU.IssueConfigRider
     LYTU.PassCategory -> do
       cfg :: DPC.PassCategory <- parseConfigData req.configData
       SQPC.create cfg

@@ -495,7 +495,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   when resp.isRuleUpdated $ case req.domain of
     LYT.DRIVER_CONFIG cfgType -> do
       TDL.deleteConfigHashKey (cast merchantOpCityId) req.domain
-      invalidateConfigInMem cfgType
+      invalidateConfigInMem (TC.toCacheConfigType cfgType)
       logDebug $ "CP Log: Cleared Cache for " <> show cfgType
     _ -> pure ()
   pure resp
@@ -580,7 +580,7 @@ postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq 
   forM_ rolloutReq $ \rolloutObj -> case rolloutObj.domain of
     LYT.DRIVER_CONFIG cfgType -> do
       TDL.deleteConfigHashKey (cast merchantOpCityId) rolloutObj.domain
-      invalidateConfigInMem cfgType
+      invalidateConfigInMem (TC.toCacheConfigType cfgType)
       logDebug $ "CP Log: Cleared Cache for " <> show cfgType
     _ -> pure ()
   pure result
@@ -871,7 +871,7 @@ postNammaTagConfigPilotActionChange _merchantShortId _opCity req = do
   case domain of
     LYT.DRIVER_CONFIG cfgType -> do
       TDL.deleteConfigHashKey (cast merchantOpCityId) domain
-      invalidateConfigInMem cfgType
+      invalidateConfigInMem (TC.toCacheConfigType cfgType)
       logDebug $ "CP Log: Cleared Cache for " <> show cfgType
     _ -> pure ()
   pure result

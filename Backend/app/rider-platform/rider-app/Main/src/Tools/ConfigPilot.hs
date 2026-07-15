@@ -149,9 +149,9 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
     LYTU.RIDER_CONFIG LYTU.MerchantPaymentMethod -> do
       handleConfigUpdateViaJson SQMPM.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.MerchantPaymentMethod) >> invalidateConfigInMem LYTU.MerchantPaymentMethod) SQMPM.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.RIDER_CONFIG LYTU.Translation -> do
-      handleConfigUpdateViaJson SQTL.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.Translation) >> invalidateConfigInMem LYTU.Translation) SQTL.updateByPrimaryKey (cast merchantOpCityId)
+      handleConfigUpdateViaJson SQTL.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.Translation) >> invalidateConfigInMem LYTU.TranslationRider) SQTL.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.RIDER_CONFIG LYTU.IssueConfig -> do
-      handleConfigUpdateViaJson (SQIC.findAllByMerchantOperatingCityId . cast) (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.IssueConfig) >> invalidateConfigInMem LYTU.IssueConfig) SQIC.updateByPrimaryKey (cast merchantOpCityId)
+      handleConfigUpdateViaJson (SQIC.findAllByMerchantOperatingCityId . cast) (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.IssueConfig) >> invalidateConfigInMem LYTU.IssueConfigRider) SQIC.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.RIDER_CONFIG LYTU.PassCategory -> do
       handleConfigUpdateViaJson SQPC.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.PassCategory) >> invalidateConfigInMem LYTU.PassCategory) SQPC.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.UI_RIDER dt pt -> do
@@ -289,3 +289,19 @@ getTSServiceUrl :: (CoreMetrics m, MonadFlow m, CPT.HasTSServiceConfig m r) => m
 getTSServiceUrl = do
   tsServiceConfig <- asks (.tsServiceConfig)
   pure tsServiceConfig.url
+
+-- | Map a LogicDomain's generic inner ConfigType to the rider-specific config-pilot cache
+-- ConfigType (i.e. what 'getConfigType' returns for that config's dimensions). Identity for
+-- configs whose cache type is already un-suffixed. Used at the dynamic invalidation sites in
+-- Domain.Action.Dashboard.NammaTag, where only the generic runtime ConfigType is available;
+-- passing the generic value straight to invalidateConfigInMem misses the suffixed Redis bucket.
+toCacheConfigType :: LYTU.ConfigType -> LYTU.ConfigType
+toCacheConfigType cfgType = case cfgType of
+  LYTU.Translation -> LYTU.TranslationRider
+  LYTU.IssueConfig -> LYTU.IssueConfigRider
+  LYTU.PayoutConfig -> LYTU.PayoutConfigRider
+  LYTU.RideRelatedNotificationConfig -> LYTU.RideRelatedNotificationConfigRider
+  LYTU.MerchantPushNotification -> LYTU.MerchantPushNotificationRider
+  LYTU.MerchantServiceUsageConfig -> LYTU.MerchantServiceUsageConfigRider
+  LYTU.Exophone -> LYTU.ExophoneRider
+  other -> other
