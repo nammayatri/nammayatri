@@ -31,7 +31,7 @@ instance ConfigDimensions MerchantPushNotificationDimensions where
   getConfigList a =
     LCP.resolveConfigList
       a
-      (LYT.RIDER_CONFIG MerchantPushNotification)
+      (LYT.RIDER_CONFIG MerchantPushNotificationRider)
       (Id a.merchantOperatingCityId)
       (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
       ([] :: [LCP.DimMatcher MerchantPushNotificationDimensions DT.MerchantPushNotification])
