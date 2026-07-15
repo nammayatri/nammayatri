@@ -17,6 +17,7 @@ import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchTry as DST
 import EulerHS.Prelude (forM_, whenNothingM_)
 import Kernel.Beam.Functions
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude hiding (forM_)
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (UTCTime)
@@ -274,6 +275,13 @@ updateDiscountAmount bookingId discount = do
   now <- getCurrentTime
   updateOneWithKV
     [Se.Set BeamB.discountAmount $ Just discount, Se.Set BeamB.updatedAt now]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+updateCustomerLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> Maps.Language -> m ()
+updateCustomerLanguage bookingId lang = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamB.customerLanguage $ Just lang, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
 findBookingsFromDB :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Id Booking] -> m [Booking]

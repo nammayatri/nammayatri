@@ -55,6 +55,7 @@ import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.VehicleVariant as DVeh
 import GHC.Generics (Generic)
 import Kernel.Beam.Functions (runInReplica)
+import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Types as KET
 import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -210,7 +211,8 @@ data DriverRideRes = DriverRideRes
     amountToBeSettledOnline :: Maybe HighPrecMoney,
     amountToCollectInCashWithCurrency :: Maybe PriceAPIEntity,
     amountToBeSettledOnlineWithCurrency :: Maybe PriceAPIEntity,
-    rideEarnings :: Maybe RideEarnings
+    rideEarnings :: Maybe RideEarnings,
+    customerLanguage :: Maybe Maps.Language
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -584,7 +586,8 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         amountToBeSettledOnline = mbAmountToBeSettledOnline,
         amountToCollectInCashWithCurrency = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency amt) ride.currency) <$> mbAmountToCollectInCash,
         amountToBeSettledOnlineWithCurrency = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency amt) ride.currency) <$> mbAmountToBeSettledOnline,
-        rideEarnings = mbRideEarningsVal
+        rideEarnings = mbRideEarningsVal,
+        customerLanguage = booking.customerLanguage
       }
 
 -- calculateLocations moved from UI.Ride

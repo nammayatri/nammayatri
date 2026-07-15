@@ -295,6 +295,7 @@ verifyPanFlow person merchantOpCityId documentVerificationConfig panNumber drive
   logDebug $ "verifyRes: " <> show verifyRes
   case verifyRes.requestor of
     VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person imageId1 Nothing driverDateOfBirth Nothing nameOnCard verifyRes.requestId now imageExtractionValidation encryptedPan
+    -- Adding an async provider branch? Extend pullSourcesFor + hvWorkflowHint in SyncVerificationStatus.
     _ -> throwError $ InternalError ("Service provider not configured to return PAN verification async responses. Provider Name : " <> (show verifyRes.requestor))
 
 onVerifyPan :: VerificationReqRecord -> VT.PanVerificationResponse -> VT.VerificationService -> Flow AckResponse
