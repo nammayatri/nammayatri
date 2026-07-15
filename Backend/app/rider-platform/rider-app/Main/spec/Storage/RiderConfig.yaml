@@ -142,6 +142,7 @@ RiderConfig:
     settleCancellationFeeBeforeNextRide: Maybe Bool
     immediateCaptureDriverCancellationFee: Maybe Bool
     immediateCaptureRiderCancellationFee: Maybe Bool
+    enablePaymentRefunds: Maybe Bool
     syncSearchDispatchConfig: Maybe SyncSearchDispatchConfig
     validCancellationReasonCodesForImmediateCharge: "Maybe [Text]"
     cxAgentDetails: "Maybe [CxAgentDetails]"

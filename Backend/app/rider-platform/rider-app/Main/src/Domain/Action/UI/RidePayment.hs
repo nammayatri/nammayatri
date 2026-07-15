@@ -32,7 +32,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Lib.Finance (FinanceCtx)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
@@ -49,7 +49,9 @@ import SharedLogic.JobScheduler
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPayoutCfg
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.OfferEntity as QOfferEntity
@@ -774,6 +776,12 @@ createPaymentRefundRequest h rideId = do
       throwError (InvalidRequest $ "A refund request is already in process for this order; please retry after it is resolved. Order: " <> orderId.getId)
     ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
     booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+    -- Per-city kill-switch: refunds are rejected outright unless the city's rider_config enables them.
+    riderConfig <-
+      getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId))
+        >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+    unless (fromMaybe False riderConfig.enablePaymentRefunds) $
+      throwError (InvalidRequest "Payment refunds are not enabled for this city")
     h.validateRefundRequester booking
     refundPurpose <- case ride.status of
       Domain.Types.RideStatus.COMPLETED -> pure DRefundRequest.RIDE_FARE

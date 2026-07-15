@@ -26,6 +26,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified "payment" Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
@@ -33,6 +34,8 @@ import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
@@ -152,6 +155,13 @@ postPaymentRefundRequestRespond merchantShortId opCity refundRequestId req = do
       rideId <- SPayment.getRideIdForOrder refundRequest.orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> refundRequest.orderId.getId)
       ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
       booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+      -- Per-city kill-switch: approving/retrying is rejected too, so rows predating a
+      -- city being switched off can't be pushed through.
+      riderConfig <-
+        getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId))
+          >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+      unless (fromMaybe False riderConfig.enablePaymentRefunds) $
+        throwError (InvalidRequest "Payment refunds are not enabled for this city")
       -- Component-wise ledger cap — same basis as customer create / admin initiate.
       DRidePayment.validateRefundComponents rideId booking (map (\c -> API.Types.UI.RidePayment.RefundComponentReq {component = c.component, amount = PriceAPIEntity c.amount refundRequest.currency}) comps)
       existingRequests <- QRefundRequest.findAllByOrderId refundRequest.orderId
