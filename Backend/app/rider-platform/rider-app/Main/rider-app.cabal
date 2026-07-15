@@ -834,6 +834,13 @@ library
       Tools.Ticket
       Tools.Wallet
       Tools.Whatsapp
+      WhatsappBot.Adapter.Backend
+      WhatsappBot.Adapter.Env
+      WhatsappBot.Adapter.PersonStore
+      WhatsappBot.Adapter.Registry
+      WhatsappBot.Adapter.Sender
+      WhatsappBot.Adapter.SessionStore
+      WhatsappBot.Adapter.Tracker
       API.Action.Dashboard.AppManagement
       API.Action.Dashboard.AppManagement.Customer
       API.Action.Dashboard.AppManagement.EDCMachine

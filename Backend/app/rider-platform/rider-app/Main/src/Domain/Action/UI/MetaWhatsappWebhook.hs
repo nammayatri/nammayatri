@@ -32,6 +32,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import qualified WhatsappBot.Adapter.Env as Env
 import WhatsappBot.Inbound (parseInbound)
 import WhatsappBot.Types (InboundEvent)
 
@@ -86,9 +87,16 @@ postWebhook mbSig rawBody = withLogTag "MetaWebhook" $ do
                 -- Dedupe on messages[].id (Meta redelivers): SET NX ⇒ first-seen only.
                 -- At-most-once BY DESIGN: the id is marked seen BEFORE the forked work
                 -- runs, so a mid-process crash consumes the message (no redelivery after
-                -- our 200). Fine for a chat bot; Step 4 may upgrade to a processing-lock.
-                fresh <- Redis.setNxExpire (dedupKey ev.messageId) dedupTtlSec ()
-                if not fresh
+                -- our 200). Fine for a chat bot.
+                fresh <- Redis.setNxExpire (dedupKey ev.messageId) dedupTtlSec True
+                -- setNxExpire == False is ambiguous (real duplicate vs a swallowed Redis
+                -- error). Confirm with a read so a Redis blip doesn't silently drop the
+                -- user's message behind the 200 ack: only a present key is a real dup.
+                isDup <-
+                  if fresh
+                    then pure False
+                    else isJust <$> (Redis.get (dedupKey ev.messageId) :: Flow (Maybe Bool))
+                if isDup
                   then logInfo $ "Meta webhook: duplicate message " <> ev.messageId <> " — skipped"
                   else fork "whatsapp bot inbound" $ processInbound merchant ev
           pure Success
@@ -113,15 +121,15 @@ dedupKey msgId = "wab:dedup:" <> msgId
 dedupTtlSec :: Redis.ExpirationTime
 dedupTtlSec = 604800 -- 7 days
 
--- | STUB (Step 3): the app-env merchant mapping is resolved and logged. The real
--- pipeline — DB merchant/city resolution, @MetaBotCfg@→@MerchantCtx@ mapping
--- (deriving flexi/regular enablement from @rideMode@), @resolveSession@, and
--- @WhatsappBot.Engine.handleMessage@ with the prod handles, wrapped in a
--- reply-on-error catch-all — lands in Step 4.
+-- | Dispatch one inbound message to the golden-tested engine with the prod handles
+-- (DB merchant/city resolution, @MetaBotCfg@→@MerchantCtx@, @resolveSession@,
+-- @WhatsappBot.Engine.handleMessage@), via 'Env.dispatchInbound' which wraps the
+-- run in a reply-on-error backstop. This is the fork body — all heavy work (auth,
+-- search, poll loops) runs here, off the webhook's fast 200 ack.
 processInbound :: MetaWebhookMerchant -> InboundEvent -> Flow ()
-processInbound merchant ev =
+processInbound merchant ev = do
   logInfo $
-    "Meta webhook inbound [STUB]: merchant="
+    "Meta webhook dispatch: merchant="
       <> merchant.merchantShortId
       <> " city="
       <> merchant.city
@@ -129,8 +137,7 @@ processInbound merchant ev =
       <> maskPhone ev.fromPhone
       <> " messageId="
       <> ev.messageId
-      <> " kind="
-      <> show ev.kind
+  Env.dispatchInbound merchant ev
 
 -- | Mask a phone number for logs. This repo treats mobile numbers as sensitive
 -- (DbHash / EncryptedField / the redacting Show on MetaCfg), so never log them raw.

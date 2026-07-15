@@ -274,6 +274,7 @@ rideBase :: Text -> BotBookingDetails
 rideBase bid =
   BotBookingDetails
     { bookingId = bid,
+      rideId = Just "mock-ride-001",
       bookingStatus = "TRIP_ASSIGNED",
       rideStatus = Just "NEW",
       rideStartTime = Nothing,
@@ -510,7 +511,8 @@ fixtureMerchant pn
           flexiRentalDistanceM = 10000,
           flexiRentalDurationS = 3600,
           flexiIntroVideoUrl = Just "https://videos.example/intro.mp4",
-          flexiSupportPhone = Just "+91 90000 12345"
+          flexiSupportPhone = Just "+91 90000 12345",
+          nyTrackingUrl = "https://www.nammayatri.in/u?vp=shareRide&rideId={rideId}"
         }
 
 -- | Poll constants (plan L11 / config.ts). Allowlist = test/setup.ts ALLOWED_PHONES
