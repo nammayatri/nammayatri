@@ -26,44 +26,30 @@ import Storage.Beam.BeamFlow
 import Tools.Auth
 
 type API =
-  ( "admin"
-      :> "roles"
-      :> ( "create"
+  "admin"
+    :> "roles"
+    :> ( "create"
+           :> DashboardAuth 'DASHBOARD_ADMIN
+           :> ReqBody '[JSON] DRoles.CreateRoleReq
+           :> Post '[JSON] DRole.RoleAPIEntity
+           :<|> DashboardAuth 'DASHBOARD_ADMIN
+             :> Capture "roleId" (Id DRole.Role)
+             :> "assignAccessLevel"
+             :> ReqBody '[JSON] DRoles.AssignAccessLevelReq
+             :> Post '[JSON] APISuccess
+           :<|> "list"
              :> DashboardAuth 'DASHBOARD_ADMIN
-             :> ReqBody '[JSON] DRoles.CreateRoleReq
-             :> Post '[JSON] DRole.RoleAPIEntity
-             :<|> DashboardAuth 'DASHBOARD_ADMIN
-               :> Capture "roleId" (Id DRole.Role)
-               :> "assignAccessLevel"
-               :> ReqBody '[JSON] DRoles.AssignAccessLevelReq
-               :> Post '[JSON] APISuccess
-             :<|> "list"
-               :> DashboardAuth 'DASHBOARD_ADMIN
-               :> QueryParam "searchString" Text
-               :> QueryParam "limit" Integer
-               :> QueryParam "offset" Integer
-               :> Get '[JSON] DRoles.ListRoleRes
-         )
-  )
-    -- listv2 sits outside the "/admin/" prefix because, unlike create/assign/list,
-    -- it's safe for any authenticated DASHBOARD_USER — the row-level scoping
-    -- happens via `Role.accessibleRoles`, not a coarse auth gate.
-    :<|> ( "roles"
-             :> "listv2"
-             :> DashboardAuth 'DASHBOARD_USER
              :> QueryParam "searchString" Text
              :> QueryParam "limit" Integer
              :> QueryParam "offset" Integer
              :> Get '[JSON] DRoles.ListRoleRes
-         )
+       )
 
 handler :: BeamFlow' => FlowServer API
 handler =
-  ( createRole
-      :<|> assignAccessLevel
-      :<|> listRoles
-  )
-    :<|> listRolesV2
+  createRole
+    :<|> assignAccessLevel
+    :<|> listRoles
 
 createRole :: BeamFlow' => TokenInfo -> DRoles.CreateRoleReq -> FlowHandler DRole.RoleAPIEntity
 createRole tokenInfo =
@@ -76,7 +62,3 @@ assignAccessLevel tokenInfo roleId =
 listRoles :: BeamFlow' => TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DRoles.ListRoleRes
 listRoles mbsearchstr mblimit mboffset =
   withFlowHandlerAPI' . DRoles.listRoles mbsearchstr mblimit mboffset
-
-listRolesV2 :: BeamFlow' => TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DRoles.ListRoleRes
-listRolesV2 tokenInfo mbSearchString mbLimit mbOffset =
-  withFlowHandlerAPI' (DRoles.listRolesV2 tokenInfo mbSearchString mbLimit mbOffset)

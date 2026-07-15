@@ -14,6 +14,7 @@
 
 module Domain.Types.Person.API where
 
+import qualified Domain.Types.Entity as DEntity
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person.Type
 import qualified Domain.Types.Role as DRole
@@ -35,7 +36,9 @@ data PersonAPIEntity = PersonAPIEntity
     registeredAt :: UTCTime,
     verified :: Maybe Bool,
     receiveNotification :: Maybe Bool,
-    language :: Maybe KET.Language
+    language :: Maybe KET.Language,
+    entityId :: Maybe (Id DEntity.Entity),
+    entityName :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -45,11 +48,14 @@ data AvailableCitiesForMerchant = AvailableCitiesForMerchant
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
-makePersonAPIEntity :: DecryptedPerson -> DRole.Role -> [ShortId DMerchant.Merchant] -> Maybe [AvailableCitiesForMerchant] -> PersonAPIEntity
-makePersonAPIEntity Person {..} personRole availableMerchants availableCitiesForMerchant =
+-- mb-prefixed params to avoid shadowing Person's own `entityId` field bound by RecordWildCards.
+makePersonAPIEntity :: DecryptedPerson -> DRole.Role -> [ShortId DMerchant.Merchant] -> Maybe [AvailableCitiesForMerchant] -> Maybe (Id DEntity.Entity) -> Maybe Text -> PersonAPIEntity
+makePersonAPIEntity Person {..} personRole availableMerchants availableCitiesForMerchant mbEntityId mbEntityName =
   PersonAPIEntity
     { registeredAt = createdAt,
       role = DRole.mkRoleAPIEntity personRole,
       language = language,
+      entityId = mbEntityId,
+      entityName = mbEntityName,
       ..
     }
