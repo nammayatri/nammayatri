@@ -42,6 +42,17 @@ data MetroRideType
   deriving stock (Eq, Show, Generic, Read, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+-- | Thresholds for multi-metric incentive configs.
+-- Every non-Nothing metric must reach its threshold to award coins (AND logic).
+data DriverIncentiveMetrics = DriverIncentiveMetrics
+  { ridesCompleted :: Maybe Kernel.Prelude.Int,
+    totalEarnings :: Maybe Kernel.Prelude.Int,
+    totalTripDistanceMeters :: Maybe Kernel.Prelude.Int,
+    totalRideTimeSeconds :: Maybe Kernel.Prelude.Int
+  }
+  deriving stock (Eq, Ord, Generic, Show, Read)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DriverCoinsFunctionType
   = OneOrTwoStarRating
   | FiveStarRating
@@ -59,6 +70,7 @@ data DriverCoinsFunctionType
   | MetroRideCompleted MetroRideType (Maybe Kernel.Prelude.Int)
   | RidesCompleted Kernel.Prelude.Int
   | DriverIncentiveCohortRidesCompleted Kernel.Prelude.Int
+  | DriverIncentiveCohortMetrics DriverIncentiveMetrics
   | QuizQuestionCompleted
   | BonusQuizCoins
   | CoinsRedemptionRefund
@@ -88,6 +100,7 @@ instance Show DriverCoinsFunctionType where
   show (BulkUploadFunctionV2 msg) = "BulkUploadFunctionV2 " <> show msg
   show (RidesCompleted n) = "RidesCompleted " <> show n
   show (DriverIncentiveCohortRidesCompleted n) = "DriverIncentiveCohortRidesCompleted " <> show n
+  show (DriverIncentiveCohortMetrics metrics) = "DriverIncentiveCohortMetrics " <> show metrics
   show (CoinsRedemptionRefund) = "CoinsRedemptionRefund"
   show (FraudCoinsReversal) = "FraudCoinsReversal"
 
@@ -201,6 +214,10 @@ instance Read DriverCoinsFunctionType where
                  | r1 <- stripPrefix "DriverIncentiveCohortRidesCompleted " r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (DriverIncentiveCohortMetrics v1, r2)
+                 | r1 <- stripPrefix "DriverIncentiveCohortMetrics " r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
             ++ [ (QuizQuestionCompleted, r2)
                  | r1 <- stripPrefix "QuizQuestionCompleted" r,
                    ((), r2) <- pure ((), r1)
@@ -249,6 +266,7 @@ instance FromJSON DriverCoinsFunctionType where
       "FraudCoinsReversal" -> pure FraudCoinsReversal
       "RidesCompleted" -> RidesCompleted <$> obj .: "contents"
       "DriverIncentiveCohortRidesCompleted" -> DriverIncentiveCohortRidesCompleted <$> obj .: "contents"
+      "DriverIncentiveCohortMetrics" -> DriverIncentiveCohortMetrics <$> obj .: "contents"
       "BulkUploadFunctionV2" -> BulkUploadFunctionV2 <$> obj .: "contents"
       "MetroRideCompleted" -> do
         contents <- obj .: "contents"
