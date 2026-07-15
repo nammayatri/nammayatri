@@ -759,6 +759,7 @@ createIssueCategory merchantShortId city Common.CreateIssueCategoryReq {..} issu
             merchantId = merchantOperatingCity.merchantId,
             merchantOperatingCityId = merchantOperatingCity.id,
             allowedRideStatuses = allowedRideStatuses <|> Just defaultAllowedRideStatuses,
+            xyneChannelId = Nothing,
             ..
           }
 
@@ -1821,7 +1822,8 @@ copyIssueCategory merchantShortId city req issueHandle identifier = do
         label = sourceCategory.label,
         igmCategory = sourceCategory.igmCategory,
         enableKapture = Nothing,
-        showInDefault = Nothing
+        showInDefault = Nothing,
+        xyneChannelId = sourceCategory.xyneChannelId
       }
   mapM_ (cloneTopLevelMessage newCategoryId targetMoc msgIdMap now) topLevelMessages
   mapM_ (cloneOption newCategoryId targetMoc msgIdMap optIdMap now) allOptions

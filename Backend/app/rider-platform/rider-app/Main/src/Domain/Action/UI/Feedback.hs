@@ -218,7 +218,8 @@ feedback request personId = do
           disposition,
           queue,
           becknIssueId = Nothing,
-          ticketContext = Just Ticket.FeedbackTicket
+          ticketContext = Just Ticket.FeedbackTicket,
+          xyneChannelId = Nothing
         }
 
     generateSlackMessage :: Person.Person -> DRide.Ride -> Maybe Text -> Text -> Int -> Maybe Text -> Flow Text

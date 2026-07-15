@@ -104,5 +104,6 @@ safetyWebhookHandler merchantShortId mbOpCity secret val = do
           rideDescription = Nothing,
           queue = tConfig.kaptureQueue,
           becknIssueId = Nothing,
-          ticketContext = Just Ticket.IssueTicket
+          ticketContext = Just Ticket.IssueTicket,
+          xyneChannelId = Nothing
         }
