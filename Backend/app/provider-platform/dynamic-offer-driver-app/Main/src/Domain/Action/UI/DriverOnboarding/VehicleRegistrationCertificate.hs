@@ -559,7 +559,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             Just DVC.TRUCK -> DV.getTruckVehicleVariant input.grossVehicleWeight input.unladdenWeight vehicleVariant
             Just DVC.TOTO -> DV.E_RICKSHAW
             _ -> vehicleVariant
-      logInfo $ "createVehicleRC: Creating RC with verificationStatus=MANUAL_VERIFICATION_REQUIRED, vehicleVariant=" <> show vehicleVariant <> ", failedRules=" <> show failedRules <> ", registrationNumber=" <> show input.registrationNumber
+          verificationStatus = if null failedRules then Documents.MANUAL_VERIFICATION_REQUIRED else Documents.INVALID
+      logInfo $ "createVehicleRC: Creating RC with verificationStatus=" <> show verificationStatus <> ", vehicleVariant=" <> show vehicleVariant <> ", failedRules=" <> show failedRules <> ", registrationNumber=" <> show input.registrationNumber
       return $
         DVRC.VehicleRegistrationCertificate
           { id,
@@ -579,7 +580,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             reviewedAt = Nothing,
             reviewRequired = Nothing,
             insuranceValidity = input.insuranceValidity,
-            verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
+            verificationStatus = verificationStatus,
             fleetOwnerId = input.fleetOwnerId,
             merchantId = Just merchantId,
             mYManufacturing = input.mYManufacturing,

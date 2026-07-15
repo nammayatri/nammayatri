@@ -160,7 +160,8 @@ tfCustomer res =
           [ Tags.NIGHT_SAFETY_CHECK Tags.~= show res.nightSafetyCheck,
             Tags.ENABLE_FREQUENT_LOCATION_UPDATES Tags.~= show res.enableFrequentLocationUpdates,
             Tags.ENABLE_OTP_LESS_RIDE Tags.~= show res.enableOtpLessRide,
-            Tags.DRIVER_PREFERENCE Tags.~=? (T.intercalate "&" <$> res.driverPreference)
+            Tags.DRIVER_PREFERENCE Tags.~=? (T.intercalate "&" <$> res.driverPreference),
+            Tags.CUSTOMER_LANGUAGE Tags.~=? (show <$> res.riderLanguage)
           ]
 
 tfVehicle :: DOnInit.OnInitRes -> Maybe Spec.Vehicle

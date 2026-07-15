@@ -549,13 +549,15 @@ notifyOnRideCompleted ::
   SRB.Booking ->
   SRide.Ride ->
   [Person.Person] ->
+  HighPrecMoney ->
   m ()
-notifyOnRideCompleted booking ride otherParties = do
+notifyOnRideCompleted booking ride otherParties rideDiscountAmount = do
   let personId = booking.riderId
       rideId = ride.id
       driverName = ride.driverName
       mbTotalFare = ride.totalFare
-      totalFare = fromMaybe booking.estimatedFare mbTotalFare
+      grossTotalFare = fromMaybe booking.estimatedFare mbTotalFare
+      totalFare = Price.modifyPrice grossTotalFare (\amt -> max 0 (amt - rideDiscountAmount))
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let entity = Notification.Entity Notification.Product rideId.getId ()
       dynamicParams = RideCompleteParam driverName $ show totalFare.amountInt

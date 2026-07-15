@@ -15,8 +15,8 @@ import qualified Domain.Types.PassType
 import qualified Domain.Types.PurchasedPass
 import qualified Domain.Types.PurchasedPassPayment
 import EulerHS.Prelude hiding (id)
-import qualified Kernel.External.Payment.Interface
 import qualified IssueManagement.Domain.Types.MediaFile
+import qualified Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Juspay.Types.CreateOrder
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common

@@ -294,6 +294,7 @@ library
       Domain.Action.UI.DriverOnboarding.PullDocument
       Domain.Action.UI.DriverOnboarding.Referral
       Domain.Action.UI.DriverOnboarding.Status
+      Domain.Action.UI.DriverOnboarding.SyncVerificationStatus
       Domain.Action.UI.DriverOnboarding.UdyamVerification
       Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
       Domain.Action.UI.DriverOnboardingV2
@@ -440,6 +441,7 @@ library
       Domain.Types.Yudhishthira
       Environment
       Lib.DriverCoins.Coins
+      Lib.DriverCoins.IncentiveMetrics
       Lib.DriverCoins.Types
       Lib.DriverScore
       Lib.DriverScore.Types
@@ -947,6 +949,8 @@ library
       Tools.Metrics
       Tools.Metrics.ARDUBPPMetrics
       Tools.Metrics.ARDUBPPMetrics.Types
+      Tools.Metrics.DriverSearchRequestResponseMetrics
+      Tools.Metrics.DriverSearchRequestResponseMetrics.Types
       Tools.Metrics.SendSearchRequestToDriverMetrics
       Tools.Metrics.SendSearchRequestToDriverMetrics.Types
       Tools.Notifications

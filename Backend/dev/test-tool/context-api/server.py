@@ -235,6 +235,20 @@ def _read_ports_table():
     return {"source": str(path.relative_to(PROJECT_ROOT)) if path.is_relative_to(PROJECT_ROOT) else str(path),
             "ports": out}
 
+
+def _svc_port(name, default):
+    """Resolved port for a service by its ports.nix name, with a fallback.
+
+    The stack resolves each dev's ports DYNAMICALLY into data/ports-resolved.nix
+    (e.g. rider-app 8013 -> 9013). Anything that talks to a backend service must
+    read the resolved value, not the canonical base port — otherwise it connects
+    to a port nothing is listening on (the cause of the endless
+    '[startup] waiting for: rider-app:8013 Connection refused' loop)."""
+    try:
+        return _read_ports_table().get("ports", {}).get(name, default)
+    except Exception:
+        return default
+
 # Whitelisted GitHub repos that the /api/git/refs endpoint can introspect.
 # Each entry maps "<owner>/<name>" → the local checkout path under data/
 # (gitignored). Adding a new launcher? Add an entry here so its modal can
@@ -262,8 +276,10 @@ SERVICE_LOGS = {
 }
 MAX_LOG_DELTA_BYTES = 64 * 1024  # 64KB per service
 
-RIDER_URL = os.environ.get("RIDER_URL", "http://localhost:8013")
-DRIVER_URL = os.environ.get("DRIVER_URL", "http://localhost:8016")
+# Use the DYNAMICALLY-resolved ports (data/ports-resolved.nix), falling back to
+# the canonical base ports only if the resolved table is unavailable.
+RIDER_URL = os.environ.get("RIDER_URL") or f"http://localhost:{_svc_port('rider-app', 8013)}"
+DRIVER_URL = os.environ.get("DRIVER_URL") or f"http://localhost:{_svc_port('dynamic-offer-driver-app', 8016)}"
 
 # ── Config-sync (replaces the standalone config-sync process) ──
 CONFIG_SYNC_DIR = PROJECT_ROOT / "Backend" / "dev" / "config-sync"
@@ -390,13 +406,14 @@ def _restart_haskell_services():
                     print(f"  \033[96m[config-sync]\033[0m killed {exe} (PID {pid}) — process-compose will restart")
         except Exception as e:
             print(f"  \033[96m[config-sync]\033[0m restart {exe} failed: {e}")
+    mock_port = _svc_port("mock-registry", 8020)
     try:
-        r = subprocess.run(["lsof", "-ti", ":8020"],
+        r = subprocess.run(["lsof", "-ti", f":{mock_port}"],
                            capture_output=True, text=True, timeout=5)
         for pid in r.stdout.strip().splitlines()[:1]:
             if pid:
                 subprocess.run(["kill", pid], timeout=5)
-                print(f"  \033[96m[config-sync]\033[0m killed mock-registry (PID {pid}, port 8020)")
+                print(f"  \033[96m[config-sync]\033[0m killed mock-registry (PID {pid}, port {mock_port})")
     except Exception as e:
         print(f"  \033[96m[config-sync]\033[0m restart mock-registry failed: {e}")
     time.sleep(3)
@@ -1535,10 +1552,11 @@ def stop_ny_rn(app: str) -> bool:
 
 
 # Paths match each service's readiness_probe in Backend/nix/services/nammayatri.nix.
+# Ports come from the resolved table (dynamic per dev) — NOT the base ports.
 HASKELL_SERVICE_HEALTH = [
-    ("rider-app", 8013, "/v2"),
-    ("driver-app", 8016, "/ui"),
-    ("mock-registry", 8020, "/"),
+    ("rider-app", _svc_port("rider-app", 8013), "/v2"),
+    ("driver-app", _svc_port("dynamic-offer-driver-app", 8016), "/ui"),
+    ("mock-registry", _svc_port("mock-registry", 8020), "/"),
 ]
 
 

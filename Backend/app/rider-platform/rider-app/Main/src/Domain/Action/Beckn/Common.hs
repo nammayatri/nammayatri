@@ -1135,7 +1135,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   fork "mark pending sos as not resolved on ride end" $ do
     SafetyCQSos.updateStatusToNotResolvedIfPendingByRideId (cast ride.id)
   unless isInitiatedByCronJob $
-    Notify.notifyOnRideCompleted booking updRide otherParties
+    Notify.notifyOnRideCompleted booking updRide otherParties rideDiscountAmount
   EditLocationThrottle.clearBookingEditAttempts booking.id
   where
     buildFareBreakup :: MonadFlow m => Id DRide.Ride -> DFareBreakup -> m DFareBreakup.FareBreakup
