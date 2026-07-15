@@ -4,6 +4,7 @@
 
 module Lib.Finance.Storage.Queries.LedgerEntry where
 
+import qualified Data.Aeson
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -11,6 +12,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.Account
 import qualified Lib.Finance.Domain.Types.LedgerEntry
@@ -151,7 +153,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry {..}) = do
       Se.Set Beam.fromStartingBalance fromStartingBalance,
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
-      Se.Set Beam.metadataV2 metadataV2,
+      Se.Set Beam.metadataV2 (Data.Aeson.toJSON <$> metadataV2),
       Se.Set Beam.reconciliationStatus reconciliationStatus,
       Se.Set Beam.referenceId referenceId,
       Se.Set Beam.referenceType referenceType,
@@ -192,7 +194,7 @@ instance FromTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.Ledger
             id = Kernel.Types.Id.Id id,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId,
-            metadataV2 = metadataV2,
+            metadataV2 = metadataV2 >>= Kernel.Utils.JSON.valueToMaybe,
             reconciliationStatus = reconciliationStatus,
             referenceId = referenceId,
             referenceType = referenceType,
@@ -230,7 +232,7 @@ instance ToTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.LedgerEn
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = merchantId,
         Beam.merchantOperatingCityId = merchantOperatingCityId,
-        Beam.metadataV2 = metadataV2,
+        Beam.metadataV2 = Data.Aeson.toJSON <$> metadataV2,
         Beam.reconciliationStatus = reconciliationStatus,
         Beam.referenceId = referenceId,
         Beam.referenceType = referenceType,

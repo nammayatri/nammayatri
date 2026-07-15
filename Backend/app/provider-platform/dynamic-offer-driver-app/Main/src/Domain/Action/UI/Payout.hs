@@ -23,7 +23,6 @@ module Domain.Action.UI.Payout
   )
 where
 
-import qualified Data.Aeson as A
 import Data.Time (utctDay)
 import qualified Domain.Action.UI.DriverCoin as DriverCoin
 import Domain.Action.UI.DriverWallet (counterpartyFromRole, makePayoutEntryIdsKey)
@@ -62,6 +61,7 @@ import Kernel.Types.Servant (RawByteString (..))
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
+import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
@@ -449,10 +449,15 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
         when (isPayoutOrderSuccess updPayoutStatus) $ do
           transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
           let metadata =
-                A.object
-                  [ "driverPayable" A..= (-1 * amount),
-                    "payoutOrderId" A..= payoutOrder.id.getId
-                  ]
+                LedgerEntryMetadata
+                  { driverPayable = Just (-1 * amount),
+                    payoutOrderId = Just payoutOrder.id.getId,
+                    reason = Nothing,
+                    subscriptionAllocations = Nothing,
+                    d2cReferralEarnings = Nothing,
+                    d2dReferralEarnings = Nothing,
+                    dailyStatsId = Nothing
+                  }
           void $
             createWalletEntryDelta
               counterparty
