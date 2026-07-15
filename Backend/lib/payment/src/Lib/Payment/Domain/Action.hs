@@ -710,7 +710,8 @@ getRefundStatusService orderId merchantOpCityId getRefundStatusCall = do
           status = refund.status,
           amount = Nothing,
           errorCode = refund.errorCode,
-          errorMessage = refund.errorMessage
+          errorMessage = refund.errorMessage,
+          amount = Just refund.refundAmount
         }
 
 -- create order -----------------------------------------------------

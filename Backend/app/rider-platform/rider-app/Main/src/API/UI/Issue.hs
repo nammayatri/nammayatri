@@ -137,7 +137,8 @@ customerIssueHandle =
       findIssueConfig = \mocId issueIdentifier ->
         getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId.getId, identifier = show issueIdentifier}) (Just (CQIssueConfig.findByMerchantOpCityId mocId Common.CUSTOMER)),
       mbUpdateTicketOnService = Just castUpdateTicketOnService,
-      mbUpdateTicketStatus = Just castUpdateTicketStatus
+      mbUpdateTicketStatus = Just castUpdateTicketStatus,
+      mbUpdateTicketCsat = Just castUpdateTicketCsat
     }
 
 -- | Fetch a MediaFile's bytes directly from S3 (returning the base64 payload
@@ -426,6 +427,9 @@ castUpdateTicketOnService merchantId merchantOperatingCityId = TT.updateTicketOn
 
 castUpdateTicketStatus :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketStatusReq -> Flow ()
 castUpdateTicketStatus merchantId merchantOperatingCityId = TT.updateTicketStatus (cast merchantId) (cast merchantOperatingCityId)
+
+castUpdateTicketCsat :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketCsatReq -> Flow ()
+castUpdateTicketCsat merchantId merchantOperatingCityId = TT.updateTicketCsat (cast merchantId) (cast merchantOperatingCityId)
 
 castKaptureGetTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.GetTicketReq -> Flow [TIT.GetTicketResp]
 castKaptureGetTicket merchantId merchantOperatingCityId = TT.kaptureGetTicket (cast merchantId) (cast merchantOperatingCityId)
