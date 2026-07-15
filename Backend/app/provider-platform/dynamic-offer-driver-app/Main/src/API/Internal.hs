@@ -134,4 +134,5 @@ handler env =
     :<|> InMemManagement.handler
     :<|> MasterCloudForward.handler env
     :<|> XyneWebhook.handler
+    :<|> XyneWebhook.bearerHandler
     :<|> NotificationWebhook.handler
