@@ -129,3 +129,13 @@ ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN is_va
 ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN updated_by_id text ;
 ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN updated_by text ;
 ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN created_by_id text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN subscription_purchase_id text ;
+
+
+------- SQL updates -------
+

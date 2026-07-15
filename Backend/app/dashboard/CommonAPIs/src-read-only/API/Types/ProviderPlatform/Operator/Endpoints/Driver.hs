@@ -93,7 +93,8 @@ data EntityDetails = EntityDetails
     mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rcNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     courtRecord :: Kernel.Prelude.Maybe CourtRecordResult,
-    pendingChallan :: Kernel.Prelude.Maybe PendingChallanResult
+    pendingChallan :: Kernel.Prelude.Maybe PendingChallanResult,
+    fleetType :: Kernel.Prelude.Maybe FleetType
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -114,6 +115,13 @@ data FilteredOperatorAnalyticsRes = FilteredOperatorAnalyticsRes
     totalInspectionCompleted :: TotalInspectionCompletedRes
   }
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetType
+  = RENTAL_FLEET
+  | NORMAL_FLEET
+  | BUSINESS_FLEET
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data InspectionResponseItem = InspectionResponseItem {answer :: Kernel.Prelude.Text, mediaFileId :: Kernel.Prelude.Maybe Kernel.Prelude.Text, question :: Kernel.Prelude.Text, questionId :: Kernel.Prelude.Text}

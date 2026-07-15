@@ -17,6 +17,7 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.DriverOnboarding.BankAccountVerification as BankAccountVerification
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.PullDocument as PullDocument
+import qualified Domain.Action.UI.DriverOnboarding.SyncVerificationStatus as SyncV
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as VRC
 import qualified Domain.Types.AadhaarCard
 import Domain.Types.BackgroundVerification
@@ -42,6 +43,7 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.VehicleCategory as DVC
+import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Domain.Types.VehicleServiceTier
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -108,7 +110,9 @@ import qualified Storage.Queries.DriverSSN as QDriverSSN
 import qualified Storage.Queries.FleetDriverAssociationExtra as FDA
 import qualified Storage.Queries.FleetRCAssociationExtra as FRCA
 import qualified Storage.Queries.HyperVergeSdkLogs as HVSdkLogsQuery
+import qualified Storage.Queries.HyperVergeVerificationExtra as HVQueryExtra
 import qualified Storage.Queries.IdfyVerification as IVQuery
+import qualified Storage.Queries.IdfyVerificationExtra as IVQueryExtra
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as PersonQuery
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
@@ -1387,42 +1391,91 @@ getDriverRegisterVehicleStatus ::
   Maybe Text ->
   Maybe Text ->
   Flow APITypes.RcVerifyStatusResp
-getDriverRegisterVehicleStatus (mbPersonId, _, _) mbRegistrationNo mbRcId = do
+getDriverRegisterVehicleStatus (mbPersonId, _, merchantOpCityId) mbRegistrationNo mbRcId = do
   callerId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  (registrationNo, verified, approved, documents) <- rcVerifyStatus (DriverCaller callerId) mbRegistrationNo mbRcId
+  (registrationNo, verified, approved, documents) <- rcVerifyStatus (DriverCaller callerId merchantOpCityId) mbRegistrationNo mbRcId
   pure $ APITypes.RcVerifyStatusResp {registrationNo, verified, approved, documents}
 
--- | Who is asking for RC verify-status. Encoding the two callers as a sum type makes the invalid
---   combinations of the old @Maybe callerId@ + @Bool isDashboard@ pair (driver with no id / dashboard with
---   an id) unrepresentable, so the driver path can never silently skip the RC-ownership authz.
+-- | Who is asking for RC verify-status; a sum type so driver-with-no-id / dashboard-with-id are
+--   unrepresentable and the driver path can't skip the RC-ownership authz.
 data RcVerifyCaller
-  = -- | Driver app: authorize against this driver's active DriverRCAssociation (closes the IDOR).
-    DriverCaller (Id Domain.Types.Person.Person)
-  | -- | Dashboard: no per-person gate (already merchant/city-scoped by ApiAuthV2); the RC's resolved
-    --   city must match this operating city.
+  = -- | Driver app: authorized against its active DriverRCAssociation. The city is only a config-lookup
+    --   key (from the auth token) — NOT matched against the RC's resolved city.
+    DriverCaller (Id Domain.Types.Person.Person) (Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
+  | -- | Dashboard: merchant/city-scoped by ApiAuthV2; the RC's resolved city must match this city.
     DashboardCaller (Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
 
--- | Shared RC verify-status core (UI + dashboard). Resolves the RC, authorizes the caller, checks all
---   mandatory vehicle docs, and — under @enableBotFlow@ — persists RC.verified. The authz closes the IDOR:
---   @DriverCaller@ requires an active DriverRCAssociation; @DashboardCaller@ instead pins the RC's resolved
---   city to the caller's operating city.
+-- | Shared RC verify-status core (UI + dashboard): resolve the RC, authorize the caller, check all
+--   mandatory vehicle docs; under @enableBotFlow@ persist RC.verified.
 rcVerifyStatus :: RcVerifyCaller -> Maybe Text -> Maybe Text -> Flow (Text, Bool, Maybe Bool, [SStatus.DocumentStatusItem])
 rcVerifyStatus caller mbRegistrationNo mbRcId = do
-  rc <- case (mbRegistrationNo, mbRcId) of
-    (Just registrationNo, _) -> VRCE.findLastVehicleRCWrapper registrationNo >>= fromMaybeM (RCNotFound registrationNo)
-    (Nothing, Just rcId) -> RCQuery.findById (Id rcId) >>= fromMaybeM (RCNotFound rcId)
+  mbRc <- case (mbRegistrationNo, mbRcId) of
+    (Just registrationNo, _) -> VRCE.findLastVehicleRCWrapper registrationNo
+    (Nothing, Just rcId) -> RCQuery.findById (Id rcId)
     (Nothing, Nothing) -> throwError (InvalidRequest "Either registrationNo or rcId must be provided")
+  case mbRc of
+    Just rc -> rcVerifyStatusForRC caller rc
+    -- No RC entity yet (verification still pending, e.g. a missed webhook). Re-pull only the RC asked
+    -- about — resolved by registration number from its still-pending row; no number or no row ⇒ nothing
+    -- to sync. Reported NO_DOC_AVAILABLE now; it surfaces once onVerifyRC creates the RC.
+    Nothing -> do
+      -- Flag off ⇒ no lookups, nothing forked; the response is NO_DOC_AVAILABLE either way.
+      let merchantOpCityId = case caller of
+            DriverCaller _ cityId -> cityId
+            DashboardCaller cityId -> cityId
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      when (transporterConfig.enablePullPendingDocVerification == Just True) $
+        whenJust mbRegistrationNo $ \regNo -> do
+          merchantServiceUsageConfig <-
+            getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
+              >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+          let sources = SyncV.pullSourcesFor merchantServiceUsageConfig DTO.VehicleRegistrationCertificate
+          rcHash <- getDbHash regNo
+          -- Read only the tables 'SyncV.pullSourcesFor' allows.
+          mbIdfyRow <- if sources.checkIdfy then IVQueryExtra.findLatestPendingByDocNumberHashAndDocType rcHash DTO.VehicleRegistrationCertificate else pure Nothing
+          mbHvRow <- if sources.checkHyperVerge then HVQueryExtra.findLatestPendingByDocNumberHashAndDocType rcHash DTO.VehicleRegistrationCertificate else pure Nothing
+          let mbRowKey = (mbIdfyRow <&> (\r -> (r.driverId, r.documentImageId1))) <|> (mbHvRow <&> (\r -> (r.driverId, r.documentImageId1)))
+          whenJust mbRowKey $ \(rowDriverId, rowImageId) -> do
+            -- A driver caller may only heal its own row; the dashboard is already merchant/city-scoped.
+            let callerOwnsRow = case caller of
+                  DashboardCaller _ -> True
+                  DriverCaller callerId _ -> callerId == rowDriverId
+            when callerOwnsRow $ do
+              person <- PersonQuery.findById rowDriverId >>= fromMaybeM (PersonNotFound rowDriverId.getId)
+              fork "pullRcStatus" $ SyncV.pullRcStatus person rowImageId.getId
+      pure (fromMaybe "" (mbRegistrationNo <|> mbRcId), False, Nothing, noDocVehicleStatusItems)
+
+-- | Every vehicle doc as NO_DOC_AVAILABLE — the shape the found-RC path returns for absent docs.
+noDocVehicleStatusItems :: [SStatus.DocumentStatusItem]
+noDocVehicleStatusItems = map mkNoDoc SDO.defaultVehicleDocumentTypes
+  where
+    mkNoDoc dt =
+      SStatus.DocumentStatusItem
+        { documentType = dt,
+          verificationStatus = SStatus.NO_DOC_AVAILABLE,
+          verificationMessage = Nothing,
+          verificationUrl = Nothing,
+          s3Path = Nothing,
+          imageId = Nothing,
+          imageId2 = Nothing,
+          documentExpiry = Nothing,
+          metadata = Nothing
+        }
+
+rcVerifyStatusForRC :: RcVerifyCaller -> DVRC.VehicleRegistrationCertificate -> Flow (Text, Bool, Maybe Bool, [SStatus.DocumentStatusItem])
+rcVerifyStatusForRC caller rc = do
   registrationNo <- decrypt rc.certificateNumber
   now <- getCurrentTime
-  -- Dashboard's path city, which the RC's resolved city must match (driver app has none).
+  -- Only the dashboard's city is matched against the RC's resolved city — a driver may legitimately
+  -- hold an RC resolved in another city.
   let mbPassedCityId = case caller of
         DashboardCaller cityId -> Just cityId
-        DriverCaller _ -> Nothing
+        DriverCaller _ _ -> Nothing
   -- Authz for driver-app callers; reused below for city so we don't re-query.
   mbCallerAssoc <-
     case caller of
       DashboardCaller _ -> pure Nothing
-      DriverCaller callerId -> Just <$> (DAQuery.findLinkedByRCIdAndDriverId callerId rc.id now >>= fromMaybeM RCNotLinked)
+      DriverCaller callerId _ -> Just <$> (DAQuery.findLinkedByRCIdAndDriverId callerId rc.id now >>= fromMaybeM RCNotLinked)
   -- City from the RC's associated person: caller (driver) → latest driver → fleet owner → RC's own.
   mbAssocPerson <- case mbCallerAssoc of
     Just callerAssoc -> PersonQuery.findById callerAssoc.driverId
@@ -1442,6 +1495,13 @@ rcVerifyStatus caller mbRegistrationNo mbRcId = do
       throwError (InvalidRequest $ "RC belongs to city: " <> show merchantOperatingCity.city)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   (vehicleDocItem, configs) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig ENGLISH registrationNo Nothing
+  -- Re-pull a stuck RC verification when it renders pending — keyed by this RC's image so a fleet
+  -- driver's other RCs are untouched; the synced result shows on the next hit.
+  let rcPending = any (\d -> d.documentType == DTO.VehicleRegistrationCertificate && SyncV.isPullableStatus d.verificationStatus) vehicleDocItem.documents
+      pullEnabled = transporterConfig.enablePullPendingDocVerification == Just True
+  when (pullEnabled && rcPending) $
+    whenJust ((,) <$> mbAssocPerson <*> vehicleDocItem.imageId) $ \(assocPerson, rcImageIdTxt) ->
+      fork "pullRcStatus" $ SyncV.pullRcStatus assocPerson rcImageIdTxt
   let allValid = SStatus.checkAllVehicleDocsValidForFetchedDocs configs vehicleDocItem
   -- Persist verified only under enableBotFlow (matches existing config behaviour).
   when (transporterConfig.enableBotFlow == Just True) $ do

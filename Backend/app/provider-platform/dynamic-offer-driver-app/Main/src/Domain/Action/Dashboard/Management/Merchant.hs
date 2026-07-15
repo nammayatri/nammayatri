@@ -3351,7 +3351,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             fetchAllGateFareProduct = mbExistingSpLoc >>= (.fetchAllGateFareProduct),
             supportNumber = request.supportNumber,
             paymentModes = request.paymentModes <|> (mbExistingSpLoc >>= (.paymentModes)) <|> Just SL.defaultPaymentModes,
-            fareSettlementType = request.fareSettlementType <|> (mbExistingSpLoc >>= (.fareSettlementType)),
+            fareSettlementType = request.fareSettlementType,
             ..
           }
 
