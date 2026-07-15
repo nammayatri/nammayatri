@@ -181,7 +181,11 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     stopInfo :: [DSI.StopInformation],
     batchConfig :: Maybe BatchConfig,
     isSafetyPlus :: Bool,
-    cancellationReason :: Maybe BookingCancellationReasonAPIEntity
+    cancellationReason :: Maybe BookingCancellationReasonAPIEntity,
+    -- The tip is editable while the ride is running, and mid-ride it is NOT in fareBreakup (that
+    -- list is rebuilt wholesale at ride completion). This is the only way the app can read back
+    -- the tip it currently has set, e.g. after a restart. Mirrors RideAPIEntity.tipAmount.
+    tipAmount :: Maybe PriceAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -551,12 +555,13 @@ buildBookingStatusAPIEntity booking = do
       destinationReachedTime = mbActiveRide >>= (.destinationReachedAt)
       talkedWithDriver = fromMaybe False (mbActiveRide >>= (.talkedWithDriver))
       isSafetyPlus = fromMaybe False $ mbActiveRide <&> (.isSafetyPlus)
+      tipAmount = mkPriceAPIEntity <$> (mbActiveRide >>= (.tipAmount))
   sosStatus <- getActiveSos' mbActiveRide booking.riderId
   mbCancellationReason <-
     if booking.status == CANCELLED
       then QBCR.findByRideBookingId booking.id
       else return Nothing
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason)
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason) tipAmount
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride

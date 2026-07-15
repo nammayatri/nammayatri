@@ -7,6 +7,7 @@ module SharedLogic.FareBreakupInfo
     setFareBreakupInfoFromFareBreakups,
     addFareBreakupInfoItems,
     upsertFareBreakupInfo,
+    tipFareBreakupTitle,
   )
 where
 
@@ -21,6 +22,11 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.FareBreakupInfo as QFareBreakupInfo
+
+-- | Canonical description for the rider's tip line in a RIDE fare breakup. The BPP emits the
+-- same amount over Beckn as BUYER_ADDITIONAL_AMOUNT; ride completion normalises it to this.
+tipFareBreakupTitle :: Text
+tipFareBreakupTitle = "RIDE_TIP"
 
 getFareBreakupInfo ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

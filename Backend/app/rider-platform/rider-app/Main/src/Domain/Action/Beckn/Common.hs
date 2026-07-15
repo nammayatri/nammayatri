@@ -904,11 +904,15 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
         Nothing -> totalFare.amount
       offerBasePrice = mkPrice (Just totalFare.currency) discountApplicableFareAmountTaxIncl
+  -- A tip added while the ride was running is not part of the fare (it never enters the BPP's
+  -- fare params, so it carries no commission or tax) but it is part of what the rider owes.
+  -- `fare` stays the fare the policy computed; `totalFare` is what is actually collected.
+  let totalFareWithTip = mkPrice (Just totalFare.currency) (totalFare.amount + maybe 0 (.amount) ride.tipAmount)
   let rideCommission = maybe booking.commission Just commission
       updRide =
         ride{status = DRide.COMPLETED,
              fare = Just fare,
-             totalFare = Just totalFare,
+             totalFare = Just totalFareWithTip,
              chargeableDistance = convertHighPrecMetersToDistance distanceUnit <$> chargeableDistance,
              traveledDistance = convertHighPrecMetersToDistance distanceUnit <$> traveledDistance,
              tollConfidence,
@@ -1110,7 +1114,26 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
               }
           ]
       else pure []
-  SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) (breakups <> offerDiscountBreakup)
+  -- The BPP sends the tip as a BUYER_ADDITIONAL_AMOUNT quotation-breakup line, but the rider app
+  -- writes and matches on RIDE_TIP. Drop the BPP's line and rebuild it from ride.tipAmount under
+  -- the canonical name, so the two agree. Rebuilding here (rather than relying on the line the
+  -- rider app wrote when the tip was added) also keeps the tip intact if this handler is replayed:
+  -- the write below REPLACES the breakup list for this ride.
+  tipBreakup <- case ride.tipAmount of
+    Just tip | tip.amount > 0 -> do
+      guid <- generateGUID
+      pure
+        [ DFareBreakup.FareBreakup
+            { id = guid,
+              entityId = ride.id.getId,
+              entityType = DFareBreakup.RIDE,
+              amount = tip,
+              description = SFareBreakupInfo.tipFareBreakupTitle
+            }
+        ]
+    _ -> pure []
+  let breakupsWithoutBppTip = filter (\fb -> fb.description /= show BecknEnums.BUYER_ADDITIONAL_AMOUNT && fb.description /= SFareBreakupInfo.tipFareBreakupTitle) breakups
+  SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) (breakupsWithoutBppTip <> tipBreakup <> offerDiscountBreakup)
   QPFS.clearCache booking.riderId
   createRecentLocationForTaxi booking
   checkAndUpdateJourneyTerminalStatusForNormalRide booking DJourney.COMPLETED
