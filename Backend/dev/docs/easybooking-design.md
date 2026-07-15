@@ -30,9 +30,9 @@ A function called `isFixedNightCharge` just picks between these two: `isRentalTr
 |---|---|---|
 | Destination model | Destination-less, like Rental (`estimatedDistance`/`estimatedDuration` given by rider, no route calc at search) | User confirmed "like rental" |
 | Fare policy | `ProgressiveDetails` (same formula OneWay uses) via `fare_product` config pointing at a Progressive `FarePolicy` row | User's core ask |
-| End-ride OTP | A `Bool` flag carried **inside the `TripCategory` value itself** (`EasyBooking Bool`), read from a new `TransporterConfig` field at the moment the category is constructed (search time). `isEndOtpRequired (EasyBooking otpRequired) = otpRequired`. | User wants a genuine on/off switch, not a hardcoded value. Embedding the flag in `TripCategory` means it rides through the entire booking lifecycle (Quote → Booking → Ride) for free — `StartRide.hs`/`EndRide.hs` need **zero changes**, since they already call the pure `isEndOtpRequired booking.tripCategory` helper. |
+| End-ride OTP | **DECIDED (final): Option A — hardcoded, exactly like `Rental`/`InterCity`/`Delivery` today.** `EasyBooking` is a bare, argument-less constructor (no `Bool`, no config field, no `TransporterConfig` change at all). `isEndOtpRequired (EasyBooking) = <True or False — pick one, see open item below>`. To change later: edit this one line in `Trip.hs`, rebuild, redeploy — same as changing any other hardcoded trip-category behavior. Applies identically to every city/merchant; cannot vary per city without a code change. | User explicitly chose the simpler, non-configurable option after walking through the tradeoff (config flag = changeable without redeploy but per-city, vs hardcode = redeploy needed but zero extra plumbing). Confirmed: no risk in either value — both paths already run in production today for other categories (`True` path via Rental/InterCity/Delivery, `False` path via OneWay/Ambulance/RideShare/CrossCity), so `StartRide.hs`/`EndRide.hs` need **zero changes** either way. |
 | Pricing policy (Estimate vs Quote) | `QuoteBased True` — same as Rental (fixed price at on_search, no live Select step) | Consistent with "no destination, no live route" — there's nothing to estimate a range against |
-| Mode type | **None.** `EasyBooking` takes only the one `Bool` flag — no `OneWayMode`/`TripMode` parameter, no RideOtp/OnDemandStaticOffer split. One category, one flag, one flow. | User corrected this explicitly: not two variants multiplied by the flag — just one true/false switch |
+| Mode type | **None.** `EasyBooking` takes **no arguments at all** — not a `Bool`, not a mode. Just a bare constructor, same shape as if `Rental` had no `RentalMode` parameter. | Simplified twice during design: first removed the mode-type split, then (this session) removed the `Bool` flag too in favor of a hardcoded value |
 | Odometer / snap-to-road rectify | `isOdometerReadingsRequired = False`, `shouldRectifyDistantPointsSnapToRoadFailure = True` | Mirrors Rental exactly (same GPS-tracked, destination-less shape prone to the same distant-point snap issue) |
 | Toll applicability | `isTollApplicableForTrip _ (EasyBooking _) = True` | It's Progressive-priced like OneWay, which already charges tolls |
 | Night charge basis | No explicit entry needed — `isFixedNightCharge = isRentalTrip \|\| isInterCityTrip` already evaluates to `False` for EasyBooking, giving it OneWay's dynamic time-window night charge (correct, since it shares OneWay's fare policy) | Falls out automatically, no code needed |
@@ -42,18 +42,104 @@ A function called `isFixedNightCharge` just picks between these two: `isRentalTr
 
 | # | Ride-flow phase | API | Files that need changes |
 |---|---|---|---|
-| 1 | Search (foundation) | Rider `POST /rideSearch` → Beckn `search` | `Trip.hs` (new constructor), `RiderPreferredOption.hs` (new constructor) |
+| 0 | **The entry point** — public request schema | Rider `POST /rideSearch` (the request body itself) | `SharedLogic/Search.hs` (new `EasyBookingSearchReq` type + `SearchReq` constructor + `fareProductConstructorModifier` tag), `Domain/Action/UI/Search.hs` (`extractSearchDetails` clause + new `processEasyBookingSearch` function) — **without this, nothing below is reachable** |
+| 1 | Search (foundation) | same | `Trip.hs` (new constructor), `RiderPreferredOption.hs` (new constructor) |
 | 2 | Search — rider-app outgoing | same | `Beckn/OnDemand/Transformer/Search.hs` (rider-app): `riderPreferredOptionToCategory` |
-| 3 | Search — driver-app incoming, fare policy resolved, Quote built | Beckn `search` → `on_search` | `Beckn/OnDemand/Utils/Search.hs` (driver-app): `mapCategoryCodeToRiderPreferred`; `Merchant.yaml` (new `TransporterConfig` field); `Domain/Action/Beckn/Search.hs`: `getPossibleTripOption` |
+| 3 | Search — driver-app incoming, fare policy resolved, Quote built | Beckn `search` → `on_search` | `Beckn/OnDemand/Utils/Search.hs` (driver-app): `mapCategoryCodeToRiderPreferred`; `Domain/Action/Beckn/Search.hs`: `getPossibleTripOption` (no `Merchant.yaml`/`TransporterConfig` change needed — end-OTP is hardcoded in `Trip.hs`, not config-driven; see Option A decision above) |
 | 4 | Rider app receives quotes | Beckn `on_search` | `Domain/Action/Beckn/OnSearch.hs` (rider-app): preference-based quote filter **+** the wire-level `QuoteDetails` type & `buildQuote` parser in the same file (section 7a, Layer C) — a new `EasyBookingDetails`/`EasyBookingQuoteDetails` shape |
 | 4a | (rider-app only) Quote/Booking domain shapes | n/a — this is the domain-model layer underneath phases 4-5, not a separate API call | `spec/Storage/Quote.yaml`, `spec/Storage/Booking.yaml` (new `EasyBookingDetails` enum entries), `SharedLogic/Confirm.hs`'s `buildBookingDetails` (section 7a, Layers A & B) |
 | 5 | Confirm → driver accept → start → end | `POST /confirm`, Beckn `init/confirm`, `POST /start`, `POST /end` | **No changes** beyond 4a above — `StartRide.hs`/`EndRide.hs`/driver-app `Init.hs`/`Confirm.hs`/`Driver.hs` all dispatch purely off `booking.tripCategory` via the `Trip.hs` helpers |
-| 6 | Config/data | n/a | `fare_policy` + `fare_product` + `transporter_config` seed SQL |
+| 6 | Config/data | n/a | `fare_policy` + `fare_policy_progressive_details` + `fare_product` seed SQL (no `transporter_config` needed — Option A, hardcoded OTP) |
 | 7 | Safety net | n/a | final grep pass for any other exhaustive `TripCategory` match before `cabal build all` |
 
-Files 1-2 above are done as notes already in this conversation; file 3 (`Transformer/Search.hs`) and file 4 (`Utils/Search.hs`) are next.
+Section 0 (the `SearchReq` entry point), and files 1-2, are done as notes already in this conversation; file 3 (`Transformer/Search.hs`) and file 4 (`Utils/Search.hs`) are next.
 
 ## Files to change
+
+### 0. THE ENTRY POINT — `SearchReq`, the actual public API request-body schema (this is what you see in Swagger)
+
+**This was missing from earlier drafts of this doc — found and designed later in the same session, and it's the most important piece: without it, nobody can even send an EasyBooking search request. Everything in sections 1 onward is unreachable without this.**
+
+`Backend/app/rider-platform/rider-app/Main/src/SharedLogic/Search.hs:61` — the real, verified sum type behind the `oneOf` you see in the `/v2/rideSearch` Swagger doc (`OneWaySearchReq`, `RentalSearchReq`, etc. are its alternatives):
+```haskell
+data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq | InterCitySearch InterCitySearchReq | AmbulanceSearch OneWaySearchReq | DeliverySearch OneWaySearchReq | PTSearch PublicTransportSearchReq | FixedRouteSearch FixedRouteSearchReq
+  deriving (Generic, Show)
+
+instance ToJSON SearchReq where toJSON = genericToJSON fareProductOptions
+instance FromJSON SearchReq where parseJSON = genericParseJSON fareProductOptions
+
+fareProductConstructorModifier :: String -> String
+fareProductConstructorModifier = \case
+  "OneWaySearch" -> "ONE_WAY"
+  "RentalSearch" -> "RENTAL"
+  "InterCitySearch" -> "INTER_CITY"
+  "AmbulanceSearch" -> "AMBULANCE"
+  "DeliverySearch" -> "DELIVERY"
+  "FixedRouteSearch" -> "FIXED_ROUTE"
+  x -> x
+```
+This `fareProductConstructorModifier` is where the Swagger `fareProductType` enum string (`"RENTAL"`, `"ONE_WAY"`, etc.) actually comes from — it's a plain constructor-name-to-string mapping, with a catch-all (`x -> x`) that would otherwise silently pass through the raw Haskell constructor name if unmapped.
+
+**Changes needed:**
+1. Add a new request type, `RentalSearchReq`'s minimal sibling (`SharedLogic/Search.hs`, next to `RentalSearchReq` at line 143):
+```haskell
+data EasyBookingSearchReq = EasyBookingSearchReq
+  { origin :: SearchReqLocation,
+    startTime :: UTCTime,
+    isSourceManuallyMoved :: Maybe Bool,
+    isSpecialLocation :: Maybe Bool,
+    quotesUnifiedFlow :: Maybe Bool,
+    isReallocationEnabled :: Maybe Bool,
+    numberOfLuggages :: Maybe Int
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+```
+Deliberately smaller than `RentalSearchReq` — no `stops`, no `estimatedRentalDistance`, no `estimatedRentalDuration` (confirmed: destination-less **and** estimate-less; the quote will show `base_fare` + `per_extra_km_rate` instead of any pre-computed number, per the reviewer's design).
+
+2. Add the constructor to `SearchReq` (line 61): `| EasyBookingSearch EasyBookingSearchReq`
+
+3. Add the tag mapping to `fareProductConstructorModifier`: `"EasyBookingSearch" -> "EASY_BOOKING"` (name open to change, flagged in "Open items")
+
+4. `Backend/app/rider-platform/rider-app/Main/src/Domain/Action/UI/Search.hs`, function `extractSearchDetails` (line 143-187, verified directly) — add a new clause mirroring the `RentalSearch` one:
+```haskell
+EasyBookingSearch EasyBookingSearchReq {..} ->
+  SearchDetails
+    { riderPreferredOption = DRPO.EasyBooking,
+      roundTrip = False,
+      stops = [],
+      hasStops = Nothing,
+      returnTime = Nothing,
+      driverIdentifier_ = Nothing,
+      routeCode = Nothing,
+      destinationStopCode = Nothing,
+      originStopCode = Nothing,
+      vehicleCategory = Nothing,
+      currentLocation = Nothing,
+      busLocationData = [],
+      fromSpecialLocationId = Nothing,
+      toSpecialLocationId = Nothing,
+      city = Nothing,
+      ..    -- RecordWildCards fills origin, startTime, quotesUnifiedFlow, isReallocationEnabled,
+            -- numberOfLuggages, isSourceManuallyMoved, isSpecialLocation from EasyBookingSearchReq
+    }
+```
+
+5. Same file, function `getRouteDetails` (line 585-614, verified) — add a dispatch line and a new processing function:
+```haskell
+EasyBookingSearch easyBookingReq -> processEasyBookingSearch person easyBookingReq originCity
+...
+processEasyBookingSearch :: SearchRequestFlow m r => DPerson.Person -> EasyBookingSearchReq -> Context.City -> m (RouteDetails, Maybe Text)
+processEasyBookingSearch _person _easyBookingReq _originCity =
+  return
+    ( RouteDetails
+        { longestRouteDistance = Nothing, shortestRouteDistance = Nothing,
+          shortestRouteDuration = Nothing, shortestRouteStaticDuration = Nothing,
+          shortestRouteInfo = Nothing, multipleRoutes = Nothing
+        },
+      Nothing
+    )
+```
+Simpler than `processRentalSearch` — no OSRM call, no serviceability check on a stop, since there's no stop concept at all for EasyBooking. Just "where" (origin) and "when" (startTime), nothing else.
 
 ### 1. `Backend/lib/beckn-spec/src/Domain/Types/Trip.hs` — the core enum
 
@@ -71,20 +157,19 @@ data TripCategory
 ```
 `ToJSON`/`FromJSON`/`Show`/`Read`/`ToSchema` are all **hand-written** (not derived) — each one enumerates every constructor explicitly, which is why `InterCity`/`CrossCity` (the only existing constructors with an extra field beyond the mode) are the right template to copy for `EasyBooking`'s extra `Bool`.
 
-**What changes:**
-- Add `| EasyBooking Bool` (line ~46) — a single constructor, one field: the end-OTP-mandatory flag. No mode parameter, no `EasyBookingMode` type — one category, one flag, one flow.
-- `ToJSON`/`FromJSON` (line 105-155): add a plain clause, same shape as every other single-field constructor (`OneWay`/`Rental`/`Ambulance`/`Delivery`):
+**What changes (FINAL — Option A, bare constructor, no `Bool`, decided this session):**
+- Add `| EasyBooking` (line ~46) — a bare constructor, **no arguments at all**. Not even a mode. Simplest possible addition to this type.
+- `ToJSON`/`FromJSON` (line 105-155): a nullary constructor needs its own small shape (no existing constructor in this type has zero fields, so this is a genuinely new — but trivial — case, not a copy-paste of an existing one):
   ```haskell
-  toJSON (EasyBooking otpRequired) =
-    object ["tag" .= ("EasyBooking" :: Text), "contents" .= otpRequired]
-  -- FromJSON: "EasyBooking" -> EasyBooking <$> v .: "contents"
+  toJSON EasyBooking = object ["tag" .= ("EasyBooking" :: Text)]
+  -- FromJSON: "EasyBooking" -> pure EasyBooking
   ```
-- `Show`/`Read` (line 238-333): copy the plain single-field pattern (same as `show (Rental s) = "Rental_" <> show s`): `show (EasyBooking otpRequired) = "EasyBooking_" <> show otpRequired`, with a matching `Read` clause.
-- `generateTripCategoryShowInstances` (line 249-260): add `[show (EasyBooking otp) | otp <- [True, False]]` (just 2 entries, not 2×2).
-- `ToSchema TripCategory` (line 157-196): add an `EasyBooking` entry to the `oneOf` list using a `Bool` schema for `contents`, same shape as the `OneWay`/`Rental` entries (single schema ref, no extra named field).
-- Add explicit clauses to: `tripCategoryToPricingPolicy` (line 346, → `QuoteBased True`), `isEndOtpRequired` (line 363, → the embedded flag directly — see below), `shouldRectifyDistantPointsSnapToRoadFailure` (line 389, → `True`), `isTollApplicableForTrip` (line 421, → `True`). Leave `isRideOtpTrip`, `isOdometerReadingsRequired`, `isGoHomeAvailable`, `skipDriverPoolCheck`, `isRentalTrip`, `isInterCityTrip`, `isAmbulanceTrip`, `isDeliveryTrip`, `isDynamicOfferTrip` on their existing catch-alls (already resolve correctly per the design table — `isRideOtpTrip` in particular has no reason to be true here since there's no RideOtp-style mode anymore).
+- `Show`/`Read` (line 238-333): `show EasyBooking = "EasyBooking"` — no suffix needed at all (compare to `show (Rental s) = "Rental_" <> show s`, which needs the suffix because `Rental` carries a mode value to encode; `EasyBooking` carries nothing, so the bare tag name is the whole string). Matching trivial `Read` clause.
+- `generateTripCategoryShowInstances` (line 249-260): add just `["EasyBooking"]` — one entry, not a list comprehension over modes/flags.
+- `ToSchema TripCategory` (line 157-196): add an `EasyBooking` entry to the `oneOf` list with no `contents` schema at all (just the `tag` field, matching the JSON shape above — check whether the shared `tripCategorySchema` helper needs a small tweak to support a schema entry with no `contents`, since every existing entry currently assumes one).
+- Add explicit clauses to: `tripCategoryToPricingPolicy` (line 346, → `QuoteBased True`), `isEndOtpRequired` (line 363, → **hardcoded `True` or `False` — see open item below, not yet picked**), `shouldRectifyDistantPointsSnapToRoadFailure` (line 389, → `True`), `isTollApplicableForTrip` (line 421, → `True`). Leave `isRideOtpTrip`, `isOdometerReadingsRequired`, `isGoHomeAvailable`, `skipDriverPoolCheck`, `isRentalTrip`, `isInterCityTrip`, `isAmbulanceTrip`, `isDeliveryTrip`, `isDynamicOfferTrip` on their existing catch-alls (already resolve correctly per the design table).
 
-**The OTP flag itself** — current code (line 363-367):
+**The OTP line itself** — current code (line 363-367):
 ```haskell
 isEndOtpRequired :: TripCategory -> Bool
 isEndOtpRequired (Rental _) = True
@@ -92,16 +177,9 @@ isEndOtpRequired (InterCity _ _) = True
 isEndOtpRequired (Delivery _) = True
 isEndOtpRequired _ = False
 ```
-New clause added: `isEndOtpRequired (EasyBooking otpRequired) = otpRequired`. Nothing else in this function changes.
+New clause: `isEndOtpRequired (EasyBooking) = True` **or** `isEndOtpRequired (EasyBooking) = False` — **literal value still to be picked, see "Open items" at the end of this doc.** Whichever is chosen, it's a one-word change to flip later (edit + rebuild + redeploy), confirmed safe either way since both the `True` path (Rental/InterCity/Delivery) and the `False` path (OneWay/Ambulance/RideShare/CrossCity) are already exercised in production today — `StartRide.hs`/`EndRide.hs` need no changes regardless of which value is picked, since both just call this function and react generically to whatever it returns.
 
-**Important gap to be aware of, found while re-reading `EndRide.hs` (line 339-343):**
-```haskell
-when (DTC.isEndOtpRequired booking.tripCategory) $ do
-  case driverReq.endRideOtp of
-    Just endRideOtp -> unless (Just endRideOtp == rideOld.endOtp) $ throwError IncorrectOTP
-    Nothing -> pure ()   -- ← missing OTP is silently accepted, even when isEndOtpRequired = True
-```
-Today, even for Rental (`isEndOtpRequired = True`), the backend does **not** reject an end-ride that omits the OTP — it only validates it *if the driver's app happens to send one*. So "mandatory" is currently enforced by the driver app's UI, not the API. If the flag should make the backend itself refuse to end the ride without an OTP when `otpRequired = True`, that's one extra line in `EndRide.hs`: change the `Nothing -> pure ()` branch to `Nothing -> throwError OtpRequired` (or similar), gated on `isEndOtpRequired`. This would be a **stricter behavior than Rental has today**, and would apply only to `EasyBooking`'s check (a targeted `case booking.tripCategory of EasyBooking _ True -> ...; _ -> {- existing lenient behavior -}` rather than changing the shared branch for all categories). Flagging this explicitly since it changes what "mandatory" actually means at the API level — confirm during review whether you want the stricter reject-if-missing behavior or just today's Rental-equivalent lenient check.
+**Note on the `EndRide.hs` leniency quirk** (still true regardless of Option A vs B): today, even when `isEndOtpRequired` is `True` for a category, the backend doesn't reject a missing OTP — it only validates one *if supplied* (`Nothing -> pure ()` at `EndRide.hs:339-343`). This is unrelated to the True/False decision above; it's a separate, pre-existing leniency that applies identically to every category including Rental today. Not something this change needs to touch unless you specifically want stricter enforcement — flagged for awareness, not as required work.
 
 ### 2. `Backend/lib/beckn-spec/src/Domain/Types/RiderPreferredOption.hs`
 - Add `| EasyBooking` to the enum (line 27-35). This type is fully derived (`Generic`, TH macros) — no hand-written instances to touch.
@@ -112,19 +190,9 @@ Today, even for Rental (`isEndOtpRequired = True`), the backend does **not** rej
 ### 4. `Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/Beckn/OnDemand/Utils/Search.hs`
 - `mapCategoryCodeToRiderPreferred` (line 270-276) — add `"ON_DEMAND_EASY_BOOKING" -> DRPO.EasyBooking` above the existing catch-all.
 
-### 5. New config field — `Backend/app/provider-platform/dynamic-offer-driver-app/Main/spec/Storage/Merchant.yaml` (`TransporterConfig` block, fields section starts ~line 1061)
+### 5. ~~New config field~~ — **not needed (Option A decided)**
 
-**What's there now** (verified): this block already has many `Maybe Bool` toggles, e.g.:
-```yaml
-    isDynamicPricingQARCalEnabled: Maybe Bool
-    recomputeCongestionChargeOnEndRide: Maybe Bool
-    enableMobilityBilling: Maybe Bool
-```
-**What changes:** add one more, following the exact same idiom:
-```yaml
-    easyBookingEndOtpMandatory: Maybe Bool
-```
-`Maybe` so existing rows default to `Nothing` (treated as `False`/optional) with no backfill required. After the YAML edit, run `, run-generator` (regenerates the Beam/domain type) — it will also emit the `ALTER TABLE transporter_config ADD COLUMN` migration automatically; no hand-written SQL needed for this column.
+An earlier draft of this plan added a new `TransporterConfig` field (`easyBookingEndOtpMandatory: Maybe Bool`) in `Merchant.yaml` to back a per-city configurable switch. **This is no longer part of the plan** — since the end-OTP requirement is now a hardcoded value directly in `Trip.hs` (Option A, decided this session), there is no new config column, no YAML edit, and no migration needed for this. Removed to avoid confusion with anyone reading an older copy of this doc.
 
 ### 6. `Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/Domain/Action/Beckn/Search.hs` — `getPossibleTripOption` (line 982-1023)
 
@@ -143,10 +211,9 @@ tripCategories =
       Just _ -> {- InterCity/CrossCity/localBundleForPreference branches -}
       Nothing -> [Rental OnDemandStaticOffer] <> [Rental RideOtp | not isScheduled]  -- ← hardcoded to Rental
 ```
-This function already receives `tConf :: DTMT.TransporterConfig` as a parameter — the new flag from step 5 is already in scope here with no extra threading needed.
 
-**What changes**, two edits:
-- `localBundleForPreference` — add: `DRPO.EasyBooking -> [EasyBooking (fromMaybe False tConf.easyBookingEndOtpMandatory)]` — a single-element list, one category, the config flag baked straight in. This is where the flag actually gets set, once, at search time.
+**What changes**, two edits (simpler now than the earlier config-reading version):
+- `localBundleForPreference` — add: `DRPO.EasyBooking -> [EasyBooking]` — that's the entire line. No config lookup, no `tConf` field access, just the bare category value (its `isEndOtpRequired` answer is already fixed in `Trip.hs`, nothing to inject here).
 - **The `Nothing` branch is a real bug EasyBooking exposes**: it's currently hardcoded to `Rental` regardless of `dsReq.riderPreferredOption`, for *any* destination-less search. Since EasyBooking is also destination-less, an EasyBooking search would silently fall into this branch and resolve to `Rental` categories instead of `EasyBooking` ones unless fixed. Change it to reuse `localBundleForPreference` instead of hardcoding Rental.
 
 ### 7. Rider-app quote/estimate filtering — `Backend/app/rider-platform/rider-app/Main/src/Domain/Action/Beckn/OnSearch.hs`
@@ -239,19 +306,18 @@ data QuoteDetails
 
 -- fare_product row — THE KEY CONFIRMATION: trip_category is stored as the Show-instance
 -- string ('OneWay_OneWayOnDemandDynamicOffer' in real seed data), not JSON. This directly
--- confirms the Show instance planned in section 1 is exactly what this column needs:
+-- confirms the Show instance planned in section 1 is exactly what this column needs.
+-- With the FINAL bare-constructor design (Option A, no Bool), this is now simply:
 -- INSERT INTO "atlas_driver_offer_bpp"."fare_product"
 --   ("area", "enabled", "fare_policy_id", "id", "merchant_id", "merchant_operating_city_id", "time_bounds", "trip_category", "vehicle_variant", "search_source")
---   VALUES ('Default', 't', '<fare_policy uuid from above>', '<new-uuid>', '<merchant-id>', '<city-id>', 'Unbounded', 'EasyBooking_True', 'SEDAN', 'ALL');
---   -- 'EasyBooking_True' or 'EasyBooking_False' depending on which OTP behavior this row is for —
---   -- since the flag is embedded in the TripCategory value itself, you may want BOTH a
---   -- 'EasyBooking_True' and 'EasyBooking_False' fare_product row per city/tier if a single
---   -- deployment needs to run both OTP modes side by side (unlikely given the flag is meant to
---   -- be a per-merchant/city setting, but the two rows would simply point at the same fare_policy_id
---   -- either way, since the flag doesn't affect the fare formula, only the OTP behavior).
+--   VALUES ('Default', 't', '<fare_policy uuid from above>', '<new-uuid>', '<merchant-id>', '<city-id>', 'Unbounded', 'EasyBooking', 'SEDAN', 'ALL');
+--   -- just the literal string 'EasyBooking' now — no _True/_False suffix, since the OTP
+--   -- behavior is no longer carried inside the TripCategory value (it's a hardcoded line
+--   -- in Trip.hs's isEndOtpRequired instead). One row per city/vehicle-tier, same as any
+--   -- other category — no special-casing needed for two variants.
 ```
 - Can clone rates from an existing OneWay `fare_policy`/`fare_policy_progressive_details` row for the same city/tier (query it first via `SELECT ... WHERE fare_policy_type = 'Progressive'`), or set fresh rates.
-- **`transporter_config.easy_booking_end_otp_mandatory`**: set per merchant/city to `true` or `false` — this is what `getPossibleTripOption` (section 6) reads to decide which `EasyBooking_<bool>` value to construct at search time; it does not need to match the `fare_product` row's tag by itself, since only one of the two will actually be selected per search based on this config value.
+- No `transporter_config` row/column needed at all (removed along with section 5 above — Option A decision).
 - Ship these as a SQL seed migration in `Backend/dev/feature-migrations/00XX-easybooking-fare-product-seed.sql` (next number after the existing `0038-...`), following the exact pattern of the real seed files above.
 
 ### 9. Grep safety-net pass — every remaining `case ... tripCategory of` site
@@ -273,13 +339,48 @@ Shared lib (`Backend/lib/beckn-spec/src/`):
 
 ## Explicitly out of scope for this change
 - No new fare-calculation formula — reuses `processFPProgressiveDetails` untouched.
-- No per-ride override of the OTP flag (e.g. a request-time parameter) — it's set once per merchant/city via `transporter_config`, not decided per individual booking. Flag if you need it decidable per-ride rather than per-city.
+- No configurable/per-city OTP toggle — Option A was chosen explicitly: a hardcoded value in `Trip.hs`, same as Rental/OneWay today. To change it later means editing that one line and redeploying, not a runtime setting.
 - No mobile/frontend UI changes (backend-only; assumed to be driven by an automation/dashboard channel, not the consumer app, based on earlier discussion in this session).
 
 ## Verification plan
 1. `cabal build all` from `Backend/` after each file group above — expect `-Werror` to flag any missed exhaustive pattern match; fix forward rather than adding wildcards that could silently mis-route other categories.
-2. Add a new Postman collection under `Backend/dev/integration-tests/collections/` modeled directly on `RentalRideFlow/01-RentalRideFlow.json` (same call sequence: search → get quotes → confirm → driver accept → start → end → verify), but asserting `tripCategory` contains `"EasyBooking"`. Run it twice against two seeded configs: once with `easy_booking_end_otp_mandatory = false` (end-ride succeeds with no OTP in the body, like Rental's start-OTP-only today) and once with `true` (end-ride without an `endRideOtp` should behave exactly like Rental does today — see the two-OTP note from earlier in this conversation: `EndRide.hs` currently only validates the OTP *if supplied*, so "mandatory" for EasyBooking should be double-checked against whether it needs to additionally reject a missing OTP, which would be a small behavioral change to `EndRide.hs` beyond just the `isEndOtpRequired` flag).
+2. Add a new Postman collection under `Backend/dev/integration-tests/collections/` modeled directly on `RentalRideFlow/01-RentalRideFlow.json` (same call sequence: search → get quotes → confirm → driver accept → start → end → verify), but asserting `tripCategory` is `"EasyBooking"` and that end-ride behaves per whichever `True`/`False` value was chosen for `isEndOtpRequired`.
 3. Manually confirm via the fare_parameters row on a test ride that the final fare used `FParamsProgressiveDetails` (extraKmFare-based), not `FParamsRentalDetails`.
 
-## Open item to flag back during your review
-The Beckn category code `"ON_DEMAND_EASY_BOOKING"` (step 3/4) is a name I chose for this plan — rename freely if you have a different convention in mind; it's a single string literal in two places.
+## Quick reference — every step with its API call, and exactly where OTP and fare policy are handled
+
+This section exists to answer two questions at a glance: *"which API call am I looking at"* and *"where does OTP / fare policy actually happen"* — without needing to reconstruct it from the file-by-file sections above.
+
+**Step 0 — Rider searches: `POST /rideSearch`**
+Files: `SharedLogic/Search.hs`, `Domain/Action/UI/Search.hs`. New `EasyBookingSearchReq` (origin + startTime only), new `extractSearchDetails` clause, new `processEasyBookingSearch` (no route calc). *No OTP/fare policy yet — this just creates the request.*
+
+**Step 1 — `Trip.hs`** *(no direct API call — the core type every later step reads from)*
+Add `| EasyBooking`. **🔑 OTP is decided entirely here**: `isEndOtpRequired (EasyBooking) = True/False` — one line, the whole system's OTP behavior. Fare policy: only the *pricing model* (`QuoteBased True`) is set here, not the ₹ numbers.
+
+**Step 2 — `RiderPreferredOption.hs`** — add `| EasyBooking`. Just a label, no OTP/fare policy relevance.
+
+**Step 3 — Rider-app sends Beckn `search`** *(server-to-server, automatic)*
+`Beckn/OnDemand/Transformer/Search.hs` — add `"ON_DEMAND_EASY_BOOKING"` tag. No OTP/fare policy — just translating a label for the wire.
+
+**Step 4 — Driver-app receives `search`** *(Beckn `search → on_search`, automatic)*
+`Beckn/OnDemand/Utils/Search.hs` (read the tag back), `Domain/Action/Beckn/Search.hs`'s `getPossibleTripOption` (add `DRPO.EasyBooking -> [EasyBooking]`). **🔑 Fare policy is looked up here**: the *unchanged* `SharedLogic/FarePolicy.hs` queries `fare_product WHERE trip_category = 'EasyBooking'`, finds the seeded row (Step 8), hands the resolved Progressive policy to `SharedLogic/FareCalculator.hs`, which computes `base_fare` as the quoted price. No code changes in either fare file — same functions every other category already uses.
+
+**Step 5 — Rider-app receives `on_search`: `GET /rideSearch/{searchId}/results`**
+`Domain/Action/Beckn/OnSearch.hs` — new `EasyBookingQuoteDetails` type + parser. This is where the already-computed `base_fare`/`per_extra_km_rate` (from Step 4) get shown to the rider. No new math here, just display.
+
+**Step 6 — Rider confirms: `POST /rideSearch/quotes/{quoteId}/confirm`**
+`Quote.yaml`/`Booking.yaml` (new enum entries), `SharedLogic/Confirm.hs`'s `buildBookingDetails` (new case branch, `stopLocation = mbToLoc`). Just saves the booking — no OTP/fare math.
+
+**Step 7 — Beckn `init`/`confirm` → driver accepts → `POST /driver/ride/{rideId}/start` → `POST /driver/ride/{rideId}/end`**
+Files: `Init.hs`, `Confirm.hs`, `Driver.hs`, `StartRide.hs`, `EndRide.hs` (all driver-app). **Change: none in any of them.** **🔑 OTP is enforced here**: `StartRide.hs` reads `isEndOtpRequired booking.tripCategory` (Step 1's answer) and generates/skips the OTP accordingly — zero new code. **🔑 Fare policy is recalculated for real here**: `EndRide.hs` re-resolves the policy and reruns `calculateFareParameters` on the *actual* GPS distance — same unchanged Progressive formula, producing the final charged fare.
+
+**Step 8 — Data/config (SQL, not code)**: `Backend/dev/feature-migrations/00XX-easybooking-fare-product-seed.sql` — `fare_policy` (type Progressive), `fare_policy_progressive_details` (real `base_fare`/`base_distance`/etc.), the per-km rate section, and the `fare_product` row tagging it all to `'EasyBooking'`. **This is where the actual ₹ numbers live** — nowhere else.
+
+**Step 9 — Safety net**: `cabal build all`, `-Werror` catches anything missed.
+
+**One-line summary**: OTP = decided in Step 1, exercised in Step 7. Fare policy = configured in Step 8, looked up in Step 4, finalized in Step 7. Both reuse existing, unchanged mechanisms — nothing new is being built for either, only new *data* pointing at them.
+
+## Open items to flag back during your review
+1. **`isEndOtpRequired (EasyBooking) = ?`** — the literal `True`/`False` value still needs to be picked (Option A mechanism is decided; the actual value isn't yet). Both are equally safe to implement (see the design table above); this is a pure product decision, not a technical one.
+2. The Beckn category code `"ON_DEMAND_EASY_BOOKING"` (step 3/4) is a name I chose for this plan — rename freely if you have a different convention in mind; it's a single string literal in two places.
+3. `EasyBookingQuoteDetails` preview-field shape (section 7, Layer C) — confirmed "fuller" (baseFare + baseDistance + perExtraKmRate), exact field list still to be finalized against what the rider-facing UI actually wants to display.
