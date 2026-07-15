@@ -318,9 +318,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
 
   -- Phone-number-based auth rate limit (hashed phone, two configurable sliding windows).
   whenJust ((.hash) <$> person.mobileNumber) $ \mobileNumberHash -> do
-    transporterConfig <-
-      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
-        >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     let phoneNumberHashText = Hex.encodeHex (unDbHash mobileNumberHash)
     mbResetSeconds <- checkAuthLimitExceededByPhone merchantOpCityId.getId phoneNumberHashText transporterConfig
     whenJust mbResetSeconds $ \resetSeconds -> throwError (HitsLimitError resetSeconds)
