@@ -246,7 +246,8 @@ handler merchantId req validatedReq = do
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
       mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback quoteId
       commission <- FC.calculateCommission driverQuote.fareParams mbFarePolicy
-      cancellationCommission <- FC.calculateCancellationCommission driverQuote.fareParams mbFarePolicy
+      initTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId searchRequest.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound searchRequest.merchantOperatingCityId.getId)
+      cancellationCommission <- FC.calculateCancellationCommission (fromMaybe False initTransporterConfig.enableCancellationCommission) driverQuote.fareParams mbFarePolicy
       mbSpecialLocation <- maybe (pure Nothing) (QSpecialLocation.findById . Id) (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea)
       let fareSettlementType = mbSpecialLocation >>= (.fareSettlementType)
       let bapUri = showBaseUrl searchRequest.bapUri

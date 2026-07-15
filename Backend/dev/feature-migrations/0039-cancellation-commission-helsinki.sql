@@ -27,6 +27,14 @@ BEGIN
   WHERE moc.merchant_short_id = 'BRIDGE_FINLAND_PARTNER' AND moc.city = 'Helsinki'
   LIMIT 1;
 
+  -- Master kill-switch: commission on cancellation fees (feature ships dark without it).
+  -- EVERY operating city of the merchant — a per-merchant feature must not differ by city.
+  UPDATE atlas_driver_offer_bpp.transporter_config
+  SET enable_cancellation_commission = true
+  WHERE merchant_operating_city_id IN
+    (SELECT id FROM atlas_driver_offer_bpp.merchant_operating_city
+     WHERE merchant_short_id = 'BRIDGE_FINLAND_PARTNER');
+
   -- Order 4: cancellation commission (gross, 15% of fee incl. VAT)
   INSERT INTO atlas_driver_offer_bpp.app_dynamic_logic_element
     (description, domain, logic, "order", merchant_id, version)

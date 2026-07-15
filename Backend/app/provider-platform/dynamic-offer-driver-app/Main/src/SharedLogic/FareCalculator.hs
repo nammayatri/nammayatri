@@ -1406,9 +1406,12 @@ calculateCommission fareParams mbFarePolicy = do
 --   into this ride's fare — at its own configured rate. GROSS (ALV-inclusive); split at emission.
 --   Config invariant: the component must appear in exactly one of the two commission configs —
 --   keep it out of commissionChargeConfig.appliesOn or the due is commissioned twice.
-calculateCancellationCommission :: MonadFlow m => FareParameters -> Maybe FullFarePolicy -> m (Maybe HighPrecMoney)
-calculateCancellationCommission fareParams mbFarePolicy = do
+--   Gated by transporter_config.enable_cancellation_commission (threaded in by every caller);
+--   disabled => Nothing, so estimate, payout, stored values and the ledger booking stay consistent.
+calculateCancellationCommission :: MonadFlow m => Bool -> FareParameters -> Maybe FullFarePolicy -> m (Maybe HighPrecMoney)
+calculateCancellationCommission enabled fareParams mbFarePolicy = do
   case mbFarePolicy of
+    _ | not enabled -> pure Nothing
     Nothing -> pure Nothing
     Just farePolicy -> do
       let componentMap = buildComponentMap fareParams

@@ -992,3 +992,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_phone_numb
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN valid_cancellation_penalty_reasons text[] ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_fee_payment_method_exceptions text[] ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN default_refund_deduct_from_driver boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_cancellation_commission boolean ;
