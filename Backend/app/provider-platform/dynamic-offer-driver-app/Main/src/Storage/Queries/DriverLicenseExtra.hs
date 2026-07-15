@@ -35,12 +35,18 @@ upsert a@DriverLicense {..} = do
         [ Se.Set BeamDL.driverDob driverDob,
           Se.Set BeamDL.driverName driverName,
           Se.Set BeamDL.documentImageId1 documentImageId1.getId,
+          Se.Set BeamDL.documentImageId2 (Kernel.Types.Id.getId <$> documentImageId2),
           Se.Set BeamDL.rejectReason rejectReason,
           Se.Set BeamDL.licenseExpiry licenseExpiry,
           Se.Set BeamDL.classOfVehicles classOfVehicles,
           Se.Set BeamDL.driverId (Kernel.Types.Id.getId driverId),
           Se.Set BeamDL.verificationStatus verificationStatus,
           Se.Set BeamDL.failedRules failedRules,
+          Se.Set BeamDL.consent consent,
+          Se.Set BeamDL.consentTimestamp consentTimestamp,
+          Se.Set BeamDL.dateOfIssue dateOfIssue,
+          Se.Set BeamDL.vehicleCategory vehicleCategory,
+          Se.Set BeamDL.merchantId (Kernel.Types.Id.getId <$> merchantId),
           Se.Set BeamDL.updatedAt updatedAt
         ]
         [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
