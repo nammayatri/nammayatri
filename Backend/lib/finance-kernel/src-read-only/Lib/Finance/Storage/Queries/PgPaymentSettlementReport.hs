@@ -95,6 +95,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPayment
       Se.Set Beam.settlementId settlementId,
       Se.Set Beam.settlementMode settlementMode,
       Se.Set Beam.settlementType settlementType,
+      Se.Set Beam.subscriptionPurchaseId subscriptionPurchaseId,
       Se.Set Beam.txnAmount txnAmount,
       Se.Set Beam.txnDate txnDate,
       Se.Set Beam.txnId txnId,

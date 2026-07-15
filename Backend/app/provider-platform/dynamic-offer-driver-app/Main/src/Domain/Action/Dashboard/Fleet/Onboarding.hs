@@ -21,6 +21,7 @@ import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as DAV
 import qualified Domain.Action.UI.DriverOnboarding.GstVerification as DGV
 import qualified Domain.Action.UI.DriverOnboarding.PanVerification as DPV
 import Domain.Action.UI.DriverOnboarding.Referral
+import qualified Domain.Action.UI.DriverOnboarding.Status as UIStatus
 import qualified Domain.Action.UI.DriverOnboarding.UdyamVerification as UDYAM
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOnboarding
 import qualified Domain.Types.DocsVerificationStatus as DDVS
@@ -156,7 +157,10 @@ getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeS
   let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
   let shouldActivateRc = True
       skipMessages = False -- Need translations for API response
-  res <- castStatusRes <$> SStatus.statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
+  statusRes <- SStatus.statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
+  -- Re-pull stuck doc verifications; fleet-owner GST/UDYAM are reachable only via this endpoint.
+  UIStatus.pullPendingDocStatuses transporterConfig person statusRes.driverDocuments statusRes.vehicleDocuments
+  let res = castStatusRes statusRes
   -- When no filter is provided and enableManualDocumentStatusCheck is enabled,
   -- default to ADMIN_APPROVED so only fully-approved vehicles are shown.
   let effectiveFilter =

@@ -27,6 +27,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     address :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     addressDocumentType :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType),
     addressState :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState),
+    approved :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     autoPayStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.FleetOwnerInformation.DriverAutoPayStatus),
     blockReasonFlag :: B.C f (Kernel.Prelude.Maybe Tools.Error.BlockReasonFlag),
     blocked :: B.C f Kernel.Prelude.Bool,

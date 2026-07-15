@@ -240,7 +240,7 @@
         "method": "POST",
         "header": [
           { "key": "Content-Type", "value": "application/json" },
-          { "key": "token", "value": "{{driver_id}}" },
+          { "key": "token", "value": "{{driver_token}}" },
           { "key": "vt", "value": "SEDAN" },
           { "key": "dm", "value": "ONLINE" },
           { "key": "mId", "value": "{{driver_merchant_id}}" }
@@ -402,7 +402,7 @@
         "method": "POST",
         "header": [
           { "key": "Content-Type", "value": "application/json" },
-          { "key": "token", "value": "{{driver_id}}" },
+          { "key": "token", "value": "{{driver_token}}" },
           { "key": "vt", "value": "SEDAN" },
           { "key": "dm", "value": "ONLINE" },
           { "key": "mId", "value": "{{driver_merchant_id}}" }

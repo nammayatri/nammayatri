@@ -21,6 +21,7 @@ module Storage.Queries.ImageExtra
     filterRecentLatestByEntityIdAndImageType,
     filterRecentByPersonRCAndImageType,
     updateVerificationStatusByRcIdAndImageTypes,
+    deleteByPersonIdAndImageType,
   )
 where
 
@@ -132,6 +133,15 @@ findRecentByPersonIdAndImageType personId imgType = do
 
 hoursAgo :: Int -> UTCTime -> UTCTime
 hoursAgo i now = negate (intToNominalDiffTime $ 3600 * i) `DT.addUTCTime` now
+
+deleteByPersonIdAndImageType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> DocumentType -> m ()
+deleteByPersonIdAndImageType personId imgType =
+  deleteWithKV
+    [ Se.And
+        [ Se.Is BeamI.personId $ Se.Eq $ getId personId,
+          Se.Is BeamI.imageType $ Se.Eq imgType
+        ]
+    ]
 
 findByPersonIdImageTypeAndValidationStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> DocumentType -> DImage.SelfieFetchStatus -> m (Maybe DImage.Image)
 findByPersonIdImageTypeAndValidationStatus persondId docType fetchStatus = do

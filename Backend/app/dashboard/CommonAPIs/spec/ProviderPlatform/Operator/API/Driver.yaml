@@ -320,6 +320,7 @@ types:
     - rcNo: Maybe Text
     - courtRecord: Maybe CourtRecordResult
     - pendingChallan: Maybe PendingChallanResult
+    - fleetType: Maybe FleetType
 
   CourtRecordResult:
     - result: Maybe CRCVerificationResponse
@@ -344,6 +345,8 @@ types:
     enum: "BOT_REVIEW"
   EntityType:
     enum: "DRIVER,VEHICLE,FLEET_OWNER"
+  FleetType:
+    enum: "RENTAL_FLEET,NORMAL_FLEET,BUSINESS_FLEET"
   SubmitReviewRequest:
     - entityType: EntityType
     - entityId: Text

@@ -122,17 +122,32 @@ _:
             if [ -z "$HOST" ]; then echo "dev-box '$NAME' has no reachable IP" >&2; exit 1; fi
             echo "Selected dev-box: $NAME  host=$HOST  user=$RUSER  port=$PORT" >&2
 
-            # ── ssh key discovery + key-only preflight ──
+            # ── ssh key discovery; generate a key if the user has none ──
             SSH_KEY=""
             for k in "$HOME/.ssh/id_ed25519" "$HOME/.ssh/id_rsa" "$HOME/.ssh/id_ecdsa"; do
               if [ -f "$k" ]; then SSH_KEY="$k"; break; fi
             done
             SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15 -o GSSAPIAuthentication=no -o ConnectTimeout=10 -p "$PORT")
             if [ -n "$SSH_KEY" ]; then SSH_OPTS+=(-i "$SSH_KEY"); fi
+            # key-only preflight; if it fails, generate a key (when absent) then copy it up.
             if ! ssh "''${SSH_OPTS[@]}" -o BatchMode=yes "$RUSER@$HOST" 'echo ok' >/dev/null 2>&1; then
-              echo "SSH key not authorized on $RUSER@$HOST." >&2
-              echo "Run: ssh-copy-id ''${SSH_KEY:+-i $SSH_KEY} -p $PORT $RUSER@$HOST" >&2
-              exit 1
+              if [ -z "$SSH_KEY" ]; then
+                echo "No SSH key found in ~/.ssh — generating an ed25519 key pair ..." >&2
+                mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+                ssh-keygen -t ed25519 -N "" -f "$HOME/.ssh/id_ed25519" -C "$DEV_NAME@devbox" >&2
+                SSH_KEY="$HOME/.ssh/id_ed25519"
+                SSH_OPTS+=(-i "$SSH_KEY")
+              fi
+              echo "Authorizing your SSH key on $RUSER@$HOST (enter the $RUSER password when prompted) ..." >&2
+              if ! ssh-copy-id -i "$SSH_KEY.pub" -p "$PORT" "$RUSER@$HOST"; then
+                echo "ssh-copy-id failed. Run manually: ssh-copy-id -i $SSH_KEY.pub -p $PORT $RUSER@$HOST" >&2
+                exit 1
+              fi
+              if ! ssh "''${SSH_OPTS[@]}" -o BatchMode=yes "$RUSER@$HOST" 'echo ok' >/dev/null 2>&1; then
+                echo "SSH key still not authorized on $RUSER@$HOST after ssh-copy-id." >&2
+                exit 1
+              fi
+              echo "SSH key authorized on $RUSER@$HOST." >&2
             fi
 
             # ── nearest 'minio-pushed'-tagged commit, from LOCAL git ──
@@ -352,7 +367,12 @@ _:
           category = "Backend";
           description = "Run the nammayatri backend + test-context-api + mock-server (no test-dashboard).";
           exec = ''
-            export DEV=1
+            # NOTE: DEV is intentionally NOT exported. Only the location-tracking-service
+            # reads it: with DEV=1 the LTS skips /internal/auth and uses the raw `token`
+            # header as the driver id, which breaks real apps/emulators (they send a
+            # registration token, so drivers never enter the geo pool and never get
+            # nearbyRideRequest). Integration-test collections now send {{driver_token}}
+            # to the LTS, so they work in authenticated (non-DEV) mode too.
             # Free up ports from previous run FIRST — so resolve-ports.sh
             # sees them as free and can reuse the same ports.
             echo "── Pre-flight: freeing stale service ports ──"
@@ -361,8 +381,17 @@ _:
             PORTS_TO_KILL=""
             if [[ -f "$RESOLVED_FILE" ]]; then
               while IFS= read -r line; do
-                if [[ "$line" =~ ^[[:space:]]*[a-zA-Z][a-zA-Z0-9_-]*[[:space:]]*=[[:space:]]*([0-9]+)[[:space:]]*\;  ]]; then
-                  PORTS_TO_KILL="$PORTS_TO_KILL ''${BASH_REMATCH[1]}"
+                if [[ "$line" =~ ^[[:space:]]*([a-zA-Z][a-zA-Z0-9_-]*)[[:space:]]*=[[:space:]]*([0-9]+)[[:space:]]*\;  ]]; then
+                  port_name="''${BASH_REMATCH[1]}"
+                  port_num="''${BASH_REMATCH[2]}"
+                  PORTS_TO_KILL="$PORTS_TO_KILL $port_num"
+                  # Redis cluster nodes also bind a cluster-bus port at
+                  # client-port + 10000 (e.g. 30040 -> 40040). A stale node can
+                  # survive holding only the bus port, which then blocks the
+                  # next cluster startup — kill those too.
+                  if [[ "$port_name" == redis-cluster-* ]]; then
+                    PORTS_TO_KILL="$PORTS_TO_KILL $((port_num + 10000))"
+                  fi
                 fi
               done < "$RESOLVED_FILE"
             else
@@ -374,7 +403,9 @@ _:
                 DEV_NAME=$(echo "''${FLAKE_ROOT}" | ${pkgs.gnused}/bin/sed -n 's|^/tmp/\([^/]*\)/nammayatri.*|\1|p')
                 if [[ -n "$DEV_NAME" ]]; then
                   echo "ports-resolved.nix not found, falling back to devbox-registry.json (dev: $DEV_NAME)"
-                  PORTS_TO_KILL=$(${pkgs.jq}/bin/jq -r ".users[\"$DEV_NAME\"].ports // {} | to_entries[].value" "$REGISTRY" 2>/dev/null || true)
+                  # For redis-cluster-* ports also emit the cluster-bus port
+                  # (client-port + 10000) — see the note in the branch above.
+                  PORTS_TO_KILL=$(${pkgs.jq}/bin/jq -r ".users[\"$DEV_NAME\"].ports // {} | to_entries[] | if (.key | startswith(\"redis-cluster\")) then \"\(.value)\n\(.value + 10000)\" else \"\(.value)\" end" "$REGISTRY" 2>/dev/null || true)
                 fi
               fi
             fi

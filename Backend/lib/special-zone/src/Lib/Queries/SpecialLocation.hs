@@ -48,6 +48,7 @@ data SpecialLocationFull = SpecialLocationFull
     isOpenMarketEnabled :: Bool,
     isQueueEnabled :: Maybe Bool,
     enforceTollRoute :: Maybe Bool,
+    fetchAllGateFareProduct :: Maybe Bool,
     supportNumber :: Maybe Text,
     render :: Maybe D.RenderType,
     paymentModes :: Maybe [D.PaymentMode],
