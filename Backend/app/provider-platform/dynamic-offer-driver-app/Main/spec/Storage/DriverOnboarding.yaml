@@ -526,6 +526,12 @@ Image:
       params: [verificationStatus, failureReason]
       where:
         and: [rcId, imageType]
+    updateVerificationStatusByIds:
+      kvFunction: updateWithKV
+      params: [verificationStatus, updatedAt]
+      where:
+        and:
+          - in: [id]
     deleteById:
       kvFunction: deleteWithKV
       where: id
