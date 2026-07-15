@@ -32,6 +32,23 @@ LedgerEntry:
       enum: "RefundRequest"
       derive: "HttpInstance"
 
+    # Typed ledger metadata (DB column stays JSON Value). Use this to keep known fields
+    # structured and avoid opaque free-form JSON for sensitive / recon attribution data.
+    SubscriptionCreditAllocation:
+      subscriptionPurchaseId: Text
+      amount: HighPrecMoney
+      derive': "Generic, Show, Eq, ToJSON, FromJSON, ToSchema"
+
+    LedgerEntryMetadata:
+      subscriptionAllocations: Maybe [SubscriptionCreditAllocation]
+      reason: Maybe Text
+      driverPayable: Maybe HighPrecMoney
+      payoutOrderId: Maybe Text
+      d2cReferralEarnings: Maybe HighPrecMoney
+      d2dReferralEarnings: Maybe HighPrecMoney
+      dailyStatsId: Maybe Text
+      derive': "Generic, Show, Eq, ToJSON, FromJSON, ToSchema"
+
   # NOTE: Mask sensitive values in ledgerEntryToAuditValue (Ledger.Service)
   fields:
     id: Id LedgerEntry
@@ -50,7 +67,7 @@ LedgerEntry:
     reversalOf: Maybe (Id LedgerEntry)
     voidReason: Maybe Text
     settledAt: Maybe UTCTime
-    metadata: Maybe Value # SENSITIVE
+    metadata: Maybe LedgerEntryMetadata
     fromStartingBalance: Maybe HighPrecMoney
     toStartingBalance: Maybe HighPrecMoney
     fromEndingBalance: Maybe HighPrecMoney
@@ -68,6 +85,15 @@ LedgerEntry:
     createdById: Maybe Text                        # requestId for UNKNOWN/SYSTEM, jobId for JOB, personId for PERSON/DASHBOARD_PERSON
     updatedBy: Maybe ActorType                     # Who updated this record
     updatedById: Maybe Text                        # requestId for UNKNOWN/SYSTEM, jobId for JOB, personId for PERSON/DASHBOARD_PERSON
+
+  beamType:
+    metadata: Maybe Value
+
+  fromTType:
+    metadata: metadata >>= Kernel.Utils.JSON.valueToMaybe|E
+
+  toTType:
+    metadata: Data.Aeson.toJSON <$> metadata|E
 
   constraints:
     id: PrimaryKey

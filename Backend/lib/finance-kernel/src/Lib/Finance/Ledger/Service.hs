@@ -59,6 +59,7 @@ module Lib.Finance.Ledger.Service
   )
 where
 
+import Control.Applicative ((<|>))
 import qualified Data.Aeson as Aeson
 import qualified Data.Map as Map
 import Kernel.Beam.Functions (ToTType' (..), findAllWithKV, updateWithKV)
@@ -90,12 +91,9 @@ import qualified Sequelize as Se
 ledgerEntryToAuditValue :: LedgerEntry -> Aeson.Value
 ledgerEntryToAuditValue = Aeson.toJSON . toTType' @BeamLE.LedgerEntry . hideLedgerEntrySensitiveFields
   where
+    -- No sensitive fields identified in LedgerEntry as of now
     hideLedgerEntrySensitiveFields :: LedgerEntry -> LedgerEntry
-    hideLedgerEntrySensitiveFields LedgerEntry {..} =
-      LedgerEntry
-        { metadata = Nothing,
-          ..
-        }
+    hideLedgerEntrySensitiveFields = identity
 
 logLedgerAudit ::
   BeamFlow.BeamFlow m r =>
@@ -336,7 +334,17 @@ createReversal originalId reason = do
                 reversalOf = Just originalId,
                 voidReason = Nothing,
                 settledAt = Just now,
-                metadata = Just $ Aeson.String reason,
+                metadata =
+                  Just $
+                    LedgerEntryMetadata
+                      { subscriptionAllocations = Nothing,
+                        reason = Just reason,
+                        driverPayable = Nothing,
+                        payoutOrderId = Nothing,
+                        d2cReferralEarnings = Nothing,
+                        d2dReferralEarnings = Nothing,
+                        dailyStatsId = Nothing
+                      },
                 reconciliationStatus = original.reconciliationStatus,
                 fromStartingBalance = Nothing,
                 fromEndingBalance = Nothing,
@@ -439,6 +447,23 @@ settleEntry entryId = do
           auditLedgerUpdate actorInfo StatusChanged entry updatedEntry
         _ -> pure ()
 
+-- | Field-wise merge: prefer non-Nothing from the left (new) side.
+mergeLedgerEntryMetadata :: LedgerEntryMetadata -> LedgerEntryMetadata -> LedgerEntryMetadata
+mergeLedgerEntryMetadata new old =
+  LedgerEntryMetadata
+    { subscriptionAllocations = new.subscriptionAllocations <|> old.subscriptionAllocations,
+      reason = new.reason <|> old.reason,
+      driverPayable = new.driverPayable <|> old.driverPayable,
+      payoutOrderId = new.payoutOrderId <|> old.payoutOrderId,
+      d2cReferralEarnings = new.d2cReferralEarnings <|> old.d2cReferralEarnings,
+      d2dReferralEarnings = new.d2dReferralEarnings <|> old.d2dReferralEarnings,
+      dailyStatsId = new.dailyStatsId <|> old.dailyStatsId
+    }
+
+mergeMaybeLedgerEntryMetadata :: Maybe LedgerEntryMetadata -> Maybe LedgerEntryMetadata -> Maybe LedgerEntryMetadata
+mergeMaybeLedgerEntryMetadata (Just new) (Just old) = Just $ mergeLedgerEntryMetadata new old
+mergeMaybeLedgerEntryMetadata new old = new <|> old
+
 -- | Settle an entry, update its amount, AND write balance snapshots.
 -- Use when the final settled amount differs from the original hold amount (e.g., fare recalculation).
 settleEntryWithBalancesAndAmount ::
@@ -449,8 +474,9 @@ settleEntryWithBalancesAndAmount ::
   HighPrecMoney -> -- fromEndingBalance
   HighPrecMoney -> -- toStartingBalance
   HighPrecMoney -> -- toEndingBalance
+  Maybe LedgerEntryMetadata ->
   m ()
-settleEntryWithBalancesAndAmount entryId settledAmount fromStartBal fromEndBal toStartBal toEndBal = do
+settleEntryWithBalancesAndAmount entryId settledAmount fromStartBal fromEndBal toStartBal toEndBal mbMetadata = do
   actorInfo <- asks (.actorInfo)
   now <- getCurrentTime
   mbEntry <- QLedger.findById entryId
@@ -464,6 +490,7 @@ settleEntryWithBalancesAndAmount entryId settledAmount fromStartBal fromEndBal t
               fromEndingBalance = Just fromEndBal,
               toStartingBalance = Just toStartBal,
               toEndingBalance = Just toEndBal,
+              metadata = mergeMaybeLedgerEntryMetadata mbMetadata entry.metadata,
               updatedBy = Just actorInfo.actorType,
               updatedById = actorInfo.actorId
             }

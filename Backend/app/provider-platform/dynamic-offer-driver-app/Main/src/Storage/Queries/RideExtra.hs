@@ -1198,14 +1198,36 @@ findByIds ::
 findByIds rideIds = do
   findAllWithKV [Se.Is BeamR.id $ Se.In $ getId <$> rideIds]
 
--- | Find all rides linked to a subscription purchase ID
--- The subscriptionPurchaseIds field is an array, so we check if the given ID is in that array
+-- | Find all rides linked to a subscription purchase ID.
+-- Uses Postgres ANY so FIFO-boundary rides with multiple subscription IDs are included (exact Eq Just [id] would miss those arrays).
 findAllBySubscriptionPurchaseId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DSP.SubscriptionPurchase ->
   m [Ride]
 findAllBySubscriptionPurchaseId (Id subPurchaseId) = do
-  findAllWithKV [Se.Is BeamR.subscriptionPurchaseIds $ Se.Eq (Just [subPurchaseId])]
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.filter_'
+            ( \ride ->
+                B.sqlBool_
+                  ( (B.customExpr_ (\sid rideSubPurchaseIds -> sid <> " = ANY (COALESCE(" <> rideSubPurchaseIds <> ", ARRAY[]::text[]))") :: B.QExpr Postgres s Text -> B.QExpr Postgres s (Maybe [Text]) -> B.QExpr Postgres s Bool)
+                      (B.val_ subPurchaseId)
+                      ride.subscriptionPurchaseIds
+                  )
+            )
+            $ B.all_ (BeamCommon.ride BeamCommon.atlasDB)
+  case res of
+    Right rows -> catMaybes <$> mapM fromTType' rows
+    Left err -> do
+      logError $
+        "findAllBySubscriptionPurchaseId failed for subscriptionId="
+          <> subPurchaseId
+          <> " error="
+          <> show err
+      pure []
 
 -- | Fetch RideSubscriptionDebit ledger entries for a subscription purchase via ride <-> ledger join.
 -- Intended to avoid per-ride getEntriesByReference calls in subscription wallet ledger flows.
