@@ -75,8 +75,14 @@ onCancel ValidatedBookingCancelledReq {..} = do
   whenJust cancellationSource $ \source -> logTagInfo ("Cancellation source " <> source) ""
   let castedCancellationSource = castCancellatonSource cancellationSource_
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-  let validCancellationReasonCodesForImmediateCharge = fromMaybe ["CUSTOMER_NO_SHOW"] riderConfig.validCancellationReasonCodesForImmediateCharge
-  let immediateCharge = isJust cancellationFee && maybe False (`elem` validCancellationReasonCodesForImmediateCharge) cancellationReasonCode
+  -- Immediate-capture is configured separately for rider- vs driver-initiated cancellations.
+  -- When the flag is true we capture the fee now; when false the fee becomes a pending due.
+  -- Defaults to true to preserve prior behaviour (rider-cancel always immediate, driver no-show immediate).
+  let immediateCharge =
+        isJust cancellationFee
+          && case castedCancellationSource of
+            SBCR.ByUser -> fromMaybe True riderConfig.immediateCaptureRiderCancellationFee
+            _ -> fromMaybe True riderConfig.immediateCaptureDriverCancellationFee
   Common.cancellationTransaction booking mbRide castedCancellationSource cancellationFee cancellationFeeTax immediateCharge
   whenJust mbRide $ \ride -> do
     fareBreakupEntries <- traverse (Common.buildFareBreakupV2 ride.id.getId DFareBreakup.RIDE) fareBreakups

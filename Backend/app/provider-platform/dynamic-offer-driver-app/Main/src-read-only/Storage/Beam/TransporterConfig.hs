@@ -83,6 +83,7 @@ data TransporterConfigT f = TransporterConfigT
     cancellationFeeCycle :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     cancellationFeeDisputeLimit :: B.C f Kernel.Prelude.Int,
     cancellationFeeDisputeWindow :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    cancellationFeePaymentMethodExceptions :: B.C f (Kernel.Prelude.Maybe [Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument]),
     cancellationFeeVendor :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cancellationRateCalculationThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cancellationRateSlabConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
@@ -321,6 +322,7 @@ data TransporterConfigT f = TransporterConfigT
     useOfferListCache :: B.C f Kernel.Prelude.Bool,
     useSilentFCMForForwardBatch :: B.C f Kernel.Prelude.Bool,
     useWithSnapToRoadFallback :: B.C f Kernel.Prelude.Bool,
+    validCancellationPenaltyReasons :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     validNameComparePercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     variantsToEnableForSubscription :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],
     vehicleCategoryExcludedFromVerification :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
@@ -339,8 +341,8 @@ instance B.Table TransporterConfigT where
 
 type TransporterConfig = TransporterConfigT Identity
 
-$(enableKVPG ''TransporterConfigT ['merchantOperatingCityId] [])
+$(enableKVPG (''TransporterConfigT) [('merchantOperatingCityId)] [])
 
-$(mkTableInstancesWithTModifier ''TransporterConfigT "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off"), ("individualPANCheck", "individual_pan_check")])
+$(mkTableInstancesWithTModifier (''TransporterConfigT) "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off"), ("individualPANCheck", "individual_pan_check")])
 
-$(Domain.Types.UtilsTH.mkCacParseInstance ''TransporterConfigT)
+$(Domain.Types.UtilsTH.mkCacParseInstance (''TransporterConfigT))

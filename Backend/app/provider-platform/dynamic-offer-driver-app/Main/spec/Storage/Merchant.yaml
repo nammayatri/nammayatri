@@ -1186,6 +1186,8 @@ TransporterConfig:
     driverDistanceToPickupThresholdOnCancel: Meters
     numOfCancellationsAllowed: Int
     canAddCancellationFee: Bool
+    cancellationFeePaymentMethodExceptions: "Maybe [PaymentInstrument]"
+    validCancellationPenaltyReasons: "Maybe [Text]"
     allowDefaultPlanAllocation: Bool
     arrivedStopThreshold: Maybe HighPrecMeters
     arrivedPickupThreshold: HighPrecMeters
@@ -1727,6 +1729,8 @@ TransporterConfig:
     allowFarePolicyUpdateBelowMinBaseFare: boolean
     communicationChannelCharLimits: json
     allowedPaymentInstrumentForPayout: "text[]"
+    cancellationFeePaymentMethodExceptions: "text[]"
+    validCancellationPenaltyReasons: "text[]"
     stclConfig: json
     defaultOnboardingAs: character varying(255)
 

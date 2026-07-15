@@ -140,6 +140,8 @@ RiderConfig:
     exotelStatusCheckSchedulerDelay: Int
     incidentReportSupport: Bool
     settleCancellationFeeBeforeNextRide: Maybe Bool
+    immediateCaptureDriverCancellationFee: Maybe Bool
+    immediateCaptureRiderCancellationFee: Maybe Bool
     syncSearchDispatchConfig: Maybe SyncSearchDispatchConfig
     validCancellationReasonCodesForImmediateCharge: "Maybe [Text]"
     cxAgentDetails: "Maybe [CxAgentDetails]"
