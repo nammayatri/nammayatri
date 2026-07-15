@@ -10,8 +10,10 @@ imports:
   RefundPurpose: Domain.Types.RefundRequest
   Ride: Domain.Types.Ride
   FareComponent: Domain.Types.FareBreakup
+  FareBreakupRes: API.Types.UI.RidePayment
 
 importPackageOverrides:
+  API.Types.UI.RidePayment: "rider-app"
   Domain.Types.Ride: "rider-app"
   Domain.Types.RefundRequest: "rider-app"
   Domain.Types.Person: "rider-app"
@@ -63,6 +65,13 @@ apis:
         type: RefundRequestInitiateReq
       response:
         type: RefundRequestRespondResp
+  - GET:
+      endpoint: /{rideId}/fareBreakup
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+      response:
+        type: FareBreakupRes
 
 types:
   RefundRequestResp:

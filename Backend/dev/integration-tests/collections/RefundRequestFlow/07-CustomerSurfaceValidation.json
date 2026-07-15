@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "07-CustomerSurfaceValidation",
-    "description": "Customer-facing refund API contracts only (fareBreakup menu, refundRequest create guards, refund list, evidence upload) — asserts routes/status/response shapes and validation, with no money/ledger/invoice assertions.",
+    "description": "Customer-facing refund API contracts only (fareBreakup menu + its dashboard-route parity twin, refundRequest create guards, refund list, evidence upload) — asserts routes/status/response shapes and validation, with no money/ledger/invoice assertions.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -673,6 +673,7 @@
             "type": "text/javascript",
             "exec": [
               "var d = {}; try { d = pm.response.json(); } catch(e) {}",
+              "pm.environment.set('rf7_customer_farebreakup', pm.response.text()); // consumed + unset by the dashboard parity step",
               "pm.test('Fare Breakup Returns 200', function () { pm.response.to.have.status(200); });",
               "var comps = d.components;",
               "if (comps == null) {",
@@ -718,6 +719,69 @@
             "{{baseUrl_app}}"
           ],
           "path": [
+            "payment",
+            "{{rideId}}",
+            "fareBreakup"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Fare Breakup Dashboard Parity (support-agent route)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch(e) {}",
+              "pm.test('Dashboard Fare Breakup Returns 200', function () { pm.expect(pm.response.code, pm.response.text()).to.eql(200); });",
+              "// The whole contract of the dashboard endpoint: same shared core as the customer API,",
+              "// so the support agent must see EXACTLY the numbers the rider app shows.",
+              "// Hand-rolled deep-equal: the dashboard shim's eql/equal are strict (===), no .deep chain.",
+              "function deepEq(a, b) {",
+              "  if (a === b) return true;",
+              "  if (typeof a !== typeof b || a === null || b === null) return false;",
+              "  if (typeof a !== 'object') return false;",
+              "  if (Array.isArray(a) !== Array.isArray(b)) return false;",
+              "  var ka = Object.keys(a).sort(), kb = Object.keys(b).sort();",
+              "  if (ka.length !== kb.length) return false;",
+              "  for (var i = 0; i < ka.length; i++) { if (ka[i] !== kb[i] || !deepEq(a[ka[i]], b[kb[i]])) return false; }",
+              "  return true;",
+              "}",
+              "var customerRaw = pm.environment.get('rf7_customer_farebreakup');",
+              "pm.test('Dashboard Response Deep-Equals Customer Response', function () {",
+              "  pm.expect(!!customerRaw, 'customer fareBreakup step must run first in this session (saves its body)').to.eql(true);",
+              "  pm.expect(deepEq(d, JSON.parse(customerRaw)), 'dashboard body must equal customer body — dashboard=' + JSON.stringify(d) + ' customer=' + customerRaw).to.eql(true);",
+              "});",
+              "console.log('dashboard fareBreakup parity OK | totalAmount=' + JSON.stringify((d || {}).totalAmount));",
+              "pm.environment.set('rf7_customer_farebreakup', ''); // shim has no unset; blank it"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/{{rideId}}/fareBreakup",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{dashboard_city}}",
             "payment",
             "{{rideId}}",
             "fareBreakup"

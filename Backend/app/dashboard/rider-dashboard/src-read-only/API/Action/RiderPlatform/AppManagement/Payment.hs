@@ -9,6 +9,7 @@ where
 
 import qualified API.Types.Dashboard.AppManagement
 import qualified "rider-app" API.Types.Dashboard.AppManagement.Payment
+import qualified "rider-app" API.Types.UI.RidePayment
 import qualified Domain.Action.RiderPlatform.AppManagement.Payment
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "rider-app" Domain.Types.Person
@@ -25,10 +26,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("payment" :> (GetPaymentRefundRequestList :<|> GetPaymentRefundRequestInfo :<|> PostPaymentRefundRequestRespond :<|> PostPaymentRefundRequestInitiate))
+type API = ("payment" :> (GetPaymentRefundRequestList :<|> GetPaymentRefundRequestInfo :<|> PostPaymentRefundRequestRespond :<|> PostPaymentRefundRequestInitiate :<|> GetPaymentFareBreakup))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getPaymentRefundRequestList merchantId city :<|> getPaymentRefundRequestInfo merchantId city :<|> postPaymentRefundRequestRespond merchantId city :<|> postPaymentRefundRequestInitiate merchantId city
+handler merchantId city = getPaymentRefundRequestList merchantId city :<|> getPaymentRefundRequestInfo merchantId city :<|> postPaymentRefundRequestRespond merchantId city :<|> postPaymentRefundRequestInitiate merchantId city :<|> getPaymentFareBreakup merchantId city
 
 type GetPaymentRefundRequestList =
   ( ApiAuth
@@ -62,6 +63,14 @@ type PostPaymentRefundRequestInitiate =
       :> API.Types.Dashboard.AppManagement.Payment.PostPaymentRefundRequestInitiate
   )
 
+type GetPaymentFareBreakup =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PAYMENT / 'API.Types.Dashboard.AppManagement.Payment.GET_PAYMENT_FARE_BREAKUP)
+      :> API.Types.Dashboard.AppManagement.Payment.GetPaymentFareBreakup
+  )
+
 getPaymentRefundRequestList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.RefundRequest.RefundRequestStatus -> Kernel.Prelude.Maybe Domain.Types.RefundRequest.RefundRequestCode -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Payment.RefundRequestResp)
 getPaymentRefundRequestList merchantShortId opCity apiTokenInfo limit offset status code customerId orderId from to = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Payment.getPaymentRefundRequestList merchantShortId opCity apiTokenInfo limit offset status code customerId orderId from to
 
@@ -73,3 +82,6 @@ postPaymentRefundRequestRespond merchantShortId opCity apiTokenInfo refundReques
 
 postPaymentRefundRequestInitiate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> API.Types.Dashboard.AppManagement.Payment.RefundRequestInitiateReq -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Payment.RefundRequestRespondResp)
 postPaymentRefundRequestInitiate merchantShortId opCity apiTokenInfo rideId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Payment.postPaymentRefundRequestInitiate merchantShortId opCity apiTokenInfo rideId req
+
+getPaymentFareBreakup :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> Environment.FlowHandler API.Types.UI.RidePayment.FareBreakupRes)
+getPaymentFareBreakup merchantShortId opCity apiTokenInfo rideId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Payment.getPaymentFareBreakup merchantShortId opCity apiTokenInfo rideId

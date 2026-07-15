@@ -3,6 +3,7 @@ module Domain.Action.Dashboard.AppManagement.Payment
     getPaymentRefundRequestInfo,
     postPaymentRefundRequestRespond,
     postPaymentRefundRequestInitiate,
+    getPaymentFareBreakup,
   )
 where
 
@@ -259,3 +260,16 @@ postPaymentRefundRequestInitiate merchantShortId opCity rideId req = do
               submitRefundToPaymentService refundRequest False
           }
   DRidePayment.createPaymentRefundRequest h rideId
+
+getPaymentFareBreakup ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id DRide.Ride ->
+  Flow API.Types.UI.RidePayment.FareBreakupRes
+getPaymentFareBreakup merchantShortId opCity rideId = do
+  merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+  ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  unless (booking.merchantOperatingCityId == merchantOpCity.id) $ throwError (RideNotFound rideId.getId)
+  DRidePayment.getFareBreakupForRide rideId booking

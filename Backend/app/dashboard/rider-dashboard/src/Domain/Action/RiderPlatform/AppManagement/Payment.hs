@@ -3,11 +3,13 @@ module Domain.Action.RiderPlatform.AppManagement.Payment
     getPaymentRefundRequestInfo,
     postPaymentRefundRequestRespond,
     postPaymentRefundRequestInitiate,
+    getPaymentFareBreakup,
   )
 where
 
 import qualified API.Client.RiderPlatform.AppManagement
 import qualified API.Types.Dashboard.AppManagement.Payment
+import qualified "rider-app" API.Types.UI.RidePayment
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "rider-app" Domain.Types.Person
 import qualified "rider-app" Domain.Types.RefundRequest
@@ -45,3 +47,8 @@ postPaymentRefundRequestInitiate merchantShortId opCity apiTokenInfo rideId req 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing (Kernel.Prelude.Just (Kernel.Types.Id.cast rideId)) (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withResponseTransactionStoring transaction (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.paymentDSL.postPaymentRefundRequestInitiate) rideId req)
+
+getPaymentFareBreakup :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> Environment.Flow API.Types.UI.RidePayment.FareBreakupRes)
+getPaymentFareBreakup merchantShortId opCity apiTokenInfo rideId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.paymentDSL.getPaymentFareBreakup) rideId

@@ -635,6 +635,16 @@ getPaymentFareBreakup (mbPersonId, _merchantId) rideId = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   unless (booking.riderId == personId) $ throwError $ InvalidRequest "Person is not the owner of the ride"
+  getFareBreakupForRide rideId booking
+
+-- | Auth-free core of 'getPaymentFareBreakup'. Callers own the access check:
+--   the rider endpoint verifies ride ownership, the dashboard endpoint
+--   (Domain.Action.Dashboard.AppManagement.Payment) verifies merchant/city.
+getFareBreakupForRide ::
+  Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+  Domain.Types.Booking.Booking ->
+  Environment.Flow API.Types.UI.RidePayment.FareBreakupRes
+getFareBreakupForRide rideId booking = do
   mbOfferEntity <- QOfferEntity.findByEntityIdAndEntityType rideId.getId DOfferEntity.RIDE
   let discount = maybe 0 (.discountAmount) mbOfferEntity
       currency = booking.estimatedFare.currency
@@ -649,7 +659,7 @@ getPaymentFareBreakup (mbPersonId, _merchantId) rideId = do
           booking.merchantOperatingCityId.getId
           currency
           True
-          personId.getId
+          booking.riderId.getId
           rideId.getId
           Nothing
           Nothing
