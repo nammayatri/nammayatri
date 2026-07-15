@@ -268,8 +268,8 @@ checkAuthLimitExceededByPhone merchantConfigs phoneNumberHash = Redis.withNonCri
     windowExceeded ind windowTag mbWindow mbThreshold =
       case (mbWindow, mbThreshold) of
         (Just window, Just threshold) -> do
-          authCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkPhoneAuthCounterKey ind windowTag phoneNumberHash) window
-          if authCount >= threshold
+          authCount <- SWC.getCurrentWindowCount (mkPhoneAuthCounterKey ind windowTag phoneNumberHash) window
+          if authCount >= fromIntegral threshold
             then do
               logInfo $ "Phone-number auth rate limit hit for window " <> windowTag <> " with count " <> show authCount
               pure $ Just (fromIntegral window.period * fromIntegral (SWC.convertPeriodTypeToSeconds window.periodType) :: Int)

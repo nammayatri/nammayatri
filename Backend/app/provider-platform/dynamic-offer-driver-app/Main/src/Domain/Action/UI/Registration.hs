@@ -989,8 +989,8 @@ checkAuthLimitExceededByPhone mocId phoneNumberHash transporterConfig = Redis.wi
     windowExceeded windowTag mbWindow mbThreshold =
       case (mbWindow, mbThreshold) of
         (Just window, Just threshold) -> do
-          authCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkPhoneAuthCounterKey mocId windowTag phoneNumberHash) window
-          if authCount >= threshold
+          authCount <- SWC.getCurrentWindowCount (mkPhoneAuthCounterKey mocId windowTag phoneNumberHash) window
+          if authCount >= fromIntegral threshold
             then do
               logInfo $ "Phone-number auth rate limit hit for driver auth window " <> windowTag <> " with count " <> show authCount
               pure $ Just (fromIntegral window.period * fromIntegral (SWC.convertPeriodTypeToSeconds window.periodType) :: Int)
