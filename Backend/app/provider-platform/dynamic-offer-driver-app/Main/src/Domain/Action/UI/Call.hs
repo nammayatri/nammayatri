@@ -367,7 +367,10 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = d
   where
     ensureCallStatusExists id' callId rideId callStatus' dtmfNumberUsed merchantOperatingCityId' =
       QCallStatus.findOneByEntityId (Just $ getId rideId) >>= \case
-        Just cs -> QCallStatus.updateCallStatusCallId callId cs.id
+        Just cs ->
+          QCallStatus.findByCallSid callId >>= \case
+            Just _ -> pure ()
+            Nothing -> QCallStatus.updateCallStatusCallId callId cs.id
         Nothing -> do
           now <- getCurrentTime
           let callStatusObj =

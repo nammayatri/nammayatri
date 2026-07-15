@@ -29,6 +29,8 @@ module Lib.DriverCoins.Coins
     getValidRideCountByDriverIdKey,
     getOTPValidRideCountByDriverIdKey,
     incrementMetroRideCount,
+    incrementIncentiveMetricsForRide,
+    incrementValidRideCountForTimeBoundCohort,
     EventFlow,
     runCancellationLogic,
     updateEventAndGetCoinsvalue,
@@ -36,9 +38,11 @@ module Lib.DriverCoins.Coins
 where
 
 import qualified Data.Aeson as A
+import Data.List (nub)
 import qualified Data.Text as T
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
 import qualified Domain.Types.Coins.CoinHistory as DTCC
+import qualified Domain.Types.Coins.CoinsConfig as DTCoinsConfig
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverStats as DDS
 import qualified Domain.Types.FleetConfig as DFC
@@ -58,9 +62,11 @@ import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
+import qualified Kernel.Types.TimeBound as TB
 import Kernel.Utils.App (lookupCloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Lib.DriverCoins.IncentiveMetrics as IncentiveMetrics
 import Lib.DriverCoins.Types
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Finance.Core.Types as Finance
@@ -220,16 +226,76 @@ driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityI
               then filter (\cc -> cc.eventFunction `notElem` combinedBlacklist && not (isDriverIncentiveCohortFunction cc.eventFunction)) applicableCoinConfiguration
               else filter (\cc -> cc.eventFunction `notElem` combinedBlacklist) applicableCoinConfiguration
 
-      logInfo $ "Coin events for driver " <> driverId.getId <> " - DriverBlacklist: " <> show blacklistedEventsByDriver <> ", FleetBlacklist: " <> show blacklistedEventsByFleet <> ", IncentiveFunctions: " <> show incentiveCohortFunctions <> ", Total: " <> show (map (.eventFunction) coinConfiguration) <> ", Applicable: " <> show (map (.eventFunction) applicableCoinConfiguration) <> ", Filtered: " <> show (map (.eventFunction) filteredConfigAll)
+      now <- getCurrentTime
+      let timeBoundReferenceUtc = case eventType of
+            DCT.EndRide {ride} -> rideTimeBoundReferenceUtc ride
+            _ -> now
+          localTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) timeBoundReferenceUtc
+          -- Prefer configs with a real (non-Unbounded) timeBound that matches ride start time.
+          -- Fallback: unbounded/null timebound configs (preserves existing day-wide cohort flow).
+          letTimeBounds =
+            [ CoinConfigWithTimeBounds cc tb
+              | cc <- filteredConfigAll,
+                Just tb <- [cc.timeBounds],
+                tb /= TB.Unbounded
+            ]
+          wrappedTimeBoundConfigs = TB.findBoundedDomain letTimeBounds localTime
+          timeBoundConfigs = (.coinsConfig) <$> wrappedTimeBoundConfigs
+          selectedConfigs =
+            if null timeBoundConfigs
+              then filter (\cc -> fromMaybe TB.Unbounded cc.timeBounds == TB.Unbounded) filteredConfigAll
+              else timeBoundConfigs
+          metricWindow =
+            case listToMaybe wrappedTimeBoundConfigs of
+              Just wrapped -> IncentiveMetrics.mkIncentiveWindowKey localTime wrapped.timeBounds
+              _ -> IncentiveMetrics.unBoundedWindowKey
 
-      if null filteredConfigAll
+      logInfo $ "Coin events for driver " <> driverId.getId <> " - DriverBlacklist: " <> show blacklistedEventsByDriver <> ", FleetBlacklist: " <> show blacklistedEventsByFleet <> ", IncentiveFunctions: " <> show incentiveCohortFunctions <> ", Total: " <> show (map (.eventFunction) coinConfiguration) <> ", Applicable: " <> show (map (.eventFunction) applicableCoinConfiguration) <> ", Filtered: " <> show (map (.eventFunction) filteredConfigAll) <> ", Selected(timeBoundPrefer): " <> show (map (.eventFunction) selectedConfigs)
+      logDebug $
+        "Coin timebound selection - driverId: "
+          <> driverId.getId
+          <> ", timeBoundReferenceUtc: "
+          <> show timeBoundReferenceUtc
+          <> ", localTime: "
+          <> show localTime
+          <> ", metricWindow: "
+          <> show metricWindow
+          <> ", candidateTimeBoundConfigs: "
+          <> show (map (\c -> (c.coinsConfig.eventFunction, c.timeBounds)) letTimeBounds)
+          <> ", matchedTimeBoundConfigs: "
+          <> show (map (.eventFunction) timeBoundConfigs)
+
+      if null selectedConfigs
         then do
-          logInfo "All coin events blacklisted; skipping award"
+          logInfo "All coin events blacklisted or no matching timebound/unbounded config; skipping award"
           pure ()
         else do
-          finalCoinsValue <- sum <$> forM filteredConfigAll (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins transporterConfig entityId vehCategory mbServiceTierType)
+          finalCoinsValue <-
+            sum
+              <$> forM
+                selectedConfigs
+                ( \cc ->
+                    calculateCoins
+                      eventType
+                      driverId
+                      merchantId
+                      merchantOpCityId
+                      cc
+                      cc.expirationAt
+                      cc.coins
+                      transporterConfig
+                      entityId
+                      vehCategory
+                      mbServiceTierType
+                      metricWindow
+                )
           logInfo $ "Awarding coins: " <> show finalCoinsValue
           updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
+
+data CoinConfigWithTimeBounds = CoinConfigWithTimeBounds
+  { coinsConfig :: DTCoinsConfig.CoinsConfig,
+    timeBounds :: TB.TimeBound
+  }
 
 extractDriverIncentiveCohortFunctions :: Maybe [LYT.TagNameValueExpiry] -> [DCT.DriverCoinsFunctionType]
 extractDriverIncentiveCohortFunctions =
@@ -245,13 +311,30 @@ extractDriverIncentiveCohortFunctions =
 isDriverIncentiveCohortFunction :: DCT.DriverCoinsFunctionType -> Bool
 isDriverIncentiveCohortFunction = \case
   DCT.DriverIncentiveCohortRidesCompleted _ -> True
+  DCT.DriverIncentiveCohortMetrics _ -> True
   _ -> False
 
-calculateCoins :: EventFlow m r => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
-calculateCoins eventType driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType = do
+isDriverIncentiveCohortRidesCompletedFunction :: DCT.DriverCoinsFunctionType -> Bool
+isDriverIncentiveCohortRidesCompletedFunction = \case
+  DCT.DriverIncentiveCohortRidesCompleted _ -> True
+  _ -> False
+
+isDriverIncentiveCohortMetricsFunction :: DCT.DriverCoinsFunctionType -> Bool
+isDriverIncentiveCohortMetricsFunction = \case
+  DCT.DriverIncentiveCohortMetrics _ -> True
+  _ -> False
+
+hasNonUnboundedTimeBound :: DTCoinsConfig.CoinsConfig -> Bool
+hasNonUnboundedTimeBound cc = case cc.timeBounds of
+  Just tb -> tb /= TB.Unbounded
+  Nothing -> False
+
+calculateCoins :: EventFlow m r => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTCoinsConfig.CoinsConfig -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> IncentiveMetrics.IncentiveWindowKey -> m Int
+calculateCoins eventType driverId merchantId merchantOpCityId coinsConfig mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType metricWindow = do
+  let eventFunction = coinsConfig.eventFunction
   case eventType of
     DCT.Rating {..} -> hRating driverId merchantId merchantOpCityId ratingValue ride eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType
-    DCT.EndRide {..} -> hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTierRide ride metroRideType tripCategoryType eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType
+    DCT.EndRide {..} -> hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTierRide ride metroRideType tripCategoryType coinsConfig mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType metricWindow
     DCT.DriverToCustomerReferral {..} -> hDriverReferral driverId merchantId merchantOpCityId ride eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType
     DCT.Cancellation {..} -> hCancellation driverId merchantId merchantOpCityId rideStartTime intialDisToPickup cancellationDisToPickup cancelledBy eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType
     DCT.LMS -> hLms driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType
@@ -292,8 +375,9 @@ hRating driverId merchantId merchantOpCityId ratingValue ride eventFunction mbex
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     _ -> pure 0
 
-hEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Maybe Int -> DR.Ride -> MetroRideType -> DCT.TripCategoryType -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
-hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTierRide _ride metroRideType tripCategoryType eventFunction mbexpirationTime numCoins _ entityId vehCategory mbServiceTierType = do
+hEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Maybe Int -> DR.Ride -> MetroRideType -> DCT.TripCategoryType -> DTCoinsConfig.CoinsConfig -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> IncentiveMetrics.IncentiveWindowKey -> m Int
+hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTierRide _ride metroRideType tripCategoryType coinsConfig mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType metricWindow = do
+  let eventFunction = coinsConfig.eventFunction
   logDebug $ "Driver Coins Handle EndRide Event Triggered - " <> show eventFunction
   case eventFunction of
     DCT.RidesCompleted a -> do
@@ -305,13 +389,42 @@ hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTier
         ]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     DCT.DriverIncentiveCohortRidesCompleted a -> do
-      validRideCount <- case tripCategoryType of
-        DCT.OTPRideTrip -> fromMaybe 0 <$> getOTPValidRideCountByDriverIdKey driverId
-        DCT.DynamicOfferTrip -> fromMaybe 0 <$> getValidRideCountByDriverIdKey driverId
+      -- Timebound config: peak-window ride count. Unbounded: existing day key.
+      validRideCount <- getCohortValidRideCount driverId tripCategoryType metricWindow
+      logDebug $
+        "DriverIncentiveCohortRidesCompleted check - driverId: "
+          <> driverId.getId
+          <> ", threshold: "
+          <> show a
+          <> ", window: "
+          <> show metricWindow
+          <> ", validRideCount: "
+          <> show validRideCount
+          <> ", configTimeBounds: "
+          <> show coinsConfig.timeBounds
       runActionWhenValidConditions
         [ pure (validRideCount == a)
         ]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
+    DCT.DriverIncentiveCohortMetrics metrics -> do
+      alreadyAwarded <- isIncentiveConfigAlreadyAwarded driverId coinsConfig transporterConfig.timeDiffFromUtc
+      metricMatched <- checkAllIncentiveMetricsMet driverId metrics metricWindow
+      logDebug $
+        "DriverIncentiveCohortMetrics award decision - driverId: "
+          <> driverId.getId
+          <> ", configId: "
+          <> coinsConfig.id.getId
+          <> ", window: "
+          <> show metricWindow
+          <> ", alreadyAwarded: "
+          <> show alreadyAwarded
+          <> ", metricMatched: "
+          <> show metricMatched
+      runActionWhenValidConditions
+        [ pure (not alreadyAwarded),
+          pure metricMatched
+        ]
+        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins (Just coinsConfig.id.getId) vehCategory mbServiceTierType
     DCT.PurpleRideCompleted ->
       runActionWhenValidConditions
         [ pure isDisabled
@@ -341,6 +454,59 @@ hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTier
                 $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
             else pure 0
     _ -> pure 0
+
+-- | Award only when every configured (Just) metric threshold is met. Nothing = not required.
+checkAllIncentiveMetricsMet :: EventFlow m r => Id DP.Person -> DCT.DriverIncentiveMetrics -> IncentiveMetrics.IncentiveWindowKey -> m Bool
+checkAllIncentiveMetricsMet driverId metrics metricWindow = do
+  actual <- IncentiveMetrics.getIncentiveMetricsData driverId metricWindow
+  let matched =
+        IncentiveMetrics.areAllConfiguredMetricsMet
+          metrics.ridesCompleted
+          actual.ridesCompleted
+          metrics.totalEarnings
+          actual.totalEarnings
+          metrics.totalTripDistanceMeters
+          actual.totalTripDistanceMeters
+          metrics.totalRideTimeSeconds
+          actual.totalRideTimeSeconds
+  logDebug $
+    "Incentive metrics compare - driverId: "
+      <> driverId.getId
+      <> ", window: "
+      <> show metricWindow
+      <> ", thresholds: "
+      <> show metrics
+      <> ", actual: "
+      <> show actual
+      <> ", matched: "
+      <> show matched
+  pure matched
+
+-- | Idempotency: coin_config.id is stored as entityId (same UUID style as ride ids).
+-- Scope lookup to the current local day. Safe for TimeBound too when there is at most
+-- one peak window per day — morning award will not need a second award later that day.
+isIncentiveConfigAlreadyAwarded :: EventFlow m r => Id DP.Person -> DTCoinsConfig.CoinsConfig -> Seconds -> m Bool
+isIncentiveConfigAlreadyAwarded driverId coinsConfig timeDiffFromUtc = do
+  (windowStart, windowEnd) <- getIncentiveAwardHistoryWindow timeDiffFromUtc
+  mbHistory <-
+    CHistory.getCoinsByEventFunctionWithinTimeRange
+      driverId
+      coinsConfig.eventFunction
+      (Just coinsConfig.id.getId)
+      windowStart
+      windowEnd
+  pure $ isJust mbHistory
+
+-- | Current local calendar day as UTC [dayStart, dayEnd), using transporter timeDiffFromUtc.
+getIncentiveAwardHistoryWindow :: MonadFlow m => Seconds -> m (UTCTime, UTCTime)
+getIncentiveAwardHistoryWindow timeDiffFromUtc = do
+  now <- getCurrentTime
+  let localTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
+      localDay = utctDay localTime
+      istOffset = negate (secondsToNominalDiffTime timeDiffFromUtc)
+      dayStartLocal = UTCTime localDay 0
+      dayEndLocal = addUTCTime (24 * 60 * 60) dayStartLocal
+  pure (addUTCTime istOffset dayStartLocal, addUTCTime istOffset dayEndLocal)
 
 hDriverReferral :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DR.Ride -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
 hDriverReferral driverId merchantId merchantOpCityId ride eventFunction mbexpirationTime numCoins _ entityId vehCategory mbServiceTierType = do
@@ -652,24 +818,64 @@ setCoinAccumulationByDriverIdKey driverId currentDate count expirationPeriod = d
 mkValidRideCountByDriverIdKey :: Id DP.Person -> Text
 mkValidRideCountByDriverIdKey driverId = "DriverValidRideCount:DriverId:" <> driverId.getId
 
+-- | Timebound-scoped valid ride count (DriverIncentiveCohortRidesCompleted peak window).
+-- Day/unbounded path keeps using mkValidRideCountByDriverIdKey (no :Window: suffix).
+mkValidRideCountByDriverIdWindowKey :: Id DP.Person -> IncentiveMetrics.IncentiveWindowKey -> Text
+mkValidRideCountByDriverIdWindowKey driverId windowKey =
+  mkValidRideCountByDriverIdKey driverId <> ":Window:" <> IncentiveMetrics.windowSuffix windowKey
+
 getValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe Int)
 getValidRideCountByDriverIdKey driverId = Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.get (mkValidRideCountByDriverIdKey driverId)
+
+getValidRideCountByDriverIdWindowKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> IncentiveMetrics.IncentiveWindowKey -> m (Maybe Int)
+getValidRideCountByDriverIdWindowKey driverId windowKey =
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.get (mkValidRideCountByDriverIdWindowKey driverId windowKey)
 
 setValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Int -> m ()
 setValidRideCountByDriverIdKey driverId expirationPeriod count = do
   void $ Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.incrby (mkValidRideCountByDriverIdKey driverId) (fromIntegral count)
   Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.expire (mkValidRideCountByDriverIdKey driverId) expirationPeriod
 
+setValidRideCountByDriverIdWindowKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> IncentiveMetrics.IncentiveWindowKey -> Int -> Int -> m ()
+setValidRideCountByDriverIdWindowKey driverId windowKey expirationPeriod count = do
+  let key = mkValidRideCountByDriverIdWindowKey driverId windowKey
+  void $ Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.incrby key (fromIntegral count)
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.expire key expirationPeriod
+
+incrementValidRideCountInWindow :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> IncentiveMetrics.IncentiveWindowKey -> Int -> Int -> m ()
+incrementValidRideCountInWindow driverId windowKey expirationPeriod incrementValue = do
+  mbCount <- getValidRideCountByDriverIdWindowKey driverId windowKey
+  case mbCount of
+    Just _ ->
+      void $
+        Hedis.runInMasterCloudRedisCellWithCrossAppRedis $
+          Hedis.incrby (mkValidRideCountByDriverIdWindowKey driverId windowKey) (fromIntegral incrementValue)
+    Nothing -> setValidRideCountByDriverIdWindowKey driverId windowKey expirationPeriod incrementValue
+
 mkOTPValidRideCountByDriverIdKey :: Id DP.Person -> Text
 mkOTPValidRideCountByDriverIdKey driverId = "DriverOTPValidRideCount:DriverId:" <> driverId.getId
 
+mkOTPValidRideCountByDriverIdWindowKey :: Id DP.Person -> IncentiveMetrics.IncentiveWindowKey -> Text
+mkOTPValidRideCountByDriverIdWindowKey driverId windowKey =
+  mkOTPValidRideCountByDriverIdKey driverId <> ":Window:" <> IncentiveMetrics.windowSuffix windowKey
+
 getOTPValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe Int)
 getOTPValidRideCountByDriverIdKey driverId = Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.get (mkOTPValidRideCountByDriverIdKey driverId)
+
+getOTPValidRideCountByDriverIdWindowKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> IncentiveMetrics.IncentiveWindowKey -> m (Maybe Int)
+getOTPValidRideCountByDriverIdWindowKey driverId windowKey =
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.get (mkOTPValidRideCountByDriverIdWindowKey driverId windowKey)
 
 setOTPValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Int -> m ()
 setOTPValidRideCountByDriverIdKey driverId expirationPeriod count = do
   void $ Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.incrby (mkOTPValidRideCountByDriverIdKey driverId) (fromIntegral count)
   Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.expire (mkOTPValidRideCountByDriverIdKey driverId) expirationPeriod
+
+setOTPValidRideCountByDriverIdWindowKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> IncentiveMetrics.IncentiveWindowKey -> Int -> Int -> m ()
+setOTPValidRideCountByDriverIdWindowKey driverId windowKey expirationPeriod count = do
+  let key = mkOTPValidRideCountByDriverIdWindowKey driverId windowKey
+  void $ Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.incrby key (fromIntegral count)
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.expire key expirationPeriod
 
 incrementOTPValidRideCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Int -> m ()
 incrementOTPValidRideCount driverId expirationPeriod incrementValue = do
@@ -677,6 +883,35 @@ incrementOTPValidRideCount driverId expirationPeriod incrementValue = do
   case otpValidRideCountKeyExists of
     Just _ -> void $ Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.incrby (mkOTPValidRideCountByDriverIdKey driverId) (fromIntegral incrementValue)
     Nothing -> setOTPValidRideCountByDriverIdKey driverId expirationPeriod incrementValue
+
+incrementOTPValidRideCountInWindow :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> IncentiveMetrics.IncentiveWindowKey -> Int -> Int -> m ()
+incrementOTPValidRideCountInWindow driverId windowKey expirationPeriod incrementValue = do
+  mbCount <- getOTPValidRideCountByDriverIdWindowKey driverId windowKey
+  case mbCount of
+    Just _ ->
+      void $
+        Hedis.runInMasterCloudRedisCellWithCrossAppRedis $
+          Hedis.incrby (mkOTPValidRideCountByDriverIdWindowKey driverId windowKey) (fromIntegral incrementValue)
+    Nothing -> setOTPValidRideCountByDriverIdWindowKey driverId windowKey expirationPeriod incrementValue
+
+-- | Ride count used by DriverIncentiveCohortRidesCompleted.
+-- TimeBoundWindow -> peak-scoped key; DayWindow (unbounded fallback) -> existing day key.
+getCohortValidRideCount ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DP.Person ->
+  DCT.TripCategoryType ->
+  IncentiveMetrics.IncentiveWindowKey ->
+  m Int
+getCohortValidRideCount driverId tripCategoryType metricWindow =
+  case metricWindow of
+    IncentiveMetrics.DayWindow ->
+      case tripCategoryType of
+        DCT.OTPRideTrip -> fromMaybe 0 <$> getOTPValidRideCountByDriverIdKey driverId
+        DCT.DynamicOfferTrip -> fromMaybe 0 <$> getValidRideCountByDriverIdKey driverId
+    IncentiveMetrics.TimeBoundWindow _ ->
+      case tripCategoryType of
+        DCT.OTPRideTrip -> fromMaybe 0 <$> getOTPValidRideCountByDriverIdWindowKey driverId metricWindow
+        DCT.DynamicOfferTrip -> fromMaybe 0 <$> getValidRideCountByDriverIdWindowKey driverId metricWindow
 
 safeIncrBy :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Integer -> Id DP.Person -> Seconds -> m ()
 safeIncrBy key value driverId timeDiffFromUtc = do
@@ -700,3 +935,105 @@ incrementMetroRideCount driverId metroRideType expirationPeriod incrementValue =
   case metroRideCountKeyExists of
     Just _ -> void $ Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.incrby (mkMetroRideCountByDriverIdKey driverId metroRideType) (fromIntegral incrementValue)
     Nothing -> setMetroRideCountByDriverIdKey driverId metroRideType expirationPeriod incrementValue
+
+-- | UTC instant used to decide whether a ride falls inside a coin-config timeBound.
+rideTimeBoundReferenceUtc :: DR.Ride -> UTCTime
+rideTimeBoundReferenceUtc ride = fromMaybe ride.createdAt ride.tripStartTime
+
+-- | When active DriverIncentiveCohortRidesCompleted configs have real timebounds and
+-- the ride start falls inside a peak, increment peak-scoped valid-ride-count keys.
+-- Day-wide DriverValidRideCount is still updated by incrementValidRideCount (unchanged).
+incrementValidRideCountForTimeBoundCohort ::
+  EventFlow m r =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DTV.VehicleCategory ->
+  DCT.TripCategoryType ->
+  Int ->
+  Seconds ->
+  UTCTime ->
+  m ()
+incrementValidRideCountForTimeBoundCohort driverId merchantId merchantOpCityId vehCategory tripCategoryType expirationPeriod timeDiffFromUtc timeBoundReferenceUtc = do
+  configs <- SQCC.getActiveCoinConfigs merchantId merchantOpCityId vehCategory
+  let cohortTimeBoundConfigs =
+        filter
+          ( \cc ->
+              cc.eventName == "EndRide"
+                && isDriverIncentiveCohortRidesCompletedFunction cc.eventFunction
+                && hasNonUnboundedTimeBound cc
+          )
+          configs
+  unless (null cohortTimeBoundConfigs) $ do
+    let localTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) timeBoundReferenceUtc
+        incentiveTimeBounds =
+          nub $
+            mapMaybe
+              ( \cc -> case cc.timeBounds of
+                  Just tb | tb /= TB.Unbounded -> Just tb
+                  _ -> Nothing
+              )
+              cohortTimeBoundConfigs
+        windows = IncentiveMetrics.matchingTimeBoundWindows localTime incentiveTimeBounds
+    logDebug $
+      "Timebound cohort ride-count increment - driverId: "
+        <> driverId.getId
+        <> ", tripCategoryType: "
+        <> show tripCategoryType
+        <> ", timeBoundReferenceUtc: "
+        <> show timeBoundReferenceUtc
+        <> ", localTime: "
+        <> show localTime
+        <> ", cohortTimeBoundEventFunctions: "
+        <> show (map (.eventFunction) cohortTimeBoundConfigs)
+        <> ", matchingWindows: "
+        <> show windows
+    forM_ windows $ \windowKey ->
+      case tripCategoryType of
+        DCT.DynamicOfferTrip -> incrementValidRideCountInWindow driverId windowKey expirationPeriod 1
+        DCT.OTPRideTrip -> incrementOTPValidRideCountInWindow driverId windowKey expirationPeriod 1
+
+-- | Increment day + matching time-bound incentive metric keys using active coin configs' timeBounds.
+incrementIncentiveMetricsForRide ::
+  EventFlow m r =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DTV.VehicleCategory ->
+  IncentiveMetrics.RideIncentiveDeltas ->
+  Int ->
+  Seconds ->
+  UTCTime ->
+  m ()
+incrementIncentiveMetricsForRide driverId merchantId merchantOpCityId vehCategory deltas expirationPeriod timeDiffFromUtc timeBoundReferenceUtc = do
+  configs <- SQCC.getActiveCoinConfigs merchantId merchantOpCityId vehCategory
+  let metricsConfigs =
+        filter
+          ( \cc ->
+              cc.eventName == "EndRide"
+                && isDriverIncentiveCohortMetricsFunction cc.eventFunction
+          )
+          configs
+  unless (null metricsConfigs) $ do
+    let localTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) timeBoundReferenceUtc
+        incentiveTimeBounds =
+          nub $
+            map (fromMaybe TB.Unbounded . (.timeBounds)) $
+              filter
+                ( \cc -> fromMaybe TB.Unbounded cc.timeBounds /= TB.Unbounded
+                )
+                metricsConfigs
+    logDebug $
+      "Incentive metrics increment for ride - driverId: "
+        <> driverId.getId
+        <> ", deltas: "
+        <> show deltas
+        <> ", timeBoundReferenceUtc: "
+        <> show timeBoundReferenceUtc
+        <> ", localTime: "
+        <> show localTime
+        <> ", metricsConfigCount: "
+        <> show (length metricsConfigs)
+        <> ", timeBoundsCount: "
+        <> show (length incentiveTimeBounds)
+    IncentiveMetrics.incrementIncentiveMetrics driverId deltas expirationPeriod incentiveTimeBounds localTime

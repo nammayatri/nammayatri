@@ -16,6 +16,7 @@
 module Lib.DriverCoins.Types
   ( DriverCoinsEventType (..),
     DCoins.DriverCoinsFunctionType (..),
+    DCoins.DriverIncentiveMetrics (..),
     DCoins.CoinMessage (..),
     DCoins.CoinStatus (..),
     DCoins.MetroRideType (..),

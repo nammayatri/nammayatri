@@ -10,6 +10,8 @@ module Domain.Action.ProviderPlatform.Management.FinanceManagement
     getFinanceManagementFinancePaymentGatewayTransactionList,
     getFinanceManagementFinanceInvoicePdf,
     getFinanceManagementFinanceAuditList,
+    getFinanceManagementFinanceSapJournals,
+    getFinanceManagementFinanceSapJournalsTransactions,
   )
 where
 
@@ -133,3 +135,13 @@ getFinanceManagementFinanceAuditList :: (Kernel.Types.Id.ShortId Domain.Types.Me
 getFinanceManagementFinanceAuditList merchantShortId opCity apiTokenInfo limit offset from to entityType action actorType actorId entityId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinanceAuditList) limit offset from to entityType action actorType actorId entityId
+
+getFinanceManagementFinanceSapJournals :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.SapJournalListRes)
+getFinanceManagementFinanceSapJournals merchantShortId opCity apiTokenInfo batchId belnr dateFrom dateTo limit offset status transactionType = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinanceSapJournals) batchId belnr dateFrom dateTo limit offset status transactionType
+
+getFinanceManagementFinanceSapJournalsTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.SapJournalTransactionsRes)
+getFinanceManagementFinanceSapJournalsTransactions merchantShortId opCity apiTokenInfo fromTime limit offset subscriptionId toTime periodEndTime periodStartTime transactionType = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinanceSapJournalsTransactions) fromTime limit offset subscriptionId toTime periodEndTime periodStartTime transactionType

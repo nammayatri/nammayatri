@@ -31,6 +31,7 @@ import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -80,7 +81,8 @@ data DConfirmReq = DConfirmReq
     paymentId :: Maybe Text,
     enableOtpLessRide :: Bool,
     driverPreference :: Maybe [Text],
-    customerDiscountAmount :: Maybe HighPrecMoney
+    customerDiscountAmount :: Maybe HighPrecMoney,
+    customerLanguage :: Maybe Maps.Language
   }
 
 data ValidatedQuote = DriverQuote DPerson.Person DDQ.DriverQuote | StaticQuote DQ.Quote | RideOtpQuote DQ.Quote | MeterRideQuote DPerson.Person DQ.Quote
@@ -227,6 +229,7 @@ handler merchant req validatedQuote = do
       whenJust req.mbRiderName $ QRB.updateRiderName booking.id
       whenJust req.paymentId $ QRB.updatePaymentId booking.id
       whenJust req.customerDiscountAmount $ QRB.updateDiscountAmount booking.id
+      whenJust req.customerLanguage $ QRB.updateCustomerLanguage booking.id
       QBE.logRideConfirmedEvent booking.id booking.distanceUnit
 
     mkDConfirmResp mbRideInfo uBooking riderDetails = do

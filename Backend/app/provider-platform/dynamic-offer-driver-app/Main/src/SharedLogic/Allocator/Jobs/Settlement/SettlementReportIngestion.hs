@@ -137,20 +137,20 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
     resolveOrderType ::
       (BeamFlow m r, EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
       Text ->
-      m (Maybe PgDom.OrderType, Maybe Bool)
+      m (Maybe PgDom.OrderType, Maybe Bool, Maybe Text)
     resolveOrderType orderId = do
       mbPaymentOrder <- QPO.findByShortId (ShortId orderId)
       case mbPaymentOrder of
         Nothing -> do
           logWarning $ "No payment order found for orderId: " <> orderId
-          pure (Nothing, Nothing)
+          pure (Nothing, Nothing, Nothing)
         Just po -> do
           mbSubPurchase <- QSP.findByPaymentOrderId po.id
           case mbSubPurchase of
             Just sp ->
-              pure (Just PgDom.SUBSCRIPTION, Just $ sp.status /= DSP.PENDING && sp.status /= DSP.FAILED)
+              pure (Just PgDom.SUBSCRIPTION, Just $ sp.status /= DSP.PENDING && sp.status /= DSP.FAILED, Just sp.id.getId)
             Nothing ->
-              pure (Just PgDom.PAYOUT_REGISTRATION, Just False)
+              pure (Just PgDom.PAYOUT_REGISTRATION, Just False, Nothing)
 
     getSettlementConfigs ::
       (BeamFlow m r, CacheFlow m r, EsqDBFlow m r) =>

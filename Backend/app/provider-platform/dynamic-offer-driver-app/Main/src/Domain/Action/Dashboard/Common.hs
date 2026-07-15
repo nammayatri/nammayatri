@@ -32,6 +32,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.Queries.FleetOwnerInformation as QFI
@@ -172,7 +173,7 @@ checkFleetOwnerVerification personId mbEnabledCheck = do
     unless fleetOwnerInfo.enabled $ throwError (InvalidRequest "Fleet owner is not enabled")
 
 checkFleetOwnerRole :: DP.Role -> Bool
-checkFleetOwnerRole role = role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS]
+checkFleetOwnerRole = SDO.isFleetRole
 
 castDashboardVehicleVariantToDomain :: Common.VehicleVariant -> DV.VehicleVariant
 castDashboardVehicleVariantToDomain = \case

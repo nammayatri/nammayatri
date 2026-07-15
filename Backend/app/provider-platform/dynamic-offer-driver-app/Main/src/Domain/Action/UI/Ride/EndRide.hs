@@ -54,6 +54,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.TransporterConfig as DTConf
+import qualified Domain.Types.VehicleVariant as DTVeh
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, pi)
 import Kernel.Beam.Functions (runInMasterDbAndRedis)
@@ -80,6 +81,7 @@ import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
+import qualified Lib.DriverCoins.IncentiveMetrics as IncentiveMetrics
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.LocationUpdates as LocUpd
@@ -629,9 +631,52 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
             DC.incrementMetroRideCount driverId metroRideType expirationPeriod 1
           when (DTC.isDynamicOfferTrip booking.tripCategory && validRideTaken) $ do
             DC.incrementValidRideCount driverId expirationPeriod 1
+            let earningsDelta = maybe 0 (roundToIntegral . getHighPrecMoney) updRide.fare
+                distanceDelta = maybe 0 getMeters updRide.chargeableDistance
+                rideTimeDelta =
+                  fromMaybe 0 $
+                    (\start end -> max 0 (roundToIntegral (diffUTCTime end start)))
+                      <$> updRide.tripStartTime
+                      <*> updRide.tripEndTime
+                vehCategory = DTVeh.getVehicleCategoryFromVehicleVariantDefault updRide.vehicleVariant
+                timeBoundReferenceUtc = fromMaybe updRide.createdAt updRide.tripStartTime
+            DC.incrementValidRideCountForTimeBoundCohort
+              driverId
+              booking.providerId
+              booking.merchantOperatingCityId
+              vehCategory
+              DCT.DynamicOfferTrip
+              expirationPeriod
+              thresholdConfig.timeDiffFromUtc
+              timeBoundReferenceUtc
+            DC.incrementIncentiveMetricsForRide
+              driverId
+              booking.providerId
+              booking.merchantOperatingCityId
+              vehCategory
+              IncentiveMetrics.RideIncentiveDeltas
+                { ridesDelta = 1,
+                  earningsDelta,
+                  distanceMetersDelta = distanceDelta,
+                  rideTimeSecondsDelta = rideTimeDelta
+                }
+              expirationPeriod
+              thresholdConfig.timeDiffFromUtc
+              timeBoundReferenceUtc
             DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.DynamicOfferTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions)
           when (DTC.isRideOtpTrip booking.tripCategory && validRideTaken) $ do
             DC.incrementOTPValidRideCount driverId expirationPeriod 1
+            let vehCategory = DTVeh.getVehicleCategoryFromVehicleVariantDefault updRide.vehicleVariant
+                timeBoundReferenceUtc = fromMaybe updRide.createdAt updRide.tripStartTime
+            DC.incrementValidRideCountForTimeBoundCohort
+              driverId
+              booking.providerId
+              booking.merchantOperatingCityId
+              vehCategory
+              DCT.OTPRideTrip
+              expirationPeriod
+              thresholdConfig.timeDiffFromUtc
+              timeBoundReferenceUtc
             DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.OTPRideTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions)
 
     -- GPS toll-behavior check moved to kafka-consumers RIDE_EVENTS_CONSUMER.

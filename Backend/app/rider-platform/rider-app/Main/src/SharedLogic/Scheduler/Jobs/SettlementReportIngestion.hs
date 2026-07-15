@@ -101,7 +101,7 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
                   else Nothing
           serviceResult <-
             try @_ @SomeException $
-              ingestPaymentSettlementReport settlementSvcCfg mbJuspayCfgForService merchantId.getId merchantOperatingCityId.getId (\_ -> pure (Nothing, Nothing))
+              ingestPaymentSettlementReport settlementSvcCfg mbJuspayCfgForService merchantId.getId merchantOperatingCityId.getId (\_ -> pure (Nothing, Nothing, Nothing))
           case serviceResult of
             Left err -> do
               logError $ "Settlement ingestion for " <> show settlementSvcCfg.settlementService <> " threw exception: " <> show err
