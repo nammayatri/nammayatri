@@ -687,12 +687,19 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
         merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
         -- Fetch operating city for issuedToAddress
         merchantOperatingCity <- CQMOC.findById latestPurchase.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist latestPurchase.merchantOperatingCityId.getId)
-        let issuedToAddress = Just $ show merchantOperatingCity.city <> ", " <> show merchantOperatingCity.state <> ", " <> show merchantOperatingCity.country
-            issuedByAddress = Just $ show merchant.city <> ", " <> show merchant.state <> ", " <> show merchant.country
         mbFleetInfo <- if isFleetOwner then QFOI.findByPrimaryKey person.id else pure Nothing
+        mbBuyerGstinRow <- QDG.findByDriverId person.id
         gstinOfParty <- maybe (pure Nothing) (mapM decrypt . (.gstNumber)) mbFleetInfo
-        -- For fleet invoices show the registered fleet name; fall back to the owner's first name when unset
-        let resolvedIssuedToName = Just $ fromMaybe person.firstName (mbFleetInfo >>= (.fleetName))
+        let issuedByAddress = Just $ show merchant.city <> ", " <> show merchant.state <> ", " <> show merchant.country
+            opCityAddress = show merchantOperatingCity.city <> ", " <> show merchantOperatingCity.state <> ", " <> show merchantOperatingCity.country
+            nonBlank t = if t == "" then Nothing else Just t
+            gstinAddress = (mbBuyerGstinRow >>= (.address)) >>= nonBlank
+            fleetOwnerAddress = do
+              addr <- (mbFleetInfo >>= (.address)) >>= nonBlank
+              pure $ addr <> maybe "" (\st -> ", " <> show st) (mbFleetInfo >>= (.addressState))
+            issuedToAddress = Just $ fromMaybe opCityAddress (gstinAddress <|> fleetOwnerAddress)
+            -- For fleet invoices show the registered fleet name; fall back to the owner's first name when unset
+            resolvedIssuedToName = Just $ fromMaybe person.firstName (mbFleetInfo >>= (.fleetName))
         let invoiceParams =
               InvoiceCreationParams
                 { paymentOrderId = latestPurchase.paymentOrderId.getId,
@@ -711,7 +718,6 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
         -- jurisdiction detection. Seller GSTIN is plain text on Merchant; buyer
         -- GSTIN is encrypted on DriverGstin and must be decrypted.
         let sellerGstin = merchant.gstin
-        mbBuyerGstinRow <- QDG.findByDriverId person.id
         buyerGstin <- traverse (decrypt . (.gstin)) mbBuyerGstinRow
         -- For FLEET_BUSINESS with both GSTINs present, use GSTIN state-code
         -- comparison (proper B2B path). Otherwise fall back to merchant-vs-opCity
