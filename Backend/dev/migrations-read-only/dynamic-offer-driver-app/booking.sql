@@ -255,3 +255,8 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_pickup_or_destination_e
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN fare_settlement_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN customer_language text ;

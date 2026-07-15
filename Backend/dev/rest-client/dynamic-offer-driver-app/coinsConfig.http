@@ -81,5 +81,6 @@ token: {{juspay_admin}}
   "entriesId": "dbced2a0-d486-4778-8f59-877f8092d8d2",
   "active": true,
   "coins": 15,
-  "expirationAt": 8886000
+  "expirationAt": 8886000,
+  "timeBounds": null
 }

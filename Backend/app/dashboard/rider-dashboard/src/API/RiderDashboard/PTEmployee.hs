@@ -2,7 +2,6 @@ module API.RiderDashboard.PTEmployee where
 
 import qualified Domain.Action.RiderDashboard.PTEmployee as DPTEmployee
 import "lib-dashboard" Environment
-import Kernel.Prelude
 import Kernel.Utils.Common (withFlowHandlerAPI')
 import Servant
 import "lib-dashboard" Storage.Beam.BeamFlow

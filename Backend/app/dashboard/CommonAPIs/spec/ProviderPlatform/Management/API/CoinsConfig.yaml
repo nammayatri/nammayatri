@@ -5,6 +5,7 @@ imports:
   Language: Kernel.External.Types
   VehicleCategory: Domain.Types.VehicleCategory
   ServiceTierType: Domain.Types.ServiceTierType
+  TimeBound: Kernel.Types.TimeBound
 
 module: CoinsConfig
 
@@ -40,6 +41,7 @@ types:
     - active: Bool
     - expirationAt: Maybe Int
     - coins: Int
+    - timeBounds: Maybe TimeBound
     - derive: "'HideSecrets"
   CreateCoinsConfigReq:
     - enum: NewCoinsConfig NewCoinsConfigReq, DuplicateCoinsConfig DuplicateCoinsConfigsReq
@@ -53,6 +55,7 @@ types:
     - vehicleCategory: VehicleCategory
     - tripCategoryType: Maybe TripCategoryType
     - serviceTierType: Maybe ServiceTierType
+    - timeBounds: Maybe TimeBound
     - eventMessages: [EventMessage]
   DuplicateCoinsConfigsReq:
     - entriesId: Id CoinsConfig
@@ -72,3 +75,4 @@ types:
     - active: Bool
     - vehicleCategory: Maybe VehicleCategory
     - tripCategoryType: Maybe TripCategoryType
+    - timeBounds: TimeBound

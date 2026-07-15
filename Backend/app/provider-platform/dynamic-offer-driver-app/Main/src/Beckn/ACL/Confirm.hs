@@ -23,6 +23,7 @@ import qualified BecknV2.Utils as Utils
 import qualified Data.Text as T
 import Domain.Action.Beckn.Confirm as DConfirm
 import Domain.Types.Booking (BookingStatus (NEW))
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
@@ -61,6 +62,7 @@ buildConfirmReqV2 req isValueAddNP = do
       enableFrequentLocationUpdates = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableFrequentLocationUpdatesTag
       enableOtpLessRide = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableOtpLessRideTag
       driverPreference = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getDriverPreferenceTag
+      customerLanguage = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getCustomerLanguageTag
   toAddress <- fulfillment.fulfillmentStops >>= Utils.getDropLocation >>= (.stopLocation) & maybe (pure Nothing) Utils.parseAddress
   let paymentId = req.confirmReqMessage.confirmReqMessageOrder.orderPayments >>= listToMaybe >>= (.paymentId)
       orderTags = req.confirmReqMessage.confirmReqMessageOrder.orderTags
@@ -97,3 +99,8 @@ getDriverPreferenceTag (Just tagGroups) = do
   tagValue <- Utils.getTagV2 Tag.SAFETY_PLUS_INFO Tag.DRIVER_PREFERENCE (Just tagGroups)
   let prefs = filter (not . T.null) $ T.strip <$> T.splitOn "&" tagValue
   if null prefs then Nothing else Just prefs
+
+getCustomerLanguageTag :: Maybe [Spec.TagGroup] -> Maybe Maps.Language
+getCustomerLanguageTag tagGroups = do
+  tagValue <- Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_LANGUAGE tagGroups
+  readMaybe . T.unpack $ tagValue

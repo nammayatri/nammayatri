@@ -220,6 +220,23 @@ updateVerifiedByCertificateNumberHash verified certificateHash = do
         ]
     ]
 
+-- | Targeted `approved` + `verified` update by RC id. Patches only those two fields (not a full-row
+--   updateByPrimaryKey), so it doesn't clobber concurrent writes to other fields.
+updateApprovedAndVerifiedById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe Bool ->
+  Maybe Bool ->
+  Id VehicleRegistrationCertificate ->
+  m ()
+updateApprovedAndVerifiedById approved verified (Id rcId) = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamVRC.approved approved,
+      Se.Set BeamVRC.verified verified,
+      Se.Set BeamVRC.updatedAt now
+    ]
+    [Se.Is BeamVRC.id $ Se.Eq rcId]
+
 findAllRCByStatusForFleet :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Text -> Maybe Documents.VerificationStatus -> Integer -> Integer -> Id Merchant.Merchant -> Maybe Text -> m [VehicleRegistrationCertificate]
 findAllRCByStatusForFleet fleetOwnerId status limitVal offsetVal (Id merchantId') statusAwareVehicleNo = do
   dbConf <- getReplicaBeamConfig

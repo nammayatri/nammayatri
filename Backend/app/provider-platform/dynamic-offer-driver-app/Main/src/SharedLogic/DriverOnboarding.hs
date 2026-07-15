@@ -115,6 +115,11 @@ defaultFleetDocumentTypes = [DVC.AadhaarCard, DVC.PanCard, DVC.GSTCertificate, D
 defaultVehicleDocumentTypes :: [DVC.DocumentType]
 defaultVehicleDocumentTypes = [DVC.VehicleRegistrationCertificate, DVC.VehiclePermit, DVC.VehicleFitnessCertificate, DVC.VehicleInsurance, DVC.VehiclePUC, DVC.VehicleInspectionForm, DVC.SubscriptionPlan, DVC.VehicleLeft, DVC.VehicleRight, DVC.VehicleFrontInterior, DVC.VehicleBackInterior, DVC.VehicleFront, DVC.VehicleBack, DVC.Odometer, DVC.VehicleNOC, DVC.InspectionHub]
 
+isFleetRole :: Person.Role -> Bool
+isFleetRole Person.FLEET_OWNER = True
+isFleetRole Person.FLEET_BUSINESS = True
+isFleetRole _ = False
+
 notifyErrorToSupport ::
   Person ->
   Id DTM.Merchant ->
@@ -718,6 +723,32 @@ makeHVVerificationReqRecord DHV.HyperVergeVerification {..} =
       verificaitonResponse = hypervergeResponse,
       ..
     }
+
+-- | Dedupe key for getTask pulls, per verification requestId — every pull path shares it, so a row is
+--   pulled at most once per 'getTaskPullWindow'.
+getTaskPullKey :: Text -> Text
+getTaskPullKey requestId = "verifyPull:req:" <> requestId
+
+getTaskPullWindow :: NominalDiffTime
+getTaskPullWindow = 30
+
+-- | Fixed-window cap: at most 'getTaskAttemptLimit' getTask pulls per requestId per
+--   'getTaskAttemptWindow'; on hitting it, pulls pause until the window expires — never a permanent
+--   stop. 10 covers ~5 min of the sync DL backstop's tightest (30s-deduped) polling.
+allowGetTaskAttempt :: (CacheFlow m r) => Text -> m Bool
+allowGetTaskAttempt requestId = do
+  let key = "verifyPull:attempts:" <> requestId
+  -- SET NX EX before INCR: the TTL is established atomically with key creation, so a crash between
+  -- the two calls can never leave a counter without expiry (= this requestId blocked forever).
+  void $ Redis.setNxExpire key getTaskAttemptWindow (0 :: Int)
+  attempts <- Redis.incr key
+  pure (attempts <= getTaskAttemptLimit)
+
+getTaskAttemptLimit :: Integer
+getTaskAttemptLimit = 10
+
+getTaskAttemptWindow :: Int
+getTaskAttemptWindow = 7200 -- 2 hours
 
 toMaybe :: [a] -> Kernel.Prelude.Maybe [a]
 toMaybe [] = Kernel.Prelude.Nothing

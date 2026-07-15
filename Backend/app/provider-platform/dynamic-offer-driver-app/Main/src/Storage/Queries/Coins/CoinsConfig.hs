@@ -63,7 +63,8 @@ updateCoinEntries UpdateReq {..} =
   updateWithKV
     [ Se.Set BeamDC.active active,
       Se.Set BeamDC.expirationAt expirationAt,
-      Se.Set BeamDC.coins coins
+      Se.Set BeamDC.coins coins,
+      Se.Set BeamDC.timeBounds timeBounds
     ]
     [Se.Is BeamDC.id $ Se.Eq $ getId entriesId]
 
@@ -117,7 +118,8 @@ updateByPrimaryKey CoinsConfig {..} =
       Se.Set BeamDC.active active,
       Se.Set BeamDC.vehicleCategory vehicleCategory,
       Se.Set BeamDC.tripCategoryType tripCategoryType,
-      Se.Set BeamDC.serviceTierType serviceTierType
+      Se.Set BeamDC.serviceTierType serviceTierType,
+      Se.Set BeamDC.timeBounds timeBounds
     ]
     [Se.Is BeamDC.id $ Se.Eq (getId id)]
 
@@ -147,7 +149,8 @@ instance FromTType' BeamDC.CoinsConfig CoinsConfig where
             active = active,
             vehicleCategory = vehicleCategory,
             tripCategoryType = tripCategoryType,
-            serviceTierType = serviceTierType
+            serviceTierType = serviceTierType,
+            timeBounds = timeBounds
           }
 
 instance ToTType' BeamDC.CoinsConfig CoinsConfig where
@@ -163,5 +166,6 @@ instance ToTType' BeamDC.CoinsConfig CoinsConfig where
         BeamDC.active = active,
         BeamDC.vehicleCategory = vehicleCategory,
         BeamDC.tripCategoryType = tripCategoryType,
-        BeamDC.serviceTierType = serviceTierType
+        BeamDC.serviceTierType = serviceTierType,
+        BeamDC.timeBounds = timeBounds
       }

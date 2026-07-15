@@ -187,3 +187,8 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN docs_verif
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN address_state text ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN address_document_type text ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN address text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN approved boolean ;

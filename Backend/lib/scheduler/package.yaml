@@ -69,6 +69,7 @@ dependencies:
   - time
   - aeson
   - euler-hs
+  - hedis
   - exceptions
   - containers
   - transformers

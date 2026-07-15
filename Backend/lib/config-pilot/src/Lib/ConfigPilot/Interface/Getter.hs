@@ -9,6 +9,7 @@ module Lib.ConfigPilot.Interface.Getter
   )
 where
 
+import Kernel.Beam.Functions (runInMasterDbAndRedis)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.InMem as IM
@@ -75,7 +76,7 @@ resolveConfigList dims logicDomain mocId fetch matchers fallback = do
   IM.withInMemCache cacheKey 3600 $
     Hedis.withRedisCache redisHashPrefix [dimensionsCacheKey dims] 1800 $ do
       logDebug $ "CP Log: [FILL] domain=" <> show logicDomain <> " dims=" <> dimensionsCacheKey dims
-      cfgs <- fetch
+      cfgs <- runInMasterDbAndRedis fetch
       let applyMatchers ms = filter (\c -> all (matchesDim dims c) ms) cfgs
       let filtered = case (applyMatchers matchers, fallback) of
             ([], Just fb) -> applyMatchers fb

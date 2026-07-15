@@ -20,6 +20,7 @@ import qualified Kernel.Utils.Common
 import qualified Lib.Types.SpecialLocation
 import qualified SharedLogic.Type
 import Tools.Beam.UtilsTH
+import qualified Tools.Maps
 
 data BookingT f = BookingT
   { area :: B.C f (Kernel.Prelude.Maybe Lib.Types.SpecialLocation.Area),
@@ -34,6 +35,7 @@ data BookingT f = BookingT
     configInExperimentVersions :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Currency),
+    customerLanguage :: B.C f (Kernel.Prelude.Maybe Tools.Maps.Language),
     disabilityTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     discountAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     displayBookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
