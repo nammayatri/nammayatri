@@ -56,6 +56,7 @@ import Kernel.Utils.Time (secondsToNominalDiffTime)
 import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
 import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.LocationUpdates.Internal as LU
 import Lib.Scheduler.Environment (JobCreator)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
@@ -79,6 +80,7 @@ import qualified "dynamic-offer-driver-app" Storage.Queries.Person as QPerson
 import qualified "dynamic-offer-driver-app" Storage.Queries.RCStatsExtra as QRCStats
 import qualified "dynamic-offer-driver-app" Storage.Queries.Ride as QRide
 import qualified "dynamic-offer-driver-app" Storage.Queries.RiderDetails as QRiderDetails
+import qualified "dynamic-offer-driver-app" Tools.ActorInfo as ActorInfo
 import qualified Tools.DynamicLogic as DL
 import "dynamic-offer-driver-app" Tools.Error
 import "dynamic-offer-driver-app" Tools.Event (BookingEventData (..), RideEventData (..))
@@ -405,7 +407,7 @@ handleReferral ::
     Esq.EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EncFlow.EncFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     CoreMetrics.CoreMetrics m,
     CHConfig.ClickhouseFlow m r,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
@@ -413,7 +415,7 @@ handleReferral ::
   ) =>
   RideEndedEvent ->
   m ()
-handleReferral ev = withRideAndBooking ev $ \ride booking -> do
+handleReferral ev = ActorInfo.withMbActorInfo ev.actorInfo . withRideAndBooking ev $ \ride booking -> do
   thresholdConfig <- fetchTransporterConfig ride
   mbRiderDetails <- join <$> QRiderDetails.findById `mapM` booking.riderId
   IH.sendReferralFCM ev.isValidRide ride booking mbRiderDetails thresholdConfig

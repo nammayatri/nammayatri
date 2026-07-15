@@ -93,3 +93,4 @@ library:
   dependencies:
     - mobility-core
     - openapi3
+    - http-api-data

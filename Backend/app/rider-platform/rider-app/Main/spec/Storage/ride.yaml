@@ -142,6 +142,10 @@ Ride:
     pickupEtaLogicVersion: Maybe Int
     commission: Maybe HighPrecMoney
     sosId: Maybe (Id Sos)
+    isTierUpgrade: Maybe Bool
+    assignedServiceTierName: Maybe Text
+    enableOtpLessRide: Maybe Bool
+    rideTags: Maybe [Text]
 
   sqlType:
     allowedEditLocationAttempts: int
@@ -173,6 +177,7 @@ Ride:
     driverNumberHash: bytea
     driverAlternateNumberHash: bytea
     tipAmount: numeric(30,2)
+    rideTags: "text[]"
 
 # FIXME separate distanceUnit/currency for each column
   beamFields:

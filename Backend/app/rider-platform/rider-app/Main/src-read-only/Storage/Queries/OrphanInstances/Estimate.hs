@@ -30,7 +30,8 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
     pure $
       Just
         Domain.Types.Estimate.Estimate
-          { backendAppVersion = backendAppVersion,
+          { area = area,
+            backendAppVersion = backendAppVersion,
             backendConfigVersion = backendConfigVersion',
             boostSearchPreSelectionServiceTierConfig = boostSearchPreSelectionServiceTierConfig,
             bppEstimateId = Kernel.Types.Id.Id bppEstimateId,
@@ -51,6 +52,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             estimatedPickupDuration = estimatedPickupDuration,
             estimatedStaticDuration = estimatedStaticDuration,
             estimatedTotalFare = Kernel.Types.Common.mkPrice currency estimatedTotalFare,
+            fareSettlementType = fareSettlementType,
             id = Kernel.Types.Id.Id id,
             insuredAmount = insuredAmount,
             isAirConditioned = isAirConditioned,
@@ -87,6 +89,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             vehicleCategory = vehicleCategory,
             vehicleIconUrl = vehicleIconUrl',
             vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
+            vehicleServiceTierLuggageCapacity = vehicleServiceTierLuggageCapacity,
             vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
             vehicleServiceTierType = vehicleVariant,
             waitingCharges = Domain.Types.Estimate.WaitingCharges $ Kernel.Types.Common.mkPriceWithDefault waitingChargePerMinAmount currency <$> waitingChargePerMin
@@ -95,7 +98,8 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
 instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
   toTType' (Domain.Types.Estimate.Estimate {..}) = do
     Beam.EstimateT
-      { Beam.backendAppVersion = backendAppVersion,
+      { Beam.area = area,
+        Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
         Beam.boostSearchPreSelectionServiceTierConfig = boostSearchPreSelectionServiceTierConfig,
         Beam.bppEstimateId = Kernel.Types.Id.getId bppEstimateId,
@@ -121,6 +125,7 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.estimatedPickupDuration = estimatedPickupDuration,
         Beam.estimatedStaticDuration = estimatedStaticDuration,
         Beam.estimatedTotalFare = (.amount) estimatedTotalFare,
+        Beam.fareSettlementType = fareSettlementType,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.insuredAmount = insuredAmount,
         Beam.isAirConditioned = isAirConditioned,
@@ -165,6 +170,7 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.vehicleCategory = vehicleCategory,
         Beam.vehicleIconUrl = Kernel.Prelude.fmap showBaseUrl vehicleIconUrl,
         Beam.vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
+        Beam.vehicleServiceTierLuggageCapacity = vehicleServiceTierLuggageCapacity,
         Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
         Beam.vehicleVariant = vehicleServiceTierType,
         Beam.waitingChargePerMin = (.waitingChargePerMin) waitingCharges <&> (.amountInt),

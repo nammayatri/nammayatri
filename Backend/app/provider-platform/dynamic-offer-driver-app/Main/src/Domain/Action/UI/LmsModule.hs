@@ -27,14 +27,16 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
 import Lib.DriverCoins.Types as DCT
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Reminder.Helper (cancelRemindersForDriverByDocumentType, recordDocumentCompletion)
-import qualified Storage.CachedQueries.CoinsConfig as CDCQ
+import qualified Storage.CachedQueries.CoinsConfig as CQCC
 import qualified Storage.CachedQueries.Lms as SCQL
 import Storage.CachedQueries.Merchant.MerchantOperatingCity as SCQMM
+import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
 import qualified Storage.Queries.Coins.CoinHistory as SQCC
 import qualified Storage.Queries.DriverModuleCompletion as SQDMC
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -42,6 +44,7 @@ import qualified Storage.Queries.LmsCertificate as SQLC
 import Storage.Queries.LmsVideoTranslation as SQLVT
 import Storage.Queries.ModuleCompletionInformation as SQMCI
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 
 -- types of coin event and its corresponding function
@@ -66,7 +69,7 @@ getLmsListAllModules (mbPersonId, _merchantId, merchantOpCityId) mbLanguage _mbL
       case question.quizCoinFunction of
         Nothing -> return 0
         Just functionName -> do
-          coinsConfig <- CDCQ.fetchConfigOnEventAndFunctionBasis DCT.LMS functionName _merchantId merchantOpCityId vehCategory Nothing DCT.DynamicOfferTrip Nothing
+          coinsConfig <- getOneConfig (CoinsConfigDimensions {merchantOptCityId = merchantOpCityId.getId, eventFunction = Just functionName, merchantId = Just _merchantId.getId, active = Just True, vehicleCategory = Just vehCategory, serviceTierType = Nothing, eventName = Just (show DCT.LMS), tripCategoryType = Just DCT.DynamicOfferTrip, configId = Nothing}) (Just (maybeToList <$> CQCC.fetchConfigOnEventAndFunctionBasis DCT.LMS functionName _merchantId merchantOpCityId vehCategory Nothing DCT.DynamicOfferTrip Nothing))
           return $ maybe 0 (\cc -> cc.coins) coinsConfig
 
     generateModuleInfo language personId eModule@LmsModule {..} = do
@@ -75,7 +78,7 @@ getLmsListAllModules (mbPersonId, _merchantId, merchantOpCityId) mbLanguage _mbL
       bonusCoins <- case bonusCoinEventFunction of
         Nothing -> pure $ Nothing
         Just functionName -> do
-          coinsConfig <- CDCQ.fetchConfigOnEventAndFunctionBasis DCT.LMSBonus functionName _merchantId merchantOpCityId vehCategory Nothing DCT.DynamicOfferTrip Nothing
+          coinsConfig <- getOneConfig (CoinsConfigDimensions {merchantOptCityId = merchantOpCityId.getId, eventFunction = Just functionName, merchantId = Just _merchantId.getId, active = Just True, vehicleCategory = Just vehCategory, serviceTierType = Nothing, eventName = Just (show DCT.LMSBonus), tripCategoryType = Just DCT.DynamicOfferTrip, configId = Nothing}) (Just (maybeToList <$> CQCC.fetchConfigOnEventAndFunctionBasis DCT.LMSBonus functionName _merchantId merchantOpCityId vehCategory Nothing DCT.DynamicOfferTrip Nothing))
           return $ maybe Nothing (\cc -> Just cc.coins) coinsConfig
 
       -- fetching total coins for quiz
@@ -224,7 +227,7 @@ getLmsListAllQuiz (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage =
           Nothing -> return Nothing
           Just functionName -> do
             let vehCategory = DTVeh.getVehicleCategoryFromVehicleVariantDefault Nothing
-            coinsConfig <- CDCQ.fetchConfigOnEventAndFunctionBasis DCT.LMS functionName _merchantId merchantOpCityId vehCategory Nothing DCT.DynamicOfferTrip Nothing
+            coinsConfig <- getOneConfig (CoinsConfigDimensions {merchantOptCityId = merchantOpCityId.getId, eventFunction = Just functionName, merchantId = Just _merchantId.getId, active = Just True, vehicleCategory = Just vehCategory, serviceTierType = Nothing, eventName = Just (show DCT.LMS), tripCategoryType = Just DCT.DynamicOfferTrip, configId = Nothing}) (Just (maybeToList <$> CQCC.fetchConfigOnEventAndFunctionBasis DCT.LMS functionName _merchantId merchantOpCityId vehCategory Nothing DCT.DynamicOfferTrip Nothing))
             return $ maybe Nothing (\cc -> Just cc.coins) coinsConfig
 
       translations <- SCQL.getAllTranslationsForQuestionId question.questionId
@@ -355,7 +358,7 @@ markVideoByStatus (mbPersonId, merchantId, merchantOpCityId) req status = do
           else when allVideosCompleted $ do SQDMC.updateEntitiesCompleted (Just now) (dmc.entitiesCompleted <> [DTDMC.VIDEO]) dmc.completionId
 
 postLmsQuestionConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id DM.Merchant, Kernel.Types.Id.Id DMOC.MerchantOperatingCity) -> API.Types.UI.LmsModule.QuestionConfirmReq -> Environment.Flow API.Types.UI.LmsModule.QuestionConfirmRes
-postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = do
+postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   personId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   driverStats <- runInReplica $ QDriverStats.findById driver.id >>= fromMaybeM DriverInfoNotFound

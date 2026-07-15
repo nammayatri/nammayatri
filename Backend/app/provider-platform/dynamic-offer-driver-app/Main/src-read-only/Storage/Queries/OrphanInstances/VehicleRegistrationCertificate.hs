@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.VehicleRegistrationCertificate where
 
+import qualified Data.Aeson
 import qualified Domain.Types.VehicleRegistrationCertificate
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -10,6 +11,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.VehicleRegistrationCertificate as Beam
 
 instance FromTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate where
@@ -23,7 +25,6 @@ instance FromTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegi
             dateOfRegistration = dateOfRegistration,
             docsVerificationStatus = docsVerificationStatus,
             documentImageId = Kernel.Types.Id.Id documentImageId,
-            enableForAirport = enableForAirport,
             failedRules = failedRules,
             fitnessExpiry = fitnessExpiry,
             fleetOwnerId = fleetOwnerId,
@@ -33,6 +34,7 @@ instance FromTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegi
             mYManufacturing = mYManufacturing,
             manufacturerModel = manufacturerModel,
             oxygen = oxygen,
+            pendingChallan = Kernel.Utils.JSON.valueToMaybe =<< pendingChallan,
             permitExpiry = permitExpiry,
             pucExpiry = pucExpiry,
             rejectReason = rejectReason,
@@ -55,6 +57,7 @@ instance FromTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegi
             vehicleVariant = vehicleVariant,
             ventilator = ventilator,
             verificationStatus = verificationStatus,
+            verified = verified,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -66,12 +69,11 @@ instance ToTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegist
     Beam.VehicleRegistrationCertificateT
       { Beam.airConditioned = airConditioned,
         Beam.approved = approved,
-        Beam.certificateNumberEncrypted = certificateNumber & unEncrypted . encrypted,
-        Beam.certificateNumberHash = certificateNumber & hash,
+        Beam.certificateNumberEncrypted = ((certificateNumber & unEncrypted . encrypted)),
+        Beam.certificateNumberHash = (certificateNumber & hash),
         Beam.dateOfRegistration = dateOfRegistration,
         Beam.docsVerificationStatus = docsVerificationStatus,
         Beam.documentImageId = Kernel.Types.Id.getId documentImageId,
-        Beam.enableForAirport = enableForAirport,
         Beam.failedRules = failedRules,
         Beam.fitnessExpiry = fitnessExpiry,
         Beam.fleetOwnerId = fleetOwnerId,
@@ -81,6 +83,7 @@ instance ToTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegist
         Beam.mYManufacturing = mYManufacturing,
         Beam.manufacturerModel = manufacturerModel,
         Beam.oxygen = oxygen,
+        Beam.pendingChallan = Data.Aeson.toJSON <$> pendingChallan,
         Beam.permitExpiry = permitExpiry,
         Beam.pucExpiry = pucExpiry,
         Beam.rejectReason = rejectReason,
@@ -103,6 +106,7 @@ instance ToTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegist
         Beam.vehicleVariant = vehicleVariant,
         Beam.ventilator = ventilator,
         Beam.verificationStatus = verificationStatus,
+        Beam.verified = verified,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,

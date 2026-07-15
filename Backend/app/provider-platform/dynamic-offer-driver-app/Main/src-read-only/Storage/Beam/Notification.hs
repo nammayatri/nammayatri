@@ -42,6 +42,6 @@ instance B.Table NotificationT where
 
 type Notification = NotificationT Identity
 
-$(enableKVPG ''NotificationT ['id] [])
+$(enableKVPGWithPartialIndex ''NotificationT ['id] [['driverFeeId], ['shortId]] [SKeyPartial [('status, "NOTIFICATION_CREATED"), ('status, "PENDING")]])
 
 $(mkTableInstances ''NotificationT "notification")

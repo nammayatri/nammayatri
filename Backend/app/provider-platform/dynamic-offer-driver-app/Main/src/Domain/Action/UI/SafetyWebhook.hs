@@ -26,12 +26,16 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (Error)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
+import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Tools.Ticket as TT
 
 type SafetyWebhookAPI =
@@ -63,13 +67,13 @@ safetyWebhookHandler ::
 safetyWebhookHandler merchantShortId mbOpCity secret val = do
   merchant <- findMerchantByShortId merchantShortId
   merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just mbOpCity)
-  transporterConfig <- SCTC.findByMerchantOpCityId merchanOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchanOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchanOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchanOperatingCityId.getId)
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchanOperatingCityId Nothing
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchanOperatingCityId Nothing))
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchanOperatingCityId.getId)
   logDebug $ "runWithServiceConfig: merchantServiceUsageConfig: " <> show merchantServiceUsageConfig
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity (DMSC.DriverBackgroundVerificationService $ (.driverBackgroundVerificationService) merchantServiceUsageConfig) merchanOperatingCityId
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.DriverBackgroundVerificationService $ (.driverBackgroundVerificationService) merchantServiceUsageConfig)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.DriverBackgroundVerificationService $ (.driverBackgroundVerificationService) merchantServiceUsageConfig) merchanOperatingCityId))
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchanOperatingCityId.getId)
   safetyWebhookAuthToken <- case merchantServiceConfig.serviceConfig of
     DMSC.DriverBackgroundVerificationServiceConfig vsc -> do

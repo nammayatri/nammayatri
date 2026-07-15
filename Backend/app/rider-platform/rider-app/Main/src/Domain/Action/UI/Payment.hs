@@ -83,6 +83,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -91,6 +92,7 @@ import qualified Lib.Payment.Domain.Types.PersonWallet as DPersonWallet
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PersonWallet as QPersonWallet
+import qualified Lib.Types.SpecialLocation as SL
 import Servant (BasicAuthData)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
@@ -99,9 +101,9 @@ import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.EDCMachineMappingExtra as QEDCMachineMapping
@@ -139,6 +141,7 @@ createOrder (personId, merchantId) rideId = do
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled totalFare.amount [] isPercentageSplitEnabled False
   staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
   nwAddress <- asks (.nwAddress)
+  udf1 <- SLUtils.getPersonUdf1 person
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = rideId.getId,
@@ -162,7 +165,8 @@ createOrder (personId, merchantId) rideId = do
             basket = Nothing,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing
+            paymentFilter = Nothing,
+            udf1 = udf1
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
@@ -182,7 +186,10 @@ createRideBookingPaymentOrder booking = do
   staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
   paymentOrderId <- generateGUID
   orderShortId <- generateShortId
-  let amount = booking.estimatedTotalFare.amount
+  let amount =
+        if booking.fareSettlementType == Just SL.CommissionOnly
+          then fromMaybe 0 booking.commission
+          else booking.estimatedTotalFare.amount
   isSplitEnabled <- Payment.getIsSplitEnabled booking.merchantId merchantOperatingCityId Nothing DOrder.RideBooking
   isPercentageSplitEnabled <- Payment.getIsPercentageSplit booking.merchantId merchantOperatingCityId Nothing DOrder.RideBooking
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled amount [] isPercentageSplitEnabled False
@@ -202,6 +209,7 @@ createRideBookingPaymentOrder booking = do
       pure $ Just mapping.terminalId
     Nothing -> pure Nothing
 
+  udf1 <- SLUtils.getPersonUdf1 person
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrderId,
@@ -225,7 +233,8 @@ createRideBookingPaymentOrder booking = do
             basket = Nothing,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing
+            paymentFilter = Nothing,
+            udf1 = udf1
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant booking.merchantId
       commonPersonId = cast @DP.Person @DPayment.Person person.id
@@ -335,7 +344,7 @@ pollPaytmEdcPaymentStatus merchantId _merchantOperatingCityId personId orderId =
                   eitherCancelResult <- withTryCatch "PaytmEDC:CancelBookingOnPollFailure" $ DCancel.cancel booking Nothing cancelReq SBCR.ByApplication
                   case eitherCancelResult of
                     Right dCancelRes -> do
-                      void $ QRideB.updateStatus booking.id SRB.CANCELLED
+                      void $ QRideB.updateStatus booking.riderId booking.id SRB.CANCELLED
                       void $ QBPL.makeAllInactiveByBookingId booking.id
                       void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes Nothing
                       logInfo $ "PaytmEDC poll: Successfully cancelled booking " <> bookingIdText <> " due to poll failures"
@@ -543,7 +552,7 @@ fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId service
     Just id -> CQPBSC.findByPlaceIdAndServiceName (Id id) (DMSC.PaymentService service)
     Nothing -> return Nothing
   merchantServiceConfig' <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, serviceName = Just (getPaymentServiceByType mbServiceType)})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, serviceName = Just (getPaymentServiceByType mbServiceType)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchant.id merchantOperatingCity.id (getPaymentServiceByType mbServiceType)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCity.id.getId "Payment" (show service))
   (,merchantOperatingCity) <$> case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig'.serviceConfig of
     Just (DMSC.PaymentServiceConfig vsc) -> pure vsc
@@ -875,6 +884,7 @@ postWalletRecharge (personId, merchantId) req = do
                       }
                 }
           }
+  udf1 <- SLUtils.getPersonUdf1 person
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrderId,
@@ -898,7 +908,8 @@ postWalletRecharge (personId, merchantId) req = do
             basket = Nothing,
             paymentRules = Just paymentRules,
             autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing
+            paymentFilter = Nothing,
+            udf1 = udf1
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId

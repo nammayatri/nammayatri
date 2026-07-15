@@ -113,6 +113,7 @@ module SharedLogic.Finance.Wallet
     walletReferenceVATCash,
     walletReferenceD2DReferral,
     walletReferenceAirportCashRecharge,
+    walletReferenceAirportCashWithdrawal,
     walletReferenceAirportEntryFeeGST,
     walletReferenceAirportEntryFee,
     walletReferenceVATInput,
@@ -127,6 +128,9 @@ module SharedLogic.Finance.Wallet
     walletTransferFromMerchantRefs,
     computeTdsRateReason,
     computeEffectiveTdsRate,
+    applyThresholdBenefit,
+    selectTds,
+    panAadhaarLinkTdsEnabled,
     estimateWalletDeductions,
     formatStripeAddress,
   )
@@ -150,6 +154,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -249,6 +254,10 @@ walletReferenceD2DReferral = "D2DReferral"
 -- | Reference type for airport booth cash recharge (idempotent by referenceId; booth operator took amount)
 walletReferenceAirportCashRecharge :: Text
 walletReferenceAirportCashRecharge = "AirportCashRecharge"
+
+-- | Reference type for airport booth cash withdrawal/reversal (debit; idempotent by referenceId)
+walletReferenceAirportCashWithdrawal :: Text
+walletReferenceAirportCashWithdrawal = "AirportCashWithdrawal"
 
 -- | Reference type for airport entry fee GST ledger entry at EndRide (third party GST)
 walletReferenceAirportEntryFeeGST :: Text
@@ -429,7 +438,7 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig i
         mbMerchantOpCity <&> \city ->
           show city.city <> ", " <> show city.state <> ", " <> show city.country
   -- Resolve supplier info (fleet owner or driver) and detect LDC custom rate
-  let configDefaultTdsRate = transporterConfig.taxConfig.defaultTdsRate
+  let configDefaultTdsRate = (.rate) <$> transporterConfig.taxConfig.defaultTdsRate
   (sName, sGSTIN, sVatNumber, sAddress, sId, hasCustomRate) <- case ride.fleetOwnerId of
     Just fleetOwnerId -> do
       mbFleetInfo <- QFOI.findByPrimaryKey (cast fleetOwnerId)
@@ -569,7 +578,7 @@ financeCtxFromRide booking ride mbPanCard isOnline = do
 -- Wallet entry delta (for topup/payout)
 
 createWalletEntryDelta ::
-  (BeamFlow m r) =>
+  (BeamFlow m r, Lib.Finance.HasActorInfo m r) =>
   CounterpartyType ->
   Text -> -- Owner ID
   HighPrecMoney -> -- Delta (positive credit, negative debit)
@@ -707,39 +716,77 @@ getPayoutEligibilityData accountId cutoff now = do
 -- | Mark a list of wallet ledger entries as paid out.
 --   Called by the payout webhook handler after successful disbursement.
 settleWalletEntries ::
-  (BeamFlow m r) =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   [Id LedgerEntry] -> -- entry IDs to settle
   Text -> -- PayoutRequest ID
   m ()
 settleWalletEntries entryIds payoutRequestId =
   markEntriesAsPaidOut entryIds payoutRequestId
 
--- | Resolve the effective TDS rate for a driver/fleet owner.
---   If PAN is invalid/missing → invalidPanTdsRate.
---   If PAN is valid → custom rate (from driverInfo/fleetOwnerInfo) or config default.
+-- | True when the merchant has enabled PAN-Aadhaar-link based TDS (the cohort
+-- model). Keyed off the cohort config being present (individualNotLinked).
+panAadhaarLinkTdsEnabled :: DTC.TaxConfig -> Bool
+panAadhaarLinkTdsEnabled taxConfig = isJust taxConfig.individualNotLinked
+
+selectTds ::
+  Maybe DPanCard.DriverPanCard ->
+  DTC.TaxConfig ->
+  Maybe DTC.TdsConfig
+selectTds mbPanCard taxConfig
+  | not (panAadhaarLinkTdsEnabled taxConfig) = Nothing
+  | otherwise =
+    let hasValidPan = maybe False (\pan -> pan.verificationStatus == Documents.VALID) mbPanCard
+        isBusiness = (mbPanCard >>= (.docType)) == Just DPanCard.BUSINESS
+        isPanLinkedToAadhaar =
+          maybe False (\pan -> pan.panAadhaarLinkage == Just DPanCard.PAN_AADHAAR_LINKED) mbPanCard
+     in if not hasValidPan
+          then Just taxConfig.invalidPanTdsRate
+          else
+            if isBusiness
+              then taxConfig.businessTds
+              else
+                if isPanLinkedToAadhaar
+                  then taxConfig.individualLinked
+                  else taxConfig.individualNotLinked
+
 computeEffectiveTdsRate ::
   Maybe DPanCard.DriverPanCard -> -- PAN card info
-  Maybe Double -> -- custom TDS rate (driverInfo.tdsRate or fleetOwnerInfo.tdsRate)
-  Maybe Double -> -- config defaultTdsRate
-  Double -> -- invalidPanTdsRate
+  Maybe Double -> -- materialized TDS rate from driverInfo.tdsRate / fleetOwnerInfo.tdsRate
+  DTC.TaxConfig -> -- merchant tax config
   Maybe Double -- effective rate
-computeEffectiveTdsRate mbPanCard mbCustomRate configDefaultTdsRate invalidPanTdsRate_ =
-  let hasValidPan = maybe False (\pan -> pan.verificationStatus == Documents.VALID) mbPanCard
-      panType = mbPanCard >>= (.docType)
-      panTypeEligible = case panType of
-        Just DPanCard.BUSINESS -> True
-        _ -> True
-      isPanValid = hasValidPan && panTypeEligible
-   in if isPanValid
-        then case mbCustomRate of
-          Just _ -> mbCustomRate
-          Nothing -> configDefaultTdsRate
-        else Just invalidPanTdsRate_
+computeEffectiveTdsRate mbPanCard mbCustomRate taxConfig =
+  case selectTds mbPanCard taxConfig of
+    -- PAN-Aadhaar-link TDS: prefer the materialized rate, fall back to the
+    -- cohort-selected rate.
+    Just tds -> Just (fromMaybe tds.rate mbCustomRate)
+    Nothing -> legacyTdsRate
+  where
+    hasValidPan = maybe False (\pan -> pan.verificationStatus == Documents.VALID) mbPanCard
+    -- Legacy TDS (merchant hasn't enabled PAN-Aadhaar-link TDS): valid PAN →
+    -- defaultTdsRate.rate (or custom override); invalid PAN → invalidPanTdsRate.rate.
+    legacyTdsRate =
+      if hasValidPan
+        then mbCustomRate <|> ((.rate) <$> taxConfig.defaultTdsRate)
+        else Just taxConfig.invalidPanTdsRate.rate
 
--- | Estimate wallet deductions (TDS only) for a given baseFare.
---   GST (govtCharges) comes from fareParams at ride end, not recalculated here.
---   At allocation time, rideFare = searchTry.baseFare (already excludes GST).
---   tdsRate is a fractional Double (e.g. 0.01 for 1%).
+applyThresholdBenefit ::
+  DTC.TaxConfig ->
+  Maybe HighPrecMoney ->
+  Maybe DPanCard.DriverPanCard ->
+  HighPrecMoney ->
+  HighPrecMoney ->
+  HighPrecMoney
+applyThresholdBenefit taxConfig mbCumulative mbPanCard currentBase rawAmount =
+  case (selectTds mbPanCard taxConfig, mbCumulative) of
+    (Nothing, _) -> rawAmount
+    (_, Nothing) -> rawAmount
+    (Just tds, Just cumulative) -> case tds.thresholdAmount of
+      Nothing -> rawAmount
+      Just thresh ->
+        if cumulative + currentBase <= thresh
+          then 0
+          else rawAmount
+
 estimateWalletDeductions ::
   Maybe Double -> -- effective TDS rate
   HighPrecMoney -> -- baseFare (rideFare at allocation time, which is already baseFare)

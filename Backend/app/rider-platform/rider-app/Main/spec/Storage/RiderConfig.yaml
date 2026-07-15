@@ -7,6 +7,7 @@ imports:
   KaptureConfig: IssueManagement.Common
   ExotelMapping: Domain.Types.Extra.RiderConfig
   VehicleServiceTierOrderConfig: Domain.Types.Extra.RiderConfig
+  SpecialLocationTierOrderConfig: Domain.Types.Extra.RiderConfig
   SyncSearchDispatchConfig: Domain.Types.Extra.RiderConfig
   Value: Data.Aeson
   NominalDiffTime: Kernel.Prelude
@@ -207,6 +208,7 @@ RiderConfig:
     ticketingPermissionConfig: Maybe Value
     userServiceTierOrderConfig: "[VehicleServiceTierOrderConfig]"
     defaultServiceTierOrderConfig: "[ServiceTierType]"
+    specialLocationTierOrderConfig: "Maybe [SpecialLocationTierOrderConfig]"
     boostSearchPreSelectionServiceTierConfig: "[VehicleServiceTierOrderConfig]"
     noOfRideRequestsConfig: Int
     busTrackingConfig: "Maybe BusTrackingConfig"
@@ -233,15 +235,18 @@ RiderConfig:
     trackVehicleKeyExpiry: Maybe Int
     distanceToNearestStopThreshold: Maybe Int
     validateSetOnboardingVehicleRequest: Maybe Bool
+    nonAllowedOverrideFleetNoServiceTiers: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
     domainPublicTransportDataVersion: Maybe Int
     updateTicketValidityInSecondsPostSetOnboarding: Maybe Seconds
     enableRideEndOffers: Bool
     enableRideHailingOffers: Bool
+    enableRewardsManagement: Bool
     metricsBlacklistPatterns: "Maybe [Text]"
     dashboardMediaFileUrlPattern : Maybe Text
     maxNearbyBuses: Maybe Int
     nearbyBusSearchRadius: Maybe Double
     enableOnlinePaymentRide: Maybe Bool
+    enableEditLocationWithoutRide: Maybe Bool
     nearbyBusMaxTimeThreshold: Maybe Int
     specialVehicleNotificationConfigs: "Maybe [SpecialVehicleNotificationConfig]"
     offerListCacheVersion: Maybe Text
@@ -297,12 +302,14 @@ RiderConfig:
     fareCacheInterCitySearchLocations : Maybe Value
     userServiceTierOrderConfig: Maybe Value
     defaultServiceTierOrderConfig: Maybe [ServiceTierType]
+    specialLocationTierOrderConfig: Maybe Value
     boostSearchPreSelectionServiceTierConfig: Maybe Value
     noOfRideRequestsConfig: Maybe Int
     busTrackingConfig: Maybe Value
     busTierSortingConfig: Maybe Value
     specialVehicleNotificationConfigs: Maybe Value
     serviceTierRelationshipCfg: Maybe Value
+    nonAllowedOverrideFleetNoServiceTiers: Maybe Value
     pickupInstructionsThreshold: Maybe Int
     pickupInstructionsProximityMeters: Maybe Int
     initiateFirstMultimodalJourney: Maybe Bool
@@ -315,13 +322,13 @@ RiderConfig:
     sourceOfServiceTier: Maybe ServiceTierSource
     enableRideEndOffers: Maybe Bool
     enableRideHailingOffers: Maybe Bool
+    enableRewardsManagement: Maybe Bool
     kafkaTopicName: Maybe Text
     staticCustomerIdThresholdDay: Maybe Day
     duesExcludedPaymentPurposes: "Maybe [Text]"
     externalSOSConfig: Maybe Value
     invoiceConfig: Maybe Value
     syncSearchDispatchConfig: Maybe Value
-
   constraints:
     merchantOperatingCityId: PrimaryKey
     frfsMetricsApiKey: "!SecondaryKey"
@@ -365,9 +372,11 @@ RiderConfig:
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Kernel.Utils.JSON.valueToMaybe|E
     userServiceTierOrderConfig: fromMaybe [] (userServiceTierOrderConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
     defaultServiceTierOrderConfig: fromMaybe Domain.Types.ServiceTierType.allServiceTiersTypes defaultServiceTierOrderConfig|E
+    specialLocationTierOrderConfig: specialLocationTierOrderConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     boostSearchPreSelectionServiceTierConfig: fromMaybe [] (boostSearchPreSelectionServiceTierConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
     busTierSortingConfig: (busTierSortingConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
     serviceTierRelationshipCfg: (serviceTierRelationshipCfg >>= Kernel.Utils.JSON.valueToMaybe)|E
+    nonAllowedOverrideFleetNoServiceTiers: (nonAllowedOverrideFleetNoServiceTiers >>= Kernel.Utils.JSON.valueToMaybe)|E
     noOfRideRequestsConfig: fromMaybe 5 noOfRideRequestsConfig|E
     busTrackingConfig: busTrackingConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     specialVehicleNotificationConfigs: (specialVehicleNotificationConfigs >>= Kernel.Utils.JSON.valueToMaybe)|E
@@ -383,6 +392,7 @@ RiderConfig:
     sourceOfServiceTier: fromMaybe (Domain.Types.RiderConfig.NANDI) sourceOfServiceTier|E
     enableRideEndOffers: fromMaybe False enableRideEndOffers|E
     enableRideHailingOffers: fromMaybe False enableRideHailingOffers|E
+    enableRewardsManagement: fromMaybe False enableRewardsManagement|E
     kafkaTopicName: fromMaybe "gps-data" kafkaTopicName|E
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
     externalSOSConfig: externalSOSConfig >>= Kernel.Utils.JSON.valueToMaybe|E
@@ -424,9 +434,11 @@ RiderConfig:
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Just . Data.Aeson.toJSON|E
     userServiceTierOrderConfig: (Just . Data.Aeson.toJSON)|I
     defaultServiceTierOrderConfig: Just defaultServiceTierOrderConfig|E
+    specialLocationTierOrderConfig: (specialLocationTierOrderConfig >>= Just . Data.Aeson.toJSON)|E
     boostSearchPreSelectionServiceTierConfig: (Just . Data.Aeson.toJSON)|I
     busTierSortingConfig: (busTierSortingConfig >>= Just . Data.Aeson.toJSON)|E
     serviceTierRelationshipCfg: (serviceTierRelationshipCfg >>= Just . Data.Aeson.toJSON)|E
+    nonAllowedOverrideFleetNoServiceTiers: (nonAllowedOverrideFleetNoServiceTiers >>= Just . Data.Aeson.toJSON)|E
     noOfRideRequestsConfig: Just noOfRideRequestsConfig|E
     busTrackingConfig: busTrackingConfig >>= Just . Data.Aeson.toJSON|E
     specialVehicleNotificationConfigs: (specialVehicleNotificationConfigs >>= Just . Data.Aeson.toJSON)|E
@@ -442,6 +454,7 @@ RiderConfig:
     sourceOfServiceTier: Just sourceOfServiceTier|E
     enableRideEndOffers: Just enableRideEndOffers|E
     enableRideHailingOffers: Just enableRideHailingOffers|E
+    enableRewardsManagement: Just enableRewardsManagement|E
     kafkaTopicName: Just kafkaTopicName|E
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
     externalSOSConfig: (externalSOSConfig >>= Just . Data.Aeson.toJSON)|E
@@ -497,6 +510,7 @@ RiderConfig:
     distanceToNearestStopThreshold: "200"
     validateSetOnboardingVehicleRequest: "false"
     enableOnlinePaymentRide: "false"
+    enableEditLocationWithoutRide: "true"
     kafkaTopicName: "'gps-data'"
   queries:
     findByMerchantOperatingCityId:
@@ -538,6 +552,7 @@ RiderConfig:
     fareCacheInterCitySearchLocations : "json"
     userServiceTierOrderConfig : "json"
     defaultServiceTierOrderConfig: text []
+    specialLocationTierOrderConfig: "json"
     boostSearchPreSelectionServiceTierConfig: "json"
     blockedUntilInMins: int
     ticketingPermissionConfig: "json"
@@ -545,6 +560,7 @@ RiderConfig:
     busTierSortingConfig: "json"
     specialVehicleNotificationConfigs: "json"
     serviceTierRelationshipCfg: "json"
+    nonAllowedOverrideFleetNoServiceTiers: "json"
     metricsBlacklistPatterns: text []
     ptCircuitBreakerConfig: "json"
     staticCustomerIdThresholdDay: date
@@ -552,6 +568,13 @@ RiderConfig:
     externalSOSConfig: "json"
     invoiceConfig: "json"
     syncSearchDispatchConfig: "jsonb"
+
+  configPilot:
+    configType: RiderConfig
+    fetchQuery: findByMerchantOperatingCityId
+    returnType: Maybe
+    configDomain: RIDER_CONFIG
+    queryModule: Storage.CachedQueries.Merchant.RiderConfig
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE

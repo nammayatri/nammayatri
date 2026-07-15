@@ -36,7 +36,6 @@ import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Driver)
-import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Plan as DPlan
 import Domain.Types.RiderDetails
 import qualified Domain.Types.SearchRequest as DSR
@@ -56,6 +55,7 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.DriverCoins.Types as DCT
 import Lib.Scheduler.Environment
 import Lib.Yudhishthira.Types
@@ -74,10 +74,11 @@ import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
-import qualified Storage.Queries.Coins.CoinsConfig as CoinsConfig (fetchCoinConfigByFunctionAndMerchant)
+import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Coins.CoinsConfig as SQCC
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import Storage.Queries.RiderDriverCorrelation
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
@@ -148,20 +149,13 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
         coinConfigs <- forM serviceTiers $ \stt -> do
           let vehicleCategory = BecknUtils.castVehicleCategoryToDomain $ BecknUtils.mapServiceTierToCategory stt
           maybeCoinsConfig <-
-            CoinsConfig.fetchCoinConfigByFunctionAndMerchant
-              DCT.GoldTierRideCompleted
-              searchReq.providerId
-              searchReq.merchantOperatingCityId
-              (Just vehicleCategory)
-              (Just stt)
+            getOneConfig (CoinsConfigDimensions {merchantOptCityId = searchReq.merchantOperatingCityId.getId, eventFunction = Just DCT.GoldTierRideCompleted, merchantId = Just searchReq.providerId.getId, active = Just True, vehicleCategory = Just vehicleCategory, serviceTierType = Just stt, eventName = Nothing, tripCategoryType = Nothing, configId = Nothing}) (Just (maybeToList <$> SQCC.fetchCoinConfigByFunctionAndMerchant DCT.GoldTierRideCompleted searchReq.providerId searchReq.merchantOperatingCityId (Just vehicleCategory) (Just stt)))
           return (stt, maybeCoinsConfig >>= (\config -> Just config.coins))
         return $ M.fromList coinConfigs
       else return M.empty
 
-  transporterConfig <- SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
-  fleetAssocs <- QFDA.findAllByDriverIds (cast . (.driverPoolResult.driverId) <$> driverPool)
-  let fleetOwnerByDriverId = HashMap.fromList $ map (\a -> (a.driverId, Id a.fleetOwnerId)) fleetAssocs
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache fleetOwnerByDriverId) driverPool
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   -- Handle queue skip for timed-out special zone drivers before marking them inactive.
   -- Forked because it's independent of the search-batch flow — failures must not
@@ -172,9 +166,10 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       let timedOutQueueDrivers = filter (\srfd -> isNothing srfd.response && srfd.pickupZone) activeSRFDs
       forM_ timedOutQueueDrivers $ \srfd ->
         SpecialZoneDriverDemand.handleQueueSkipIfApplicable searchReq.pickupZoneGateId (show searchTry.vehicleServiceTier) srfd.driverId searchReq.providerId (searchTry.id.getId <> ":" <> srfd.driverId.getId)
-  whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
+  whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId Nothing searchTry.id.getId -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
 
+  isValueAddNP <- CQVAN.isValueAddNP searchReq.bapId
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
     let needTranslation = language `elem` transporterConfig.languagesToBeTranslated
@@ -182,7 +177,6 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
           if needTranslation
             then fromMaybe searchReq $ M.lookup language languageDictionary
             else searchReq
-    isValueAddNP <- CQVAN.isValueAddNP searchReq.bapId
     let useSilentFCMForForwardBatch = transporterConfig.useSilentFCMForForwardBatch
     tripQuoteDetail <- HashMap.lookup dPoolRes.driverPoolResult.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dPoolRes.driverPoolResult.serviceTier)
     let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) tripQuoteDetail.conditionalCharges
@@ -284,10 +278,9 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       DTR.TransporterConfig ->
       Maybe (Id RiderDetails) ->
       M.Map DVST.ServiceTierType (Maybe Int) ->
-      HashMap.HashMap (Id DPerson.Person) (Id DPerson.Person) ->
       SDP.DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId coinConfigCache fleetOwnerByDriverId dpwRes = do
+    buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId coinConfigCache dpwRes = do
       let currency = searchTry.currency
       guid <- generateGUID
       now <- getCurrentTime
@@ -327,7 +320,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
                 merchantOperatingCityId = searchReq.merchantOperatingCityId,
                 searchRequestValidTill = if dpwRes.pickupZone then addUTCTime (fromIntegral dpwRes.keepHiddenForSeconds) defaultValidTill else defaultValidTill,
                 driverId = cast dpRes.driverId,
-                fleetOwnerId = HashMap.lookup (cast dpRes.driverId) fleetOwnerByDriverId,
+                fleetOwnerId = Id <$> dpRes.fleetOwnerId,
                 vehicleNumber = dpRes.vehicleNumber,
                 vehicleVariant = dpRes.variant,
                 vehicleServiceTier = tripQuoteDetail.vehicleServiceTier,
@@ -459,7 +452,7 @@ addLanguageToDictionary ::
   m LanguageDictionary
 addLanguageToDictionary searchReq dict dPoolRes = do
   let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
-  transporterConfig <- SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
   if language `elem` transporterConfig.languagesToBeTranslated
     then
       if isJust $ M.lookup language dict

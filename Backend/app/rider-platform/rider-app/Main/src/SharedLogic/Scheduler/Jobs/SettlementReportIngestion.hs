@@ -33,6 +33,8 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Settlement.Ingestion (ingestPaymentSettlementReport)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
@@ -40,8 +42,8 @@ import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getOneConfig)
 
 -- | Lock TTL reduced from 3600s to 600s (10 minutes) to avoid long lock holds
 lockTTLSeconds :: Int
@@ -65,7 +67,8 @@ runSettlementReportIngestionJob ::
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasField "blackListedJobs" r [Text],
     JobCreatorEnv r,
-    HasSchemaName SchedulerJobT
+    HasSchemaName SchedulerJobT,
+    Finance.HasActorInfo m r
   ) =>
   Job 'SettlementReportIngestion ->
   m ExecutionResult
@@ -98,7 +101,7 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
                   else Nothing
           serviceResult <-
             try @_ @SomeException $
-              ingestPaymentSettlementReport settlementSvcCfg mbJuspayCfgForService merchantId.getId merchantOperatingCityId.getId
+              ingestPaymentSettlementReport settlementSvcCfg mbJuspayCfgForService merchantId.getId merchantOperatingCityId.getId (\_ -> pure (Nothing, Nothing, Nothing))
           case serviceResult of
             Left err -> do
               logError $ "Settlement ingestion for " <> show settlementSvcCfg.settlementService <> " threw exception: " <> show err
@@ -143,6 +146,7 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
                   serviceName = Just (DMSC.SettlementService service)
                 }
             )
+            Nothing
         pure $ case mbConfig of
           Just cfg -> case cfg.serviceConfig of
             DMSC.SettlementServiceConfig settlementCfg -> Just settlementCfg
@@ -165,6 +169,7 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
                 serviceName = Just svcName
               }
           )
+          (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService mId mOpCityId svcName))
       case mbCfg >>= extractPaymentServiceConfig . (.serviceConfig) of
         Just (Payment.JuspayConfig juspayCfg) ->
           pure . Just $

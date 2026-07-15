@@ -17,6 +17,9 @@ imports:
   EntityName: Lib.Payment.Domain.Types.Common
   Integer: Kernel.Prelude
   Version: Kernel.Types.Version
+  CloudType: Kernel.Types.Version
+  showBaseUrl: Kernel.Prelude
+  parseBaseUrl: Kernel.Prelude
   AadhaarVerificationService: Kernel.External.AadhaarVerification.Types
   CallService: Kernel.External.Call
   MapsService: Kernel.External.Maps.Types
@@ -43,6 +46,7 @@ imports:
   Hours: Kernel.Types.Common
   ExotelMapping: Domain.Types.Extra.TransporterConfig
   KnowledgeCenterSopTypesConfig: Domain.Types.Extra.TransporterConfig
+  TdsConfig: Domain.Types.Extra.TransporterConfig
   Expand: Kernel.External.Payout.Interface.Types
   TripCategory: Domain.Types.Trip
   IssueBreachConfig: SharedLogic.BehaviourManagement.IssueBreach
@@ -53,7 +57,9 @@ imports:
   Role: Domain.Types.Person
   Base64: Kernel.Types.Base64
   Map: Data.Map.Strict
+  ChallanSearchService: Kernel.External.ChallanSearch.Types
   OnboardingAs: Domain.Types.DriverInformation
+  MapProvider: Domain.Types.DriverInformation
 
 Merchant:
   derives: Generic,Show,'UsageSafety
@@ -108,6 +114,8 @@ Merchant:
     signingPrivateKey: Maybe Base64
     signatureExpiry: Int
     cipherText: Maybe Base64
+    cloudType: Maybe CloudType
+    cloudBaseUrl: Maybe BaseUrl
   sqlType:
     destinationRestriction: text[]
     originRestriction: text[]
@@ -155,6 +163,8 @@ Merchant:
     registryUrl: Text
     gatewayAndRegistryPriorityList: Maybe [GatewayAndRegistryService]
     mediaFileDocumentLinkExpires: Maybe Seconds
+    cloudType: Maybe Text
+    cloudBaseUrl: Maybe Text
 
   constraints:
     subscriberId: SecondaryKey
@@ -166,6 +176,8 @@ Merchant:
     destinationRestriction: Kernel.Types.Geofencing.destination|I
     gatewayAndRegistryPriorityList: Kernel.Prelude.Just|I
     mediaFileDocumentLinkExpires: Kernel.Prelude.Just|I
+    cloudType: (Kernel.Prelude.fmap Kernel.Prelude.show)|I
+    cloudBaseUrl: (Kernel.Prelude.fmap showBaseUrl)|I
 
   fromTType:
     geofencingConfig: Kernel.Types.Geofencing.GeofencingConfig originRestriction
@@ -174,6 +186,8 @@ Merchant:
     gatewayAndRegistryPriorityList: fromMaybe [Domain.Types.ONDC, Domain.Types.NY]
       gatewayAndRegistryPriorityList|E
     mediaFileDocumentLinkExpires: Kernel.Prelude.fromMaybe 3600|I
+    cloudType: (Kernel.Prelude.>>= (Kernel.Prelude.readMaybe . Data.Text.unpack))|I
+    cloudBaseUrl: (Kernel.Prelude.pure . (Kernel.Prelude.>>= parseBaseUrl))|MI
 
   queries:
     findById:
@@ -198,12 +212,15 @@ MerchantMessage:
   types:
     MessageKey:
       enum: SEND_OTP,WELCOME_TO_PLATFORM,ALTERNATE_NUMBER_OTP,ONBOARD_SUPPORT_SMS_TEMPLATE,END_RIDE_MESSAGE,ONBOARDING_YATRI_MESSAGE,BOOKING_MESSAGE,CASH_COLLECTED_MESSAGE,SEND_PAYMENT_LINK,WHATSAPP_CLEAR_DUES_CALL_MISSED_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,WHATSAPP_SETUP_AUTOPAY_MESSAGE,WHATSAPP_SWITCH_PLAN_MESSAGE,WHATSAPP_HOW_IT_WORKS_MESSAGE,SMS_CLEAR_DUES_CALL_MISSED_MESSAGE,SMS_CLEAR_DUES_MESSAGE,SMS_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,SMS_SETUP_AUTOPAY_MESSAGE,SMS_SWITCH_PLAN_MESSAGE,SMS_HOW_IT_WORKS_MESSAGE,WHATSAPP_SETUP_MANDATE_MESSAGE,WHATSAPP_VEHICLE_UNLINKED_MESSAGE,WHATSAPP_VEHICLE_LINKED_MESSAGE,YATRI_RENTAL_PAUSE,YATRI_RENTAL_RESUME,WHATSAPP_SEND_MANUAL_PAYMENT_LINK,SMS_TO_GO_ONLINE_IN_SCHEDULED_RIDE,FLEET_JOINING_MESSAGE,FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE,WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK,WHATSAPP_MANUAL_PAYMENT_LINK,FLEET_CONSENT_DEEPLINK_MESSAGE,SEND_FARE_RECEIPT_MESSAGE,WAIVE_OFF_ENABLED_FOR_SUBSCRIPTION,OPERATOR_CONSENT_DEEPLINK_MESSAGE,OPERATOR_JOINING_MESSAGE,OPERATOR_JOIN_AND_DOWNLOAD_APP_MESSAGE,FLEET_LINK_SUCCESS_MESSAGE,FLEET_UNLINK_SUCCESS_MESSAGE,DOCUMENT_INVALID,DRIVER_PAYOUT,SEND_SOS_ALERT,POST_RIDE_SOS,DOCUMENT_EXPIRY_REMINDER_SMS,VEHICLE_INSPECTION_SMS,DRIVER_INSPECTION_SMS,TRAINING_VIDEO_SMS,FLEET_COMMUNICATION_SMS,FLEET_COMMUNICATION_WHATSAPP,SEND_TOTP
+      derive: "Bounded, Enum"
 
     MediaChannel:
       enum: SMS,WHATSAPP,OVERLAY,ALERT
+      derive: "Bounded, Enum"
 
     MessageDomain:
       enum: FLEET,RIDE_HAILING,GENERAL
+      derive: "Bounded, Enum"
 
   fields:
     merchantId: Id Merchant
@@ -271,9 +288,23 @@ MerchantMessage:
       kvFunction: findOneWithKV
       where:
         and: [ merchantOperatingCityId, domain, channel ]
+    deleteByMerchantOpCityIdAndMessageKeyVehicleCategory:
+      kvFunction: deleteWithKV
+      where:
+        and: [ merchantOperatingCityId, messageKey, vehicleCategory]
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
+
+  configPilot:
+    configType: MerchantMessage
+    fetchQuery: findAllByMerchantOpCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: List
+    queryModule: Storage.CachedQueries.Merchant.MerchantMessage
+    filterDimensions:
+      - messageKey
+      - vehicleCategory
 
 LlmPrompt:
   derives: Generic,Show,'UsageSafety
@@ -526,6 +557,18 @@ Overlay:
       where:
         and: [ merchantOperatingCityId, overlayKey, language, udf1, vehicleCategory ]
 
+  configPilot:
+    configType: Overlay
+    fetchQuery: findAllByMerchantOpCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: List
+    queryModule: Storage.CachedQueries.Merchant.Overlay
+    filterDimensions:
+      - overlayKey
+      - language
+      - udf1
+      - vehicleCategory
+
 # LeaderBoardConfigs:
 #   derives: "Generic,ToJSON,FromJSON,ToSchema"
 #   types:
@@ -594,6 +637,7 @@ MerchantServiceUsageConfig:
     driverBackgroundVerificationService: DriverBackgroundVerificationService
     aadhaarVerificationService: AadhaarVerificationService
     faceVerificationService: VerificationService
+    faceMatchService: VerificationService
     panVerificationService: Maybe VerificationService
     gstVerificationService: Maybe VerificationService
     dashboardPanVerificationService: Maybe VerificationService
@@ -617,24 +661,28 @@ MerchantServiceUsageConfig:
     sdkVerificationService: VerificationService
     llmChatCompletion: LLMChatCompletionService
     totoVerificationPriorityList: "Maybe [VerificationService]"
+    challanProvidersPriorityList: "Maybe [ChallanSearchService]"
 
   beamType:
     llmChatCompletion: Maybe LLMChatCompletionService
     categoryBasedVerificationPriorityList: Maybe Value
     createPayoutOrder: Maybe PayoutService
     payoutOrderStatus: Maybe PayoutService
+    faceMatchService: Maybe VerificationService
 
   fromTType:
     llmChatCompletion: Kernel.Prelude.fromMaybe ChatCompletion.Types.AzureOpenAI|I
     categoryBasedVerificationPriorityList: Kernel.Utils.JSON.valueToMaybe =<< categoryBasedVerificationPriorityList|E
     createPayoutOrder: fromMaybe (Kernel.External.Payout.Types.Juspay)|I
     payoutOrderStatus: fromMaybe (Kernel.External.Payout.Types.Juspay)|I
+    faceMatchService: Kernel.Prelude.fromMaybe Kernel.External.Verification.Types.Idfy|I
 
   toTType:
     llmChatCompletion: Kernel.Prelude.Just|I
     categoryBasedVerificationPriorityList: Data.Aeson.toJSON <$> categoryBasedVerificationPriorityList|E
     createPayoutOrder: Kernel.Prelude.Just|I
     payoutOrderStatus: Kernel.Prelude.Just|I
+    faceMatchService: Kernel.Prelude.Just|I
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -664,6 +712,7 @@ MerchantServiceUsageConfig:
     getDistancesForScheduledRides: text
     aadhaarVerificationService: character varying(30)
     faceVerificationService: character varying(30)
+    faceMatchService: character varying(30)
     panVerificationService: character varying(30)
     gstVerificationService: character varying(30)
     dashboardPanVerificationService: character varying(30)
@@ -680,6 +729,7 @@ MerchantServiceUsageConfig:
     backgroundVerification: text
     llmChatCompletion: character varying(30)
     totoVerificationPriorityList: "text[]"
+    challanProvidersPriorityList: "text[]"
   default:
     getPickupRoutes: "'Google'"
     getTripRoutes: "'Google'"
@@ -961,9 +1011,12 @@ TransporterConfig:
       subscriptionGst: GstBreakup
       airportEntryFeeGst: Maybe GstBreakup
       securityDepositGst: Maybe GstBreakup
-      defaultTdsRate: Maybe Double
-      subscriptionTdsRate: Maybe Double
-      invalidPanTdsRate: Double
+      defaultTdsRate: Maybe TdsConfig
+      subscriptionTdsRate: Maybe TdsConfig
+      invalidPanTdsRate: TdsConfig
+      individualLinked: Maybe TdsConfig
+      individualNotLinked: Maybe TdsConfig
+      businessTds: Maybe TdsConfig
       serviceVatPercentage: Maybe Double
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     CommissionAggregationFrequency:
@@ -1002,11 +1055,16 @@ TransporterConfig:
       derive': Generic, Show, ToJSON, FromJSON, ToSchema, Eq
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff",
-      "automatic_r_c_activation_cut_off")]
+      "automatic_r_c_activation_cut_off"), ("individualPANCheck",
+      "individual_pan_check")]
     - Custom Domain.Types.UtilsTH.mkCacParseInstance
   fields:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    authPhoneNumberCountThreshold1: Maybe Int
+    authPhoneNumberCountWindow1: Maybe SlidingWindowOptions
+    authPhoneNumberCountThreshold2: Maybe Int
+    authPhoneNumberCountWindow2: Maybe SlidingWindowOptions
     pickupLocThreshold: Meters
     dropLocThreshold: Meters
     editLocTimeThreshold: Seconds
@@ -1022,6 +1080,7 @@ TransporterConfig:
     qarCalRadiusInKm: Maybe Double
     isDynamicPricingQARCalEnabled: Maybe Bool
     recomputeCongestionChargeOnEndRide: Maybe Bool
+    enableMobilityBilling: Maybe Bool
     minRidesToUnlist: Maybe Int
     mediaFileUrlPattern: Text
     mediaFileSizeUpperLimit: Int
@@ -1078,6 +1137,7 @@ TransporterConfig:
     canDowngradeToSedan: Bool
     canDowngradeToHatchback: Bool
     canDowngradeToTaxi: Bool
+    enableTierUpgradeFeature: Maybe Bool
     canSuvDowngradeToTaxi: Bool
     canSuvDowngradeToHatchback: Bool
     canSwitchToRental: Bool
@@ -1203,6 +1263,8 @@ TransporterConfig:
     requiresDriverOnboardingInspection: Maybe Bool
     separateDriverVehicleEnablement: Maybe Bool
     dontAutoEnableDriver: Maybe Bool
+    enableBotFlow: Maybe Bool # Just True ⇒ statusHandler computes verified (isMandatory docs) + enabled (isMandatoryForEnabling docs AND BOT-set approved). NULL ⇒ legacy flow.
+    enablePullPendingDocVerification: Maybe Bool # Just True ⇒ status renders re-pull stuck doc verifications via getTask (SyncVerificationStatus). NULL ⇒ off.
     reminderSystemEnabled: Maybe Bool
     allowedReferralEntities: "[Role]"
     enableOverchargingBlocker: Bool
@@ -1236,6 +1298,7 @@ TransporterConfig:
     allowDuplicateAadhaar: Maybe Bool
     allowDuplicateUdyam: Maybe Bool
     allowPanAadhaarLinkage: Maybe Bool
+    individualPANCheck: Maybe Bool
     cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
     distanceWeightage: Maybe Int
     driverCallingOption: "Maybe CallingOption"
@@ -1290,11 +1353,17 @@ TransporterConfig:
     allowAadhaarReupload: Maybe Bool
     allowDlReupload: Maybe Bool
     allowGstReupload: Maybe Bool
+    isGstPanLinkCheckRequired: Maybe Bool
     invoiceConfig: Maybe InvoiceConfig
     enableManualDocumentStatusCheck: Maybe Bool
+    enableDocumentMetadata: Maybe Bool # When True, document metadata (DL number, Aadhaar number, PAN, address proof details) is computed and returned in status responses.
+    enableCourtRecordCheck: Maybe Bool # Gates the Idfy Court Record Check (CRC) on driver-inspection approval. Enabled per-merchant (e.g. MSIL).
     sendMembershipIdInProfile: Maybe Bool
     stclConfig: Maybe StclConfig # STCL membership tunables. Any field left as Nothing falls back to defaults in Domain.Action.UI.StclMembership.
     useCategoryBasedVerificationPriorityList: Maybe Bool
+    supportedMapProviders: "Maybe [MapProvider]" # Merchant-level allowlist constraining driver-selectable map providers; Nothing = allow all.
+    blockDriverOwnRCForFleetDrivers: Maybe Bool # When True, fleet-linked drivers cannot onboard/activate their own (non-fleet) RC
+    overrideOperatorDriverJoiningWithDeepLink: Maybe Bool
 
   beamType:
     currency: Maybe Currency
@@ -1588,6 +1657,8 @@ TransporterConfig:
 
   sqlType:
     exotelAppIdMapping: json
+    authPhoneNumberCountWindow1: json
+    authPhoneNumberCountWindow2: json
     pickupLocThreshold: bigint
     dropLocThreshold: bigint
     rideTimeEstimatedThreshold: bigint
@@ -1839,6 +1910,7 @@ TransporterConfig:
     allowAadhaarReupload: "false"
     allowDlReupload: "false"
     allowGstReupload: "false"
+    isGstPanLinkCheckRequired: "false"
     useCategoryBasedVerificationPriorityList: "true"
   excludedDefaultQueries:
     - findByPrimaryKey
@@ -1897,11 +1969,18 @@ TransporterConfig:
     - EXTRA_QUERY_FILE
     - EXTRA_DOMAIN_TYPE_FILE
 
+  configPilot:
+    configType: TransporterConfig
+    fetchQuery: getTransporterConfigFromDB
+    returnType: Maybe
+    queryModule: Storage.CachedQueries.Merchant.TransporterConfig
+
 MerchantServiceConfig:
   derives: Generic,Show,'UsageSafety
   fields:
     merchantId: Id Merchant
     serviceConfig: Domain.Types.Extra.MerchantServiceConfig.ServiceConfigD s
+    runInCloud: Maybe CloudType
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     updatedAt: UTCTime
     createdAt: UTCTime
@@ -1909,6 +1988,8 @@ MerchantServiceConfig:
     serviceConfig:
       serviceName: Domain.Types.MerchantServiceConfig.ServiceName
       configJSON: Value
+  beamType:
+    runInCloud: Maybe Text
   constraints:
     merchantId: PrimaryKey
     serviceName: PrimaryKey
@@ -1924,9 +2005,11 @@ MerchantServiceConfig:
   toTType:
     serviceName: getServiceName
     configJSON: getConfigJSON
+    runInCloud: (Kernel.Prelude.fmap Kernel.Prelude.show)|I
   fromTType:
     serviceConfig: Storage.Queries.Transformers.MerchantServiceConfig.mkServiceConfig
       configJSON serviceName|EM
+    runInCloud: (Kernel.Prelude.>>= (Kernel.Prelude.readMaybe . Data.Text.unpack))|I
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
     - EXTRA_QUERY_FILE
@@ -1995,6 +2078,16 @@ MerchantPushNotification:
       where:
         and: [ merchantOperatingCityId, key, tripCategory ]
 
+  configPilot:
+    configType: MerchantPushNotification
+    fetchQuery: findAllByMerchantOpCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: List
+    queryModule: Storage.CachedQueries.Merchant.MerchantPushNotification
+    filterDimensions:
+      - key
+      - tripCategory
+
 RideRelatedNotificationConfig:
   tableName: ride_related_notification_config
   derives: "Generic,Show,ToJSON,FromJSON,Eq"
@@ -2034,6 +2127,15 @@ RideRelatedNotificationConfig:
       kvFunction: findAllWithKV
       where:
         and: [ merchantOperatingCityId, timeDiffEvent ]
+
+  configPilot:
+    configType: RideRelatedNotificationConfig
+    fetchQuery: findAllByMerchantOperatingCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: List
+    queryModule: Storage.CachedQueries.RideRelatedNotificationConfig
+    filterDimensions:
+      - timeDiffEvent
 
 PayoutConfig:
   tableName: payout_config
@@ -2110,6 +2212,16 @@ PayoutConfig:
   extraOperations:
     - EXTRA_QUERY_FILE
 
+  configPilot:
+    configType: PayoutConfig
+    fetchQuery: findAllByMerchantOpCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: List
+    queryModule: Storage.CachedQueries.Merchant.PayoutConfig
+    filterDimensions:
+      - vehicleCategory
+      - isPayoutEnabled
+
 ScheduledPayoutConfig:
   tableName: scheduled_payout_config
   derives: "Generic,Show,ToJSON,FromJSON,Eq"
@@ -2158,3 +2270,10 @@ ScheduledPayoutConfig:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
       where: merchantOperatingCityId
+
+  configPilot:
+    configType: ScheduledPayoutConfig
+    fetchQuery: findAllByMerchantOpCityId
+    returnType: List
+    queryModule: Storage.Queries.ScheduledPayoutConfig
+    filterDimensions: [isEnabled, payoutCategory]

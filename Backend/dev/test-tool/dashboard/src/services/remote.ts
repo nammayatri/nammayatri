@@ -87,3 +87,27 @@ export const remoteSyncCaddyPort = (t: RemoteTarget): Promise<RegistryResponse> 
 
 export const remoteCabalClean = (t: RemoteTarget): Promise<RemoteSessionResponse> =>
   json('/api/remote/cabal-clean', t);
+
+export interface MachineInfo {
+  name: string;
+  role: 'base' | 'worker';
+  localIp: string;
+  awsIp: string;
+  bestIp: string;
+  user: string;
+  type?: string;
+  resources: { cpu?: string; ram?: string; storage?: string };
+}
+
+export interface MachinesResponse {
+  machines: MachineInfo[];
+  myIps: string[];
+  error?: string;
+}
+
+export const fetchMachines = (): Promise<MachinesResponse> =>
+  fetch(`${LOCAL_API_BASE}/api/remote/machines`).then(r => r.json());
+
+export const setupSsh = (host: string, user: string, port?: number): Promise<{
+  status?: string; message?: string; publicKey?: string; error?: string;
+}> => json('/api/remote/setup-ssh', { host, user, port: port || 22 });

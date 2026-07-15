@@ -14,20 +14,22 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as SCT
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
 import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperatorAssociation
+import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
 import Tools.Error
 import qualified Tools.Notifications as TN
-import Utils.Common.Cac.KeyNameConstants
 
 postOperatorConsent ::
   ( ( Maybe (Id Person),
@@ -43,9 +45,11 @@ postOperatorConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   let mbOnboardingVehicleCategory = driverOperatorAssociation.onboardingVehicleCategory
   operator <- QPerson.findById (Id driverOperatorAssociation.operatorId) >>= fromMaybeM (OperatorNotFound driverOperatorAssociation.operatorId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
 
   SA.endDriverAssociationsIfAllowed merchant merchantOperatingCityId transporterConfig driver
+  when (merchant.overwriteAssociation == Just True) $
+    QRCAssociation.endAllRCAssociationsForDriver driverId
 
   DOR.makeDriverReferredByOperator merchantOperatingCityId driverId operator.id
 

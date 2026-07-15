@@ -22,9 +22,14 @@ import Kernel.Prelude ()
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant.Client.Core ()
+import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.DriverIdentityInfo as QDII
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.IffcoTokioInsurance as QIffco
@@ -52,14 +57,14 @@ triggerIffcoTokioInsurance ::
   Id DMOC.MerchantOperatingCity ->
   m ()
 triggerIffcoTokioInsurance driverId merchantId merchantOpCityId = do
-  msc <- CQMSC.findByServiceAndCity (ExtraMSC.InsuranceDeclarationService ExtraMSC.IffcoTokio) merchantOpCityId
+  msc <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (ExtraMSC.InsuranceDeclarationService ExtraMSC.IffcoTokio)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (ExtraMSC.InsuranceDeclarationService ExtraMSC.IffcoTokio) merchantOpCityId))
   let mbIffcoExtCfg = case msc of
         Just x -> case x.serviceConfig of
           ExtraMSC.InsuranceDeclarationServiceConfig cfg -> Just cfg
           _ -> Nothing
         Nothing -> Nothing
   whenJust mbIffcoExtCfg $ \iffcoExtCfg -> do
-    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
     now <- getCurrentTime
     let todayLocal = utctDay localTime
@@ -76,8 +81,10 @@ triggerIffcoTokioInsurance driverId merchantId merchantOpCityId = do
     unless alreadyInsured $ do
       person <- QPerson.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
       driverInfo <- QDI.findByPrimaryKey (cast driverId) >>= fromMaybeM DriverInfoNotFound
-      let nomineeName = driverInfo.nomineeName
-          nomineeRelationship = driverInfo.nomineeRelationship
+      mbIdentity <- QDII.findByDriverId (cast driverId)
+      let identityInfo = DIInfo.getIdentityInfo mbIdentity driverInfo
+          nomineeName = identityInfo.nomineeName
+          nomineeRelationship = identityInfo.nomineeRelationship
       if isNothing nomineeName || isNothing nomineeRelationship
         then logInfo $ "IffcoTokio: skipping insurance for driver=" <> driverId.getId <> " nomineeName or nomineeRelationship is missing"
         else do

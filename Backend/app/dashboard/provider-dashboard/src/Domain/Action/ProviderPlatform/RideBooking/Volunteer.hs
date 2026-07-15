@@ -29,4 +29,4 @@ postVolunteerAssignStartOtpRide merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $
-    API.Client.ProviderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.volunteerDSL.postVolunteerAssignStartOtpRide) req
+    API.Client.ProviderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.volunteerDSL.postVolunteerAssignStartOtpRide) (Just apiTokenInfo.personId.getId) req

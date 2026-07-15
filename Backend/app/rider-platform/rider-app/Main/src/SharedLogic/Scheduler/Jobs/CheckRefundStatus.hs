@@ -31,6 +31,8 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -44,8 +46,8 @@ import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.JobScheduler
 import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.SchedulerJob ()
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
@@ -55,7 +57,7 @@ import qualified UrlShortner.Common as UrlShortner
 checkRefundStatusJob ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EncFlow m r,
     SchedulerFlow r,
     EsqDBReplicaFlow m r,
@@ -82,7 +84,7 @@ checkRefundStatusJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   paymentOrder <- QPaymentOrder.findByShortId refundEntry.orderId >>= fromMaybeM (InvalidRequest $ "payment order not found for refund: " <> show refundEntry.id.getId)
   person <- QP.findById (cast paymentOrder.personId) >>= fromMaybeM (PersonNotFound paymentOrder.personId.getId)
   retryStatus <- processRefundStatus refundEntry person paymentOrder
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   when retryStatus $ do
     let maxRetries = riderConfig.refundStatusUpdateRetries
     if currentRetries >= maxRetries
@@ -103,7 +105,7 @@ processRefundStatus ::
   forall m r c.
   ( CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EncFlow m r,
     SchedulerFlow r,
     EsqDBReplicaFlow m r,

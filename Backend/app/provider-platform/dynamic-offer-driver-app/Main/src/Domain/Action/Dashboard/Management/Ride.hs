@@ -42,6 +42,7 @@ import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.Prelude
@@ -56,7 +57,9 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.CallStatusExtra as QCallStatus
 import qualified Storage.Queries.DriverFee as QDriverFee
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 
 getRideList ::
@@ -103,12 +106,12 @@ getRideAgentList ::
   Flow Common.RideListRes
 getRideAgentList = DRide.getRideAgentList
 
-postRideEndMultiple :: ShortId DM.Merchant -> Context.City -> Common.MultipleRideEndReq -> Flow Common.MultipleRideEndResp
-postRideEndMultiple merchantShortId opCity req = do
+postRideEndMultiple :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Common.MultipleRideEndReq -> Flow Common.MultipleRideEndResp
+postRideEndMultiple merchantShortId opCity mbRequestorId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) $ do
   runRequestValidation Common.validateMultipleRideEndReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  shandle <- EHandler.buildEndRideHandle merchant.id merchantOpCityId Nothing
+  shandle <- EHandler.buildEndRideHandle merchant.id merchantOpCityId Nothing True
   logTagInfo "dashboard -> multipleRideEnd : " $ show (req.rides <&> (.rideId))
   respItems <- forM req.rides $ \reqItem -> do
     info <- handle Common.listItemErrHandler $ do
@@ -123,8 +126,8 @@ postRideEndMultiple merchantShortId opCity req = do
     pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
   pure $ Common.MultipleRideSyncResp {list = respItems}
 
-postRideCancelMultiple :: ShortId DM.Merchant -> Context.City -> Common.MultipleRideCancelReq -> Flow Common.MultipleRideCancelResp
-postRideCancelMultiple merchantShortId opCity req = do
+postRideCancelMultiple :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Common.MultipleRideCancelReq -> Flow Common.MultipleRideCancelResp
+postRideCancelMultiple merchantShortId opCity mbRequestorId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) $ do
   runRequestValidation Common.validateMultipleRideCancelReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -138,7 +141,7 @@ postRideCancelMultiple merchantShortId opCity req = do
                 additionalInfo = reqItem.additionalInfo,
                 doCancellationRateBasedBlocking = Nothing
               }
-      Success <- CHandler.dashboardCancelRideHandler CHandler.cancelRideHandle merchant.id merchantOpCityId rideId dashboardReq
+      Success <- CHandler.dashboardCancelRideHandler CHandler.cancelRideHandle merchant.id merchantOpCityId rideId dashboardReq True
       pure Common.SuccessItem
     pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
   pure $ Common.MultipleRideSyncResp {list = respItems}
@@ -186,7 +189,7 @@ getRideCallCount _merchantShortId _opCity rideId = do
 
 postRideWaiverRideCancellationPenalty :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Common.WaiverRideCancellationPenaltyReq -> Flow APISuccess
 postRideWaiverRideCancellationPenalty _merchantShortId _opCity rideId req = do
-  ride <- QRide.findById (cast @Common.Ride @DRide.Ride rideId) >>= fromMaybeM (InvalidRequest $ "Ride does not exist: " <> rideId.getId)
+  ride <- QRideLite.findByIdLite (cast @Common.Ride @DRide.Ride rideId) >>= fromMaybeM (InvalidRequest $ "Ride does not exist: " <> rideId.getId)
   when (ride.status /= DRide.CANCELLED) $ throwError (InvalidRequest "Ride is not cancelled")
   case (ride.driverCancellationPenaltyFeeId, ride.driverCancellationPenaltyAmount) of
     (Just driverCancellationPenaltyFeeId, Just driverCancellationPenaltyAmount) -> do

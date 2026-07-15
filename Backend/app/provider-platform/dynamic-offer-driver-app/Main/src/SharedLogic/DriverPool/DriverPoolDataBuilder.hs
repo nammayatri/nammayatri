@@ -6,7 +6,6 @@ where
 
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
-import qualified Domain.Types.Extra.Plan as DExtraPlan
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Person as Person
 import Kernel.Prelude
@@ -18,8 +17,6 @@ import SharedLogic.DriverPool.DriverPoolData
 import qualified SharedLogic.DriverPool.DriverPoolMigrations as Migrations
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.DriverPlan as QDP
-import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QV
@@ -27,6 +24,10 @@ import qualified Storage.Queries.Vehicle as QV
 -- | Get pool data for drivers, lazily building from DB for any missing keys.
 -- This handles cold start: first call after deploy fetches from DB and caches.
 -- Subsequent calls hit Redis directly.
+-- Writes are routed to the correct cloud based on each driver's cloudType.
+-- The two Bool flags gate the corresponding DB fetches inside the cold-start
+-- builder: bankAccounts is only consumed when the merchant has online payment
+-- enabled, fleet associations are only consumed when prepaid wallet flow is on.
 getOrBuildDriverPoolDataBatch ::
   ( BeamFlow m r,
     MonadFlow m,
@@ -34,9 +35,12 @@ getOrBuildDriverPoolDataBatch ::
     CacheFlow m r,
     Redis.HedisLTSFlowEnv r
   ) =>
+  Bool ->
+  Bool ->
   [Id Driver] ->
   m [DriverPoolData]
-getOrBuildDriverPoolDataBatch driverIds = do
+getOrBuildDriverPoolDataBatch onlinePayment isPrepaidEnabled driverIds = do
+  deploymentCloudType <- asks (.cloudType)
   found <- getDriverPoolDataBatch driverIds
   let foundIds = map (.driverId) found
       missing = filter (`notElem` foundIds) driverIds
@@ -46,34 +50,36 @@ getOrBuildDriverPoolDataBatch driverIds = do
       toPersist = [e | (e, changed) <- migratedFound, changed]
   unless (null toPersist) $ do
     logInfo $ "DriverPoolData migrations: backfilled " <> show (length toPersist) <> " entries"
-    mapM_ setDriverPoolData toPersist
-    -- Clean up secondary cloud keys after writing migrated entries to primary,
-    -- so the driver doesn't end up with keys in both clouds.
-    let keysToDelete = map (driverPoolDataKey . (.driverId)) toPersist
-    Redis.withSecondaryLTSRedis $ Redis.delStandalone keysToDelete
+    mapM_ (setDriverPoolDataByCloud deploymentCloudType) toPersist
 
   builtFromDB <-
     if null missing
       then pure []
       else do
         logInfo $ "DriverPoolData cold start: building from DB for " <> show (length missing) <> " drivers"
-        b <- buildDriverPoolDataFromDB missing
-        mapM_ setDriverPoolData b
+        b <- buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled missing
+        mapM_ (setDriverPoolDataByCloud deploymentCloudType) b
         pure b
   pure $ migratedEntries <> builtFromDB
 
 -- | Build DriverPoolData from DB tables for drivers that don't have a Redis key yet.
--- Fetches from: driver_information, vehicle, person, driver_bank_account,
--- driver_stats, driver_plan (safety plus), fleet_driver_association.
+-- Always fetches: driver_information, vehicle, person.
+-- Conditionally fetches:
+--   - driver_bank_account when @onlinePayment@ is true (its fields are only read
+--     downstream inside the online-payment branch of GetNearestDrivers).
+--   - fleet_driver_association when @isPrepaidEnabled@ is true (fleetOwnerId is
+--     only consumed by the prepaid wallet filter). The fleet-account lookup that
+--     redirects bankAccount to the fleet owner only fires when both flags are on.
 buildDriverPoolDataFromDB ::
   (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Bool ->
+  Bool ->
   [Id Driver] ->
   m [DriverPoolData]
-buildDriverPoolDataFromDB driverIds = do
+buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
   let personIds = map cast driverIds :: [Id Person.Person]
       driverIdTexts = map (.getId) driverIds
 
-  -- Batch fetch all required tables
   driverInfos <- QDI.findAllByDriverIds driverIdTexts
   let diMap = HashMap.fromList $ map (\di -> (di.driverId, di)) driverInfos
 
@@ -83,31 +89,29 @@ buildDriverPoolDataFromDB driverIds = do
   persons <- QP.getDriversByIdIn personIds
   let pMap = HashMap.fromList $ map (\p -> (cast p.id, p)) persons
 
-  driverStats <- QDS.findAllByDriverIds persons
-  let dsMap = HashMap.fromList $ map (\ds -> (ds.driverId, ds)) driverStats
-
-  fleetAssocs <- QFDA.findAllByDriverIds personIds
+  fleetAssocs <-
+    if isPrepaidEnabled || onlinePayment
+      then QFDA.findAllByDriverIds personIds
+      else pure []
   let faMap = HashMap.fromList $ map (\fa -> (cast fa.driverId, fa)) fleetAssocs
       fleetOwnerPersonIds = DL.nub $ map (\fa -> Id @Person.Person fa.fleetOwnerId) fleetAssocs
 
-  bankAccounts <- QDBA.getDriverBankAccounts (DL.nub (personIds <> fleetOwnerPersonIds))
+  bankAccounts <-
+    if onlinePayment
+      then QDBA.getDriverBankAccounts (DL.nub (personIds <> fleetOwnerPersonIds))
+      else pure []
   let baMap = HashMap.fromList $ map (\ba -> (ba.driverId, ba)) bankAccounts
 
-  safetyPlusPlans <- mapM (\did -> (did,) <$> QDP.findByDriverIdWithServiceName (cast did) (DExtraPlan.DASHCAM_RENTAL DExtraPlan.CAUTIO)) driverIds
-  let spMap = HashMap.fromList safetyPlusPlans
-
-  pure $ mapMaybe (buildOne diMap vMap pMap dsMap baMap faMap spMap) driverIds
+  pure $ mapMaybe (buildOne diMap vMap pMap baMap faMap) driverIds
   where
-    buildOne diMap vMap pMap dsMap baMap faMap spMap did = do
+    buildOne diMap vMap pMap baMap faMap did = do
       di <- HashMap.lookup did diMap
       v <- HashMap.lookup did vMap
       p <- HashMap.lookup did pMap
-      let ds = HashMap.lookup did dsMap
       let fa = HashMap.lookup did faMap
       let effectiveBa = case fa of
             Just assoc -> HashMap.lookup (Id @Person.Person assoc.fleetOwnerId) baMap
             Nothing -> HashMap.lookup (cast did :: Id Person.Person) baMap
-      let sp = join $ HashMap.lookup did spMap
       Just
         DriverPoolData
           { driverId = did,
@@ -120,7 +124,7 @@ buildDriverPoolDataFromDB driverIds = do
             latestScheduledPickup = di.latestScheduledPickup,
             deviceToken = p.deviceToken,
             goHomeStatus = Nothing, -- populated by CachedQueries at runtime
-            totalRides = maybe 0 (.totalRides) ds,
+            totalRides = Just 0, -- make nothing after first iteration
             variant = v.variant,
             selectedServiceTiers = v.selectedServiceTiers,
             enabled = di.enabled,
@@ -129,6 +133,7 @@ buildDriverPoolDataFromDB driverIds = do
             canSwitchToRental = di.canSwitchToRental,
             canSwitchToInterCity = di.canSwitchToInterCity,
             canSwitchToIntraCity = di.canSwitchToIntraCity,
+            enableForAirport = Just di.enableForAirport,
             forwardBatchingEnabled = di.forwardBatchingEnabled,
             isSpecialLocWarrior = di.isSpecialLocWarrior,
             tollRouteBlockedTill = di.tollRouteBlockedTill,
@@ -150,7 +155,7 @@ buildDriverPoolDataFromDB driverIds = do
             clientConfigVersion = p.clientConfigVersion,
             vehicleTags = v.vehicleTags,
             mYManufacturing = v.mYManufacturing,
-            safetyPlusEnabled = maybe False (.enableServiceUsageCharge) sp,
+            safetyPlusEnabled = Just False,
             fleetOwnerId = (.fleetOwnerId) <$> fa,
             driverTripEndLocation = di.driverTripEndLocation,
             hasRideStarted = di.hasRideStarted,
@@ -159,5 +164,6 @@ buildDriverPoolDataFromDB driverIds = do
             luggageCapacity = v.luggageCapacity,
             vehicleRating = v.vehicleRating,
             registrationNo = v.registrationNo,
+            cloudType = p.cloudType,
             schemaVersion = Just Migrations.currentSchemaVersion
           }

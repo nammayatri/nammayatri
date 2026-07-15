@@ -174,3 +174,39 @@ INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_acc
 
 -- {"api":"PostDriverAirportPreference","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_bpp_dashboard"}
 INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) VALUES ( atlas_bpp_dashboard.uuid_generate_v4(), '37947162-3b5d-4ed6-bcac-08841be1534d', 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_AIRPORT_PREFERENCE' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetDriverSearchRequestStats","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) VALUES ( atlas_bpp_dashboard.uuid_generate_v4(), '37947162-3b5d-4ed6-bcac-08841be1534d', 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_SEARCH_REQUEST_STATS' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetDriverIdentityInfo","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) VALUES ( atlas_bpp_dashboard.uuid_generate_v4(), '37947162-3b5d-4ed6-bcac-08841be1534d', 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_IDENTITY_INFO' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostDriverIdentityInfoUpdate","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) VALUES ( atlas_bpp_dashboard.uuid_generate_v4(), '37947162-3b5d-4ed6-bcac-08841be1534d', 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_IDENTITY_INFO_UPDATE' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostDriverOperatorChange","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) VALUES ( atlas_bpp_dashboard.uuid_generate_v4(), '37947162-3b5d-4ed6-bcac-08841be1534d', 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_OPERATOR_CHANGE' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostDriverFleetOperatorChange","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) VALUES ( atlas_bpp_dashboard.uuid_generate_v4(), '37947162-3b5d-4ed6-bcac-08841be1534d', 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_FLEET_OPERATOR_CHANGE' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostDriverFleetOperatorCreate","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) VALUES ( atlas_bpp_dashboard.uuid_generate_v4(), '37947162-3b5d-4ed6-bcac-08841be1534d', 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_FLEET_OPERATOR_CREATE' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostDriverAssociationChange","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) VALUES ( atlas_bpp_dashboard.uuid_generate_v4(), '37947162-3b5d-4ed6-bcac-08841be1534d', 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_ASSOCIATION_CHANGE' ) ON CONFLICT DO NOTHING;

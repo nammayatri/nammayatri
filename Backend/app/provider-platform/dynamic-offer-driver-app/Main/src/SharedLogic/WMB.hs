@@ -40,11 +40,13 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import qualified Kernel.Utils.CalculateDistance as KU
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Route as QR
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
@@ -527,7 +529,7 @@ linkFleetBadge driverId _ _ fleetOwnerId badge badgeType = do
     buildBadgeAssociation fleetBadgeId now =
       FleetBadgeAssociation
         { associatedOn = Just now,
-          associatedTill = convertTextToUTC (Just "2099-12-12"),
+          associatedTill = defaultAssociationEnd,
           badgeId = badge.id,
           badgeType = badgeType,
           createdAt = now,
@@ -557,7 +559,7 @@ linkVehicleToDriver driverId merchantId merchantOperatingCityId _ _ vehicleNumbe
               }
       void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) False rcStatusReq
     createRCAssociation = do
-      transporterConfig <- SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
       createDriverRCAssociationIfPossible transporterConfig driverId vehicleRC
 
 -- forceCancelAllActiveTripTransaction vehicleDriverId = do

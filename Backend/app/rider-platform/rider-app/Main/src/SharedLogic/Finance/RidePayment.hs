@@ -105,6 +105,7 @@ module SharedLogic.Finance.RidePayment
     upsertCoreRidePaymentLedger,
     UpsertCoreLedgerResult (..),
     settleRidePaymentLedger,
+    createSettledCashbackPayoutLeg,
     getWalletAccountByOwner,
     getWalletBalanceByOwner,
     getPayoutEligibilityData,
@@ -148,6 +149,7 @@ import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (MonadFlow, getCurrentTime, logDebug, logError, logInfo, throwError)
 import Lib.Finance
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Invoice.Service as FInvoiceService
@@ -288,7 +290,7 @@ applyBookingProviderFieldsToCtx booking ctx =
 --   Expense(BUYER) → Asset(BUYER) since they represent real BAP cost, not pass-through.
 --   Returns entry IDs for later settlement + invoice ID.
 createRidePaymentLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   HighPrecMoney -> -- rideFare (base, without tax)
   HighPrecMoney -> -- gstAmount (GST/VAT on ride fare)
@@ -299,7 +301,7 @@ createRidePaymentLedger ::
   HighPrecMoney -> -- cashbackPayoutAmount (amount to pay back to rider, 0 for DISCOUNT)
   HighPrecMoney -> -- rideVatAbsorbedOnDiscount (platform-absorbed VAT on the discount portion)
   m (Either FinanceError RidePaymentLedgerResult)
-createRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platformFee offerDiscountAmount cashbackPayoutAmount _rideVatAbsorbedOnDiscount = do
+createRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platformFee offerDiscountAmount cashbackPayoutAmount rideVatAbsorbedOnDiscount = do
   result <- runFinance ctx $ do
     let (riderSrc, riderDst) =
           if ctx.isOnline
@@ -328,6 +330,7 @@ createRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platformFe
         platformFee
         offerDiscountAmount
         cashbackPayoutAmount
+        rideVatAbsorbedOnDiscount
   case result of
     Left err -> do
       logError $ "Failed to create ride payment ledger: " <> show err
@@ -349,18 +352,6 @@ mkDeductionLineItem :: Text -> LineItemDescription -> HighPrecMoney -> Bool -> M
 mkDeductionLineItem desc descType amt isExt
   | amt > 0 = Just InvoiceLineItem {description = desc, descriptionType = Just descType, quantity = 1, unitPrice = - amt, lineTotal = - amt, isExternalCharge = isExt, groupId = Nothing, itemType = Just Adjustment}
   | otherwise = Nothing
-
--- | Ride-fare invoice line. Discount, when present, is captured in the
---   'RideFarePostDiscount' description so the renderer shows the post-discount
---   fare with a human-readable discount summary (no separate deduction line).
-mkRideFareLineItem :: HighPrecMoney -> Currency -> HighPrecMoney -> Maybe InvoiceLineItem
-mkRideFareLineItem amt currency discountAmount
-  | amt <= 0 = Nothing
-  | discountAmount > 0 =
-    let desc = "Ride Fare Post Discount (" <> show currency <> " " <> show discountAmount <> ")"
-        descType = RideFarePostDiscount currency discountAmount
-     in Just InvoiceLineItem {description = desc, descriptionType = Just descType, quantity = 1, unitPrice = amt, lineTotal = amt, isExternalCharge = False, groupId = Just "g-ride", itemType = Just Fare}
-  | otherwise = Just InvoiceLineItem {description = "Ride Fare", descriptionType = Just RideFare, quantity = 1, unitPrice = amt, lineTotal = amt, isExternalCharge = False, groupId = Just "g-ride", itemType = Just Fare}
 
 -- ---------------------------------------------------------------------------
 -- 1a. Upsert core ride payment ledger on amount change
@@ -390,7 +381,7 @@ data UpsertCoreLedgerResult = UpsertCoreLedgerResult
 --       'voidRidePaymentLedger') and recreate at the new amounts.
 --     * Prior core entries but totals match → no-op.
 upsertCoreRidePaymentLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   HighPrecMoney -> -- rideFare (without GST, post-discount)
   HighPrecMoney -> -- gstAmount  (post-discount)
@@ -493,14 +484,14 @@ upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platfo
 --   create PENDING entries as usual, then immediately settle them so the
 --   ledger ends in the captured state with no outstanding rider obligation.
 createFullyDiscountedRidePaymentLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
-  HighPrecMoney -> -- rideFare (original, before discount)
-  HighPrecMoney -> -- gstAmount
+  HighPrecMoney -> -- rideFare (post-discount, from the ledger info — 0 for the fully-discounted portion)
+  HighPrecMoney -> -- gstAmount (post-discount)
   HighPrecMoney -> -- tollFare
   HighPrecMoney -> -- tollVatAmount
   HighPrecMoney -> -- platformFee
-  HighPrecMoney -> -- offerDiscountAmount (should equal rideFare + gstAmount + platformFee)
+  HighPrecMoney -> -- offerDiscountAmount (the full clamped gross discount)
   HighPrecMoney -> -- rideVatAbsorbedOnDiscount (platform-absorbed VAT on the discount portion)
   m (Either FinanceError RidePaymentLedgerResult)
 createFullyDiscountedRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platformFee offerDiscountAmount rideVatAbsorbedOnDiscount = do
@@ -559,7 +550,7 @@ riderObligationRefTypes =
 --   'createRidePaymentLedger' and voided together with the ledger entries
 --   in 'voidRidePaymentLedger'.
 settleRidePaymentLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   [Id LE.LedgerEntry] -> -- entry IDs from createRidePaymentLedger
   Text -> -- settlement reason
@@ -590,6 +581,29 @@ settleRidePaymentLedger ctx entryIds settledReason = do
       logError $ "Failed to post settlement capture legs: " <> show err
       pure $ Left err
     Right _ -> pure $ Right ()
+
+-- | Post and settle ONLY the cashback-payout accrual leg
+--   (BuyerExpense → OwnerLiability, ref 'ridePaymentRefCashbackPayout'),
+--   leaving it in the same SETTLED / settlementStatus=NULL state that ride
+--   completion produces. This is the state the ExecuteCashRideCashbackPayout
+--   job looks for (settled + unsettled-settlementStatus). Used by the
+--   dashboard payout-offer sync to backfill the cashback entry so the payout
+--   job has something to drain. No-op when the amount is non-positive.
+createSettledCashbackPayoutLeg ::
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
+  FinanceCtx ->
+  HighPrecMoney ->
+  m ()
+createSettledCashbackPayoutLeg ctx cashbackPayoutAmount =
+  when (cashbackPayoutAmount > 0) $ do
+    result <- runFinance ctx $ void $ transferPending BuyerExpense OwnerLiability cashbackPayoutAmount ridePaymentRefCashbackPayout
+    case result of
+      Left err -> logError $ "Failed to create cashback payout ledger leg for " <> ctx.referenceId <> ": " <> show err
+      Right (_, entryIds) -> do
+        settleResult <- settleRidePaymentLedger ctx entryIds settledReasonRidePayment
+        case settleResult of
+          Right () -> logInfo $ "Settled cashback payout ledger leg for ride: " <> ctx.referenceId
+          Left err -> logError $ "Cashback payout ledger leg settle failed for " <> ctx.referenceId <> ": " <> show err
 
 -- ---------------------------------------------------------------------------
 -- Wallet account / payout-eligibility helpers
@@ -657,7 +671,7 @@ getPayoutEligibilityData counterparty personId = do
 --   lock TTL). Idempotent — entries already PROCESSING/PAID_OUT are
 --   left alone.
 reserveCashbackEntriesForPayout ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   [Id LE.LedgerEntry] ->
   Maybe Text -> -- optional PayoutRequest id (settlementId)
   m ()
@@ -673,7 +687,7 @@ reserveCashbackEntriesForPayout entryIds mbSettlementId = do
 --   PayoutFailed) or the webhook reports a terminal failure.
 --   Only flips PROCESSING entries — PAID_OUT entries are untouched.
 releaseCashbackEntriesReservation ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   [Id LE.LedgerEntry] ->
   m ()
 releaseCashbackEntriesReservation entryIds = do
@@ -691,7 +705,7 @@ releaseCashbackEntriesReservation entryIds = do
 --   Idempotent: if all supplied entries are already PAID_OUT we no-op
 --   (and skip creating a duplicate drain transfer).
 markCashbackEntriesAsPaidOut ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   [Id LE.LedgerEntry] -> -- original cashback entry IDs (from PayoutRequest.ledgerEntryIds)
   HighPrecMoney -> -- payout amount (drives the OwnerLiability → BuyerExternal drain)
@@ -736,33 +750,41 @@ buildRidePaymentInvoiceConfig ::
   HighPrecMoney -> -- tollFare
   HighPrecMoney -> -- tollVatAmount
   HighPrecMoney -> -- platformFee
-  HighPrecMoney -> -- offerDiscountAmount (for ride-fare description suffix)
+  HighPrecMoney -> -- offerDiscountAmount (rendered as its own deduction line)
   HighPrecMoney -> -- cashbackPayoutAmount (rendered as deduction line)
+  HighPrecMoney -> -- rideVatAbsorbedOnDiscount (reconstructs the pre-discount fare/tax)
   InvoiceConfig
-buildRidePaymentInvoiceConfig ctx rideFare gstAmount tollFare tollVatAmount platformFee offerDiscountAmount cashbackPayoutAmount =
-  InvoiceConfig
-    { invoiceType = Ride,
-      issuedToType = DInvType.RIDER,
-      issuedToId = ctx.counterpartyId,
-      issuedToName = ctx.issuedToName,
-      issuedToAddress = ctx.fromLocationAddress,
-      referenceId = Just ctx.referenceId,
-      lineItems =
-        catMaybes
-          [ mkRideFareLineItem (rideFare + platformFee) ctx.currency offerDiscountAmount,
-            mkLineItem "Ride Tax" RideTax gstAmount False Tax (Just "g-ride"),
-            mkLineItem "Toll Fare" TollFare tollFare True Fare (Just "g-toll"),
-            mkLineItem "Toll Tax" TollTax tollVatAmount True Tax (Just "g-toll"),
-            mkDeductionLineItem "Cashback Offer" CashbackOffer cashbackPayoutAmount False
-          ],
-      gstBreakdown = Nothing,
-      isVat = gstAmount > 0 || tollVatAmount > 0,
-      issuedToTaxNo = Nothing,
-      issuedByTaxNo = Nothing,
-      paymentMode = Just $ if ctx.isOnline then "ONLINE" else "CASH",
-      periodStart = Nothing,
-      periodEnd = Nothing
-    }
+buildRidePaymentInvoiceConfig ctx rideFare gstAmount tollFare tollVatAmount platformFee offerDiscountAmount cashbackPayoutAmount rideVatAbsorbedOnDiscount =
+  -- The main table shows the FULL pre-discount fare and its full VAT; the discount is a
+  -- separate negative Adjustment below the total.
+  -- Reconstruction is universal: every caller passes post-discount amounts + the clamped
+  -- gross discount + the VAT absorbed inside it (fully-discounted path included).
+  let preDiscountTax = gstAmount + rideVatAbsorbedOnDiscount
+      preDiscountFareLine = rideFare + platformFee + (offerDiscountAmount - rideVatAbsorbedOnDiscount)
+   in InvoiceConfig
+        { invoiceType = Ride,
+          issuedToType = DInvType.RIDER,
+          issuedToId = ctx.counterpartyId,
+          issuedToName = ctx.issuedToName,
+          issuedToAddress = ctx.fromLocationAddress,
+          referenceId = Just ctx.referenceId,
+          lineItems =
+            catMaybes
+              [ mkLineItem "Ride Fare" RideFare preDiscountFareLine False Fare (Just "g-ride"),
+                mkLineItem "Ride Tax" RideTax preDiscountTax False Tax (Just "g-ride"),
+                mkLineItem "Toll Fare" TollFare tollFare True Fare (Just "g-toll"),
+                mkLineItem "Toll Tax" TollTax tollVatAmount True Tax (Just "g-toll"),
+                mkDeductionLineItem "Discount" OfferDiscount offerDiscountAmount False,
+                mkDeductionLineItem "Cashback Offer" CashbackOffer cashbackPayoutAmount False
+              ],
+          gstBreakdown = Nothing,
+          isVat = preDiscountTax > 0 || tollVatAmount > 0,
+          issuedToTaxNo = Nothing,
+          issuedByTaxNo = Nothing,
+          paymentMode = Just $ if ctx.isOnline then "ONLINE" else "CASH",
+          periodStart = Nothing,
+          periodEnd = Nothing
+        }
 
 -- ---------------------------------------------------------------------------
 -- 3. Void ledger entries when payment intent is cancelled
@@ -773,18 +795,19 @@ buildRidePaymentInvoiceConfig ctx rideFare gstAmount tollFare tollVatAmount plat
 --   recreate the ledger — stale invoices from the previous attempt must
 --   also be marked VOIDED so dashboards / lookups don't surface them.
 voidRidePaymentLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, MonadFlow m, Finance.HasActorInfo m r) =>
   [Id LE.LedgerEntry] ->
   m ()
 voidRidePaymentLedger entryIds = do
   -- Collect linked invoice IDs BEFORE voiding the entries, in case
   -- voiding cascades or otherwise disrupts the link lookup.
+  actorInfo <- asks (.actorInfo)
   mbInvoices <- forM entryIds $ \entryId -> FInvoiceService.getInvoiceForEntry entryId
   let uniqueInvoiceIds = List.nub [inv.id | Just inv <- mbInvoices]
   forM_ entryIds $ \entryId ->
     voidEntry entryId "PaymentIntentCancelled"
   forM_ uniqueInvoiceIds $ \invId ->
-    QInvoice.updateStatus FInvoice.Voided invId
+    QInvoice.updateStatus FInvoice.Voided (Just actorInfo.actorType) actorInfo.actorId invId
   logInfo $
     "Voided " <> show (length entryIds) <> " ride payment ledger entries and "
       <> show (length uniqueInvoiceIds)
@@ -795,7 +818,7 @@ voidRidePaymentLedger entryIds = do
 
 -- | Mark cancellation fee invoice as Paid after successful Stripe capture.
 markCancellationFeeInvoicePaid ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Maybe (Id FInvoice.Invoice) ->
   m ()
 markCancellationFeeInvoicePaid mbInvoiceId =
@@ -805,7 +828,7 @@ markCancellationFeeInvoicePaid mbInvoiceId =
 
 -- | Find and cancel the Ride invoice linked to a rideId (called when ride intent is cancelled).
 voidRideInvoice ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Text -> -- rideId
   m ()
 voidRideInvoice rideId = do
@@ -826,7 +849,7 @@ voidRideInvoice rideId = do
 -- | Void all unsettled ledger entries for a ride then cancel the ride invoice.
 --   Single call-site for any cancellation path (cash or online, with or without fee).
 voidRidePaymentEntriesAndInvoice ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Text -> -- rideId
   m ()
 voidRidePaymentEntriesAndInvoice rideId = do
@@ -838,7 +861,7 @@ voidRidePaymentEntriesAndInvoice rideId = do
 
 -- | Mark the Ride invoice as Paid after successful payment capture.
 markRideInvoicePaid ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Text -> -- rideId
   m ()
 markRideInvoicePaid rideId = do
@@ -852,7 +875,7 @@ markRideInvoicePaid rideId = do
 
 -- | Mark the Ride invoice as Issued when capture fails (entries now DUE for collection).
 markRideInvoiceIssued ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Text -> -- rideId
   m ()
 markRideInvoiceIssued rideId = do
@@ -873,7 +896,7 @@ markRideInvoiceIssued rideId = do
 --   Capture-side legs happen in settleRidePaymentLedger when chargePaymentIntent
 --   succeeds. Tip is a pure pass-through to the driver — no BAP commission.
 createTipLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   HighPrecMoney -> -- tipAmount
   m (Either FinanceError [Id LE.LedgerEntry])
@@ -890,7 +913,7 @@ createTipLedger ctx tipAmount = do
 --   cancellation fee. Call 'markCancellationFeeInvoicePaid' on success or
 --   'voidCancellationFeeLedger' / 'markDueCancellationFeeLedger' on failure.
 createPendingCancellationFeeLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   HighPrecMoney -> -- cancellationFee (without GST)
   HighPrecMoney -> -- cancellationGST
@@ -1018,7 +1041,7 @@ findDueRidePaymentEntries rideId = do
 
 -- | Mark ledger entries as DUE (capture was attempted and failed).
 markEntriesAsDue ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   [Id LE.LedgerEntry] ->
   m ()
 markEntriesAsDue entryIds = do
@@ -1049,7 +1072,7 @@ isRidePaymentSettled rideId = do
 --   Called after chargePaymentIntent succeeds when tip was folded into the
 --   existing PI (paymentStatus was not Completed when tip was added).
 regenerateRideTipInvoice ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, MonadFlow m, Finance.HasActorInfo m r) =>
   Text -> -- rideId
   HighPrecMoney -> -- tipAmount
   m ()

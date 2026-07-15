@@ -35,6 +35,7 @@ data DriverInformationE e = DriverInformation
     addressDocumentType :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType,
     adminId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     airConditionScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    airportBlockExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     autoPayStatus :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverAutoPayStatus,
     availableUpiApps :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -46,7 +47,6 @@ data DriverInformationE e = DriverInformation
     canDowngradeToHatchback :: Kernel.Prelude.Bool,
     canDowngradeToSedan :: Kernel.Prelude.Bool,
     canDowngradeToTaxi :: Kernel.Prelude.Bool,
-    canSwitchToAirport :: Kernel.Prelude.Bool,
     canSwitchToInterCity :: Kernel.Prelude.Bool,
     canSwitchToIntraCity :: Kernel.Prelude.Bool,
     canSwitchToRental :: Kernel.Prelude.Bool,
@@ -62,9 +62,11 @@ data DriverInformationE e = DriverInformation
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     driverTripEndLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     drunkAndDriveViolationCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    enableForAirport :: Domain.Types.DriverInformation.AirportRestrictionType,
     enabled :: Kernel.Prelude.Bool,
     enabledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     extraFareMitigationFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    firstVerifiedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     forwardBatchingEnabled :: Kernel.Prelude.Bool,
     hasAdvanceBooking :: Kernel.Prelude.Bool,
     hasRideStarted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -100,6 +102,7 @@ data DriverInformationE e = DriverInformation
     payoutVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payoutVpaBankAccount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payoutVpaStatus :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.PayoutVpaStatus,
+    preferredMapProvider :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.MapProvider,
     preferredPrimarySpecialLocId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation),
     preferredSecondarySpecialLocIds :: [Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation],
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -121,6 +124,8 @@ data DriverInformationE e = DriverInformation
     totalReferred :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     tripDistanceMaxThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     tripDistanceMinThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    unhygienicVehicleViolationCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    vehicleUnsafeViolationCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     verified :: Kernel.Prelude.Bool,
     weeklyCancellationRateBlockingCooldown :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     weeklyExtraKms :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
@@ -152,6 +157,7 @@ instance EncryptedItem DriverInformation where
           addressDocumentType = addressDocumentType entity,
           adminId = adminId entity,
           airConditionScore = airConditionScore entity,
+          airportBlockExpiryTime = airportBlockExpiryTime entity,
           approved = approved entity,
           autoPayStatus = autoPayStatus entity,
           availableUpiApps = availableUpiApps entity,
@@ -163,7 +169,6 @@ instance EncryptedItem DriverInformation where
           canDowngradeToHatchback = canDowngradeToHatchback entity,
           canDowngradeToSedan = canDowngradeToSedan entity,
           canDowngradeToTaxi = canDowngradeToTaxi entity,
-          canSwitchToAirport = canSwitchToAirport entity,
           canSwitchToInterCity = canSwitchToInterCity entity,
           canSwitchToIntraCity = canSwitchToIntraCity entity,
           canSwitchToRental = canSwitchToRental entity,
@@ -179,9 +184,11 @@ instance EncryptedItem DriverInformation where
           driverId = driverId entity,
           driverTripEndLocation = driverTripEndLocation entity,
           drunkAndDriveViolationCount = drunkAndDriveViolationCount entity,
+          enableForAirport = enableForAirport entity,
           enabled = enabled entity,
           enabledAt = enabledAt entity,
           extraFareMitigationFlag = extraFareMitigationFlag entity,
+          firstVerifiedAt = firstVerifiedAt entity,
           forwardBatchingEnabled = forwardBatchingEnabled entity,
           hasAdvanceBooking = hasAdvanceBooking entity,
           hasRideStarted = hasRideStarted entity,
@@ -217,6 +224,7 @@ instance EncryptedItem DriverInformation where
           payoutVpa = payoutVpa entity,
           payoutVpaBankAccount = payoutVpaBankAccount entity,
           payoutVpaStatus = payoutVpaStatus entity,
+          preferredMapProvider = preferredMapProvider entity,
           preferredPrimarySpecialLocId = preferredPrimarySpecialLocId entity,
           preferredSecondarySpecialLocIds = preferredSecondarySpecialLocIds entity,
           referralCode = referralCode entity,
@@ -238,6 +246,8 @@ instance EncryptedItem DriverInformation where
           totalReferred = totalReferred entity,
           tripDistanceMaxThreshold = tripDistanceMaxThreshold entity,
           tripDistanceMinThreshold = tripDistanceMinThreshold entity,
+          unhygienicVehicleViolationCount = unhygienicVehicleViolationCount entity,
+          vehicleUnsafeViolationCount = vehicleUnsafeViolationCount entity,
           verified = verified entity,
           weeklyCancellationRateBlockingCooldown = weeklyCancellationRateBlockingCooldown entity,
           weeklyExtraKms = weeklyExtraKms entity,
@@ -261,6 +271,7 @@ instance EncryptedItem DriverInformation where
             addressDocumentType = addressDocumentType entity,
             adminId = adminId entity,
             airConditionScore = airConditionScore entity,
+            airportBlockExpiryTime = airportBlockExpiryTime entity,
             approved = approved entity,
             autoPayStatus = autoPayStatus entity,
             availableUpiApps = availableUpiApps entity,
@@ -272,7 +283,6 @@ instance EncryptedItem DriverInformation where
             canDowngradeToHatchback = canDowngradeToHatchback entity,
             canDowngradeToSedan = canDowngradeToSedan entity,
             canDowngradeToTaxi = canDowngradeToTaxi entity,
-            canSwitchToAirport = canSwitchToAirport entity,
             canSwitchToInterCity = canSwitchToInterCity entity,
             canSwitchToIntraCity = canSwitchToIntraCity entity,
             canSwitchToRental = canSwitchToRental entity,
@@ -288,9 +298,11 @@ instance EncryptedItem DriverInformation where
             driverId = driverId entity,
             driverTripEndLocation = driverTripEndLocation entity,
             drunkAndDriveViolationCount = drunkAndDriveViolationCount entity,
+            enableForAirport = enableForAirport entity,
             enabled = enabled entity,
             enabledAt = enabledAt entity,
             extraFareMitigationFlag = extraFareMitigationFlag entity,
+            firstVerifiedAt = firstVerifiedAt entity,
             forwardBatchingEnabled = forwardBatchingEnabled entity,
             hasAdvanceBooking = hasAdvanceBooking entity,
             hasRideStarted = hasRideStarted entity,
@@ -326,6 +338,7 @@ instance EncryptedItem DriverInformation where
             payoutVpa = payoutVpa entity,
             payoutVpaBankAccount = payoutVpaBankAccount entity,
             payoutVpaStatus = payoutVpaStatus entity,
+            preferredMapProvider = preferredMapProvider entity,
             preferredPrimarySpecialLocId = preferredPrimarySpecialLocId entity,
             preferredSecondarySpecialLocIds = preferredSecondarySpecialLocIds entity,
             referralCode = referralCode entity,
@@ -347,6 +360,8 @@ instance EncryptedItem DriverInformation where
             totalReferred = totalReferred entity,
             tripDistanceMaxThreshold = tripDistanceMaxThreshold entity,
             tripDistanceMinThreshold = tripDistanceMinThreshold entity,
+            unhygienicVehicleViolationCount = unhygienicVehicleViolationCount entity,
+            vehicleUnsafeViolationCount = vehicleUnsafeViolationCount entity,
             verified = verified entity,
             weeklyCancellationRateBlockingCooldown = weeklyCancellationRateBlockingCooldown entity,
             weeklyExtraKms = weeklyExtraKms entity,
@@ -363,9 +378,11 @@ instance EncryptedItem' DriverInformation where
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
 
-data AddressDocumentType = RationCard | UtilityBill | Passport deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data AddressDocumentType = RationCard | UtilityBill | Passport | VoterId | LifeInsurancePolicy | Others deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data AirConditionedRestrictionType = NoRestriction | ToggleAllowed | ToggleNotAllowed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data AirportRestrictionType = ENABLED | DISABLED | BLOCKED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data Badges = Badges {badgeCount :: Kernel.Prelude.Int, badgeName :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -406,6 +423,8 @@ data DriverSummary = DriverSummary
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+data MapProvider = GOOGLE_MAPS | WAZE | APPLE_MAPS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
 data OnboardingAs = FLEET_DRIVER | INDIVIDUAL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data PayoutVpaStatus = VIA_WEBHOOK | MANUALLY_ADDED | VERIFIED_BY_USER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -414,6 +433,8 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AddressDocumentType)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AirConditionedRestrictionType)
 
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AirportRestrictionType)
+
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DisabledReasonFlag)
 
 $(mkHttpInstancesForEnum ''DisabledReasonFlag)
@@ -421,6 +442,10 @@ $(mkHttpInstancesForEnum ''DisabledReasonFlag)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverAutoPayStatus)
 
 $(mkHttpInstancesForEnum ''DriverAutoPayStatus)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MapProvider)
+
+$(mkHttpInstancesForEnum ''MapProvider)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''OnboardingAs)
 

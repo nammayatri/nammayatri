@@ -24,6 +24,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import Tools.SMS as Sms hiding (Success)
@@ -40,7 +41,7 @@ postMeterRideAddDestination ::
 postMeterRideAddDestination (_mbPersonId, merchantId, merchantOpCityId) rideId meterRideRequest = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   whenJust ride.toLocation $ \_ -> throwError $ InvalidRequest ("Ride already has a drop location for meter ride " <> ride.id.getId)
-  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  booking <- runInReplica $ QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   unless (booking.tripCategory == OneWay MeterRide) $
     throwError $ InvalidRequest ("Invalid trip category " <> show booking.tripCategory)
 

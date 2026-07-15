@@ -33,8 +33,8 @@ data PassVerifyTransaction = PassVerifyTransaction
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data PassVerifiedStatus = FULLY_VERIFIED | PARTIALLY_VERIFIED | NOT_VERIFIED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+data PassVerifiedStatus = FULLY_VERIFIED | PARTIALLY_VERIFIED | NOT_VERIFIED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PassVerifiedStatus)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''PassVerifiedStatus))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''PassVerifiedStatus)
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''PassVerifiedStatus))

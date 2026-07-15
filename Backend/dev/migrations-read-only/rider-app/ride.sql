@@ -446,3 +446,21 @@ ALTER TABLE atlas_app.ride ADD COLUMN driver_arrival_status text ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.ride ADD COLUMN is_tier_upgrade boolean ;
+ALTER TABLE atlas_app.ride ADD COLUMN assigned_service_tier_name text ;
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN enable_otp_less_ride boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN ride_tags text[] ;

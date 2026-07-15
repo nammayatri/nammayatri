@@ -21,9 +21,10 @@ import Kernel.Types.CacheFlow
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.JWT hiding (ServiceAccount (..))
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getOneConfig)
 import Tools.Error
 import Utils.Common.JWT.Config as C
 import qualified Utils.Common.JWT.Config as GW
@@ -51,7 +52,7 @@ getCustomCardTitleValueByTripType tripType =
 
 getserviceAccount :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id M.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> m TC.ServiceAccount
 getserviceAccount merchantId merchantOpCityId serviceName = do
-  merchantServiceConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName}) >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "WalletService" (show GW.GoogleWallet))
+  merchantServiceConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOpCityId (serviceName))) >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "WalletService" (show GW.GoogleWallet))
   wsc <- case merchantServiceConfig.serviceConfig of
     DEMSC.WalletServiceConfig wsc' -> pure wsc'
     _ -> throwError $ InternalError $ "Unknown Service Config" <> " MerchantOperatingCityId :-" <> merchantOpCityId.getId

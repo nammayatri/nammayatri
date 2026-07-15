@@ -70,6 +70,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Domain.Types.Account
 import Lib.Finance.Domain.Types.DirectTaxTransaction ()
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as FinanceIndirectTax
@@ -89,6 +90,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.BppTransactionJoin as BppT
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
@@ -100,6 +102,7 @@ import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonExtra as QPerson
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRiderDetails
@@ -546,7 +549,7 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
   driverEdaKafkaList <- CHDriverEda.findAllTuple firstDate lastDate ride.driverId (Just ride.id)
   let driverEdaKafka = listToMaybe driverEdaKafkaList
   let driverStartLocation = (\(lat, lon, _, _, _) -> KEMT.LatLong <$> lat <*> lon) =<< driverEdaKafka
-  mbIsDestinationEdited <- case ride.isPickupOrDestinationEdited of
+  mbIsDestinationEdited <- case booking.isPickupOrDestinationEdited of
     Just True -> do
       mbBookingUpdateReq <- runInReplica $ QBUR.findByBookingIdAndStatus ride.bookingId DBUR.DRIVER_ACCEPTED
       case mbBookingUpdateReq of
@@ -841,7 +844,7 @@ rideSync merchantShortId opCity reqRideId = do
 
   logTagInfo "dashboard -> syncRide : " $ show rideId <> "; status: " <> show ride.status
 
-  SyncRide.rideSync Nothing (Just ride) booking merchant
+  SyncRide.rideSync Nothing (Just ride) booking merchant True
 
 ---------------------------------------------------------------------
 
@@ -860,7 +863,7 @@ multipleRideSync merchantShortId opCity rideSyncReq = do
       ( \(ride, booking) ->
           mapLeft show
             <$> ( withTryCatch "mkMultipleRideData:multipleRideSync" $
-                    mkMultipleRideData ride.id <$> SyncRide.rideSync Nothing (Just ride) booking merchant
+                    mkMultipleRideData ride.id <$> SyncRide.rideSync Nothing (Just ride) booking merchant True
                 )
       )
       ridesBookingsZip
@@ -882,7 +885,7 @@ mkMultipleRideData rideId Common.RideSyncRes {..} =
 currentActiveRide :: ShortId DM.Merchant -> Text -> Flow (Id Common.Ride)
 currentActiveRide _ vehicleNumber = do
   vehicle <- VQuery.findByRegistrationNo vehicleNumber >>= fromMaybeM (VehicleNotFound vehicleNumber)
-  activeRide <- runInReplica $ QRide.getActiveByDriverId vehicle.driverId >>= fromMaybeM NoActiveRidePresent
+  activeRide <- runInReplica $ QRideLite.getActiveByDriverIdLite vehicle.driverId >>= fromMaybeM NoActiveRidePresent
   let rideId = cast @DRide.Ride @Common.Ride activeRide.id
   pure rideId
 
@@ -937,13 +940,13 @@ bookingWithVehicleNumberAndPhone merchant merchantOpCityId req = do
               }
       void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) True rcStatusReq
     createRCAssociation driverId rc = do
-      transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       createDriverRCAssociationIfPossible transporterConfig driverId rc
 
 endActiveRide :: Id DRide.Ride -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 endActiveRide rideId merchantId merchantOperatingCityId = do
   let dashboardReq = EHandler.DashboardEndRideReq {point = Nothing, merchantId, merchantOperatingCityId, odometer = Nothing}
-  shandle <- EHandler.buildEndRideHandle merchantId merchantOperatingCityId (Just rideId)
+  shandle <- EHandler.buildEndRideHandle merchantId merchantOperatingCityId (Just rideId) False
   void $ EHandler.dashboardEndRide shandle rideId dashboardReq
 
 fareBreakUp :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Flow Common.FareBreakUpRes
@@ -1060,7 +1063,7 @@ getNearby merchantShortId opCity driverId = do
   unless (driver.merchantId == merchant.id && driver.merchantOperatingCityId == merchantOpCity.id) $
     throwError (PersonDoesNotExist driverId.getId)
   -- Read config values; both counts are gated on hotspot config presence and enableDemandHotspots
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCity.id Nothing
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCity.id Nothing))
   let mbHotspotsConfig = transporterConfig >>= (.demandHotspotsConfig)
   case mbHotspotsConfig of
     Just configs | configs.enableDemandHotspots -> do

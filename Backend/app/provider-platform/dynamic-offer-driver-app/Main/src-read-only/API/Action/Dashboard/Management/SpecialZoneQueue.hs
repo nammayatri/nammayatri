@@ -21,10 +21,13 @@ import Servant
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.ProviderPlatform.Management.SpecialZoneQueue.API)
-handler merchantId city = postSpecialZoneQueueTriggerNotify merchantId city :<|> getSpecialZoneQueueQueueStats merchantId city :<|> postSpecialZoneQueueManualQueueAdd merchantId city :<|> postSpecialZoneQueueManualQueueRemove merchantId city :<|> getSpecialZoneQueueDriverQueuePosition merchantId city :<|> getSpecialZoneQueueDriverQueueHistory merchantId city
+handler merchantId city = postSpecialZoneQueueTriggerNotify merchantId city :<|> getSpecialZoneQueueTriggerNotifyStatus merchantId city :<|> getSpecialZoneQueueQueueStats merchantId city :<|> postSpecialZoneQueueManualQueueAdd merchantId city :<|> postSpecialZoneQueueManualQueueRemove merchantId city :<|> getSpecialZoneQueueDriverQueuePosition merchantId city :<|> getSpecialZoneQueueDriverQueueHistory merchantId city
 
-postSpecialZoneQueueTriggerNotify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.SpecialZoneQueue.TriggerSpecialZoneQueueNotifyReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postSpecialZoneQueueTriggerNotify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.SpecialZoneQueue.TriggerSpecialZoneQueueNotifyReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SpecialZoneQueue.TriggerSpecialZoneQueueNotifyRes)
 postSpecialZoneQueueTriggerNotify a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.SpecialZoneQueue.postSpecialZoneQueueTriggerNotify a3 a2 a1
+
+getSpecialZoneQueueTriggerNotifyStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SpecialZoneQueue.TriggerSpecialZoneQueueNotifyStatusRes)
+getSpecialZoneQueueTriggerNotifyStatus a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.SpecialZoneQueue.getSpecialZoneQueueTriggerNotifyStatus a2 a1
 
 getSpecialZoneQueueQueueStats :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SpecialZoneQueue.SpecialZoneQueueStatsRes)
 getSpecialZoneQueueQueueStats a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.SpecialZoneQueue.getSpecialZoneQueueQueueStats a3 a2 a1

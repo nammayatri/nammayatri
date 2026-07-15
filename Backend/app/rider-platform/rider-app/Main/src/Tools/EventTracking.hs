@@ -15,9 +15,10 @@ import qualified Kernel.External.EventTracking.Moengage.Types as MT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 
 data TrackingEvent
   = FirstRideCompleted Text
@@ -33,7 +34,7 @@ trackEvent ::
   TrackingEvent ->
   m ()
 trackEvent merchantId merchantOperatingCityId event = do
-  mbMerchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+  mbMerchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId))
   case mbMerchantConfig of
     Nothing -> logDebug "EventTracking: MerchantServiceUsageConfig not found, skipping event"
     Just merchantConfig -> do
@@ -68,6 +69,7 @@ sendToProvider merchantId merchantOperatingCityId provider actionName req = do
             serviceName = Just (DMSC.EventTrackingService provider)
           }
       )
+      Nothing
   case mbConfig of
     Nothing ->
       logDebug $ "EventTracking: provider " <> show provider <> " listed in usage config but no service config row found, skipping"

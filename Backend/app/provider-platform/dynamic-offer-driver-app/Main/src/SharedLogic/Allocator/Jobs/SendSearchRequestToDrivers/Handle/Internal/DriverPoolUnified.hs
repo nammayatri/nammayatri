@@ -30,6 +30,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Queries.GateInfo
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
@@ -44,6 +45,7 @@ import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.RiderDriverCorrelation as QFavDrivers
 import Tools.Maps as Maps
 
@@ -74,7 +76,7 @@ getNextDriverPoolBatch driverPoolConfig searchReq searchTry tripQuoteDetails pay
   logDebug $ "Doing Special Driver Pooling for seachReq:- " <> show searchReq
   batchNum <- SDP.getPoolBatchNum searchTry.id
   SDP.incrementBatchNum searchTry.id
-  cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow searchReq.merchantOperatingCityId searchReq.configInExperimentVersions (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound searchReq.providerId.getId)
   withTimeAPI "driverPooling" "prepareDriverPoolBatch" $ prepareDriverPoolBatch cityServiceTiers merchant driverPoolConfig searchReq searchTry tripQuoteDetails batchNum goHomeConfig paymentMethodInfo
 
@@ -156,7 +158,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
       return $ fst <$> batches
 
     prepareDriverPoolBatch' previousBatchesDrivers batchNum merchantOpCityId txnId isValueAddNP = withLogTag ("BatchNum - " <> show batchNum <> " and txnId:- " <> show txnId) $ do
-      transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
       blockListedDriversForSearch <- Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversKey searchReq.id)
       blockListedDriversForRider <- maybe (pure []) (Redis.withCrossAppRedis . Redis.getList . mkBlockListedDriversForRiderKey) searchReq.riderId
       let blockListedDrivers = blockListedDriversForSearch <> blockListedDriversForRider

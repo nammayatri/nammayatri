@@ -34,6 +34,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id (Id (..), cast)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerEntry
@@ -79,6 +80,7 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareParameters as QFareParams
 import qualified Storage.Queries.Ride as QRide
@@ -120,7 +122,7 @@ runReconciliationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId (Just merchantOperatingCityId) merchant Nothing
 
-    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
     -- Check if reconciliation is enabled for this merchant
     unless (fromMaybe False transporterConfig.reconciliationJobsEnabled) $ do

@@ -45,6 +45,8 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as CoreMetrics
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import "location-updates" Lib.LocationUpdates as Reexport
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
@@ -56,9 +58,11 @@ import SharedLogic.Ride
 import Storage.Beam.Toll ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Vehicle as QVeh
@@ -103,7 +107,8 @@ type LocationUpdateFlow m r c =
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
-    HasField "rideEventsPublisherCfg" r (Maybe RideEventsPublisherCfg)
+    HasField "rideEventsPublisherCfg" r (Maybe RideEventsPublisherCfg),
+    Finance.HasActorInfo m r
   )
 
 getDeviationForPoint :: LatLong -> [LatLong] -> Meters
@@ -254,13 +259,13 @@ updateTollRouteDeviation merchantOpCityId driverId (Just ride) batchWaypoints = 
     QRide.updateDriverDeviatedToTollRoute ride.id isTollPresentOnCurrentRoute
   return (driverDeviatedToTollRoute, isTollPresentOnCurrentRoute)
 
-getTravelledDistanceAndTollInfo :: LocationUpdateFlow m r c => Id DMOC.MerchantOperatingCity -> Maybe Ride -> Meters -> Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool) -> m (Meters, Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool))
+getTravelledDistanceAndTollInfo :: LocationUpdateFlow m r c => Id DMOC.MerchantOperatingCity -> Maybe Ride -> Meters -> Maybe TollsDetector.TollInfo -> m (Meters, Maybe TollsDetector.TollInfo)
 getTravelledDistanceAndTollInfo _ Nothing _ estimatedTollInfo = do
   logInfo "No ride found to get travelled distance"
   return (0, estimatedTollInfo)
 getTravelledDistanceAndTollInfo merchantOperatingCityId (Just ride) estimatedDistance estimatedTollInfo = do
   let rideId = ride.id
-  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  booking <- QBookingLite.findByIdLite (cast ride.bookingId) >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let key = multipleRouteKey booking.transactionId
   multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get key
   case multipleRoutes of
@@ -281,7 +286,7 @@ getTravelledDistanceAndTollInfo merchantOperatingCityId (Just ride) estimatedDis
 
 buildRideInterpolationHandler :: LocationUpdateFlow m r c => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id Ride) -> Bool -> Maybe Integer -> m (RideInterpolationHandler Person m)
 buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBatchSize = do
-  transportConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transportConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let snapToRoad' shouldRectifyDistantPointsFailure =
         if transportConfig.useWithSnapToRoadFallback
           then TMaps.snapToRoadWithFallback shouldRectifyDistantPointsFailure merchantId merchantOpCityId False (fmap getId rideId)

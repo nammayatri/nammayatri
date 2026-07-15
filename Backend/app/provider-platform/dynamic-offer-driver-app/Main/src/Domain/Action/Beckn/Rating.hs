@@ -20,6 +20,7 @@ import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text as Text
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.DriverStats as DDriverStats
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -39,6 +40,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified SharedLogic.Analytics as Analytics
@@ -47,6 +49,7 @@ import Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.DriverStats as SQD
@@ -127,7 +130,7 @@ handler merchantId req ride = do
 
   rating' <- B.runInReplica $ QRating.checkIfRatingExistsForDriver ride.driverId
   driverStats <- runInReplica $ QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
-  transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   -- backfilling rating for the old driver entries
   (ratingCount, ratingsSum) <- do
     if ((not $ null rating') && (isNothing driverStats.totalRatings) && (isNothing driverStats.totalRatingScore) && (isNothing driverStats.isValidRating))
@@ -157,16 +160,18 @@ handler merchantId req ride = do
       QRating.updateRating newRatingValue feedbackDetails isSafe issueId wasOfferedAssistance req.shouldFavDriver mediaId rideRating.id driverId
       pure (newRatingValue - oldRatingValue, False)
   newRating <- calculateAverageRating driverId merchant.minimumDriverRatesCount shouldIncrementCount netRatingValue ratingCount ratingsSum transporterConfig
-  syncServiceTiersOnRatingChange newRating driverId ride.merchantOperatingCityId
+  syncServiceTiersOnRatingChange driverStats newRating driverId ride.merchantOperatingCityId
 
 syncServiceTiersOnRatingChange ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  DDriverStats.DriverStats ->
   Maybe Centesimal ->
   Id DP.Person ->
   Id DMOC.MerchantOperatingCity ->
   m ()
-syncServiceTiersOnRatingChange newRating personId merchantOpCityId = do
-  tierResults <- fetchVehicleTierForDriverWithUsageRestriction True Nothing Nothing (Just newRating) Nothing personId merchantOpCityId
+syncServiceTiersOnRatingChange driverStats newRating personId merchantOpCityId = do
+  let updatedDriverStats = driverStats {DDriverStats.rating = newRating}
+  tierResults <- fetchVehicleTierForDriverWithUsageRestriction True Nothing Nothing (Just updatedDriverStats) Nothing personId merchantOpCityId
   let newTiers = (.serviceTierType) . fst <$> filter (not . snd) tierResults
   QVehicle.updateSelectedServiceTiers newTiers personId
 
@@ -270,5 +275,8 @@ createMediaEntry url fileType filePath = do
             _type = fileType,
             url = fileUrl,
             s3FilePath = Just filePath,
-            createdAt = now
+            status = Just D.COMPLETED,
+            fileHash = Nothing,
+            createdAt = now,
+            updatedAt = now
           }

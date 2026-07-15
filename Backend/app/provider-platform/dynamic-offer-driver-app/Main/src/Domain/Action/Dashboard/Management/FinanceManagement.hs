@@ -2,12 +2,15 @@ module Domain.Action.Dashboard.Management.FinanceManagement
   ( getFinanceManagementSubscriptionPurchaseList,
     getFinanceManagementInvoiceList,
     getFinanceManagementFinanceInvoiceList,
+    getFinanceManagementFinanceAuditList,
     getFinanceManagementFinanceReconciliation,
     postFinanceManagementReconciliationTrigger,
     getFinanceManagementFinancePaymentSettlementList,
     getFinanceManagementFinancePaymentGatewayTransactionList,
     getFinanceManagementFinanceWalletLedger,
     getFinanceManagementFinanceInvoicePdf,
+    getFinanceManagementFinanceSapJournals,
+    getFinanceManagementFinanceSapJournalsTransactions,
   )
 where
 
@@ -37,7 +40,10 @@ import Kernel.Types.Error
 import Kernel.Types.Id (Id (..), ShortId (..), cast)
 import Kernel.Utils.Common (logError, logWarning, secondsToNominalDiffTime)
 import Kernel.Utils.Error (fromMaybeM, throwError)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as FinanceCore
 import qualified Lib.Finance.Domain.Types.Account as Account
+import qualified Lib.Finance.Domain.Types.AuditEntry as AuditEntry
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
@@ -45,9 +51,11 @@ import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerEntry
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as PgPaymentSettlementReport
 import qualified Lib.Finance.Domain.Types.ReconciliationEntry as ReconciliationEntry
 import qualified Lib.Finance.Domain.Types.ReconciliationSummary as ReconSummary
+import qualified Lib.Finance.Domain.Types.SapJournalEntry as SJE
 import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
 import qualified Lib.Finance.Ledger.Service as LedgerService
+import qualified Lib.Finance.Storage.Queries.AuditEntryExtra as QAuditEntryExtra
 import qualified Lib.Finance.Storage.Queries.DirectTaxTransaction as QDirectTax
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
@@ -58,6 +66,7 @@ import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntryExt
 import qualified Lib.Finance.Storage.Queries.PgPaymentSettlementReportExtra as QPgPaymentSettlementReport
 import qualified Lib.Finance.Storage.Queries.ReconciliationEntryExtra as QReconEntryExtra
 import qualified Lib.Finance.Storage.Queries.ReconciliationSummaryExtra as QReconSummaryExtra
+import qualified Lib.Finance.Storage.Queries.SapJournalEntryExtra as QSapJournalEntry
 import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as PaymentTransaction
 import qualified Lib.Payment.Domain.Types.Refunds as PaymentRefund
@@ -70,10 +79,11 @@ import qualified SharedLogic.Finance.Wallet as WalletService
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as QTC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Plan as CQPlan
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
@@ -146,16 +156,18 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
             (Just offset)
 
   -- Build response items (use each subscription's serviceName for plan lookup)
-  items <- mapM (\sub -> buildSubscriptionPurchaseItem sub limit offset) subscriptions
+  results <- mapM (\sub -> tryBuildSubscriptionPurchaseItem sub limit offset) subscriptions
 
-  let totalItems = length items
+  let (failedOwnerIds, items) = partitionEithers results
+      totalItems = length items
       summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
 
   pure $
     API.SubscriptionPurchaseListRes
       { totalItems,
         summary,
-        subscriptions = items
+        subscriptions = items,
+        failedOwnerIds
       }
   where
     parseServiceName :: Text -> Maybe DPlan.ServiceNames
@@ -186,6 +198,15 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
         mbAmountMax
         (Just limit)
         (Just offset)
+
+    tryBuildSubscriptionPurchaseItem :: DSP.SubscriptionPurchase -> Int -> Int -> Flow (Either Text API.SubscriptionPurchaseListItem)
+    tryBuildSubscriptionPurchaseItem subscription limit' offset' = do
+      result <- withTryCatch ("buildSubscriptionPurchaseItem:" <> subscription.ownerId) $ buildSubscriptionPurchaseItem subscription limit' offset'
+      case result of
+        Right item -> pure $ Right item
+        Left err -> do
+          logError $ "Failed to build subscription item for ownerId: " <> subscription.ownerId <> ", error: " <> show err
+          pure $ Left subscription.ownerId
 
     buildSubscriptionPurchaseItem :: DSP.SubscriptionPurchase -> Int -> Int -> Flow API.SubscriptionPurchaseListItem
     buildSubscriptionPurchaseItem subscription _limit _offset = do
@@ -304,7 +325,8 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
             revenueRecognized = Just revenueRecognized,
             linkedRides = linkedRides,
             createdAt = Just subscription.createdAt,
-            updatedAt = Just subscription.updatedAt
+            updatedAt = Just subscription.updatedAt,
+            orderId = Just subscription.paymentOrderId.getId
           }
 
     -- Calculate utilized value from RideSubscriptionDebit ledger entries
@@ -516,7 +538,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
             totalInvoiceValue = invoice.totalAmount,
             tdsReference = tdsRef,
             irn = invoice.irn,
-            qrCode = Nothing,
+            qrCode = invoice.signedQRCode,
             rideId = listToMaybe rideIds,
             subscriptionId = listToMaybe subscriptionIds,
             supplierName = invoice.supplierName,
@@ -564,6 +586,63 @@ getFinanceManagementFinanceInvoiceList ::
   Maybe UTCTime ->
   Flow API.InvoiceListRes
 getFinanceManagementFinanceInvoiceList = getFinanceManagementInvoiceList
+
+getFinanceManagementFinanceAuditList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe AuditEntry.AuditEntityType ->
+  Maybe AuditEntry.AuditAction ->
+  Maybe FinanceCore.ActorType ->
+  Maybe Text ->
+  Maybe Text ->
+  Flow API.AuditListRes
+getFinanceManagementFinanceAuditList merchantShortId opCity mbLimit mbOffset mbFrom mbTo mbEntityType mbAction mbActorType mbActorId mbEntityId = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  let limit = mkPageLimit mbLimit
+      offset = mkPageOffset mbOffset
+
+  entries <-
+    QAuditEntryExtra.findByMerchantOpCityIdWithFilters
+      merchant.id.getId
+      merchantOpCityId.getId
+      mbFrom
+      mbTo
+      mbEntityType
+      mbAction
+      mbActorType
+      mbActorId
+      mbEntityId
+      (Just limit)
+      (Just offset)
+
+  let auditEntries = map toAuditListItem entries
+      totalItems = length auditEntries
+      summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
+
+  pure API.AuditListRes {..}
+  where
+    toAuditListItem :: AuditEntry.AuditEntry -> API.AuditListItem
+    toAuditListItem entry =
+      API.AuditListItem
+        { auditEntryId = entry.id.getId,
+          entityType = entry.entityType,
+          entityId = entry.entityId,
+          action = entry.action,
+          actorType = entry.actorType,
+          actorId = entry.actorId,
+          previousState = entry.previousState,
+          newState = entry.newState,
+          metadata = entry.metadata,
+          ipAddress = entry.ipAddress,
+          createdAt = entry.createdAt,
+          updatedAt = entry.updatedAt
+        }
 
 -- | Get reconciliation data
 getFinanceManagementFinanceReconciliation ::
@@ -1160,6 +1239,8 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
       let expectedValue = case gwFilter of
             API.Juspay -> "juspay"
             API.BillDesk -> "billdesk"
+            API.RazorPay -> "razorpay"
+            API.CCAvenue -> "ccavenue"
        in maybe False ((== expectedValue) . canonicalizeText) mbActualValue
 
     canonicalizeText :: Text -> Text
@@ -1209,7 +1290,7 @@ getFinanceManagementFinanceWalletLedgerImpl ::
 getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mbFleetOperatorId mbConcernedIndividualId mbFrom mbLimit mbOffset mbSourceType mbTo = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
   let limit = mkPageLimit mbLimit
       offset = mkPageOffset mbOffset
@@ -1345,7 +1426,7 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   when (null invoices) $
     throwError $ InvalidRequest "No invoices found for the given criteria"
 
-  transporterConfig <- QTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCity.id Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   let lang = fromMaybe ENGLISH mbLanguage
       tz = DT.minutesToTimeZone (fromIntegral transporterConfig.timeDiffFromUtc `div` 60)
       tmplLogoUrl = transporterConfig.invoiceConfig >>= (.logoUrl) <&> showBaseUrl
@@ -1418,3 +1499,123 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
       { pdfBase64 = pdfBase64,
         invoiceNumber = chosenInv.invoiceNumber
       }
+
+getFinanceManagementFinanceSapJournals ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Maybe Text ->
+  Flow API.SapJournalListRes
+getFinanceManagementFinanceSapJournals merchantShortId opCity mbBatchId mbBelnr mbDateFrom mbDateTo mbLimit mbOffset mbStatus mbTransactionType = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let limitVal = mkPageLimit mbLimit
+      mbTxnType = mbTransactionType >>= readMaybe . toString
+      mbSt = mbStatus >>= readMaybe . toString
+  entries <- QSapJournalEntry.findByMerchantIdWithFilters merchant.id.getId merchantOpCityId.getId mbDateFrom mbDateTo mbTxnType mbSt mbBatchId mbBelnr (Just limitVal) mbOffset
+  let totalItems = length entries
+      summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
+      journals = map toSapJournalItem entries
+  pure API.SapJournalListRes {totalItems, summary, journals}
+
+getFinanceManagementFinanceSapJournalsTransactions ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  UTCTime ->
+  UTCTime ->
+  Text ->
+  Flow API.SapJournalTransactionsRes
+getFinanceManagementFinanceSapJournalsTransactions merchantShortId opCity mbFromTime mbLimit mbOffset mbSubscriptionId mbToTime periodEndTime periodStartTime transactionType = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  (queryStartTime, queryEndTime) <- resolveTimeRange mbFromTime mbToTime periodStartTime periodEndTime
+  case transactionType of
+    "SubscriptionPurchase" -> do
+      rows <- QSubscriptionPurchase.findSubscriptionPurchasesWithTaxByDateRange merchantOpCityId queryStartTime queryEndTime mbSubscriptionId mbLimit mbOffset
+      let items = map subscriptionToTransactionItem rows
+      pure API.SapJournalTransactionsRes {total = length items, transactions = items}
+    _ -> do
+      txnType <- parseTxnType transactionType
+      reports <- QPgPaymentSettlementReport.findByTxnDateRangeAndTxnType merchant.id.getId merchantOpCityId.getId queryStartTime queryEndTime txnType mbSubscriptionId mbLimit mbOffset
+      let items = map pgSettlementToTransactionItem reports
+      pure API.SapJournalTransactionsRes {total = length items, transactions = items}
+  where
+    resolveTimeRange :: Maybe UTCTime -> Maybe UTCTime -> UTCTime -> UTCTime -> Flow (UTCTime, UTCTime)
+    resolveTimeRange mbFrom mbTo pStart pEnd = do
+      let from = fromMaybe pStart mbFrom
+          to = fromMaybe pEnd mbTo
+      when (from < pStart || to > pEnd) $
+        throwError $ InvalidRequest "Cannot filter in this time range"
+      pure (from, to)
+
+    subscriptionToTransactionItem :: (Text, HighPrecMoney, HighPrecMoney, HighPrecMoney, HighPrecMoney, HighPrecMoney, UTCTime) -> API.SapJournalTransactionItem
+    subscriptionToTransactionItem (spId, planFee, cgst, sgst, igst, taxableValue, purchaseTimestamp) =
+      API.SapJournalTransactionItem
+        { debitAmount = planFee,
+          creditAmount = cgst + sgst + igst + taxableValue,
+          currency = "INR",
+          description = "Subscription Purchase",
+          subscriptionId = Just spId,
+          creationDate = purchaseTimestamp,
+          createdBy = "System"
+        }
+
+    pgSettlementToTransactionItem :: PgPaymentSettlementReport.PgPaymentSettlementReport -> API.SapJournalTransactionItem
+    pgSettlementToTransactionItem r =
+      let amount = case r.txnType of
+            PgPaymentSettlementReport.ORDER -> r.txnAmount
+            PgPaymentSettlementReport.REFUND -> fromMaybe 0 r.refundAmount
+            PgPaymentSettlementReport.CHARGEBACK -> fromMaybe 0 r.chargebackAmount
+       in API.SapJournalTransactionItem
+            { debitAmount = amount,
+              creditAmount = amount,
+              currency = show r.currency,
+              description = show r.txnType,
+              subscriptionId = r.subscriptionPurchaseId,
+              creationDate = r.createdAt,
+              createdBy = maybe "System" show r.createdBy
+            }
+
+    parseTxnType :: (MonadThrow m, Log m) => Text -> m PgPaymentSettlementReport.TxnType
+    parseTxnType = \case
+      "Order" -> pure PgPaymentSettlementReport.ORDER
+      "Refund" -> pure PgPaymentSettlementReport.REFUND
+      "Chargeback" -> pure PgPaymentSettlementReport.CHARGEBACK
+      other -> throwError $ InvalidRequest ("Invalid transactionType: " <> other)
+
+toSapJournalItem :: SJE.SapJournalEntry -> API.SapJournalItem
+toSapJournalItem entry =
+  API.SapJournalItem
+    { id = entry.id.getId,
+      belnr = entry.belnr,
+      batchId = entry.batchId,
+      blart = entry.blart,
+      transactionType = show entry.transactionType,
+      description = entry.description,
+      budat = entry.budat,
+      bldat = entry.bldat,
+      gjahr = entry.gjahr,
+      totalDebitAmount = entry.totalDebitAmount,
+      totalCreditAmount = entry.totalCreditAmount,
+      currency = show entry.currency,
+      transactionCount = entry.transactionCount,
+      glNumber = entry.glNumber,
+      glName = entry.glName,
+      sapMessage = entry.sapMessage,
+      status = show entry.status,
+      merchantId = entry.merchantId,
+      merchantOperatingCityId = entry.merchantOperatingCityId,
+      createdAt = entry.createdAt,
+      updatedAt = entry.updatedAt
+    }

@@ -26,6 +26,7 @@ import Domain.Types.VehicleVariant
 import EulerHS.Prelude hiding (any, elem, id, map, state)
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForEnumAndList)
 import Kernel.External.Encryption
+import qualified Kernel.External.Ticket.Types as Ticket
 import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
@@ -208,6 +209,23 @@ data RideInfoRes = RideInfoRes
 data IssueStatus = OPEN | PENDING_INTERNAL | PENDING_EXTERNAL | RESOLVED | CLOSED | REOPENED | NOT_APPLICABLE
   deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON, ToParamSchema)
 
+-- | The customer's reaction to a post-resolution satisfaction prompt.
+-- ACCEPT  : customer confirms the issue is resolved (drives transition to CLOSED).
+-- ESCALATE: customer is not satisfied (drives the reopen-prompt branch / REOPENED).
+data CustomerResponse
+  = ACCEPT
+  | ESCALATE
+  deriving (Eq, Show, Ord, Read, Generic, ToSchema, FromJSON, ToJSON, ToParamSchema)
+
+instance FromHttpApiData CustomerResponse where
+  parseUrlPiece "accept" = pure ACCEPT
+  parseUrlPiece "escalate" = pure ESCALATE
+  parseUrlPiece _ = Left "Unable to parse customer response"
+
+instance ToHttpApiData CustomerResponse where
+  toUrlPiece ACCEPT = "accept"
+  toUrlPiece ESCALATE = "escalate"
+
 data FareBreakup = FareBreakup
   { amount :: Price,
     description :: Text,
@@ -222,6 +240,7 @@ data FareBreakupEntityType = BOOKING_UPDATE_REQUEST | BOOKING | RIDE | INITIAL_B
 $(mkBeamInstancesForEnumAndList ''VehicleVariant)
 $(mkBeamInstancesForEnum ''IssueStatus)
 $(mkHttpInstancesForEnum ''IssueStatus)
+$(mkBeamInstancesForEnum ''CustomerResponse)
 
 data ChatType = IssueMessage | IssueOption | MediaFile | IssueDescription
   deriving (Generic, FromJSON, ToSchema, ToJSON, Show, Read, Eq, Ord)
@@ -238,6 +257,19 @@ data Chat = Chat
     timestamp :: UTCTime
   }
   deriving (Show, Generic, Read, Eq, Ord, ToJSON, FromJSON, ToSchema)
+
+-- | Per-provider ticket identifier used when a merchant fans out create/update
+-- calls across multiple third-party ticket services (e.g. primary Zendesk with
+-- a mirrored XyneSpaces write). Stored on 'IssueReport' as a JSON blob so the
+-- shared library never needs a Beam typeclass instance for it. The primary
+-- provider's ticketId keeps living on 'IssueReport.ticketId'; the list here
+-- holds only the secondaries so downstream updates can target each service
+-- with its own ticketId.
+data AdditionalTicketId = AdditionalTicketId
+  { service :: Ticket.IssueTicketService,
+    ticketId :: Text
+  }
+  deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be Value => HasSqlValueSyntax be Chat where
   sqlValueSyntax = sqlValueSyntax . toJSON
@@ -289,7 +321,7 @@ data MerchantConfig = MerchantConfig
 allLanguages :: [Language]
 allLanguages = [minBound .. maxBound]
 
-data IssueReportType = AC_RELATED_ISSUE | DRIVER_TOLL_RELATED_ISSUE | SYNC_BOOKING | EXTRA_FARE_MITIGATION | DRUNK_AND_DRIVE_VIOLATION
+data IssueReportType = AC_RELATED_ISSUE | DRIVER_TOLL_RELATED_ISSUE | SYNC_BOOKING | EXTRA_FARE_MITIGATION | DRUNK_AND_DRIVE_VIOLATION | UNHYGIENIC_VEHICLE | VEHICLE_UNSAFE
   deriving stock (Show, Eq, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 

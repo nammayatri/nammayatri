@@ -9,10 +9,12 @@ imports:
   FieldInfo: Domain.Types.DocumentVerificationConfig
   ServiceTierType: Domain.Types.Common
   AirConditionedRestrictionType: Domain.Types.DriverInformation
+  AirportRestrictionType: Domain.Types.DriverInformation
   APISuccess: Kernel.Types.APISuccess
   Centesimal: Kernel.Types.Common
   UTCTime: Kernel.Prelude
   Person: Domain.Types.Person
+  Role: Domain.Types.Person
   PriceAPIEntity: Kernel.Types.Common
   Money: Kernel.Types.Common
   VehicleCategory: Domain.Types.VehicleCategory
@@ -35,6 +37,7 @@ imports:
   VerificationService: Kernel.External.Verification.Types
   RequirementsInfo: Kernel.External.Payment.Interface.Types
   Address: Kernel.External.Payment.Stripe.Types
+  DocumentStatusItem: SharedLogic.DriverOnboarding.VehicleDocs
 
 module: DriverOnboardingV2
 types:
@@ -73,6 +76,7 @@ types:
     verificationProvidersPriorityList: Maybe [VerificationService]
     isReminderSupported: Maybe Bool
     isApprovalSupported: Maybe Bool
+    rolesAllowedToUploadDocument: Maybe [Role]
   UpdateAirConditionUpdateRequest:
     recordType: NewType
     isAirConditioned: Bool
@@ -81,7 +85,7 @@ types:
     canSwitchToRental: Maybe Bool
     canSwitchToInterCity: Maybe Bool
     canSwitchToIntraCity: Maybe Bool
-    canSwitchToAirport: Maybe Bool
+    enableForAirport: AirportRestrictionType
     airConditioned: Maybe AirConditionedTier
   AirConditionedTier:
       isWorking: Bool
@@ -200,6 +204,13 @@ types:
   FleetRCListRes:
     recordType: NewType
     rcs: "[LinkedRC]"
+  # Vehicle-only RC verify-status: recompute RC.verified from all mandatory vehicle docs (person-independent).
+  RcVerifyStatusResp:
+    registrationNo: Text
+    verified: Bool
+    approved: Maybe Bool
+    documents: "[DocumentStatusItem]"
+    derive: "Show"
   LinkToFleetReq:
     fleetOwnerId: Id Person
     onboardingVehicleCategory: Maybe VehicleCategory
@@ -398,6 +409,17 @@ apis:
         type: LinkToFleetReq
       response:
         type: APISuccess
+  # Vehicle-only RC verify-status. Person-independent: takes registrationNo OR rcId, resolves merchant/city
+  # from the RC row, checks all mandatory vehicle docs, and (under enableBotFlow) persists RC.verified.
+  # Auth is for API access only — it is NOT used to derive the RC.
+  - GET:
+      endpoint: /driver/register/vehicleStatus
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - registrationNo: Text
+        - rcId: Text
+      response:
+        type: RcVerifyStatusResp
   # Digilocker
   - POST:
       endpoint: /driver/digilocker/initiate

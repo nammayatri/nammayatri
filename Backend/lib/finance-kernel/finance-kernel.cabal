@@ -42,6 +42,8 @@ library
       Lib.Finance.Invoice.Service
       Lib.Finance.Ledger.Interface
       Lib.Finance.Ledger.Service
+      Lib.Finance.SapJournalEntry.Interface
+      Lib.Finance.SapJournalEntry.Service
       Lib.Finance.Settlement.Fetch
       Lib.Finance.Settlement.Ingestion
       Lib.Finance.Settlement.ParserTypeMap
@@ -50,6 +52,7 @@ library
       Lib.Finance.Settlement.Transformer
       Lib.Finance.StateMachine.Interface
       Lib.Finance.StateMachine.Service
+      Lib.Finance.Storage.Queries.AuditEntryExtra
       Lib.Finance.Storage.Queries.InvoiceExtra
       Lib.Finance.Storage.Queries.InvoiceTemplateExtra
       Lib.Finance.Storage.Queries.LedgerEntryExtra
@@ -57,8 +60,10 @@ library
       Lib.Finance.Storage.Queries.PgPayoutSettlementReportExtra
       Lib.Finance.Storage.Queries.ReconciliationEntryExtra
       Lib.Finance.Storage.Queries.ReconciliationSummaryExtra
+      Lib.Finance.Storage.Queries.SapJournalEntryExtra
       Lib.Finance.Tax.Interface
       Lib.Finance.Tax.Types
+      Lib.Finance.Utils.SensitiveData
       Tools.Beam.UtilsTH
       Lib.Finance.Domain.Types.Account
       Lib.Finance.Domain.Types.AuditEntry
@@ -73,6 +78,7 @@ library
       Lib.Finance.Domain.Types.PgPayoutSettlementReport
       Lib.Finance.Domain.Types.ReconciliationEntry
       Lib.Finance.Domain.Types.ReconciliationSummary
+      Lib.Finance.Domain.Types.SapJournalEntry
       Lib.Finance.Domain.Types.SettlementFileInfo
       Lib.Finance.Domain.Types.StateTransition
       Lib.Finance.Storage.Beam.Account
@@ -89,6 +95,7 @@ library
       Lib.Finance.Storage.Beam.PgPayoutSettlementReport
       Lib.Finance.Storage.Beam.ReconciliationEntry
       Lib.Finance.Storage.Beam.ReconciliationSummary
+      Lib.Finance.Storage.Beam.SapJournalEntry
       Lib.Finance.Storage.Beam.SettlementFileInfo
       Lib.Finance.Storage.Beam.StateTransition
       Lib.Finance.Storage.Queries.Account
@@ -100,14 +107,17 @@ library
       Lib.Finance.Storage.Queries.InvoiceLedgerLink
       Lib.Finance.Storage.Queries.InvoiceTemplate
       Lib.Finance.Storage.Queries.LedgerEntry
+      Lib.Finance.Storage.Queries.OrphanInstances.AuditEntry
       Lib.Finance.Storage.Queries.OrphanInstances.Invoice
       Lib.Finance.Storage.Queries.OrphanInstances.InvoiceTemplate
       Lib.Finance.Storage.Queries.OrphanInstances.PgPaymentSettlementReport
       Lib.Finance.Storage.Queries.OrphanInstances.PgPayoutSettlementReport
+      Lib.Finance.Storage.Queries.OrphanInstances.SapJournalEntry
       Lib.Finance.Storage.Queries.PgPaymentSettlementReport
       Lib.Finance.Storage.Queries.PgPayoutSettlementReport
       Lib.Finance.Storage.Queries.ReconciliationEntry
       Lib.Finance.Storage.Queries.ReconciliationSummary
+      Lib.Finance.Storage.Queries.SapJournalEntry
       Lib.Finance.Storage.Queries.SettlementFileInfo
       Lib.Finance.Storage.Queries.StateTransition
   other-modules:

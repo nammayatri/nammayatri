@@ -10,6 +10,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PassType
 import qualified Domain.Types.Person
+import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -35,6 +36,7 @@ data PurchasedPass = PurchasedPass
     passDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     passName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     passNumber :: Kernel.Prelude.Int,
+    passPhotoMediaId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     passTypeId :: Kernel.Types.Id.Id Domain.Types.PassType.PassType,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     preferredDestination :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -49,7 +51,7 @@ data PurchasedPass = PurchasedPass
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data BenefitType = FullSaving | FixedSaving | PercentageSaving deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+data BenefitType = FullSaving | FixedSaving | PercentageSaving deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
 
 data StatusType
   = Pending
@@ -62,14 +64,14 @@ data StatusType
   | Refunded
   | RefundFailed
   | PhotoPending
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+  deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (Kernel.Prelude.ToParamSchema))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''StatusType)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''StatusType))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''StatusType)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''StatusType))
 
-$(Kernel.Utils.TH.mkToHttpInstanceForEnum ''StatusType)
+$(Kernel.Utils.TH.mkToHttpInstanceForEnum (''StatusType))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''BenefitType)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''BenefitType))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''BenefitType)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''BenefitType))

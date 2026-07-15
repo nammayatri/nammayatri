@@ -33,6 +33,7 @@ imports:
   TripParty: Domain.Types.Trip
   ConfigVersionMap: Lib.Yudhishthira.Types
   Value: Data.Aeson
+  FareSettlementType: Lib.Types.SpecialLocation
   ParcelType: Domain.Types.ParcelType
   JourneyLeg: Domain.Types.JourneyLeg
   RecentLocation: Domain.Types.RecentLocation
@@ -214,6 +215,7 @@ Booking:
     isScheduled: Bool
     vehicleServiceTierType: ServiceTierType|NoRelation
     vehicleServiceTierSeatingCapacity: Maybe Int
+    vehicleServiceTierLuggageCapacity: Maybe Int
     vehicleServiceTierAirConditioned: Maybe Double
     vehicleCategory: Maybe VehicleCategory
     vehicleIconUrl: Maybe BaseUrl
@@ -225,6 +227,7 @@ Booking:
     specialLocationTag: Maybe Text
     specialLocationName: Maybe Text
     specialLocationSupportNumber: Maybe Text
+    fareSettlementType: Maybe FareSettlementType
     createdAt: UTCTime
     updatedAt: UTCTime
     serviceTierName: Maybe Text
@@ -469,6 +472,7 @@ Booking:
     riderId: "!SecondaryKey" # forcing to be a secondary key
     quoteId: "!SecondaryKey" # forcing to be a secondary key
     riderTransactionId: "!SecondaryKey" # forcing to be a secondary key
+    otpCode: "!SecondaryKey" # forcing to be a secondary key
 
   queries:
     updateIsBookingUpdated:

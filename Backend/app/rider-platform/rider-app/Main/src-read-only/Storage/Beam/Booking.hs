@@ -22,6 +22,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Version
 import qualified Kernel.Utils.Common
+import qualified Lib.Types.SpecialLocation
 import qualified SharedLogic.Type
 import Tools.Beam.UtilsTH
 
@@ -65,6 +66,7 @@ data BookingT f = BookingT
     estimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     estimatedStaticDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     estimatedTotalFare :: B.C f Kernel.Types.Common.HighPrecMoney,
+    fareSettlementType :: B.C f (Kernel.Prelude.Maybe Lib.Types.SpecialLocation.FareSettlementType),
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fulfillmentId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     hasStops :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -120,6 +122,7 @@ data BookingT f = BookingT
     vehicleCategory :: B.C f (Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory),
     vehicleIconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleServiceTierAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    vehicleServiceTierLuggageCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleVariant :: B.C f Domain.Types.ServiceTierType.ServiceTierType
   }
@@ -131,6 +134,6 @@ instance B.Table BookingT where
 
 type Booking = BookingT Identity
 
-$(enableKVPG ''BookingT ['id] [['bppBookingId], ['quoteId], ['riderId], ['riderTransactionId]])
+$(enableKVPG ''BookingT ['id] [['otpCode], ['bppBookingId], ['quoteId], ['riderId], ['riderTransactionId]])
 
 $(mkTableInstancesWithTModifier ''BookingT "booking" [("bppBookingId", "bpp_ride_booking_id"), ("riderTransactionId", "transaction_id")])

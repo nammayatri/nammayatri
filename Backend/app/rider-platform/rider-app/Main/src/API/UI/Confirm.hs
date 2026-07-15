@@ -34,12 +34,13 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.Queries.BecknConfig as SQBC
 import Tools.Auth
 import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 import qualified Tools.Metrics as Metrics
@@ -95,7 +96,7 @@ confirm' (personId, _) quoteId mbDashboardAgentId mbPaymentMethodId mbPaymentIns
     dConfirmRes <- DConfirm.confirm personId quoteId mbDashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled requiresPaymentBeforeConfirm mbSelectedOfferId
     becknInitReq <- ACL.buildInitReqV2 dConfirmRes
     moc <- CQMOC.findByMerchantIdAndCity dConfirmRes.merchant.id dConfirmRes.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> dConfirmRes.merchant.id.getId <> "-city-" <> show dConfirmRes.city)
-    bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = moc.id.getId, merchantId = dConfirmRes.merchant.id.getId, domain = Just "MOBILITY", vehicleCategory = Nothing})) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show dConfirmRes.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId)
+    bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = moc.id.getId, merchantId = dConfirmRes.merchant.id.getId, domain = Just "MOBILITY", vehicleCategory = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just dConfirmRes.merchant.id) "MOBILITY" (Just moc.id)))) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show dConfirmRes.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId)
     initTtl <- bapConfig.initTTLSec & fromMaybeM (InternalError "Invalid ttl")
     confirmTtl <- bapConfig.confirmTTLSec & fromMaybeM (InternalError "Invalid ttl")
     confirmBufferTtl <- bapConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")

@@ -47,7 +47,9 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 findByPersonId :: (Safety.Storage.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Safety.Domain.Types.Common.Person -> m [Safety.Domain.Types.Sos.Sos])
 findByPersonId personId = do findAllWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
-findByPersonIdAndStatus :: (Safety.Storage.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Safety.Domain.Types.Common.Person -> Safety.Domain.Types.Sos.SosStatus -> m (Maybe Safety.Domain.Types.Sos.Sos))
+findByPersonIdAndStatus ::
+  (Safety.Storage.BeamFlow.BeamFlow m r) =>
+  (Kernel.Types.Id.Id Safety.Domain.Types.Common.Person -> Safety.Domain.Types.Sos.SosStatus -> m (Maybe Safety.Domain.Types.Sos.Sos))
 findByPersonIdAndStatus personId status = do findOneWithKV [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId), Se.Is Beam.status $ Se.Eq status]]
 
 findByRideId :: (Safety.Storage.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Safety.Domain.Types.Common.Ride) -> m (Maybe Safety.Domain.Types.Sos.Sos))
@@ -93,6 +95,9 @@ updateMediaFiles mediaFiles id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.mediaFiles (Kernel.Prelude.Just (Kernel.Types.Id.getId <$> mediaFiles)), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateRequesterId :: (Safety.Storage.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos -> m ())
+updateRequesterId requesterId id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.requesterId requesterId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateState :: (Safety.Storage.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Safety.Domain.Types.Sos.SosState -> Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos -> m ())
 updateState sosState id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.sosState sosState, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -120,6 +125,7 @@ updateByPrimaryKey (Safety.Domain.Types.Sos.Sos {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
+      Se.Set Beam.requesterId requesterId,
       Se.Set Beam.rideId (Kernel.Types.Id.getId <$> rideId),
       Se.Set Beam.sosState sosState,
       Se.Set Beam.status status,
@@ -145,6 +151,7 @@ instance FromTType' Beam.Sos Safety.Domain.Types.Sos.Sos where
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             personId = Kernel.Types.Id.Id personId,
+            requesterId = requesterId,
             rideId = Kernel.Types.Id.Id <$> rideId,
             sosState = sosState,
             status = status,
@@ -167,6 +174,7 @@ instance ToTType' Beam.Sos Safety.Domain.Types.Sos.Sos where
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.personId = Kernel.Types.Id.getId personId,
+        Beam.requesterId = requesterId,
         Beam.rideId = Kernel.Types.Id.getId <$> rideId,
         Beam.sosState = sosState,
         Beam.status = status,

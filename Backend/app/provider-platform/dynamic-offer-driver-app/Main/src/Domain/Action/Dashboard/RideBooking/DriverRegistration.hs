@@ -21,11 +21,13 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified Storage.Cac.TransporterConfig as SCT
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import qualified Storage.Queries.RideExtra as QRideExtra
@@ -49,7 +51,8 @@ auth merchantShortId opCity req = do
           email = Nothing,
           identifierType = Just SP.MOBILENUMBER,
           otpChannel = Nothing,
-          password = Nothing
+          password = Nothing,
+          employeeId = Nothing
         }
       Nothing
       Nothing
@@ -64,7 +67,7 @@ postDriverRegistrationVerify :: ShortId DM.Merchant -> Context.City -> Text -> B
 postDriverRegistrationVerify merchantShortId opCity authId mbFleet fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   verify authId mbFleet fleetOwnerId Nothing transporterConfig req
 
 verify :: Text -> Bool -> Text -> Maybe (Id SP.Person) -> TransporterConfig -> Common.AuthVerifyReq -> Flow APISuccess
@@ -84,7 +87,7 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
     -- Check if driver has any active rides (not completed or cancelled)
     mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId res.person.id
     when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
-    assoc <- FDV.makeFleetDriverAssociation res.person.id fleetOwnerId mbOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+    assoc <- FDV.makeFleetDriverAssociation res.person.id fleetOwnerId mbOperatorId DomainRC.defaultAssociationEnd
     QFDV.create assoc
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById res.person.id
     Analytics.handleDriverAnalyticsAndFlowStatus

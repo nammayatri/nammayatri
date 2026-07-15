@@ -35,3 +35,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_gstin ADD COLUMN pan_number text ;
 
 ALTER TABLE atlas_driver_offer_bpp.driver_gstin ADD COLUMN state_name text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_gstin ADD COLUMN pincode text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_gstin ADD COLUMN reject_reason text ;

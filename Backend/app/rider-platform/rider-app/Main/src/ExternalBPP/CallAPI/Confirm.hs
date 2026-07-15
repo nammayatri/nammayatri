@@ -20,12 +20,15 @@ import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.PTCircuitBreaker as CB
+import qualified Storage.CachedQueries.FRFSConfig as CQFRFS
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 import qualified UrlShortner.Common as UrlShortner
@@ -33,7 +36,7 @@ import qualified UrlShortner.Common as UrlShortner
 confirm ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EncFlow m r,
     SchedulerFlow r,
     EsqDBReplicaFlow m r,
@@ -80,13 +83,13 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
       return $ Right ()
     _ -> do
       let ptMode = CB.vehicleCategoryToPTMode booking.vehicleType
-      mRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+      mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCity.id))
       let circuitOpen = CB.isCircuitOpen ptMode CB.BookingAPI mRiderConfig
       let cbConfig = CB.parseCircuitBreakerConfig (mRiderConfig >>= (.ptCircuitBreakerConfig))
 
       result <- withTryCatch "callExternalBPP:confirmFlow" $ do
         frfsConfig <-
-          getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+          getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (CQFRFS.findByMerchantOperatingCityId merchantOperatingCity.id (Just [])))
             >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
         onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories mbIsSingleMode
         processOnConfirm onConfirmReq
@@ -111,7 +114,7 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
     processOnConfirm ::
       ( CacheFlow m r,
         EsqDBFlow m r,
-        MonadFlow m,
+        Finance.HasActorInfo m r,
         EncFlow m r,
         SchedulerFlow r,
         EsqDBReplicaFlow m r,

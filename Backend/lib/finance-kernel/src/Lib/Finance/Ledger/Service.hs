@@ -58,14 +58,19 @@ module Lib.Finance.Ledger.Service
 where
 
 import qualified Data.Aeson as Aeson
-import Kernel.Beam.Functions (findAllWithKV, updateWithKV)
+import qualified Data.Map as Map
+import Kernel.Beam.Functions (ToTType' (..), findAllWithKV, updateWithKV)
 import Kernel.Prelude
 import Kernel.Types.Common ()
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import Lib.Finance.Audit.Interface (AuditInput (..))
+import qualified Lib.Finance.Audit.Service as Audit
 import Lib.Finance.Core.Types (TimeRange (..))
 import Lib.Finance.Domain.Types.Account (Account)
 import qualified Lib.Finance.Domain.Types.Account as Account
+import Lib.Finance.Domain.Types.AuditEntry (AuditAction (..))
+import qualified Lib.Finance.Domain.Types.AuditEntry as AuditDomain
 import Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Error.Types
 import Lib.Finance.Ledger.Interface
@@ -73,7 +78,101 @@ import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Beam.LedgerEntry as BeamLE
 import qualified Lib.Finance.Storage.Queries.Account as QAccount
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedger
+import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerExtra
 import qualified Sequelize as Se
+
+--------------------------------------------------------------------------------
+-- AUDIT HELPERS
+--------------------------------------------------------------------------------
+
+ledgerEntryToAuditValue :: LedgerEntry -> Aeson.Value
+ledgerEntryToAuditValue = Aeson.toJSON . toTType' @BeamLE.LedgerEntry . hideLedgerEntrySensitiveFields
+  where
+    hideLedgerEntrySensitiveFields :: LedgerEntry -> LedgerEntry
+    hideLedgerEntrySensitiveFields LedgerEntry {..} =
+      LedgerEntry
+        { metadata = Nothing,
+          ..
+        }
+
+logLedgerAudit ::
+  BeamFlow.BeamFlow m r =>
+  ActorInfo ->
+  AuditAction ->
+  Maybe LedgerEntry ->
+  LedgerEntry ->
+  m ()
+logLedgerAudit actorInfo action mbBefore afterEntry = do
+  auditResult <-
+    Audit.logAudit
+      AuditInput
+        { entityType = AuditDomain.LedgerEntry,
+          entityId = afterEntry.id.getId,
+          action = action,
+          actorType = actorInfo.actorType,
+          actorId = actorInfo.actorId,
+          beforeState = ledgerEntryToAuditValue <$> mbBefore,
+          afterState = Just $ ledgerEntryToAuditValue afterEntry,
+          merchantId = afterEntry.merchantId,
+          merchantOperatingCityId = afterEntry.merchantOperatingCityId
+        }
+  case auditResult of
+    Left err -> logWarning $ "Failed to audit ledger entry (" <> show action <> "): " <> show err
+    Right _ -> pure ()
+
+auditLedgerCreate ::
+  BeamFlow.BeamFlow m r =>
+  ActorInfo ->
+  LedgerEntry ->
+  m ()
+auditLedgerCreate actorInfo = logLedgerAudit actorInfo Created Nothing
+
+auditLedgerReversal ::
+  BeamFlow.BeamFlow m r =>
+  ActorInfo ->
+  LedgerEntry ->
+  m ()
+auditLedgerReversal actorInfo = logLedgerAudit actorInfo Reversed Nothing
+
+auditLedgerUpdate ::
+  BeamFlow.BeamFlow m r =>
+  ActorInfo ->
+  AuditAction ->
+  LedgerEntry ->
+  LedgerEntry ->
+  m ()
+auditLedgerUpdate actorInfo action before after =
+  logLedgerAudit actorInfo action (Just before) after
+
+settlementSnapshotChanged :: LedgerEntry -> LedgerEntry -> Bool
+settlementSnapshotChanged before after =
+  before.settlementStatus /= after.settlementStatus
+    || before.settlementId /= after.settlementId
+    || before.settlementTimestamp /= after.settlementTimestamp
+
+settlementAuditPairs ::
+  [LedgerEntry] ->
+  [LedgerEntry] ->
+  [(LedgerEntry, LedgerEntry)]
+settlementAuditPairs beforeEntries afterEntries =
+  let afterById = Map.fromList [(entry.id, entry) | entry <- afterEntries]
+   in [ (before, after)
+        | before <- beforeEntries,
+          Just after <- [Map.lookup before.id afterById],
+          settlementSnapshotChanged before after
+      ]
+
+auditBatchSettlementUpdates ::
+  BeamFlow.BeamFlow m r =>
+  ActorInfo ->
+  AuditAction ->
+  [LedgerEntry] ->
+  m ()
+auditBatchSettlementUpdates _ _ [] = pure ()
+auditBatchSettlementUpdates actorInfo action beforeEntries = do
+  afterEntries <- QLedgerExtra.findByIds (map (.id) beforeEntries)
+  forM_ (settlementAuditPairs beforeEntries afterEntries) $ \(before, after) ->
+    auditLedgerUpdate actorInfo action before after
 
 --------------------------------------------------------------------------------
 -- CREATE OPERATIONS
@@ -82,10 +181,11 @@ import qualified Sequelize as Se
 -- | Create a ledger entry WITHOUT updating account balances
 -- Use this for entries that don't immediately affect balances (e.g., PENDING)
 createEntry ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   LedgerEntryInput ->
   m (Either FinanceError LedgerEntry)
 createEntry input = do
+  actorInfo <- asks (.actorInfo)
   now <- getCurrentTime
   entryId <- generateGUID
   let entry =
@@ -115,20 +215,26 @@ createEntry input = do
             timestamp = now,
             merchantId = input.merchantId,
             merchantOperatingCityId = input.merchantOperatingCityId,
+            createdBy = Just actorInfo.actorType,
+            createdById = actorInfo.actorId,
+            updatedBy = Just actorInfo.actorType,
+            updatedById = actorInfo.actorId,
             createdAt = now,
             updatedAt = now
           }
 
   QLedger.create entry
+  auditLedgerCreate actorInfo entry
   pure $ Right entry
 
 -- | Create a ledger entry AND update account balances atomically
 -- LAW 1: Credits = Debits (fromAccount debited, toAccount credited)
 createEntryWithBalanceUpdate ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   LedgerEntryInput ->
   m (Either FinanceError LedgerEntry)
 createEntryWithBalanceUpdate input = do
+  actorInfo <- asks (.actorInfo)
   mbFromAccount <- QAccount.findById input.fromAccountId
   mbToAccount <- QAccount.findById input.toAccountId
 
@@ -177,22 +283,28 @@ createEntryWithBalanceUpdate input = do
                 timestamp = now,
                 merchantId = input.merchantId,
                 merchantOperatingCityId = input.merchantOperatingCityId,
+                createdBy = Just actorInfo.actorType,
+                createdById = actorInfo.actorId,
+                updatedBy = Just actorInfo.actorType,
+                updatedById = actorInfo.actorId,
                 createdAt = now,
                 updatedAt = now
               }
       QLedger.create entry
       _ <- QAccount.updateBalance fromEndBal input.fromAccountId
       _ <- QAccount.updateBalance toEndBal input.toAccountId
+      auditLedgerCreate actorInfo entry
       pure $ Right entry
 
 -- | Create a reversal entry for an existing entry
 -- LAW 2: History is immutable - we create a new entry, not modify the old one
 createReversal ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   Id LedgerEntry -> -- Entry to reverse
   Text -> -- Reason for reversal
   m (Either FinanceError LedgerEntry)
 createReversal originalId reason = do
+  actorInfo <- asks (.actorInfo)
   mbOriginal <- QLedger.findById originalId
 
   case mbOriginal of
@@ -228,6 +340,10 @@ createReversal originalId reason = do
                 timestamp = now,
                 merchantId = original.merchantId,
                 merchantOperatingCityId = original.merchantOperatingCityId,
+                createdBy = Just actorInfo.actorType,
+                createdById = actorInfo.actorId,
+                updatedBy = Just actorInfo.actorType,
+                updatedById = actorInfo.actorId,
                 createdAt = now,
                 updatedAt = now
               }
@@ -244,6 +360,7 @@ createReversal originalId reason = do
       forM_ mbFrom $ \a -> QAccount.updateBalance (if isAssetOrExpenseAccount a then a.balance - original.amount else a.balance + original.amount) original.fromAccountId
       forM_ mbTo $ \a -> QAccount.updateBalance (if isAssetOrExpenseAccount a then a.balance + original.amount else a.balance - original.amount) original.toAccountId
 
+      auditLedgerReversal actorInfo reversal
       pure $ Right reversal
 
 --------------------------------------------------------------------------------
@@ -252,12 +369,19 @@ createReversal originalId reason = do
 
 -- | Update entry status (generic operation)
 updateEntryStatus ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   Id LedgerEntry ->
   EntryStatus ->
   m ()
 updateEntryStatus entryId newStatus = do
-  QLedger.updateStatus newStatus entryId
+  actorInfo <- asks (.actorInfo)
+  mbBefore <- QLedger.findById entryId
+  forM_ mbBefore $ \before ->
+    when (before.status /= newStatus) $ do
+      QLedger.updateStatus newStatus (Just actorInfo.actorType) actorInfo.actorId entryId
+      mbAfter <- QLedger.findById entryId
+      forM_ mbAfter $ \after ->
+        auditLedgerUpdate actorInfo StatusChanged before after
 
 -- | Settle an entry (mark as SETTLED with timestamp).
 -- Idempotently posts balance deltas to from/to accounts the first time an
@@ -265,10 +389,11 @@ updateEntryStatus entryId newStatus = do
 -- 'createEntryWithBalanceUpdate'. Writes the resulting balance snapshots onto
 -- the entry. If the entry is already SETTLED (or not found / VOIDED), no-op.
 settleEntry ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   Id LedgerEntry ->
   m ()
 settleEntry entryId = do
+  actorInfo <- asks (.actorInfo)
   mbEntry <- QLedger.findById entryId
   forM_ mbEntry $ \entry ->
     when (entry.status == PENDING || entry.status == DUE) $ do
@@ -298,15 +423,18 @@ settleEntry entryId = do
                     fromStartingBalance = Just fromStartBal,
                     fromEndingBalance = Just fromEndBal,
                     toStartingBalance = Just toStartBal,
-                    toEndingBalance = Just toEndBal
+                    toEndingBalance = Just toEndBal,
+                    updatedBy = Just actorInfo.actorType,
+                    updatedById = actorInfo.actorId
                   }
           QLedger.updateByPrimaryKey updatedEntry
+          auditLedgerUpdate actorInfo StatusChanged entry updatedEntry
         _ -> pure ()
 
 -- | Settle an entry, update its amount, AND write balance snapshots.
 -- Use when the final settled amount differs from the original hold amount (e.g., fare recalculation).
 settleEntryWithBalancesAndAmount ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   Id LedgerEntry ->
   HighPrecMoney -> -- settledAmount (the actual/final amount)
   HighPrecMoney -> -- fromStartingBalance
@@ -315,6 +443,7 @@ settleEntryWithBalancesAndAmount ::
   HighPrecMoney -> -- toEndingBalance
   m ()
 settleEntryWithBalancesAndAmount entryId settledAmount fromStartBal fromEndBal toStartBal toEndBal = do
+  actorInfo <- asks (.actorInfo)
   now <- getCurrentTime
   mbEntry <- QLedger.findById entryId
   forM_ mbEntry $ \entry -> do
@@ -326,18 +455,28 @@ settleEntryWithBalancesAndAmount entryId settledAmount fromStartBal fromEndBal t
               fromStartingBalance = Just fromStartBal,
               fromEndingBalance = Just fromEndBal,
               toStartingBalance = Just toStartBal,
-              toEndingBalance = Just toEndBal
+              toEndingBalance = Just toEndBal,
+              updatedBy = Just actorInfo.actorType,
+              updatedById = actorInfo.actorId
             }
     QLedger.updateByPrimaryKey updatedEntry
+    auditLedgerUpdate actorInfo Updated entry updatedEntry
 
 -- | Void an entry (mark as VOIDED with reason)
 voidEntry ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   Id LedgerEntry ->
   Text -> -- Reason for voiding
   m ()
 voidEntry entryId reason = do
-  QLedger.updateVoided VOIDED (Just reason) entryId
+  actorInfo <- asks (.actorInfo)
+  mbBefore <- QLedger.findById entryId
+  forM_ mbBefore $ \before ->
+    when (before.status /= VOIDED) $ do
+      QLedger.updateVoided VOIDED (Just reason) (Just actorInfo.actorType) actorInfo.actorId entryId
+      mbAfter <- QLedger.findById entryId
+      forM_ mbAfter $ \after ->
+        auditLedgerUpdate actorInfo StatusChanged before after
 
 --------------------------------------------------------------------------------
 -- QUERY BY ID/REFERENCE
@@ -554,12 +693,14 @@ findUnsettledByAccountBeforeTime accountId before =
 -- Uses a single batch UPDATE query for performance.
 -- Used by the wallet payout webhook handler after a successful disbursement.
 markEntriesAsPaidOut ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   [Id LedgerEntry] -> -- Entry IDs to mark
   Text -> -- Settlement ID (PayoutRequest ID)
   m ()
 markEntriesAsPaidOut [] _ = pure ()
 markEntriesAsPaidOut entryIds payoutRequestId = do
+  actorInfo <- asks (.actorInfo)
+  beforeEntries <- QLedgerExtra.findByIds entryIds
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamLE.settlementStatus (Just PAID_OUT),
@@ -568,6 +709,7 @@ markEntriesAsPaidOut entryIds payoutRequestId = do
       Se.Set BeamLE.updatedAt now
     ]
     [Se.Is BeamLE.id $ Se.In (map (.getId) entryIds)]
+  auditBatchSettlementUpdates actorInfo StatusChanged beforeEntries
 
 -- | Reserve a batch of ledger entries for an in-flight payout.
 --   Sets settlementStatus = PROCESSING (so subsequent eligibility queries
@@ -575,12 +717,14 @@ markEntriesAsPaidOut entryIds payoutRequestId = do
 --   that are still UNSETTLED / NULL — already-PAID_OUT or already-PROCESSING
 --   entries are left untouched.
 markEntriesAsProcessing ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   [Id LedgerEntry] ->
   Maybe Text -> -- optional settlementId (PayoutRequest id once known)
   m ()
 markEntriesAsProcessing [] _ = pure ()
 markEntriesAsProcessing entryIds mbSettlementId = do
+  actorInfo <- asks (.actorInfo)
+  beforeEntries <- QLedgerExtra.findByIds entryIds
   now <- getCurrentTime
   updateWithKV
     ( [ Se.Set BeamLE.settlementStatus (Just PROCESSING),
@@ -599,17 +743,20 @@ markEntriesAsProcessing entryIds mbSettlementId = do
             ]
         ]
     ]
+  auditBatchSettlementUpdates actorInfo StatusChanged beforeEntries
 
 -- | Revert a batch of PROCESSING ledger entries back to UNSETTLED.
 --   Used when a payout submission fails (sync or via webhook) to release
 --   the reservation so the entries become eligible again.
 --   Only flips PROCESSING entries — PAID_OUT entries are not touched.
 markEntriesAsUnsettled ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   [Id LedgerEntry] ->
   m ()
 markEntriesAsUnsettled [] = pure ()
 markEntriesAsUnsettled entryIds = do
+  actorInfo <- asks (.actorInfo)
+  beforeEntries <- QLedgerExtra.findByIds entryIds
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamLE.settlementStatus (Just UNSETTLED),
@@ -625,3 +772,4 @@ markEntriesAsUnsettled entryIds = do
             ]
         ]
     ]
+  auditBatchSettlementUpdates actorInfo StatusChanged beforeEntries

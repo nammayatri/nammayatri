@@ -1,10 +1,13 @@
 imports:
   DashboardAccessType: API.Types.ProviderPlatform.Management.Endpoints.Account
   DocumentType: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
-  BaseUrl: Kernel.Prelude
-  VehicleCategory: Domain.Types.VehicleCategory # check this
   DLDetails: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
   RCDetails: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
+  PanType: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
+  AddressDocumentType: Dashboard.Common.Driver
+  IndianState: Kernel.Types.Beckn.Context
+  BaseUrl: Kernel.Prelude
+  VehicleCategory: Domain.Types.VehicleCategory # check this
   Driver: Dashboard.Common
   APISuccess: Kernel.Types.APISuccess
   DocsVerificationStatus: Dashboard.Common
@@ -60,6 +63,17 @@ apis:
               - docsVerificationStatus: DocsVerificationStatus
             response:
               type: StatusRes
+  # Vehicle-only RC verify-status. Resolves the RC from registrationNo/rcId. Dashboard callers are already
+  # merchant/city-scoped by ApiAuthV2, so the per-person RC-ownership gate is skipped here (it is enforced
+  # only on the driver-app UI endpoint). No helperApi / fleetOwnerId needed.
+  - GET:
+      endpoint: /register/vehicleStatus
+      auth: ApiAuthV2
+      query:
+        - registrationNo: Text
+        - rcId: Text
+      response:
+        type: RcVerifyStatusResp
   - POST:
       endpoint: /verify/{verifyType}
       auth: ApiAuthV2
@@ -82,6 +96,15 @@ apis:
                 adminApprovalRequired: Bool
             response:
               type: VerifyDocumentRes
+
+  - GET:
+      endpoint: /vehicle/documents
+      auth: ApiAuthV2
+      query:
+        - rcNo: Text
+        - rcId: Text
+      response:
+        type: VehicleDocumentStatusRes
 
   - GET:
       endpoint: /get/referralDetails
@@ -146,6 +169,7 @@ types:
     documentCategory: Maybe DocumentCategory
     isReminderSupported: Maybe Bool
     isApprovalSupported: Maybe Bool
+    rolesAllowedToUploadDocument: Maybe [DashboardAccessType]
   DocumentCategory:
     enum: "Driver,Vehicle,Permission,Training"
   DocumentFlowGrouping:
@@ -175,6 +199,62 @@ types:
     imageId: Maybe Text
     imageId2: Maybe Text
     expiryDate: Maybe UTCTime
+    metadata: Maybe DocumentMetadata
+  DocumentMetadata:
+    enum: "DLMetadata DLDocumentMetadata | AadhaarMetadata AadhaarDocumentMetadata | PanMetadata PanDocumentMetadata | LocalAddressProofMetadata LocalAddressProofDocumentMetadata | GSTMetadata GSTDocumentMetadata | RCMetadata RCDocumentMetadata | VehiclePUCMetadata VehiclePUCDocumentMetadata | VehicleFitnessMetadata VehicleFitnessCertificateDocumentMetadata | VehicleInsuranceMetadata VehicleInsuranceDocumentMetadata | VehiclePermitMetadata VehiclePermitDocumentMetadata | UDYAMMetadata UDYAMDocumentMetadata | TANMetadata TANDocumentMetadata | LDCMetadata LDCDocumentMetadata"
+  UDYAMDocumentMetadata:
+    udyamNumber: Maybe Text
+    tdsRate: Maybe Double
+  TANDocumentMetadata:
+    documentId: Text
+    tdsRate: Maybe Double
+  LDCDocumentMetadata:
+    documentId: Text
+    tdsRate: Maybe Double
+  DLDocumentMetadata:
+    driverLicenseNumber: Text
+    driverDateOfBirth: Maybe UTCTime
+    dateOfExpiry: UTCTime
+  AadhaarDocumentMetadata:
+    aadhaarNumber: Maybe Text
+    nameOnCard: Maybe Text
+    dateOfBirth: Maybe Text
+    address: Maybe Text
+  PanDocumentMetadata:
+    panNumber: Text
+    panDocType: Maybe PanType
+    driverDob: Maybe UTCTime
+  LocalAddressProofDocumentMetadata:
+    state: Maybe IndianState
+    proofDocumentType: Maybe AddressDocumentType
+    address: Maybe Text
+  GSTDocumentMetadata:
+    gstNumber: Text
+  RCDocumentMetadata:
+    fitnessExpiry: UTCTime
+    vehicleNumberPlate: Text
+    vehicleVariant: Maybe Text
+    vehicleManufacturer: Maybe Text
+    vehicleModel: Maybe Text
+    vehicleModelYear: Maybe Int
+    vehicleColor: Maybe Text
+  VehiclePUCDocumentMetadata:
+    pucNumber: Maybe Text
+    pucExpiry: UTCTime
+  VehicleFitnessCertificateDocumentMetadata:
+    fitnessExpiry: UTCTime
+    applicationNumber: Text
+    rcNumber: Text
+  VehicleInsuranceDocumentMetadata:
+    policyNumber: Text
+    insuranceExpiry: UTCTime
+    insuranceProvider: Text
+    rcNumber: Text
+  VehiclePermitDocumentMetadata:
+    permitNumber: Text
+    permitExpiry: UTCTime
+    regionCovered: Text
+    rcNumber: Text
   ResponseStatus:
     enum: "NO_DOC_AVAILABLE,PENDING,VALID,FAILED,INVALID,LIMIT_EXCEED,MANUAL_VERIFICATION_REQUIRED,UNAUTHORIZED,PULL_REQUIRED,CONSENT_DENIED"
   VehicleDocumentItem:
@@ -191,6 +271,13 @@ types:
     imageId: Maybe Text
     expiryDate: Maybe UTCTime
     docsVerificationStatus: Maybe DocsVerificationStatus
+  VehicleDocumentStatusRes:
+    vehicleDocument: Maybe VehicleDocumentItem
   ReferralInfoRes:
     personId: Id Driver
     name: Text
+  RcVerifyStatusResp:
+    registrationNo: Text
+    verified: Bool
+    approved: Maybe Bool
+    documents: [DocumentStatusItem]

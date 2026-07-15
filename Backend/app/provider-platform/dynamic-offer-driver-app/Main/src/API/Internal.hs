@@ -26,6 +26,7 @@ import qualified API.Internal.InMemManagement as InMemManagement
 import qualified API.Internal.KnowYourDriver as KnowYourDriver
 import qualified API.Internal.MasterCloudForward as MasterCloudForward
 import qualified API.Internal.Multimodal as Multimodal
+import qualified API.Internal.NotificationWebhook as NotificationWebhook
 import qualified API.Internal.PickupInstruction as PickupInstruction
 import qualified API.Internal.PopulateTipAmount as PopulateTipAmount
 import qualified API.Internal.ProdLoopStatus as ProdLoopStatus
@@ -42,6 +43,7 @@ import qualified API.Internal.TollList as TollList
 import qualified API.Internal.TollUpsert as TollUpsert
 import qualified API.Internal.VerifyEmailUpdate as VerifyEmailUpdate
 import qualified API.Internal.ViolationDetection as ViolationDetection
+import qualified API.Internal.XyneWebhook as XyneWebhook
 import Environment
 import Servant
 import Tools.Auth ()
@@ -86,6 +88,9 @@ type API =
            :<|> VerifyEmailUpdate.API
            :<|> InMemManagement.API
            :<|> MasterCloudForward.API
+           :<|> XyneWebhook.API
+           :<|> XyneWebhook.BearerAPI
+           :<|> NotificationWebhook.API
        )
 
 handler :: AppEnv -> FlowServer API
@@ -128,3 +133,6 @@ handler env =
     :<|> VerifyEmailUpdate.handler
     :<|> InMemManagement.handler
     :<|> MasterCloudForward.handler env
+    :<|> XyneWebhook.handler
+    :<|> XyneWebhook.bearerHandler
+    :<|> NotificationWebhook.handler

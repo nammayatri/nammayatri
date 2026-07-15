@@ -9,14 +9,15 @@ import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime, secondsToNominalDiffTime)
 import Kernel.Utils.Logging (logInfo)
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.Scheduler (ExecutionResult (..), Job (..))
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import SharedLogic.NyRegularSubscriptionHasher (calculateSubscriptionSchedulingHash)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QCMOC
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.NyRegularSubscription as NyRegularSubscription
 import qualified Tools.Error as Tools
 
@@ -33,7 +34,7 @@ runNyRegularMasterJob ::
 runNyRegularMasterJob Job {merchantOperatingCityId} = do
   cityId <- merchantOperatingCityId & fromMaybeM (Tools.InternalError "Job is missing merchantOperatingCityId")
   merchantCity <- QCMOC.findById cityId >>= fromMaybeM (Tools.MerchantOperatingCityNotFound $ "merchantOpCityid: " <> cityId.getId)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = cityId.getId}) >>= fromMaybeM (Tools.RiderConfigNotFound $ "merchantOpCityid: " <> cityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = cityId.getId}) (Just (CQRC.findByMerchantOperatingCityId cityId)) >>= fromMaybeM (Tools.RiderConfigNotFound $ "merchantOpCityid: " <> cityId.getId)
   let batchSize = fromMaybe 10 (riderConfig.nyRegularSubscriptionBatchSize)
       executionTimeOffsetMinutes = fromMaybe 15 (riderConfig.nyRegularExecutionTimeOffsetMinutes)
 

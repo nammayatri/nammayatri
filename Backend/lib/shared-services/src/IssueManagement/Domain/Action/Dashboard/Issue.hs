@@ -271,6 +271,8 @@ createIssueReportV2 _merchantShortId _city Common.IssueReportReqV2 {..} issueHan
             merchantId = Just (person.merchantId),
             reopenedCount = 0,
             becknIssueId = Nothing,
+            customerResponse = Nothing,
+            additionalTicketIds = Nothing,
             ..
           }
 
@@ -377,7 +379,6 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
   merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport (Just person) issueHandle
   mkIssueInfoRes person issueReport merchantOpCity.id
   where
-    mkIssueInfoRes :: (Esq.EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Person -> DIR.IssueReport -> Id MerchantOperatingCity -> m Common.IssueInfoDRes
     mkIssueInfoRes person issueReport merchantOpCityId = do
       personDetail <- Just <$> mkPersonDetail person
       mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReport.id identifier
@@ -389,7 +390,7 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
           pure $ Just fetchedCategory.category
       option <- mapM (\optionId -> CQIO.findById optionId identifier >>= fromMaybeM (IssueOptionNotFound optionId.getId)) issueReport.optionId
       issueConfig <-
-        CQI.findByMerchantOpCityId merchantOpCityId identifier
+        issueHandle.findIssueConfig merchantOpCityId identifier
           >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
       issueChats <- case identifier of
         DRIVER -> return Nothing
@@ -446,17 +447,64 @@ issueUpdate ::
   Context.City ->
   Id DIR.IssueReport ->
   ServiceHandle m ->
+  Identifier ->
   Common.IssueUpdateByUserReq ->
   m APISuccess
-issueUpdate merchantShortId opCity issueReportId issueHandle req = do
+issueUpdate merchantShortId opCity issueReportId issueHandle identifier req = do
   unless (isJust req.status || isJust req.assignee) $
     throwError $ InvalidRequest "Empty request, no fields to update."
-  issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
-  merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
-  QIR.updateStatusAssignee issueReportId req.status req.assignee
-  whenJust req.assignee $ \assignee -> mkIssueAssigneeUpdateComment assignee merchantOpCity
-  pure Success
+  -- Take the same per-issue lock the customer-facing updateIssueStatus holds, so the
+  -- agent's status flip and the customer's prompt-response cannot interleave reads of
+  -- issue.chats and overwrite each other's appends.
+  Redis.withLockRedisAndReturnValue (UIR.makeIssueReportKey issueReportId) 60 $ do
+    issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+    merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
+    -- When the agent flips the issue to RESOLVED (or CLOSED) we must mirror what the
+    -- external TSP webhook path does: append the configured agent-resolved chat messages
+    -- so the customer's app sees the satisfaction prompt. Without this the prompt was
+    -- only ever surfaced when the legacy Kapture webhook fired.
+    effectiveStatus <- case req.status of
+      Just newStatus
+        | newStatus `elem` [RESOLVED, CLOSED] && issueReport.status /= newStatus -> do
+          -- Re-resolution starts a fresh satisfaction round: clear any stale
+          -- customerResponse so the agent UI doesn't keep showing a previous
+          -- ESCALATE/ACCEPT badge against the new prompt.
+          QIR.clearCustomerResponse issueReportId
+          Just <$> appendAgentResolvedChats issueReport newStatus merchantOpCity.id identifier issueHandle
+      _ -> pure req.status
+    QIR.updateStatusAssignee issueReportId effectiveStatus req.assignee
+    whenJust req.assignee $ \assignee -> mkIssueAssigneeUpdateComment assignee merchantOpCity
+    -- Push an FCM to the rider/driver if the status actually changed. Reuses the
+    -- existing chat-notification hook (CHAT_MESSAGE FCM category) so merchants
+    -- don't need to configure a new template — the body carries a status-update
+    -- snippet and senderType is "STATUS_UPDATE" so the frontend can distinguish.
+    whenJust effectiveStatus $ \newStatus ->
+      when (issueReport.status /= newStatus) $
+        notifyStatusChange issueReport newStatus
+    pure Success
   where
+    notifyStatusChange issueReport newStatus = whenJust issueHandle.mbSendChatNotification $ \send -> do
+      now <- getCurrentTime
+      notifId <- generateGUID
+      let snippet = case newStatus of
+            RESOLVED -> "Your issue has been marked resolved"
+            CLOSED -> "Your issue has been closed"
+            REOPENED -> "Your issue has been reopened"
+            OPEN -> "Your issue is now open"
+            PENDING_INTERNAL -> "Your issue is being reviewed"
+            PENDING_EXTERNAL -> "Your issue is awaiting an external update"
+            NOT_APPLICABLE -> "Your issue status was updated"
+          payload =
+            ChatNotifPayload
+              { issueReportId = issueReportId.getId,
+                messageId = notifId,
+                senderType = "STATUS_UPDATE",
+                snippet = snippet,
+                hasMedia = False,
+                timestamp = now
+              }
+      void $ withTryCatch "notifyOnIssueStatusChange" (send issueReport.personId payload)
+
     mkIssueAssigneeUpdateComment assignee merchantOpCity = do
       id <- generateGUID
       now <- getCurrentTime
@@ -470,6 +518,51 @@ issueUpdate merchantShortId opCity issueReportId issueHandle req = do
               createdAt = now,
               merchantId = Just merchantOpCity.merchantId
             }
+
+-- | Append the configured agent-resolved chat messages to an issue and return the
+-- effective status. If the customer has already hit the reopen cap we post the
+-- close messages and force CLOSED instead of RESOLVED — matching the cap behaviour
+-- in 'ticketStatusCallBack'. Shared between the dashboard agent-resolve path and
+-- the legacy external-TSP webhook path so both produce identical chat state.
+--
+-- Idempotent: if every selected message is already the tail of issue.chats we skip
+-- the write, so an accidental double-click from the agent dashboard or a webhook
+-- retry doesn't pollute the conversation with duplicate prompts.
+appendAgentResolvedChats ::
+  BeamFlow m r =>
+  DIR.IssueReport ->
+  IssueStatus ->
+  Id MerchantOperatingCity ->
+  Identifier ->
+  ServiceHandle m ->
+  m IssueStatus
+appendAgentResolvedChats issueReport targetStatus merchantOpCityId identifier issueHandle = do
+  issueConfig <- issueHandle.findIssueConfig merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
+  let shouldUseCloseMsgs =
+        targetStatus == CLOSED
+          || (targetStatus == RESOLVED && issueReport.reopenedCount >= issueConfig.reopenCount)
+      selectedMsgs = if shouldUseCloseMsgs then issueConfig.onIssueCloseMsgs else issueConfig.onKaptMarkIssueResMsgs
+      effectiveStatus = if shouldUseCloseMsgs then CLOSED else targetStatus
+  mbIssueMessages <- mapM (`CQIM.findById` identifier) selectedMsgs
+  let issueMessageIds = mapMaybe ((.id) <$>) mbIssueMessages
+      newChatIds = map (.getId) issueMessageIds
+      existingChatIds = map (.chatId) issueReport.chats
+      alreadyAppended = not (null newChatIds) && newChatIds `DL.isSuffixOf` existingChatIds
+  unless alreadyAppended $ do
+    now <- getCurrentTime
+    let updatedChats =
+          issueReport.chats
+            ++ map
+              ( \msgId ->
+                  Chat
+                    { chatType = IssueMessage,
+                      chatId = msgId.getId,
+                      timestamp = now
+                    }
+              )
+              issueMessageIds
+    QIR.updateChats issueReport.id updatedChats
+  pure effectiveStatus
 
 issueAddComment ::
   ( Esq.EsqDBReplicaFlow m r,
@@ -504,6 +597,33 @@ issueFetchMedia :: (HasField "s3Env" r (S3.S3Env m), MonadReader r m, BeamFlow m
 issueFetchMedia _ filePath =
   S3.get $ T.unpack filePath
 
+-- | Operator-side chat media upload. Mirrors the customer-facing 'issueMediaUpload''
+-- flow but skips the per-person identifier lookup: the file is stored under an
+-- "operator" namespace so dashboard-originated attachments are distinguishable
+-- from rider/driver uploads in S3. Returns the new MediaFile id which the caller
+-- threads into 'SendChatMessageByUserReq.mediaFileIds'.
+issueChatUpload ::
+  ( BeamFlow m r,
+    MonadTime m,
+    MonadReader r m,
+    HasField "s3Env" r (S3.S3Env m)
+  ) =>
+  ShortId Merchant ->
+  Context.City ->
+  ServiceHandle m ->
+  CommonUI.IssueMediaUploadReq ->
+  Identifier ->
+  m CommonUI.IssueMediaUploadRes
+issueChatUpload merchantShortId opCity issueHandle req identifier = do
+  merchantOpCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show opCity)
+  config <- issueHandle.findMerchantConfig merchantOpCity.merchantId merchantOpCity.id Nothing
+  let identifierPath = case identifier of
+        CUSTOMER -> "operator-customer"
+        DRIVER -> "operator-driver"
+  UIR.mediaUploadToS3 config.mediaFileSizeUpperLimit config.mediaFileUrlPattern req "issue-media" identifierPath
+
 ticketStatusCallBack ::
   ( Esq.EsqDBReplicaFlow m r,
     BeamFlow m r
@@ -527,24 +647,9 @@ ticketStatusCallBack reqJson issueHandle identifier = do
             (return person.merchantOperatingCityId)
             return
             issueReport.merchantOperatingCityId
-        issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
-        let shouldUseCloseMsgs = issueReport.reopenedCount >= issueConfig.reopenCount
-            selectedMsgs = if shouldUseCloseMsgs then issueConfig.onIssueCloseMsgs else issueConfig.onKaptMarkIssueResMsgs
-        mbIssueMessages <- mapM (`CQIM.findById` identifier) selectedMsgs
-        let issueMessageIds = mapMaybe ((.id) <$>) mbIssueMessages
-        now <- getCurrentTime
-        let updatedChats =
-              issueReport.chats
-                ++ map
-                  ( \id ->
-                      Chat
-                        { chatType = IssueMessage,
-                          chatId = id.getId,
-                          timestamp = now
-                        }
-                  )
-                  issueMessageIds
-        -- Get ticket details and update issueChat
+        effectiveStatus <- appendAgentResolvedChats issueReport RESOLVED merchantOpCityId identifier issueHandle
+        -- Pull the external ticket conversation snapshot and persist it onto the issue
+        -- chat (legacy webhook only — agent-internal flow already has chat in our DB).
         merchantId <- maybe (return person.merchantId) (const $ return person.merchantId) issueReport.merchantId
         kaptureData <- case issueHandle.kaptureGetTicket of
           Just getTicketFunc -> do
@@ -553,10 +658,8 @@ ticketStatusCallBack reqJson issueHandle identifier = do
               (firstTicket : _) -> Just firstTicket.conversationType.chat
               [] -> Nothing
           Nothing -> return Nothing
-        -- Use safe function to handle issue chat creation/update
         safeCreateOrUpdateIssueChatWithKapture req.ticketId issueReport.rideId issueReport.personId kaptureData (Just issueReport.id)
-        QIR.updateChats issueReport.id updatedChats
-        QIR.updateIssueStatus req.ticketId (if shouldUseCloseMsgs then CLOSED else transformedStatus)
+        QIR.updateIssueStatus req.ticketId effectiveStatus
       PENDING_EXTERNAL -> case (req.subStatus, req.queue, issueHandle.mbSendUnattendedTicketAlert) of
         (Just "Unattended", Just "SOS", Just sendUnattendedTicketAlert) -> sendUnattendedTicketAlert req.ticketId
         _ -> do
@@ -861,19 +964,25 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
     when (issueMessage.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
   updatedIssueMessage <- mkIssueMessage existingIssueMessage merchantOperatingCity issueHandle
   handleMessagePriorityUpdates existingIssueMessage updatedIssueMessage.optionId updatedIssueMessage.categoryId updatedIssueMessage.messageType updatedIssueMessage.priority identifier
-  whenJust existingIssueMessage $ \extIM -> do
-    clearOptionAndCategoryCache extIM
-    clearUpdatedIssueMessagesCacheIfRequired extIM updatedIssueMessage
   upsertTranslations updatedIssueMessage.message ((.message) <$> existingIssueMessage) merchantOperatingCity (fromMaybe [] req.messageTranslations)
   traverse_ (\newSentence -> upsertTranslations newSentence ((.messageAction) =<< existingIssueMessage) merchantOperatingCity (fromMaybe [] req.actionTranslations)) updatedIssueMessage.messageAction
   traverse_ (\newSentence -> upsertTranslations newSentence ((.messageTitle) =<< existingIssueMessage) merchantOperatingCity (fromMaybe [] req.titleTranslations)) updatedIssueMessage.messageTitle
+  -- Cache invalidation runs strictly AFTER the DB write so a concurrent reader
+  -- can't repopulate the cache with the old row between the DEL and the UPDATE.
+  -- Always clear the new parent's option+category list caches (and the old
+  -- parent's too, if it differs); the previous code only cleared the new
+  -- parent's list caches when the parent id actually changed, so plain text /
+  -- label / priority edits silently kept showing the old copy in the customer
+  -- app until configsExpTime elapsed.
   if isJust existingIssueMessage
     then do
       QIM.updateByPrimaryKey updatedIssueMessage
       clearIssueMessageIdCaches updatedIssueMessage
-    else do
+      whenJust existingIssueMessage $ \extIM -> clearOptionAndCategoryCache extIM
       clearOptionAndCategoryCache updatedIssueMessage
+    else do
       QIM.create updatedIssueMessage
+      clearOptionAndCategoryCache updatedIssueMessage
   return $
     Common.UpsertIssueMessageRes
       { messageId = updatedIssueMessage.id
@@ -911,11 +1020,6 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
     clearIssueMessageIdCaches im = do
       CQIM.clearAllIssueMessageByIdAndLanguageCache im.id identifier
       CQIM.clearIssueMessageByIdCache im.id identifier
-
-    clearUpdatedIssueMessagesCacheIfRequired :: BeamFlow m r => DIM.IssueMessage -> DIM.IssueMessage -> m ()
-    clearUpdatedIssueMessagesCacheIfRequired extIM upIM = do
-      when (extIM.optionId /= upIM.optionId || extIM.categoryId /= upIM.categoryId) $
-        clearOptionAndCategoryCache upIM
 
     clearOptionAndCategoryCache :: BeamFlow m r => DIM.IssueMessage -> m ()
     clearOptionAndCategoryCache im = do
@@ -1527,7 +1631,7 @@ getIssueConfig merchantShortId city issueHandle identifier = do
   merchantOperatingCity <-
     issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
-  issueConfig <- CQI.findByMerchantOpCityId merchantOperatingCity.id identifier >>= fromMaybeM (IssueConfigNotFound merchantOperatingCity.id.getId)
+  issueConfig <- issueHandle.findIssueConfig merchantOperatingCity.id identifier >>= fromMaybeM (IssueConfigNotFound merchantOperatingCity.id.getId)
   pure $
     Common.IssueConfigRes
       { issueConfigId = cast issueConfig.id,
@@ -1536,6 +1640,7 @@ getIssueConfig merchantShortId city issueHandle identifier = do
         onIssueReopenMsgs = cast <$> issueConfig.onIssueReopenMsgs,
         onAutoMarkIssueClsMsgs = cast <$> issueConfig.onAutoMarkIssueClsMsgs,
         onKaptMarkIssueResMsgs = cast <$> issueConfig.onKaptMarkIssueResMsgs,
+        onCustomerNotSatisfiedMsgs = cast <$> issueConfig.onCustomerNotSatisfiedMsgs,
         onIssueCloseMsgs = cast <$> issueConfig.onIssueCloseMsgs,
         reopenCount = issueConfig.reopenCount,
         merchantName = issueConfig.messageTransformationConfig >>= (.merchantName),
@@ -1554,8 +1659,18 @@ updateIssueConfig merchantShortId city req issueHandle identifier = do
   merchantOperatingCity <-
     issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
-  issueConfig <- CQI.findByMerchantOpCityId merchantOperatingCity.id identifier >>= fromMaybeM (IssueConfigNotFound merchantOperatingCity.id.getId)
+  issueConfig <- issueHandle.findIssueConfig merchantOperatingCity.id identifier >>= fromMaybeM (IssueConfigNotFound merchantOperatingCity.id.getId)
   now <- getCurrentTime
+  let updatedMessageTransformationConfig =
+        case (req.merchantName, req.supportEmail) of
+          (Nothing, Nothing) -> issueConfig.messageTransformationConfig
+          _ ->
+            let existing = fromMaybe (DICFG.MessageTransformationConfig Nothing Nothing Nothing) issueConfig.messageTransformationConfig
+             in Just $
+                  existing
+                    { DICFG.merchantName = req.merchantName <|> existing.merchantName,
+                      DICFG.supportEmail = req.supportEmail <|> existing.supportEmail
+                    }
   let updatedConfig =
         issueConfig
           { DICFG.autoMarkIssueClosedDuration = fromMaybe issueConfig.autoMarkIssueClosedDuration req.autoMarkIssueClosedDuration,
@@ -1563,8 +1678,10 @@ updateIssueConfig merchantShortId city req issueHandle identifier = do
             DICFG.onIssueReopenMsgs = maybe issueConfig.onIssueReopenMsgs (map cast) req.onIssueReopenMsgs,
             DICFG.onAutoMarkIssueClsMsgs = maybe issueConfig.onAutoMarkIssueClsMsgs (map cast) req.onAutoMarkIssueClsMsgs,
             DICFG.onKaptMarkIssueResMsgs = maybe issueConfig.onKaptMarkIssueResMsgs (map cast) req.onKaptMarkIssueResMsgs,
+            DICFG.onCustomerNotSatisfiedMsgs = maybe issueConfig.onCustomerNotSatisfiedMsgs (map cast) req.onCustomerNotSatisfiedMsgs,
             DICFG.onIssueCloseMsgs = maybe issueConfig.onIssueCloseMsgs (map cast) req.onIssueCloseMsgs,
             DICFG.reopenCount = fromMaybe issueConfig.reopenCount req.reopenCount,
+            DICFG.messageTransformationConfig = updatedMessageTransformationConfig,
             DICFG.updatedAt = now
           }
   CQI.updateByPrimaryKey updatedConfig
@@ -1610,15 +1727,22 @@ reorderOptions merchantShortId city req issueHandle identifier = do
   merchantOperatingCity <-
     issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
-  mapM_
-    ( \(optId, newPriority) -> do
+  -- Collect each option's parent message-id while we're inside the per-option
+  -- loop so we can invalidate the options-by-message-and-language list cache
+  -- once per unique parent after the writes. Previously only the
+  -- single-option-by-id caches were cleared, so the customer app kept showing
+  -- the old priority order until configsExpTime elapsed.
+  parentMessageIds <-
+    fmap (DL.nub . catMaybes) $
+      forM req.optionOrder $ \(optId, newPriority) -> do
         issueOption <- CQIO.findById optId identifier >>= fromMaybeM (IssueOptionNotFound optId.getId)
         when (issueOption.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
         QIO.updatePriority optId newPriority
         CQIO.clearIssueOptionByIdCache optId identifier
         CQIO.clearAllIssueOptionByIdAndLanguageCache optId identifier
-    )
-    req.optionOrder
+        pure (Id <$> issueOption.issueMessageId)
+  forM_ parentMessageIds $ \msgId ->
+    CQIO.clearAllIssueOptionByMessageAndLanguageCache msgId identifier
   pure Success
 
 reorderMessages ::
@@ -1633,15 +1757,23 @@ reorderMessages merchantShortId city req issueHandle identifier = do
   merchantOperatingCity <-
     issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
-  mapM_
-    ( \(msgId, newPriority) -> do
-        issueMessage <- CQIM.findById msgId identifier >>= fromMaybeM (IssueMessageDoesNotExist msgId.getId)
-        when (issueMessage.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
-        QIM.updatePriority msgId newPriority
-        CQIM.clearIssueMessageByIdCache msgId identifier
-        CQIM.clearAllIssueMessageByIdAndLanguageCache msgId identifier
-    )
-    req.messageOrder
+  -- Collect each message's parent (option / category) ids while we update
+  -- priorities, then invalidate the messages-by-option-and-language and
+  -- messages-by-category-and-language list caches once per unique parent.
+  -- Previously only by-id caches were cleared, so the customer app kept
+  -- showing the old priority order until configsExpTime elapsed.
+  parents <-
+    forM req.messageOrder $ \(msgId, newPriority) -> do
+      issueMessage <- CQIM.findById msgId identifier >>= fromMaybeM (IssueMessageDoesNotExist msgId.getId)
+      when (issueMessage.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
+      QIM.updatePriority msgId newPriority
+      CQIM.clearIssueMessageByIdCache msgId identifier
+      CQIM.clearAllIssueMessageByIdAndLanguageCache msgId identifier
+      pure (issueMessage.optionId, issueMessage.categoryId)
+  forM_ (DL.nub $ mapMaybe fst parents) $ \optId ->
+    CQIM.clearAllIssueMessageByOptionIdAndLanguageCache optId identifier
+  forM_ (DL.nub $ mapMaybe snd parents) $ \catId ->
+    CQIM.clearAllIssueMessageByCategoryIdAndLanguageCache catId identifier
   pure Success
 
 copyIssueCategory ::

@@ -12,17 +12,19 @@ import qualified Kernel.Types.APISuccess as API
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee (updateCancellationPenaltyAccumulationFees)
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Error
 
 postPenaltyTriggerJobCancellationPenaltyServiceName :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Common.ServiceNames -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postPenaltyTriggerJobCancellationPenaltyServiceName merchantShortId opCity serviceName' = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let serviceName = mapServiceName serviceName'
   updateCancellationPenaltyAccumulationFees serviceName transporterConfig merchant.id merchantOpCityId
   return $ API.Success

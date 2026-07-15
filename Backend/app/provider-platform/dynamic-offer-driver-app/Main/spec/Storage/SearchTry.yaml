@@ -7,6 +7,7 @@ imports:
   Money: Kernel.Types.Common
   VehicleCategory: Domain.Types.VehicleCategory
   BillingCategory: SharedLogic.Type
+  PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
 
 SearchTry:
   tableName: search_try
@@ -49,6 +50,7 @@ SearchTry:
     serviceTierArray: "[Text]"
     emailDomain: Maybe Text
     businessEmailDomain: Maybe Text
+    paymentInstrument: Maybe PaymentInstrument
     createdAt: UTCTime
     updatedAt: UTCTime
 

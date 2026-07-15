@@ -15,6 +15,7 @@
 module Tools.Ticket
   ( createTicket,
     updateTicket,
+    updateTicketStatus,
     addAndUpdateKaptureCustomer,
     kaptureEncryption,
     kapturePullTicket,
@@ -33,14 +34,20 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Cac.MerchantServiceUsageConfig as QMSUC
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 
 createTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Id MerchantOperatingCity -> TIT.CreateTicketReq -> m TIT.CreateTicketResp
 createTicket = runWithServiceConfig Ticket.createTicket
 
 updateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp
 updateTicket = runWithServiceConfig Ticket.updateTicket
+
+updateTicketStatus :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketStatusReq -> m ()
+updateTicketStatus = runWithServiceConfig Ticket.updateTicketStatus
 
 addAndUpdateKaptureCustomer :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Id MerchantOperatingCity -> TIT.KaptureCustomerReq -> m TIT.KaptureCustomerResp
 addAndUpdateKaptureCustomer = runWithServiceConfig Ticket.addAndUpdateKaptureCustomer
@@ -65,9 +72,9 @@ runWithServiceConfig ::
   req ->
   m resp
 runWithServiceConfig func merchantId merchantOpCityId req = do
-  merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  merchantConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantIssueTicketServiceConfig <-
-    QMSC.findByServiceAndCity (DMSC.IssueTicketService merchantConfig.issueTicketService) merchantOpCityId
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.IssueTicketService merchantConfig.issueTicketService)}) (Just (maybeToList <$> QMSC.findByServiceAndCity (DMSC.IssueTicketService merchantConfig.issueTicketService) merchantOpCityId))
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   case merchantIssueTicketServiceConfig.serviceConfig of
     DMSC.IssueTicketServiceConfig msc -> func msc req

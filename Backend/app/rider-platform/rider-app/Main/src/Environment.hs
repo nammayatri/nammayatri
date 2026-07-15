@@ -71,6 +71,7 @@ import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Kernel.Utils.Servant.SignatureAuth
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler.Types
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
@@ -141,6 +142,7 @@ data AppCfg = AppCfg
     searchLimitExceedNotificationTemplate :: Text,
     s3Config :: S3Config,
     s3PublicConfig :: S3Config,
+    s3RewardsConfig :: S3Config,
     httpClientOptions :: HttpClientOptions,
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
@@ -189,6 +191,9 @@ data AppCfg = AppCfg
     googleSAPrivateKey :: String,
     ltsCfg :: LocationTrackingeServiceConfig,
     locationTrackingServiceKey :: Text,
+    zendeskWebhookToken :: Text,
+    xyneWebhookSigningSecret :: Text,
+    xyneWebhookBearerToken :: Text,
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
     seatBookingConfirmAPIRateLimitOptions :: APIRateLimitOptions,
@@ -204,7 +209,8 @@ data AppCfg = AppCfg
     blackListedJobs :: [Text],
     sftpConfig :: SFTPConfig,
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
-    bapHostRedirectMap :: BapHostRedirectMap
+    bapHostRedirectMap :: BapHostRedirectMap,
+    useCachedActiveRidesList :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -245,8 +251,10 @@ data AppEnv = AppEnv
     signatureExpiry :: Seconds,
     s3Config :: S3Config,
     s3PublicConfig :: S3Config,
+    s3RewardsConfig :: S3Config,
     s3Env :: S3Env Flow,
     s3EnvPublic :: S3Env Flow,
+    s3RewardsEnv :: S3Env Flow,
     disableSignatureAuth :: Bool,
     encTools :: EncTools,
     nwAddress :: BaseUrl,
@@ -308,6 +316,9 @@ data AppEnv = AppEnv
     googleSAPrivateKey :: String,
     ltsCfg :: LocationTrackingeServiceConfig,
     locationTrackingServiceKey :: Text,
+    zendeskWebhookToken :: Text,
+    xyneWebhookSigningSecret :: Text,
+    xyneWebhookBearerToken :: Text,
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
     seatBookingConfirmAPIRateLimitOptions :: APIRateLimitOptions,
@@ -325,7 +336,9 @@ data AppEnv = AppEnv
     cloudType :: Maybe CloudType,
     sftpConfig :: SFTPConfig,
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
-    bapHostRedirectMap :: BapHostRedirectMap
+    bapHostRedirectMap :: BapHostRedirectMap,
+    useCachedActiveRidesList :: Bool,
+    actorInfo :: Finance.ActorInfo
   }
   deriving (Generic)
 
@@ -379,6 +392,7 @@ buildAppEnv cfg@AppCfg {..} = do
       Right env -> pure (Just env)
   let s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
+      s3RewardsEnv = buildS3Env cfg.s3RewardsConfig
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   serviceClickhouseEnv <- createConn riderClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
@@ -394,6 +408,7 @@ buildAppEnv cfg@AppCfg {..} = do
       Right env -> pure (Just env)
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
+  let actorInfo = Finance.ActorInfo {actorType = Finance.UNKNOWN, actorId = requestId} -- to be modified in api handler
   return AppEnv {minTripDistanceForReferralCfg = convertHighPrecMetersToDistance Meter <$> minTripDistanceForReferralCfg, disableViaPointTimetableCheck = disableViaPointTimetableCheck, ..}
 
 releaseAppEnv :: AppEnv -> IO ()

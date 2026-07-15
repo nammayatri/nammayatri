@@ -10,6 +10,7 @@ module SharedLogic.Finance.Prepaid
     expiryRevenueRecognitionReferenceType,
     expiryCreditTransferReferenceType,
     prepaidSubLedger,
+    resolvePrepaidScope,
     getPrepaidAccountByOwner,
     getPrepaidBalanceByOwner,
     getPrepaidPendingHoldByOwner,
@@ -30,6 +31,7 @@ import qualified Data.List as DL
 import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.Extra.Plan (ServiceNames (..))
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType)
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.External.Encryption (EncFlow, decrypt)
@@ -40,16 +42,19 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common (Currency (..), HighPrecMoney)
 import Kernel.Types.Id
 import Kernel.Utils.Common (HasRequestId, addUTCTime, fork, getCurrentTime, logError, logInfo, withTryCatch)
-import Lib.Finance
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.Finance hiding (TransactionType (SubscriptionPurchase))
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Finance.EInvoice
+import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
 import SharedLogic.Finance.Wallet (computeTdsRateReason)
-import qualified Storage.Cac.TransporterConfig as SCT
+import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Plan as QPlan
-import qualified Storage.Queries.SubscriptionPurchase as QSP
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 
 -- | Optional parameters for creating a finance invoice during prepaid balance credit
@@ -113,6 +118,16 @@ encodePrepaidSubLedger = \case
 -- RideCredit account. Nothing produces the pooled (non-isolated) account.
 prepaidSubLedger :: Maybe DVC.VehicleCategory -> Maybe Text
 prepaidSubLedger = fmap encodePrepaidSubLedger
+
+resolvePrepaidScope ::
+  (BeamFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Maybe DVC.VehicleCategory ->
+  m (Maybe DVC.VehicleCategory)
+resolvePrepaidScope merchantOpCityId mbVehicleCategory = do
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
+  let scopedEnabled = maybe False (fromMaybe False . (.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled)) mbTransporterConfig
+  pure $ if scopedEnabled then mbVehicleCategory else Nothing
 
 getPrepaidAccountByOwner ::
   (BeamFlow m r) =>
@@ -318,7 +333,7 @@ getOrCreateSellerRevenueAccount currency merchantId merchantOperatingCityId = do
   getOrCreateAccount input
 
 createPrepaidHold ::
-  (BeamFlow m r) =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   CounterpartyType ->
   Text -> -- Owner ID
   HighPrecMoney ->
@@ -372,7 +387,7 @@ findPendingPrepaidHoldByReference ownerAccountId referenceType referenceId = do
   pure $ find (\entry -> entry.fromAccountId == ownerAccountId && entry.status == PENDING) entries
 
 voidPrepaidHold ::
-  (BeamFlow m r) =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   CounterpartyType ->
   Text -> -- Owner ID
   Text -> -- Reference ID
@@ -392,7 +407,7 @@ voidPrepaidHold counterpartyType ownerId referenceId reason mbVehicleCategory = 
       forM_ pendingEntries $ \entry -> voidEntry entry.id reason
 
 settlePrepaidHoldByReference ::
-  (BeamFlow m r) =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   CounterpartyType ->
   Text ->
   Text ->
@@ -434,7 +449,8 @@ creditPrepaidBalance ::
     EncFlow m r,
     Redis.HedisFlow m r,
     Metrics.CoreMetrics m,
-    HasRequestId r
+    HasRequestId r,
+    Finance.HasActorInfo m r
   ) =>
   CounterpartyType ->
   Text -> -- Owner ID
@@ -628,7 +644,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                     issuedByAddress = invoiceParams.issuedByAddress,
                     supplierName = Nothing,
                     supplierAddress = Nothing,
-                    supplierGSTIN = Nothing,
+                    supplierGSTIN = invoiceParams.merchantGstin,
                     supplierTaxNo = Nothing,
                     supplierId = Nothing,
                     merchantGstin = invoiceParams.merchantGstin,
@@ -712,7 +728,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
     (_, _, _, _, _, _, Left err) -> pure $ Left err
 
 debitPrepaidBalance ::
-  (BeamFlow m r) =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   CounterpartyType ->
   Text -> -- Owner ID
   HighPrecMoney -> -- Final ride fare (base fare for settlement)
@@ -767,7 +783,8 @@ handleSubscriptionExpiry ::
   ( BeamFlow m r,
     Redis.HedisFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    Finance.HasActorInfo m r
   ) =>
   DSP.SubscriptionPurchase ->
   m ()
@@ -782,13 +799,15 @@ handleSubscriptionExpiry purchase = do
         merchantOperatingCityId = purchase.merchantOperatingCityId.getId
         referenceId = purchase.id.getId
 
-    -- Fetch all other ACTIVE subscriptions in the same category scope (excluding the one being expired)
-    allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId purchase.ownerType PREPAID_SUBSCRIPTION purchase.vehicleCategory
+    prepaidScope <- resolvePrepaidScope purchase.merchantOperatingCityId purchase.vehicleCategory
+
+    -- Fetch all other ACTIVE subscriptions in the same scope (excluding the one being expired)
+    allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId purchase.ownerType PREPAID_SUBSCRIPTION prepaidScope
     let otherActive = filter (\p -> p.id /= purchase.id) allActive
         otherActiveCredits = sum $ map (.planRideCredit) otherActive
 
     -- Get current balance scoped to the same sub-ledger as the expiring purchase
-    mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId purchase.vehicleCategory
+    mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId prepaidScope
     let currentBalance = fromMaybe 0 mbBalance
         -- Credits attributable to the expiring subscription
         expiredCredits = max 0 (currentBalance - otherActiveCredits)
@@ -801,7 +820,7 @@ handleSubscriptionExpiry purchase = do
               then (expiredCredits / totalPlanCredit) * purchase.planFee
               else 0
 
-      mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId purchase.vehicleCategory
+      mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId prepaidScope
       mbSellerLiability <- getOrCreateSellerLiabilityAccount currency merchantId merchantOperatingCityId
       mbSellerRevenue <- getOrCreateSellerRevenueAccount currency merchantId merchantOperatingCityId
       mbSellerRideCredit <- getOrCreateSellerRideCreditAccount currency merchantId merchantOperatingCityId
@@ -852,12 +871,12 @@ handleSubscriptionExpiry purchase = do
           logInfo $ "Failed to get accounts for subscription expiry: " <> referenceId
           pure ()
 
-    QSP.updateStatusById DSP.EXPIRED purchase.id
+    SubscriptionPurchaseSvc.updateSubscriptionPurchaseStatus purchase DSP.EXPIRED
     logInfo $ "Subscription " <> purchase.id.getId <> " expired. Expired credits: " <> show expiredCredits
     when (purchase.ownerType == DSP.DRIVER) $
       void $
         withTryCatch "decrementOperatorTotalActiveDriversOnSubscriptionExpiry" $ do
-          mbTransporterConfig <- SCT.findByMerchantOpCityId purchase.merchantOperatingCityId Nothing
+          mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = purchase.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId purchase.merchantOperatingCityId Nothing))
           whenJust mbTransporterConfig $ \tc ->
             AnalyticsExtra.decrementOperatorTotalActiveDriversIfDriverHasNoActiveSubscription tc purchase.ownerId
 
@@ -870,7 +889,8 @@ handleSubscriptionExpiry purchase = do
 -- If any were exhausted, the caller should call activateNextQueuedPurchaseExpiry
 -- and schedule follow-up jobs.
 checkAndMarkExhaustedSubscriptions ::
-  (BeamFlow m r) =>
+  forall m r.
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   CounterpartyType ->
   Text -> -- Owner ID
   DSP.SubscriptionOwnerType ->
@@ -884,6 +904,7 @@ checkAndMarkExhaustedSubscriptions counterpartyType ownerId ownerType mbVehicleC
       sorted = DL.sortOn (.purchaseTimestamp) allActive
   go sorted currentBalance [] False
   where
+    go :: [DSP.SubscriptionPurchase] -> HighPrecMoney -> [Id DSP.SubscriptionPurchase] -> Bool -> m ([Id DSP.SubscriptionPurchase], Bool)
     go [] _ acc exhausted = pure (acc, exhausted)
     go [single] _ acc exhausted = pure (acc <> [single.id], exhausted) -- Last one is always contributing
     go (oldest : rest) balance acc exhausted = do
@@ -891,7 +912,7 @@ checkAndMarkExhaustedSubscriptions counterpartyType ownerId ownerType mbVehicleC
       if balance <= restCredits
         then do
           -- Oldest subscription's credits are fully consumed
-          QSP.updateStatusById DSP.EXHAUSTED oldest.id
+          SubscriptionPurchaseSvc.updateSubscriptionPurchaseStatus oldest DSP.EXHAUSTED
           logInfo $ "Subscription " <> oldest.id.getId <> " marked EXHAUSTED"
           -- Continue checking (there might be more to exhaust)
           go rest balance (acc <> [oldest.id]) True
@@ -905,7 +926,7 @@ checkAndMarkExhaustedSubscriptions counterpartyType ownerId ownerType mbVehicleC
 -- Returns Just (purchaseId, expiryDate) if a purchase was activated, Nothing otherwise.
 -- The caller is responsible for scheduling the ExpireSubscriptionPurchase job.
 activateNextQueuedPurchaseExpiry ::
-  (BeamFlow m r) =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   Text -> -- Owner ID
   DSP.SubscriptionOwnerType ->
   Maybe DVC.VehicleCategory -> -- Category scope for FIFO isolation (Nothing = pooled)
@@ -922,7 +943,7 @@ activateNextQueuedPurchaseExpiry ownerId ownerType mbVehicleCategory = do
         Just plan -> do
           now <- getCurrentTime
           let expiryDate = fmap (\days -> addUTCTime (fromIntegral (days * 60 * 60 * 24)) now) plan.validityInDays
-          QSPE.updateExpiryAndStartDateById expiryDate (Just now) nextPurchase.id
+          SubscriptionPurchaseSvc.activateSubscriptionPurchaseExpiry nextPurchase expiryDate (Just now)
           logInfo $ "Activated expiry for queued subscription " <> nextPurchase.id.getId <> " with expiryDate: " <> show expiryDate <> " startDate: " <> show now
           pure $ (nextPurchase.id,) <$> expiryDate
         Nothing -> do

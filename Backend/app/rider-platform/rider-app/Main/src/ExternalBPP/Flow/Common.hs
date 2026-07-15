@@ -1,6 +1,7 @@
 module ExternalBPP.Flow.Common where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Applicative ((<|>))
 import Data.List (sortOn)
 import qualified Data.List.NonEmpty as NE
 import Data.Ord (Down (..))
@@ -24,23 +25,41 @@ import Domain.Types.MerchantOperatingCity
 import qualified ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import ExternalBPP.ExternalAPI.Types
 import qualified ExternalBPP.Flow.Fare as Flow
+import Kernel.External.Maps.Google.MapsClient.Types (LatLngV2 (..), LocationV2 (..), WayPointV2 (..))
 import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
+import qualified Kernel.External.MultiModal.Interface as KMultiModal
+import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto.Config as DB
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyModule.Utils as JMU
 import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.FRFSCancellationConfig as CQFRFSCancellationConfig
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
+import qualified Tools.MultiModal as TMultiModal
 
 search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m DOnSearch
-search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHostUrl mbNetworkId searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId = do
-  quotes <- buildQuotes routeDetails
+search = searchImpl False
+
+-- | Same as 'search', but builds quotes by discovering the transit route
+-- (including interchanges) between the search's stations via the transit
+-- planner, instead of the route-stop mappings. Used as a fallback when
+-- 'search' yields no quotes, e.g. metro journeys that need an interchange
+-- where no single route serves both stations.
+multimodalDiscoverySearch :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m DOnSearch
+multimodalDiscoverySearch = searchImpl True
+
+searchImpl :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Bool -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m DOnSearch
+searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHostUrl mbNetworkId searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId = do
+  quotes <- bool buildQuotes buildMultimodalDiscoveryQuotes useMultimodalDiscovery routeDetails
   logDebug $ "Route Details Debug: " <> show routeDetails
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
   messageId <- generateGUID
@@ -87,6 +106,77 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
               )
               routesInfo
           return $ concat quotes
+
+    -- Multimodal discovery path: quote a single transit journey (no fixed
+    -- route) by discovering the actual legs from the transit planner. Covers
+    -- interchange journeys where no single route serves both stations.
+    buildMultimodalDiscoveryQuotes = \case
+      [FRFSRouteDetails {routeCode = Nothing, startStationCode, endStationCode}] -> mkInterchangeQuote startStationCode endStationCode
+      _ -> return []
+
+    -- Discover the interchange legs from the transit planner and quote them as
+    -- a multi-leg journey through the regular quote path. Enabled only for
+    -- providers whose fare depends solely on origin and destination (CMRL), so
+    -- the fare is correct irrespective of the discovered legs.
+    mkInterchangeQuote startStationCode endStationCode = do
+      routesInfoResult <- withTryCatch "discoverInterchangeRoutesInfo" (discoverInterchangeRoutesInfo startStationCode endStationCode)
+      case routesInfoResult of
+        Left err -> do
+          logError $ "Failed to discover interchange routes between stations: " <> startStationCode <> " and " <> endStationCode <> ", error: " <> show err
+          return []
+        Right routesInfo -> mkQuote Nothing searchReq.vehicleType routesInfo
+
+    -- Asks the transit planner (OTP) for a transit journey between the two
+    -- stations, restricted to the search's vehicle mode, and maps each leg of
+    -- the best route to a RouteStopInfo.
+    discoverInterchangeRoutesInfo startStationCode endStationCode = do
+      fromStation <- OTPRest.getStationByGtfsIdAndStopCode startStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound startStationCode)
+      toStation <- OTPRest.getStationByGtfsIdAndStopCode endStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound endStationCode)
+      fromLat <- fromStation.lat & fromMaybeM (InternalError $ "Latitude not found for station: " <> fromStation.code)
+      fromLon <- fromStation.lon & fromMaybeM (InternalError $ "Longitude not found for station: " <> fromStation.code)
+      toLat <- toStation.lat & fromMaybeM (InternalError $ "Latitude not found for station: " <> toStation.code)
+      toLon <- toStation.lon & fromMaybeM (InternalError $ "Longitude not found for station: " <> toStation.code)
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCity.id)) >>= fromMaybeM (RiderConfigNotFound merchantOperatingCity.id.getId)
+      transitServiceReq <- TMultiModal.getTransitServiceReq merchant.id merchantOperatingCity.id
+      now <- getCurrentTime
+      let expectedMode = case searchReq.vehicleType of
+            Spec.METRO -> MultiModalTypes.MetroRail
+            Spec.SUBWAY -> MultiModalTypes.Subway
+            Spec.BUS -> MultiModalTypes.Bus
+          transitRoutesReq =
+            GetTransitRoutesReq
+              { origin = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = fromLat, longitude = fromLon}}},
+                destination = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = toLat, longitude = toLon}}},
+                arrivalTime = Nothing,
+                departureTime = Just now,
+                mode = Nothing,
+                transitPreferences = Nothing,
+                transportModes = Nothing,
+                minimumWalkDistance = riderConfig.minimumWalkDistance,
+                permissibleModes = [expectedMode],
+                maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
+                sortingType = MultiModalTypes.Fastest,
+                walkSpeed = Nothing
+              }
+      otpResponse <- KMultiModal.getTransitRoutes Nothing transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError $ "No transit routes found between stations: " <> fromStation.code <> " and " <> toStation.code)
+      transitRoute <-
+        find (\route -> any (\leg -> leg.mode == expectedMode) route.legs && all (\leg -> leg.mode == expectedMode || leg.mode == MultiModalTypes.Walk) route.legs) otpResponse.routes
+          & fromMaybeM (InternalError $ "No suitable transit route found between stations: " <> fromStation.code <> " and " <> toStation.code)
+      let legsRouteDetails = sortOn (.subLegOrder) $ concatMap (.routeDetails) (filter (\leg -> leg.mode == expectedMode) transitRoute.legs)
+      forM legsRouteDetails $ \legRouteDetail -> do
+        routeCode <- (legRouteDetail.gtfsId <&> gtfsIdtoDomainCode) & fromMaybeM (InternalError "Route gtfsId not found in transit leg")
+        legStartStopCode <- ((legRouteDetail.fromStopDetails >>= (.stopCode)) <|> ((legRouteDetail.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InternalError "From stop code not found in transit leg")
+        legEndStopCode <- ((legRouteDetail.toStopDetails >>= (.stopCode)) <|> ((legRouteDetail.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InternalError "To stop code not found in transit leg")
+        route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode >>= fromMaybeM (RouteNotFound routeCode)
+        return $
+          RouteStopInfo
+            { route,
+              totalStops = Nothing,
+              stops = Nothing,
+              startStopCode = legStartStopCode,
+              endStopCode = legEndStopCode,
+              travelTime = nominalDiffTimeToSeconds <$> (diffUTCTime <$> legRouteDetail.toArrivalTime <*> legRouteDetail.fromDepartureTime)
+            }
 
     buildMultipleNonTransitRouteQuotes routesDetails = do
       case routesDetails of
@@ -335,10 +425,24 @@ calculateCancellationCharges merchantOpCityId vehicleCategory baseFare departure
   case mbMatchingTier of
     Nothing -> return (0, baseFare) -- no config → full refund
     Just tier -> do
-      let charges = case tier.cancellationChargeType of
+      let rawCharges = case tier.cancellationChargeType of
             DFRFSCancellationConfig.PERCENTAGE -> baseFare * tier.cancellationChargeValue / 100
             DFRFSCancellationConfig.FLAT -> tier.cancellationChargeValue
-          refund = max 0 (baseFare - charges)
+          charges = min baseFare (max 0 rawCharges)
+          refund = baseFare - charges
+      when (rawCharges /= charges) $
+        logError $
+          "FRFSCancellationConfig misconfigured for tier " <> tier.id.getId
+            <> " (type="
+            <> show tier.cancellationChargeType
+            <> ", value="
+            <> show tier.cancellationChargeValue
+            <> ", baseFare="
+            <> show baseFare
+            <> "): rawCharges="
+            <> show rawCharges
+            <> " clamped to "
+            <> show charges
       return (charges, refund)
   where
     matchesTier mins tier =

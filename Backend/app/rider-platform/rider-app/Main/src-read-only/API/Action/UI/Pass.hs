@@ -18,8 +18,11 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.PurchasedPass
 import qualified Environment
 import EulerHS.Prelude
+import qualified IssueManagement.Common.UI.Issue
+import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude
+import qualified Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
@@ -44,6 +47,9 @@ type API =
            Data.Text.Text
       :> QueryParam
            "imeiNumber"
+           Data.Text.Text
+      :> QueryParam
+           "passPhotoMediaId"
            Data.Text.Text
       :> QueryParam
            "profilePicture"
@@ -126,6 +132,9 @@ type API =
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
+      :> QueryParam
+           "status"
+           Data.Text.Text
       :> Get
            '[JSON]
            [API.Types.UI.Pass.PurchasedPassTransactionAPIEntity]
@@ -145,13 +154,29 @@ type API =
       :<|> TokenAuth
       :> "multimodal"
       :> "pass"
+      :> Capture
+           "purchasedPassId"
+           (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
       :> "uploadProfilePicture"
-      :> ReqBody
-           '[JSON]
-           API.Types.UI.Pass.PassUploadProfilePictureReq
+      :> QueryParam
+           "imeiNumber"
+           Data.Text.Text
+      :> Kernel.ServantMultipart.MultipartForm
+           Kernel.ServantMultipart.Tmp
+           IssueManagement.Common.UI.Issue.IssueMediaUploadReq
       :> Post
            '[JSON]
-           Kernel.Types.APISuccess.APISuccess
+           IssueManagement.Common.UI.Issue.IssueMediaUploadRes
+      :<|> TokenAuth
+      :> "multimodal"
+      :> "pass"
+      :> "photo"
+      :> Capture
+           "mediaId"
+           (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile)
+      :> Get
+           '[JSON]
+           Data.Text.Text
       :<|> TokenAuth
       :> "multimodal"
       :> "pass"
@@ -169,7 +194,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getMultimodalPassAvailablePasses :<|> postMultimodalPassSelect :<|> postMultimodalPassV2Select :<|> getMultimodalPassList :<|> postMultimodalPassVerify :<|> postMultimodalPassSwitchDeviceId :<|> getMultimodalPassTransactions :<|> postMultimodalPassActivateToday :<|> postMultimodalPassUploadProfilePicture :<|> postMultimodalPassSetPrefSrcAndDest
+handler = getMultimodalPassAvailablePasses :<|> postMultimodalPassSelect :<|> postMultimodalPassV2Select :<|> getMultimodalPassList :<|> postMultimodalPassVerify :<|> postMultimodalPassSwitchDeviceId :<|> getMultimodalPassTransactions :<|> postMultimodalPassActivateToday :<|> postMultimodalPassUploadProfilePicture :<|> getMultimodalPassPhoto :<|> postMultimodalPassSetPrefSrcAndDest
 
 getMultimodalPassAvailablePasses ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -188,10 +213,11 @@ postMultimodalPassSelect ::
     Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Prelude.Maybe Data.Time.Day ->
     Environment.FlowHandler API.Types.UI.Pass.PassSelectionAPIEntity
   )
-postMultimodalPassSelect a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassSelect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
+postMultimodalPassSelect a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassSelect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
 
 postMultimodalPassV2Select ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -242,9 +268,10 @@ getMultimodalPassTransactions ::
     ) ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
     Environment.FlowHandler [API.Types.UI.Pass.PurchasedPassTransactionAPIEntity]
   )
-getMultimodalPassTransactions a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.getMultimodalPassTransactions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getMultimodalPassTransactions a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.getMultimodalPassTransactions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postMultimodalPassActivateToday ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -260,10 +287,21 @@ postMultimodalPassUploadProfilePicture ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    API.Types.UI.Pass.PassUploadProfilePictureReq ->
-    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+    Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    IssueManagement.Common.UI.Issue.IssueMediaUploadReq ->
+    Environment.FlowHandler IssueManagement.Common.UI.Issue.IssueMediaUploadRes
   )
-postMultimodalPassUploadProfilePicture a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassUploadProfilePicture (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postMultimodalPassUploadProfilePicture a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassUploadProfilePicture (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+
+getMultimodalPassPhoto ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile ->
+    Environment.FlowHandler Data.Text.Text
+  )
+getMultimodalPassPhoto a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.getMultimodalPassPhoto (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postMultimodalPassSetPrefSrcAndDest ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

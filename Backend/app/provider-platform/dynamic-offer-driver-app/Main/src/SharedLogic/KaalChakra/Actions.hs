@@ -9,12 +9,14 @@ import EulerHS.Prelude hiding (id)
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
-import qualified Lib.Yudhishthira.Storage.Queries.TagActionNotificationConfig as QTAN
+import qualified Lib.Yudhishthira.Storage.Queries.TagActionNotificationConfig as QTANC
 import qualified Lib.Yudhishthira.Types.TagActionNotificationConfig as DRN
 import SharedLogic.Allocator
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
+import Storage.ConfigPilot.Config.TagActionNotificationConfig (TagActionNotificationConfigDimensions (..))
 
 data Action
   = SAFE_TO_UNSAFE_COHORT
@@ -35,7 +37,7 @@ kaalChakraAction ::
   m ()
 kaalChakraAction mbMerchantOperatingCityId driverId mbAction notificationKey = do
   whenJust mbMerchantOperatingCityId $ \cityId -> do
-    notificationConfigs <- QTAN.findAllByMerchantOperatingCityIdAndNotificationKey (cast cityId) notificationKey
+    notificationConfigs <- getConfig (TagActionNotificationConfigDimensions {merchantOperatingCityId = cityId.getId, notificationKey = Just notificationKey}) (Just (QTANC.findAllByMerchantOperatingCityIdAndNotificationKey (cast cityId) notificationKey))
     void $ scheduleTagActionNotificationJob driverId `mapM` notificationConfigs
   whenJust mbAction $ \action -> do
     case action of

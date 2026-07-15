@@ -203,14 +203,17 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
             vehicleServiceTierAirConditioned = estimate.vehicleServiceTierAirConditioned,
             isAirConditioned = estimate.isAirConditioned,
             vehicleServiceTierSeatingCapacity = estimate.vehicleServiceTierSeatingCapacity,
+            vehicleServiceTierLuggageCapacity = estimate.vehicleServiceTierLuggageCapacity,
             specialLocationName = estimate.specialLocationName,
             specialLocationSupportNumber = Nothing,
+            fareSettlementType = estimate.fareSettlementType,
             quoteBreakupList = quoteBreakups,
             tripCategory = Just tripCategory,
             vehicleIconUrl = estimate.vehicleIconUrl,
             isSafetyPlus = quoteDetails.isSafetyPlus,
             billingCategory = billingCategory,
             selectedOfferId = estimate.selectedOfferId,
+            area = estimate.area,
             ..
           }
   pure quote

@@ -12,3 +12,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_service_config ADD PRIMARY KEY ( mer
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_config ALTER COLUMN service_name TYPE character varying(50);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_config ADD COLUMN run_in_cloud text ;

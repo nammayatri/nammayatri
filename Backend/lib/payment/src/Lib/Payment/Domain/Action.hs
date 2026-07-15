@@ -47,6 +47,7 @@ module Lib.Payment.Domain.Action
     getTransactionStatus,
     offerListService,
     invalidateOfferListCacheService,
+    invalidateOfferListCacheServiceForAllServiceTypes,
     listDomainOffers,
     listDomainOffersWithBasket,
     splitOfferRespByProduct,
@@ -108,6 +109,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import Lib.Payment.Domain.Types.Common
 import qualified Lib.Payment.Domain.Types.Offer as DOffer
@@ -118,11 +120,13 @@ import qualified Lib.Payment.Domain.Types.PaymentOrderOffer as DPaymentOrderOffe
 import qualified Lib.Payment.Domain.Types.PaymentOrderSplit as DPaymentOrderSplit
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
 import qualified Lib.Payment.Domain.Types.PayoutOrder as Payment
+import qualified Lib.Payment.Domain.Types.PayoutRequest as DPayoutRequest
 import qualified Lib.Payment.Domain.Types.PayoutTransaction as PT
 import qualified Lib.Payment.Domain.Types.PersonDailyOfferStats as DPersonDailyOfferStats
 import Lib.Payment.Domain.Types.Refunds (Refunds (..))
 import qualified Lib.Payment.Domain.Types.WalletRewardPosting as DWalletRewardPosting
 import Lib.Payment.PGFee (PGFeeConfig (..), PGFeeType (..), recordPGFeeLedgerEntries)
+import qualified Lib.Payment.Payout.RequestStatus as RequestStatus
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQTransaction
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
@@ -133,6 +137,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrderOffer as QPaymentOrderOffer
 import qualified Lib.Payment.Storage.Queries.PaymentOrderSplit as QPaymentOrderSplit
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
+import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPayoutRequest
 import qualified Lib.Payment.Storage.Queries.PayoutTransaction as QPayoutTransaction
 import qualified Lib.Payment.Storage.Queries.PersonDailyOfferStats as QPersonDailyOfferStats
 import qualified Lib.Yudhishthira.Tools.Utils as LYUtils
@@ -225,7 +230,8 @@ type BeamFlow m r = (FinanceBeamFlow.BeamFlow m r, PaymentBeamFlow.BeamFlow m r)
 cancelPaymentIntentService ::
   ( EncFlow m r,
     BeamFlow m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    Finance.HasActorInfo m r
   ) =>
   Id MerchantOperatingCity ->
   Id Ride ->
@@ -264,7 +270,8 @@ chargePaymentIntentService ::
   forall m r c.
   ( EncFlow m r,
     BeamFlow m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    Finance.HasActorInfo m r
   ) =>
   Id MerchantOperatingCity ->
   DOrder.PaymentServiceType ->
@@ -332,6 +339,7 @@ data CreatePaymentServiceReq = CreatePaymentServiceReq
     basket :: Maybe [Payment.Basket],
     paymentRules :: Maybe Payment.PaymentRules,
     webhookUrl :: Maybe BaseUrl,
+    udf1 :: Maybe Text,
     -- Offer-specific
     offerId :: Maybe Text,
     discountAmount :: Maybe HighPrecMoney,
@@ -372,7 +380,8 @@ createPaymentService ::
   forall m r c.
   ( EncFlow m r,
     BeamFlow m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    Finance.HasActorInfo m r
   ) =>
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
@@ -506,7 +515,8 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
                 paymentRules = req.paymentRules,
                 autoRefundPostSuccess = Nothing,
                 webhookUrl = req.webhookUrl,
-                paymentFilter = Nothing
+                paymentFilter = Nothing,
+                udf1 = req.udf1
               }
       resp <- createPaymentCall paymentReq
       now <- getCurrentTime
@@ -608,7 +618,8 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
 refundPaymentService ::
   forall m r.
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   RefundPaymentServiceReq ->
   (PInterface.RefundPaymentReq -> m PInterface.RefundPaymentResp) ->
@@ -665,7 +676,8 @@ refundPaymentService req refundCall = do
 getRefundStatusService ::
   forall m r.
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id DOrder.PaymentOrder ->
   Id MerchantOperatingCity ->
@@ -710,7 +722,8 @@ updateShortId mbPaymentServiceType isTestTransaction shortId =
 
 createOrderService ::
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
@@ -813,7 +826,8 @@ buildSDKPayloadDetails req order = do
 
 buildPaymentOrder ::
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
@@ -975,6 +989,14 @@ invalidateOfferListCacheService ::
 invalidateOfferListCacheService customerId version paymentServiceType = do
   let key = makeOfferListCacheKey version paymentServiceType customerId
   Redis.withCrossAppRedis $ Redis.del key
+
+invalidateOfferListCacheServiceForAllServiceTypes ::
+  (MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Text ->
+  m ()
+invalidateOfferListCacheServiceForAllServiceTypes customerId version =
+  mapM_ (invalidateOfferListCacheService customerId version) [minBound .. maxBound]
 
 makeOfferListCacheKey :: Text -> DOrder.PaymentServiceType -> Text -> Text
 makeOfferListCacheKey version serviceType customerId =
@@ -1248,7 +1270,7 @@ applyOfferWithoutPaymentService ::
   UTCTime ->
   Maybe (Text, HighPrecMoney) -> -- mbProduct: (serviceTierType, amount) for basket
   m ()
-applyOfferWithoutPaymentService referenceId offerId offerCode offerStatsInput discountAmount payoutAmount orderAmount currency merchantId merchantOperatingCityId useDomainOffers applyOfferCall rideCreatedAt mbProduct = do
+applyOfferWithoutPaymentService referenceId offerId offerCode offerStatsInput discountAmount payoutAmount orderDiscountApplicableAmount currency merchantId merchantOperatingCityId useDomainOffers applyOfferCall rideCreatedAt mbProduct = do
   existingOffers <- QOfflineOffer.findByReferenceId referenceId
   when (null existingOffers) $ do
     now <- getCurrentTime
@@ -1266,7 +1288,7 @@ applyOfferWithoutPaymentService referenceId offerId offerCode offerStatsInput di
             { txnId = referenceId,
               offers = [offerId],
               customer = customer,
-              amount = orderAmount,
+              amount = orderDiscountApplicableAmount,
               currency = currency,
               planId = "dummy-not-required",
               registrationDate = addUTCTime 19800 rideCreatedAt, -- ist time
@@ -1474,7 +1496,8 @@ buildOrderOffer paymentOrderId mbOffers merchantId merchantOperatingCityId = do
 
 orderStatusService ::
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id MerchantOperatingCity ->
   Id Person ->
@@ -1664,7 +1687,7 @@ data OrderTxn = OrderTxn
   }
 
 updateOrderTransaction ::
-  BeamFlow m r =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   Id MerchantOperatingCity ->
   DOrder.PaymentOrder ->
   OrderTxn ->
@@ -1756,7 +1779,7 @@ buildPaymentTransaction order OrderTxn {..} respDump = do
 -- juspay webhook ----------------------------------------------------------
 
 juspayWebhookService ::
-  BeamFlow m r =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   Id MerchantOperatingCity ->
   Payment.OrderStatusResp ->
   Text ->
@@ -1893,7 +1916,7 @@ mkStripeWebhookData = \case
   PEInterface.CustomEvent _event -> SkipWebhookData
 
 stripeWebhookService ::
-  BeamFlow m r =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   Id MerchantOperatingCity ->
   PEInterface.ServiceEventResp ->
   Text ->
@@ -1946,7 +1969,9 @@ mkPayoutStripeWebhookData = \case
 
 stripePayoutWebhookService ::
   ( EncFlow m r,
-    PaymentBeamFlow.BeamFlow m r
+    PaymentBeamFlow.BeamFlow m r,
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id MerchantOperatingCity ->
   PayoutEvents.PayoutServiceEventResp ->
@@ -2084,7 +2109,8 @@ mkChargeOrderTxn PEInterface.Charge {..} = do
 
 updateRefundsByWebhook ::
   forall m r.
-  ( BeamFlow m r
+  ( BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id MerchantOperatingCity ->
   PEInterface.Refund ->
@@ -2187,7 +2213,8 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
 
 createRefundService ::
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id MerchantOperatingCity ->
   ShortId DOrder.PaymentOrder ->
@@ -2290,7 +2317,7 @@ mkRefundsEntry merchantId requestId orderShortId amount refundStatus = do
         completedAt = Nothing
       }
 
-upsertRefundStatus :: BeamFlow m r => Id MerchantOperatingCity -> DOrder.PaymentOrder -> Payment.RefundsData -> m (Maybe Refunds)
+upsertRefundStatus :: (BeamFlow m r, Finance.HasActorInfo m r) => Id MerchantOperatingCity -> DOrder.PaymentOrder -> Payment.RefundsData -> m (Maybe Refunds)
 upsertRefundStatus merchantOpCityId order Payment.RefundsData {..} =
   do
     now <- getCurrentTime
@@ -2347,7 +2374,8 @@ mkCreatePayoutOrderReq mRoutingId mConnectedAccountId CreatePayoutServiceReq {..
 
 createPayoutService ::
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
@@ -2449,7 +2477,9 @@ mkPayoutOrderStatusReq payoutOrder mRoutingId mConnectedAccountId PayoutStatusSe
 
 payoutStatusService ::
   ( EncFlow m r,
-    PaymentBeamFlow.BeamFlow m r
+    PaymentBeamFlow.BeamFlow m r,
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id Merchant ->
   Id Person ->
@@ -2462,7 +2492,7 @@ payoutStatusService _merchantId _personId payoutStatusServiceReq createPayoutOrd
   payoutStatusUpdates payoutStatusServiceReq.orderId statusResp
   pure $ PayoutPaymentStatus {status = statusResp.status, transferStatus = statusResp.transferStatus, orderId = statusResp.orderId, accountDetailsType = show <$> ((.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< statusResp.fulfillments)}
 
-payoutStatusUpdates :: (EncFlow m r, PaymentBeamFlow.BeamFlow m r) => Text -> PT.PayoutOrderStatusResp -> m ()
+payoutStatusUpdates :: (EncFlow m r, PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r, Finance.HasActorInfo m r) => Text -> PT.PayoutOrderStatusResp -> m ()
 payoutStatusUpdates orderId statusResp = do
   order <- QPayoutOrder.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId)
   case statusResp.transferStatus of
@@ -2474,6 +2504,7 @@ payoutStatusUpdates orderId statusResp = do
       txns = (.transactions) =<< mbFulfillment
       mbTxn = listToMaybe <$> sortBy (comparing (.updatedAt)) =<< txns
   QPayoutOrder.updatePayoutOrderTxnRespInfo ((.responseCode) =<< mbTxn) ((.responseMessage) =<< mbTxn) orderId
+  updatePayoutRequestStatusFromOrder order statusResp.status
   whenJust mbTxn $ \JuspayPayout.Transaction {amount = amount_txn, ..} -> do
     findTransaction <- QPayoutTransaction.findByTransactionRef transactionRef
     let mbBeneficiaryDetails = (.beneficiaryDetails) =<< mbFulfillment
@@ -2501,6 +2532,21 @@ payoutStatusUpdates orderId statusResp = do
                   updatedAt = now
                 }
         QPayoutTransaction.create payoutTransaction
+
+updatePayoutRequestStatusFromOrder ::
+  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
+  Payment.PayoutOrder ->
+  JuspayPayout.PayoutOrderStatus ->
+  m ()
+updatePayoutRequestStatusFromOrder order orderStatus = do
+  let newStatus = RequestStatus.castPayoutOrderStatusToPayoutRequestStatus orderStatus
+      protectedStatuses = [DPayoutRequest.CREDITED, DPayoutRequest.CASH_PAID, DPayoutRequest.CASH_PENDING]
+  when (newStatus /= DPayoutRequest.PROCESSING) $
+    forM_ (fromMaybe [] order.entityIds) $ \entityId -> do
+      mbPayoutRequest <- QPayoutRequest.findById (Id entityId)
+      whenJust mbPayoutRequest $ \payoutRequest ->
+        when (payoutRequest.status /= newStatus && payoutRequest.status `notElem` protectedStatuses) $
+          RequestStatus.updatePayoutRequestStatusWithHistory newStatus (Just $ "Payout order status: " <> show orderStatus) payoutRequest
 
 mkCreatePayoutServiceReq ::
   Text ->

@@ -11,6 +11,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport
 import qualified Lib.Finance.Storage.Beam.BeamFlow
 import qualified Lib.Finance.Storage.Beam.PgPaymentSettlementReport as Beam
@@ -30,10 +31,17 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 
 updateReconStatus ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Finance.Domain.Types.PgPaymentSettlementReport.ReconStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPaymentSettlementReport -> m ())
-updateReconStatus reconStatus reconMessage id = do
+  (Lib.Finance.Domain.Types.PgPaymentSettlementReport.ReconStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPaymentSettlementReport -> m ())
+updateReconStatus reconStatus reconMessage updatedBy updatedById id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.reconStatus reconStatus, Se.Set Beam.reconMessage reconMessage, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateOneWithKV
+    [ Se.Set Beam.reconStatus reconStatus,
+      Se.Set Beam.reconMessage reconMessage,
+      Se.Set Beam.updatedBy updatedBy,
+      Se.Set Beam.updatedById updatedById,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
@@ -44,17 +52,24 @@ updateByPrimaryKey :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.F
 updateByPrimaryKey (Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPaymentSettlementReport {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.bankId bankId,
+    [ Se.Set Beam.bankCode bankCode,
+      Se.Set Beam.bankId bankId,
+      Se.Set Beam.cardNumber cardNumber,
+      Se.Set Beam.cardType cardType,
       Se.Set Beam.chargebackAmount chargebackAmount,
       Se.Set Beam.chargebackId chargebackId,
       Se.Set Beam.chargebackReasonCode chargebackReasonCode,
       Se.Set Beam.chargebackStatus chargebackStatus,
+      Se.Set Beam.createdBy createdBy,
+      Se.Set Beam.createdById createdById,
       Se.Set Beam.currency currency,
       Se.Set Beam.disputeId disputeId,
       Se.Set Beam.disputeType disputeType,
+      Se.Set Beam.isValidSubscriptionPurchase isValidSubscriptionPurchase,
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.orderId orderId,
+      Se.Set Beam.orderType orderType,
       Se.Set Beam.paymentGateway paymentGateway,
       Se.Set Beam.paymentMethod paymentMethod,
       Se.Set Beam.paymentMethodSubType paymentMethodSubType,
@@ -80,6 +95,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPayment
       Se.Set Beam.settlementId settlementId,
       Se.Set Beam.settlementMode settlementMode,
       Se.Set Beam.settlementType settlementType,
+      Se.Set Beam.subscriptionPurchaseId subscriptionPurchaseId,
       Se.Set Beam.txnAmount txnAmount,
       Se.Set Beam.txnDate txnDate,
       Se.Set Beam.txnId txnId,
@@ -87,6 +103,8 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPayment
       Se.Set Beam.txnType txnType,
       Se.Set Beam.uniqueSplitId uniqueSplitId,
       Se.Set Beam.updatedAt _now,
+      Se.Set Beam.updatedBy updatedBy,
+      Se.Set Beam.updatedById updatedById,
       Se.Set Beam.utr utr,
       Se.Set Beam.vendorId vendorId
     ]

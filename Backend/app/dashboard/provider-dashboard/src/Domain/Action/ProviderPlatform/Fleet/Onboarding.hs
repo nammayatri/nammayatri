@@ -1,4 +1,4 @@
-module Domain.Action.ProviderPlatform.Fleet.Onboarding (getOnboardingDocumentConfigs, getOnboardingRegisterStatus, postOnboardingVerify, getOnboardingGetReferralDetails) where
+module Domain.Action.ProviderPlatform.Fleet.Onboarding (getOnboardingDocumentConfigs, getOnboardingRegisterStatus, getOnboardingRegisterVehicleStatus, postOnboardingVerify, getOnboardingVehicleDocuments, getOnboardingGetReferralDetails) where
 
 import qualified API.Client.ProviderPlatform.Fleet as Client
 import qualified API.Types.ProviderPlatform.Fleet.Onboarding
@@ -48,8 +48,19 @@ postOnboardingVerify merchantShortId opCity apiTokenInfo verifyType req = do
     QP.updatePersonVerifiedStatus (Id req.driverId) True
   pure Success
 
+getOnboardingVehicleDocuments :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.VehicleDocumentStatusRes)
+getOnboardingVehicleDocuments merchantShortId opCity apiTokenInfo rcNo rcId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.getOnboardingVehicleDocuments) rcNo rcId
+
 getOnboardingGetReferralDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.ReferralInfoRes)
 getOnboardingGetReferralDetails merchantShortId opCity apiTokenInfo referralCode = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let requestorId = apiTokenInfo.personId.getId
   Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.getOnboardingGetReferralDetails) requestorId referralCode
+
+getOnboardingRegisterVehicleStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.RcVerifyStatusResp)
+getOnboardingRegisterVehicleStatus merchantShortId opCity apiTokenInfo registrationNo rcId = do
+  when (isNothing registrationNo && isNothing rcId) $ throwError (InvalidRequest "Either registrationNo or rcId must be provided")
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.getOnboardingRegisterVehicleStatus) registrationNo rcId

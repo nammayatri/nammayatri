@@ -24,6 +24,7 @@ data DriverBlockTransactionsT f = DriverBlockTransactionsT
     reasonCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     reportedAt :: B.C f Kernel.Prelude.UTCTime,
     requestorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    specialZoneId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

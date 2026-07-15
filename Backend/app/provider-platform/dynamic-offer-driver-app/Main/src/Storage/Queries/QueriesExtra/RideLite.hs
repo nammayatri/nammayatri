@@ -21,8 +21,10 @@ import qualified Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
+import qualified IssueManagement.Domain.Types.MediaFile
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
@@ -31,7 +33,7 @@ import qualified Storage.Beam.Ride as Beam
 ---------------- Use this function if you need the data which are here as per your domain requirement ----------------
 ---------------- Add items in the below domain according to your use                                  ----------------
 
-findByIdLite :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id RideLite -> m (Maybe RideLite))
+findByIdLite :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe RideLite))
 findByIdLite id = findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByRBIdLite :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m (Maybe RideLite))
@@ -42,6 +44,9 @@ findActiveByRBIdLite (Kernel.Types.Id.Id rbId) = findOneWithKV [Se.And [Se.Is Be
 
 findInProgressByDriverId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe RideLite)
 findInProgressByDriverId (Kernel.Types.Id.Id driverId) = findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.status $ Se.Eq Domain.Types.Ride.INPROGRESS]]
+
+getActiveByDriverIdLite :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe RideLite)
+getActiveByDriverIdLite (Kernel.Types.Id.Id personId) = findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq personId, Se.Is Beam.status $ Se.In [Domain.Types.Ride.INPROGRESS, Domain.Types.Ride.NEW]]]
 
 findRideByRideShortIdLite :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.ShortId RideLite -> m (Maybe RideLite))
 findRideByRideShortIdLite shortId = findOneWithKV [Se.Is Beam.shortId $ Se.Eq (Kernel.Types.Id.getShortId shortId)]
@@ -58,7 +63,14 @@ data RideLite = RideLite
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
     status :: Domain.Types.Ride.RideStatus,
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    tripCategory :: Maybe Domain.Types.TripCategory
+    tripCategory :: Maybe Domain.Types.TripCategory,
+    deliveryFileIds :: Kernel.Prelude.Maybe [Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile],
+    fare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    tripStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    cancellationFeeIfCancelled :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    driverCancellationPenaltyAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    driverCancellationPenaltyFeeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverCancellationPenaltyWaivedReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -77,5 +89,12 @@ instance FromTType' RideLiteTable RideLite where
             shortId = Kernel.Types.Id.ShortId shortId,
             status = status,
             driverArrivalTime = driverArrivalTime,
-            tripCategory = tripCategory
+            tripCategory = tripCategory,
+            deliveryFileIds = (Kernel.Types.Id.Id <$>) <$> deliveryFileIds,
+            fare = fmap (Kernel.Types.Common.mkAmountWithDefault fareAmount) fare,
+            tripStartTime = tripStartTime,
+            cancellationFeeIfCancelled = cancellationFeeIfCancelled,
+            driverCancellationPenaltyAmount = driverCancellationPenaltyAmount,
+            driverCancellationPenaltyFeeId = driverCancellationPenaltyFeeId,
+            driverCancellationPenaltyWaivedReason = driverCancellationPenaltyWaivedReason
           }

@@ -15,10 +15,6 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
-  {-# WARNING
-    "This module contains direct calls to the table and redis. \
-  \ Use Storage.ConfigPilot.Config.MerchantServiceUsageConfig (getConfig) instead for reads."
-    #-}
   ( create,
     findByMerchantOperatingCityId,
     clearCache,

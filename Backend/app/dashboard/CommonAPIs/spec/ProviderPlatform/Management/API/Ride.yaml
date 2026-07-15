@@ -115,6 +115,18 @@ apis:
       response:
         type: MultipleRideEndResp
       validation: Dashboard.ProviderPlatform.Management.Ride.validateMultipleRideEndReq
+      helperApi:
+        - POST:
+            endpoint: /end
+            name: PostRideEndMultiple
+            auth: ApiAuthV2
+            query:
+              - requestorId: Text
+            request:
+              type: MultipleRideEndReq
+            response:
+              type: MultipleRideEndResp
+            validation: Dashboard.ProviderPlatform.Management.Ride.validateMultipleRideEndReq
       migrate:
         endpoint: RideAPI MultipleRideEndEndpoint
         endpointV2:
@@ -132,6 +144,18 @@ apis:
         endpoint: RideAPI MultipleRideCancelEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES MULTIPLE_RIDE_CANCEL
+      helperApi:
+        - POST: # MultipleRideCancelAPI
+            endpoint: /cancel
+            name: PostRideCancelMultiple
+            auth: ApiAuthV2
+            query:
+              - requestorId: Text
+            request:
+              type: MultipleRideCancelReq
+            response:
+              type: MultipleRideCancelResp
+            validation: Dashboard.ProviderPlatform.Management.Ride.validateMultipleRideCancelReq
   - GET: # RideInfoAPI
       endpoint: /{rideId}/info
       auth: ApiAuthV2

@@ -1,0 +1,56 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  RewardCampaign: Domain.Types.RewardCampaign
+  RewardCohort: Domain.Types.RewardCohort
+  CouponSourceType: Domain.Types.RewardCampaign
+
+RewardUnlock:
+  tableName: reward_unlock
+  derives: "Generic, Show, Eq"
+  fields:
+    id: Id RewardUnlock
+    personId: Id Person
+    campaignId: Id RewardCampaign
+    cohortId: Id RewardCohort
+    unlockedAt: UTCTime
+    couponCode: Maybe Text
+    couponSource: CouponSourceType
+    couponValidTill: Maybe UTCTime
+    status: UnlockStatus
+    unlockSeq: Maybe Int
+    viewedAt: Maybe UTCTime
+    claimedAt: Maybe UTCTime
+    redeemedAt: Maybe UTCTime
+    reclaimedAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  types:
+    UnlockStatus:
+      enum: "Active, Redeemed, ExpiredUnredeemed, Reclaimed"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <UnlockStatus>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <UnlockStatus>
+  constraints:
+    id: PrimaryKey
+    personId: "!SecondaryKey"
+    campaignId: "!SecondaryKey"
+  default:
+    status: "'Active'"
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByPerson:
+      kvFunction: findAllWithKV
+      where: personId
+    findByPersonAndCampaign:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - personId
+          - campaignId
+  extraOperations:
+    - EXTRA_QUERY_FILE

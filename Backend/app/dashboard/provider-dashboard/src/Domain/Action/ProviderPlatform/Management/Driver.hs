@@ -62,6 +62,10 @@ module Domain.Action.ProviderPlatform.Management.Driver
     postDriverTdsRateUpdate,
     getDriverAirportPreference,
     postDriverAirportPreference,
+    getDriverSearchRequestStats,
+    getDriverIdentityInfo,
+    postDriverIdentityInfoUpdate,
+    postDriverAssociationChange,
   )
 where
 
@@ -294,7 +298,7 @@ postDriverClearFee merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
   T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverClearFee) driverId req
+    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverClearFee) (Just apiTokenInfo.personId.getId) driverId req
 
 postDriverPersonNumbers :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.PersonIdsReq -> Environment.Flow [Common.PersonRes]
 postDriverPersonNumbers merchantShortId opCity apiTokenInfo req = do
@@ -330,7 +334,7 @@ postDriverRefundByPayout :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo ->
 postDriverRefundByPayout merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
-  T.withTransactionStoring transaction (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverRefundByPayout) driverId req)
+  T.withTransactionStoring transaction (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverRefundByPayout) driverId (Just apiTokenInfo.personId.getId) req)
 
 getDriverSecurityDepositStatus :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Common.ServiceNames -> Environment.Flow [Common.SecurityDepositDfStatusRes])
 getDriverSecurityDepositStatus merchantShortId opCity apiTokenInfo driverId mbServiceName = do
@@ -404,13 +408,38 @@ postDriverTdsRateUpdate merchantShortId opCity apiTokenInfo req = do
   T.withTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverTdsRateUpdate) req
 
-getDriverAirportPreference :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Environment.Flow Common.AirportPreferenceRes)
-getDriverAirportPreference merchantShortId opCity apiTokenInfo driverId = do
+getDriverAirportPreference :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Maybe Text -> Environment.Flow Common.AirportPreferenceRes)
+getDriverAirportPreference merchantShortId opCity apiTokenInfo mbPhoneNumber mbVehicleNumber mbSpecialZoneId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverAirportPreference) driverId
+  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverAirportPreference) mbPhoneNumber mbVehicleNumber mbSpecialZoneId
 
 postDriverAirportPreference :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.AirportPreferenceReq -> Environment.Flow APISuccess)
 postDriverAirportPreference merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) (Just driverId) Nothing (Just req)
   T.withTransactionStoring transaction $ (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverAirportPreference) driverId req)
+
+getDriverSearchRequestStats :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Day -> Maybe Day -> Environment.Flow Common.DriverSearchRequestStatsRes)
+getDriverSearchRequestStats merchantShortId opCity apiTokenInfo driverId mbFromDate mbToDate = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverSearchRequestStats) driverId mbFromDate mbToDate
+
+getDriverIdentityInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Environment.Flow Common.DriverIdentityInfoRes
+getDriverIdentityInfo merchantShortId opCity apiTokenInfo driverId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let requestorId = apiTokenInfo.personId.getId
+  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverIdentityInfo) driverId requestorId
+
+postDriverIdentityInfoUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateDriverIdentityInfoReq -> Environment.Flow APISuccess
+postDriverIdentityInfoUpdate merchantShortId opCity apiTokenInfo driverId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) (Just driverId) Nothing (Just req)
+  T.withTransactionStoring transaction $ do
+    let requestorId = apiTokenInfo.personId.getId
+    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverIdentityInfoUpdate) driverId requestorId req
+
+postDriverAssociationChange :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Common.ChangeAssociationReq -> Environment.Flow APISuccess)
+postDriverAssociationChange merchantShortId opCity apiTokenInfo subjectId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) (Just (Id subjectId)) Nothing (Just req)
+  T.withTransactionStoring transaction (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverAssociationChange) apiTokenInfo.personId.getId subjectId req)

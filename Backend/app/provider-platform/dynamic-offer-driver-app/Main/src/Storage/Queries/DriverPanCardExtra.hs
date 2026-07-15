@@ -39,19 +39,37 @@ findByPanNumberAndNotInValid personId = do
         ]
     ]
 
-upsertPanRecord :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => DriverPanCard -> m ()
-upsertPanRecord a@DriverPanCard {..} =
-  findOneWithKV [Se.Is Beam.driverId $ Se.Eq driverId.getId] >>= \case
+findValidByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe DriverPanCard)
+findValidByDriverId driverId = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq driverId.getId,
+          Se.Is Beam.verificationStatus $ Se.Eq Documents.VALID
+        ]
+    ]
+
+upsertPanRecord :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => DriverPanCard -> Maybe DriverPanCard -> m ()
+upsertPanRecord a@DriverPanCard {..} mbExisting =
+  case mbExisting of
     Just _ ->
       updateOneWithKV
         [ Se.Set Beam.consentTimestamp consentTimestamp,
           Se.Set Beam.driverDob driverDob,
           Se.Set Beam.driverName driverName,
           Se.Set Beam.documentImageId1 documentImageId1.getId,
+          Se.Set Beam.panCardNumberEncrypted (panCardNumber & unEncrypted . encrypted),
           Se.Set Beam.panCardNumberHash (panCardNumber & hash),
           Se.Set Beam.updatedAt updatedAt,
           Se.Set Beam.verificationStatus verificationStatus,
-          Se.Set Beam.driverNameOnGovtDB driverNameOnGovtDB
+          Se.Set Beam.driverNameOnGovtDB driverNameOnGovtDB,
+          Se.Set Beam.docType docType
         ]
         [Se.Is Beam.driverId $ Se.Eq driverId.getId]
     Nothing -> createWithKV a
+
+upsert :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => DriverPanCard -> m ()
+upsert record = findOneWithKV [Se.Is Beam.driverId $ Se.Eq record.driverId.getId] >>= upsertPanRecord record
+
+deleteByDriverIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Documents.VerificationStatus -> m ()
+deleteByDriverIdAndStatus driverId status =
+  deleteWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId.getId, Se.Is Beam.verificationStatus $ Se.Eq status]]

@@ -26,6 +26,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
       Just
         Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig
           { aadhaarVerificationService = aadhaarVerificationService,
+            additionalIssueTicketServices = additionalIssueTicketServices,
             autoComplete = autoComplete,
             cancelPaymentIntent = fromMaybe Kernel.External.Payment.Types.Stripe cancelPaymentIntent,
             capturePaymentIntent = capturePaymentIntent,
@@ -76,6 +77,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
   toTType' (Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig {..}) = do
     Beam.MerchantServiceUsageConfigT
       { Beam.aadhaarVerificationService = aadhaarVerificationService,
+        Beam.additionalIssueTicketServices = additionalIssueTicketServices,
         Beam.autoComplete = autoComplete,
         Beam.cancelPaymentIntent = Kernel.Prelude.Just cancelPaymentIntent,
         Beam.capturePaymentIntent = capturePaymentIntent,

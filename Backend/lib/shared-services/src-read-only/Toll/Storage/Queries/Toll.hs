@@ -23,7 +23,7 @@ create = createWithKV
 createMany :: (Toll.Storage.BeamFlow.BeamFlow m r) => ([Toll.Domain.Types.Toll.Toll] -> m ())
 createMany = traverse_ create
 
-findAllTollsByMerchantOperatingCity :: (Toll.Storage.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Toll.Domain.Types.Toll.Toll])
+findAllTollsByMerchantOperatingCity :: (Toll.Storage.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Toll.Domain.Types.Toll.Toll]))
 findAllTollsByMerchantOperatingCity merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
 findByPrimaryKey :: (Toll.Storage.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Toll.Domain.Types.Toll.Toll -> m (Maybe Toll.Domain.Types.Toll.Toll))
@@ -34,9 +34,11 @@ updateByPrimaryKey (Toll.Domain.Types.Toll.Toll {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.isAutoRickshawAllowed isAutoRickshawAllowed,
+      Se.Set Beam.isAutoRickshawTollChargeApplicable isAutoRickshawTollChargeApplicable,
       Se.Set Beam.isTwoWheelerAllowed isTwoWheelerAllowed,
+      Se.Set Beam.isTwoWheelerTollChargeApplicable isTwoWheelerTollChargeApplicable,
       Se.Set Beam.name name,
-      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
+      Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) price),
       Se.Set Beam.price ((.amount) price),
       Se.Set Beam.tollEndGates tollEndGates,
       Se.Set Beam.tollStartGates tollStartGates,

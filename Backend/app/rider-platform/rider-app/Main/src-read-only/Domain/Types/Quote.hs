@@ -20,11 +20,13 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
+import qualified Lib.Types.SpecialLocation
 import qualified SharedLogic.Type
 import qualified Tools.Beam.UtilsTH
 
 data Quote = Quote
-  { backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { area :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     billingCategory :: SharedLogic.Type.BillingCategory,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
@@ -37,6 +39,7 @@ data Quote = Quote
     estimatedFare :: Kernel.Types.Common.Price,
     estimatedPickupDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedTotalFare :: Kernel.Types.Common.Price,
+    fareSettlementType :: Kernel.Prelude.Maybe Lib.Types.SpecialLocation.FareSettlementType,
     id :: Kernel.Types.Id.Id Domain.Types.Quote.Quote,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isBlockedRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -62,6 +65,7 @@ data Quote = Quote
     validTill :: Kernel.Prelude.UTCTime,
     vehicleIconUrl :: Kernel.Prelude.Maybe Kernel.Types.Common.BaseUrl,
     vehicleServiceTierAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    vehicleServiceTierLuggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleServiceTierType :: Domain.Types.ServiceTierType.ServiceTierType
   }

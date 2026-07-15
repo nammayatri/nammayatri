@@ -36,3 +36,12 @@ LeaderBoardConfigs:
       kvFunction: findOneWithKV
       where:
         and: [leaderBoardType, merchantOperatingCityId]
+
+  configPilot:
+    configType: LeaderBoardConfig
+    fetchQuery: findAllByMerchantOpCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: List
+    queryModule: Storage.CachedQueries.Merchant.LeaderBoardConfig
+    filterDimensions:
+      - leaderBoardType

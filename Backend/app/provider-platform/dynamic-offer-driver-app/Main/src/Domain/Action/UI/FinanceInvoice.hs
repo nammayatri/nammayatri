@@ -17,6 +17,7 @@ import Kernel.Prelude (head, listToMaybe, showBaseUrl)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
@@ -25,8 +26,9 @@ import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtr
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import Storage.Beam.Payment ()
-import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SubscriptionPurchase as QSubscriptionPurchase
@@ -161,7 +163,7 @@ getFinanceInvoicePdf ::
 getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLimit mbOffset _mbReferenceId mbTo = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
   mbDriver <- QPerson.findById driverId
-  mbTransporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
 
   let fromTime = toUTCTimeFrom <$> mbFrom
       toTime = toUTCTimeTo <$> mbTo

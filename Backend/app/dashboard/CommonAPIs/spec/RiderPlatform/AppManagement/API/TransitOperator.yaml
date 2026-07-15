@@ -21,8 +21,18 @@ imports:
   NandiRow: SharedLogic.External.Nandi.Types
   NandiWaybillRow: SharedLogic.External.Nandi.Types
   QueryBody: SharedLogic.External.Nandi.Types
+  EnrichedStop: SharedLogic.External.Nandi.Types
+  BulkReplaceReq: SharedLogic.External.Nandi.Types
+  BulkReplaceResult: SharedLogic.External.Nandi.Types
+  RouteStopsResponse: SharedLogic.External.Nandi.Types
+  InsertRouteStopReq: SharedLogic.External.Nandi.Types
+  InsertRouteStopResp: SharedLogic.External.Nandi.Types
+  ReprocessReq: SharedLogic.External.Nandi.Types
+  ReprocessResult: SharedLogic.External.Nandi.Types
+  RouteStopMappingExport: SharedLogic.External.Nandi.Types
   Value: Data.Aeson
   FilePath: EulerHS.Prelude
+  APISuccess: Kernel.Types.APISuccess
 
 importPackageOverrides:
   BecknV2.OnDemand.Enums: "beckn-spec"
@@ -308,6 +318,96 @@ apis:
         type: UpsertDeviceVehicleMappingReq
       response:
         type: UpsertDeviceVehicleMappingResp
+
+  - POST:
+      endpoint: /bus/{vehicleNumber}/unblock
+      name: TransitOperatorUnblockBus
+      auth: ApiAuthV2
+      params:
+        vehicleNumber: Text
+      response:
+        type: APISuccess
+
+  - GET:
+      endpoint: /stops/search
+      name: TransitOperatorSearchStops
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        q: Text
+      query:
+        limit: Int
+        withRoutes: Bool
+      response:
+        type: "[EnrichedStop]"
+
+  - GET:
+      endpoint: /stops/nearby
+      name: TransitOperatorNearbyStops
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        lat: Double
+        lon: Double
+      query:
+        radius: Double
+        limit: Int
+        withRoutes: Bool
+      response:
+        type: "[EnrichedStop]"
+
+  - POST:
+      endpoint: /stops/bulkReplace
+      name: TransitOperatorBulkReplaceStops
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: BulkReplaceReq
+      response:
+        type: BulkReplaceResult
+
+  - GET:
+      endpoint: /routeStops
+      name: TransitOperatorRouteStops
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        routeId: Text
+      response:
+        type: RouteStopsResponse
+
+  - POST:
+      endpoint: /routeStops/insert
+      name: TransitOperatorInsertRouteStop
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        routeId: Text
+      request:
+        type: InsertRouteStopReq
+      response:
+        type: InsertRouteStopResp
+
+  - POST:
+      endpoint: /routes/reprocess
+      name: TransitOperatorReprocessRoutes
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: ReprocessReq
+      response:
+        type: "[ReprocessResult]"
+
+  - GET:
+      endpoint: /routeStopMapping
+      name: TransitOperatorExportRouteStopMapping
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: "[RouteStopMappingExport]"
 
 types:
   DeviceVehicleMappingListRes:

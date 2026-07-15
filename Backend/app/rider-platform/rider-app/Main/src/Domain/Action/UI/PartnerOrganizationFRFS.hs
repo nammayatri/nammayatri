@@ -80,10 +80,13 @@ import Kernel.Utils.Common as Kernel
 import Kernel.Utils.JSON (removeNullFields)
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import SharedLogic.FRFSConfirm
 import qualified SharedLogic.FRFSUtils as Utils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified Storage.CachedQueries.BecknConfig as CQBC
+import qualified Storage.CachedQueries.FRFSConfig as CQFRFS
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -92,7 +95,6 @@ import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
 import qualified Storage.CachedQueries.Person as CQP
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QSearch
@@ -387,7 +389,7 @@ getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId integratedBPPCo
         fromStation' <- CQPOS.findStationWithPOrgIdAndStationId fromStationId'.getId partnerOrg.orgId integratedBPPConfig
         toStation' <- CQPOS.findStationWithPOrgIdAndStationId toStationId'.getId partnerOrg.orgId integratedBPPConfig
         return (fromStation', toStation')
-  frfsConfig' <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = fromStation'.merchantOperatingCityId.getId}) >>= fromMaybeM (FRFSConfigNotFound fromStation'.merchantOperatingCityId.getId)
+  frfsConfig' <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = fromStation'.merchantOperatingCityId.getId}) (Just (CQFRFS.findByMerchantOperatingCityId fromStation'.merchantOperatingCityId (Just []))) >>= fromMaybeM (FRFSConfigNotFound fromStation'.merchantOperatingCityId.getId)
 
   unless (frfsConfig'.merchantId == partnerOrg.merchantId) $
     throwError . InvalidRequest $ "apiKey of partnerOrgId:" +|| partnerOrg.orgId.getId ||+ " not valid for merchantId:" +|| frfsConfig'.merchantId.getId ||+ ""
@@ -471,7 +473,7 @@ shareTicketInfo ticketBookingId = do
 
       whenWithLockRedisWithoutUnlock statusTriggerLockKey bppStatusCallCfg.intervalInSec $ do
         bapConfig <-
-          getOneConfig (BecknConfigDimensions {merchantOperatingCityId = city.id.getId, merchantId = merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType)})
+          getOneConfig (BecknConfigDimensions {merchantOperatingCityId = city.id.getId, merchantId = merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback city.id merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType)))
             >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchantId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType ||+ "")
         void $ CallExternalBPP.status merchantId city bapConfig ticketBooking
 
@@ -479,10 +481,10 @@ getFareV2 :: MerchantOperatingCity -> PartnerOrganization -> Station -> Station 
 getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTransactionId routeCode integratedBPPConfig = do
   let merchantId = fromStation.merchantId
       frfsVehicleType = fromStation.vehicleType
-  frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = fromStation.merchantOperatingCityId.getId}) >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
+  frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = fromStation.merchantOperatingCityId.getId}) (Just (CQFRFS.findByMerchantOperatingCityId fromStation.merchantOperatingCityId (Just []))) >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   bapConfig <-
-    getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType)})
+    getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType)))
       >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchantId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType ||+ "")
   route <-
     maybe
@@ -556,6 +558,8 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
             vehicleNumber = Nothing,
             isSingleMode = Just True,
             cloudType = Nothing,
+            clientSdkVersion = Nothing,
+            clientBundleVersion = Nothing,
             ..
           }
 
@@ -590,6 +594,7 @@ mkQuoteRes (quote, quoteCategories) = do
         integratedBppConfigId = quote.integratedBppConfigId,
         observingFailures = Nothing,
         offer = Nothing,
+        journeyStations = Nothing,
         ..
       }
 
@@ -778,7 +783,7 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   fromStation <- OTPRest.getStationByGtfsIdAndStopCode quote.fromStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound $ "Station not found for fromStationCode:" +|| quote.fromStationCode ||+ "")
   toStation <- OTPRest.getStationByGtfsIdAndStopCode quote.toStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound $ "Station not found for toStationCode:" +|| quote.toStationCode ||+ "")
-  frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = fromStation.merchantOperatingCityId.getId}) >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
+  frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = fromStation.merchantOperatingCityId.getId}) (Just (CQFRFS.findByMerchantOperatingCityId fromStation.merchantOperatingCityId (Just []))) >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
   redisLockSearchId <- Redis.tryLockRedis lockKey 10
   if not redisLockSearchId
     then throwError $ RedisLockStillProcessing lockKey

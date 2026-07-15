@@ -18,11 +18,16 @@ import qualified Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.City
+import qualified Kernel.Types.SlidingWindowCounters
 import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data TransporterConfigT f = TransporterConfigT
   { aaEnabledClientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    authPhoneNumberCountThreshold1 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    authPhoneNumberCountThreshold2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    authPhoneNumberCountWindow1 :: B.C f (Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions),
+    authPhoneNumberCountWindow2 :: B.C f (Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions),
     aadhaarImageResizeConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     aadhaarVerificationRequired :: B.C f Kernel.Prelude.Bool,
     acStatusCheckGap :: B.C f Kernel.Prelude.Int,
@@ -60,6 +65,7 @@ data TransporterConfigT f = TransporterConfigT
     badDebtSchedulerTime :: B.C f Kernel.Types.Common.Seconds,
     badDebtTimeThreshold :: B.C f Kernel.Prelude.Int,
     bankErrorExpiry :: B.C f Kernel.Types.Common.Seconds,
+    blockDriverOwnRCForFleetDrivers :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     bookAnyVehicleDowngradeLevel :: B.C f Kernel.Prelude.Int,
     bulkWaiveOffLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cacheOfferListByDriverId :: B.C f Kernel.Prelude.Bool,
@@ -150,18 +156,24 @@ data TransporterConfigT f = TransporterConfigT
     editLocDriverPermissionNeeded :: B.C f Kernel.Prelude.Bool,
     editLocTimeThreshold :: B.C f Kernel.Types.Common.Seconds,
     emailOtpConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailOTPConfig),
+    enableBotFlow :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableCoinsToDirectPayout :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enableCourtRecordCheck :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableDashboardSms :: B.C f Kernel.Prelude.Bool,
     enableDirectWalletIncentives :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enableDocumentMetadata :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableExistingVehicleInBulkUpload :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableFaceVerification :: B.C f Kernel.Prelude.Bool,
     enableFareCalculatorV2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableGpsTollBehavior :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableManualDocumentStatusCheck :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableMobileNumberValidation :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enableMobilityBilling :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableOverchargingBlocker :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enablePullPendingDocVerification :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableScheduleReallocation :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableSupportForSafety :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enableTierUpgradeFeature :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableTollCrossedNotifications :: B.C f Kernel.Prelude.Bool,
     enableUdfForOffers :: B.C f Kernel.Prelude.Bool,
     enableVendorCheckForCollectingDues :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -182,12 +194,14 @@ data TransporterConfigT f = TransporterConfigT
     gpsTollBehaviorWindowDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     graceTimeForScheduledRidePickup :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     includeDriverCurrentlyOnRide :: B.C f Kernel.Prelude.Bool,
+    individualPANCheck :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     invoiceConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     isAAEnabledForRecurring :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isAvoidToll :: B.C f Kernel.Prelude.Bool,
     isDeviceIdChecksRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isDriverNameMandatoryInBulkUpload :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isDynamicPricingQARCalEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isGstPanLinkCheckRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isMLBasedDynamicPricingEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPlanMandatory :: B.C f Kernel.Prelude.Bool,
     issueBreachConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
@@ -237,6 +251,7 @@ data TransporterConfigT f = TransporterConfigT
     orderAndNotificationStatusCheckTimeLimit :: B.C f Kernel.Types.Common.Seconds,
     otpRideStartRestrictionRadius :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     overlayBatchSize :: B.C f Kernel.Prelude.Int,
+    overrideOperatorDriverJoiningWithDeepLink :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     pastDaysRideCounter :: B.C f Kernel.Prelude.Int,
     payoutBatchLimit :: B.C f Kernel.Prelude.Int,
     payoutRideMoneyToDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -286,6 +301,7 @@ data TransporterConfigT f = TransporterConfigT
     subscription :: B.C f Kernel.Prelude.Bool,
     subscriptionConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     subscriptionStartTime :: B.C f Kernel.Prelude.UTCTime,
+    supportedMapProviders :: B.C f (Kernel.Prelude.Maybe [Domain.Types.DriverInformation.MapProvider]),
     taxConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     tdsFromEmail :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     thresholdCancellationPercentageToUnlist :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
@@ -325,6 +341,6 @@ type TransporterConfig = TransporterConfigT Identity
 
 $(enableKVPG ''TransporterConfigT ['merchantOperatingCityId] [])
 
-$(mkTableInstancesWithTModifier ''TransporterConfigT "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")])
+$(mkTableInstancesWithTModifier ''TransporterConfigT "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off"), ("individualPANCheck", "individual_pan_check")])
 
 $(Domain.Types.UtilsTH.mkCacParseInstance ''TransporterConfigT)

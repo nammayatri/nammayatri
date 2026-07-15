@@ -23,10 +23,26 @@ type API =
       :> Post
            '[JSON]
            API.Types.UI.ParkingBooking.ParkingBookingResponse
+      :<|> "multimodal"
+      :> "parking"
+      :> "marshal"
+      :> "create"
+      :> Header
+           "api-key"
+           Data.Text.Text
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.ParkingBooking.MarshalPersonReq
+      :> Post
+           '[JSON]
+           API.Types.UI.ParkingBooking.MarshalPersonResp
   )
 
 handler :: Environment.FlowServer API
-handler = postMultimodalParkingBook
+handler = postMultimodalParkingBook :<|> postMultimodalParkingMarshalCreate
 
 postMultimodalParkingBook :: (Kernel.Prelude.Maybe Data.Text.Text -> API.Types.UI.ParkingBooking.ParkingBookingReq -> Environment.FlowHandler API.Types.UI.ParkingBooking.ParkingBookingResponse)
 postMultimodalParkingBook a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.ParkingBooking.postMultimodalParkingBook a2 a1
+
+postMultimodalParkingMarshalCreate :: (Kernel.Prelude.Maybe Data.Text.Text -> API.Types.UI.ParkingBooking.MarshalPersonReq -> Environment.FlowHandler API.Types.UI.ParkingBooking.MarshalPersonResp)
+postMultimodalParkingMarshalCreate a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.ParkingBooking.postMultimodalParkingMarshalCreate a2 a1

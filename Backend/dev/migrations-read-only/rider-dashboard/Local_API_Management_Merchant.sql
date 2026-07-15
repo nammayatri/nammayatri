@@ -108,3 +108,22 @@ INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_acc
 
 -- {"api":"DeleteMerchantTollDelete","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_bap_dashboard"}
 INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) VALUES ( atlas_bap_dashboard.uuid_generate_v4(), '37947162-3b5d-4ed6-bcac-08841be1534d', 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/MERCHANT/DELETE_MERCHANT_TOLL_DELETE' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetMerchantMerchantMessageCatalog","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) VALUES ( atlas_bap_dashboard.uuid_generate_v4(), '37947162-3b5d-4ed6-bcac-08841be1534d', 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_MERCHANT_MESSAGE_CATALOG' ) ON CONFLICT DO NOTHING;
+
+
+
+------- SQL updates -------
+
+-- {"api":"PostMerchantMerchantMessageUpsert","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) VALUES ( atlas_bap_dashboard.uuid_generate_v4(), '37947162-3b5d-4ed6-bcac-08841be1534d', 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_MERCHANT_MESSAGE_UPSERT' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"DeleteMerchantMerchantMessage","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) VALUES ( atlas_bap_dashboard.uuid_generate_v4(), '37947162-3b5d-4ed6-bcac-08841be1534d', 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/MERCHANT/DELETE_MERCHANT_MERCHANT_MESSAGE' ) ON CONFLICT DO NOTHING;

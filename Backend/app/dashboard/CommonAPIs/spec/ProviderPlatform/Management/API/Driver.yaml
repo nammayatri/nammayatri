@@ -34,6 +34,9 @@ imports:
   MerchantOperatingCity: Dashboard.Common
   ServiceTierType: Dashboard.Common
   UpsertDriverServiceTiersCsvReq: Dashboard.Common.Driver
+  IndianState: Kernel.Types.Beckn.Context
+  Day: Data.Time
+  AddressDocumentType: Dashboard.Common.Driver
 
 module: Driver
 
@@ -439,6 +442,18 @@ apis:
         type: ClearDriverFeeReq
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /clearFee
+            auth: ApiAuthV2
+            mandatoryQuery:
+              driverId: Id Driver
+            query:
+              - requestorId: Text
+            request:
+              type: ClearDriverFeeReq
+            response:
+              type: APISuccess
       migrate:
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS CLEAR_FEE
@@ -501,6 +516,18 @@ apis:
       auth: ApiAuthV2
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/refundByPayout
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            query:
+              - requestorId: Text
+            request:
+              type: RefundByPayoutReq
+            response:
+              type: APISuccess
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REFUND_BY_PAYOUT
   - GET:
@@ -598,10 +625,12 @@ apis:
         type: APISuccess
 
   - GET: # GetAirportPreferenceAPI
-      endpoint: /{driverId}/airportPreference
+      endpoint: /airportPreference
       auth: ApiAuthV2
-      params:
-        driverId: Id Driver
+      query:
+        - phoneNumber: Text
+        - vehicleNumber: Text
+        - specialZoneId: Text
       response:
         type: AirportPreferenceRes
 
@@ -615,7 +644,94 @@ apis:
       response:
         type: APISuccess
 
+  - GET: # DriverSearchRequestStatsAPI
+      endpoint: /{driverId}/searchRequestStats
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      query:
+        - fromDate: Day
+        - toDate: Day
+      response:
+        type: DriverSearchRequestStatsRes
+
+  - GET: # GetDriverIdentityInfoAPI
+      endpoint: /{driverId}/identityInfo
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: DriverIdentityInfoRes
+      helperApi:
+        - GET:
+            endpoint: /{driverId}/identityInfo/{requestorId}
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              requestorId: Text
+            response:
+              type: DriverIdentityInfoRes
+
+  - POST: # UpdateDriverIdentityInfoAPI
+      endpoint: /{driverId}/identityInfo/update
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: UpdateDriverIdentityInfoReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/identityInfo/update/{requestorId}
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              requestorId: Text
+            request:
+              type: UpdateDriverIdentityInfoReq
+            response:
+              type: APISuccess
+
+  - POST: # postDriverAssociationChange
+      endpoint: /{subjectId}/association/change
+      auth: ApiAuthV2
+      params:
+        subjectId: Text
+      request:
+        type: ChangeAssociationReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{requestorId}/{subjectId}/association/change
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+              subjectId: Text
+            request:
+              type: ChangeAssociationReq
+            response:
+              type: APISuccess
+
 types:
+  DriverIdentityInfoRes:
+    - driverId: Id Driver
+    - nomineeName: Maybe Text
+    - nomineeRelationship: Maybe Text
+    - nomineeDob: Maybe Day
+    - address: Maybe Text
+    - addressDocumentType: Maybe AddressDocumentType
+    - addressState: Maybe IndianState
+    - derive: "'HideSecrets"
+  UpdateDriverIdentityInfoReq:
+    - nomineeName: Maybe Text
+    - nomineeRelationship: Maybe Text
+    - nomineeDob: Maybe Day
+    - address: Maybe Text
+    - addressDocumentType: Maybe AddressDocumentType
+    - addressState: Maybe IndianState
+    - derive: "'HideSecrets"
   DriverListRes:
     - totalItems: Int # for backward compatibility
     - summary: Summary
@@ -850,10 +966,43 @@ types:
     - newMerchantId: Id Merchant
     - newMerchantOperatingCityId: Id MerchantOperatingCity
     - derive: "'HideSecrets"
+  AirportRestrictionType:
+    - enum: "ENABLED, DISABLED, BLOCKED"
   AirportPreferenceRes:
-    - canSwitchToAirport: Maybe Bool
+    - driverId: Id Driver
+    - driverName: Text
+    - enableForAirport: AirportRestrictionType
+    - blockExpiryTime: Maybe UTCTime
+    - blockHistory: Maybe [AirportBlockHistoryItem]
+  AirportBlockHistoryItem:
+    - blockReason: Maybe Text
+    - blockLiftTime: Maybe UTCTime
+    - blockedBy: Maybe Text
+    - actionType: Maybe Text
+    - reportedAt: UTCTime
   AirportPreferenceReq:
-    - canSwitchToAirport: Bool
+    - enableForAirport: AirportRestrictionType
+    - blockReason: Maybe Text
+    - blockExpiryTime: Maybe UTCTime
+    - specialZoneId: Maybe Text
+    - requestorId: Maybe Text
+    - derive: "'HideSecrets"
+  SearchRequestForDriverResponse:
+    - enum: "Accept, Reject, Pulled"
+    - derive: "Read, Kernel.Prelude.ToParamSchema"
+  DriverSearchRequestStatsRes:
+    - stats: [DriverSearchRequestDailyStats]
+  DriverSearchRequestDailyStats:
+    - day: Day
+    - response: Maybe SearchRequestForDriverResponse
+    - count: Int
+  AssociationChangeType:
+    enum: "ChangeDriverOperator, ChangeFleetOperator, ChangeFleetDriver"
+    derive: "'HideSecrets"
+  ChangeAssociationReq:
+    - changeType: AssociationChangeType
+    - newOperatorCode: Maybe Text
+    - fleetOwnerId: Maybe Text
     - derive: "'HideSecrets"
 
 extraOperations:

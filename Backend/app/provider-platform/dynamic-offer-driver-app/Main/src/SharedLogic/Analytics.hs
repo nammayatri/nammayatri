@@ -373,7 +373,9 @@ updateEnabledVerifiedStateWithAnalytics mbDriverInfoData transporterConfig drive
         let delta = if isEnabled then 1 :: Integer else -1
         forM_ operatorIds $ \oid ->
           adjustOperatorAllTimeAnalyticsMetric transporterConfig oid TOTAL_ENABLED_DRIVERS delta
-  QDI.updateEnabledVerifiedState driverId isEnabled isVerified
+  -- BOT: setting enabled or verified to False also revokes `approved` (re-approval required).
+  let isApproved = if transporterConfig.enableBotFlow == Just True && (not isEnabled || isVerified == Just False) then Just False else Nothing
+  QDI.updateEnabledVerifiedState driverId isEnabled isVerified isApproved
 
 incrementOperatorTotalActiveDriversIfFirstDriverSubscription ::
   ( MonadFlow m,

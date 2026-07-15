@@ -25,9 +25,10 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Storage.Beam.SystemConfigs ()
-import Storage.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import qualified Storage.Queries.Booking as QRB
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import TransactionLogs.PushLogs
 
@@ -40,7 +41,7 @@ onUpdate ::
   SignatureAuthResult ->
   OnUpdate.OnUpdateReqV2 ->
   FlowHandler AckResponse
-onUpdate _ reqV2 = withFlowHandlerBecknAPI do
+onUpdate _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.onUpdateReqContext
   L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do

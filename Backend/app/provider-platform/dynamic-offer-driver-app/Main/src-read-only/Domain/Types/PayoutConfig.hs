@@ -45,6 +45,6 @@ data D2DPayoutTypeEnum = WALLET | DIRECT_PAYOUT | NO_PAYOUT deriving (Eq, Ord, S
 
 data VpaVerificationMode = PAYMENT_BASED | API_BASED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''D2DPayoutTypeEnum)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''D2DPayoutTypeEnum))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VpaVerificationMode)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''VpaVerificationMode))

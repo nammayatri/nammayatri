@@ -23,6 +23,8 @@ module Domain.Action.Dashboard.Customer
     postCustomerPersonNumbers,
     postCustomerPersonId,
     postCustomerUpdatePaymentMode,
+    postCustomerOffersList,
+    postCustomerApplyOffer,
   )
 where
 
@@ -49,19 +51,26 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
+import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.MerchantConfig as SMC
+import qualified SharedLogic.Offer as SOffer
+import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.MerchantConfig as CQMerchantCfg
+import qualified Storage.CachedQueries.Person as CQPerson
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Clickhouse.Sos as CHSos
 import Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SavedReqLocation as QSRL
+import Tools.Error (DeletedPersonError (..))
 
 ---------------------------------------------------------------------
 deleteCustomerDelete ::
@@ -77,6 +86,8 @@ deleteCustomerDelete merchantShortId opCity customerId = do
   unless (merchant.id == person.merchantId && person.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist $ getId personId)
   bookings <- runInReplica $ QRB.findByRiderIdAndStatus personId [DRB.NEW, DRB.TRIP_ASSIGNED, DRB.AWAITING_REASSIGNMENT, DRB.CONFIRMED, DRB.COMPLETED]
   unless (null bookings) $ throwError (InvalidRequest "Can't delete customer, has a valid booking in past.")
+  dues <- SPayment.getDuesForPerson person
+  when (dues.totalDueAmount > 0) $ throwError (PersonHasPendingDues dues.totalDueAmount)
   _ <- QP.deleteById personId
   QPFS.clearCache personId
   _ <- QSRL.deleteAllByRiderId personId
@@ -115,7 +126,7 @@ postCustomerUnblock merchantShortId opCity customerId = do
   -- merchant access checking
   let merchantId = customer.merchantId
   unless (merchant.id == merchantId && customer.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
-  merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = customer.merchantOperatingCityId.getId})
+  merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = customer.merchantOperatingCityId.getId}) (Just (CQMerchantCfg.findAllByMerchantOperatingCityId customer.merchantOperatingCityId (Just [])))
   mapM_
     ( \mc -> withCrossAppRedis $ do
         SWC.deleteCurrentWindowValues (SMC.mkCancellationKey mc.id.getId personId.getId) mc.fraudBookingCancellationCountWindow
@@ -296,3 +307,46 @@ postCustomerUpdatePaymentMode merchantShortId opCity customerId req = do
   unless (merchant.id == customer.merchantId && customer.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
   QP.updatePaymentMode (Just req.paymentMode) personId
   pure Success
+
+---------------------------------------------------------------------
+findCustomerByMobile :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Text -> Flow (DM.Merchant, DP.Person)
+findCustomerByMobile merchantShortId opCity mbCountryCode mobileNumber = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+  let countryCode = fromMaybe "+91" mbCountryCode
+  mobileNumberHash <- getDbHash mobileNumber
+  person <- QP.findByMobileNumberAndMerchantId countryCode mobileNumberHash merchant.id >>= fromMaybeM (PersonDoesNotExist mobileNumber)
+  unless (person.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist mobileNumber)
+  pure (merchant, person)
+
+postCustomerOffersList :: ShortId DM.Merchant -> Context.City -> Common.CustomerOffersListReq -> Flow [Common.CustomerOfferEntity]
+postCustomerOffersList merchantShortId opCity req = do
+  (merchant, person) <- findCustomerByMobile merchantShortId opCity req.mobileCountryCode req.mobileNumber
+  offers <- SOffer.listOffersForPerson merchant.id person req.amount
+  pure $ map mkCustomerOfferEntity offers
+
+postCustomerApplyOffer :: ShortId DM.Merchant -> Context.City -> Common.ApplyCustomerOfferReq -> Flow APISuccess
+postCustomerApplyOffer merchantShortId opCity req = do
+  (merchant, person) <- findCustomerByMobile merchantShortId opCity req.mobileCountryCode req.mobileNumber
+  offers <- SOffer.listOffersForPerson merchant.id person req.amount
+  unless (any ((== req.offerCode) . (.offerCode)) offers) $
+    throwError (InvalidRequest $ "Offer code " <> req.offerCode <> " is not eligible for customer")
+  now <- getCurrentTime
+  let tag = LYTU.mkTagNameValueExpiry (LYT.TagName SOffer.autoApplyOfferTagName) (LYT.TextValue req.offerCode) (Just $ Hours req.validityHours) now
+      newTags = LYTU.removeTagNameValue person.customerNammaTags tag ++ [tag]
+  CQPerson.updateCustomerTags (Just newTags) person.id
+  logTagInfo "dashboard -> applyOffer : " (show person.id <> " offerCode: " <> req.offerCode)
+  pure Success
+
+mkCustomerOfferEntity :: SOffer.OfferRespAPIEntity -> Common.CustomerOfferEntity
+mkCustomerOfferEntity SOffer.OfferRespAPIEntity {..} =
+  Common.CustomerOfferEntity
+    { offerId = offerId,
+      offerCode = offerCode,
+      offerTitle = offerTitle,
+      offerDescription = offerDescription,
+      autoApply = autoApply,
+      isHidden = isHidden,
+      amountSaved = amountSaved,
+      postOfferAmount = postOfferAmount
+    }

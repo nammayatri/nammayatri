@@ -32,13 +32,13 @@ import Kernel.Prelude
 import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (Currency, HighPrecMoney, MonadFlow, fromMaybeM, generateGUID, getCurrentTime, logDebug, logError, logInfo, throwError)
-import qualified Lib.Finance.Domain.Types.StateTransition as ST
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DCommon
 import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
 import Lib.Payment.Domain.Types.PayoutRequest
-import qualified Lib.Payment.Payout.History as PayoutHistory
+import Lib.Payment.Payout.RequestStatus (getStatusMessage, recordHistory, toPaymentState, updatePayoutRequestStatusWithHistory)
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 
@@ -81,7 +81,7 @@ data PayoutResult
 -- ---------------------------------------------------------------------------
 
 createPayoutRequest ::
-  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r) =>
+  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   PayoutRequest ->
   m ()
 createPayoutRequest payoutRequest = do
@@ -118,24 +118,22 @@ ensurePayoutExecutable pr =
     throwError $ InvalidRequest $ "PayoutRequest " <> pr.id.getId <> " is not executable (status: " <> show pr.status <> ")"
 
 updateStatusWithHistoryById ::
-  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r) =>
+  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   PayoutRequestStatus ->
   Maybe Text ->
   PayoutRequest ->
   m ()
-updateStatusWithHistoryById newStatus message payoutRequest = do
-  QPR.updateStatusById newStatus payoutRequest.id
-  recordHistory (Just payoutRequest.status) newStatus message payoutRequest
+updateStatusWithHistoryById = updatePayoutRequestStatusWithHistory
 
 createInitialHistory ::
-  (FinanceBeamFlow.BeamFlow m r) =>
+  (FinanceBeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   PayoutRequest ->
   m ()
 createInitialHistory payoutRequest = do
   recordHistory Nothing payoutRequest.status (Just $ getStatusMessage payoutRequest.status) payoutRequest
 
 markCashPending ::
-  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r) =>
+  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Text ->
   Text ->
   Maybe Text ->
@@ -147,7 +145,7 @@ markCashPending agentId agentName mbMessage payoutRequest = do
   updateStatusWithHistoryById CASH_PENDING (mbMessage <|> Just ("Cash Pending marked by " <> agentName)) payoutRequest
 
 markCashPaid ::
-  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r) =>
+  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Text ->
   Text ->
   Maybe Text ->
@@ -159,7 +157,7 @@ markCashPaid agentId agentName mbMessage payoutRequest = do
   updateStatusWithHistoryById CASH_PAID (mbMessage <|> Just ("Cash Paid marked by " <> agentName)) payoutRequest
 
 cancelPayoutWithin ::
-  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r) =>
+  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   NominalDiffTime ->
   Text ->
   PayoutRequest ->
@@ -175,7 +173,7 @@ cancelPayoutWithin window reason payoutRequest = do
   recordHistory (Just payoutRequest.status) CANCELLED (Just $ "Cancelled: " <> reason) payoutRequest
 
 retryPayoutWith ::
-  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r) =>
+  (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   (PayoutRequestStatus -> Bool) ->
   (PayoutRequest -> m ()) ->
   PayoutRequest ->
@@ -202,7 +200,8 @@ retryPayoutWith canRetry executePayout payoutRequest = do
 submitPayoutRequest ::
   ( EncFlow m r,
     PaymentBeamFlow.BeamFlow m r,
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   PayoutSubmission ->
   (DPayment.CreatePayoutServiceReq -> m IPayout.CreatePayoutOrderResp) ->
@@ -228,7 +227,8 @@ submitPayoutRequest submission payoutCall = do
 executePayoutRequest ::
   ( EncFlow m r,
     PaymentBeamFlow.BeamFlow m r,
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Currency ->
   Payout.PayoutServiceFlow ->
@@ -245,7 +245,8 @@ executePayoutRequest = executePayoutRequestInternal Nothing
 executePayoutRequestInternal ::
   ( EncFlow m r,
     PaymentBeamFlow.BeamFlow m r,
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Maybe HighPrecMoney -> -- explicit transferAmount override (Nothing = use amount)
   Currency ->
@@ -345,66 +346,3 @@ buildPayoutRequest submission = do
         createdAt = now,
         updatedAt = now
       }
-
--- ---------------------------------------------------------------------------
--- History & state helpers
--- ---------------------------------------------------------------------------
-
-recordHistory ::
-  (FinanceBeamFlow.BeamFlow m r) =>
-  Maybe PayoutRequestStatus ->
-  PayoutRequestStatus ->
-  Maybe Text ->
-  PayoutRequest ->
-  m ()
-recordHistory fromStatus toStatus message payoutRequest = do
-  let merchantIdText = payoutRequest.merchantId
-      opCityIdText = payoutRequest.merchantOperatingCityId
-  void $
-    PayoutHistory.recordPayoutHistory
-      PayoutHistory.PayoutHistoryRecord
-        { entityType = ST.PayoutRequest,
-          entityId = payoutRequest.id.getId,
-          fromState = toPaymentState <$> fromStatus,
-          toState = toPaymentState toStatus,
-          paymentEvent = toPaymentEvent toStatus,
-          message = message,
-          metadata = Nothing,
-          actorType = "SYSTEM",
-          actorId = Nothing,
-          merchantId = merchantIdText,
-          merchantOperatingCityId = opCityIdText
-        }
-
-toPaymentState :: PayoutRequestStatus -> ST.PaymentState
-toPaymentState INITIATED = ST.INITIATED
-toPaymentState PROCESSING = ST.PROCESSING
-toPaymentState CREDITED = ST.CREDITED
-toPaymentState AUTO_PAY_FAILED = ST.AUTO_PAY_FAILED
-toPaymentState RETRYING = ST.RETRYING
-toPaymentState FAILED = ST.FAILED
-toPaymentState CANCELLED = ST.CANCELLED
-toPaymentState CASH_PAID = ST.CASH_PAID
-toPaymentState CASH_PENDING = ST.CASH_PENDING
-
-getStatusMessage :: PayoutRequestStatus -> Text
-getStatusMessage INITIATED = "Payout scheduled"
-getStatusMessage PROCESSING = "Payment in progress"
-getStatusMessage CREDITED = "Payment credited to bank"
-getStatusMessage AUTO_PAY_FAILED = "Auto-pay failed"
-getStatusMessage CANCELLED = "Payment cancelled"
-getStatusMessage RETRYING = "Retrying payment..."
-getStatusMessage FAILED = "Payment failed/cancelled"
-getStatusMessage CASH_PAID = "Payment marked as cash paid"
-getStatusMessage CASH_PENDING = "Payment marked as cash pending"
-
-toPaymentEvent :: PayoutRequestStatus -> ST.PaymentEvent
-toPaymentEvent INITIATED = ST.INITIATE
-toPaymentEvent PROCESSING = ST.CAPTURE
-toPaymentEvent CREDITED = ST.CREDIT
-toPaymentEvent AUTO_PAY_FAILED = ST.FAIL
-toPaymentEvent CANCELLED = ST.CANCEL
-toPaymentEvent RETRYING = ST.RETRY
-toPaymentEvent FAILED = ST.FAIL
-toPaymentEvent CASH_PAID = ST.CREDIT
-toPaymentEvent CASH_PENDING = ST.INITIATE

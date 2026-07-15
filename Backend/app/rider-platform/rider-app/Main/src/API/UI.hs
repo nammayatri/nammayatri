@@ -1,6 +1,7 @@
 module API.UI
   ( API,
     handler,
+    uiApiPrefix,
   )
 where
 
@@ -35,6 +36,7 @@ import qualified API.Action.UI.PassDetails as PassDetails
 import qualified API.Action.UI.PickupInstructions as PickupInstructions
 import qualified API.Action.UI.Places as Places
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
+import qualified API.Action.UI.Rewards as Rewards
 import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.RiderLocation as RiderLocation
 import qualified API.Action.UI.RiderPreferences as RiderPreferences
@@ -45,6 +47,7 @@ import qualified API.Action.UI.TicketKapture as TicketKapture
 import qualified API.Action.UI.TicketService as TicketService
 import qualified API.Action.UI.TrackRoute as TrackRoute
 import qualified API.Action.UI.TriggerFCM as TriggerFCM
+import qualified API.Action.UI.ZendeskSdkToken as ZendeskSdkToken
 import qualified API.UI.AadhaarVerification as AadhaarVerification
 import qualified API.UI.AddBaggage as AddBaggage
 import qualified API.UI.AppInstalls as AppInstalls
@@ -82,13 +85,21 @@ import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Sos as Sos
 import qualified API.UI.Support as Support
 import qualified API.UI.Whatsapp as Whatsapp
+import qualified Data.Text as T
 import Environment
 import EulerHS.Prelude
+import GHC.TypeLits (symbolVal)
 import Kernel.Utils.Servant.Server (healthCheck)
 import Servant
 
+-- for multi-cloud proxy
+type UIAPIPrefix = "v2"
+
+uiApiPrefix :: Text
+uiApiPrefix = T.pack $ symbolVal (Proxy @UIAPIPrefix)
+
 type API =
-  "v2"
+  UIAPIPrefix
     :> ( Get '[JSON] Text
            :<|> Registration.API
            :<|> Profile.API
@@ -158,6 +169,7 @@ type API =
            :<|> RiderPreferences.API
            :<|> NYRegular.API
            :<|> Offers.API
+           :<|> Rewards.API
            :<|> AttractionRecommend.API
            :<|> RiderLocation.API
            :<|> Pass.API
@@ -169,6 +181,7 @@ type API =
            :<|> SVP.API
            :<|> ChangeServiceTier.API
            :<|> AddBaggage.API
+           :<|> ZendeskSdkToken.API
        )
 
 handler :: FlowServer API
@@ -242,6 +255,7 @@ handler =
     :<|> RiderPreferences.handler
     :<|> NYRegular.handler
     :<|> Offers.handler
+    :<|> Rewards.handler
     :<|> AttractionRecommend.handler
     :<|> RiderLocation.handler
     :<|> Pass.handler
@@ -253,3 +267,4 @@ handler =
     :<|> SVP.handler
     :<|> ChangeServiceTier.handler
     :<|> AddBaggage.handler
+    :<|> ZendeskSdkToken.handler

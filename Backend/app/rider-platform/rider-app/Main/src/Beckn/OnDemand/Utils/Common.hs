@@ -41,11 +41,12 @@ import Kernel.Types.Beckn.Domain as Domain
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import SharedLogic.Search as SLS
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
 import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import Storage.ConfigPilot.Config.VehicleConfig (VehicleConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.Queries.VehicleConfig as QVC
 import Tools.Error
 
 mkBapUri :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Id DM.Merchant -> m KP.BaseUrl
@@ -432,5 +433,6 @@ getBlackListedVehicles merchantOperatingCityId becknConfigId subscriberId = do
         { merchantOperatingCityId = merchantOperatingCityId.getId,
           becknConfigId = becknConfigId.getId
         }
+      (Just (QVC.findAllByBecknConfigId becknConfigId))
   let blackListedVehicles = filter (\vc -> subscriberId `elem` vc.blackListedSubscribers) vehicleConfigs
   pure $ mapMaybe (\blv -> mapTextToVehicle blv.category) blackListedVehicles

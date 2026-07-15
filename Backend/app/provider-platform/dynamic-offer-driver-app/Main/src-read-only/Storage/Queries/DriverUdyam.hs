@@ -5,9 +5,11 @@
 module Storage.Queries.DriverUdyam where
 
 import qualified Domain.Types.DriverUdyam
+import qualified Domain.Types.Image
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Documents
@@ -23,11 +25,31 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverUdyam.DriverUdyam] -> m ())
 createMany = traverse_ create
 
+deleteByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+deleteByDriverId driverId = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+findAllByEncryptedUdyamNumber :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.External.Encryption.DbHash -> m [Domain.Types.DriverUdyam.DriverUdyam])
+findAllByEncryptedUdyamNumber udyamNumberHashBeam = do findAllWithKV [Se.Is Beam.udyamNumberHash $ Se.Eq udyamNumberHashBeam]
+
 findByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverUdyam.DriverUdyam))
 findByDriverId driverId = do findOneWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+findByDriverIdAndVerificationStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Documents.VerificationStatus -> m (Maybe Domain.Types.DriverUdyam.DriverUdyam))
+findByDriverIdAndVerificationStatus driverId verificationStatus = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
+          Se.Is Beam.verificationStatus $ Se.Eq verificationStatus
+        ]
+    ]
+
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverUdyam.DriverUdyam -> m (Maybe Domain.Types.DriverUdyam.DriverUdyam))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+findByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image) -> m (Maybe Domain.Types.DriverUdyam.DriverUdyam))
+findByImageId documentImageId = do findOneWithKV [Se.Is Beam.documentImageId $ Se.Eq (Kernel.Types.Id.getId <$> documentImageId)]
 
 updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateVerificationStatus verificationStatus driverId = do
@@ -48,7 +70,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.DriverUdyam.DriverUdyam {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
+    [ Se.Set Beam.documentImageId (Kernel.Types.Id.getId <$> documentImageId),
+      Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.enterpriseName enterpriseName,
       Se.Set Beam.enterpriseType enterpriseType,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
@@ -67,7 +90,8 @@ instance FromTType' Beam.DriverUdyam Domain.Types.DriverUdyam.DriverUdyam where
     pure $
       Just
         Domain.Types.DriverUdyam.DriverUdyam
-          { driverId = Kernel.Types.Id.Id driverId,
+          { documentImageId = Kernel.Types.Id.Id <$> documentImageId,
+            driverId = Kernel.Types.Id.Id driverId,
             enterpriseName = enterpriseName,
             enterpriseType = enterpriseType,
             id = Kernel.Types.Id.Id id,
@@ -84,7 +108,8 @@ instance FromTType' Beam.DriverUdyam Domain.Types.DriverUdyam.DriverUdyam where
 instance ToTType' Beam.DriverUdyam Domain.Types.DriverUdyam.DriverUdyam where
   toTType' (Domain.Types.DriverUdyam.DriverUdyam {..}) = do
     Beam.DriverUdyamT
-      { Beam.driverId = Kernel.Types.Id.getId driverId,
+      { Beam.documentImageId = Kernel.Types.Id.getId <$> documentImageId,
+        Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.enterpriseName = enterpriseName,
         Beam.enterpriseType = enterpriseType,
         Beam.id = Kernel.Types.Id.getId id,

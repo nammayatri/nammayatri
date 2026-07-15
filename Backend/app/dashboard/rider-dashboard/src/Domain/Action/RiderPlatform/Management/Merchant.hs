@@ -40,6 +40,9 @@ module Domain.Action.RiderPlatform.Management.Merchant
     getMerchantConfigTollList,
     postMerchantTollUpsert,
     deleteMerchantTollDelete,
+    getMerchantMerchantMessageCatalog,
+    postMerchantMerchantMessageUpsert,
+    deleteMerchantMerchantMessage,
   )
 where
 
@@ -61,6 +64,7 @@ import qualified Kernel.Types.MerchantOperatingCity as KMOC
 import Kernel.Utils.Common
 import Kernel.Utils.Geometry (getGeomFromKML)
 import Kernel.Utils.Validation (runRequestValidation)
+import qualified Lib.GateInfo.Geometry as GGeom
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as DebugLog
 import qualified SharedLogic.Transaction as T
@@ -236,6 +240,7 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
   -- update entry in dashboard
   baseMerchant <- SQM.findByShortId merchantShortId >>= fromMaybeM (InvalidRequest $ "Merchant not found with shortId " <> show merchantShortId)
   geom <- getGeomFromKML req.file >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom")
+  geomGeoJson <- GGeom.getGeoJsonFromKML req.file >>= fromMaybeM (InvalidRequest "Cannot convert KML to GeoJSON")
   now <- getCurrentTime
   whenJust cityStdCode $ \stdCode -> do
     let (City.City cityText) = req.city
@@ -257,7 +262,7 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
   whenJust cityStdCode $ \stdCode -> do
     id <- generateGUID
     KQMOC.createIfNotExist $ KMOC.MerchantOperatingCity {id = Id id, city = show req.city, stdCode = Just stdCode}
-  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigOperatingCityCreate) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, ..}
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigOperatingCityCreate) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, geomGeoJson = geomGeoJson, ..}
   where
     buildMerchant now merchantD baseMerchant =
       DM.Merchant
@@ -266,7 +271,6 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           defaultOperatingCity = req.city,
           supportedOperatingCities = [req.city],
           serverNames = baseMerchant.serverNames,
-          is2faMandatory = baseMerchant.is2faMandatory,
           domain = baseMerchant.domain,
           website = baseMerchant.website,
           authToken = baseMerchant.authToken,
@@ -277,14 +281,7 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           hasFleetMemberHierarchy = baseMerchant.hasFleetMemberHierarchy,
           isStrongNameCheckRequired = baseMerchant.isStrongNameCheckRequired,
           singleActiveSessionOnly = baseMerchant.singleActiveSessionOnly,
-          trackLoginLogoutForRoles = baseMerchant.trackLoginLogoutForRoles,
-          twoFactorMandatoryForRoles = baseMerchant.twoFactorMandatoryForRoles,
-          twoFaOtpTTLInSecs = baseMerchant.twoFaOtpTTLInSecs,
-          twoFaMaxOtpVerifyAttempts = baseMerchant.twoFaMaxOtpVerifyAttempts,
-          totpStepSize = baseMerchant.totpStepSize,
-          totpClockSkew = baseMerchant.totpClockSkew,
-          emailOtpTTLInSecs = baseMerchant.emailOtpTTLInSecs,
-          emailMaxOtpVerifyAttempts = baseMerchant.emailMaxOtpVerifyAttempts
+          trackLoginLogoutForRoles = baseMerchant.trackLoginLogoutForRoles
         }
 
 getMerchantConfigSpecialLocationList :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe SL.SpecialLocationType -> Kernel.Prelude.Maybe [SL.SpecialLocationType] -> Environment.Flow Common.SpecialLocationResp)
@@ -351,3 +348,20 @@ deleteMerchantTollDelete merchantShortId opCity apiTokenInfo tollId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.deleteMerchantTollDelete) tollId
+
+getMerchantMerchantMessageCatalog :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Environment.Flow Common.RiderMerchantMessageCatalogResp
+getMerchantMerchantMessageCatalog merchantShortId opCity apiTokenInfo = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantMerchantMessageCatalog)
+
+deleteMerchantMerchantMessage :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Environment.Flow APISuccess
+deleteMerchantMerchantMessage merchantShortId opCity apiTokenInfo messageKey = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing T.emptyRequest
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.deleteMerchantMerchantMessage) messageKey
+
+postMerchantMerchantMessageUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertRiderMerchantMessageReq -> Environment.Flow APISuccess
+postMerchantMerchantMessageUpsert merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantMerchantMessageUpsert) req

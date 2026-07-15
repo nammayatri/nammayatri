@@ -5,12 +5,14 @@ module Domain.Types.FleetOwnerInformation where
 
 import Data.Aeson
 import qualified Domain.Types.DocsVerificationStatus
+import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Stripe.Types
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
@@ -22,6 +24,10 @@ data FleetOwnerInformationE e = FleetOwnerInformation
     aadhaarFrontImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     aadhaarNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     aadhaarNumberDec :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    addressDocumentType :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType,
+    addressState :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState,
+    approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     autoPayStatus :: Kernel.Prelude.Maybe Domain.Types.FleetOwnerInformation.DriverAutoPayStatus,
     blockReasonFlag :: Kernel.Prelude.Maybe Tools.Error.BlockReasonFlag,
     blocked :: Kernel.Prelude.Bool,
@@ -86,6 +92,10 @@ instance EncryptedItem FleetOwnerInformation where
           aadhaarFrontImageId = aadhaarFrontImageId entity,
           aadhaarNumber = aadhaarNumber_,
           aadhaarNumberDec = aadhaarNumberDec entity,
+          address = address entity,
+          addressDocumentType = addressDocumentType entity,
+          addressState = addressState entity,
+          approved = approved entity,
           autoPayStatus = autoPayStatus entity,
           blockReasonFlag = blockReasonFlag entity,
           blocked = blocked entity,
@@ -142,6 +152,10 @@ instance EncryptedItem FleetOwnerInformation where
             aadhaarFrontImageId = aadhaarFrontImageId entity,
             aadhaarNumber = aadhaarNumber_,
             aadhaarNumberDec = aadhaarNumberDec entity,
+            address = address entity,
+            addressDocumentType = addressDocumentType entity,
+            addressState = addressState entity,
+            approved = approved entity,
             autoPayStatus = autoPayStatus entity,
             blockReasonFlag = blockReasonFlag entity,
             blocked = blocked entity,

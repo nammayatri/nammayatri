@@ -19,22 +19,22 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Kernel.Types.Id
-import Kernel.Types.Version (CloudType (..))
 import qualified Kernel.Utils.CalculateDistance
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error
 
 postIdentifyNearByBus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> API.Types.UI.RiderLocation.RiderLocationRequest -> Environment.Flow API.Types.UI.RiderLocation.RiderLocationResponse
 postIdentifyNearByBus (_mbPersonId, merchantId) req = do
   _merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchantId req.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show req.city)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCity.id)) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
   let riderLocation = Kernel.External.Maps.Types.LatLong req.riderLat req.riderLon
   nearbyBuses <- getNearbyBuses riderLocation riderConfig merchantOperatingCity.id
   busLocations <- mapMaybeM (convertToBusLocation riderLocation riderConfig) nearbyBuses
@@ -46,14 +46,12 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
       integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
       let redisPrefix = case integratedBPPConfig.providerConfig of
             DIBC.ONDC config -> config.redisPrefix
+            DIBC.DIRECT config -> config.redisPrefix
             _ -> Nothing
       let nearbyBusSearchRadius :: Double = fromMaybe 0.1 riderConfig.nearbyBusSearchRadius
           maxNearbyBuses :: Int = fromMaybe 5 riderConfig.maxNearbyBuses
-      cloudType <- asks (.cloudType)
       busesBS <-
-        mapM (pure . decodeUtf8) =<< case cloudType of
-          Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.geoSearch (nearbyBusKey redisPrefix) (Hedis.FromLonLat userPos.lon userPos.lat) (Hedis.ByRadius nearbyBusSearchRadius "km")
-          _ -> CQMMB.withCrossAppRedisNew $ Hedis.geoSearch (nearbyBusKey redisPrefix) (Hedis.FromLonLat userPos.lon userPos.lat) (Hedis.ByRadius nearbyBusSearchRadius "km")
+        mapM (pure . decodeUtf8) =<< Hedis.runInMultiCloudLTSRedisForList (Hedis.geoSearch (nearbyBusKey redisPrefix) (Hedis.FromLonLat userPos.lon userPos.lat) (Hedis.ByRadius nearbyBusSearchRadius "km"))
       logDebug $ "getNearbyBuses: busesBS: " <> show busesBS
       if null busesBS
         then do
@@ -61,9 +59,7 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
           pure []
         else do
           logDebug $ "getNearbyBuses: Fetching bus metadata for " <> show (length busesBS) <> " buses"
-          buses <- case cloudType of
-            Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.hmGet (vehicleMetaKey redisPrefix) busesBS
-            _ -> CQMMB.withCrossAppRedisNew $ Hedis.hmGet (vehicleMetaKey redisPrefix) busesBS
+          buses <- Hedis.runInMultiCloudLTSRedisForMaybeList $ Hedis.hmGet (vehicleMetaKey redisPrefix) busesBS
           let validBuses = catMaybes buses
               sortedLimitedBuses = take maxNearbyBuses $ EulerHS.Prelude.sortOn (distanceToUser userPos) validBuses
           pure sortedLimitedBuses
@@ -100,10 +96,10 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
 
     nearbyBusKey :: Maybe Text -> Text
     nearbyBusKey mbRedisPrefix = case mbRedisPrefix of
-      Just prefix -> prefix <> ":bus_locations"
+      Just prefix | prefix /= "" -> prefix <> ":bus_locations"
       _ -> "bus_locations"
 
     vehicleMetaKey :: Maybe Text -> Text
     vehicleMetaKey mbRedisPrefix = case mbRedisPrefix of
-      Just prefix -> prefix <> ":bus_metadata_v2"
+      Just prefix | prefix /= "" -> prefix <> ":bus_metadata_v2"
       _ -> "bus_metadata_v2"

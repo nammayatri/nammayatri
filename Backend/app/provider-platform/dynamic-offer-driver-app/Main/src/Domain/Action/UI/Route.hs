@@ -37,7 +37,7 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging
 import SharedLogic.Ride (searchRequestKey)
-import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Ride as QRide
 import qualified Tools.Maps as Maps
 
@@ -54,7 +54,7 @@ getTripRoutes (personId, merchantId, merchantOpCityId) entityId req = do
   ride' <- QRide.getInProgressByDriverId personId
   case ride' of
     Just ride -> do
-      booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+      booking <- QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
       let entityId' = Just $ fromMaybe (getId ride.id) entityId
       let key = searchRequestKey booking.transactionId
       let rideHasStops = fromMaybe False ride.hasStops

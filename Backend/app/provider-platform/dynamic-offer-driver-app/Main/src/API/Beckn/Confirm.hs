@@ -46,6 +46,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import TransactionLogs.PushLogs
 
@@ -62,7 +63,7 @@ confirm ::
   SignatureAuthResult ->
   Confirm.ConfirmReqV2 ->
   FlowHandler AckResponse
-confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI do
+confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.confirmReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "Confirm APIV2 Flow" "Reached"
@@ -118,7 +119,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       let vehicleCategory = Utils.mapServiceTierToCategory dConfirmRes.booking.vehicleServiceTier
       becknConfig <- QBC.findByMerchantIdDomainAndVehicle dConfirmRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
       mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dConfirmRes.booking.quoteId
-      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow dConfirmRes.booking.vehicleServiceTier dConfirmRes.booking.merchantOperatingCityId dConfirmRes.booking.configInExperimentVersions (dConfirmRes.booking.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show dConfirmRes.booking.vehicleServiceTier))
+      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow dConfirmRes.booking.vehicleServiceTier dConfirmRes.booking.merchantOperatingCityId (dConfirmRes.booking.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show dConfirmRes.booking.vehicleServiceTier))
       let pricing = Utils.convertBookingToPricing vehicleServiceTierItem dConfirmRes.booking
       bppInvoiceInfo <- ACL.resolveBPPInvoiceInfo dConfirmRes
       let onConfirmMessage = ACL.buildOnConfirmMessageV2 dConfirmRes pricing becknConfig mbFarePolicy bppInvoiceInfo

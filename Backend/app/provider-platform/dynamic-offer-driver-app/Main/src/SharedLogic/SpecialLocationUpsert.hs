@@ -97,7 +97,10 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoNotificationActiveTillInSec :: Maybe Text,
     enforceTollRoute :: Maybe Text,
     render :: Maybe Text,
-    enableQueueFilter :: Maybe Text
+    fetchAllGateFareProduct :: Maybe Text,
+    enableQueueFilter :: Maybe Text,
+    paymentModes :: Maybe Text,
+    fareSettlementType :: Maybe Text
   }
   deriving (Show)
 
@@ -142,7 +145,10 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> optional (r .: "gate_info_notification_active_till_in_sec")
       <*> optional (r .: "enforce_toll_route")
       <*> optional (r .: "render")
+      <*> optional (r .: "fetch_all_gate_fare_product")
       <*> optional (r .: "enable_queue_filter")
+      <*> optional (r .: "payment_modes")
+      <*> optional (r .: "fare_settlement_type")
 
 ---------------------------------------------------------------------
 -- CSV Helper Functions
@@ -185,6 +191,16 @@ parseGateTags fieldValue =
     Just tags ->
       let tagList = filter (not . T.null) $ map T.strip $ T.splitOn "," tags
        in if null tagList then Nothing else Just tagList
+
+-- | Resolve the payment-modes CSV cell, throwing on an invalid token (rather than
+--   silently dropping it). Returns 'Nothing' when the cell is omitted/blank so the
+--   merge step can distinguish "not provided" (preserve existing / default on create)
+--   from an explicit value. Parsing/normalization live in 'SL.parsePaymentModes'.
+resolvePaymentModes :: Int -> Maybe Text -> Flow (Maybe [SL.PaymentMode])
+resolvePaymentModes idx mbFieldValue =
+  case SL.parsePaymentModes mbFieldValue of
+    Left badToken -> throwError $ InvalidRequest $ "Invalid payment mode: " <> badToken <> " at row: " <> show idx
+    Right mbModes -> pure mbModes
 
 ---------------------------------------------------------------------
 -- Main Upsert Function
@@ -254,6 +270,8 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
       mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
       supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
       mbRender :: Maybe DSL.RenderType = readMaybeCSVField idx (fromMaybe "" row.render) "Render"
+      mbFareSettlementType :: Maybe DSL.FareSettlementType = readMaybeCSVField idx (fromMaybe "" row.fareSettlementType) "Payment Collection Mode"
+      mbFetchAllGateFareProduct :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.fetchAllGateFareProduct) "Fetch All Gate Fare Product"
   pickupPriority :: Int <- readCSVField idx row.pickupPriority "Pickup Priority"
   dropPriority :: Int <- readCSVField idx row.dropPriority "Drop Priority"
   gateInfoId <- maybe generateGUID (pure . Id) (cleanField =<< row.gateInfoId)
@@ -277,6 +295,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
         gateGeom <- GGeom.getGeoJsonFromKML gateInfoGeomFile >>= fromMaybeM (InvalidRequest $ "Not able to convert the given KML to GeoJSON for gateInfo: " <> gateInfoName)
         return $ Just gateGeom
       else return Nothing
+  resolvedPaymentModes <- resolvePaymentModes idx row.paymentModes
   let specialLocation =
         DSL.SpecialLocation
           { id = Id locationName,
@@ -297,7 +316,10 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             isQueueEnabled = mbIsQueueEnabled,
             enforceTollRoute = mbEnforceTollRoute,
             render = mbRender,
-            supportNumber = supportNumber
+            fetchAllGateFareProduct = mbFetchAllGateFareProduct,
+            supportNumber = supportNumber,
+            paymentModes = resolvedPaymentModes,
+            fareSettlementType = mbFareSettlementType
           }
       gateInfo =
         DGI.GateInfo
@@ -429,9 +451,11 @@ processSpecialLocationAndGatesGroup opCity merchantOpCity specialLocationAndGate
 -- for fields parsed via `optional` in the FromNamedRecord instance.
 ---------------------------------------------------------------------
 mergeSpecialLocationWithExisting :: DSL.SpecialLocation -> Maybe DSL.SpecialLocation -> DSL.SpecialLocation
-mergeSpecialLocationWithExisting new Nothing = new
+mergeSpecialLocationWithExisting new Nothing =
+  new{DSL.paymentModes = new.paymentModes <|> Just SL.defaultPaymentModes}
 mergeSpecialLocationWithExisting new (Just old) =
-  new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled
+  new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled,
+      DSL.paymentModes = new.paymentModes <|> old.paymentModes
      }
 
 mergeGateInfoWithExisting :: DGI.GateInfo -> Maybe DGI.GateInfo -> DGI.GateInfo

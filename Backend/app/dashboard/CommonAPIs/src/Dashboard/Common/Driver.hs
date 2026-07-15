@@ -199,3 +199,7 @@ instance FromMultipart Tmp UpsertDriverServiceTiersCsvReq where
 instance ToMultipart Tmp UpsertDriverServiceTiersCsvReq where
   toMultipart form =
     MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
+
+data AddressDocumentType = RationCard | UtilityBill | Passport | VoterId | LifeInsurancePolicy | Others
+  deriving stock (Eq, Ord, Show, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)

@@ -94,6 +94,7 @@ dependencies:
   - warp
   - uuid
   - beckn-spec
+  - config-pilot
   - passetto-client
   - passetto-lib
   - behavior-engine
@@ -105,6 +106,7 @@ dependencies:
   - async
   - unliftio
   - utils
+  - finance-kernel
 
 ghc-options:
   - -Wall

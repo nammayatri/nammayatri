@@ -19,6 +19,7 @@ module Tools.Maps
     getDistances,
     getPlaceDetails,
     getPlaceName,
+    searchDestinations,
     getRoutes,
     getFrfsAutocompleteDistances,
     snapToRoad,
@@ -45,6 +46,7 @@ import Kernel.External.Maps as Reexport hiding
     getPlaceDetails,
     getPlaceName,
     getRoutes,
+    searchDestinations,
     snapToRoad,
   )
 import qualified Kernel.External.Maps as Maps
@@ -52,11 +54,13 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.CachedQueries.Merchant as SMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Person as CQP
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Tools.Error
 
 getDistance ::
@@ -153,7 +157,7 @@ getPickupRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity ->
 getPickupRoutes merchantId merchantOperatingCityId service entityId req = do
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantMapsServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MapsService service)})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MapsService service)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.MapsService service)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show service))
   case merchantMapsServiceConfig.serviceConfig of
     DMSC.MapsServiceConfig msc -> Maps.getRoutes entityId merchant.isAvoidToll msc req
@@ -203,6 +207,11 @@ getPlaceName = runWithServiceConfig Maps.getPlaceName (.getPlaceName)
 getPlaceDetails :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
 getPlaceDetails = runWithServiceConfig Maps.getPlaceDetails (.getPlaceDetails)
 
+-- | Google Geocoding v4 "search for destinations". Google-only; routed via the
+-- same provider slot as getPlaceName (geocoding).
+searchDestinations :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> SearchDestinationsReq -> m SearchDestinationsResp
+searchDestinations = runWithServiceConfig Maps.searchDestinations (.getPlaceName)
+
 callGetRoutesWrapper :: ServiceFlow m r => Bool -> Maybe Text -> MapsServiceConfig -> GetRoutesReq -> m GetRoutesResp
 callGetRoutesWrapper isAvoidToll entityId = Maps.getRoutes entityId isAvoidToll
 
@@ -216,9 +225,9 @@ runWithServiceConfig ::
   req ->
   m resp
 runWithServiceConfig func getCfg merchantId merchantOperatingCityId entityId req = do
-  merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+  merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   merchantMapsServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MapsService $ getCfg merchantConfig)})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MapsService $ getCfg merchantConfig)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.MapsService $ getCfg merchantConfig)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show $ getCfg merchantConfig))
   case merchantMapsServiceConfig.serviceConfig of
     DMSC.MapsServiceConfig msc -> func entityId msc req

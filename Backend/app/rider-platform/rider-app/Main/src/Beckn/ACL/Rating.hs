@@ -26,9 +26,10 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.Queries.BecknConfig as SQBC
 import Tools.Error
 
 buildRatingReqV2 ::
@@ -40,7 +41,7 @@ buildRatingReqV2 res@DFeedback.FeedbackRes {..} = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
   moc <- CQMOC.findByMerchantIdAndCity merchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show city)
-  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = moc.id.getId, merchantId = merchant.id.getId, domain = Just "MOBILITY", vehicleCategory = Nothing})) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show res.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId)
+  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = moc.id.getId, merchantId = merchant.id.getId, domain = Just "MOBILITY", vehicleCategory = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just merchant.id) "MOBILITY" (Just moc.id)))) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show res.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId)
   ttl <- bapConfig.ratingTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context <- ContextV2.buildContextV2 Context.RATING Context.MOBILITY msgId (Just transactionId) merchant.bapId bapUrl (Just providerId) (Just providerUrl) merchant.defaultCity merchant.country (Just ttl)
   let message = tfMessage res

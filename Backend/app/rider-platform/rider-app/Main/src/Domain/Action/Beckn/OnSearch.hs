@@ -78,18 +78,24 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+-- import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+
+import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.CallBPPInternal as Est
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.BppDetails as CQBppDetails
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.InsuranceConfig (InsuranceConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.InsuranceConfig as QIC
 import qualified Storage.Queries.NyRegularInstanceLog as QNyRegularInstanceLog
 import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
 import qualified Storage.Queries.Quote as QQuote
@@ -162,7 +168,9 @@ data EstimateInfo = EstimateInfo
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
+    vehicleServiceTierLuggageCapacity :: Maybe Int,
     specialLocationName :: Maybe Text,
+    fareSettlementType :: Maybe SL.FareSettlementType,
     tripCategory :: DT.TripCategory,
     vehicleCategory :: Enums.VehicleCategory,
     vehicleIconUrl :: Maybe BaseUrl,
@@ -170,7 +178,8 @@ data EstimateInfo = EstimateInfo
     qar :: Maybe Double,
     -- petCharges :: Maybe Price,
     smartTipSuggestion :: Maybe HighPrecMoney,
-    smartTipReason :: Maybe Text
+    smartTipReason :: Maybe Text,
+    area :: Maybe Text
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -233,13 +242,16 @@ data QuoteInfo = QuoteInfo
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
+    vehicleServiceTierLuggageCapacity :: Maybe Int,
     specialLocationName :: Maybe Text,
     specialLocationSupportNumber :: Maybe Text,
+    fareSettlementType :: Maybe SL.FareSettlementType,
     quoteBreakupList :: [QuoteBreakupInfo],
     tripCategory :: DT.TripCategory,
     -- petCharges :: Maybe Price,
     vehicleCategory :: Enums.VehicleCategory,
-    vehicleIconUrl :: Maybe BaseUrl
+    vehicleIconUrl :: Maybe BaseUrl,
+    area :: Maybe Text
   }
 
 data QuoteDetails
@@ -302,11 +314,11 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   now <- getCurrentTime
 
   mkBppDetails >>= CQBppDetails.createIfNotPresent
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId searchRequest.merchantOperatingCityId))
   let isReservedSearch = isReservedRideSearch searchRequest
   mbNySubscription <- getNyRegularSubs isReservedSearch
   isValueAddNP <- CQVAN.isValueAddNP providerInfo.providerId
-  becknConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId, merchantId = searchRequest.merchantId.getId, domain = Just (show Domain.MOBILITY), vehicleCategory = Nothing})) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId)
+  becknConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId, merchantId = searchRequest.merchantId.getId, domain = Just (show Domain.MOBILITY), vehicleCategory = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just searchRequest.merchantId) (show Domain.MOBILITY) (Just searchRequest.merchantOperatingCityId)))) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId)
   blackListedVehicles <- Utils.getBlackListedVehicles searchRequest.merchantOperatingCityId becknConfig.id providerInfo.providerId
   if not isValueAddNP && isJust searchRequest.disabilityTag
     then do
@@ -489,6 +501,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion boostSearchPreSel
           tripCategory = tripCategory,
           vehicleCategory = DV.castVehicleVariantToVehicleCategory vehicleVariant
         }
+      (Just (QIC.findByMerchantIdAndMerchantOperatingCityIdAndTripCategoryAndVehicleCategory searchRequest.merchantId searchRequest.merchantOperatingCityId tripCategory (DV.castVehicleVariantToVehicleCategory vehicleVariant)))
   let isInsured = maybe False (\inc -> case inc.allowedVehicleServiceTiers of Just allowedTiers -> fromMaybe (DV.castVariantToServiceTier vehicleVariant) serviceTierType `elem` allowedTiers; Nothing -> True) insuranceConfig
   pure
     DEstimate.Estimate

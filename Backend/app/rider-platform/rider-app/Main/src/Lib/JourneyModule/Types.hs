@@ -65,6 +65,7 @@ import Kernel.Types.Price as KTP
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.JourneyLeg.Types
 import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Lib.JourneyModule.State.Utils as JMStateUtils
@@ -82,12 +83,13 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.PTCircuitBreaker as PTCircuitBreaker
 import qualified SharedLogic.Ride as DARide
 import qualified SharedLogic.Search as SLSearch
+import qualified Storage.CachedQueries.FRFSConfig as CQFRFS
 import Storage.CachedQueries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
@@ -389,7 +391,8 @@ data MetroLegExtraInfo = MetroLegExtraInfo
     refund :: Maybe LegRefundInfo,
     refunds :: [LegRefundInfo],
     categories :: [FRFSTicketServiceAPI.CategoryInfoResponse],
-    categoryBookingDetails :: Maybe [CategoryBookingDetails] -- TODO :: To be deprecated once UI starts consuming `categories` instead as this is redundant data.
+    categoryBookingDetails :: Maybe [CategoryBookingDetails], -- TODO :: To be deprecated once UI starts consuming `categories` instead as this is redundant data.
+    qrEncoding :: Maybe DIBC.QREncoding
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -642,10 +645,10 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
         startTime = booking.startTime,
         order = journeyLeg.sequenceNumber,
         estimatedDuration = booking.estimatedDuration,
-        estimatedMinFare = Just $ mkPriceAPIEntity booking.estimatedFare,
+        estimatedMinFare = Just $ mkRoundedPriceAPIEntity booking.estimatedFare,
         estimatedChildFare = Nothing,
-        estimatedMaxFare = Just $ mkPriceAPIEntity booking.estimatedFare,
-        estimatedTotalFare = Just $ mkPriceAPIEntity booking.estimatedTotalFare,
+        estimatedMaxFare = Just $ mkRoundedPriceAPIEntity booking.estimatedFare,
+        estimatedTotalFare = Just $ mkRoundedPriceAPIEntity booking.estimatedTotalFare,
         estimatedDistance = booking.estimatedDistance,
         merchantId = booking.merchantId,
         merchantOperatingCityId = booking.merchantOperatingCityId,
@@ -682,7 +685,7 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
                 trackingStatusLastUpdatedAt
               },
         actualDistance = mRide >>= (.traveledDistance),
-        totalFare = mkPriceAPIEntity <$> (mRide >>= (.totalFare)),
+        totalFare = mkRoundedPriceAPIEntity <$> (mRide >>= (.totalFare)),
         entrance = journeyLeg.osmEntrance,
         exit = journeyLeg.osmExit,
         validTill = Nothing,
@@ -934,6 +937,9 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
       let refundBloc = listToMaybe refunds'
       let adultTicketQuantity = find (\priceItem -> priceItem.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)
           childTicketQuantity = find (\priceItem -> priceItem.categoryType == CHILD) fareParameters.priceItems <&> (.quantity)
+      let qrEncoding = case integratedBPPConfig.providerConfig of
+            DIBC.ONDC ondcConfig -> ondcConfig.qrEncoding
+            _ -> Nothing
       case booking.vehicleType of
         Spec.METRO -> do
           return $
@@ -951,7 +957,8 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   refund = refundBloc,
                   refunds = refunds',
                   categories = categories,
-                  categoryBookingDetails = Just categoryBookingDetails
+                  categoryBookingDetails = Just categoryBookingDetails,
+                  qrEncoding = qrEncoding
                 }
         Spec.BUS -> do
           journeyLegDetail <- listToMaybe journeyLegInfo' & fromMaybeM (InternalError "Journey Leg Detail not found")
@@ -1180,7 +1187,7 @@ computeIsCancellable ::
   DIBC.IntegratedBPPConfig ->
   m (Maybe Bool)
 computeIsCancellable booking integratedBPPConfig = do
-  mbFrfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
+  mbFrfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQFRFS.findByMerchantOperatingCityId booking.merchantOperatingCityId (Just [])))
   let configCancellable = maybe True (.isCancellationAllowed) mbFrfsConfig
   let mbServiceTierType = getServiceTierTypeFromRouteStationsJson booking.routeStationsJson
   case mbServiceTierType of
@@ -1267,7 +1274,8 @@ mkStandaloneFrfsMinimalLegInfo frfsSearch mbFare = do
                 refund = Nothing,
                 refunds = [],
                 categories = [],
-                categoryBookingDetails = Nothing
+                categoryBookingDetails = Nothing,
+                qrEncoding = Nothing
               }
         Spec.SUBWAY ->
           Subway
@@ -1331,7 +1339,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
   let startTime = journeyLeg.fromDepartureTime
 
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity frfsSearch
-  mRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+  mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCityId))
   person <- QPerson.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
   let isPTBookingAllowedForUser = ("PTBookingAllowed#Yes" `elem` (maybe [] (map YTypes.getTagNameValueExpiry) person.customerNammaTags))
   let isPTBookingNotAllowedForUser = ("PTBookingAllowed#No" `elem` (maybe [] (map YTypes.getTagNameValueExpiry) person.customerNammaTags))
@@ -1465,7 +1473,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
                   refund = Nothing,
                   refunds = [],
                   categories = categories,
-                  categoryBookingDetails = Nothing
+                  categoryBookingDetails = Nothing,
+                  qrEncoding = Nothing
                 }
         Spec.BUS -> do
           journeyLegDetail <- listToMaybe journeyLegInfo' & fromMaybeM (InternalError "Journey Leg Detail not found")

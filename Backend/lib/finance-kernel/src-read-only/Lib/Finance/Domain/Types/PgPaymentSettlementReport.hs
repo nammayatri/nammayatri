@@ -8,22 +8,30 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
+import qualified Lib.Finance.Core.Types
 import qualified Tools.Beam.UtilsTH
 
 data PgPaymentSettlementReport = PgPaymentSettlementReport
-  { bankId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { bankCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bankId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cardNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cardType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     chargebackAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     chargebackId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     chargebackReasonCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     chargebackStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
+    createdBy :: Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType,
+    createdById :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     currency :: Kernel.Types.Common.Currency,
     disputeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disputeType :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.DisputeType,
     id :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPaymentSettlementReport,
+    isValidSubscriptionPurchase :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Text,
     orderId :: Kernel.Prelude.Text,
+    orderType :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.OrderType,
     paymentGateway :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentMethod :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.PaymentMethod,
     paymentMethodSubType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -49,6 +57,7 @@ data PgPaymentSettlementReport = PgPaymentSettlementReport
     settlementId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     settlementMode :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.SettlementMode,
     settlementType :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.SettlementType,
+    subscriptionPurchaseId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     txnAmount :: Kernel.Types.Common.HighPrecMoney,
     txnDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     txnId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -56,6 +65,8 @@ data PgPaymentSettlementReport = PgPaymentSettlementReport
     txnType :: Lib.Finance.Domain.Types.PgPaymentSettlementReport.TxnType,
     uniqueSplitId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
+    updatedBy :: Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType,
+    updatedById :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     utr :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vendorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
@@ -63,7 +74,28 @@ data PgPaymentSettlementReport = PgPaymentSettlementReport
 
 data DisputeType = FRAUD | CONSUMER | PROCESSING_ERROR | OTHER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data PaymentMethod = UPI | CREDIT_CARD | DEBIT_CARD | NETBANKING | WALLET deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data OrderType = SUBSCRIPTION | PAYOUT_REGISTRATION deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+data PaymentMethod
+  = UPI
+  | CREDIT_CARD
+  | DEBIT_CARD
+  | NETBANKING
+  | WALLET
+  | CASH_CARD
+  | BHARAT_QR
+  | EMI
+  | NEFT
+  | UPI_CREDIT
+  | ENACH
+  | CBDC
+  | UPI_PREPAID_WALLET
+  | UPI_CREDIT_LINE
+  | BANK_TRANSFER
+  | COMMERCIAL_CARD
+  | PAY_LATER
+  | INTERNATIONAL_CARD
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data ReconStatus = PENDING | MATCHED | MISMATCHED | MANUAL_REVIEW | IGNORED | SETTLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
@@ -78,6 +110,10 @@ data TxnType = ORDER | REFUND | CHARGEBACK deriving (Eq, Ord, Show, Read, Generi
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DisputeType))
 
 $(mkHttpInstancesForEnum (''DisputeType))
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''OrderType))
+
+$(mkHttpInstancesForEnum (''OrderType))
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentMethod))
 
@@ -100,5 +136,3 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TxnStatus))
 $(mkHttpInstancesForEnum (''TxnStatus))
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TxnType))
-
-$(mkHttpInstancesForEnum (''TxnType))

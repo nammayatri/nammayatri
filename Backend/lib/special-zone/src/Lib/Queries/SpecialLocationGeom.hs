@@ -38,7 +38,9 @@ updateSpecialLocation D.SpecialLocation {..} = Esq.update $ \tbl -> do
       SpecialLocationGeomUpdatedAt =. val updatedAt,
       SpecialLocationGeomIsQueueEnabled =. val isQueueEnabled,
       SpecialLocationGeomRender =. val render,
-      SpecialLocationGeomSupportNumber =. val supportNumber
+      SpecialLocationGeomSupportNumber =. val supportNumber,
+      SpecialLocationGeomPaymentModes =. val (PostgresList <$> paymentModes),
+      SpecialLocationGeomFareSettlementType =. val fareSettlementType
     ]
   where_ $
     tbl ^. SpecialLocationGeomId ==. val id.getId

@@ -64,11 +64,13 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Version as Version
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), createReversal, getEntriesByReference, invoice, runFinance, settleEntry, transferPending, transferWithoutAttribution, transfer_, voidEntry)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -88,12 +90,13 @@ import SharedLogic.Ride (releaseLien, updateOnRideStatusWithAdvancedRideCheck)
 import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified SharedLogic.UserCancellationDues as UserCancellationDues
-import qualified Storage.Cac.TransporterConfig as CCT
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.CallStatus as QCallStatus
@@ -103,8 +106,10 @@ import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFP
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.Vehicle as QVeh
@@ -116,12 +121,10 @@ import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Notifications as Notify
 import TransactionLogs.Types
-import Utils.Common.Cac.KeyNameConstants
 
 -- main fn
 cancelRideImpl ::
-  ( MonadFlow m,
-    EncFlow m r,
+  ( EncFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -159,15 +162,17 @@ cancelRideImpl ::
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
-    ClickhouseFlow m r
+    ClickhouseFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id DRide.Ride ->
   DRide.RideEndedBy ->
   SBCR.BookingCancellationReason ->
   Bool ->
   Maybe Bool ->
+  Bool ->
   m ()
-cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellationRateBasedBlocking = do
+cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellationRateBasedBlocking allowSnapshotVehicleFallback = do
   isLocked <- Redis.tryLockRedis (buildCancelRideTransactionKey rideId) 15
   if isLocked
     then do
@@ -180,7 +185,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             merchant <-
               CQM.findById merchantId
                 >>= fromMaybeM (MerchantNotFound merchantId.getId)
-            transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+            transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
             rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig
             noShowCharges <- withTryCatch "noShowCharges:cancelRideImpl" $ do
               if transporterConfig.canAddCancellationFee
@@ -199,7 +204,15 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             logDebug $ "userNoShowCharges: " <> show userNoShowCharges
             let (userNoShowChargesFee, userNoShowChargesTax, userNoShowChargesLogicVersion, userNoShowOverdueCharge, userNoShowOverdueTax) = userNoShowCharges
             driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-            vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+            mbVehicle <- QVeh.findById ride.driverId
+            vehicle <- case mbVehicle of
+              Just v -> pure v
+              Nothing
+                | allowSnapshotVehicleFallback -> do
+                  logWarning $ "Vehicle missing for driver " <> ride.driverId.getId <> " on cancelled ride " <> ride.id.getId <> "; using ride_details snapshot (ops cancel)"
+                  rideDetails <- QRideDetails.findById ride.id >>= fromMaybeM (RideNotFound ride.id.getId)
+                  pure $ BP.buildVehicleFromRideDetailsSnapshot booking ride rideDetails
+                | otherwise -> throwError (DriverWithoutVehicle ride.driverId.getId)
             unless (isValidRide ride) $ throwError (InternalError "Ride is not valid for cancellation")
             cancelRideTransaction booking ride bookingCReason merchant rideEndedBy userNoShowChargesFee userNoShowChargesTax userNoShowOverdueCharge userNoShowOverdueTax userNoShowChargesLogicVersion transporterConfig driver
             logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
@@ -229,7 +242,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
               when (bookingCReason.source == SBCR.ByDriver) $ do
                 DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {rideTags, merchantId = merchantId, driver = driver, rideFare = Just booking.estimatedFare, currency = booking.currency, distanceUnit = booking.distanceUnit, doCancellationRateBasedBlocking}
                 DCP.accumulateCancellationPenalty (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet) booking ride rideTags transporterConfig driver
-              Notify.notifyOnCancel ride.merchantOperatingCityId booking driver bookingCReason.source
+              Notify.notifyOnCancel ride.merchantOperatingCityId ride.id booking driver bookingCReason.source
             fork "cancelRide/ReAllocate - Notify BAP" $ do
               isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason isForceReallocation
               unless isReallocated $ do
@@ -254,7 +267,8 @@ cancelRideTransaction ::
     LT.HasLocationService m r,
     HasShortDurationRetryCfg r c,
     EncFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
   ) =>
   SRB.Booking ->
   DRide.Ride ->
@@ -439,7 +453,7 @@ customerCancellationChargesCalculation ::
   Maybe Int ->
   m (Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe Int, Maybe HighPrecMoney, Maybe HighPrecMoney)
 customerCancellationChargesCalculation booking ride riderDetails cancellationType reasonCode mbExistingVersion = do
-  transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   (cancellationDisToPickup, _mbLocation) <- getDistanceToPickup booking (Just ride)
   now <- getCurrentTime
   durationToPickup <- (maybe (fromMaybe 0 booking.dqDurationToPickup) (.durationToPickup)) <$> (QDQ.findById (Id booking.quoteId))
@@ -541,7 +555,7 @@ getCancellationCharges ::
   Maybe DTCR.CancellationReasonCode ->
   m (Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe Int, Maybe HighPrecMoney, Maybe HighPrecMoney)
 getCancellationCharges booking ride cancellationType reasonCode = do
-  transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   case booking.riderId of
     Nothing -> return (Nothing, Nothing, Nothing, Nothing, Nothing)
     Just rid -> do
@@ -564,7 +578,8 @@ getCancellationCharges booking ride cancellationType reasonCode = do
 createCancellationLedgerEntries ::
   ( EsqDBFlow m r,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   SRB.Booking ->
   DRide.Ride ->
@@ -578,6 +593,23 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
     Nothing -> logError "createCancellationLedgerEntries: riderId not present in booking"
     Just rid -> do
       merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
+      let driverOrFleetPersonId = fromMaybe ride.driverId ride.fleetOwnerId
+      mbPanCard <- QPanCard.findByDriverId driverOrFleetPersonId
+      driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      mbDriverInfo <- QDI.findById (cast ride.driverId)
+      -- Read the materialized tds_rate for the tax subject (fleet owner if it's
+      -- a fleet ride, else the driver). Set by the PAN / linkage webhooks when
+      -- PAN-Aadhaar-link TDS is enabled (see PanVerification.materializeTdsRateFor).
+      mbStoredTdsRate <- case ride.fleetOwnerId of
+        Just fleetOwnerId -> do
+          mbFleetInfo <- QFOI.findByPrimaryKey (cast fleetOwnerId)
+          pure (mbFleetInfo >>= (.tdsRate))
+        Nothing -> pure (mbDriverInfo >>= (.tdsRate))
+      mbCumulativeEarnings <- case ride.fleetOwnerId of
+        Just _ -> pure Nothing
+        Nothing -> do
+          mbStats <- QDriverStats.findByPrimaryKey (cast ride.driverId)
+          pure $ (.totalEarnings) <$> mbStats
       let rideGst = transporterConfig.taxConfig.rideGst
           -- VAT stays with the driver (OwnerLiability), GST is remitted to govt (GovtIndirect) — mirrors createDriverWalletTransaction.
           cancellationTaxDest = if fromMaybe False booking.fareParams.isVatTaxType then OwnerLiability else GovtIndirect
@@ -585,14 +617,15 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
             [ (baseCancellation, walletReferenceCustomerCancellationCharges, OwnerLiability),
               (gstOnCancellation, walletReferenceCustomerCancellationGST, cancellationTaxDest)
             ]
-          mbTdsRate = transporterConfig.taxConfig.defaultTdsRate
+          mbTdsRate =
+            if panAadhaarLinkTdsEnabled transporterConfig.taxConfig
+              then computeEffectiveTdsRate mbPanCard mbStoredTdsRate transporterConfig.taxConfig
+              else (.rate) <$> transporterConfig.taxConfig.defaultTdsRate
           mbTdsAmount = do
             rate <- mbTdsRate
-            let amount = baseCancellation * realToFrac rate
-            if amount > 0 then Just amount else Nothing
-      driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-      mbPanCard <- QPanCard.findByDriverId ride.driverId
-      mbDriverInfo <- QDI.findById (cast ride.driverId)
+            let rawAmount = baseCancellation * realToFrac rate
+                gatedAmount = applyThresholdBenefit transporterConfig.taxConfig mbCumulativeEarnings mbPanCard baseCancellation rawAmount
+            if gatedAmount > 0 then Just gatedAmount else Nothing
       -- Resolve rider's payment-mode choice from booking.paymentMethodId — same logic as EndRide.
       -- Cash → "CASH", anything else (Card/UPI/Wallet/NetBanking/BoothOnline) → "ONLINE".
       isOnline <- do
@@ -692,7 +725,8 @@ cancellationLedgerRefs =
 applyCancellationLedgerAction ::
   ( EsqDBFlow m r,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   SRB.Booking ->
   DRide.Ride ->

@@ -83,6 +83,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverAddRidePayoutAccountNumber,
     postDriverFleetVehicleEdit,
     getDriverFleetStatusSummary,
+    getDriverVehicleInfo,
   )
 where
 
@@ -373,12 +374,12 @@ postDriverFleetRemoveVehicle merchantShortId opCity apiTokenInfo vehicleNo mbFle
   (fleetOwnerId, requestorId) <- getFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetRemoveVehicle) fleetOwnerId vehicleNo (Just requestorId)
 
-postDriverFleetRemoveDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Text -> Flow APISuccess
-postDriverFleetRemoveDriver merchantShortId opCity apiTokenInfo driverId mbFleetOwnerId = do
+postDriverFleetRemoveDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Text -> Maybe Text -> Flow APISuccess
+postDriverFleetRemoveDriver merchantShortId opCity apiTokenInfo driverId mbFleetOwnerId operatorCode = do
   checkFleetOwnerVerification apiTokenInfo.personId
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetRemoveDriver) requestorId driverId mbFleetOwnerId'
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetRemoveDriver) requestorId driverId mbFleetOwnerId' operatorCode
 
 ---------------------------------------------------------------------------------------------------------------
 ---------------------------------------- READ LAYER (Single Fleet Level) --------------------------------------
@@ -492,23 +493,23 @@ getDriverFleetTripTransactions merchantShortId opCity apiTokenInfo driverId mbFr
   let memberPersonId = apiTokenInfo.personId.getId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetTripTransactions) driverId mbFrom mbTo mbVehicleNumber mbFleetOwnerId (Just memberPersonId) limit offset
 
-getDriverFleetDriverAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Common.DocsVerificationStatus -> Maybe Text -> Flow Common.DrivertoVehicleAssociationResT
-getDriverFleetDriverAssociation merhcantId opCity apiTokenInfo mbIsActive mbLimit mbOffset mbCountryCode mbPhoneNo mbStats mbFrom mbTo mbMode name mbSearchString mbFleetOwnerId _ _ _ mbHasRequestReason mbServiceTier mbEnabled mbApproved mbDriverDocsVerificationStatus mbDriverId = do
+getDriverFleetDriverAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Common.DocsVerificationStatus -> Maybe Text -> Maybe Bool -> Flow Common.DrivertoVehicleAssociationResT
+getDriverFleetDriverAssociation merhcantId opCity apiTokenInfo mbIsActive mbLimit mbOffset mbCountryCode mbPhoneNo mbStats mbFrom mbTo mbMode name mbSearchString mbFleetOwnerId _ _ _ mbHasRequestReason mbServiceTier mbEnabled mbApproved mbDriverDocsVerificationStatus mbDriverId mbPickLatestDoc = do
   checkFleetOwnerVerification apiTokenInfo.personId
   checkedMerchantId <- merchantCityAccessCheck merhcantId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let requestorId = apiTokenInfo.personId.getId
       isRequestorFleerOwner = DP.isFleetOwner apiTokenInfo.person
       hasFleetMemberHierarchy = apiTokenInfo.merchant.hasFleetMemberHierarchy
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDriverAssociation) mbIsActive mbLimit mbOffset mbCountryCode mbPhoneNo mbStats mbFrom mbTo mbMode name mbSearchString mbFleetOwnerId (Just requestorId) hasFleetMemberHierarchy (Just isRequestorFleerOwner) mbHasRequestReason mbServiceTier mbEnabled mbApproved mbDriverDocsVerificationStatus mbDriverId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDriverAssociation) mbIsActive mbLimit mbOffset mbCountryCode mbPhoneNo mbStats mbFrom mbTo mbMode name mbSearchString mbFleetOwnerId (Just requestorId) hasFleetMemberHierarchy (Just isRequestorFleerOwner) mbHasRequestReason mbServiceTier mbEnabled mbApproved mbDriverDocsVerificationStatus mbDriverId mbPickLatestDoc
 
-getDriverFleetVehicleAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.FleetVehicleStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Common.DocsVerificationStatus -> Flow Common.DrivertoVehicleAssociationResT
-getDriverFleetVehicleAssociation merhcantId opCity apiTokenInfo mbLimit mbOffset mbVehicleNo mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo mbFleetOwnerId _ _ _ mbApproved mbVehicleDocsVerificationStatus = do
+getDriverFleetVehicleAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.FleetVehicleStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Common.DocsVerificationStatus -> Maybe Bool -> Flow Common.DrivertoVehicleAssociationResT
+getDriverFleetVehicleAssociation merhcantId opCity apiTokenInfo mbLimit mbOffset mbVehicleNo mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo mbFleetOwnerId _ _ _ mbApproved mbVehicleDocsVerificationStatus mbPickLatestDoc = do
   checkFleetOwnerVerification apiTokenInfo.personId
   checkedMerchantId <- merchantCityAccessCheck merhcantId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let requestorId = apiTokenInfo.personId.getId
       isRequestorFleerOwner = DP.isFleetOwner apiTokenInfo.person
       hasFleetMemberHierarchy = apiTokenInfo.merchant.hasFleetMemberHierarchy
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetVehicleAssociation) mbLimit mbOffset mbVehicleNo mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo mbFleetOwnerId (Just requestorId) hasFleetMemberHierarchy (Just isRequestorFleerOwner) mbApproved mbVehicleDocsVerificationStatus
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetVehicleAssociation) mbLimit mbOffset mbVehicleNo mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo mbFleetOwnerId (Just requestorId) hasFleetMemberHierarchy (Just isRequestorFleerOwner) mbApproved mbVehicleDocsVerificationStatus mbPickLatestDoc
 
 getDriverFleetGetDriverRequests :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe UTCTime -> Maybe UTCTime -> Maybe AlertRequestType -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe AlertRequestStatus -> Maybe Int -> Maybe Int -> Flow Common.DriverRequestRespT
 getDriverFleetGetDriverRequests merchantShortId opCity apiTokenInfo mbFrom mbTo mbAlertRequestType mbRouteCode mbDriverId mbBadgeName _ mbalertStatus mbLimit mbOffset = do
@@ -741,3 +742,8 @@ getDriverFleetStatusSummary merchantShortId opCity apiTokenInfo entityOperationT
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerId' <- getFleetOwnerId apiTokenInfo.personId.getId mbFleetOwnerId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetStatusSummary) entityOperationType (Just fleetOwnerId')
+
+getDriverVehicleInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Flow Common.VehicleInfo
+getDriverVehicleInfo merchantShortId opCity apiTokenInfo vehicleNo rcId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverVehicleInfo) vehicleNo rcId

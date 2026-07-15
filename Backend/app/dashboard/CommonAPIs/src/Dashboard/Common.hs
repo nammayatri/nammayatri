@@ -43,6 +43,7 @@ import Domain.Types.VehicleCategory
 import Domain.Types.VehicleVariant
 import Kernel.Prelude
 import Kernel.ServantMultipart
+import Kernel.Types.Common (Centesimal)
 import Kernel.Types.HideSecrets
 import Kernel.Types.HideSecrets as Reexport
 import qualified Kernel.Types.Id as Id
@@ -117,6 +118,20 @@ instance FromHttpApiData Role where
   parseHeader = left T.pack . eitherDecode . BSL.fromStrict
 
 instance ToHttpApiData Role where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
+
+data PlatformType = MULTIMODAL | PARTNERORG | APPLICATION
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+instance FromHttpApiData PlatformType where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = left T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData PlatformType where
   toUrlPiece = DT.decodeUtf8 . toHeader
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
@@ -373,5 +388,11 @@ data VehicleServiceTierOrderConfig = VehicleServiceTierOrderConfig
 data SpecialZone = SpecialZone
   { serviceTierNameForZone :: Text,
     specialZoneId :: Text
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
+
+data CancellationRateConfig = CancellationRateConfig
+  { cancellationRate :: Centesimal,
+    cancellationRideThreshold :: Int
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)

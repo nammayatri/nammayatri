@@ -16,10 +16,12 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Version
+import qualified Lib.Types.SpecialLocation
 import Tools.Beam.UtilsTH
 
 data EstimateT f = EstimateT
-  { backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+  { area :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     boostSearchPreSelectionServiceTierConfig :: B.C f (Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType]),
     bppEstimateId :: B.C f Kernel.Prelude.Text,
@@ -45,6 +47,7 @@ data EstimateT f = EstimateT
     estimatedPickupDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     estimatedStaticDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     estimatedTotalFare :: B.C f Kernel.Types.Common.HighPrecMoney,
+    fareSettlementType :: B.C f (Kernel.Prelude.Maybe Lib.Types.SpecialLocation.FareSettlementType),
     id :: B.C f Kernel.Prelude.Text,
     insuredAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -89,6 +92,7 @@ data EstimateT f = EstimateT
     vehicleCategory :: B.C f (Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory),
     vehicleIconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleServiceTierAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    vehicleServiceTierLuggageCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleVariant :: B.C f Domain.Types.ServiceTierType.ServiceTierType,
     waitingChargePerMin :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),

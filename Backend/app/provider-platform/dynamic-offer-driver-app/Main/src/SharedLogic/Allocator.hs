@@ -17,13 +17,14 @@
 
 module SharedLogic.Allocator where
 
+import Control.Applicative ((<|>))
+import Data.Aeson (withObject, (.:))
 import Data.Singletons.TH
 import qualified Domain.Action.WebhookHandler as AWebhook
 import qualified Domain.Types.AlertRequest as DAR
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.DailyStats as DS
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
-import qualified Domain.Types.MediaFileDocument as DMFD
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -40,6 +41,7 @@ import qualified Domain.Types.ScheduledPayout as DSPayout
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.VehicleCategory as DVC
+import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Id
@@ -53,6 +55,7 @@ import qualified Tools.Notifications as Notify
 data AllocatorJobType
   = SendSearchRequestToDriver
   | UnblockDriver
+  | UnblockAirportDriver
   | UnblockSoftBlockedDriver
   | SoftBlockNotifyDriver
   | SupplyDemand
@@ -91,9 +94,12 @@ data AllocatorJobType
   | ScheduledBatchPayout
   | SettlementReportIngestion
   | CheckPickupZoneArrival
+  | TriggerSpecialZoneNotify
   | ScheduledTDSDistribution
   | IffcoTokioInsurance
   | AggregatedCommissionInvoiceCreation
+  | SAPSubscriptionPurchaseDispatch
+  | SAPPGSettlementDispatch
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -105,6 +111,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo :: Sing (e :: AllocatorJobType) -> Text -> Maybe (AnyJobInfo AllocatorJobType)
   restoreAnyJobInfo SSendSearchRequestToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendSearchRequestToDriver jobData
   restoreAnyJobInfo SUnblockDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockDriver jobData
+  restoreAnyJobInfo SUnblockAirportDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockAirportDriver jobData
   restoreAnyJobInfo SUnblockSoftBlockedDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockSoftBlockedDriver jobData
   restoreAnyJobInfo SSoftBlockNotifyDriver jobData = AnyJobInfo <$> restoreJobInfo SSoftBlockNotifyDriver jobData
   restoreAnyJobInfo SSupplyDemand jobData = AnyJobInfo <$> restoreJobInfo SSupplyDemand jobData
@@ -143,9 +150,12 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SScheduledBatchPayout jobData = AnyJobInfo <$> restoreJobInfo SScheduledBatchPayout jobData
   restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
   restoreAnyJobInfo SCheckPickupZoneArrival jobData = AnyJobInfo <$> restoreJobInfo SCheckPickupZoneArrival jobData
+  restoreAnyJobInfo STriggerSpecialZoneNotify jobData = AnyJobInfo <$> restoreJobInfo STriggerSpecialZoneNotify jobData
   restoreAnyJobInfo SScheduledTDSDistribution jobData = AnyJobInfo <$> restoreJobInfo SScheduledTDSDistribution jobData
   restoreAnyJobInfo SIffcoTokioInsurance jobData = AnyJobInfo <$> restoreJobInfo SIffcoTokioInsurance jobData
   restoreAnyJobInfo SAggregatedCommissionInvoiceCreation jobData = AnyJobInfo <$> restoreJobInfo SAggregatedCommissionInvoiceCreation jobData
+  restoreAnyJobInfo SSAPSubscriptionPurchaseDispatch jobData = AnyJobInfo <$> restoreJobInfo SSAPSubscriptionPurchaseDispatch jobData
+  restoreAnyJobInfo SSAPPGSettlementDispatch jobData = AnyJobInfo <$> restoreJobInfo SSAPPGSettlementDispatch jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -197,6 +207,16 @@ newtype UnblockDriverRequestJobData = UnblockDriverRequestJobData
 instance JobInfoProcessor 'UnblockDriver
 
 type instance JobContent 'UnblockDriver = UnblockDriverRequestJobData
+
+data UnblockAirportDriverRequestJobData = UnblockAirportDriverRequestJobData
+  { driverId :: Id DP.Driver,
+    specialZoneId :: Maybe Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'UnblockAirportDriver
+
+type instance JobContent 'UnblockAirportDriver = UnblockAirportDriverRequestJobData
 
 data FleetAlertJobData = FleetAlertJobData
   { fleetOwnerId :: Id DP.Driver,
@@ -269,7 +289,8 @@ data SendPDNNotificationToDriverJobData = SendPDNNotificationToDriverJobData
     merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     retryCount :: Maybe Int,
-    serviceName :: Maybe Plan.ServiceNames
+    serviceName :: Maybe Plan.ServiceNames,
+    shardNum :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -282,7 +303,8 @@ data MandateExecutionInfo = MandateExecutionInfo
     endTime :: UTCTime,
     merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
-    serviceName :: Maybe Plan.ServiceNames
+    serviceName :: Maybe Plan.ServiceNames,
+    shardNum :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -301,7 +323,8 @@ data CalculateDriverFeesJobData = CalculateDriverFeesJobData
     scheduleManualPaymentLink :: Maybe Bool,
     scheduleDriverFeeCalc :: Maybe Bool,
     createChildJobs :: Maybe Bool,
-    recalculateManualReview :: Maybe Bool
+    recalculateManualReview :: Maybe Bool,
+    shardNum :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -343,7 +366,8 @@ data SendOverlayJobData = SendOverlayJobData
     overlayBatchSize :: Int,
     serviceName :: Maybe Plan.ServiceNames,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
-    vehicleCategory :: Maybe DVC.VehicleCategory
+    vehicleCategory :: Maybe DVC.VehicleCategory,
+    shardNum :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -367,7 +391,8 @@ data SendManualPaymentLinkJobData = SendManualPaymentLinkJobData
     serviceName :: Plan.ServiceNames,
     startTime :: UTCTime,
     endTime :: UTCTime,
-    channel :: MediaChannel
+    channel :: MediaChannel,
+    shardNum :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -459,9 +484,14 @@ instance JobInfoProcessor 'CheckDashCamInstallationStatus
 type instance JobContent 'CheckDashCamInstallationStatus = CheckDashCamInstallationStatusJobData
 
 newtype MediaFileDocumentCompleteJobData = MediaFileDocumentCompleteJobData
-  { mediaFileDocumentId :: Id DMFD.MediaFileDocument
+  { mediaFileId :: Id DMF.MediaFile
   }
-  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+  deriving (Generic, Show, Eq, ToJSON)
+
+instance FromJSON MediaFileDocumentCompleteJobData where
+  parseJSON = withObject "MediaFileDocumentCompleteJobData" $ \o ->
+    MediaFileDocumentCompleteJobData
+      <$> (o .: "mediaFileId" <|> o .: "mediaFileDocumentId")
 
 instance JobInfoProcessor 'MediaFileDocumentComplete
 
@@ -559,6 +589,29 @@ instance JobInfoProcessor 'CheckPickupZoneArrival
 
 type instance JobContent 'CheckPickupZoneArrival = CheckPickupZoneArrivalJobData
 
+-- | Async payload for a dashboard /triggerNotify call. Carries everything
+-- 'forceNotifyDriverDemand' needs so the heavy LTS-queue lookup + driver
+-- filtering + FCM/GRPC fan-out runs in the allocator instead of blocking the
+-- dashboard request. 'triggerRequestId' is stamped on every row this job creates
+-- so the status endpoint can aggregate accept/reject/ignored/pending.
+data TriggerSpecialZoneNotifyJobData = TriggerSpecialZoneNotifyJobData
+  { triggerRequestId :: Text,
+    gateId :: Text,
+    vehicleType :: Text,
+    driversToNotify :: Int, -- required-accepts target the retry loop tops up toward
+    forceNotifyDriverIds :: Maybe [Text],
+    isDemandHigh :: Maybe Bool,
+    merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    retryIntervalSec :: Int, -- cadence between retry cycles (= gate's request-validity config)
+    retryTill :: UTCTime -- absolute deadline; loop stops at the first cycle past this
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'TriggerSpecialZoneNotify
+
+type instance JobContent 'TriggerSpecialZoneNotify = TriggerSpecialZoneNotifyJobData
+
 data ScheduledTDSDistributionJobData = ScheduledTDSDistributionJobData
   { merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
@@ -595,3 +648,35 @@ data AggregatedCommissionInvoiceCreationJobData = AggregatedCommissionInvoiceCre
 instance JobInfoProcessor 'AggregatedCommissionInvoiceCreation
 
 type instance JobContent 'AggregatedCommissionInvoiceCreation = AggregatedCommissionInvoiceCreationJobData
+
+data SAPSubscriptionPurchaseDispatchJobData = SAPSubscriptionPurchaseDispatchJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    scheduledTime :: TimeOfDay,
+    timeDiffFromUtc :: Seconds,
+    maxApiRetries :: Int,
+    startTime :: UTCTime,
+    endTime :: UTCTime,
+    scheduleNextJob :: Maybe Bool
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SAPSubscriptionPurchaseDispatch
+
+type instance JobContent 'SAPSubscriptionPurchaseDispatch = SAPSubscriptionPurchaseDispatchJobData
+
+data SAPPGSettlementDispatchJobData = SAPPGSettlementDispatchJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    scheduledTime :: TimeOfDay,
+    timeDiffFromUtc :: Seconds,
+    maxApiRetries :: Int,
+    startTime :: UTCTime,
+    endTime :: UTCTime,
+    scheduleNextJob :: Maybe Bool
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SAPPGSettlementDispatch
+
+type instance JobContent 'SAPPGSettlementDispatch = SAPPGSettlementDispatchJobData

@@ -18,16 +18,17 @@ import Tools.Beam.UtilsTH
 
 data VehicleServiceTierT f = VehicleServiceTierT
   { airConditionedThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    allowNullVehicleRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowedAreas :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     allowedVehicleVariant :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],
     autoSelectedVehicleVariant :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],
     baseVehicleServiceTier :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    cancellationRateConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     defaultForVehicleVariant :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],
     driverRating :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     fareAdditionPerKmOverBaseServiceTier :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     id :: B.C f Kernel.Prelude.Text,
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    isAirportRideEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isIntercityEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isRentalsEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

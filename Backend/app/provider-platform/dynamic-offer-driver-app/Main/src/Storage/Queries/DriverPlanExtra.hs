@@ -18,7 +18,6 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
-import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified Storage.Beam.DriverPlan as BeamDF
 import Storage.Queries.OrphanInstances.DriverPlan ()
 
@@ -43,6 +42,30 @@ findAllDriversToSendManualPaymentLinkWithLimit serviceName merchantId opCityId e
     ]
     (Just limit)
     Nothing
+
+findAllDriversToSendManualPaymentLinkWithLimitByDriverIds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  DPlan.ServiceNames ->
+  Id Merchant ->
+  Id MOC.MerchantOperatingCity ->
+  UTCTime ->
+  Int ->
+  [Id Person] ->
+  m [DriverPlan]
+findAllDriversToSendManualPaymentLinkWithLimitByDriverIds serviceName merchantId opCityId endTime limit driverIds
+  | null driverIds = pure []
+  | otherwise =
+    findAllWithOptionsKV'
+      [ Se.And
+          [ Se.Is BeamDF.merchantId $ Se.Eq (Just merchantId.getId),
+            Se.Is BeamDF.merchantOpCityId $ Se.Eq (Just opCityId.getId),
+            Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+            Se.Or [Se.Is BeamDF.lastPaymentLinkSentAtIstDate $ Se.LessThan (Just endTime), Se.Is BeamDF.lastPaymentLinkSentAtIstDate $ Se.Eq Nothing],
+            Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds)
+          ]
+      ]
+      (Just limit)
+      Nothing
 
 updateAutoPayStatusAndPayerVpaByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> DPlan.ServiceNames -> Maybe DriverAutoPayStatus -> Maybe Text -> m ()
 updateAutoPayStatusAndPayerVpaByDriverIdAndServiceName driverId serviceName mbAutoPayStatus mbPayerVpa = do
@@ -132,6 +155,31 @@ findAllDriversEligibleForService serviceName merchantId merchantOperatingCity en
     (Just limit)
     Nothing
 
+findAllDriversEligibleForServiceByDriverIds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  DPlan.ServiceNames ->
+  Id Merchant ->
+  Id MOC.MerchantOperatingCity ->
+  UTCTime ->
+  Int ->
+  [Id Person] ->
+  m [DriverPlan]
+findAllDriversEligibleForServiceByDriverIds serviceName merchantId merchantOperatingCity endTime limit driverIds
+  | null driverIds = pure []
+  | otherwise =
+    findAllWithOptionsKV'
+      [ Se.And
+          [ Se.Is BeamDF.merchantId $ Se.Eq (Just merchantId.getId),
+            Se.Is BeamDF.merchantOpCityId $ Se.Eq (Just merchantOperatingCity.getId),
+            Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+            Se.Is BeamDF.enableServiceUsageCharge $ Se.Eq (Just True),
+            Se.Or [Se.Is BeamDF.lastBillGeneratedAt $ Se.LessThan (Just endTime), Se.Is BeamDF.lastBillGeneratedAt $ Se.Eq Nothing],
+            Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds)
+          ]
+      ]
+      (Just limit)
+      Nothing
+
 updatePlanIdByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id DPlan.Plan -> DPlan.ServiceNames -> Maybe VC.VehicleCategory -> Id MOC.MerchantOperatingCity -> m () -- ned DSL Fix
 updatePlanIdByDriverIdAndServiceName (Id driverId) (Id planId) serviceName mbVehicleCategory merchantOperatingCity = do
   now <- getCurrentTime
@@ -211,9 +259,7 @@ updateWaiveOffPercantageAndType waiveOffEntity = do
         ]
     ]
 
--- Wrapper for src-read-only function with LTS sync
-
-updateEnableServiceUsageChargeByDriverIdAndServiceName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> Id Person -> DExtraPlan.ServiceNames -> m ()
+updateEnableServiceUsageChargeByDriverIdAndServiceName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r) => Bool -> Id Person -> DExtraPlan.ServiceNames -> m ()
 updateEnableServiceUsageChargeByDriverIdAndServiceName enableServiceUsageCharge driverId serviceName = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -221,5 +267,3 @@ updateEnableServiceUsageChargeByDriverIdAndServiceName enableServiceUsageCharge 
       Se.Set BeamDF.updatedAt _now
     ]
     [Se.And [Se.Is BeamDF.driverId $ Se.Eq (getId driverId), Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)]]
-  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
-    LTSSync.emptyUpdate {LTSSync.safetyPlusEnabled = LTSSync.Set enableServiceUsageCharge}

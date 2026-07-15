@@ -76,6 +76,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation (runRequestValidation)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
 import qualified Lib.Finance.Domain.Types.Account as FinanceAccount
 import qualified Lib.Finance.Storage.Queries.Account as QFinanceAccount
@@ -88,10 +89,11 @@ import qualified SharedLogic.Finance.Wallet as FWallet
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Reminder.Helper (createReminder)
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverBlockTransactions as QDBT
@@ -118,7 +120,6 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.Volunteer as QVF
 import Tools.Error
 import qualified Tools.SMS as Sms
-import Utils.Common.Cac.KeyNameConstants
 
 getDriverPaymentDue ::
   ShortId DM.Merchant ->
@@ -182,7 +183,7 @@ postDriverEnable merchantShortId opCity reqDriverId = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   -- Check driver inspection approval if required (similar to RC approval check in activateRC)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (InvalidRequest "TransporterConfig not found")
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (InvalidRequest "TransporterConfig not found")
   when (transporterConfig.requiresDriverOnboardingInspection == Just True) $ do
     driverInfo <- QDriverInfo.findById driverId >>= fromMaybeM (PersonDoesNotExist personId.getId)
     unless (fromMaybe False driverInfo.approved) $
@@ -251,7 +252,7 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceN
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica (QPerson.findById personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let isVendorValidationRequired = fromMaybe False transporterConfig.enableVendorCheckForCollectingDues && not isExempted && isVolunteerReq
   when isVendorValidationRequired $ do
     case mbVendorId of
@@ -274,7 +275,7 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceN
             throwError $ InvalidRequest "Status of some id is not PAYMENT_OVERDUE."
           return duePaymentIds
     let totalFee = sum $ map (\fee -> fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) driverFees
-    now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+    now <- getCurrentTime
     QDriverInfo.updatePendingPayment False driverId
     QDriverInfo.updateSubscription True driverId
     mapM_ (QDF.updateCollectedPaymentStatus (paymentStatus isExempted) (Just requestorId) now mbVendorId) ((.id) <$> driverFees)
@@ -476,7 +477,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
       pure $ map getShortId availableMerchantsShortId
     Nothing -> pure []
   merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId (Just []) Nothing
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
   driverStats <- runInReplica $ QDriverStats.findById person.id >>= fromMaybeM DriverInfoNotFound
   selectedServiceTiers <-
     maybe
@@ -774,7 +775,7 @@ postDriverUnlinkVehicle merchantShortId opCity reqDriverId = do
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
@@ -793,7 +794,7 @@ postDriverEndRCAssociation merchantShortId opCity reqDriverId = do
   -- API should be deprecated
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
 
@@ -841,7 +842,7 @@ postDriverDeleteAadhaar merchantShortId opCity reqDriverId = do
   -- Update DriverInformation to clear Aadhaar number
   QDriverInfo.updateAadhaarNumber Nothing driverId
 
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False (Just False)
   logTagInfo "dashboard -> deleteAadhaar : " (show personId)
   pure Success
@@ -872,7 +873,7 @@ postDriverDeletePanCard merchantShortId opCity reqDriverId = do
   -- Update DriverInformation to clear Pan number
   QDriverInfo.updatePanNumber Nothing driverId
 
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False (Just False)
   logTagInfo "dashboard -> deletePanCard : " (show personId)
   pure Success
@@ -897,7 +898,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
   -- merchant access checking
   let merchantId = requestor.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == requestor.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
   when (requestor.role == DP.DRIVER) $ do
     mbLinkedVehicle <- QVehicle.findById personId
@@ -950,7 +951,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
           createReminder ODC.VehiclePermit personId merchant.id merchantOpCityId (Just newRC.id.getId) (Just permitExpiry) Nothing
         whenJust newRC.insuranceValidity $ \insuranceValidity ->
           createReminder ODC.VehicleInsurance personId merchant.id merchantOpCityId (Just newRC.id.getId) (Just insuranceValidity) Nothing
-        cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId (Just []) Nothing
+        cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
         -- as we create new rc, need to pass onboard inspection before activate rc and create vehicle
         unless (transporterConfig.requiresOnboardingInspection == Just True || DCommon.checkFleetOwnerRole requestor.role) $ do
           driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
@@ -986,7 +987,6 @@ createRCInputFromVehicle req@Common.AddVehicleReq {..} mbFleetOwnerId =
       airConditioned,
       oxygen,
       ventilator,
-      enableForAirport,
       documentImageId = "",
       vehicleClass = Just vehicleClass,
       vehicleClassCategory = Nothing,

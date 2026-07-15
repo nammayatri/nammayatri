@@ -43,6 +43,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Lib.JourneyLeg.Common.FRFSJourneyUtils as Reexport
 import qualified Lib.JourneyModule.State.Types as JMStateTypes
 import qualified Lib.JourneyModule.State.Utils as JMStateUtils
@@ -54,17 +55,19 @@ import qualified SharedLogic.FRFSCancelJourney as FRFSCancelJourney
 import SharedLogic.FRFSConfirm
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
 
@@ -92,7 +95,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           -- Fetch all bus data for the route using getRoutesBuses
           (allBusDataForRoute, routeStopMappings) <- do
             buses <- concat <$> mapConcurrently (\rc -> (.buses) <$> CQMMB.getRoutesBuses rc integratedBppConfig) routesToUseForTrackVehicles
-            routeStopMappings <- HM.fromList <$> mapM (\rc -> (rc,) <$> HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode rc integratedBppConfig) routesToUseForTrackVehicles
+            routeStopMappings <- HM.fromList <$> mapConcurrently (\rc -> (rc,) <$> HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode rc integratedBppConfig) routesToUseForTrackVehicles
             return (buses, routeStopMappings)
 
           -- Fetch user's boarding station and leg's end station details
@@ -126,7 +129,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                 let mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
                 case mbServiceTier of
                   Just serviceTier -> do
-                    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+                    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
                     let allowedVariants = maybe (defaultBusBoardingRelationshitCfg serviceTier._type) (.canBoardIn) $ find (\serviceRelationShip -> serviceRelationShip.vehicleType == Enums.BUS && serviceRelationShip.serviceTierType == serviceTier._type) =<< riderConfig.serviceTierRelationshipCfg
                     map fst . filter (\(_bs, mbVehicleServiceTier) -> maybe True (\vehicleServiceTier -> vehicleServiceTier `elem` allowedVariants) mbVehicleServiceTier)
                       <$> mapConcurrently
@@ -192,7 +195,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           -- Fetch all bus data for the route using getRoutesBuses
           (allBusDataForRoute, routeStopMappings) <- do
             buses <- concat <$> mapConcurrently (\rc -> (.buses) <$> CQMMB.getRoutesBuses rc integratedBppConfig) routesToUseForTrackVehicles
-            routeStopMappings <- HM.fromList <$> mapM (\rc -> (rc,) <$> HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode rc integratedBppConfig) routesToUseForTrackVehicles
+            routeStopMappings <- HM.fromList <$> mapConcurrently (\rc -> (rc,) <$> HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode rc integratedBppConfig) routesToUseForTrackVehicles
             return (buses, routeStopMappings)
 
           -- Fetch user's boarding station and leg's end station details
@@ -447,7 +450,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
         routeDetails
 
 confirm :: JT.ConfirmFlow m r c => Id DPerson.Person -> Id DMerchant.Merchant -> Maybe (Id FRFSQuote) -> Bool -> Bool -> Maybe API.CrisSdkResponse -> Spec.VehicleCategory -> [API.FRFSCategorySelectionReq] -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> m ()
-confirm personId merchantId mbQuoteId bookLater bookingAllowed crisSdkResponse vehicleType categorySelectionReq isSingleMode mbEnableOffer mbIsMockPayment mbTripId = do
+confirm personId merchantId mbQuoteId bookLater bookingAllowed crisSdkResponse vehicleType categorySelectionReq isSingleMode mbEnableOffer mbIsMockPayment mbTripId = ActorInfo.withPersonIdActorInfo personId $ do
   when (not bookLater && bookingAllowed) $ do
     quoteId <- mbQuoteId & fromMaybeM (InvalidRequest "You can't confirm bus before getting the fare")
     quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
@@ -456,7 +459,7 @@ confirm personId merchantId mbQuoteId bookLater bookingAllowed crisSdkResponse v
       DIBC.ONDC _ | vehicleType == Spec.BUS -> do
         merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
         merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
-        bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory vehicleType)}) >>= fromMaybeM (InternalError "Beckn Config not found")
+        bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
         FRFSTicketService.select merchant merchantOperatingCity bapConfig quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer
       _ -> do
         void $ postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer mbIsMockPayment integratedBppConfig mbTripId
@@ -467,7 +470,7 @@ cancel searchId cancellationType = do
   whenJust mbMetroBooking $ \metroBooking -> do
     merchant <- CQM.findById metroBooking.merchantId >>= fromMaybeM (MerchantDoesNotExist metroBooking.merchantId.getId)
     merchantOperatingCity <- CQMOC.findById metroBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound metroBooking.merchantOperatingCityId.getId)
-    bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory metroBooking.vehicleType)}) >>= fromMaybeM (InternalError "Beckn Config not found")
+    bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory metroBooking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory metroBooking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
     mbSideEffectData <- CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType metroBooking
     whenJust mbSideEffectData $ \(mRiderNumber, mRiderMobileCountryCode, fareParameters, updatedBooking) -> do
       FRFSCancel.handleCancelledSideEffects updatedBooking mRiderNumber mRiderMobileCountryCode fareParameters

@@ -25,7 +25,7 @@ data VehicleExtraInformation = VehicleExtraInformation {rcNo :: Kernel.Prelude.T
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data VehicleInfoAPIEntity = VehicleInfoAPIEntity {questionId :: Kernel.Prelude.Text, question :: Kernel.Prelude.Text, answer :: Kernel.Prelude.Text}
+data VehicleInfoAPIEntity = VehicleInfoAPIEntity {questionId :: Kernel.Prelude.Text, question :: Kernel.Prelude.Text, answer :: Kernel.Prelude.Text, mediaFileId :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

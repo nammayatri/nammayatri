@@ -920,8 +920,72 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN default_onboard
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN use_category_based_verification_priority_list boolean  default true;
 
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_court_record_check boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_tier_upgrade_feature boolean ;
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_mobility_billing boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_bot_flow boolean ;
 
 
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN individual_pan_check boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_gst_pan_link_check_required boolean  default false;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN supported_map_providers text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN block_driver_own_rc_for_fleet_drivers boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN override_operator_driver_joining_with_deep_link boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_document_metadata boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_pull_pending_doc_verification boolean ;
+
+-- phone-number auth sliding-window rate limit (two independent windows) --
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_phone_number_count_threshold1 integer;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_phone_number_count_window1 json;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_phone_number_count_threshold2 integer;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_phone_number_count_window2 json;

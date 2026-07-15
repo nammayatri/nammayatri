@@ -155,3 +155,5 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN cloud_type text ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.frfs_search ADD COLUMN client_sdk_version text ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN client_bundle_version text ;

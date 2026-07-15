@@ -16,13 +16,14 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyModule.Utils as JMU
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Storage.Queries.Person as QP
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
@@ -58,7 +59,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
             logInfo $ "possibleRoutes between two stops: " <> show routeCodes
             pure $ List.nub $ [routeCode] <> routeCodes
       _ -> pure [routeCode]
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = personCityInfo.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist personCityInfo.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = personCityInfo.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId personCityInfo.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist personCityInfo.merchantOperatingCityId.getId)
   let maxBuses = fromMaybe 5 $ mbMaxBuses <|> riderConfig.maxNearbyBuses
   mbSourceStop <- maybe (pure Nothing) (\stopCode -> OTPRest.getStationByGtfsIdAndStopCode stopCode integratedBPPConfig) mbSelectedSourceStopId
   let currentLocation = (\ss -> LatLong <$> ss.lat <*> ss.lon) =<< mbSourceStop

@@ -25,6 +25,8 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -32,6 +34,7 @@ import SharedLogic.Ride
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Ride as QRide
@@ -53,7 +56,8 @@ cancelBooking ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasShortDurationRetryCfg r c,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
   ) =>
   DRB.Booking ->
   Maybe DPerson.Person ->
@@ -102,7 +106,7 @@ cancelBooking booking mbDriver transporter = do
         Nothing -> throwError (PersonNotFound ride.driverId.getId)
         Just driver -> do
           fork "cancelRide - Notify driver" $ do
-            Notify.notifyOnCancel booking.merchantOperatingCityId booking driver bookingCancellationReason.source
+            Notify.notifyOnCancel booking.merchantOperatingCityId ride.id booking driver bookingCancellationReason.source
   where
     buildBookingCancellationReason driverId ride merchantId = do
       return $
@@ -125,7 +129,7 @@ cancelBooking booking mbDriver transporter = do
 -- Removes from both sorted set and hash set to keep Redis state consistent.
 removeBookingFromRedis :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DRB.Booking -> m ()
 removeBookingFromRedis booking = do
-  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   let localStartTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) booking.startTime
       vehicleVariant = castServiceTierToVariant booking.vehicleServiceTier
       redisKey = createRedisKey localStartTime booking.merchantOperatingCityId booking.tripCategory vehicleVariant
@@ -190,7 +194,7 @@ createRedisKeysForCombinations time mocId tripCategories vehicleVariants =
 -- Stores in both a sorted set (for time-range queries) and hash set (for ID lookup).
 addScheduledBookingInRedis :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => DRB.Booking -> m ()
 addScheduledBookingInRedis booking = do
-  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   localNow <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let localStartTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) booking.startTime
       bookingLocalDay = utctDay localStartTime

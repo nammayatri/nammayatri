@@ -22,6 +22,7 @@ import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import Domain.Types.ConditionalCharges as DAC
 import Domain.Types.DriverPoolConfig
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
@@ -35,6 +36,8 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import qualified Lib.Types.SpecialLocation as SL
@@ -49,9 +52,11 @@ import SharedLogic.Pricing
 import qualified SharedLogic.Type as SLT
 import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
 import qualified Storage.Cac.GoHomeConfig as CGHC
-import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQDVST
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.SearchTry as QST
@@ -123,7 +128,8 @@ initiateDriverSearchBatch ::
     HasField "blackListedJobs" r [Text],
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
   ) =>
   DriverSearchBatchInput m ->
   m DST.SearchTry
@@ -133,7 +139,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
     "initiateDriverSearchBatch"
     ( do
         driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) searchReq.estimatedDistance searchTry.searchRepeatType searchTry.searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
-        goHomeCfg <- CGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId)))
+        goHomeCfg <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) (Just (Just <$> CGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId Nothing)) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> searchReq.merchantOperatingCityId.getId)
         singleBatchProcessingTempDelay <- asks (.singleBatchProcessingTempDelay)
         now <- getCurrentTime
         let batchTime = fromIntegral driverPoolConfig.singleBatchProcessTime + singleBatchProcessingTempDelay
@@ -200,7 +206,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
           let estimateOrQuoteServiceTierNames = tripQuoteDetails <&> (.vehicleServiceTierName)
           searchTry <- case mbLastSearchTry of
             Nothing -> do
-              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory billingCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory billingCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference ((.paymentInstrument) <$> paymentMethodInfo)
               _ <- QST.create searchTry
               return searchTry
             Just oldSearchTry -> do
@@ -211,7 +217,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
               -- TODO : Fix this
               -- unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
               --   throwError SearchTryEstimatedFareChanged
-              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory billingCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory billingCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference ((.paymentInstrument) <$> paymentMethodInfo)
               when (oldSearchTry.status == DST.ACTIVE) $ do
                 QST.updateStatus DST.CANCELLED oldSearchTry.id
                 void $ QDQ.setInactiveBySTId oldSearchTry.id
@@ -249,16 +255,17 @@ buildSearchTry ::
   Maybe Text ->
   Maybe Text ->
   Maybe [Text] ->
+  Maybe DMPM.PaymentInstrument ->
   m DST.SearchTry
-buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory billingCategory customerExtraFee petCharges messageId estimateOrQuoteServTierNames serviceTier emailDomain businessEmailDomain driverPreference = do
+buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory billingCategory customerExtraFee petCharges messageId estimateOrQuoteServTierNames serviceTier emailDomain businessEmailDomain driverPreference mbPaymentInstrument = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
-  vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow serviceTier searchReq.merchantOperatingCityId searchReq.configInExperimentVersions (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTier))
-  transporterConfig <- CTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
+  vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow serviceTier searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTier))
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
   if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer && transporterConfig.isDynamicPricingQARCalEnabled == Just True
     then
       fork "updateDynamicPricingDemandCounters" $
-        geoAddDynamicPricingCounter mkDemandVehicleCategoryWithDistanceBin mkDemandVehicleCategory mkDemandVehicleCategoryCity now vehicleServiceTierItem.vehicleCategory searchReq.fromLocation.lat searchReq.fromLocation.lon searchReq.id.getId ((.getMeters) <$> searchReq.estimatedDistance) searchReq.merchantOperatingCityId.getId
+        geoAddDynamicPricingCounter mkDemandVehicleCategoryWithDistanceBin mkDemandVehicleCategory mkDemandVehicleCategoryCity now vehicleServiceTierItem.vehicleCategory searchReq.fromLocation.lat searchReq.fromLocation.lon id_.getId ((.getMeters) <$> searchReq.estimatedDistance) searchReq.merchantOperatingCityId.getId
     else pure ()
   pure $
     DST.SearchTry
@@ -284,6 +291,7 @@ buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare sea
         preferSafetyPlus = searchReq.preferSafetyPlus,
         driverPreference = driverPreference,
         businessEmailDomain = businessEmailDomain,
+        paymentInstrument = mbPaymentInstrument,
         ..
       }
 
@@ -323,7 +331,7 @@ buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceT
     case mbVehicleServiceTierName of
       Just name -> return name
       _ -> do
-        item <- CQDVST.findByServiceTierTypeAndCityIdInRideFlow vehicleServiceTier searchReq.merchantOperatingCityId searchReq.configInExperimentVersions (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
+        item <- CQDVST.findByServiceTierTypeAndCityIdInRideFlow vehicleServiceTier searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
         return item.name
   (driverParkingCharge, tollCharges, driverPickUpCharge, driverMinFee, driverMaxFee, driverStepFee, driverDefaultStepFee) <-
     case (mbDriverParkingCharge, mbTollCharges, mDriverPickUpCharge, mbDriverMinFee, mbDriverMaxFee, mbStepFee, mbDefaultStepFee) of

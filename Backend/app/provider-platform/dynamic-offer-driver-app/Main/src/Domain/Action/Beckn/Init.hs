@@ -41,6 +41,8 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
@@ -53,11 +55,14 @@ import qualified SharedLogic.RiderDetails as SRD
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
-import qualified Storage.Cac.TransporterConfig as CCT
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.Location as QLoc
@@ -68,7 +73,6 @@ import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
-import Utils.Common.CacUtils
 
 data FulfillmentId = QuoteId (Id DQ.Quote) | DriverQuoteId (Id DDQ.DriverQuote)
 
@@ -194,7 +198,7 @@ handler merchantId req validatedReq = do
     let lat = searchRequest.fromLocation.lat
         lon = searchRequest.fromLocation.lon
         merchantOpCityId = searchRequest.merchantOperatingCityId
-    transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     DemandHotspots.updateDemandHotspotsOnBooking searchRequest.id merchantOpCityId transporterConfig (Maps.LatLong lat lon)
   let paymentMethodInfo = req.paymentMethodInfo
       bppSubscriberId = req.bppSubscriberId
@@ -206,6 +210,7 @@ handler merchantId req validatedReq = do
     buildBooking ::
       ( CacheFlow m r,
         EsqDBFlow m r,
+        Esq.EsqDBReplicaFlow m r,
         EncFlow m r,
         HasField "vehicleServiceTier" q ServiceTierType,
         HasField "distance" q (Maybe Meters),
@@ -238,9 +243,11 @@ handler merchantId req validatedReq = do
           stops = searchRequest.stops
           isTollApplicable = isTollApplicableForTrip driverQuote.vehicleServiceTier tripCategory
       exophone <- findRandomExophone searchRequest.merchantOperatingCityId searchRequest DExophone.CALL_RIDE
-      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId configInExperimentVersions (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
+      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
       mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback quoteId
       commission <- FC.calculateCommission driverQuote.fareParams mbFarePolicy
+      mbSpecialLocation <- maybe (pure Nothing) (QSpecialLocation.findById . Id) (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea)
+      let fareSettlementType = mbSpecialLocation >>= (.fareSettlementType)
       let bapUri = showBaseUrl searchRequest.bapUri
           displayBookingId = req.displayBookingId
       (initiatedAs, senderDetails, receiverDetails) <- do
@@ -275,6 +282,7 @@ handler merchantId req validatedReq = do
             estimatedFare = driverQuote.estimatedFare,
             currency = driverQuote.currency,
             distanceUnit = searchRequest.distanceUnit,
+            customerLanguage = searchRequest.customerLanguage,
             riderName = Nothing,
             billingCategory = billingCategory,
             estimatedDuration = searchRequest.estimatedDuration,
@@ -311,6 +319,7 @@ handler merchantId req validatedReq = do
             insuredAmount = req.insuredAmount,
             exotelDeclinedCallStatusReceivingTime = Nothing,
             numberOfLuggages = searchRequest.numberOfLuggages,
+            isPickupOrDestinationEdited = Just False,
             paymentMode = searchRequest.paymentMode,
             searchTryId = searchTryId,
             dqDurationToPickup = dqDurationToPickup,
@@ -367,9 +376,9 @@ handler merchantId req validatedReq = do
       pure (mbPaymentMethod, Nothing) -- TODO : Remove paymentUrl from here altogether
 
 findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DSR.SearchRequest -> DExophone.ExophoneType -> m DExophone.Exophone
-findRandomExophone merchantOpCityId sr exoType = do
-  merchantServiceUsageConfig <- CMSUC.findByMerchantOpCityId merchantOpCityId (Just (TransactionId (Id sr.transactionId))) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
-  exophones <- CQExophone.findByMerchantOpCityIdServiceAndExophoneType merchantOpCityId merchantServiceUsageConfig.getExophone exoType
+findRandomExophone merchantOpCityId _ exoType = do
+  merchantServiceUsageConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  exophones <- getConfig (ExophoneDimensions {merchantOperatingCityId = merchantOpCityId.getId, phoneNumber = Nothing, callService = Just merchantServiceUsageConfig.getExophone, exophoneType = Just exoType}) (Just (CQExophone.findByMerchantOpCityIdServiceAndExophoneType merchantOpCityId merchantServiceUsageConfig.getExophone exoType))
   nonEmptyExophones <- case exophones of
     [] -> throwError $ ExophoneNotFound merchantOpCityId.getId
     e : es -> pure $ e :| es
@@ -382,8 +391,7 @@ validateRequest ::
   Id DM.Merchant ->
   InitReq ->
   m ValidatedInitReq
-validateRequest merchantId req = do
-  void $ QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+validateRequest _merchantId req = do
   now <- getCurrentTime
   case req.fulfillmentId of
     DriverQuoteId driverQuoteId -> do
@@ -394,6 +402,7 @@ validateRequest merchantId req = do
         -- Lock Description: This is a Lock held between Init and Cancel Search, if Cancel Search is OnGoing then the Driver Quote would be Marked Inactive post the lock release and Init will fail with `QuoteExpired`.
         -- Lock Release: If any errors or Post Init Beckn Action Handler is executed.
         isLockAcquired <- Redis.tryLockRedis (mkCancelSearchInitLockKey searchRequest.transactionId) 30
+        logError $ "cancelSearchInitLock | Init acquire | txn=" <> searchRequest.transactionId <> " acquired=" <> show isLockAcquired
         searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
         updatedDriverQuote <- runInMasterDbAndRedis $ QDQuote.findById driverQuoteId >>= fromMaybeM (DriverQuoteNotFound driverQuoteId.getId)
         when (updatedDriverQuote.validTill < now || updatedDriverQuote.status == DDQ.Inactive || not isLockAcquired) $
@@ -411,6 +420,7 @@ validateRequest merchantId req = do
       exep <- withTryCatch "init:validateRequest:callWithErrorHandling" action
       case exep of
         Left e -> do
+          logError $ "cancelSearchInitLock | Init release (validateRequest error) | txn=" <> transactionId
           Redis.unlockRedis (mkCancelSearchInitLockKey transactionId)
           someExceptionToAPIErrorThrow e
         Right a -> pure a

@@ -59,6 +59,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
@@ -72,6 +73,7 @@ import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.JourneyLeg as QJL
@@ -134,6 +136,7 @@ data BookingAPIEntity = BookingAPIEntity
     isValueAddNP :: Bool,
     vehicleServiceTierType :: DVST.ServiceTierType,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
+    vehicleServiceTierLuggageCapacity :: Maybe Int,
     vehicleServiceTierAirConditioned :: Maybe Double,
     vehicleIconUrl :: Maybe Text,
     billingCategory :: SLT.BillingCategory,
@@ -152,7 +155,8 @@ data BookingAPIEntity = BookingAPIEntity
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     displayBookingId :: Maybe Text,
     driverPreference :: Maybe [Text],
-    specialLocationSupportNumber :: Maybe Text
+    specialLocationSupportNumber :: Maybe Text,
+    commissionCharge :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -355,6 +359,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         isPetRide = booking.isPetRide,
         vehicleServiceTierType = booking.vehicleServiceTierType,
         vehicleServiceTierSeatingCapacity = booking.vehicleServiceTierSeatingCapacity,
+        vehicleServiceTierLuggageCapacity = booking.vehicleServiceTierLuggageCapacity,
         vehicleServiceTierAirConditioned = booking.vehicleServiceTierAirConditioned,
         isAirConditioned = booking.isAirConditioned,
         serviceTierName = booking.serviceTierName,
@@ -376,7 +381,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         mbJourneyId = mbJourneyLeg <&> (.journeyId),
         displayBookingId = booking.displayBookingId,
         driverPreference = booking.driverPreference,
-        specialLocationSupportNumber = booking.specialLocationSupportNumber
+        specialLocationSupportNumber = booking.specialLocationSupportNumber,
+        commissionCharge = booking.commission
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
@@ -516,13 +522,14 @@ getActiveSos' mbRide personId = do
 makeCancellationReasonAPIEntity :: BookingCancellationReason -> BookingCancellationReasonAPIEntity
 makeCancellationReasonAPIEntity BookingCancellationReason {..} = BookingCancellationReasonAPIEntity {..}
 
-buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, ClickhouseFlow m r, BeamFlow m r) => Booking -> Id Person.Person -> m BookingAPIEntity
-buildBookingAPIEntity booking personId = do
-  mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
+buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, ClickhouseFlow m r, BeamFlow m r) => Booking -> Id Person.Person -> Bool -> m BookingAPIEntity
+buildBookingAPIEntity booking personId dontNeedFareBreakup = do
+  -- mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
   mbRide <- runInReplica $ QRide.findByRBId booking.id
+  let mbActiveRide = (\r -> if r.status == DRide.CANCELLED then Nothing else Just r) =<< mbRide
   -- nightIssue <- runInReplica $ QIssue.findNightIssueByBookingId booking.id
-  (fareBreakups, estimatedFareBreakups) <- getfareBreakups booking mbRide
-  mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
+  (fareBreakups, estimatedFareBreakups) <- if dontNeedFareBreakup then pure ([], []) else getfareBreakups booking mbRide
+  mbExoPhone <- getOneConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
   mbSosStatus <- getActiveSos mbActiveRide personId
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId

@@ -23,6 +23,8 @@ imports:
   PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
   PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
   SearchTry: Domain.Types.SearchTry
+  FareSettlementType: Lib.Types.SpecialLocation
+  Language: Tools.Maps
 
 Booking:
   derives: "Generic,Show,FromJSON,ToJSON"
@@ -45,6 +47,7 @@ Booking:
     specialZoneOtpCode: Maybe Text
     specialLocationTag: Maybe Text
     specialLocationName: Maybe Text
+    fareSettlementType: Maybe FareSettlementType
     disabilityTag: Maybe Text
     area: Maybe Area
     pickupGateId: Maybe Text
@@ -105,6 +108,7 @@ Booking:
     insuredAmount: Maybe Text
     exotelDeclinedCallStatusReceivingTime: Maybe UTCTime
     numberOfLuggages: Maybe Int
+    isPickupOrDestinationEdited: Maybe Bool
     paymentInstrument: Maybe PaymentInstrument
     paymentMode: Maybe PaymentMode
     commission: Maybe HighPrecMoney
@@ -117,6 +121,7 @@ Booking:
     financeInvoiceId: Maybe Text
     emailDomain: Maybe Text
     businessEmailDomain: Maybe Text
+    customerLanguage: Maybe Language
 
   excludedFields:
     - merchantId
@@ -258,6 +263,10 @@ Booking:
     updateEstimatedDistanceAndFare:
       kvFunction: updateOneWithKV
       params: [estimatedFare, estimatedDistance]
+      where: id
+    updateIsPickupOrDestinationEdited:
+      kvFunction: updateOneWithKV
+      params: [isPickupOrDestinationEdited]
       where: id
 
   constraints:

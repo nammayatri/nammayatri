@@ -30,9 +30,10 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Storage.Beam.SystemConfigs ()
-import Storage.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import qualified Storage.Queries.SearchRequest as QSearchReq
+import qualified Tools.ActorInfo as ActorInfo
 import TransactionLogs.PushLogs
 
 type API = OnSearch.OnSearchAPIV2
@@ -44,7 +45,7 @@ onSearch ::
   SignatureAuthResult ->
   OnSearch.OnSearchReqV2 ->
   FlowHandler AckResponse
-onSearch _ reqV2 = withFlowHandlerBecknAPI do
+onSearch _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   void $ processOnSearchPayload reqV2 ProcessAsync
   pure Ack
 

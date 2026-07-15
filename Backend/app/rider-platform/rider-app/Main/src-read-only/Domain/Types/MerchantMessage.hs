@@ -61,9 +61,11 @@ data MessageKey
   | PASS_PURCHASED_MESSAGE
   | SPECIAL_ZONE_BOOKING_INVOICE
   | SEND_TOTP
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+  | SPECIAL_ZONE_BOOKING_INVOICE_TITLE
+  | WHATSAPP_REWARD_UNLOCK
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
 
-type MerchantMessage = MerchantMessageD 'Safe
+type MerchantMessage = MerchantMessageD ('Safe)
 
 instance FromJSON (MerchantMessageD 'Unsafe)
 
@@ -73,4 +75,4 @@ instance FromJSON (MerchantMessageD 'Safe)
 
 instance ToJSON (MerchantMessageD 'Safe)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageKey)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MessageKey))

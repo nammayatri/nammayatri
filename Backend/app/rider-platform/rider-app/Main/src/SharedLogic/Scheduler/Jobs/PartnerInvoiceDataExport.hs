@@ -25,7 +25,6 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time.Format (defaultTimeLocale, formatTime)
 import qualified Domain.Action.UI.PartnerBookingStatement as PBS
-import qualified Domain.Types.Booking.API as DBAPI
 import qualified Domain.Types.PartnerInvoiceDataLog as DPIL
 import qualified Domain.Types.RideStatus as DRideStatus
 import Environment (SFTPConfig (..))
@@ -44,6 +43,7 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.PartnerInvoiceDataLog as QPartnerInvoiceDataLog
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Ride as QRide
 import System.Directory (getTemporaryDirectory, removeFile)
 import System.IO (hClose, hPutStr, openTempFile)
 import System.Process (callProcess)
@@ -129,18 +129,16 @@ enrichLogEntry logEntry = do
 
   case (mbBooking, mbPerson) of
     (Just booking, Just person) -> do
-      -- Build API entity
-      bookingAPI <- DBAPI.buildBookingAPIEntity booking person.id
-
-      let mbRide = find (\ride -> ride.status == DRideStatus.COMPLETED) bookingAPI.rideList
-      case mbRide of
+      mbRide <- QRide.findByRBId booking.id
+      let mbCompletedRide = mbRide >>= (\ride -> if ride.status == DRideStatus.COMPLETED then Just ride else Nothing)
+      case mbCompletedRide of
         Nothing -> return Nothing -- Only export completed rides
         Just _ride -> do
           -- Decrypt sensitive data
           email <- mapM decrypt person.email
           mobile <- mapM decrypt person.mobileNumber
 
-          res <- PBS.buildInvoiceData person booking bookingAPI (email <|> person.identifier) mobile
+          res <- PBS.buildInvoiceData person booking mbCompletedRide (email <|> person.identifier) mobile
           return $ Just res
     _ -> return Nothing
 

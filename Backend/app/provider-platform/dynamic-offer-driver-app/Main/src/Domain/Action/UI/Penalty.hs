@@ -20,11 +20,12 @@ import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as YT
 import qualified Lib.Yudhishthira.Types.Application as YA
-import qualified Storage.Cac.TransporterConfig as CCT
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Ride as QRide

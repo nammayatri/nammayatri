@@ -15,6 +15,7 @@
 module API.UI
   ( API,
     handler,
+    uiApiPrefix,
   )
 where
 
@@ -29,6 +30,7 @@ import qualified API.Action.UI.DriverSafetySettings as DriverSafetySettings
 import qualified API.Action.UI.DriverWallet as DriverWallet
 import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.FRFSFleetOperator as FRFSFleetOperator
+import qualified API.Action.UI.Faq as Faq
 import qualified API.Action.UI.FareCalculator as FareCalculator
 import qualified API.Action.UI.FinanceInvoice as FinanceInvoice
 import qualified API.Action.UI.FleetOwnerList as FleetOwnerList
@@ -89,15 +91,23 @@ import qualified API.UI.Route as Route
 import qualified API.UI.Sos as Sos
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Whatsapp as Whatsapp
+import qualified Data.Text as T
 import Environment
+import GHC.TypeLits (symbolVal)
 import Kernel.Prelude
 import Kernel.Utils.Servant.Server (healthCheck)
 import Servant
 
 type HealthCheckAPI = Get '[JSON] Text
 
+--for multi-cloud proxy
+type UIAPIPrefix = "ui"
+
+uiApiPrefix :: Text
+uiApiPrefix = T.pack $ symbolVal (Proxy @UIAPIPrefix)
+
 type API =
-  "ui"
+  UIAPIPrefix
     :> ( HealthCheckAPI
            :<|> Merchant.API
            :<|> MerchantDocument.API
@@ -139,6 +149,7 @@ type API =
            :<|> SpecialLocation.API
            :<|> SpecialZoneQueue.API
            :<|> Reels.API
+           :<|> Faq.API
            :<|> Cac.API
            :<|> EditBooking.API
            :<|> SocialLogin.API
@@ -215,6 +226,7 @@ handler =
     :<|> SpecialLocation.handler
     :<|> SpecialZoneQueue.handler
     :<|> Reels.handler
+    :<|> Faq.handler
     :<|> Cac.handler
     :<|> EditBooking.handler
     :<|> SocialLogin.handler

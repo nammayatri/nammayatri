@@ -52,6 +52,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.Person as SLP
 import qualified SharedLogic.Scheduler.Jobs.SafetyCSAlert as SIVR
@@ -60,10 +61,10 @@ import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.FeedbackForm as CQFF
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Issue as QIssue
 import qualified Storage.Queries.Person as QPerson
@@ -126,7 +127,7 @@ feedback request personId = do
   unless (ride.status == DRide.COMPLETED) $ throwError (RideInvalidStatus "Feedback available only for completed rides.")
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   let bppRideId = ride.bppRideId
   badgeMetadata <- case request.feedbackAnswers of
@@ -161,7 +162,7 @@ feedback request personId = do
       createTicketResp <- withTryCatch "createTicket:feedback" $ Ticket.createTicket merchant.id merchantOperatingCityId ticketReq
       case createTicketResp of
         Left err -> logTagError "Create Ticket API failed - " $ show err
-        Right resp -> logTagInfo "Created Ticket for Customer L0 Feedback : TicketId - " resp.ticketId
+        Right (primaryResp, _) -> logTagInfo "Created Ticket for Customer L0 Feedback : TicketId - " primaryResp.ticketId
       slackConfig <- asks (.slackNotificationConfig)
       desc <- generateSlackMessage person ride unencryptedMobileNumber (T.pack $ show city) request.rating feedbackDetails
       let message = createJsonMessage desc

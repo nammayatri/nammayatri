@@ -45,7 +45,8 @@ handler = onInit
 
 onInit :: Maybe (Id DM.Merchant) -> SignatureAuthResult -> ByteString -> FlowHandler Spec.AckResponse
 onInit mbMerchantId authResult reqBS = withFlowHandlerAPI $ do
-  req <- case decodeOnInitReq reqBS of
+  reqBS' <- Utils.decompressGzipBody reqBS
+  req <- case decodeOnInitReq reqBS' of
     Right r -> pure r
     Left err -> throwError (InvalidRequest (toText err))
   mbForwarded <- Forwarding.maybeForwardOnInit mbMerchantId authResult req reqBS

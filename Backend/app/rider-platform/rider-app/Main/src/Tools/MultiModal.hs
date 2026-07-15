@@ -23,18 +23,20 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Tools.Error
 
 getMultiModalConfig :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m MultiModal.MultiModalServiceConfig
 getMultiModalConfig merchantId merchantOperatingCityId = do
   merchantServiceUsageConfig <-
-    getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+    getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId))
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MultiModalService merchantServiceUsageConfig.getMultiModalService)})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MultiModalService merchantServiceUsageConfig.getMultiModalService)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.MultiModalService merchantServiceUsageConfig.getMultiModalService)))
       >>= fromMaybeM (InternalError $ "No MultiModal service provider configured for the merchant, merchantId:" <> merchantId.getId)
 
   case merchantServiceConfig.serviceConfig of
@@ -48,7 +50,7 @@ getOTPRestServiceReq :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DM.Mer
 getOTPRestServiceReq merchantId merchantOperatingCityId = do
   transitServiceReq <-
     measureLatency
-      (getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MultiModalStaticDataService MultiModal.OTPTransit)}) >>= fromMaybeM (InternalError "No OTP Transit Service Config Found"))
+      (getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MultiModalStaticDataService MultiModal.OTPTransit)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.MultiModalStaticDataService MultiModal.OTPTransit))) >>= fromMaybeM (InternalError "No OTP Transit Service Config Found"))
       ("getOTPRestServiceReq: getOneConfig merchantId=" <> merchantId.getId <> " merchantOperatingCityId=" <> merchantOperatingCityId.getId)
   transitServiceReq' <- case transitServiceReq.serviceConfig of
     DMSC.MultiModalStaticDataServiceConfig multiModalServiceConfig -> return multiModalServiceConfig

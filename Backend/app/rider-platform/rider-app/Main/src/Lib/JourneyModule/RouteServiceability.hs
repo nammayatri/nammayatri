@@ -4,10 +4,11 @@ import qualified API.Types.UI.MultimodalConfirm
 import qualified BecknV2.FRFS.Enums
 import Data.List (nub)
 import qualified Data.Map.Strict as Map
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import qualified Domain.Types.FRFSVehicleServiceTier as DFRFSVehicleServiceTier
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import qualified Domain.Types.VehicleSeatLayoutMapping as DVSLM
+import Domain.Utils (mapConcurrently)
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (all, any, catMaybes, concatMap, elem, find, foldr, groupBy, id, length, map, mapM_, null, readMaybe, toList, whenJust)
@@ -17,16 +18,33 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyLeg.Common.FRFSJourneyUtils as JLCF
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import qualified SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper as SeatHold
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+
+upcomingFreshnessThresholdSec :: Int
+upcomingFreshnessThresholdSec = 300
+
+getFreshUpcomingBuses :: Text -> DIntegratedBPPConfig.IntegratedBPPConfig -> [Text] -> Flow [CQMMB.FullBusData]
+getFreshUpcomingBuses routeId integratedBPPConfig liveVehicleNos = do
+  now <- getCurrentTime
+  let nowSec = floor (utcTimeToPOSIXSeconds now) :: Int
+  upcoming <- CQMMB.getUpcomingRoutesBuses routeId integratedBPPConfig
+  pure $
+    filter
+      ( \b ->
+          (nowSec - b.busData.timestamp) <= upcomingFreshnessThresholdSec
+            && not (b.vehicleNumber `elem` liveVehicleNos)
+      )
+      upcoming.buses
 
 -- | Shared function to build RouteWithLiveVehicle for a single route.
 --   Used by both FRFSTicketService and MultimodalConfirm.
@@ -39,18 +57,27 @@ buildRouteWithLiveVehicle ::
   [(BecknV2.FRFS.Enums.ServiceTierType, DFRFSVehicleServiceTier.FRFSVehicleServiceTier)] ->
   Maybe LatLong ->
   Int ->
+  Bool ->
   Flow (Maybe API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
-buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromStopCode toStopCode frfsTierMap mbSourceStopLatLong maxLiveVehicles = do
-  let vehicleNos = nub $ map (.vehicle_no) busScheduleDetails <> map (.vehicleNumber) routeInfo.buses
-  seatLayoutMappings <-
-    mapM
-      ( \vehicleNo ->
-          JMU.measureLatency
-            (CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vehicleNo integratedBPPConfig.feedKey)
-            ("buildRouteWithLiveVehicle: findByVehicleNoAndGtfsIdCached vehicle=" <> vehicleNo)
+buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromStopCode toStopCode frfsTierMap mbSourceStopLatLong maxLiveVehicles allowUpcomingTrips = do
+  upcomingBuses <-
+    if allowUpcomingTrips
+      then getFreshUpcomingBuses routeInfo.routeId integratedBPPConfig (map (.vehicleNumber) routeInfo.buses)
+      else pure []
+  let mergedBuses = routeInfo.buses <> upcomingBuses
+  let vehicleNos = nub $ map (.vehicle_no) busScheduleDetails <> map (.vehicleNumber) mergedBuses
+  seatLayoutMappingsByVehicleNo <-
+    mapConcurrently
+      ( \vehicleNo -> do
+          mapping <-
+            JMU.measureLatency
+              (CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vehicleNo integratedBPPConfig.feedKey)
+              ("buildRouteWithLiveVehicle: findByVehicleNoAndGtfsIdCached vehicle=" <> vehicleNo)
+          pure (vehicleNo, mapping)
       )
       vehicleNos
-  let seatLayoutMappingByVehicleNo = Map.fromList (zip vehicleNos seatLayoutMappings)
+  let seatLayoutMappingByVehicleNo = Map.fromList seatLayoutMappingsByVehicleNo
+      seatLayoutMappings = map snd seatLayoutMappingsByVehicleNo
       shouldRunSeatHoldReaper = any ((== Just DVSLM.AUTO_ASSIGNED) . (>>= (.seatSelectionType))) seatLayoutMappings
       -- Map of vehicleNo -> active tripId, derived from the schedule details' active trip
       -- (same logic as the single-vehicle path), so live vehicles can carry their currentTripId.
@@ -69,7 +96,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
               busScheduleDetails
 
   when shouldRunSeatHoldReaper $ do
-    mRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = integratedBPPConfig.merchantOperatingCityId.getId})
+    mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = integratedBPPConfig.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId integratedBPPConfig.merchantOperatingCityId))
     let seatBookingCleanupTtl' = mRiderConfig >>= (.seatBookingCleanupTtl)
     shouldRun <- Hedis.setNxExpire "frfs:seat_hold_reaper_lock" (fromMaybe 120 seatBookingCleanupTtl') ("1" :: Text)
     when shouldRun $
@@ -87,7 +114,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
       getBusScheduleInfo busScheduleDetails integratedBPPConfig routeInfo.routeId fromStopCode toStopCode frfsTierMap seatLayoutMappingByVehicleNo
   liveVehiclesFork <-
     awaitableFork "getLiveVehicles" $
-      getLiveVehicles routeInfo.buses integratedBPPConfig frfsTierMap mbSourceStopLatLong maxLiveVehicles seatLayoutMappingByVehicleNo activeTripIdByVehicleNo
+      getLiveVehicles mergedBuses integratedBPPConfig frfsTierMap mbSourceStopLatLong maxLiveVehicles seatLayoutMappingByVehicleNo activeTripIdByVehicleNo
   schedules <-
     L.await Nothing schedulesFork >>= \case
       Left err -> throwError $ InternalError $ "getBusScheduleInfo fork failed: " <> show err
@@ -132,7 +159,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
           (JMU.getRouteStopIndices routeId' fromStopCode' toStopCode' integratedBPPConfig')
           ("getBusScheduleInfo: getRouteStopIndices routeId=" <> routeId')
       catMaybes
-        <$> mapM
+        <$> mapConcurrently
           ( \detail -> do
               let busLiveInfo = join $ lookup detail.vehicle_no busLiveInfoMap
               logDebug $ "getBusScheduleInfo: getBusLiveInfo vehicle=" <> detail.vehicle_no <> ", found=" <> show (isJust busLiveInfo) <> ", details=" <> show (fmap (\v -> (v.vehicle_number, v.latitude, v.longitude, v.timestamp, v.routes_info, v.bearing)) busLiveInfo)
@@ -195,7 +222,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
     getLiveVehicles busesData integratedBPPConfig' frfsTierMap' mbSourceLatLong maxLiveCount seatLayoutMappingByVehicleNo' activeTripIdByVehicleNo' = do
       allVehicles <-
         catMaybes
-          <$> mapM
+          <$> mapConcurrently
             ( \bus -> do
                 mbVehicleMetadata <-
                   JMU.measureLatency
@@ -230,7 +257,9 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                           currentTripId = Map.lookup bus.vehicleNumber activeTripIdByVehicleNo',
                           serviceSubTypes = mbServiceSubTypes,
                           vehicleTagNumber = mbVehicleTagNumber,
-                          seatSelectionType = seatSelType
+                          seatSelectionType = seatSelType,
+                          isUpcomingTrip = bus.busData.is_upcoming_trip,
+                          previousRouteId = bus.busData.previous_route_id
                         }
                   Nothing -> do
                     logError $ "Vehicle info not found for bus: " <> bus.vehicleNumber

@@ -15,7 +15,10 @@ import {
   remoteSessions,
   remoteSyncCaddyPort,
   remoteCabalClean,
+  fetchMachines,
+  setupSsh,
   RemoteTarget,
+  MachineInfo,
 } from '../services/remote';
 import './RemoteStackPanel.css';
 
@@ -64,9 +67,69 @@ export const RemoteStackPanel: React.FC = () => {
   const [state, setState] = useState<PanelState>({});
   const [busy, setBusy] = useState<'deploy' | 'start' | 'stop' | 'clear-data' | 'cabal-clean' | null>(null);
   const [override] = useState<string | null>(getContextApiBaseOverride());
+  const [machines, setMachines] = useState<MachineInfo[]>([]);
+  const [selectedMachine, setSelectedMachine] = useState<string>('localhost');
+  const [sshStatus, setSshStatus] = useState<{ ok: boolean; message?: string } | null>(null);
 
   const isLocalhost = !target.host || ['localhost', '127.0.0.1', '::1'].includes(target.host.trim());
   const hasDevName = isLocalhost || !!target.devName?.trim();
+
+  // Fetch available machines from ServiceDiscovery API
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetchMachines();
+        if (cancelled || !res.machines) return;
+        setMachines(res.machines);
+        // If current host matches a machine, select it
+        const match = res.machines.find(
+          m => m.bestIp === target.host || m.localIp === target.host || m.awsIp === target.host
+        );
+        if (match) {
+          setSelectedMachine(match.name);
+          // Sync user and host from ServiceDiscovery (overrides stale localStorage values)
+          setTarget(prev => ({ ...prev, host: match.bestIp, user: match.user }));
+          // Run SSH check for auto-selected remote machine
+          try {
+            const sshRes = await setupSsh(match.bestIp, match.user, target.port);
+            if (!cancelled) {
+              setSshStatus(sshRes.status === 'ok'
+                ? { ok: true, message: sshRes.message }
+                : { ok: false, message: sshRes.message });
+            }
+          } catch (e) {
+            if (!cancelled) setSshStatus({ ok: false, message: `SSH check failed: ${e}` });
+          }
+        }
+      } catch { /* ServiceDiscovery unavailable */ }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const onMachineSelect = async (value: string) => {
+    setSelectedMachine(value);
+    setSshStatus(null);
+    if (value === 'localhost') {
+      setTarget(prev => ({ ...prev, host: 'localhost', user: '' }));
+    } else {
+      const m = machines.find(m => m.name === value);
+      if (m) {
+        setTarget(prev => ({ ...prev, host: m.bestIp, user: m.user }));
+        try {
+          const res = await setupSsh(m.bestIp, m.user, target.port);
+          if (res.status === 'ok') {
+            setSshStatus({ ok: true, message: res.message });
+          } else {
+            setSshStatus({ ok: false, message: res.message });
+          }
+        } catch (e) {
+          setSshStatus({ ok: false, message: `SSH check failed: ${e}` });
+        }
+      }
+    }
+  };
 
   // Persist form fields across page reloads / tab switches.
   useEffect(() => {
@@ -196,6 +259,9 @@ export const RemoteStackPanel: React.FC = () => {
           status: 'rsync running…',
         }));
       }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setState(prev => ({ ...prev, error: `Deploy failed: ${msg}`, status: undefined }));
     } finally {
       setBusy(null);
     }
@@ -211,6 +277,22 @@ export const RemoteStackPanel: React.FC = () => {
       } else {
         setState(prev => ({ ...prev, clearSession: res.session, status: 'clear-data running…' }));
       }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setState(prev => ({ ...prev, error: `Clear-data failed: ${msg}`, status: undefined }));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const onStopClearData = async () => {
+    if (!state.clearSession) return;
+    setBusy('clear-data');
+    try {
+      await remoteStop(state.clearSession);
+      setState(prev => ({ ...prev, clearSession: undefined, status: 'Clear-data stopped.' }));
+    } catch (e) {
+      setState(prev => ({ ...prev, clearSession: undefined, error: `Stop failed: ${e}`, status: undefined }));
     } finally {
       setBusy(null);
     }
@@ -235,6 +317,9 @@ export const RemoteStackPanel: React.FC = () => {
           status: `mobility-stack-dev running on ${target.host}`,
         }));
       }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setState(prev => ({ ...prev, error: `Start failed: ${msg}`, status: undefined }));
     } finally {
       setBusy(null);
     }
@@ -246,6 +331,9 @@ export const RemoteStackPanel: React.FC = () => {
     try {
       await remoteStop(state.startSession);
       setState(prev => ({ ...prev, startSession: undefined, status: 'Stopped.' }));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setState(prev => ({ ...prev, startSession: undefined, error: `Stop failed: ${msg}`, status: undefined }));
     } finally {
       setBusy(null);
     }
@@ -276,6 +364,9 @@ export const RemoteStackPanel: React.FC = () => {
       } else {
         setState(prev => ({ ...prev, cabalCleanSession: res.session, status: 'cabal clean running…' }));
       }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setState(prev => ({ ...prev, error: `Cabal clean failed: ${msg}`, status: undefined }));
     } finally {
       setBusy(null);
     }
@@ -302,17 +393,15 @@ export const RemoteStackPanel: React.FC = () => {
 
       <div className="rsp-form">
         <label>
-          <span>Host</span>
-          <input value={target.host} onChange={e => update('host', e.target.value)} />
-        </label>
-        <label>
-          <span>User</span>
-          <input
-            value={target.user || ''}
-            onChange={e => update('user', e.target.value)}
-            placeholder={isLocalhost ? '(not used)' : 'e.g. ubuntu'}
-            disabled={isLocalhost}
-          />
+          <span>Machine</span>
+          <select value={selectedMachine} onChange={e => onMachineSelect(e.target.value)}>
+            <option value="localhost">localhost</option>
+            {machines.filter(m => m.role === 'worker' && m.type === 'dev-box').map(m => (
+              <option key={m.name} value={m.name}>
+                {m.user || m.name} — {m.bestIp} [{m.resources?.cpu}, {m.resources?.ram}]
+              </option>
+            ))}
+          </select>
         </label>
         <label>
           <span>Port</span>
@@ -320,15 +409,6 @@ export const RemoteStackPanel: React.FC = () => {
             type="number"
             value={target.port || 22}
             onChange={e => update('port', Number(e.target.value) || 22)}
-            disabled={isLocalhost}
-          />
-        </label>
-        <label>
-          <span>Identity file</span>
-          <input
-            value={target.identityFile || ''}
-            onChange={e => update('identityFile', e.target.value)}
-            placeholder="~/.ssh/id_ed25519 (optional)"
             disabled={isLocalhost}
           />
         </label>
@@ -369,13 +449,19 @@ export const RemoteStackPanel: React.FC = () => {
       </div>
 
       <div className="rsp-actions">
-        <button onClick={onDeploy} disabled={!!busy || !hasDevName}>
+        <button onClick={onDeploy} disabled={!!busy || !hasDevName || !!state.deploySession || !!state.startSession || !!state.clearSession || !!state.cabalCleanSession || (!isLocalhost && (!sshStatus || !sshStatus.ok))}>
           {busy === 'deploy' ? 'Deploying…' : 'Deploy (rsync)'}
         </button>
-        <button onClick={onClearData} disabled={!!busy || !hasDevName} title="Wipe runtime data under <repo>/data (postgres, kafka, metabase, …) using `, clear-data`.">
-          {busy === 'clear-data' ? 'Clearing…' : 'Clear data'}
-        </button>
-        <button onClick={onStart} disabled={!!busy || !hasDevName}>
+        {state.clearSession ? (
+          <button onClick={onStopClearData} disabled={busy === 'clear-data'} style={{ background: '#e53e3e' }}>
+            {busy === 'clear-data' ? 'Stopping…' : 'Stop Clear data'}
+          </button>
+        ) : (
+          <button onClick={onClearData} disabled={!!busy || !hasDevName || !!state.deploySession || !!state.startSession || !!state.cabalCleanSession} title="Wipe runtime data under <repo>/data (postgres, kafka, metabase, …) using `, clear-data`.">
+            {busy === 'clear-data' ? 'Clearing…' : 'Clear data'}
+          </button>
+        )}
+        <button onClick={onStart} disabled={!!busy || !hasDevName || !!state.deploySession || !!state.startSession || !!state.clearSession || !!state.cabalCleanSession}>
           {busy === 'start' ? 'Starting…' : 'Start mobility-stack-dev'}
         </button>
         <button onClick={onStop} disabled={!state.startSession || busy === 'stop' || !hasDevName}>
@@ -390,7 +476,7 @@ export const RemoteStackPanel: React.FC = () => {
         </button>
         <button
           onClick={onCabalClean}
-          disabled={!!busy || !hasDevName}
+          disabled={!!busy || !hasDevName || !!state.deploySession || !!state.startSession || !!state.clearSession}
           title="Run `cabal clean` in the Backend directory to clear stale build artifacts (fixes GHC panics / package-database corruption)"
         >
           {busy === 'cabal-clean' ? 'Cleaning…' : 'Cabal Clean'}
@@ -424,6 +510,17 @@ export const RemoteStackPanel: React.FC = () => {
         )}
         {state.status && <div className="rsp-status">{state.status}</div>}
         {state.error && <div className="rsp-error">{state.error}</div>}
+        {sshStatus && !isLocalhost && (
+          sshStatus.ok
+            ? <div className="rsp-status">SSH: {sshStatus.message}</div>
+            : <div className="rsp-error" style={{ whiteSpace: 'pre-wrap' }}>
+                SSH not set up. Run this command in your terminal:{'\n\n'}
+                <code style={{ background: '#333', padding: '4px 8px', borderRadius: '4px', userSelect: 'all' }}>
+                  {sshStatus.message?.match(/ssh-copy-id.*/)?.[0] || sshStatus.message}
+                </code>
+                {'\n\n'}Then select the machine again.
+              </div>
+        )}
       </div>
 
       <div className="rsp-terminals">

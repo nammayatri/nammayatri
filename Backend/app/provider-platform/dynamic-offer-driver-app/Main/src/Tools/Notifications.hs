@@ -43,6 +43,8 @@ import Domain.Types.ServiceTierType
 import Domain.Types.Trip as Trip
 import qualified Domain.Types.TripTransaction as DTT
 import qualified EulerHS.Prelude hiding (null)
+import qualified IssueManagement.Common as IMCommon
+import Kernel.Beam.Functions
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Notification.FCM.Flow as FCM
 import Kernel.External.Notification.FCM.Types as FCM
@@ -56,19 +58,22 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Version as Version
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.DriverCoins.Types
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Yudhishthira.Types as LYT
-import qualified Storage.Cac.MerchantServiceUsageConfig as QMSUC
-import Storage.Cac.TransporterConfig
+import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.MerchantClientConfig as QMCC
 import qualified Storage.Queries.Person as QPerson
-import Utils.Common.Cac.KeyNameConstants
 
 clearDeviceToken :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r) => Id Person -> m ()
 clearDeviceToken = QPerson.clearDeviceTokenByPersonId
@@ -154,7 +159,7 @@ findFCMConfigWithFallback merchantOpCityId personId = do
   mbClientConfig <- QMCC.findByPackageOSAndService (ClientFCMService) (driver >>= (.clientDevice) <&> (.deviceType)) (fromMaybe "" (driver >>= (.clientId)))
   case mbClientConfig of
     Just clientConfig -> let (DMCC.ClientFCMServiceConfig fcmCfg) = clientConfig.clientServiceConfig in pure fcmCfg
-    Nothing -> findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId) <&> (.fcmConfig)
+    Nothing -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId) <&> (.fcmConfig)
 
 -- dynamicFCMNotifyPerson
 --     merchantOpCityId
@@ -285,7 +290,7 @@ sendFeedbackBadgeNotification merchantOpCityId driver entityData = do
     let dynamicParams = [("rating", show entityData.rating), ("badgeCount", maybe "0" show entityData.badgeCount)]
         title = buildTemplate dynamicParams merchantPN.title
         body = buildTemplate dynamicParams merchantPN.body
-    notifyDriverWithProviders merchantOpCityId Notification.FEEDBACK_BADGE_PN title body driver driver.deviceToken entityData
+    notifyDriverWithProviders merchantOpCityId Notification.FEEDBACK_BADGE_PN title body driver driver.deviceToken Nothing entityData
 
 -- NEW_RIDE_AVAILABLE
 -- title = FCMNotificationTitle "New ride available for offering"
@@ -318,11 +323,12 @@ notifyOnCancel ::
     Hedis.HedisLTSFlowEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
+  Id DRide.Ride ->
   Booking ->
   Person ->
   SBCR.CancellationSource ->
   m ()
-notifyOnCancel merchantOpCityId booking person cancellationSource = do
+notifyOnCancel merchantOpCityId rideId booking person cancellationSource = do
   let newCityId = cityFallback person.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   subCategory <- getSubCategory cancellationSource
   dynamicFCMNotifyPerson
@@ -331,7 +337,7 @@ notifyOnCancel merchantOpCityId booking person cancellationSource = do
     person.deviceToken
     (fromMaybe ENGLISH person.language)
     (Just booking.tripCategory)
-    (createFCMReq "NOTIFY_DRIVER_ON_CANCEL" booking.id.getId FCM.Product (\r -> r {subCategory = Just subCategory, priority = Nothing}))
+    (createFCMReq "NOTIFY_DRIVER_ON_CANCEL" rideId.getId FCM.Product (\r -> r {subCategory = Just subCategory, priority = Nothing}))
     (Just ())
     [ ("startTime", showTimeIst (booking.startTime))
     ]
@@ -421,6 +427,28 @@ notifyDriver ::
   m ()
 notifyDriver merchantOpCityId = sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing
 
+rideEntityNotificationCategories :: [Notification.Category]
+rideEntityNotificationCategories =
+  [ Notification.TRIP_STARTED,
+    Notification.DRIVER_ASSIGNMENT,
+    Notification.CANCELLED_PRODUCT
+  ]
+
+mkNotificationEntity ::
+  ToJSON a =>
+  Id DMOC.MerchantOperatingCity ->
+  Notification.Category ->
+  Maybe (Id DRide.Ride) ->
+  a ->
+  Notification.Entity a
+mkNotificationEntity merchantOpCityId category mbRideId dataSend =
+  case (category, mbRideId) of
+    (cat, Just rideId)
+      | cat `elem` rideEntityNotificationCategories ->
+        Notification.Entity Notification.Product rideId.getId dataSend
+    _ ->
+      Notification.Entity Notification.Merchant merchantOpCityId.getId dataSend
+
 notifyDriverWithProviders ::
   ( ServiceFlow m r,
     CacheFlow m r,
@@ -436,9 +464,10 @@ notifyDriverWithProviders ::
   Text ->
   Person ->
   Maybe FCM.FCMRecipientToken ->
+  Maybe (Id DRide.Ride) ->
   a ->
   m ()
-notifyDriverWithProviders merchantOpCityId category title body driver mbDeviceToken dataSend =
+notifyDriverWithProviders merchantOpCityId category title body driver mbDeviceToken mbRideId dataSend =
   runWithServiceConfigForProviders merchantOpCityId driver.clientId driver.clientDevice notificationData EulerHS.Prelude.id (clearDeviceToken driver.id)
   where
     notificationData =
@@ -447,7 +476,7 @@ notifyDriverWithProviders merchantOpCityId category title body driver mbDeviceTo
           subCategory = Nothing,
           showNotification = Notification.SHOW,
           messagePriority = Just Notification.HIGH,
-          entity = Notification.Entity Notification.Merchant merchantOpCityId.getId dataSend,
+          entity = mkNotificationEntity merchantOpCityId category mbRideId dataSend,
           dynamicParams = EmptyDynamicParam,
           body = body,
           title = title,
@@ -455,6 +484,45 @@ notifyDriverWithProviders merchantOpCityId category title body driver mbDeviceTo
           ttl = Nothing,
           sound = Nothing
         }
+
+-- | Sent when a dashboard operator posts a chat message on a driver-side
+-- issue. Mirror of the rider-app helper of the same name; routes the FCM
+-- through `runWithServiceConfigForProviders` so it goes via the driver's
+-- configured provider stack.
+notifyOnIssueChatMessage ::
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Hedis.HedisFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  Id Person ->
+  IMCommon.ChatNotifPayload ->
+  m ()
+notifyOnIssueChatMessage driverId payload = do
+  driver <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  let merchantOperatingCityId = driver.merchantOperatingCityId
+      title = T.pack "Support"
+      body =
+        if T.null payload.snippet
+          then if payload.hasMedia then "Sent you an image" else "You have a new message"
+          else payload.snippet
+      notificationData =
+        Notification.NotificationReq
+          { category = Notification.CHAT_MESSAGE,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product payload.issueReportId payload,
+            body = body,
+            title = title,
+            dynamicParams = EmptyDynamicParam,
+            auth = Notification.Auth driver.id.getId ((.getFCMRecipientToken) <$> driver.deviceToken) Nothing,
+            ttl = Nothing,
+            sound = Nothing
+          }
+  runWithServiceConfigForProviders merchantOperatingCityId driver.clientId driver.clientDevice notificationData EulerHS.Prelude.id (clearDeviceToken driver.id)
 
 driverScheduledRideAcceptanceAlert ::
   ( ServiceFlow m r,
@@ -616,7 +684,7 @@ notifyDriverNewAllocation merchantOpCityId booking personId lang mbToken = do
 --   Maybe FCM.FCMRecipientToken ->
 --   m ()
 -- notifyFarePolicyChange merchantOpCityId coordinatorId mbToken = do
---   transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+--   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 --   FCM.notifyPerson transporterConfig.fcmConfig (clearDeviceToken coordinatorId) notificationData $ FCMNotificationRecipient coordinatorId.getId mbToken
 --   where
 --     title = FCM.FCMNotificationTitle "Fare policy changed."
@@ -646,7 +714,7 @@ notifyDriverNewAllocation merchantOpCityId booking personId lang mbToken = do
 --   Maybe FCM.FCMRecipientToken ->
 --   m ()
 -- notifyDiscountChange merchantOpCityId coordinatorId mbToken = do
---   transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+--   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 --   FCM.notifyPerson transporterConfig.fcmConfig (clearDeviceToken coordinatorId) notificationData $ FCMNotificationRecipient coordinatorId.getId mbToken
 --   where
 --     title = FCM.FCMNotificationTitle "Discount updated."
@@ -1118,6 +1186,74 @@ drunkAndDriveViolationWarningOverlay mOpCityId person req entityData = do
     notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title
     body = FCMNotificationBody $ fromMaybe "Description" req.description
 
+data UnhygienicVehicleWarningData = UnhygienicVehicleWarningData
+  { driverId :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+data VehicleUnsafeWarningData = VehicleUnsafeWarningData
+  { driverId :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+unhygienicVehicleWarningNotify ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Hedis.HedisFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Person ->
+  UnhygienicVehicleWarningData ->
+  m ()
+unhygienicVehicleWarningNotify mOpCityId person entityData = do
+  mbMerchantPN <- CPN.findMatchingMerchantPN mOpCityId "UNHYGIENIC_VEHICLE_WARNING" Nothing Nothing (Just $ fromMaybe ENGLISH person.language) Nothing
+  whenJust mbMerchantPN $ \merchantPN -> do
+    fcmConfig <- findFCMConfigWithFallback mOpCityId person.id
+    let notifTitle = FCMNotificationTitle merchantPN.title
+        body = FCMNotificationBody merchantPN.body
+        notificationData =
+          FCM.FCMData
+            { fcmNotificationType = FCM.UNHYGIENIC_VEHICLE_WARNING,
+              fcmShowNotification = FCM.SHOW,
+              fcmEntityType = FCM.Person,
+              fcmEntityIds = entityData.driverId,
+              fcmEntityData = Just entityData,
+              fcmNotificationJSON = FCM.createAndroidNotification notifTitle body FCM.UNHYGIENIC_VEHICLE_WARNING Nothing,
+              fcmOverlayNotificationJSON = Nothing,
+              fcmNotificationId = Nothing
+            }
+    FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken person.id) notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
+
+vehicleUnsafeWarningNotify ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Hedis.HedisFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Person ->
+  VehicleUnsafeWarningData ->
+  m ()
+vehicleUnsafeWarningNotify mOpCityId person entityData = do
+  mbMerchantPN <- CPN.findMatchingMerchantPN mOpCityId "VEHICLE_UNSAFE_WARNING" Nothing Nothing (Just $ fromMaybe ENGLISH person.language) Nothing
+  whenJust mbMerchantPN $ \merchantPN -> do
+    fcmConfig <- findFCMConfigWithFallback mOpCityId person.id
+    let notifTitle = FCMNotificationTitle merchantPN.title
+        body = FCMNotificationBody merchantPN.body
+        notificationData =
+          FCM.FCMData
+            { fcmNotificationType = FCM.VEHICLE_UNSAFE_WARNING,
+              fcmShowNotification = FCM.SHOW,
+              fcmEntityType = FCM.Person,
+              fcmEntityIds = entityData.driverId,
+              fcmEntityData = Just entityData,
+              fcmNotificationJSON = FCM.createAndroidNotification notifTitle body FCM.VEHICLE_UNSAFE_WARNING Nothing,
+              fcmOverlayNotificationJSON = Nothing,
+              fcmNotificationId = Nothing
+            }
+    FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken person.id) notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
+
 driverStopDetectionAlert ::
   ( ServiceFlow m r,
     CacheFlow m r,
@@ -1313,7 +1449,7 @@ notifyOnRideStarted ride booking = do
   let dynamicParams = [("offerAdjective", offerAdjective)]
   let title = buildTemplate dynamicParams mbMerchantPN.title
       body = buildTemplate dynamicParams mbMerchantPN.body
-  notifyDriverWithProviders merchantOperatingCityId Notification.TRIP_STARTED title body person person.deviceToken EmptyDynamicParam
+  notifyDriverWithProviders merchantOperatingCityId Notification.TRIP_STARTED title body person person.deviceToken (Just ride.id) EmptyDynamicParam
 
 data WMBTripAssignedData = WMBTripAssignedData
   { tripTransactionId :: Id DTT.TripTransaction,
@@ -1344,10 +1480,10 @@ notifyWmbOnRide ::
 notifyWmbOnRide driverId merchantOperatingCityId status title body entityData = do
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   case status of
-    DTT.TRIP_ASSIGNED -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_ASSIGNED title body person person.deviceToken entityData
-    DTT.COMPLETED -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_FINISHED title body person person.deviceToken entityData
-    DTT.CANCELLED -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_FINISHED title body person person.deviceToken entityData -- TODO :: Change this to WMB_TRIP_CANCELLED
-    DTT.IN_PROGRESS -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_STARTED title body person person.deviceToken entityData
+    DTT.TRIP_ASSIGNED -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_ASSIGNED title body person person.deviceToken Nothing entityData
+    DTT.COMPLETED -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_FINISHED title body person person.deviceToken Nothing entityData
+    DTT.CANCELLED -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_FINISHED title body person person.deviceToken Nothing entityData -- TODO :: Change this to WMB_TRIP_CANCELLED
+    DTT.IN_PROGRESS -> notifyDriverWithProviders merchantOperatingCityId Notification.WMB_TRIP_STARTED title body person person.deviceToken Nothing entityData
     _ -> pure ()
 
 ----------------- we have to remove this once YATRI_PARTNER is migrated to new version ------------------
@@ -1453,7 +1589,7 @@ notifyWithGRPCProvider ::
   m ()
 notifyWithGRPCProvider merchantOpCityId category title body clientId mbTtl entityData = do
   merchantNotificationServiceConfig <-
-    QMSC.findByServiceAndCity (DMSC.NotificationService Notification.GRPC) merchantOpCityId
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.NotificationService Notification.GRPC)}) (Just (maybeToList <$> QMSC.findByServiceAndCity (DMSC.NotificationService Notification.GRPC) merchantOpCityId))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Notification" "GRPC")
   case merchantNotificationServiceConfig.serviceConfig of
     DMSC.NotificationServiceConfig (Notification.GRPCConfig cfg) -> do
@@ -1513,7 +1649,7 @@ runWithServiceConfigForProviders merchantOpCityId clientId clientDevice req iosM
     handler mbClientConfig = Notification.NotficationServiceHandler {..}
       where
         getNotificationServiceList = do
-          merchantServiceUsageConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+          merchantServiceUsageConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
           let sendSearchReqNotificationList = merchantServiceUsageConfig.sendSearchRequestToDriver
           when (null sendSearchReqNotificationList) $ throwError $ InternalError ("No notification service provider configured for the merchant Op city : " <> merchantOpCityId.getId)
           pure sendSearchReqNotificationList
@@ -1523,14 +1659,14 @@ runWithServiceConfigForProviders merchantOpCityId clientId clientDevice req iosM
             Just clientConfig -> let (DMCC.ClientFCMServiceConfig fcmCfg) = clientConfig.clientServiceConfig in pure $ Notification.FCMConfig fcmCfg
             Nothing -> do
               merchantNotificationServiceConfig <-
-                QMSC.findByServiceAndCity (DMSC.NotificationService FCM) merchantOpCityId
+                getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.NotificationService FCM)}) (Just (maybeToList <$> QMSC.findByServiceAndCity (DMSC.NotificationService FCM) merchantOpCityId))
                   >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Notification" (show FCM))
               case merchantNotificationServiceConfig.serviceConfig of
                 DMSC.NotificationServiceConfig nsc -> pure nsc
                 _ -> throwError $ InternalError "Unknow Service Config"
         getServiceConfig service = do
           merchantNotificationServiceConfig <-
-            QMSC.findByServiceAndCity (DMSC.NotificationService service) merchantOpCityId
+            getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.NotificationService service)}) (Just (maybeToList <$> QMSC.findByServiceAndCity (DMSC.NotificationService service) merchantOpCityId))
               >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Notification" (show service))
           case merchantNotificationServiceConfig.serviceConfig of
             DMSC.NotificationServiceConfig nsc -> pure nsc

@@ -198,8 +198,11 @@ GoHomeConfig:
     addStartWaypointAt: "3000"
     newLocAllowedRadius: "20"
 
-
-
+  configPilot:
+    configType: GoHomeConfig
+    fetchQuery: getGoHomeConfigFromDB
+    returnType: Maybe
+    queryModule: Storage.CachedQueries.GoHomeConfig
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
 

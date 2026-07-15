@@ -1,6 +1,7 @@
 module Domain.Action.UI.CancellationReasonLookup (getRideGetCancellationReasons) where
 
 import qualified API.Types.UI.CancellationReasonLookup
+import qualified Data.Aeson as A
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MessageDictionary as DMD
@@ -12,6 +13,9 @@ import qualified Kernel.External.Types as Language
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import qualified Storage.Queries.MessageDictionary as QMD
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -45,9 +49,21 @@ getRideGetCancellationReasons (mbDriverId, _merchantId, _merchantOpCityId) rideI
       merchantOpCityId
       (fromMaybe _merchantId merchantId)
 
+  -- Keep rows whose JsonLogic eligibilityLogic passes for this ride's stage; no eligibilityLogic = always shown.
+  -- Fail-open: a malformed rule must not hide a reason (runLogics collects errors instead of throwing).
+  let logicContext = A.object ["driverArrived" A..= isJust ride.driverArrivalTime]
+  visibleEntries <- flip filterM messageEntries $ \entry ->
+    case entry.eligibilityLogic of
+      Nothing -> pure True
+      Just logic -> do
+        resp <- LYTU.runLogics [logic] logicContext
+        pure $ case (resp.errors, resp.result) of
+          ([], A.Bool b) -> b
+          _ -> True
+
   -- For each message key, look up the translation in driver's language (falls back to ENGLISH)
-  forM messageEntries $ \entry -> do
-    mbTranslation <- QTranslation.findByErrorAndLanguage entry.messageKey driverLanguage
+  forM visibleEntries $ \entry -> do
+    mbTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = entry.messageKey, language = Just driverLanguage}) (Just (QTranslation.findByErrorAndLanguage entry.messageKey driverLanguage))
     let reasonMessage = maybe entry.messageKey (.message) mbTranslation
     pure $
       API.Types.UI.CancellationReasonLookup.CancellationReasonResp

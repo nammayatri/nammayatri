@@ -29,6 +29,7 @@ import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.Scheduler
 import qualified Safety.Domain.Action.UI.Sos as SafetySos
 import qualified Safety.Domain.Types.Sos as SafetyDSos
@@ -37,8 +38,8 @@ import SharedLogic.Person as SLP
 import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
 import Tools.Error
@@ -76,7 +77,7 @@ createSafetyTicket ::
   m ()
 createSafetyTicket person ride = do
   logDebug $ "Creating Safety Ticket for ride : " <> show ride.id
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   merchantConfig <- CQM.findById (person.merchantId) >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   let rideMocId = fromMaybe person.merchantOperatingCityId ride.merchantOperatingCityId
   rideMoc <- CQMOC.findById rideMocId >>= fromMaybeM (MerchantOperatingCityNotFound rideMocId.getId)
@@ -105,10 +106,10 @@ createSafetyTicket person ride = do
   ticketResponse <- withTryCatch "createTicket:safetyCSAlert" (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber mediaLinks (Just rideInfo) SafetyDSos.CSAlertSosTicket riderConfig.kaptureConfig.disposition kaptureQueue))
   ticketId <- do
     case ticketResponse of
-      Right ticketResponse' -> do
+      Right (primaryResp, _) -> do
         void $ QR.updateSafetyJourneyStatus ride.id DRide.CSAlerted
-        logDebug $ "Ticket created when rider didn't picked up call : " <> show (Just ticketResponse'.ticketId)
-        return (Just ticketResponse'.ticketId)
+        logDebug $ "Ticket created when rider didn't picked up call : " <> show (Just primaryResp.ticketId)
+        return (Just primaryResp.ticketId)
       Left err -> do
         logError $ "Ticket didn't created when rider didn't picked up call with error : " <> show err
         return Nothing
@@ -189,6 +190,7 @@ buildSosDetails person req ticketId = do
         flow = req.flow,
         rideId = Just rideId,
         ticketId = ticketId,
+        requesterId = Nothing,
         mediaFiles = [],
         merchantId = Just (cast person.merchantId),
         merchantOperatingCityId = Just (cast person.merchantOperatingCityId),

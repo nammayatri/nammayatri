@@ -12,6 +12,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Kernel.External.AadhaarVerification.Types
 import qualified Kernel.External.BackgroundVerification.Types
 import qualified Kernel.External.Call
+import qualified Kernel.External.ChallanSearch.Types
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.Notification.Types
 import qualified Kernel.External.Payment.Types
@@ -29,6 +30,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     autoComplete :: Kernel.External.Maps.Types.MapsService,
     backgroundVerification :: Kernel.External.BackgroundVerification.Types.BackgroundVerificationService,
     categoryBasedVerificationPriorityList :: Kernel.Prelude.Maybe (Data.Map.Strict.Map Kernel.Prelude.Text [Kernel.External.Verification.Types.VerificationService]),
+    challanProvidersPriorityList :: Kernel.Prelude.Maybe [Kernel.External.ChallanSearch.Types.ChallanSearchService],
     createBankAccount :: Kernel.External.Payment.Types.PaymentService,
     createPayoutOrder :: Kernel.External.Payout.Types.PayoutService,
     createdAt :: Kernel.Prelude.UTCTime,
@@ -36,6 +38,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     dashboardPanVerificationService :: Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService,
     dashboardUdyamVerificationService :: Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService,
     driverBackgroundVerificationService :: Kernel.External.Verification.Types.DriverBackgroundVerificationService,
+    faceMatchService :: Kernel.External.Verification.Types.VerificationService,
     faceVerificationService :: Kernel.External.Verification.Types.VerificationService,
     getBankAccount :: Kernel.External.Payment.Types.PaymentService,
     getDistances :: Kernel.External.Maps.Types.MapsService,

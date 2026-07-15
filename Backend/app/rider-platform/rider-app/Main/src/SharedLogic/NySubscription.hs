@@ -82,7 +82,8 @@ triggerSubscriptionSearch subscription = do
             subscriptionId = Just subscription.id,
             verifyBeforeCancellingOldBooking = Just True,
             numberOfLuggages = Nothing,
-            doMultimodalSearch = Just False
+            doMultimodalSearch = Just False,
+            city = Nothing
           }
   merchantId <- subscription.merchantId & fromMaybeM (InternalError $ "no merchant id for subscription id :" <> subscription.id.getId)
   searchResp <-

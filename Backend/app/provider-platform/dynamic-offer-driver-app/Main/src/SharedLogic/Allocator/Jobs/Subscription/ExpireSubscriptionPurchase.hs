@@ -10,11 +10,12 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..), ExpireSubscriptionPurchaseJobData (..))
-import SharedLogic.Finance.Prepaid (activateNextQueuedPurchaseExpiry, handleSubscriptionExpiry)
+import SharedLogic.Finance.Prepaid (activateNextQueuedPurchaseExpiry, handleSubscriptionExpiry, resolvePrepaidScope)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.SubscriptionPurchase as QSP
 
@@ -27,7 +28,8 @@ expireSubscriptionPurchase ::
     JobCreatorEnv r,
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    Finance.HasActorInfo m r
   ) =>
   Job 'ExpireSubscriptionPurchase ->
   m ExecutionResult
@@ -44,7 +46,8 @@ expireSubscriptionPurchase Job {id = jobId, jobInfo} = withLogTag ("JobId-" <> j
       handleSubscriptionExpiry purchase
       -- After expiry, activate the next queued purchase's expiry timer (deferred FIFO)
       when (purchase.status == DSP.ACTIVE) $ do
-        mbActivated <- activateNextQueuedPurchaseExpiry purchase.ownerId purchase.ownerType purchase.vehicleCategory
+        prepaidScope <- resolvePrepaidScope purchase.merchantOperatingCityId purchase.vehicleCategory
+        mbActivated <- activateNextQueuedPurchaseExpiry purchase.ownerId purchase.ownerType prepaidScope
         whenJust mbActivated $ \(nextPurchaseId, expiry) -> do
           now <- getCurrentTime
           let delay = diffUTCTime expiry now

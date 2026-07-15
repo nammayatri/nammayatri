@@ -5,6 +5,7 @@ module API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration where
 
 import qualified API.Types.ProviderPlatform.Management.Endpoints.Account
 import qualified Dashboard.Common
+import qualified Dashboard.Common.Driver
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -16,6 +17,7 @@ import qualified Kernel.External.Verification.Interface.Types
 import qualified Kernel.External.Verification.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
@@ -25,6 +27,7 @@ import Servant.Client
 
 data AadhaarApproveDetails = AadhaarApproveDetails
   { documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image,
+    documentImageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
     aadhaarNumber :: Kernel.Prelude.Text,
     nameOnCard :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -74,11 +77,13 @@ data ApproveDetails
   | VehicleFrontInteriorImg (Kernel.Types.Id.Id Dashboard.Common.Image)
   | VehicleBackInteriorImg (Kernel.Types.Id.Id Dashboard.Common.Image)
   | OdometerImg (Kernel.Types.Id.Id Dashboard.Common.Image)
-  | LocalResidenceProofImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+  | LocalResidenceProofApprove LocalResidenceProofApproveDetails
   | PoliceVerificationCertificateImg (Kernel.Types.Id.Id Dashboard.Common.Image)
   | UDYAMApprove UDYAMApproveDetails
   | LDCApprove LDCApproveDetails
   | GSTApprove GSTApproveDetails
+  | DriverVehicleNOCImg (Kernel.Types.Id.Id Dashboard.Common.Image)
+  | TANApprove TANApproveDetails
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -128,7 +133,7 @@ data CommonDocumentListItem = CommonDocumentListItem
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data CommonDocumentRejectDetails = CommonDocumentRejectDetails {reason :: Kernel.Prelude.Text, documentId :: Kernel.Types.Id.Id Dashboard.Common.CommonDriverOnboardingDocuments}
+data CommonDocumentRejectDetails = CommonDocumentRejectDetails {reason :: Kernel.Prelude.Text, documentId :: Kernel.Types.Id.Id Dashboard.Common.CommonDriverOnboardingDocuments, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -228,6 +233,13 @@ data DocumentType
   | BankAccount
   | PanAadhaarLink
   | VoterIdCard
+  | OperatorPartnerCode
+  | MedicalCertificate
+  | Rating
+  | BotApproval
+  | NomineeDetails
+  | DriverVehicleNOC
+  | FleetRegistration
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
@@ -255,6 +267,7 @@ data DocumentsListResponse = DocumentsListResponse
     vehicleBackInterior :: [Kernel.Prelude.Text],
     pan :: [Kernel.Prelude.Text],
     vehicleNOC :: [Kernel.Prelude.Text],
+    driverVehicleNOC :: [Kernel.Prelude.Text],
     businessLicense :: [Kernel.Prelude.Text],
     odometer :: [Kernel.Prelude.Text],
     aadhaar :: [Kernel.Prelude.Text],
@@ -263,6 +276,7 @@ data DocumentsListResponse = DocumentsListResponse
     policeVerificationCertificate :: [Kernel.Prelude.Text],
     drivingSchoolCertificate :: [Kernel.Prelude.Text],
     udyamCertificate :: [Kernel.Prelude.Text],
+    medicalCertificate :: [Kernel.Prelude.Text],
     commonDocuments :: [CommonDocumentItem]
   }
   deriving stock (Generic)
@@ -322,7 +336,20 @@ data ImageDocumentsRejectDetails = ImageDocumentsRejectDetails {reason :: Kernel
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data InspectionHubRejectDetails = InspectionHubRejectDetails {reason :: Kernel.Prelude.Text, requestId :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data LDCApproveDetails = LDCApproveDetails {documentId :: Kernel.Types.Id.Id Dashboard.Common.CommonDriverOnboardingDocuments, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data LocalResidenceProofApproveDetails = LocalResidenceProofApproveDetails
+  { documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image,
+    state :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState,
+    proofDocumentType :: Kernel.Prelude.Maybe Dashboard.Common.Driver.AddressDocumentType,
+    address :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -383,7 +410,8 @@ data RCDetails = RCDetails
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     failedRules :: [Kernel.Prelude.Text],
-    verificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus
+    verificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
+    permitExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -413,7 +441,6 @@ data RegisterRCReq = RegisterRCReq
     airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    enableForAirport :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     vehicleCategory :: Kernel.Prelude.Maybe Dashboard.Common.VehicleCategory,
     vehicleClass :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleDetails :: Kernel.Prelude.Maybe Dashboard.Common.DriverVehicleDetails,
@@ -431,7 +458,7 @@ data RejectDetails
   = SSNReject SSNRejectDetails
   | ImageDocuments ImageDocumentsRejectDetails
   | CommonDocumentReject CommonDocumentRejectDetails
-  | UDYAMReject UDYAMRejectDetails
+  | InspectionHubReject InspectionHubRejectDetails
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -456,6 +483,10 @@ data StatusRes = StatusRes
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data TANApproveDetails = TANApproveDetails {documentId :: Kernel.Types.Id.Id Dashboard.Common.CommonDriverOnboardingDocuments, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data TriggerReminderReq = TriggerReminderReq {documentType :: DocumentType, dueDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime, intervals :: Kernel.Prelude.Maybe [Kernel.Prelude.Int]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -463,11 +494,7 @@ data TriggerReminderReq = TriggerReminderReq {documentType :: DocumentType, dueD
 instance Kernel.Types.HideSecrets.HideSecrets TriggerReminderReq where
   hideSecrets = Kernel.Prelude.identity
 
-data UDYAMApproveDetails = UDYAMApproveDetails {udyamId :: Kernel.Types.Id.Id Dashboard.Common.DriverUdyam, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double, udyamNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data UDYAMRejectDetails = UDYAMRejectDetails {reason :: Kernel.Prelude.Text, udyamId :: Kernel.Types.Id.Id Dashboard.Common.DriverUdyam}
+data UDYAMApproveDetails = UDYAMApproveDetails {documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double, udyamNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -630,7 +657,7 @@ data VerifyBankAccountReq = VerifyBankAccountReq {bankAccountNo :: Kernel.Prelud
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = (GetDriverRegistrationDocumentsList :<|> GetDriverRegistrationGetDocument :<|> PostDriverRegistrationDocumentUpload :<|> PostDriverRegistrationRegisterDl :<|> PostDriverRegistrationVerifyBankAccount :<|> GetDriverRegistrationInfoBankAccount :<|> GetDriverRegistrationPayoutRegistration :<|> PostDriverRegistrationDeleteBankAccount :<|> GetDriverRegistrationPayoutOrderStatus :<|> PostDriverRegistrationRegisterRc :<|> PostDriverRegistrationRegisterAadhaar :<|> PostDriverRegistrationRegisterGenerateAadhaarOtp :<|> PostDriverRegistrationRegisterVerifyAadhaarOtp :<|> GetDriverRegistrationUnderReviewDrivers :<|> GetDriverRegistrationDocumentsInfo :<|> GetDriverRegistrationVerificationStatus :<|> GetDriverRegistrationDocumentsCommonList :<|> PostDriverRegistrationDocumentsUpdate :<|> PostDriverRegistrationDocumentsCommon :<|> PostDriverRegistrationUnlinkDocumentHelper :<|> PostDriverRegistrationTriggerReminderHelper)
+type API = (GetDriverRegistrationDocumentsList :<|> GetDriverRegistrationGetDocument :<|> PostDriverRegistrationDocumentUpload :<|> PostDriverRegistrationRegisterDl :<|> PostDriverRegistrationVerifyBankAccount :<|> GetDriverRegistrationInfoBankAccount :<|> GetDriverRegistrationPayoutRegistrationHelper :<|> PostDriverRegistrationDeleteBankAccount :<|> GetDriverRegistrationPayoutOrderStatus :<|> PostDriverRegistrationRegisterRc :<|> PostDriverRegistrationRegisterAadhaar :<|> PostDriverRegistrationRegisterGenerateAadhaarOtp :<|> PostDriverRegistrationRegisterVerifyAadhaarOtp :<|> GetDriverRegistrationUnderReviewDrivers :<|> GetDriverRegistrationDocumentsInfo :<|> GetDriverRegistrationVerificationStatus :<|> GetDriverRegistrationDocumentsCommonList :<|> PostDriverRegistrationDocumentsUpdate :<|> PostDriverRegistrationDocumentsCommon :<|> PostDriverRegistrationUnlinkDocumentHelper :<|> PostDriverRegistrationTriggerReminderHelper)
 
 type GetDriverRegistrationDocumentsList =
   ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "documents" :> "list" :> QueryParam "rcId" Kernel.Prelude.Text
@@ -670,6 +697,14 @@ type GetDriverRegistrationInfoBankAccount =
   )
 
 type GetDriverRegistrationPayoutRegistration = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "payout" :> "registration" :> Get '[JSON] PayoutRegistrationRes)
+
+type GetDriverRegistrationPayoutRegistrationHelper =
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "payout" :> "registration"
+      :> QueryParam
+           "requestorId"
+           Kernel.Prelude.Text
+      :> Get '[JSON] PayoutRegistrationRes
+  )
 
 type PostDriverRegistrationDeleteBankAccount = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "delete" :> "bankAccount" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
@@ -812,7 +847,7 @@ data DriverRegistrationAPIs = DriverRegistrationAPIs
     postDriverRegistrationRegisterDl :: Kernel.Types.Id.Id Dashboard.Common.Driver -> RegisterDLReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverRegistrationVerifyBankAccount :: Kernel.Types.Id.Id Dashboard.Common.Driver -> VerifyBankAccountReq -> EulerHS.Types.EulerClient Kernel.External.Verification.Interface.Types.VerifyAsyncResp,
     getDriverRegistrationInfoBankAccount :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.External.Verification.Types.BankAccountVerificationResponse,
-    getDriverRegistrationPayoutRegistration :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient PayoutRegistrationRes,
+    getDriverRegistrationPayoutRegistration :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient PayoutRegistrationRes,
     postDriverRegistrationDeleteBankAccount :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverRegistrationPayoutOrderStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.External.Payout.Interface.Types.PayoutOrderStatusResp,
     postDriverRegistrationRegisterRc :: Kernel.Types.Id.Id Dashboard.Common.Driver -> RegisterRCReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,

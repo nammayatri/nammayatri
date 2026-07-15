@@ -3,8 +3,11 @@ module BecknV2.FRFS.Utils where
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec hiding (Domain)
 import qualified BecknV2.OnDemand.Enums as BecknSpec
+import qualified Codec.Compression.GZip as GZip
+import qualified Control.Exception as E
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time
@@ -14,6 +17,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.Error as Error
 import Kernel.Utils.Error
+import Kernel.Utils.Logging (logWarning)
 
 tfDescriptor :: Maybe Text -> Maybe Text -> Maybe Spec.Descriptor
 tfDescriptor mCode mName = do
@@ -210,3 +214,14 @@ unescapeQuotedJSON bs =
             Right txt -> Just (TE.encodeUtf8 txt)
             Left _ -> Nothing
     else Nothing
+
+decompressGzipBody :: (MonadFlow m) => ByteString -> m ByteString
+decompressGzipBody bs
+  | BS.take 2 bs == BS.pack [0x1f, 0x8b] = do
+    eRes <- liftIO $ E.try @E.SomeException (E.evaluate (BL.toStrict (GZip.decompress (BL.fromStrict bs))))
+    case eRes of
+      Right out -> pure out
+      Left err -> do
+        logWarning $ "FRFS callback: gzip decompression failed (" <> show err <> "); using raw body"
+        pure bs
+  | otherwise = pure bs

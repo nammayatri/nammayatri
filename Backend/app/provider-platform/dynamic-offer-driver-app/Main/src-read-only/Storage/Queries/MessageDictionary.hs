@@ -21,7 +21,7 @@ create = createWithKV
 
 findAllByMessageTypeAndMerchantOpCityIdAndMerchantId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.MessageDictionary.MessageType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ([Domain.Types.MessageDictionary.MessageDictionary]))
+  (Domain.Types.MessageDictionary.MessageType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m [Domain.Types.MessageDictionary.MessageDictionary])
 findAllByMessageTypeAndMerchantOpCityIdAndMerchantId messageType merchantOperatingCityId merchantId = do
   findAllWithKV
     [ Se.And
@@ -39,7 +39,8 @@ instance FromTType' Beam.MessageDictionary Domain.Types.MessageDictionary.Messag
     pure $
       Just
         Domain.Types.MessageDictionary.MessageDictionary
-          { id = Kernel.Types.Id.Id id,
+          { eligibilityLogic = eligibilityLogic,
+            id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             messageKey = messageKey,
@@ -51,7 +52,8 @@ instance FromTType' Beam.MessageDictionary Domain.Types.MessageDictionary.Messag
 instance ToTType' Beam.MessageDictionary Domain.Types.MessageDictionary.MessageDictionary where
   toTType' (Domain.Types.MessageDictionary.MessageDictionary {..}) = do
     Beam.MessageDictionaryT
-      { Beam.id = Kernel.Types.Id.getId id,
+      { Beam.eligibilityLogic = eligibilityLogic,
+        Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.messageKey = messageKey,

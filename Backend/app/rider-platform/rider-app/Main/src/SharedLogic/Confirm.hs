@@ -52,6 +52,7 @@ import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
@@ -62,14 +63,16 @@ import SharedLogic.MerchantPaymentMethod
 import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.InsuranceConfig as CQInsuranceConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
+import Storage.ConfigPilot.Config.MerchantPaymentMethod (MerchantPaymentMethodDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.Estimate as QEstimate
@@ -261,7 +264,7 @@ confirm DConfirmReq {..} = do
   (paymentMethodInfo, isStripe) <- case paymentMethodId of
     Nothing -> pure (Nothing, False)
     Just paymentMethodId' -> do
-      QMPM.findById (Id paymentMethodId') >>= \case
+      getOneConfig (MerchantPaymentMethodDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, configId = Just paymentMethodId'}) (Just (maybeToList <$> QMPM.findById (Id paymentMethodId'))) >>= \case
         Just merchantPaymentMethod -> do
           -- 1. merchantPaymentMethod.id from db
           pure (Just $ mkPaymentMethodInfo merchantPaymentMethod, False)
@@ -436,6 +439,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           serviceTierName = quote.serviceTierName,
           vehicleServiceTierType = quote.vehicleServiceTierType,
           vehicleServiceTierSeatingCapacity = quote.vehicleServiceTierSeatingCapacity,
+          vehicleServiceTierLuggageCapacity = quote.vehicleServiceTierLuggageCapacity,
           vehicleServiceTierAirConditioned = quote.vehicleServiceTierAirConditioned,
           vehicleIconUrl = quote.vehicleIconUrl,
           isAirConditioned = quote.isAirConditioned,
@@ -450,6 +454,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           distanceUnit = searchRequest.distanceUnit,
           specialLocationName = quote.specialLocationName,
           specialLocationSupportNumber = quote.specialLocationSupportNumber,
+          fareSettlementType = quote.fareSettlementType,
           isDashboardRequest = searchRequest.isDashboardRequest,
           tripCategory = quote.tripCategory,
           initiatedBy = searchRequest.initiatedBy,
@@ -573,8 +578,8 @@ extractDriverPreference mbTags = do
 
 findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m DExophone.Exophone
 findRandomExophone merchantOperatingCityId = do
-  merchantServiceUsageConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
-  exophones <- getConfig (ExophoneDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, callService = Just merchantServiceUsageConfig.getExophone})
+  merchantServiceUsageConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+  exophones <- getConfig (ExophoneDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, phoneNumber = Nothing, callService = Just merchantServiceUsageConfig.getExophone}) (Just (CQExophone.findByMerchantOperatingCityIdAndService merchantOperatingCityId merchantServiceUsageConfig.getExophone))
   nonEmptyExophones <- case exophones of
     [] -> throwError $ ExophoneNotFound merchantOperatingCityId.getId
     e : es -> pure $ e :| es

@@ -1,19 +1,18 @@
-{-# OPTIONS_GHC -Wno-orphans -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.ConfigPilot.Config.MerchantConfig
-  ( MerchantConfigDimensions (..),
-  )
-where
+module Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..)) where
 
-import qualified Domain.Types.MerchantConfig as DMC
+import qualified Domain.Types.MerchantConfig as DT
 import Kernel.Prelude
-import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
+import qualified Lib.ConfigPilot.Interface.Getter as LCP
+import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
-import qualified Storage.CachedQueries.MerchantConfig as SCMC
-import Storage.ConfigPilot.Interface.Getter
-import Storage.ConfigPilot.Interface.Types
+import Storage.Beam.Yudhishthira ()
+import qualified Storage.CachedQueries.MerchantConfig as SQ
 
 data MerchantConfigDimensions = MerchantConfigDimensions
   { merchantOperatingCityId :: Text
@@ -27,11 +26,13 @@ instance ConfigTypeInfo 'MerchantConfig where
 
 instance ConfigDimensions MerchantConfigDimensions where
   type ConfigTypeOf MerchantConfigDimensions = 'MerchantConfig
-  type ConfigValueTypeOf MerchantConfigDimensions = [DMC.MerchantConfig]
+  type ConfigValueTypeOf MerchantConfigDimensions = [DT.MerchantConfig]
   getConfigType _ = MerchantConfig
-  getConfigList a = do
-    let mocId = a.merchantOperatingCityId
-    IM.withInMemCache (configPilotInMemKey a) 3600 $ do
-      cfgs <- SCMC.findAllByMerchantOperatingCityId (Id mocId) (Just [])
-      let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) cfgs
-      mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG MerchantConfig) (Id mocId)) configWrappers
+  getConfigList a =
+    LCP.resolveConfigList
+      a
+      (LYT.RIDER_CONFIG MerchantConfig)
+      (Id a.merchantOperatingCityId)
+      (SQ.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId) (Just []))
+      ([] :: [LCP.DimMatcher MerchantConfigDimensions DT.MerchantConfig])
+      Nothing

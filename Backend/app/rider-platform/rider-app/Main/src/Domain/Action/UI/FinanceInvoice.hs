@@ -11,6 +11,7 @@ import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude (head, listToMaybe, showBaseUrl)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.Finance.Domain.Types.Invoice (InvoiceStatus (..))
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import Lib.Finance.Invoice.PdfService
@@ -21,11 +22,11 @@ import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QInvoiceExtra
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import Storage.Beam.Payment ()
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
-import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import Tools.Error
 import "beckn-services" Tools.InvoicePdf (generateFinanceInvoicePdf)
 
@@ -44,7 +45,7 @@ getFinanceInvoicePdf ::
 getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mbOffset mbReferenceId mbTo = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId))
 
   let fromTime = toUTCTimeFrom <$> mbFrom
       toTime = toUTCTimeTo <$> mbTo
@@ -146,8 +147,8 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
 
 fetchInvoicesByRideId :: Text -> Id DP.Person -> Maybe InvoiceType -> Flow [FInvoice.Invoice]
 fetchInvoicesByRideId rideId personId mbInvoiceType = do
-  ride <- QRide.findById (Id rideId) >>= fromMaybeM (RideNotFound rideId)
-  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  ride <- QRideLite.findByIdLite (Id rideId) >>= fromMaybeM (RideNotFound rideId)
+  booking <- QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   unless (booking.riderId == personId) $
     throwError $ InvalidRequest "Ride does not belong to this rider"
   QInvoiceExtra.findByReferenceIdWithOptions rideId mbInvoiceType [Draft, Issued, Paid] (Just 1) (Just 0)

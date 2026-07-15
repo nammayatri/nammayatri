@@ -3,6 +3,7 @@
 
 module Storage.Beam.OperationHubRequests where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.OperationHubRequests
@@ -16,6 +17,7 @@ data OperationHubRequestsT f = OperationHubRequestsT
     driverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fulfilledAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     id :: B.C f Kernel.Prelude.Text,
+    inspectionResponse :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     operationHubId :: B.C f Kernel.Prelude.Text,

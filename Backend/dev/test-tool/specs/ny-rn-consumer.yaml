@@ -256,7 +256,7 @@ stages:
       fi
       echo "local.properties written ($(wc -l < "$props") lines)"
     lifecycle: one-shot
-    invalidatedBy: [inputs.GOOGLE_SERVICES_JSON, inputs.VARIANT, inputs.LOCAL_PROPERTIES, ports.backend, ports.mock]
+    invalidatedBy: [inputs.GOOGLE_SERVICES_JSON, inputs.VARIANT, inputs.LOCAL_PROPERTIES, ports.caddy, ports.backend, ports.mock]
 
   - id: install
     needs: [sync-source]

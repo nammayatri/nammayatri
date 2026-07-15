@@ -20,6 +20,7 @@ module Domain.Action.UI.DriverOnboarding.Image
     validateImage,
     validateImageFile,
     getImage,
+    getImageWithAccessCheck,
     imageS3Lock,
     throwValidationError,
     convertHVStatusToValidationStatus,
@@ -32,7 +33,6 @@ import AWS.S3 as S3
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import Data.Time.Format.ISO8601
-import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate (imageS3Lock)
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.Image as Domain hiding (SelfieFetchStatus (..))
 import qualified Domain.Types.Merchant as DM
@@ -53,11 +53,16 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified SharedLogic.DriverFleetOperatorAssociation as DFOA
 import SharedLogic.DriverOnboarding
-import Storage.Cac.TransporterConfig
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CFQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverRCAssociation as QDRCA
 import qualified Storage.Queries.FleetRCAssociationExtra as FRCA
 import qualified Storage.Queries.Image as Query
@@ -65,7 +70,6 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import Tools.Error
 import qualified Tools.Verification as Verification
-import Utils.Common.Cac.KeyNameConstants
 
 data ImageValidateRequest = ImageValidateRequest
   { image :: Text,
@@ -152,7 +156,7 @@ validateImageHandler ::
 validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merchantOpCityId) req@ImageValidateRequest {..} = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantId = person.merchantId
-  docConfigs <- maybe (CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing) pure mbDocConfigs
+  docConfigs <- maybe (getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just imageType, vehicleCategory = Nothing}) (Just (CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing))) pure mbDocConfigs
   -- Only restrict when rolesAllowedToUploadDocument is non-empty; Nothing or [] means all roles allowed
   -- When mbUploaderRole is Nothing (e.g. admin not at BPP), allow; only check when uploader role is known
   whenJust (listToMaybe docConfigs >>= (.rolesAllowedToUploadDocument)) $ \allowedRoles ->
@@ -162,7 +166,7 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
           throwError (InvalidRequesterRole $ show uploaderRole)
   when (isJust validationStatus && imageType == DVC.ProfilePhoto) $ checkIfGenuineReq merchantId req
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   imageSizeInBytes <- fromMaybeM (InvalidRequest "Failed to decode base64 image") $ base64Decode image
   let maxSizeInBytes = fromMaybe 100 transporterConfig.maxAllowedDocSizeInMB * 1024 * 1024 -- Should be set for all merchants, taking 100 if not set
   when (BS.length imageSizeInBytes > maxSizeInBytes) $
@@ -215,6 +219,10 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
         )
         $ throwError $ DocumentAlreadyValidated (show imageType)
 
+      -- Driver selfie re-upload lock: allowed only while every face-match-bound doc is absent or INVALID.
+      when (imageType == DVC.ProfilePhoto && not isDashboard) $
+        enforceSelfieReuploadPolicy person allImages
+
       imagePath <- createPath personId.getId merchantId.getId imageType fileExtension
       s3Result <-
         withTryCatch "S3:put:uploadImage" $
@@ -229,12 +237,21 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
       Query.create imageEntity
 
       -- skipping validation for rc as validation not available in idfy
-      isImageValidationRequired <- case person.role of
-        Person.FLEET_OWNER -> do
-          --------------- Image validation for fleet (different config table than docConfigs)
-          fleetDocConfigs <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing
-          return $ maybe True (.isImageValidationRequired) fleetDocConfigs
-        _ -> return $ maybe True (.isImageValidationRequired) $ find (\c -> c.vehicleCategory == fromMaybe CAR vehicleCategory) docConfigs
+      (isImageValidationRequired, markValidOnSkip) <-
+        if person.role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS]
+          then do
+            --------------- Image validation for fleet (different config table than docConfigs)
+            fleetDocConfigs <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing
+            return
+              ( maybe True (.isImageValidationRequired) fleetDocConfigs,
+                fleetDocConfigs >>= (.markImageValidOnValidationSkip)
+              )
+          else do
+            let mbDocCfg = find (\c -> c.vehicleCategory == fromMaybe CAR vehicleCategory) docConfigs
+            return
+              ( maybe True (.isImageValidationRequired) mbDocCfg,
+                mbDocCfg >>= (.markImageValidOnValidationSkip)
+              )
       if isImageValidationRequired && isNothing validationStatus
         then do
           validationOutput <-
@@ -243,7 +260,23 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
           when validationOutput.validationAvailable $ do
             checkErrors imageEntity.id imageType validationOutput.detectedImage
           Query.updateVerificationStatusOnlyById Documents.VALID imageEntity.id
-        else when (isNothing validationStatus) $ Query.updateVerificationStatusOnlyById Documents.MANUAL_VERIFICATION_REQUIRED imageEntity.id
+        else
+          when (isNothing validationStatus) $
+            if markValidOnSkip == Just True
+              then Query.updateVerificationStatusOnlyById Documents.VALID imageEntity.id
+              else Query.updateVerificationStatusOnlyById Documents.MANUAL_VERIFICATION_REQUIRED imageEntity.id
+      when (imageType == DVC.ProfilePhoto) $
+        fork "deferred face match on selfie upload" $ do
+          runDeferredFaceMatchOnSelfie person imageEntity.createdAt
+          -- Recompute verified/enabled right away: the deferred run may have promoted PENDING docs to VALID.
+          void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent person.id)
+      when (imageType == DVC.LocalResidenceProof) $
+        mapM_
+          ( \staleImg -> do
+              _ <- withTryCatch "S3:delete:staleLocalResidenceProof" $ S3.delete (T.unpack staleImg.s3Path)
+              Query.deleteById staleImg.id
+          )
+          (filter (\staleImg -> staleImg.id /= imageEntity.id) allImages)
       return $ ImageValidateResponse {imageId = imageEntity.id}
   where
     checkErrors id_ _ Nothing = throwImageError id_ ImageValidationFailed
@@ -375,3 +408,15 @@ getImage merchantId imageId = do
   case imageMetadata of
     Just img | img.merchantId == merchantId -> S3.get $ T.unpack img.s3Path
     _ -> pure T.empty
+
+getImageWithAccessCheck :: Id Person.Person -> Id DM.Merchant -> Id Domain.Image -> Flow Text
+getImageWithAccessCheck personId merchantId imageId = do
+  imageMetadata <- Query.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
+  unless (imageMetadata.merchantId == merchantId) $ throwError (ImageAccessDenied imageId.getId)
+  unless (imageMetadata.personId == personId) $ do
+    mbRequestor <- Person.findById personId
+    whenJust mbRequestor $ \requestor -> do
+      imageOwner <- Person.findById imageMetadata.personId >>= fromMaybeM (PersonDoesNotExist imageMetadata.personId.getId)
+      isValid <- DFOA.isAssociationBetweenTwoPerson requestor imageOwner
+      unless isValid $ throwError (ImageAccessDenied imageId.getId)
+  S3.get $ T.unpack imageMetadata.s3Path

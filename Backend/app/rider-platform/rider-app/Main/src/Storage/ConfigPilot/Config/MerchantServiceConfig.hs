@@ -9,15 +9,15 @@ import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Extra.MerchantServiceConfig ()
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Kernel.Prelude
-import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.ConfigPilot.Interface.Getter as CR
+import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.ConfigPilot.Interface.Getter
-import Storage.ConfigPilot.Interface.Types
 import qualified Storage.Queries.MerchantServiceConfig as SQMSC
 import qualified Storage.Queries.Transformers.MerchantServiceConfig as TRMSC
 import Tools.Error
@@ -51,20 +51,17 @@ instance ConfigDimensions MerchantServiceConfigDimensions where
   type ConfigTypeOf MerchantServiceConfigDimensions = 'MerchantServiceConfig
   type ConfigValueTypeOf MerchantServiceConfigDimensions = [DMSC.MerchantServiceConfig]
   getConfigType _ = MerchantServiceConfig
-  getConfigList a = do
-    let mocId = a.merchantOperatingCityId
-    let mId = a.merchantId
-    IM.withInMemCache (configPilotInMemKey a) 3600 $ do
-      cfgs <- SQMSC.findAllByMerchantId (Id mId)
-      let filtered = filterByDimensions a cfgs
-      let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) filtered
-      mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG MerchantServiceConfig) (Id mocId)) configWrappers
-  filterByDimensions dims cfgs = filter matchesDimsMocId cfgs
-    where
-      matchesDimsMocId c =
-        maybe True (\sn -> fst (TRMSC.getServiceNameConfigJson c.serviceConfig) == sn) dims.serviceName
-          && c.merchantOperatingCityId == Id dims.merchantOperatingCityId
-  getConfig dims = do
+  getConfigList a =
+    CR.resolveConfigList
+      a
+      (LYT.RIDER_CONFIG MerchantServiceConfig)
+      (Id a.merchantOperatingCityId)
+      (SQMSC.findAllByMerchantId (Id a.merchantId))
+      [ CR.DimMatcher (\dims -> Just dims.merchantOperatingCityId) (\c -> Just (c.merchantOperatingCityId.getId)) (==),
+        CR.DimMatcher (.serviceName) (\c -> Just $ fst (TRMSC.getServiceNameConfigJson c.serviceConfig)) (==)
+      ]
+      Nothing
+  getConfig dims _mbFallback = do
     foundCfg <- measureLatency (getConfigList dims) ("MerchantServiceConfig.getConfigList merchantId=" <> dims.merchantId <> " mocId=" <> dims.merchantOperatingCityId)
     if null foundCfg
       then do

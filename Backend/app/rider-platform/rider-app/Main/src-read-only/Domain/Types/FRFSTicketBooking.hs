@@ -38,6 +38,8 @@ data FRFSTicketBooking = FRFSTicketBooking
     cancellationCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cashbackPayoutOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cashbackStatus :: Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.CashbackStatus,
+    clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     cloudType :: Kernel.Prelude.Maybe Kernel.Types.Version.CloudType,
     conductorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     customerCancelled :: Kernel.Prelude.Bool,
@@ -108,8 +110,8 @@ data FRFSTicketBooking = FRFSTicketBooking
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
 
 data CashbackStatus = PENDING | PROCESSING | SUCCESSFUL | CASHBACK_FAILED | MANUAL_VERIFICATION deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CashbackStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CashbackStatus))

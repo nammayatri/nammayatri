@@ -54,6 +54,11 @@ OPHUB_DIR="$SCRIPT_DIR/collections/OperationHubFlow"
 AIRPORT_DIR="$SCRIPT_DIR/collections/AirportTaxiFlow"
 TOLL_CONFIG_DIR="$SCRIPT_DIR/collections/TollConfigFlow"
 TOLL_RIDE_DIR="$SCRIPT_DIR/collections/TollRideFlow"
+DRIVER_IMAGE_DIR="$SCRIPT_DIR/collections/DriverImageFlow"
+PAN_HARD_CHECK_DIR="$SCRIPT_DIR/collections/PanHardCheckFlow"
+REWARDS_DIR="$SCRIPT_DIR/collections/RewardsFlow"
+PANGST_DIR="$SCRIPT_DIR/collections/PanGstCrossCheckFlow"
+FACEMATCH_DIR="$SCRIPT_DIR/collections/FaceMatchOnboardingFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
 DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
@@ -103,8 +108,28 @@ enable_all_drivers() {
         "UPDATE atlas_driver_offer_bpp.driver_information SET enabled = true, verified = true WHERE enabled = false OR verified = false;" 2>/dev/null || true
 }
 
+OPHUB_SETUP_SQL="$SCRIPT_DIR/collections/OperationHubFlow/setup-local-operation-hub.sql"
+OPHUB_CHALLAN_SETUP_SQL="$SCRIPT_DIR/collections/OperationHubFlow/setup-challan-search-test.sql"
 TOLL_SETUP_SQL="$SCRIPT_DIR/../local-testing-data/toll-dashboard-access.sql"
 PROVIDER_DASHBOARD_SEED_SQL="$SCRIPT_DIR/../local-testing-data/provider-dashboard.sql"
+FACEMATCH_SETUP_SQL="$SCRIPT_DIR/../local-testing-data/facematch-config.sql"
+
+seed_ophub() {
+    echo "Seeding operation hub + challan search config..."
+    for sql in "$OPHUB_SETUP_SQL" "$OPHUB_CHALLAN_SETUP_SQL"; do
+        if [ ! -f "$sql" ]; then
+            echo "WARNING: Setup SQL not found: $sql"
+            continue
+        fi
+        if ! psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" \
+            -v ON_ERROR_STOP=1 -f "$sql" > /dev/null 2>&1; then
+            echo "WARNING: Seed failed: $sql (postgres on $DB_HOST:$DB_PORT?)"
+            echo "  Manual: psql -h $DB_HOST -p $DB_PORT -U $DB_USER_SUPER -d $DB_NAME -f $sql"
+        fi
+    done
+}
+REWARDS_SETUP_SQL="$SCRIPT_DIR/../local-testing-data/rewards-dashboard-setup.sql"
+RIDER_DASHBOARD_SEED_SQL="$SCRIPT_DIR/../local-testing-data/rider-dashboard.sql"
 
 # Toll dashboard: access_matrix + optional local-testing-data (person, token, merchant_access).
 seed_toll_dashboard_access() {
@@ -131,10 +156,36 @@ seed_toll_dashboard_access() {
     fi
 }
 
+seed_rewards_dashboard_access() {
+    if [ "${NY_TEST_SKIP_REWARDS_SEED:-}" = "1" ]; then
+        echo "Skipping rewards dashboard seed (NY_TEST_SKIP_REWARDS_SEED=1)"
+        return 0
+    fi
+    if [ ! -f "$REWARDS_SETUP_SQL" ]; then
+        echo "WARNING: Rewards setup SQL not found: $REWARDS_SETUP_SQL"
+        return 0
+    fi
+    echo "Seeding rewards dashboard access + enable_rewards_management..."
+    if ! psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" \
+        -v ON_ERROR_STOP=1 -f "$REWARDS_SETUP_SQL" > /dev/null 2>&1; then
+        echo "WARNING: rewards-dashboard-setup.sql failed (postgres on $DB_HOST:$DB_PORT?)"
+        echo "  Manual: psql -h $DB_HOST -p $DB_PORT -U $DB_USER_SUPER -d $DB_NAME -f $REWARDS_SETUP_SQL"
+        return 0
+    fi
+    if [ -f "$RIDER_DASHBOARD_SEED_SQL" ]; then
+        echo "Seeding rider-dashboard local-testing-data (token, merchant_access)..."
+        psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" \
+            -f "$RIDER_DASHBOARD_SEED_SQL" > /dev/null 2>&1 || \
+            echo "WARNING: rider-dashboard.sql seed failed — run manually if rewards tests get 403"
+    fi
+}
+
 setup() {
     echo "=== Integration test setup ==="
     seed_toll_dashboard_access
+    seed_rewards_dashboard_access
     echo "Done. Run: ./run-tests.sh toll-config NY_Bangalore"
+    echo "       or: ./run-tests.sh rewards NY_Bangalore"
 }
 
 # ── List ──
@@ -151,7 +202,7 @@ list_suites() {
             done
         fi
     done
-    for label_dir in "Toll Config:$TOLL_CONFIG_DIR" "Toll Ride:$TOLL_RIDE_DIR" "Online Ride:$ONLINE_DIR" "Bus:$BUS_DIR" "Metro:$METRO_DIR" "Subway:$SUBWAY_DIR" "Scheduler:$SCHEDULER_DIR" "Fleet Management:$FLEET_DIR"; do
+    for label_dir in "Toll Config:$TOLL_CONFIG_DIR" "Toll Ride:$TOLL_RIDE_DIR" "Rewards:$REWARDS_DIR" "Online Ride:$ONLINE_DIR" "Bus:$BUS_DIR" "Metro:$METRO_DIR" "Subway:$SUBWAY_DIR" "Scheduler:$SCHEDULER_DIR" "Fleet Management:$FLEET_DIR"; do
         local label="${label_dir%%:*}"
         local dir="${label_dir#*:}"
         echo ""
@@ -486,6 +537,13 @@ run_scheduler() {
 
 run_loyalty() { run_frfs "$LOYALTY_DIR" "LOYALTY WALLET" "${1:-}" "${2:-}"; }
 run_stcl() { run_frfs "$STCL_DIR" "STCL MEMBERSHIP" "${1:-}" "${2:-}"; }
+run_driver_image() { run_frfs "$DRIVER_IMAGE_DIR" "DRIVER IMAGE" "${1:-}" "${2:-}"; }
+# Delegates to the collection's own run.sh — it sets transporter_config.pan_hard_check,
+# resolves seed driver/fleet-owner ids, runs newman, and resets the flag on exit.
+run_pan_hard_check() {
+    [ -x "$PAN_HARD_CHECK_DIR/run.sh" ] || { echo "No PanHardCheck runner at $PAN_HARD_CHECK_DIR/run.sh"; exit 1; }
+    "$PAN_HARD_CHECK_DIR/run.sh" "${1:-NY_Bangalore}"
+}
 run_intercity() { run_frfs "$INTERCITY_DIR" "INTERCITY" "${1:-}" "${2:-}"; }
 run_rental() { run_frfs "$RENTAL_DIR" "RENTAL" "${1:-}" "${2:-}"; }
 run_fleet() { run_frfs "$FLEET_DIR" "FLEET MANAGEMENT" "${1:-}" "${2:-}"; }
@@ -508,7 +566,10 @@ run_sms() {
     echo ""
     return $sms_exit
 }
-run_ophub() { run_frfs "$OPHUB_DIR" "OPERATION HUB" "${1:-}" "${2:-}"; }
+run_ophub() {
+    seed_ophub
+    run_frfs "$OPHUB_DIR" "OPERATION HUB" "${1:-}" "${2:-}"
+}
 run_airport() { run_frfs "$AIRPORT_DIR" "AIRPORT TAXI" "${1:-}" "${2:-}"; }
 run_toll_config() {
     seed_toll_dashboard_access
@@ -520,6 +581,25 @@ run_toll_ride() {
 }
 run_toll() {
     run_toll_config "${1:-}" "${2:-}" && run_toll_ride "${1:-}" "${2:-}"
+}
+run_rewards() {
+    seed_rewards_dashboard_access
+    run_frfs "$REWARDS_DIR" "REWARDS" "${1:-}" "${2:-}"
+}
+
+run_pangst() {
+    run_frfs "$PANGST_DIR" "PAN-GST CROSS CHECK" "${1:-}" "${2:-}"
+}
+
+# Face match onboarding: enable the per-document face-match toggle (base data comes from config sync).
+seed_facematch_config() {
+    echo "Seeding face-match config (document_verification_config.face_match_source_doc)..."
+    psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" -f "$FACEMATCH_SETUP_SQL" >/dev/null 2>&1 \
+        || echo "WARNING: face-match seed failed — run manually: psql -h $DB_HOST -p $DB_PORT -U $DB_USER_SUPER -d $DB_NAME -f $FACEMATCH_SETUP_SQL"
+}
+run_facematch() {
+    seed_facematch_config
+    run_frfs "$FACEMATCH_DIR" "FACE MATCH ONBOARDING" "${1:-}" "${2:-}"
 }
 
 # ── Help ──
@@ -550,11 +630,17 @@ show_help() {
     echo "  toll-config         Run toll dashboard API suites (CRUD, CSV, polygon gates)"
     echo "  toll-ride           Run toll + auto ride flow (estimate tollChargesInfo)"
     echo "  toll                Run toll-config then toll-ride"
+    echo "  rewards             Run rewards dashboard + rider unlock suites (NY + BT)"
+    echo "  face-match          Run selfie<->document face match onboarding suites (auto-seeds face-match config)"
     echo "  ./run-tests.sh toll-config NY_Bangalore       # Toll dashboard APIs (Bangalore)"
     echo "  ./run-tests.sh toll-config BT_Delhi           # Toll dashboard APIs (Delhi)"
+    echo "  ./run-tests.sh rewards NY_Bangalore           # Rewards APIs (Namma Yatri)"
+    echo "  ./run-tests.sh rewards BT_Delhi               # Rewards APIs (Bharat Taxi)"
     echo "  ./run-tests.sh toll-ride NY_Bangalore           # Toll on estimate + auto ride (Bangalore)"
     echo "  ./run-tests.sh toll-ride BT_Delhi             # Toll on estimate + auto ride (Delhi)"
     echo "  --setup             Seed toll dashboard access_matrix + provider-dashboard.sql"
+    echo "  driver-image        Run driver image fetch API tests"
+    echo "  pan-hard-check      Run PAN hard-check tests (business PAN rejected for DRIVER/FLEET_OWNER)"
     echo "  --list              List all available suites and cities"
     echo "  --check             Check for stuck DB entities"
     echo "  -d                  Debug: capture per-API service logs to assets/test-logs/"
@@ -669,6 +755,21 @@ case "${1:-}" in
         ;;
     toll)
         run_toll "${2:-}" "${3:-}"
+        ;;
+    rewards)
+        run_rewards "${2:-}" "${3:-}"
+        ;;
+    driver-image)
+        run_driver_image "${2:-}" "${3:-}"
+        ;;
+    pan|pan-hard-check)
+        run_pan_hard_check "${2:-}"
+        ;;
+    pan-gst|pangst)
+        run_pangst "${2:-}" "${3:-}"
+        ;;
+    face-match|facematch)
+        run_facematch "${2:-}" "${3:-}"
         ;;
     "")
         run_rides

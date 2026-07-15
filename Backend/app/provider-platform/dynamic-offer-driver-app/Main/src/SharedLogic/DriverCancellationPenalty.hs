@@ -39,6 +39,7 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -131,8 +132,7 @@ mkCancellationPenaltyFee now merchantId merchantOpCityId driverId penaltyAmount 
     )
 
 accumulateCancellationPenalty ::
-  ( MonadFlow m,
-    EncFlow m r,
+  ( EncFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -152,7 +152,8 @@ accumulateCancellationPenalty ::
     Redis.HedisFlow m r,
     EventStreamFlow m r,
     Metrics.HasCoreMetrics r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    Finance.HasActorInfo m r
   ) =>
   Bool -> -- isWalletEnabled
   SRB.Booking ->

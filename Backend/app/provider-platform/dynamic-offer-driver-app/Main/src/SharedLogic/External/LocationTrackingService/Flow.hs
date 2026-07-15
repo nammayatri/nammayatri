@@ -274,6 +274,7 @@ driversLocationByCloudType driverIds mbCloudType = do
   ltsCfg <- asks (.ltsCfg)
   cloudType <- asks (.cloudType)
   let url = if cloudType == mbCloudType then ltsCfg.url else fromMaybe ltsCfg.url ltsCfg.secondaryUrl
+  let fallbackUrl = if url == ltsCfg.url then ltsCfg.secondaryUrl else Just ltsCfg.url
   let req =
         DriversLocationReq
           { driverIds
@@ -282,5 +283,14 @@ driversLocationByCloudType driverIds mbCloudType = do
     withShortRetry $
       callAPI url (DriversLocationAPI.driversLocation req) "driversLocation" DriversLocationAPI.locationTrackingServiceAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVERS_LOCATION_API") url)
-  logDebug $ "lts driversLocation: " <> show driversLocationRes
-  return driversLocationRes
+  logDebug $ "lts driversLocationByCloudType: " <> show driversLocationRes
+  case (driversLocationRes, fallbackUrl) of
+    ([], Just secondaryUrl) -> do
+      logDebug "driversLocationByCloudType: primary returned empty, trying fallback URL"
+      fallbackRes <-
+        withShortRetry $
+          callAPI secondaryUrl (DriversLocationAPI.driversLocation req) "driversLocation" DriversLocationAPI.locationTrackingServiceAPI
+            >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVERS_LOCATION_API") secondaryUrl)
+      logDebug $ "lts driversLocationByCloudType fallback: " <> show fallbackRes
+      return fallbackRes
+    _ -> return driversLocationRes

@@ -1,48 +1,47 @@
-{-# OPTIONS_GHC -Wno-orphans -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.ConfigPilot.Config.PayoutConfig
-  ( PayoutDimensions (..),
-  )
-where
+module Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..)) where
 
-import qualified Domain.Types.PayoutConfig as DPC
-import Domain.Types.VehicleCategory (VehicleCategory)
+import qualified Domain.Types.PayoutConfig
+import qualified Domain.Types.PayoutConfig as DT
+import qualified Domain.Types.VehicleCategory
 import Kernel.Prelude
-import qualified Kernel.Storage.InMem as IM
+import qualified Kernel.Prelude
 import Kernel.Types.Id
+import qualified Lib.ConfigPilot.Interface.Getter as LCP
+import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
-import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
-import Storage.ConfigPilot.Interface.Getter
-import Storage.ConfigPilot.Interface.Types
+import Storage.Beam.Yudhishthira ()
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as SQ
 
-data PayoutDimensions = PayoutDimensions
+data PayoutConfigDimensions = PayoutConfigDimensions
   { merchantOperatingCityId :: Text,
-    vehicleCategory :: Maybe VehicleCategory,
-    isPayoutEnabled :: Maybe Bool,
-    payoutEntity :: Maybe DPC.PayoutEntity
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
+    isPayoutEnabled :: Maybe Kernel.Prelude.Bool,
+    payoutEntity :: Maybe Domain.Types.PayoutConfig.PayoutEntity
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
-instance ConfigTypeInfo 'PayoutConfig where
-  type DimensionsFor 'PayoutConfig = PayoutDimensions
-  configTypeValue = PayoutConfig
-  sConfigType = SPayoutConfig
+instance ConfigTypeInfo 'PayoutConfigRider where
+  type DimensionsFor 'PayoutConfigRider = PayoutConfigDimensions
+  configTypeValue = PayoutConfigRider
+  sConfigType = SPayoutConfigRider
 
-instance ConfigDimensions PayoutDimensions where
-  type ConfigTypeOf PayoutDimensions = 'PayoutConfig
-  type ConfigValueTypeOf PayoutDimensions = [DPC.PayoutConfig]
-  getConfigType _ = PayoutConfig
-  getConfigList a = do
-    let mocId = a.merchantOperatingCityId
-    IM.withInMemCache (configPilotInMemKey a) 3600 $ do
-      cfgs <- CPC.findAllByMerchantOpCityId (Id mocId) (Just [])
-      let filtered = filterByDimensions a cfgs
-      let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) filtered
-      mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG PayoutConfig) (Id mocId)) configWrappers
-  filterByDimensions dims cfgs = filter matchesDims cfgs
-    where
-      matchesDims c =
-        maybe True (\vc -> c.vehicleCategory == Just vc) dims.vehicleCategory
-          && maybe True (\en -> c.isPayoutEnabled == en) dims.isPayoutEnabled
-          && maybe True (\pe -> c.payoutEntity == pe) dims.payoutEntity
+instance ConfigDimensions PayoutConfigDimensions where
+  type ConfigTypeOf PayoutConfigDimensions = 'PayoutConfigRider
+  type ConfigValueTypeOf PayoutConfigDimensions = [DT.PayoutConfig]
+  getConfigType _ = PayoutConfigRider
+  getConfigList a =
+    LCP.resolveConfigList
+      a
+      (LYT.RIDER_CONFIG PayoutConfig)
+      (Id a.merchantOperatingCityId)
+      (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId) (Just []))
+      [ LCP.DimMatcher (.vehicleCategory) (.vehicleCategory) (==),
+        LCP.DimMatcher (.isPayoutEnabled) (Just . (.isPayoutEnabled)) (==),
+        LCP.DimMatcher (.payoutEntity) (Just . (.payoutEntity)) (==)
+      ]
+      Nothing

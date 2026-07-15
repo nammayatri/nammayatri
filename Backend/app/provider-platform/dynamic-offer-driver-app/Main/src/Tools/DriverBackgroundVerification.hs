@@ -25,8 +25,11 @@ import Kernel.External.Verification.SafetyPortal.Types
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Tools.Error
 
 searchAgent ::
@@ -48,11 +51,11 @@ runWithServiceConfig ::
 runWithServiceConfig func getCfg merchantId merchantOpCityId req = do
   logDebug $ "runWithServiceConfig: merchantId: " <> merchantId.getId <> ", merchantOpCityId: " <> merchantOpCityId.getId <> "WE REACHED TILL HERE!"
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   logDebug $ "runWithServiceConfig: merchantServiceUsageConfig: " <> show merchantServiceUsageConfig
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity (DMSC.DriverBackgroundVerificationService $ getCfg merchantServiceUsageConfig) merchantOpCityId
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.DriverBackgroundVerificationService $ getCfg merchantServiceUsageConfig)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.DriverBackgroundVerificationService $ getCfg merchantServiceUsageConfig) merchantOpCityId))
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId)
   case merchantServiceConfig.serviceConfig of
     DMSC.DriverBackgroundVerificationServiceConfig vsc -> func vsc req

@@ -16,6 +16,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSTicketBooking as Beam
 import Storage.Queries.FRFSTicketBookingExtra as ReExport
@@ -26,7 +27,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking] -> m ())
 createMany = traverse_ create
 
-findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
+findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> m ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking]))
 findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 
 findByBppOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.FRFSTicketBooking.FRFSTicketBooking))
@@ -173,7 +174,7 @@ updateTotalPriceById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.T
 updateTotalPriceById totalPrice id = do
   _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) totalPrice),
+    [ Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) totalPrice),
       Se.Set Beam.price ((.amount) totalPrice),
       Se.Set Beam.updatedAt _now
     ]
@@ -202,6 +203,8 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.cancellationCharges cancellationCharges,
       Se.Set Beam.cashbackPayoutOrderId cashbackPayoutOrderId,
       Se.Set Beam.cashbackStatus cashbackStatus,
+      Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
+      Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
       Se.Set Beam.cloudType cloudType,
       Se.Set Beam.conductorId conductorId,
       Se.Set Beam.customerCancelled customerCancelled,
@@ -265,7 +268,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.toStationLat ((.lat) <$> toStationPoint),
       Se.Set Beam.toStationLon ((.lon) <$> toStationPoint),
       Se.Set Beam.toStopIdx toStopIdx,
-      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) totalPrice),
+      Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) totalPrice),
       Se.Set Beam.price ((.amount) totalPrice),
       Se.Set Beam.tripId tripId,
       Se.Set Beam.validTill validTill,

@@ -18,7 +18,7 @@ data EntityExtraInformation = EntityExtraInformation {entityType :: EntityType, 
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data EntityInfoAPIEntity = EntityInfoAPIEntity {questionId :: Kernel.Prelude.Text, question :: Kernel.Prelude.Text, answer :: Kernel.Prelude.Text}
+data EntityInfoAPIEntity = EntityInfoAPIEntity {questionId :: Kernel.Prelude.Text, question :: Kernel.Prelude.Text, answer :: Kernel.Prelude.Text, mediaFileId :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

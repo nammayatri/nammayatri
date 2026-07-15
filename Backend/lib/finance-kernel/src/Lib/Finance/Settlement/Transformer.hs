@@ -10,20 +10,25 @@ import qualified Kernel.External.Settlement.Interface.Types as Ext
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (generateGUID, getCurrentTime)
+import Lib.Finance.Core.Types (HasActorInfo)
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as Dom
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 
 toPgPaymentSettlementReport ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   Text ->
   Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
+  (Text -> m (Maybe Dom.OrderType, Maybe Bool, Maybe Text)) ->
   Ext.PaymentSettlementReport ->
   m Dom.PgPaymentSettlementReport
-toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId referenceType report = do
+toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId referenceType mbBankCode resolveOrderType report = do
   now <- getCurrentTime
   reportId <- generateGUID
+  (orderType, isValidSubscriptionPurchase, mbSubscriptionPurchaseId) <- resolveOrderType report.orderId
+  actorInfo <- asks (.actorInfo)
   let (chargebackId, chargebackReasonCode, chargebackStatus, chargebackAmount) = case report.txnType of
         Ext.CHARGEBACK ->
           ( report.disputeId,
@@ -41,7 +46,7 @@ toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId refer
         txnId = report.txnId,
         rrn = report.rrn,
         utr = report.utr,
-        bankId = Nothing,
+        bankId = report.bankId,
         chargebackAmount = chargebackAmount,
         txnType = mapTxnType report.txnType,
         txnStatus = mapTxnStatus report.txnStatus,
@@ -54,9 +59,12 @@ toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId refer
         vendorId = report.vendorId,
         uniqueSplitId = report.uniqueSplitId,
         paymentGateway = report.paymentGateway,
-        pgApprovalCode = Nothing,
+        pgApprovalCode = report.pgApprovalCode,
         paymentMethod = mapPaymentMethod <$> report.paymentMethod,
         paymentMethodSubType = report.paymentMethodSubType,
+        bankCode = mbBankCode,
+        cardType = report.cardType,
+        cardNumber = report.cardNumber,
         settlementType = mapSettlementType <$> report.settlementType,
         settlementMode = mapSettlementMode <$> report.settlementMode,
         settlementId = report.settlementId,
@@ -76,9 +84,16 @@ toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId refer
         chargebackStatus = chargebackStatus,
         disputeId = report.disputeId,
         disputeType = mapDisputeType <$> report.disputeType,
+        orderType = orderType,
+        isValidSubscriptionPurchase = isValidSubscriptionPurchase,
+        subscriptionPurchaseId = mbSubscriptionPurchaseId,
         reconStatus = Dom.PENDING,
         reconMessage = Nothing,
         rawData = report.rawData,
+        createdBy = Just actorInfo.actorType,
+        createdById = actorInfo.actorId,
+        updatedBy = Just actorInfo.actorType,
+        updatedById = actorInfo.actorId,
         createdAt = now,
         updatedAt = now
       }
@@ -98,6 +113,19 @@ mapPaymentMethod Ext.CREDIT_CARD = Dom.CREDIT_CARD
 mapPaymentMethod Ext.DEBIT_CARD = Dom.DEBIT_CARD
 mapPaymentMethod Ext.NETBANKING = Dom.NETBANKING
 mapPaymentMethod Ext.WALLET = Dom.WALLET
+mapPaymentMethod Ext.CASH_CARD = Dom.CASH_CARD
+mapPaymentMethod Ext.BHARAT_QR = Dom.BHARAT_QR
+mapPaymentMethod Ext.EMI = Dom.EMI
+mapPaymentMethod Ext.NEFT = Dom.NEFT
+mapPaymentMethod Ext.UPI_CREDIT = Dom.UPI_CREDIT
+mapPaymentMethod Ext.ENACH = Dom.ENACH
+mapPaymentMethod Ext.CBDC = Dom.CBDC
+mapPaymentMethod Ext.UPI_PREPAID_WALLET = Dom.UPI_PREPAID_WALLET
+mapPaymentMethod Ext.UPI_CREDIT_LINE = Dom.UPI_CREDIT_LINE
+mapPaymentMethod Ext.BANK_TRANSFER = Dom.BANK_TRANSFER
+mapPaymentMethod Ext.COMMERCIAL_CARD = Dom.COMMERCIAL_CARD
+mapPaymentMethod Ext.PAY_LATER = Dom.PAY_LATER
+mapPaymentMethod Ext.INTERNATIONAL_CARD = Dom.INTERNATIONAL_CARD
 
 mapSettlementType :: Ext.SettlementType -> Dom.SettlementType
 mapSettlementType Ext.CREDIT = Dom.CREDIT

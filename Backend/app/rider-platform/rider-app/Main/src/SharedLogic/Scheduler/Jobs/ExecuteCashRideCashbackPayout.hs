@@ -6,13 +6,15 @@ import Domain.Types.VehicleCategory as DV
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payout.Interface as Payout
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Account as DA
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
@@ -24,23 +26,26 @@ import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPayoutCfg
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as TP
 
 executeCashRideCashbackPayoutJob ::
   ( EncFlow m r,
     CacheFlow m r,
     MonadFlow m,
+    ServiceFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Job 'ExecuteCashRideCashbackPayout ->
   m ExecutionResult
@@ -57,13 +62,15 @@ runPayoutForPerson ::
   ( EncFlow m r,
     CacheFlow m r,
     MonadFlow m,
+    ServiceFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id Person ->
   m ()
@@ -87,7 +94,7 @@ runPayoutForPerson personId = do
           if totalAmount <= 0
             then logInfo $ "Cashback net total non-positive (" <> show totalAmount <> ") for person=" <> personId.getId <> " — skipping"
             else do
-              mbPayoutConfig <- getOneConfig (PayoutDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just DV.CAR, isPayoutEnabled = Nothing, payoutEntity = Nothing})
+              mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just DV.CAR, isPayoutEnabled = Nothing, payoutEntity = Nothing}) (Just (maybeToList <$> CQPayoutCfg.findByCityIdAndVehicleCategory person.merchantOperatingCityId DV.CAR (Just [])))
               case mbPayoutConfig of
                 Nothing ->
                   logError $ "PayoutConfig not found for city=" <> person.merchantOperatingCityId.getId <> " — skipping payout for person=" <> personId.getId
@@ -98,12 +105,14 @@ submitCashbackPayout ::
   ( EncFlow m r,
     CacheFlow m r,
     MonadFlow m,
+    ServiceFlow m r,
     EsqDBFlow m r,
     SchedulerFlow r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Person ->
   Text -> -- VPA
@@ -170,6 +179,8 @@ submitCashbackPayout person payoutVpa payoutConfig cashbackEntries totalAmount =
           <> show (length originalEntryIds)
           <> " amount="
           <> show totalAmount
+      Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_INITIATED" totalAmount
     PayoutRequest.PayoutFailed _ err -> do
       RidePaymentFinance.releaseCashbackEntriesReservation originalEntryIds
       logError $ "Cashback payout submission failed for person=" <> person.id.getId <> ": " <> err
+      Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_FAILED" totalAmount

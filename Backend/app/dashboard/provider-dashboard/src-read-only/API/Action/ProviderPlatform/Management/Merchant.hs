@@ -29,10 +29,10 @@ import Storage.Beam.CommonInstances ()
 import qualified Toll.Domain.Types.Toll
 import Tools.Auth.Api
 
-type API = ("merchant" :> (PostMerchantUpdate :<|> GetMerchantConfigCommon :<|> PostMerchantConfigCommonUpdate :<|> GetMerchantConfigDriverPool :<|> PostMerchantConfigDriverPoolUpdate :<|> PostMerchantConfigDriverPoolCreate :<|> PostMerchantConfigDriverPoolUpsert :<|> GetMerchantConfigDriverPoolList :<|> GetMerchantConfigDriverIntelligentPool :<|> PostMerchantConfigDriverIntelligentPoolUpdate :<|> GetMerchantConfigOnboardingDocument :<|> PostMerchantConfigOnboardingDocumentUpdate :<|> PostMerchantConfigOnboardingDocumentCreate :<|> GetMerchantServiceUsageConfig :<|> PostMerchantServiceConfigMapsUpdate :<|> PostMerchantServiceUsageConfigMapsUpdate :<|> PostMerchantServiceConfigSmsUpdate :<|> PostMerchantServiceUsageConfigSmsUpdate :<|> PostMerchantServiceConfigVerificationUpdate :<|> PostMerchantConfigFarePolicyDriverExtraFeeBoundsCreate :<|> PostMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate :<|> PostMerchantConfigFarePolicyPerExtraKmRateUpdate :<|> PostMerchantConfigFarePolicyUpdate :<|> PostMerchantConfigFarePolicyUpsert :<|> GetMerchantConfigFarePolicyExport :<|> GetMerchantConfigFarePolicyDetails :<|> GetMerchantConfigFareProductList :<|> PostMerchantConfigOperatingCityCreate :<|> PostMerchantSchedulerTrigger :<|> PostMerchantUpdateOnboardingVehicleVariantMapping :<|> PostMerchantConfigSpecialLocationUpsert :<|> GetMerchantConfigSpecialLocationList :<|> GetMerchantConfigGeometryList :<|> PutMerchantConfigGeometryUpdate :<|> PostMerchantSpecialLocationUpsert :<|> DeleteMerchantSpecialLocationDelete :<|> PostMerchantSpecialLocationGatesUpsert :<|> DeleteMerchantSpecialLocationGatesDelete :<|> PostMerchantConfigTollUpsert :<|> GetMerchantConfigTollList :<|> PostMerchantTollUpsert :<|> DeleteMerchantTollDelete :<|> PostMerchantConfigClearCacheSubscription :<|> PostMerchantConfigUpsertPlanAndConfigSubscription :<|> PostMerchantConfigFailover :<|> PostMerchantPayoutConfigUpdate :<|> PostMerchantConfigOperatingCityWhiteList :<|> PostMerchantConfigMerchantCreate :<|> GetMerchantConfigVehicleServiceTier :<|> GetMerchantConfigVehicleServiceTierList :<|> PostMerchantConfigVehicleServiceTierUpdate :<|> PostMerchantConfigVehicleServiceTierCreate :<|> PostMerchantConfigDebugLogUpdate :<|> GetMerchantMerchantDocumentList :<|> GetMerchantMerchantDocument :<|> PostMerchantMerchantDocumentCreate :<|> PostMerchantMerchantDocumentUpdate :<|> PostMerchantMerchantDocumentDelete :<|> GetMerchantCityList))
+type API = ("merchant" :> (PostMerchantUpdate :<|> GetMerchantConfigCommon :<|> PostMerchantConfigCommonUpdate :<|> GetMerchantConfigDriverPool :<|> PostMerchantConfigDriverPoolUpdate :<|> PostMerchantConfigDriverPoolCreate :<|> PostMerchantConfigDriverPoolUpsert :<|> GetMerchantConfigDriverPoolList :<|> GetMerchantConfigDriverIntelligentPool :<|> PostMerchantConfigDriverIntelligentPoolUpdate :<|> GetMerchantConfigOnboardingDocument :<|> PostMerchantConfigOnboardingDocumentUpdate :<|> PostMerchantConfigOnboardingDocumentCreate :<|> GetMerchantServiceUsageConfig :<|> PostMerchantServiceConfigMapsUpdate :<|> PostMerchantServiceUsageConfigMapsUpdate :<|> PostMerchantServiceConfigSmsUpdate :<|> PostMerchantServiceUsageConfigSmsUpdate :<|> PostMerchantServiceConfigVerificationUpdate :<|> PostMerchantConfigFarePolicyDriverExtraFeeBoundsCreate :<|> PostMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate :<|> PostMerchantConfigFarePolicyPerExtraKmRateUpdate :<|> PostMerchantConfigFarePolicyUpdate :<|> PostMerchantConfigFarePolicyUpsert :<|> GetMerchantConfigFarePolicyExport :<|> GetMerchantConfigFarePolicyDetails :<|> GetMerchantConfigFareProductList :<|> PostMerchantConfigFareProductSetEnabled :<|> PostMerchantConfigOperatingCityCreate :<|> PostMerchantSchedulerTrigger :<|> PostMerchantUpdateOnboardingVehicleVariantMapping :<|> PostMerchantConfigSpecialLocationUpsert :<|> GetMerchantConfigSpecialLocationList :<|> GetMerchantConfigGeometryList :<|> PutMerchantConfigGeometryUpdate :<|> PostMerchantSpecialLocationUpsert :<|> DeleteMerchantSpecialLocationDelete :<|> PostMerchantSpecialLocationGatesUpsert :<|> DeleteMerchantSpecialLocationGatesDelete :<|> PostMerchantConfigTollUpsert :<|> GetMerchantConfigTollList :<|> PostMerchantTollUpsert :<|> DeleteMerchantTollDelete :<|> PostMerchantConfigClearCacheSubscription :<|> PostMerchantConfigUpsertPlanAndConfigSubscription :<|> GetMerchantConfigVendorSplitDetailsList :<|> GetMerchantConfigSubscriptionConfigList :<|> PostMerchantConfigFailover :<|> PostMerchantPayoutConfigUpdate :<|> PostMerchantConfigOperatingCityWhiteList :<|> PostMerchantConfigMerchantCreate :<|> GetMerchantConfigVehicleServiceTier :<|> GetMerchantConfigVehicleServiceTierList :<|> PostMerchantConfigVehicleServiceTierUpdate :<|> PostMerchantConfigVehicleServiceTierCreate :<|> PostMerchantConfigDebugLogUpdate :<|> GetMerchantMerchantDocumentList :<|> GetMerchantMerchantDocument :<|> PostMerchantMerchantDocumentCreate :<|> PostMerchantMerchantDocumentUpdate :<|> PostMerchantMerchantDocumentDelete :<|> GetMerchantMerchantMessageCatalog :<|> PostMerchantMerchantMessageUpsert :<|> DeleteMerchantMerchantMessage :<|> GetMerchantCityList))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = postMerchantUpdate merchantId city :<|> getMerchantConfigCommon merchantId city :<|> postMerchantConfigCommonUpdate merchantId city :<|> getMerchantConfigDriverPool merchantId city :<|> postMerchantConfigDriverPoolUpdate merchantId city :<|> postMerchantConfigDriverPoolCreate merchantId city :<|> postMerchantConfigDriverPoolUpsert merchantId city :<|> getMerchantConfigDriverPoolList merchantId city :<|> getMerchantConfigDriverIntelligentPool merchantId city :<|> postMerchantConfigDriverIntelligentPoolUpdate merchantId city :<|> getMerchantConfigOnboardingDocument merchantId city :<|> postMerchantConfigOnboardingDocumentUpdate merchantId city :<|> postMerchantConfigOnboardingDocumentCreate merchantId city :<|> getMerchantServiceUsageConfig merchantId city :<|> postMerchantServiceConfigMapsUpdate merchantId city :<|> postMerchantServiceUsageConfigMapsUpdate merchantId city :<|> postMerchantServiceConfigSmsUpdate merchantId city :<|> postMerchantServiceUsageConfigSmsUpdate merchantId city :<|> postMerchantServiceConfigVerificationUpdate merchantId city :<|> postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate merchantId city :<|> postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate merchantId city :<|> postMerchantConfigFarePolicyPerExtraKmRateUpdate merchantId city :<|> postMerchantConfigFarePolicyUpdate merchantId city :<|> postMerchantConfigFarePolicyUpsert merchantId city :<|> getMerchantConfigFarePolicyExport merchantId city :<|> getMerchantConfigFarePolicyDetails merchantId city :<|> getMerchantConfigFareProductList merchantId city :<|> postMerchantConfigOperatingCityCreate merchantId city :<|> postMerchantSchedulerTrigger merchantId city :<|> postMerchantUpdateOnboardingVehicleVariantMapping merchantId city :<|> postMerchantConfigSpecialLocationUpsert merchantId city :<|> getMerchantConfigSpecialLocationList merchantId city :<|> getMerchantConfigGeometryList merchantId city :<|> putMerchantConfigGeometryUpdate merchantId city :<|> postMerchantSpecialLocationUpsert merchantId city :<|> deleteMerchantSpecialLocationDelete merchantId city :<|> postMerchantSpecialLocationGatesUpsert merchantId city :<|> deleteMerchantSpecialLocationGatesDelete merchantId city :<|> postMerchantConfigTollUpsert merchantId city :<|> getMerchantConfigTollList merchantId city :<|> postMerchantTollUpsert merchantId city :<|> deleteMerchantTollDelete merchantId city :<|> postMerchantConfigClearCacheSubscription merchantId city :<|> postMerchantConfigUpsertPlanAndConfigSubscription merchantId city :<|> postMerchantConfigFailover merchantId city :<|> postMerchantPayoutConfigUpdate merchantId city :<|> postMerchantConfigOperatingCityWhiteList merchantId city :<|> postMerchantConfigMerchantCreate merchantId city :<|> getMerchantConfigVehicleServiceTier merchantId city :<|> getMerchantConfigVehicleServiceTierList merchantId city :<|> postMerchantConfigVehicleServiceTierUpdate merchantId city :<|> postMerchantConfigVehicleServiceTierCreate merchantId city :<|> postMerchantConfigDebugLogUpdate merchantId city :<|> getMerchantMerchantDocumentList merchantId city :<|> getMerchantMerchantDocument merchantId city :<|> postMerchantMerchantDocumentCreate merchantId city :<|> postMerchantMerchantDocumentUpdate merchantId city :<|> postMerchantMerchantDocumentDelete merchantId city :<|> getMerchantCityList merchantId city
+handler merchantId city = postMerchantUpdate merchantId city :<|> getMerchantConfigCommon merchantId city :<|> postMerchantConfigCommonUpdate merchantId city :<|> getMerchantConfigDriverPool merchantId city :<|> postMerchantConfigDriverPoolUpdate merchantId city :<|> postMerchantConfigDriverPoolCreate merchantId city :<|> postMerchantConfigDriverPoolUpsert merchantId city :<|> getMerchantConfigDriverPoolList merchantId city :<|> getMerchantConfigDriverIntelligentPool merchantId city :<|> postMerchantConfigDriverIntelligentPoolUpdate merchantId city :<|> getMerchantConfigOnboardingDocument merchantId city :<|> postMerchantConfigOnboardingDocumentUpdate merchantId city :<|> postMerchantConfigOnboardingDocumentCreate merchantId city :<|> getMerchantServiceUsageConfig merchantId city :<|> postMerchantServiceConfigMapsUpdate merchantId city :<|> postMerchantServiceUsageConfigMapsUpdate merchantId city :<|> postMerchantServiceConfigSmsUpdate merchantId city :<|> postMerchantServiceUsageConfigSmsUpdate merchantId city :<|> postMerchantServiceConfigVerificationUpdate merchantId city :<|> postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate merchantId city :<|> postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate merchantId city :<|> postMerchantConfigFarePolicyPerExtraKmRateUpdate merchantId city :<|> postMerchantConfigFarePolicyUpdate merchantId city :<|> postMerchantConfigFarePolicyUpsert merchantId city :<|> getMerchantConfigFarePolicyExport merchantId city :<|> getMerchantConfigFarePolicyDetails merchantId city :<|> getMerchantConfigFareProductList merchantId city :<|> postMerchantConfigFareProductSetEnabled merchantId city :<|> postMerchantConfigOperatingCityCreate merchantId city :<|> postMerchantSchedulerTrigger merchantId city :<|> postMerchantUpdateOnboardingVehicleVariantMapping merchantId city :<|> postMerchantConfigSpecialLocationUpsert merchantId city :<|> getMerchantConfigSpecialLocationList merchantId city :<|> getMerchantConfigGeometryList merchantId city :<|> putMerchantConfigGeometryUpdate merchantId city :<|> postMerchantSpecialLocationUpsert merchantId city :<|> deleteMerchantSpecialLocationDelete merchantId city :<|> postMerchantSpecialLocationGatesUpsert merchantId city :<|> deleteMerchantSpecialLocationGatesDelete merchantId city :<|> postMerchantConfigTollUpsert merchantId city :<|> getMerchantConfigTollList merchantId city :<|> postMerchantTollUpsert merchantId city :<|> deleteMerchantTollDelete merchantId city :<|> postMerchantConfigClearCacheSubscription merchantId city :<|> postMerchantConfigUpsertPlanAndConfigSubscription merchantId city :<|> getMerchantConfigVendorSplitDetailsList merchantId city :<|> getMerchantConfigSubscriptionConfigList merchantId city :<|> postMerchantConfigFailover merchantId city :<|> postMerchantPayoutConfigUpdate merchantId city :<|> postMerchantConfigOperatingCityWhiteList merchantId city :<|> postMerchantConfigMerchantCreate merchantId city :<|> getMerchantConfigVehicleServiceTier merchantId city :<|> getMerchantConfigVehicleServiceTierList merchantId city :<|> postMerchantConfigVehicleServiceTierUpdate merchantId city :<|> postMerchantConfigVehicleServiceTierCreate merchantId city :<|> postMerchantConfigDebugLogUpdate merchantId city :<|> getMerchantMerchantDocumentList merchantId city :<|> getMerchantMerchantDocument merchantId city :<|> postMerchantMerchantDocumentCreate merchantId city :<|> postMerchantMerchantDocumentUpdate merchantId city :<|> postMerchantMerchantDocumentDelete merchantId city :<|> getMerchantMerchantMessageCatalog merchantId city :<|> postMerchantMerchantMessageUpsert merchantId city :<|> deleteMerchantMerchantMessage merchantId city :<|> getMerchantCityList merchantId city
 
 type PostMerchantUpdate =
   ( ApiAuth
@@ -250,6 +250,14 @@ type GetMerchantConfigFareProductList =
       :> API.Types.ProviderPlatform.Management.Merchant.GetMerchantConfigFareProductList
   )
 
+type PostMerchantConfigFareProductSetEnabled =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_FARE_PRODUCT_SET_ENABLED)
+      :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantConfigFareProductSetEnabled
+  )
+
 type PostMerchantConfigOperatingCityCreate =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
@@ -386,6 +394,22 @@ type PostMerchantConfigUpsertPlanAndConfigSubscription =
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantConfigUpsertPlanAndConfigSubscription
   )
 
+type GetMerchantConfigVendorSplitDetailsList =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.GET_MERCHANT_CONFIG_VENDOR_SPLIT_DETAILS_LIST)
+      :> API.Types.ProviderPlatform.Management.Merchant.GetMerchantConfigVendorSplitDetailsList
+  )
+
+type GetMerchantConfigSubscriptionConfigList =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.GET_MERCHANT_CONFIG_SUBSCRIPTION_CONFIG_LIST)
+      :> API.Types.ProviderPlatform.Management.Merchant.GetMerchantConfigSubscriptionConfigList
+  )
+
 type PostMerchantConfigFailover =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
@@ -492,6 +516,30 @@ type PostMerchantMerchantDocumentDelete =
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantMerchantDocumentDelete
   )
 
+type GetMerchantMerchantMessageCatalog =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.GET_MERCHANT_MERCHANT_MESSAGE_CATALOG)
+      :> API.Types.ProviderPlatform.Management.Merchant.GetMerchantMerchantMessageCatalog
+  )
+
+type PostMerchantMerchantMessageUpsert =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_MERCHANT_MESSAGE_UPSERT)
+      :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantMerchantMessageUpsert
+  )
+
+type DeleteMerchantMerchantMessage =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.DELETE_MERCHANT_MERCHANT_MESSAGE)
+      :> API.Types.ProviderPlatform.Management.Merchant.DeleteMerchantMerchantMessage
+  )
+
 type GetMerchantCityList = API.Types.ProviderPlatform.Management.Merchant.GetMerchantCityList
 
 postMerchantUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Merchant.MerchantUpdateReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.MerchantUpdateRes)
@@ -575,6 +623,9 @@ getMerchantConfigFarePolicyDetails merchantShortId opCity apiTokenInfo farePolic
 getMerchantConfigFareProductList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Types.SpecialLocation.Area -> Kernel.Prelude.Bool -> Dashboard.Common.TripCategory -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.FareProductListRes)
 getMerchantConfigFareProductList merchantShortId opCity apiTokenInfo area enabled tripCategory = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Merchant.getMerchantConfigFareProductList merchantShortId opCity apiTokenInfo area enabled tripCategory
 
+postMerchantConfigFareProductSetEnabled :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.Merchant.SetFareProductEnabledReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postMerchantConfigFareProductSetEnabled merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Merchant.postMerchantConfigFareProductSetEnabled merchantShortId opCity apiTokenInfo req
+
 postMerchantConfigOperatingCityCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.Merchant.CreateMerchantOperatingCityReq -> Environment.FlowHandler Dashboard.Common.Merchant.CreateMerchantOperatingCityRes)
 postMerchantConfigOperatingCityCreate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Merchant.postMerchantConfigOperatingCityCreate merchantShortId opCity apiTokenInfo req
 
@@ -626,6 +677,12 @@ postMerchantConfigClearCacheSubscription merchantShortId opCity apiTokenInfo req
 postMerchantConfigUpsertPlanAndConfigSubscription :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Merchant.UpsertPlanAndConfigReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.UpsertPlanAndConfigResp)
 postMerchantConfigUpsertPlanAndConfigSubscription merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Merchant.postMerchantConfigUpsertPlanAndConfigSubscription merchantShortId opCity apiTokenInfo req
 
+getMerchantConfigVendorSplitDetailsList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.Merchant.VendorSplitDetailsAPIEntity])
+getMerchantConfigVendorSplitDetailsList merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Merchant.getMerchantConfigVendorSplitDetailsList merchantShortId opCity apiTokenInfo
+
+getMerchantConfigSubscriptionConfigList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.Merchant.SubscriptionConfigAPIEntity])
+getMerchantConfigSubscriptionConfigList merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Merchant.getMerchantConfigSubscriptionConfigList merchantShortId opCity apiTokenInfo
+
 postMerchantConfigFailover :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.Merchant.ConfigNames -> Dashboard.Common.Merchant.ConfigFailoverReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantConfigFailover merchantShortId opCity apiTokenInfo configName req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Merchant.postMerchantConfigFailover merchantShortId opCity apiTokenInfo configName req
 
@@ -667,6 +724,15 @@ postMerchantMerchantDocumentUpdate merchantShortId opCity apiTokenInfo req = wit
 
 postMerchantMerchantDocumentDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Merchant.DeleteMerchantDocumentReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantMerchantDocumentDelete merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Merchant.postMerchantMerchantDocumentDelete merchantShortId opCity apiTokenInfo req
+
+getMerchantMerchantMessageCatalog :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Merchant.MerchantMessageCatalogType -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.MerchantMessageCatalogResp)
+getMerchantMerchantMessageCatalog merchantShortId opCity apiTokenInfo catalogType = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Merchant.getMerchantMerchantMessageCatalog merchantShortId opCity apiTokenInfo catalogType
+
+postMerchantMerchantMessageUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Merchant.UpsertMerchantMessageReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postMerchantMerchantMessageUpsert merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Merchant.postMerchantMerchantMessageUpsert merchantShortId opCity apiTokenInfo req
+
+deleteMerchantMerchantMessage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Dashboard.Common.VehicleCategory -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+deleteMerchantMerchantMessage merchantShortId opCity apiTokenInfo messageKey vehicleCategory = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Merchant.deleteMerchantMerchantMessage merchantShortId opCity apiTokenInfo messageKey vehicleCategory
 
 getMerchantCityList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.CityListResp)
 getMerchantCityList merchantShortId opCity = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Merchant.getMerchantCityList merchantShortId opCity

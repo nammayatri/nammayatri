@@ -32,13 +32,14 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Types.Id as ID
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CallStatus as QCallStatus
@@ -72,7 +73,7 @@ callOnClickTracker :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFl
 callOnClickTracker rideId = do
   ride <- runInReplica $ QRide.findById (ID.Id rideId.getId) >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- runInReplica $ QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   buildCallStatus <- callStatusObj booking.merchantOperatingCityId booking.merchantId
   QCallStatus.create buildCallStatus
   scheduleJobs ride booking.merchantId booking.merchantOperatingCityId (riderConfig.exotelStatusCheckSchedulerDelay)

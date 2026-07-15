@@ -40,6 +40,38 @@ data RenderType
 
 $(mkBeamInstancesForEnum ''RenderType)
 
+data PaymentMode
+  = PAYTMEDC
+  | CASH
+  | ONLINE
+  deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForEnum ''PaymentMode)
+
+-- | The payment mode applied when a special location does not specify any.
+--   Single source of truth for the default used across upsert/CSV paths.
+defaultPaymentModes :: [PaymentMode]
+defaultPaymentModes = [CASH]
+
+data FareSettlementType
+  = CommissionOnly
+  | FullPayment
+  deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForEnum ''FareSettlementType)
+
+parsePaymentModes :: Maybe Text -> Either Text (Maybe [PaymentMode])
+parsePaymentModes mbRaw =
+  case mbRaw >>= cleanCell of
+    Nothing -> Right Nothing
+    Just raw ->
+      case filter (not . T.null) (map (T.toUpper . T.strip) (T.splitOn "," raw)) of
+        [] -> Right Nothing
+        tokens -> Just <$> traverse parseToken tokens
+  where
+    cleanCell t = case T.strip t of "" -> Nothing; s -> Just s
+    parseToken t = maybe (Left t) Right (readMaybe (T.unpack t))
+
 data Merchant
 
 data MerchantOperatingCity
@@ -62,8 +94,11 @@ data SpecialLocation = SpecialLocation
     isQueueEnabled :: Maybe Bool,
     enforceTollRoute :: Maybe Bool,
     render :: Maybe RenderType,
+    fetchAllGateFareProduct :: Maybe Bool,
     priority :: Int,
     supportNumber :: Maybe Text,
+    paymentModes :: Maybe [PaymentMode],
+    fareSettlementType :: Maybe FareSettlementType,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

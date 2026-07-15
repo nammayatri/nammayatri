@@ -1,0 +1,547 @@
+{
+  "info": {
+    "name": "Media File Upload Status Flow",
+    "description": "Tests MediaFile upload status across dashboard, driver, and rider APIs: addLink (synchronous COMPLETED), uploadFile (fork+PENDING->COMPLETED), issue media upload (fork+PENDING->COMPLETED), merchant onboarding upload (fork+PENDING->COMPLETED with status guard on getFile), and getMediaMediaImage status guard.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "(function () {",
+          "  if (pm.collectionVariables.get('_env_resolved')) return;",
+          "  var re = /\\$\\{[A-Z_][A-Z0-9_]*:([^}]*)\\}/g;",
+          "  pm.environment.values.each(function (v) {",
+          "    if (typeof v.value === 'string' && v.value.indexOf('${') !== -1) {",
+          "      var resolved = v.value.replace(re, '$1');",
+          "      pm.environment.set(v.key, resolved);",
+          "    }",
+          "  });",
+          "  pm.collectionVariables.set('_env_resolved', 'true');",
+          "})();",
+          "",
+          "if (!pm.collectionVariables.get('_test_driver_number')) {",
+          "    var dNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    pm.collectionVariables.set('_test_driver_number', dNum);",
+          "    console.log('Test driver:', dNum);",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "variable": [],
+  "item": [
+    {
+      "name": "Switch City (Dashboard)",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+          "host": ["{{dashboard_base_url}}"],
+          "path": ["user", "switchMerchantAndCity"]
+        },
+        "header": [
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "token", "value": "{{dashboard_token}}"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('dashboard_token', d.authToken);",
+              "console.log('Switched to', d.merchantId, d.city);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard Add Link (synchronous COMPLETED)",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/message/addLink",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "message", "addLink"]
+        },
+        "header": [
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "token", "value": "{{dashboard_token}}"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"url\": \"https://test.example.com/test-image.png\", \"fileType\": \"ImageLink\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var body = pm.response.json();",
+              "console.log('addLink resp:', JSON.stringify(body));",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Response contains fileId', function () {",
+              "  pm.expect(body).to.have.property('fileId');",
+              "});",
+              "pm.collectionVariables.set('_test_addlink_file_id', body.fileId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Image for addLink file (COMPLETED passes guard)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/media/media/image/{{_test_addlink_file_id}}",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "media", "media", "image", "{{_test_addlink_file_id}}"]
+        },
+        "header": [
+          {"key": "token", "value": "{{dashboard_token}}"}
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var code = pm.response.code;",
+              "var body = pm.response.text();",
+              "console.log('getImage addLink [' + code + ']:', body.substring(0, 500));",
+              "pm.test('COMPLETED status passes guard (not blocked by status check)', function () {",
+              "  if (code >= 400) {",
+              "    pm.expect(body).to.not.include('Media file is not available yet');",
+              "  }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard Upload File (fork+PENDING)",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/message/uploadFile",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "message", "uploadFile"]
+        },
+        "header": [
+          {"key": "token", "value": "{{dashboard_token}}"}
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {"key": "file", "type": "file", "src": "collections/RideBookingFlow/fixtures/test-image.png"},
+            {"key": "reqContentType", "value": "image/png", "type": "text"},
+            {"key": "fileType", "value": "Image", "type": "text"}
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var body = pm.response.json();",
+              "console.log('uploadFile resp:', JSON.stringify(body));",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Response contains fileId', function () {",
+              "  pm.expect(body).to.have.property('fileId');",
+              "});",
+              "pm.collectionVariables.set('_test_uploaded_file_id', body.fileId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Image for uploadFile (after fork completes)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/media/media/image/{{_test_uploaded_file_id}}",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "media", "media", "image", "{{_test_uploaded_file_id}}"]
+        },
+        "header": [
+          {"key": "token", "value": "{{dashboard_token}}"}
+        ]
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var start = Date.now(); while (Date.now() - start < 3000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var code = pm.response.code;",
+              "var body = pm.response.text();",
+              "console.log('getImage uploadFile [' + code + ']:', body.substring(0, 200));",
+              "pm.test('Status code is 200 (fork completed, guard passed)', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Response contains imageBase64', function () {",
+              "  var d = pm.response.json();",
+              "  pm.expect(d).to.have.property('imageBase64');",
+              "  pm.expect(d.imageBase64.length).to.be.above(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Image (non-existent ID - error)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/media/media/image/00000000-0000-0000-0000-000000000000",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "media", "media", "image", "00000000-0000-0000-0000-000000000000"]
+        },
+        "header": [
+          {"key": "token", "value": "{{dashboard_token}}"}
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var code = pm.response.code;",
+              "var body = pm.response.text();",
+              "console.log('getImage missing [' + code + ']:', body.substring(0, 500));",
+              "pm.test('Returns error for non-existent file', function () {",
+              "  pm.expect(code).to.be.oneOf([400, 404, 500]);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver Auth",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["auth"]
+        },
+        "header": [
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_driver_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{driver_merchant_id}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.collectionVariables.set('_test_driver_auth_id', d.authId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver OTP",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{_test_driver_auth_id}}/verify",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["auth", "{{_test_driver_auth_id}}", "verify"]
+        },
+        "header": [
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"7891\", \"deviceToken\": \"test\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.collectionVariables.set('_test_driver_token', d.token);",
+              "pm.collectionVariables.set('_test_driver_id', d.person.id);",
+              "console.log('Driver ID:', d.person.id);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Issue Media Upload (fork+PENDING via driver API)",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseURL_namma_P}}/issue/upload",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["issue", "upload"]
+        },
+        "header": [
+          {"key": "token", "value": "{{_test_driver_token}}"}
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {"key": "file", "type": "file", "src": "collections/RideBookingFlow/fixtures/test-image.png"},
+            {"key": "reqContentType", "value": "image/png", "type": "text"},
+            {"key": "fileType", "value": "Image", "type": "text"}
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var body = pm.response.json();",
+              "console.log('issueUpload resp:', JSON.stringify(body));",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Response contains fileId', function () {",
+              "  pm.expect(body).to.have.property('fileId');",
+              "});",
+              "pm.collectionVariables.set('_test_issue_file_id', body.fileId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Image for issue file (status guard after fork)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/media/media/image/{{_test_issue_file_id}}",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "media", "media", "image", "{{_test_issue_file_id}}"]
+        },
+        "header": [
+          {"key": "token", "value": "{{dashboard_token}}"}
+        ]
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var start = Date.now(); while (Date.now() - start < 3000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var code = pm.response.code;",
+              "var body = pm.response.text();",
+              "console.log('getImage issue [' + code + ']:', body.substring(0, 200));",
+              "pm.test('Status code is 200 (issue fork completed, guard passed)', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Response contains imageBase64', function () {",
+              "  var d = pm.response.json();",
+              "  pm.expect(d).to.have.property('imageBase64');",
+              "  pm.expect(d.imageBase64.length).to.be.above(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Switch City (Rider Dashboard)",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseURL_BAP_Dashboard}}/user/switchMerchantAndCity",
+          "host": ["{{baseURL_BAP_Dashboard}}"],
+          "path": ["user", "switchMerchantAndCity"]
+        },
+        "header": [
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "token", "value": "{{rider_dashboard_token}}"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"NAMMA_YATRI\", \"city\": \"{{city}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.collectionVariables.set('_rider_dashboard_token', d.authToken);",
+              "console.log('Rider dashboard switched to', d.merchantId, d.city);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Start Merchant Onboarding",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseURL_BAP_Dashboard}}/bap/NAMMA_YATRI/{{city}}/onboarding/TICKET_MERCHANT_ONBOARDING/start",
+          "host": ["{{baseURL_BAP_Dashboard}}"],
+          "path": ["bap", "NAMMA_YATRI", "{{city}}", "onboarding", "TICKET_MERCHANT_ONBOARDING", "start"]
+        },
+        "header": [
+          {"key": "token", "value": "{{_rider_dashboard_token}}"}
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var body = pm.response.json();",
+              "console.log('Onboarding:', body.id, 'status:', body.status, 'steps:', body.steps.length);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has onboarding ID and steps', function () {",
+              "  pm.expect(body).to.have.property('id');",
+              "  pm.expect(body.steps).to.be.an('array').that.is.not.empty;",
+              "});",
+              "pm.collectionVariables.set('_onboarding_id', body.id);",
+              "pm.collectionVariables.set('_onboarding_step_id', body.steps[0].id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Onboarding Upload File (fork+PENDING)",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseURL_BAP_Dashboard}}/bap/NAMMA_YATRI/{{city}}/onboarding/step/{{_onboarding_step_id}}/test-doc/uploadFile",
+          "host": ["{{baseURL_BAP_Dashboard}}"],
+          "path": ["bap", "NAMMA_YATRI", "{{city}}", "onboarding", "step", "{{_onboarding_step_id}}", "test-doc", "uploadFile"]
+        },
+        "header": [
+          {"key": "token", "value": "{{_rider_dashboard_token}}"}
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {"key": "file", "type": "file", "src": "collections/RideBookingFlow/fixtures/test-image.png"},
+            {"key": "reqContentType", "value": "image/png", "type": "text"},
+            {"key": "fileType", "value": "Image", "type": "text"}
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var body = pm.response.json();",
+              "console.log('onboarding uploadFile resp:', JSON.stringify(body));",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Response contains fileId', function () {",
+              "  pm.expect(body).to.have.property('fileId');",
+              "});",
+              "pm.collectionVariables.set('_onboarding_file_id', body.fileId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Onboarding Get File (status guard after fork)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseURL_BAP_Dashboard}}/bap/NAMMA_YATRI/{{city}}/onboarding/{{_onboarding_id}}/file/{{_onboarding_file_id}}",
+          "host": ["{{baseURL_BAP_Dashboard}}"],
+          "path": ["bap", "NAMMA_YATRI", "{{city}}", "onboarding", "{{_onboarding_id}}", "file", "{{_onboarding_file_id}}"]
+        },
+        "header": [
+          {"key": "token", "value": "{{_rider_dashboard_token}}"}
+        ]
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var start = Date.now(); while (Date.now() - start < 3000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var code = pm.response.code;",
+              "var body = pm.response.text();",
+              "console.log('onboarding getFile [' + code + ']:', body.substring(0, 200));",
+              "pm.test('Status code is 200 (fork completed, status guard passed)', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Response contains fileBase64', function () {",
+              "  var d = pm.response.json();",
+              "  pm.expect(d).to.have.property('fileBase64');",
+              "  pm.expect(d.fileBase64.length).to.be.above(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ]
+}

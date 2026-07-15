@@ -80,6 +80,7 @@ library
     , exceptions
     , external
     , extra
+    , finance-kernel
     , generic-lens
     , haskell-cac
     , hspec
@@ -169,6 +170,7 @@ executable rider-app-scheduler-exe
     , exceptions
     , external
     , extra
+    , finance-kernel
     , generic-lens
     , haskell-cac
     , hspec

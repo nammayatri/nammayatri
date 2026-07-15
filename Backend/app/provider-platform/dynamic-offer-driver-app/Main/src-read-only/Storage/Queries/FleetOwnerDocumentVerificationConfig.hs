@@ -4,6 +4,7 @@
 
 module Storage.Queries.FleetOwnerDocumentVerificationConfig where
 
+import qualified Data.Text
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig
 import qualified Domain.Types.MerchantOperatingCity
@@ -11,6 +12,7 @@ import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -25,12 +27,12 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig])
 findAllByMerchantOpCityId limit offset merchantOperatingCityId = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)] (Se.Asc Beam.order) limit offset
 
 findAllByMerchantOpCityIdAndRole ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Person.Role -> m ([Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Person.Role -> m [Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig])
 findAllByMerchantOpCityIdAndRole merchantOperatingCityId role = do
   findAllWithKV
     [ Se.And
@@ -67,9 +69,12 @@ updateByPrimaryKey (Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwner
       Se.Set Beam.isHidden isHidden,
       Se.Set Beam.isImageValidationRequired isImageValidationRequired,
       Se.Set Beam.isMandatory isMandatory,
+      Se.Set Beam.isMandatoryForEnabling isMandatoryForEnabling,
+      Se.Set Beam.markImageValidOnValidationSkip markImageValidOnValidationSkip,
       Se.Set Beam.maxRetryCount maxRetryCount,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.order order,
+      Se.Set Beam.rolesAllowedToUploadDocumentText (Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show) Kernel.Prelude.<$> rolesAllowedToUploadDocument),
       Se.Set Beam.title title,
       Se.Set Beam.updatedAt _now
     ]
@@ -98,11 +103,14 @@ instance FromTType' Beam.FleetOwnerDocumentVerificationConfig Domain.Types.Fleet
             isHidden = isHidden,
             isImageValidationRequired = isImageValidationRequired,
             isMandatory = isMandatory,
+            isMandatoryForEnabling = isMandatoryForEnabling,
+            markImageValidOnValidationSkip = markImageValidOnValidationSkip,
             maxRetryCount = maxRetryCount,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             order = order,
             role = role,
+            rolesAllowedToUploadDocument = rolesAllowedToUploadDocumentText >>= traverse (readMaybe . Data.Text.unpack),
             title = title,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -124,11 +132,14 @@ instance ToTType' Beam.FleetOwnerDocumentVerificationConfig Domain.Types.FleetOw
         Beam.isHidden = isHidden,
         Beam.isImageValidationRequired = isImageValidationRequired,
         Beam.isMandatory = isMandatory,
+        Beam.isMandatoryForEnabling = isMandatoryForEnabling,
+        Beam.markImageValidOnValidationSkip = markImageValidOnValidationSkip,
         Beam.maxRetryCount = maxRetryCount,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.order = order,
         Beam.role = role,
+        Beam.rolesAllowedToUploadDocumentText = Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show) Kernel.Prelude.<$> rolesAllowedToUploadDocument,
         Beam.title = title,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

@@ -58,7 +58,8 @@ sendSpecialZonePayout ::
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     RideEnd.EndRideFlow m r,
-    LocationUpdateFlow m r c
+    LocationUpdateFlow m r c,
+    HasField "activeDriversListKeyShards" r Int
   ) =>
   Job 'SpecialZonePayout ->
   m ExecutionResult
@@ -84,7 +85,8 @@ handleNewFlow ::
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     RideEnd.EndRideFlow m r,
-    LocationUpdateFlow m r c
+    LocationUpdateFlow m r c,
+    HasField "activeDriversListKeyShards" r Int
   ) =>
   Id DPR.PayoutRequest ->
   m ExecutionResult
@@ -113,7 +115,8 @@ executeSpecialZonePayout ::
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     RideEnd.EndRideFlow m r,
-    LocationUpdateFlow m r c
+    LocationUpdateFlow m r c,
+    HasField "activeDriversListKeyShards" r Int
   ) =>
   DPR.PayoutRequest ->
   m ExecutionResult
@@ -137,7 +140,7 @@ executeSpecialZonePayout payoutRequest = do
                 odometer = Nothing,
                 driverGpsTurnedOff = Nothing
               }
-      shandle <- RideEnd.buildEndRideHandle merchantId merchantOpCityId (Just ride.id)
+      shandle <- RideEnd.buildEndRideHandle merchantId merchantOpCityId (Just ride.id) False
       void $ RideEnd.driverEndRide shandle ride.id driverReq
 
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
@@ -167,7 +170,8 @@ handleOldFlow ::
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     RideEnd.EndRideFlow m r,
-    LocationUpdateFlow m r c
+    LocationUpdateFlow m r c,
+    HasField "activeDriversListKeyShards" r Int
   ) =>
   Id DSP.ScheduledPayout ->
   m ExecutionResult
@@ -222,7 +226,8 @@ executeOldSpecialZonePayout ::
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     RideEnd.EndRideFlow m r,
-    LocationUpdateFlow m r c
+    LocationUpdateFlow m r c,
+    HasField "activeDriversListKeyShards" r Int
   ) =>
   DSP.ScheduledPayout ->
   m ExecutionResult
@@ -251,7 +256,7 @@ executeOldSpecialZonePayout scheduledPayout = do
                   odometer = Nothing,
                   driverGpsTurnedOff = Nothing
                 }
-        shandle <- RideEnd.buildEndRideHandle mId mocId (Just ride.id)
+        shandle <- RideEnd.buildEndRideHandle mId mocId (Just ride.id) False
         void $ RideEnd.driverEndRide shandle ride.id driverReq
     _ -> pure ()
 

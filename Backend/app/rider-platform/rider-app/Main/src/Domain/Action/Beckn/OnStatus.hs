@@ -44,10 +44,11 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Tools.Logging
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
-import Kernel.Types.Id (Id)
+import Kernel.Types.Id (Id, cast)
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
+import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
 import SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QB
@@ -151,7 +152,7 @@ buildRideEntity booking updRide newRideInfo = do
 rideBookingTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int) => DB.BookingStatus -> DRide.RideStatus -> DB.Booking -> RideEntity -> m ()
 rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity = do
   unless (booking.status == bookingNewStatus) $ do
-    QB.updateStatus booking.id bookingNewStatus
+    QB.updateStatus booking.riderId booking.id bookingNewStatus
   -- not making booking parties link inactive as this function is not used
   case rideEntity of
     UpdatedRide (DUpdatedRide {ride, rideOldStatus}) -> do
@@ -181,7 +182,7 @@ onStatus req = withDynamicLogLevel "rider-onstatus-domain" $ do
       logDebug $ "RIDER_ONSTATUS_DOMAIN_DEBUG: Processing ValidatedNewBookingDetails for booking: " <> booking.id.getId
       mbExistingRide <- B.runInReplica $ QRide.findActiveByRBId booking.id
       unless (booking.status == bookingNewStatus) $ do
-        QB.updateStatus booking.id bookingNewStatus
+        QB.updateStatus booking.riderId booking.id bookingNewStatus
       -- not making booking parties link inactive as this function is not used
       whenJust mbExistingRide \existingRide -> do
         unless (existingRide.status == rideNewStatus) $ do
@@ -280,7 +281,7 @@ validateRequest req@DOnStatusReq {..} = do
       let validatedRideDetails = ValidatedBookingReallocationDetails request
       return ValidatedOnStatusReq {..}
 
-buildNewRide :: (MonadFlow m, EncFlow m r, HasFlowEnv m r '["cloudType" ::: Maybe CloudType]) => Maybe DM.Merchant -> DB.Booking -> DCommon.BookingDetails -> m DRide.Ride
+buildNewRide :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["cloudType" ::: Maybe CloudType]) => Maybe DM.Merchant -> DB.Booking -> DCommon.BookingDetails -> m DRide.Ride
 buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
   id <- generateGUID
   shortId <- generateShortId
@@ -365,7 +366,12 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       sosId = Nothing
       offersFraudCheckFailureReason = booking.offersFraudCheckFailureReason
       driverArrivalStatus = Nothing
-  pure $ DRide.Ride {cloudType = cloudType, ..}
+  mbSafetySettings <- QSafetySettings.findByPersonId (cast booking.riderId)
+  let isMeterRide = case booking.bookingDetails of
+        DB.MeterRideDetails _ -> True
+        _ -> False
+      enableOtpLessRide = Just $ isMeterRide || fromMaybe False (mbSafetySettings >>= (.enableOtpLessRide))
+  pure $ DRide.Ride {cloudType = cloudType, isTierUpgrade = Just isTierUpgrade, assignedServiceTierName = assignedServiceTierName, enableOtpLessRide = enableOtpLessRide, rideTags = Nothing, ..}
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>

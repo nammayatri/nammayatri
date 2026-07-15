@@ -105,3 +105,37 @@ ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN bank_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN chargeback_amount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN created_by text ;
+ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN card_number text ;
+ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN bank_code text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN order_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN is_valid_subscription_purchase boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN updated_by_id text ;
+ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN updated_by text ;
+ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN created_by_id text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN subscription_purchase_id text ;
+
+
+------- SQL updates -------
+

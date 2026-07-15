@@ -36,7 +36,7 @@ import qualified Storage.Clickhouse.Booking as CHB
 import Storage.Queries.DriverInformationExtra (findAllByDriverIds)
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Ride as QR
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Vehicle as QV
 import Tools.Error (GenericError (InvalidRequest))
 
@@ -121,7 +121,7 @@ buildRideRelatedInfo ::
   Kernel.Prelude.Maybe Text ->
   Environment.Flow Common.RideRelatedInfo
 buildRideRelatedInfo True (Just rideId) = do
-  ride <- QR.findById (ID.Id rideId) >>= fromMaybeM (RideNotFound rideId)
+  ride <- QRideLite.findByIdLite (ID.Id rideId) >>= fromMaybeM (RideNotFound rideId)
   mbBooking <- CHB.findById ride.bookingId
   (source, destination) <- getSourceAndDestination mbBooking
   pure
@@ -153,7 +153,7 @@ buildMapDriverInfo country (mbRideId, position, driverInformation) = do
       pure $ Kernel.Prelude.listToMaybe profilePhotos >>= \photo -> Just photo.id.getId
 
     vehicleIconURL <- do
-      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId Nothing Nothing
+      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId Nothing
       let mbServiceTier = find (\vst -> vehicle.variant `elem` vst.allowedVehicleVariant) cityVehicleServiceTiers
       pure $ mbServiceTier >>= (.vehicleIconUrl) >>= \url -> Just $ show url
 

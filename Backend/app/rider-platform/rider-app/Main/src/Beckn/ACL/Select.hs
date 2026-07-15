@@ -36,11 +36,13 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.MerchantPaymentMethod as SLMPM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Storage.Queries.BecknConfig as SQBC
 import Tools.Error
 
 buildSelectReqV2 ::
@@ -50,8 +52,8 @@ buildSelectReqV2 ::
 buildSelectReqV2 dSelectRes = do
   endLoc <- dSelectRes.searchRequest.toLocation & fromMaybeM (InternalError "To location address not found")
   moc <- CQMOC.findByMerchantIdAndCity dSelectRes.merchant.id dSelectRes.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> dSelectRes.merchant.id.getId <> "-city-" <> show dSelectRes.city)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = moc.id.getId}) >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
-  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = moc.id.getId, merchantId = dSelectRes.merchant.id.getId, domain = Just "MOBILITY", vehicleCategory = Nothing})) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show dSelectRes.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moc.id.getId}) (Just (CQRC.findByMerchantOperatingCityId moc.id)) >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
+  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = moc.id.getId, merchantId = dSelectRes.merchant.id.getId, domain = Just "MOBILITY", vehicleCategory = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just dSelectRes.merchant.id) "MOBILITY" (Just moc.id)))) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show dSelectRes.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId)
   -- stops <- dSelectRes.searchRequest.stops
   messageId <- generateGUID
   let message = buildSelectReqMessage dSelectRes endLoc dSelectRes.isValueAddNP bapConfig riderConfig
@@ -221,7 +223,7 @@ tfPayments :: DSelect.DSelectRes -> BecknConfig -> RiderConfig -> Maybe [Spec.Pa
 tfPayments res bapConfig riderConfig = do
   let mPrice = Just res.estimate.estimatedFare
   let mkParams = SLMPM.mkBknPaymentParams res.paymentMethodInfo bapConfig riderConfig
-  Just $ L.singleton $ mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee False res.paymentMode Nothing
+  Just $ L.singleton $ mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee False res.paymentMode (show <$> res.paymentInstrument)
 
 tfProvider :: DSelect.DSelectRes -> Spec.Provider
 tfProvider res = emptyProvider {Spec.providerId = Just res.providerId}

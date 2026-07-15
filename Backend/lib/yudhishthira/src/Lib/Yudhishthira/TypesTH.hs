@@ -7,6 +7,7 @@ import Data.Aeson
 import qualified Data.Aeson.KeyMap
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as DT
 import qualified Data.Time
 import qualified Data.Time.LocalTime
@@ -14,11 +15,22 @@ import qualified Data.Vector
 import Kernel.Prelude hiding (Type)
 import Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version
 import Language.Haskell.TH
 import qualified Servant.Client.Core
 
 class GenericDefaults a where
   genDef :: Proxy a -> [a]
+
+-- | Canonical instance for a widely-shared enum. Without it, multiple config splices
+-- (across different modules, e.g. TransporterConfig and UiDriverConfig) each auto-generate
+-- their own orphan @GenericDefaults DeviceType@, which overlap when those modules are
+-- imported together. Providing one here (in the class's own module, so it is in scope wherever
+-- @generateGenericDefault@ is used) makes every splice reuse it instead of regenerating.
+-- Returns @[IOS]@ (first constructor only) to exactly match what the auto-generated enum
+-- instance produced before, avoiding any change to existing default values.
+instance GenericDefaults Kernel.Types.Version.DeviceType where
+  genDef _ = [Kernel.Types.Version.IOS]
 
 checkInstance :: Name -> Type -> Q Bool
 checkInstance className typ = isInstance className [typ]
@@ -84,10 +96,72 @@ generateGenericDefaultWithOverrides overrides typeName = do
     TyConI (NewtypeD _ _ _ _ (RecC conName fields) []) -> generateGenericDefaultForRecords overrides typeName conName fields
     TyConI (DataD _ _ _ _ enums _) -> generateGenericDefaultForEnums overrides typeName enums
     TyConI (NewtypeD _ _ _ _ enums _) -> generateGenericDefaultForEnums overrides typeName [enums]
-    TyConI (TySynD _n _ _enums) -> generateGenericDefaultForEnums overrides typeName []
+    -- Type synonyms (e.g. HKD aliases like `type Foo = FooD 'Safe`): resolve to the
+    -- underlying applied data type, substitute the type arguments and generate the
+    -- instance for the fully-applied head (`FooD 'Safe`).
+    TyConI (TySynD _n _ rhs) ->
+      case unapplyType rhs of
+        (ConT realName, args) -> generateGenericDefaultForApplied overrides rhs realName args
+        _ -> generateGenericDefaultForEnums overrides typeName []
     _ -> fail $ "can't generate GenericDefaults for type: " ++ show res
   -- runIO $ putStrLn (pprint result)
   pure result
+
+-- | Generate a 'GenericDefaults' instance for a fully-applied data type
+-- (e.g. @FooD 'Safe@). @headTy@ is the instance head, @realName@ the underlying
+-- data constructor name and @args@ the applied type arguments.
+generateGenericDefaultForApplied :: [(String, [String])] -> Type -> Name -> [Type] -> Q [Dec]
+generateGenericDefaultForApplied overrides headTy realName args = do
+  info <- reify realName
+  case info of
+    TyConI (DataD _ _ tvs _ [RecC conName fields] _) ->
+      generateGenericDefaultForRecordsTy overrides headTy conName (map (substField (mkSubst tvs args)) fields)
+    TyConI (NewtypeD _ _ tvs _ (RecC conName fields) _) ->
+      generateGenericDefaultForRecordsTy overrides headTy conName (map (substField (mkSubst tvs args)) fields)
+    TyConI (DataD _ _ tvs _ enums _) ->
+      generateGenericDefaultForEnumsTy overrides headTy (map (substCon (mkSubst tvs args)) enums)
+    TyConI (NewtypeD _ _ tvs _ enum _) ->
+      generateGenericDefaultForEnumsTy overrides headTy [substCon (mkSubst tvs args) enum]
+    _ -> pure []
+
+-- | Split a (possibly applied) type into its head constructor and arguments.
+unapplyType :: Type -> (Type, [Type])
+unapplyType = go []
+  where
+    go acc (AppT f x) = go (x : acc) f
+    go acc (SigT t _) = go acc t
+    go acc (ParensT t) = go acc t
+    go acc t = (t, acc)
+
+tyVarName :: TyVarBndr flag -> Name
+tyVarName (PlainTV n _) = n
+tyVarName (KindedTV n _ _) = n
+
+mkSubst :: [TyVarBndr flag] -> [Type] -> [(Name, Type)]
+mkSubst tvs args = zip (map tyVarName tvs) args
+
+substType :: [(Name, Type)] -> Type -> Type
+substType sub = go
+  where
+    go (VarT n) = fromMaybe (VarT n) (lookup n sub)
+    go (AppT a b) = AppT (go a) (go b)
+    go (AppKindT t k) = AppKindT (go t) k
+    go (SigT t k) = SigT (go t) k
+    go (InfixT a n b) = InfixT (go a) n (go b)
+    go (ParensT t) = ParensT (go t)
+    go t = t
+
+substField :: [(Name, Type)] -> VarBangType -> VarBangType
+substField sub (n, b, t) = (n, b, substType sub t)
+
+substCon :: [(Name, Type)] -> Con -> Con
+substCon sub con = case con of
+  NormalC n bts -> NormalC n (map (\(b, t) -> (b, substType sub t)) bts)
+  RecC n vbts -> RecC n (map (substField sub) vbts)
+  InfixC (b1, t1) n (b2, t2) -> InfixC (b1, substType sub t1) n (b2, substType sub t2)
+  ForallC vs cx c -> ForallC vs cx (substCon sub c)
+  GadtC ns bts t -> GadtC ns (map (\(b, t') -> (b, substType sub t')) bts) (substType sub t)
+  RecGadtC ns vbts t -> RecGadtC ns (map (substField sub) vbts) (substType sub t)
 
 generateGenericDefaultDefaultForType :: Type -> Q (Exp, [Dec])
 generateGenericDefaultDefaultForType fieldType = do
@@ -119,6 +193,11 @@ generateGenericDefaultDefaultForType fieldType = do
       fieldGenericDefaults <- getFieldDefaultValues typeOfConstructor
       let fieldDefaultValues = fst fieldGenericDefaults
       pure (fieldDefaultValues, snd fieldGenericDefaults)
+    -- List of ids, e.g. `[Id IssueMessage]`. The element is an applied `Id X`, not a bare
+    -- `ConT`, so it isn't caught by the plain `[X]` case below; default it to a single-id list.
+    AppT ListT (AppT (ConT idCon) (ConT _)) | idCon == ''Kernel.Types.Id.Id -> do
+      fieldGenericDefaults <- getFieldDefaultValues idCon
+      pure (ListE [fst fieldGenericDefaults], snd fieldGenericDefaults)
     AppT ListT (ConT rawFieldType) -> do
       fieldGenericDefaults <- getFieldDefaultValues rawFieldType
       let fieldDefaultValues = fst fieldGenericDefaults
@@ -172,12 +251,32 @@ generateGenericDefaultDefaultForType fieldType = do
               ]
       let combinedDec = snd domain1Defaults ++ snd domain2Defaults
       pure (hashMapExp, combinedDec)
+    -- Strict map field, e.g. `Map Text [VerificationService]`.
+    AppT (AppT (ConT mapName) keyT) valT | mapName == ''Map.Map -> do
+      domain1Defaults <- generateGenericDefaultDefaultForType keyT
+      domain2Defaults <- generateGenericDefaultDefaultForType valT
+      let toExpList e = case e of
+            ListE elems -> elems
+            AppE (VarE fn) arg -> [AppE (VarE 'head) (AppE (VarE fn) arg)]
+            single -> [single]
+      let keyExpList = toExpList (fst domain1Defaults)
+          valueExpList = toExpList (fst domain2Defaults)
+      let mapExp = ListE [AppE (VarE 'Map.fromList) (ListE (zipWith (\k v -> TupE [Just k, Just v]) keyExpList valueExpList))]
+      pure (mapExp, snd domain1Defaults ++ snd domain2Defaults)
+    -- Generic `Maybe t` for inner types not covered by the specific cases above
+    -- (e.g. `Maybe (Map ..)`).
+    AppT (ConT maybeName) inner | maybeName == ''Maybe -> do
+      (vals, decs) <- generateGenericDefaultDefaultForType inner
+      pure (AppE (AppE (VarE 'map) (ConE 'Just)) vals, decs)
     a@(_) -> do
       runIO $ putStrLn $ "non supported type: " ++ show a
       fail "Not Supported currently, to add support for your case check this: https://hackage.haskell.org/package/template-haskell-2.22.0.0/docs/Language-Haskell-TH.html#g:22"
 
 generateGenericDefaultForRecords :: [(String, [String])] -> Name -> Name -> [VarBangType] -> Q [Dec]
-generateGenericDefaultForRecords overrides typeName conName fields = do
+generateGenericDefaultForRecords overrides typeName = generateGenericDefaultForRecordsTy overrides (ConT typeName)
+
+generateGenericDefaultForRecordsTy :: [(String, [String])] -> Type -> Name -> [VarBangType] -> Q [Dec]
+generateGenericDefaultForRecordsTy overrides headTy conName fields = do
   let typeProxy = mkName "_typeProxy"
   fieldCombinations <- forM fields $ \(fieldName, _, fieldType) -> do
     let fieldName' = DT.unpack $ DL.reverse (DT.splitOn "." $ show fieldName) DL.!! 0
@@ -191,7 +290,7 @@ generateGenericDefaultForRecords overrides typeName conName fields = do
   let mkTypeValue acc fieldCombination = do
         case fst fieldCombination of
           BindS (VarP fieldNameVar) _ -> pure $ AppE acc (VarE fieldNameVar)
-          _ -> fail $ show typeName <> ", this shouldn't have happened, generated from previous step. something is wrong with the type :)"
+          _ -> fail $ pprint headTy <> ", this shouldn't have happened, generated from previous step. something is wrong with the type :)"
 
   almostBody <- foldlM mkTypeValue (ConE conName) fieldCombinations
   let allDec = foldl' (\acc fieldCombination -> acc <> (snd fieldCombination)) [] fieldCombinations
@@ -204,13 +303,16 @@ generateGenericDefaultForRecords overrides typeName conName fields = do
   -- runIO $ putStrLn $ (pprint finalBody)
 
   let functionDec = [FunD 'genDef [Clause [VarP typeProxy] (NormalB finalBody) []]]
-  let instanceDec = [InstanceD Nothing [] (AppT (ConT ''GenericDefaults) (ConT typeName)) functionDec]
+  let instanceDec = [InstanceD Nothing [] (AppT (ConT ''GenericDefaults) headTy) functionDec]
 
   return $ DL.nub $ instanceDec <> allDec
 
 generateGenericDefaultForEnums :: [(String, [String])] -> Name -> [Con] -> Q [Dec]
-generateGenericDefaultForEnums _ _ [] = return []
-generateGenericDefaultForEnums overrides enumName (firstEnum : _rest) = do
+generateGenericDefaultForEnums overrides enumName = generateGenericDefaultForEnumsTy overrides (ConT enumName)
+
+generateGenericDefaultForEnumsTy :: [(String, [String])] -> Type -> [Con] -> Q [Dec]
+generateGenericDefaultForEnumsTy _ _ [] = return []
+generateGenericDefaultForEnumsTy overrides headTy (firstEnum : _rest) = do
   let typeProxy = mkName "_typeProxy"
   (body, innerDec) <-
     if not $ null overrides
@@ -222,6 +324,10 @@ generateGenericDefaultForEnums overrides enumName (firstEnum : _rest) = do
               NormalC en [(_, ConT wrappedType)] -> do
                 (fieldValues, innerD') <- getFieldDefaultValues wrappedType
                 pure (AppE (AppE (VarE 'map) (ConE en)) fieldValues, innerD')
+              NormalC en [(_, AppT ListT (ConT wrappedType))] -> do
+                (fieldValues, innerD') <- getFieldDefaultValues wrappedType
+                let x = mkName "x"
+                pure (AppE (AppE (VarE 'map) (LamE [VarP x] (AppE (ConE en) (ListE [VarE x])))) fieldValues, innerD')
               NormalC en [(_, AppT (ConT typeWrapper) (ConT wrappedType))] | typeWrapper == ''Maybe -> do
                 fieldGenericDefaults <- getFieldDefaultValues wrappedType
                 let fieldValues = fst fieldGenericDefaults
@@ -244,7 +350,7 @@ generateGenericDefaultForEnums overrides enumName (firstEnum : _rest) = do
               _ -> fail $ "expected enum, but got -> " <> show enum
   let finalBody = UInfixE (AppE (VarE 'take) (LitE (IntegerL 10))) (VarE '($)) body
   let functionDec = [FunD 'genDef [Clause [VarP typeProxy] (NormalB finalBody) []]]
-  let instanceDec = [InstanceD Nothing [] (AppT (ConT ''GenericDefaults) (ConT enumName)) functionDec]
+  let instanceDec = [InstanceD Nothing [] (AppT (ConT ''GenericDefaults) headTy) functionDec]
   return $ DL.nub $ instanceDec <> innerDec
   where
     foldlF arrV acc fn = foldlM fn acc arrV

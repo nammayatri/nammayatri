@@ -27,8 +27,9 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Storage.Beam.SystemConfigs ()
-import Storage.ConfigPilot.Interface.Getter (TxnIdKey (..))
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import TransactionLogs.PushLogs
 
@@ -41,7 +42,7 @@ onCancel ::
   SignatureAuthResult ->
   OnCancel.OnCancelReqV2 ->
   FlowHandler AckResponse
-onCancel _ req = withFlowHandlerBecknAPI do
+onCancel _ req = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId req.onCancelReqContext
   L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do

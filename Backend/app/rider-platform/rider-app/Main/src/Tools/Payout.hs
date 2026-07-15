@@ -34,11 +34,13 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.Version
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified System.Environment as SE
 
 createPayoutOrder ::
@@ -75,12 +77,12 @@ runWithServiceConfigAndName ::
   serviceReq ->
   m resp
 runWithServiceConfigAndName func getCfg mkReq clientSdkVersion merchantId merchantOperatingCityId mRoutingId serviceReq = do
-  orgPaymentsConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+  orgPaymentsConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   let payoutServiceNameRaw = DMSC.PayoutService (getCfg orgPaymentsConfig)
       paymentMode = Nothing -- Stripe payouts are not supported
   payoutServiceName <- modifyServiceName payoutServiceNameRaw (fromMaybe DMPM.LIVE paymentMode) clientSdkVersion
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just payoutServiceName})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just payoutServiceName}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (payoutServiceName)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payout" (show Payout.Juspay))
   case merchantServiceConfig.serviceConfig of
     DMSC.PayoutServiceConfig vsc -> case vsc of

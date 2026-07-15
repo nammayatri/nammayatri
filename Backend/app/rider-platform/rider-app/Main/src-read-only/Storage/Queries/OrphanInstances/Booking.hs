@@ -63,6 +63,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             estimatedFare = Kernel.Types.Common.mkPrice currency estimatedFare,
             estimatedStaticDuration = estimatedStaticDuration,
             estimatedTotalFare = Kernel.Types.Common.mkPrice currency estimatedTotalFare,
+            fareSettlementType = fareSettlementType,
             fromLocation = fst toBookingDetailsAndFromLocation',
             fulfillmentId = fulfillmentId,
             hasStops = hasStops,
@@ -119,6 +120,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             vehicleCategory = vehicleCategory,
             vehicleIconUrl = vehicleIconUrl',
             vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
+            vehicleServiceTierLuggageCapacity = vehicleServiceTierLuggageCapacity,
             vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
             vehicleServiceTierType = vehicleVariant
           }
@@ -166,6 +168,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.estimatedFare = (.amount) estimatedFare,
         Beam.estimatedStaticDuration = estimatedStaticDuration,
         Beam.estimatedTotalFare = (.amount) estimatedTotalFare,
+        Beam.fareSettlementType = fareSettlementType,
         Beam.fromLocationId = Just $ Kernel.Types.Id.getId $ (.id) fromLocation,
         Beam.fulfillmentId = fulfillmentId,
         Beam.hasStops = hasStops,
@@ -221,6 +224,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.vehicleCategory = vehicleCategory,
         Beam.vehicleIconUrl = Kernel.Prelude.fmap showBaseUrl vehicleIconUrl,
         Beam.vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
+        Beam.vehicleServiceTierLuggageCapacity = vehicleServiceTierLuggageCapacity,
         Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
         Beam.vehicleVariant = vehicleServiceTierType
       }

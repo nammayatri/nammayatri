@@ -147,6 +147,33 @@ data FRFSDiscoverySearchAPIReq = FRFSDiscoverySearchAPIReq {city :: Kernel.Types
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSGtfsFareAPI = FRFSGtfsFareAPI {code :: Data.Text.Text, name :: Data.Maybe.Maybe Data.Text.Text, providerCode :: Data.Maybe.Maybe Data.Text.Text, validityDuration :: Data.Maybe.Maybe Data.Text.Text}
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSGtfsRes = FRFSGtfsRes
+  { fares :: [FRFSGtfsFareAPI],
+    integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
+    ready :: Kernel.Prelude.Bool,
+    routeStops :: [FRFSGtfsRouteStopAPI],
+    routes :: [FRFSGtfsRouteAPI],
+    stops :: [FRFSGtfsStopAPI]
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSGtfsRouteAPI = FRFSGtfsRouteAPI {code :: Data.Text.Text, shortName :: Data.Text.Text, variant :: Data.Maybe.Maybe Data.Text.Text, vehicleType :: Data.Maybe.Maybe Data.Text.Text}
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSGtfsRouteStopAPI = FRFSGtfsRouteStopAPI {routeCode :: Data.Text.Text, sequenceNum :: Kernel.Prelude.Int, stopCode :: Data.Text.Text, stopType :: Data.Maybe.Maybe Data.Text.Text}
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSGtfsStopAPI = FRFSGtfsStopAPI {code :: Data.Text.Text, lat :: Data.Maybe.Maybe Kernel.Prelude.Double, lon :: Data.Maybe.Maybe Kernel.Prelude.Double, name :: Data.Maybe.Maybe Data.Text.Text}
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSPossibleStopsReq = FRFSPossibleStopsReq {stationCodes :: [Data.Text.Text]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -157,6 +184,7 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
+    journeyStations :: Data.Maybe.Maybe [FRFSStationAPI],
     observingFailures :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     offer :: Data.Maybe.Maybe SharedLogic.OfferTypes.CumulativeOfferResp,
     price :: Kernel.Types.Common.HighPrecMoney,
@@ -213,7 +241,7 @@ data FRFSRouteAPI = FRFSRouteAPI
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSRouteServiceabilityReq = FRFSRouteServiceabilityReq {endStopCode :: Data.Text.Text, startStopCode :: Data.Text.Text}
+data FRFSRouteServiceabilityReq = FRFSRouteServiceabilityReq {allowUpcomingTrips :: Data.Maybe.Maybe Kernel.Prelude.Bool, endStopCode :: Data.Text.Text, startStopCode :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -263,6 +291,7 @@ data FRFSStationAPI = FRFSStationAPI
     name :: Data.Maybe.Maybe Data.Text.Text,
     parentStopCode :: Data.Maybe.Maybe Data.Text.Text,
     routeCodes :: Data.Maybe.Maybe [Data.Text.Text],
+    routeDetails :: Data.Maybe.Maybe Data.Text.Text,
     sequenceNum :: Data.Maybe.Maybe Kernel.Prelude.Int,
     stationType :: Data.Maybe.Maybe Domain.Types.StationType.StationType,
     timeTakenToTravelUpcomingStop :: Data.Maybe.Maybe Kernel.Types.Common.Seconds,

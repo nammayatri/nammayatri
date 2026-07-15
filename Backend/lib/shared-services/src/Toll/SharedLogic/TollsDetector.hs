@@ -7,7 +7,18 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Toll.SharedLogic.TollsDetector where
+module Toll.SharedLogic.TollsDetector
+  ( checkAndValidatePendingTolls,
+    clearTollStartGateBatchCache,
+    filterRoutesPreferringToll,
+    getTollInfoOnRoute,
+    TollChargeDetails (..),
+    TollInfo (..),
+    emptyTollInfo,
+    estimatedTollInfoFromCharges,
+    hasDetectedTolls,
+  )
+where
 
 import Data.List (nubBy)
 import qualified Kernel.Beam.Functions as B
@@ -19,6 +30,13 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.ComputeIntersection
+import Lib.LocationUpdates.TollTypes
+  ( TollChargeDetails (..),
+    TollInfo (..),
+    emptyTollInfo,
+    estimatedTollInfoFromCharges,
+    hasDetectedTolls,
+  )
 import Toll.Domain.Types.Toll
 import Toll.Domain.Types.TollGate (TollGate (..), geoPolygonToLatLongRings, lineStringToSegments)
 import Toll.Storage.BeamFlow (BeamFlow)
@@ -31,15 +49,6 @@ tollStartGateTrackingKey driverId = "TollGateTracking:DriverId-" <> driverId
 clearTollStartGateBatchCache :: (CacheFlow m r) => Text -> m ()
 clearTollStartGateBatchCache driverId = do
   Hedis.del $ tollStartGateTrackingKey driverId
-
--- Removes the matched toll AND all other possibilities with the same entry gate from pending cache
--- For example, if XL is matched (X entry, L exit), removes XK, XL, XM (all with entry X)
-removeMatchedTollFromCache :: (CacheFlow m r) => Text -> [Toll] -> Toll -> m ()
-removeMatchedTollFromCache driverId allPendingTolls matchedToll = do
-  let remainingPendingTolls = filter (\toll -> toll.tollStartGates /= matchedToll.tollStartGates) allPendingTolls
-  if null remainingPendingTolls
-    then Hedis.del $ tollStartGateTrackingKey driverId
-    else Hedis.setExp (tollStartGateTrackingKey driverId) remainingPendingTolls 21600 -- 6 hours
 
 gateIntersectsRouteSegment :: LineSegment -> TollGate -> Bool
 gateIntersectsRouteSegment routeSegment = \case
@@ -185,66 +194,134 @@ checkAndValidatePendingTolls driverId _estimatedTollCharges _estimatedTollNames 
       -- No pending tolls in cache
       return Nothing
 
--- This function is triggered when allTollCombinationsWithStartGates are found intersecting the route to find the exit segment intersection on the further route and return the remaining route after intersection.
-getExitTollAndRemainingRoute :: RoutePoints -> [Toll] -> Maybe (RoutePoints, Toll)
-getExitTollAndRemainingRoute [] _ = Nothing
-getExitTollAndRemainingRoute [_] _ = Nothing
-getExitTollAndRemainingRoute _ [] = Nothing
-getExitTollAndRemainingRoute (p1 : p2 : ps) tolls = do
-  let currentRouteSegment = LineSegment p1 p2
-      mbExitToll = find (\Toll {..} -> any (gateIntersectsRouteSegment currentRouteSegment) tollEndGates) tolls
-  case mbExitToll of
-    Just toll -> Just (p2 : ps, toll)
-    Nothing -> getExitTollAndRemainingRoute (p2 : ps) tolls
+type TollChargesAndNamesAndIds = TollInfo
 
--- This function is responsible for checking the toll start and exit segments intersection on the route and appropriately update the state in case exit segment is not found corresponding to the entry segment while On Ride.
-getAggregatedTollChargesAndNamesOnRoute :: (CacheFlow m r) => Maybe Text -> RoutePoints -> [Toll] -> (HighPrecMoney, [Text], [Text], Bool, Maybe Bool) -> m (HighPrecMoney, [Text], [Text], Bool, Maybe Bool)
-getAggregatedTollChargesAndNamesOnRoute _ [] _ tollChargesAndNamesAndIds = return tollChargesAndNamesAndIds
-getAggregatedTollChargesAndNamesOnRoute _ [_] _ tollChargesAndNamesAndIds = return tollChargesAndNamesAndIds
-getAggregatedTollChargesAndNamesOnRoute _ _ [] tollChargesAndNamesAndIds = return tollChargesAndNamesAndIds
-getAggregatedTollChargesAndNamesOnRoute mbDriverId route@(p1 : p2 : ps) tolls (tollCharges, tollNames, tollIds, tollIsAutoRickshawAllowed, tollIsTwoWheelerAllowed) = do
-  let currentRouteSegment = LineSegment p1 p2
-      allTollCombinationsWithStartGates = filter (\Toll {..} -> any (gateIntersectsRouteSegment currentRouteSegment) tollStartGates) tolls
-  if not $ null allTollCombinationsWithStartGates
-    then do
-      case getExitTollAndRemainingRoute route allTollCombinationsWithStartGates of
-        Just (remainingRoute, toll) ->
-          getAggregatedTollChargesAndNamesOnRoute
-            mbDriverId
-            remainingRoute
-            tolls
-            ( tollCharges + toll.price.amount,
-              tollNames <> [toll.name],
-              tollIds <> [getId toll.id], -- Accumulate toll IDs
-              toll.isAutoRickshawAllowed,
-              toll.isTwoWheelerAllowed
-            )
-        Nothing -> do
-          -- Option 1: Accumulate in cache (don't overwrite existing pending tolls)
-          whenJust mbDriverId $ \driverId -> do
-            mbExistingPendingTolls :: Maybe [Toll] <- Hedis.safeGet (tollStartGateTrackingKey driverId)
-            let allPendingTolls = fromMaybe [] mbExistingPendingTolls <> allTollCombinationsWithStartGates
-                -- Remove duplicates by ID
-                uniquePendingTolls = nubBy (\toll1 toll2 -> getId toll1.id == getId toll2.id) allPendingTolls
-            Hedis.setExp (tollStartGateTrackingKey driverId) uniquePendingTolls 21600 -- 6 hours
-          return (tollCharges, tollNames, tollIds, tollIsAutoRickshawAllowed, tollIsTwoWheelerAllowed)
-    else getAggregatedTollChargesAndNamesOnRoute mbDriverId (p2 : ps) tolls (tollCharges, tollNames, tollIds, tollIsAutoRickshawAllowed, tollIsTwoWheelerAllowed)
+addTollChargeDetails :: Toll -> TollChargeDetails -> TollChargeDetails
+addTollChargeDetails toll@Toll {..} TollChargeDetails {..} =
+  TollChargeDetails
+    { tollCharges = tollCharges + price.amount,
+      tollNames = tollNames <> [name],
+      tollIds = tollIds <> [getId toll.id]
+    }
+
+addTollChargeDetailsIf :: Bool -> Toll -> TollChargeDetails -> TollChargeDetails
+addTollChargeDetailsIf shouldAdd toll tollChargeDetails =
+  if shouldAdd then addTollChargeDetails toll tollChargeDetails else tollChargeDetails
+
+addDetectedTollCharge :: Toll -> TollChargesAndNamesAndIds -> TollChargesAndNamesAndIds
+addDetectedTollCharge toll@Toll {..} acc =
+  let updatedOverall = addTollChargeDetails toll (TollChargeDetails acc.tollCharges acc.tollNames acc.tollIds)
+   in acc{tollCharges = updatedOverall.tollCharges,
+          tollNames = updatedOverall.tollNames,
+          tollIds = updatedOverall.tollIds,
+          isAutoRickshawAllowed = acc.isAutoRickshawAllowed && isAutoRickshawAllowed,
+          isTwoWheelerAllowed = Just (fromMaybe True acc.isTwoWheelerAllowed && fromMaybe True isTwoWheelerAllowed),
+          autoRickshawTollChargeDetails =
+            addTollChargeDetailsIf (fromMaybe False isAutoRickshawTollChargeApplicable) toll acc.autoRickshawTollChargeDetails,
+          twoWheelerTollChargeDetails =
+            addTollChargeDetailsIf (fromMaybe False isTwoWheelerTollChargeApplicable) toll acc.twoWheelerTollChargeDetails
+         }
+
+addTollCharge :: Toll -> TollChargesAndNamesAndIds -> TollChargesAndNamesAndIds
+addTollCharge = addDetectedTollCharge
+
+tollStartsOnRouteSegment :: LineSegment -> Toll -> Bool
+tollStartsOnRouteSegment routeSegment Toll {..} =
+  any (gateIntersectsRouteSegment routeSegment) tollStartGates
+
+usesPolygonStartGates :: Toll -> Bool
+usesPolygonStartGates Toll {..} =
+  any isPolyStartGate tollStartGates
+  where
+    isPolyStartGate (PolyGate _) = True
+    isPolyStartGate (LineGate _) = False
+
+-- | True when any pending toll's exit gate is crossed on this route segment.
+exitDetectedOnRouteSegment :: LineSegment -> [Toll] -> Bool
+exitDetectedOnRouteSegment routeSegment =
+  any (\Toll {..} -> any (gateIntersectsRouteSegment routeSegment) tollEndGates)
+
+-- | On segments where a pending toll exits, only line tolls may be newly armed.
+canAddTollToPending :: Bool -> Toll -> Bool
+canAddTollToPending exitOnSegment toll =
+  not exitOnSegment || not (usesPolygonStartGates toll)
+
+addPendingTollStartersOnSegment :: LineSegment -> [Toll] -> [Toll] -> [Toll]
+addPendingTollStartersOnSegment routeSegment tolls pendingTolls =
+  let pendingTollIds = map (getId . (.id)) pendingTolls
+      exitOnSegment = exitDetectedOnRouteSegment routeSegment pendingTolls
+      newTollStarters =
+        filter
+          ( \toll ->
+              tollStartsOnRouteSegment routeSegment toll
+                && getId toll.id `notElem` pendingTollIds
+                && canAddTollToPending exitOnSegment toll
+          )
+          tolls
+   in nubBy (\toll1 toll2 -> getId toll1.id == getId toll2.id) (pendingTolls <> newTollStarters)
+
+-- | When a toll exit is found, charge it and drop every pending toll that shares the same entry gate.
+resolveTollExitsOnSegment :: LineSegment -> [Toll] -> TollChargesAndNamesAndIds -> ([Toll], TollChargesAndNamesAndIds)
+resolveTollExitsOnSegment routeSegment pendingTolls tollChargesAndNamesAndIds =
+  case find (\Toll {..} -> any (gateIntersectsRouteSegment routeSegment) tollEndGates) pendingTolls of
+    Nothing -> (pendingTolls, tollChargesAndNamesAndIds)
+    Just matchedToll ->
+      let remainingPendingTolls = filter (\toll -> toll.tollStartGates /= matchedToll.tollStartGates) pendingTolls
+       in resolveTollExitsOnSegment routeSegment remainingPendingTolls (addTollCharge matchedToll tollChargesAndNamesAndIds)
+
+cachePendingTolls :: (CacheFlow m r) => Maybe Text -> [Toll] -> m ()
+cachePendingTolls _ [] = pure ()
+cachePendingTolls Nothing _ = pure ()
+cachePendingTolls (Just driverId) pendingTolls =
+  Hedis.setExp (tollStartGateTrackingKey driverId) pendingTolls 21600 -- 6 hours
+
+-- | Walks the route segment-by-segment using the same start/exit pairing as the original
+-- | algorithm: tolls whose entry gate is crossed are tracked in pendingTolls until their
+-- | exit gate is crossed, at which point they are charged. Unlike the original slice-based
+-- | walk, the route is not truncated after each exit so nested tolls inside an active toll
+-- | window are still detected on later segments.
+getAggregatedTollChargesAndNamesOnRoute ::
+  (CacheFlow m r) =>
+  Maybe Text ->
+  RoutePoints ->
+  [Toll] ->
+  [Toll] ->
+  TollChargesAndNamesAndIds ->
+  m TollChargesAndNamesAndIds
+getAggregatedTollChargesAndNamesOnRoute mbDriverId route tolls initialPendingTolls tollChargesAndNamesAndIds = do
+  let (finalTollChargesAndNamesAndIds, finalPendingTolls) =
+        go initialPendingTolls route tolls tollChargesAndNamesAndIds
+  if null finalPendingTolls
+    then whenJust mbDriverId $ \driverId -> Hedis.del $ tollStartGateTrackingKey driverId
+    else cachePendingTolls mbDriverId finalPendingTolls
+  return finalTollChargesAndNamesAndIds
+  where
+    go pendingTolls [] _ acc = (acc, pendingTolls)
+    go pendingTolls [_] _ acc = (acc, pendingTolls)
+    go pendingTolls _ [] acc = (acc, pendingTolls)
+    go pendingTolls (p1 : p2 : ps) tolls' acc =
+      let currentRouteSegment = LineSegment p1 p2
+          pendingWithStarters = addPendingTollStartersOnSegment currentRouteSegment tolls' pendingTolls
+          (remainingPendingTolls, updatedAcc) =
+            resolveTollExitsOnSegment currentRouteSegment pendingWithStarters acc
+       in go remainingPendingTolls (p2 : ps) tolls' updatedAcc
 
 {- Author: Khuzema Khomosi
   Best Case Time Complexity - O(No. of points in routes)
   Worst Case Time Complexity - O(No. of points in route * No. of gate segments of eligible tolls)
 
   This function first finds all the eligible Tolls whose entry segments lie within the Route's bounding box.
-  For each two points of the route, it finds all the tolls whose entry segments intersect the two points of the route.
-  If it finds some entry segments of tolls intersecting the route points, then it goes further on the route to find the exit segment intersecting the toll.
-  Once the exit segment is found, it add's the toll and slices the route further to check for anymore tolls if exists till it reaches the end of the route.
+  For each route segment it finds tolls whose entry gate intersects, tracks them as pending until the
+  corresponding exit gate is crossed, then charges them. The route is not sliced after each exit so
+  nested tolls inside an active toll window are still detected on later segments.
+
+  On segments where a pending toll exits, new polygon tolls are not armed (line tolls still may be).
 
   Note:
   In case of on ride it is possible that the batch of driver waypoints that we have has only the start of the toll and the end of the toll comes later.
-  In that case this function maintains the TollCombinationsWithStartGatesInPrevBatch based on driverId to check for it's corresponding exit segment intersection on route coming in later batches.
-  Once the exit segment is found, it deletes the TollCombinationsWithStartGatesInPrevBatch & add's the toll and slices the route further to check for anymore tolls if exists till it reaches the end of the route.
+  In that case this function maintains pending tolls in Redis based on driverId to resolve exits in later batches.
 -}
-getTollInfoOnRoute :: (BeamFlow m r, EsqDBReplicaFlow m r) => Text -> Maybe Text -> RoutePoints -> m (Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool))
+getTollInfoOnRoute :: (BeamFlow m r, EsqDBReplicaFlow m r) => Text -> Maybe Text -> RoutePoints -> m (Maybe TollInfo)
 getTollInfoOnRoute merchantOperatingCityId mbDriverId route = do
   tolls <- B.runInReplica $ findAllTollsByMerchantOperatingCity merchantOperatingCityId
   if not $ null tolls
@@ -256,26 +333,28 @@ getTollInfoOnRoute merchantOperatingCityId mbDriverId route = do
           mbTollCombinationsWithStartGatesInPrevBatch :: Maybe [Toll] <- Hedis.safeGet (tollStartGateTrackingKey driverId)
           case mbTollCombinationsWithStartGatesInPrevBatch of
             Just tollCombinationsWithStartGatesInPrevBatch -> getAggregatedTollChargesConsideringStartSegmentFromPrevBatchWhileOnRide driverId tollCombinationsWithStartGatesInPrevBatch eligibleTollsThatMaybePresentOnTheRoute
-            Nothing -> getAggregatedTollCharges route eligibleTollsThatMaybePresentOnTheRoute (0, [], [])
-        Nothing -> getAggregatedTollCharges route eligibleTollsThatMaybePresentOnTheRoute (0, [], [])
+            Nothing -> getAggregatedTollCharges route eligibleTollsThatMaybePresentOnTheRoute emptyTollInfo
+        Nothing -> getAggregatedTollCharges route eligibleTollsThatMaybePresentOnTheRoute emptyTollInfo
     else return Nothing
   where
-    getAggregatedTollCharges remainingRoute eligibleTollsThatMaybePresentOnTheRoute (tollCharges, tollNames, tollIds) = do
-      (aggregatedTollCharges, aggregatedTollNames, aggregatedTollIds, isAutoRickshawAllowed, isTwoWheelerAllowed) <- getAggregatedTollChargesAndNamesOnRoute mbDriverId remainingRoute eligibleTollsThatMaybePresentOnTheRoute (tollCharges, tollNames, tollIds, False, Just False)
-      if aggregatedTollCharges > 0 && (not $ null aggregatedTollNames)
-        then return $ Just (aggregatedTollCharges, aggregatedTollNames, aggregatedTollIds, isAutoRickshawAllowed, isTwoWheelerAllowed)
+    getAggregatedTollCharges remainingRoute eligibleTollsThatMaybePresentOnTheRoute initialTollInfo = do
+      aggregatedTollInfo <-
+        getAggregatedTollChargesAndNamesOnRoute mbDriverId remainingRoute eligibleTollsThatMaybePresentOnTheRoute [] initialTollInfo
+      if hasDetectedTolls aggregatedTollInfo
+        then return $ Just aggregatedTollInfo
         else return Nothing
 
     getAggregatedTollChargesConsideringStartSegmentFromPrevBatchWhileOnRide driverId tollCombinationsWithStartGatesInPrevBatch eligibleTollsThatMaybePresentOnTheRoute = do
-      case getExitTollAndRemainingRoute route tollCombinationsWithStartGatesInPrevBatch of
-        Just (remainingRoute, toll) -> do
-          -- Remove only the matched toll from cache, keep other pending tolls
-          removeMatchedTollFromCache driverId tollCombinationsWithStartGatesInPrevBatch toll
-          getAggregatedTollCharges remainingRoute eligibleTollsThatMaybePresentOnTheRoute (toll.price.amount, [toll.name], [getId toll.id])
-        Nothing -> do
-          logWarning $ "No exit segment of tolls with start segment marked from previous batch found for driverId : " <> driverId <> " TollCombinationsWithStartGatesInPrevBatch : " <> show tollCombinationsWithStartGatesInPrevBatch <> " route : " <> show route
-          -- Continue processing current batch for new toll entries even though pending tolls didn't find exits
-          getAggregatedTollCharges route eligibleTollsThatMaybePresentOnTheRoute (0, [], [])
+      aggregatedTollInfo <-
+        getAggregatedTollChargesAndNamesOnRoute
+          (Just driverId)
+          route
+          eligibleTollsThatMaybePresentOnTheRoute
+          tollCombinationsWithStartGatesInPrevBatch
+          emptyTollInfo
+      if hasDetectedTolls aggregatedTollInfo
+        then return $ Just aggregatedTollInfo
+        else return Nothing
 
 -- | Filter Google route alternatives down to those that traverse at least one toll
 --   (start gate intersected AND its corresponding exit gate intersected on the same polyline).

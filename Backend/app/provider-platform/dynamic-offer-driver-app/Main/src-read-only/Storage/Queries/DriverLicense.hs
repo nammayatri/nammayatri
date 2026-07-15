@@ -32,6 +32,17 @@ deleteByDriverId driverId = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel
 findByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverLicense.DriverLicense))
 findByDriverId driverId = do findOneWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+findByDriverIdAndVerificationStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Documents.VerificationStatus -> m (Maybe Domain.Types.DriverLicense.DriverLicense))
+findByDriverIdAndVerificationStatus driverId verificationStatus = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
+          Se.Is Beam.verificationStatus $ Se.Eq verificationStatus
+        ]
+    ]
+
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverLicense.DriverLicense -> m (Maybe Domain.Types.DriverLicense.DriverLicense))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -65,8 +76,8 @@ updateByPrimaryKey (Domain.Types.DriverLicense.DriverLicense {..}) = do
       Se.Set Beam.driverName driverName,
       Se.Set Beam.failedRules failedRules,
       Se.Set Beam.licenseExpiry licenseExpiry,
-      Se.Set Beam.licenseNumberEncrypted (((licenseNumber & unEncrypted . encrypted))),
-      Se.Set Beam.licenseNumberHash ((licenseNumber & hash)),
+      Se.Set Beam.licenseNumberEncrypted (licenseNumber & unEncrypted . encrypted),
+      Se.Set Beam.licenseNumberHash (licenseNumber & hash),
       Se.Set Beam.rejectReason rejectReason,
       Se.Set Beam.vehicleCategory vehicleCategory,
       Se.Set Beam.verificationStatus verificationStatus,

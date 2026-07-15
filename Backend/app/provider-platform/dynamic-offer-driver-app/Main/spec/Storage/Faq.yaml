@@ -1,0 +1,32 @@
+imports:
+  Language: Kernel.External.Types
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+
+Faq:
+  tableName: faq
+
+  fields:
+    id: Id Faq
+    faqGroupId: Text
+    language: Language
+    question: Text
+    answer: Text
+    category: Maybe Text
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+
+  constraints:
+    id: PrimaryKey
+    language: SecondaryKey
+
+  queries:
+    findAllByMerchantOperatingCityIdAndLanguage:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, language]
+
+  sqlType:
+    question: text
+    answer: text
+    category: character varying(255)

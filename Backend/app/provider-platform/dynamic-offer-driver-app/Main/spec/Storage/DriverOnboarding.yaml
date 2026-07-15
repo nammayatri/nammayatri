@@ -36,7 +36,7 @@ IdfyVerification:
     documentImageId2: Maybe (Id Image)
     driverId: Id Person
     requestId: Text
-    docType: DocumentType
+    docType: Text
     vehicleCategory: Maybe VehicleCategory
     status: Text
     issueDateOnDoc: Maybe UTCTime
@@ -56,6 +56,8 @@ IdfyVerification:
     id: PrimaryKey
     driverId: SecondaryKey
     requestId: SecondaryKey
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -71,6 +73,13 @@ IdfyVerification:
       kvFunction: findAllWithOptionsKV
       where:
         and: [driverId, docType]
+    findLatestByDocTypeAndDocumentImageId1:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [driverId, docType, documentImageId1]
+      orderBy:
+        field: createdAt
+        order: desc
     findByRequestId:
       kvFunction: findOneWithKV
       where: requestId
@@ -256,6 +265,10 @@ DriverLicense:
     findByDriverId:
       kvFunction: findOneWithKV
       where: driverId
+    findByDriverIdAndVerificationStatus:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, verificationStatus]
     deleteByDriverId:
       kvFunction: deleteWithKV
       where: driverId
@@ -276,6 +289,9 @@ VehicleRegistrationCertificate:
     DocsVerificationStatus:
       enum: "ADMIN_PENDING,ADMIN_APPROVED,ADMIN_REJECTED"
       derive: "ToParamSchema"
+    PendingChallanResult:
+      pendingChallanCount: Maybe Int
+      errorMessage: Maybe Text
   fields:
     id: Id VehicleRegistrationCertificate
     documentImageId: Id Image
@@ -303,7 +319,6 @@ VehicleRegistrationCertificate:
     airConditioned: Maybe Bool
     oxygen: Maybe Bool
     ventilator: Maybe Bool
-    enableForAirport: Maybe Bool
     luggageCapacity: Maybe Int
     mYManufacturing: Maybe Day
     vehicleRating: Maybe Double
@@ -312,8 +327,10 @@ VehicleRegistrationCertificate:
     vehicleModelYear: Maybe Int
     dateOfRegistration: Maybe UTCTime
     rejectReason: Maybe Text
-    approved: Maybe Bool
+    approved: Maybe Bool # Set by the BOT API on approval. (verified/enabled are statusHandler-computed; approved is the BOT gate.)
+    verified: Maybe Bool # statusHandler-computed: true iff all isMandatory vehicle docs are VALID (InspectionHub is one of them). Bidirectional.
     docsVerificationStatus: Maybe DocsVerificationStatus
+    pendingChallan: Maybe PendingChallanResult
     vehicleImageId: Maybe (Id MediaFile)
   default:
     approved: "false"
@@ -322,6 +339,14 @@ VehicleRegistrationCertificate:
     certificateNumberHash: "!SecondaryKey" # forcing to be a secondary key
     documentImageId: SecondaryKey
     fleetOwnerId: SecondaryKey # high fan-out (fleet -> many RCs), monitor SET size
+  sqlType:
+    pendingChallan: json
+  beamType:
+    pendingChallan: Maybe Value
+  toTType:
+    pendingChallan: Data.Aeson.toJSON <$> pendingChallan|E
+  fromTType:
+    pendingChallan: Kernel.Utils.JSON.valueToMaybe =<< pendingChallan|E
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -368,6 +393,10 @@ VehicleRegistrationCertificate:
     updateApproved:
       kvFunction: updateOneWithKV
       params: [approved]
+      where: id
+    updatePendingChallan:
+      kvFunction: updateOneWithKV
+      params: [pendingChallan]
       where: id
     updateMerchantIdAndCityIdById:
       kvFunction: updateWithKV
@@ -497,6 +526,12 @@ Image:
       params: [verificationStatus, failureReason]
       where:
         and: [rcId, imageType]
+    updateVerificationStatusByIds:
+      kvFunction: updateWithKV
+      params: [verificationStatus, updatedAt]
+      where:
+        and:
+          - in: [id]
     deleteById:
       kvFunction: deleteWithKV
       where: id
@@ -508,6 +543,15 @@ Image:
       kvFunction: deleteWithKV
       where:
         and: [id, personId]
+    updateVerificationStatusAndFailureReasonForIds:
+      kvFunction: updateWithKV
+      params: [verificationStatus, failureReason]
+      where:
+        in: [id]
+    findImagesByIds:
+      kvFunction: findAllWithKV
+      where:
+        in: [id]
   extraOperations:
     - EXTRA_QUERY_FILE
   domainInstance:
@@ -568,12 +612,11 @@ DocumentVerificationConfig:
       reviewRequired: Maybe Bool
       bodyType: Maybe Text
       priority: Maybe Int
-      enableForAirport: Maybe Bool
       derive: "Eq, Ord, Read"
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,DriverInspectionForm,TrainingForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer,InspectionHub,DriverInspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLinkage,VoterIdCard"
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,DriverInspectionForm,TrainingForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer,InspectionHub,DriverInspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLinkage,VoterIdCard,OperatorPartnerCode,MedicalCertificate,Rating,BotApproval,NomineeDetails,DriverVehicleNOC,FleetRegistration"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix,Exact"
     DocumentCategory:
@@ -612,6 +655,7 @@ DocumentVerificationConfig:
     maxRetryCount: Int
     isDefaultEnabledOnManualVerification: Bool
     isImageValidationRequired: Bool
+    markImageValidOnValidationSkip: Maybe Bool
     doStrictVerifcation: Bool
     order: Int
     filterForOldApks: Maybe Bool
@@ -625,6 +669,7 @@ DocumentVerificationConfig:
     isReminderSupported: Maybe Bool
     isApprovalSupported: Maybe Bool
     onlyImageVerificationStatusLookupRequired: Maybe Bool
+    faceMatchSourceDoc: Maybe DocumentType
   default:
     order: "0"
     doStrictVerifcation: "true"
@@ -672,6 +717,16 @@ DocumentVerificationConfig:
         order: asc
   extraOperations:
     - EXTRA_QUERY_FILE
+
+  configPilot:
+    configType: DocumentVerificationConfig
+    fetchQuery: findAllByMerchantOpCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: List
+    queryModule: Storage.CachedQueries.DocumentVerificationConfig
+    filterDimensions:
+      - documentType
+      - vehicleCategory
 
 VehiclePermit:
   tableName: vehicle_permit
@@ -973,6 +1028,7 @@ DriverPanCard:
     docType: Maybe PanType
     driverNameOnGovtDB: Maybe Text
     panAadhaarLinkage: Maybe PanAadhaarLinkage
+    rejectReason: Maybe Text
   excludedFields: [merchantOperatingCityId]
   constraints:
     id: PrimaryKey
@@ -1002,6 +1058,10 @@ DriverPanCard:
     updateVerificationStatusByImageId:
       kvFunction: updateOneWithKV
       params: [verificationStatus]
+      where: documentImageId1
+    updateVerificationStatusAndRejectReason:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus, rejectReason]
       where: documentImageId1
     updateMerchantIdAndCityIdByDriverId:
       kvFunction: updateWithKV
@@ -1037,6 +1097,7 @@ DriverGstin:
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     pincode : Maybe Text
     stateName : Maybe Text
+    rejectReason: Maybe Text
   excludedFields: [merchantOperatingCityId]
   constraints:
     id: PrimaryKey
@@ -1065,6 +1126,10 @@ DriverGstin:
     updateVerificationStatusByImageId:
       kvFunction: updateOneWithKV
       params: [verificationStatus]
+      where: documentImageId1
+    updateVerificationStatusAndRejectReason:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus, rejectReason]
       where: documentImageId1
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -1108,6 +1173,7 @@ DriverUdyam :
   fields:
     id: Id DriverUdyam
     driverId: Id Person
+    documentImageId: Maybe (Id Image)
     udyamNumber: EncryptedHashedField e Text
     enterpriseType: Maybe Text
     enterpriseName : Maybe Text
@@ -1120,6 +1186,7 @@ DriverUdyam :
     id: PrimaryKey
     driverId: SecondaryKey
     udyamNumberHash: "!SecondaryKey" # forcing to be a secondary key
+    documentImageId: SecondaryKey
 
   queries:
     findById:
@@ -1128,6 +1195,16 @@ DriverUdyam :
     findByDriverId:
       kvFunction: findOneWithKV
       where: driverId
+    findByImageId:
+      kvFunction: findOneWithKV
+      where: documentImageId
+    findAllByEncryptedUdyamNumber:
+      kvFunction: findAllWithKV
+      where: udyamNumberHash|B
+    findByDriverIdAndVerificationStatus:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, verificationStatus]
     updateVerificationStatus:
       kvFunction: updateWithKV
       params: [verificationStatus, updatedAt]
@@ -1136,6 +1213,9 @@ DriverUdyam :
       kvFunction: updateWithKV
       params: [verificationStatus, rejectReason, updatedAt]
       where: id
+    deleteByDriverId:
+      kvFunction: deleteWithKV
+      where: driverId
 
 DriverRidePayoutBankAccount:
   tableName: driver_ride_payout_bank_account
@@ -1196,12 +1276,14 @@ FleetOwnerDocumentVerificationConfig:
     title: Text
     description: Maybe Text
     isMandatory: Bool
+    isMandatoryForEnabling: Maybe Bool
     isDisabled: Bool
     disableWarning: Maybe Text
     isHidden: Bool
     dependencyDocumentType: "[DocumentType]"
     isDefaultEnabledOnManualVerification: Bool
     isImageValidationRequired: Bool
+    markImageValidOnValidationSkip: Maybe Bool
     checkExtraction: Bool
     checkExpiry: Bool
     maxRetryCount: Int
@@ -1209,6 +1291,7 @@ FleetOwnerDocumentVerificationConfig:
     order: Int
     role: Role
     documentCategory: Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory
+    rolesAllowedToUploadDocument: Maybe [Role]
   default:
     order: "0"
     role: "'FLEET_OWNER'"
@@ -1218,6 +1301,14 @@ FleetOwnerDocumentVerificationConfig:
     role: PrimaryKey
   sqlType:
     dependencyDocumentType: text[]
+    rolesAllowedToUploadDocumentText: text[]
+  beamFields:
+    rolesAllowedToUploadDocument:
+      rolesAllowedToUploadDocumentText: Maybe [Text]
+  toTType:
+    rolesAllowedToUploadDocumentText: (Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show)) Kernel.Prelude.<$> rolesAllowedToUploadDocument|E
+  fromTType:
+    rolesAllowedToUploadDocument: rolesAllowedToUploadDocumentText >>= traverse (readMaybe . Data.Text.unpack)|E
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithOptionsKV
@@ -1229,6 +1320,14 @@ FleetOwnerDocumentVerificationConfig:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, role]
+
+  configPilot:
+    configType: FleetOwnerDocumentVerificationConfig
+    fetchQuery: findAllByMerchantOpCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: List
+    queryModule: Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
+    filterDimensions: [documentType, role]
 
 AadhaarCard:
   tableName: aadhaar_card
@@ -1251,6 +1350,7 @@ AadhaarCard:
     merchantId: Id Merchant
     createdAt: UTCTime
     updatedAt: UTCTime
+    rejectReason: Maybe Text
   derives: "Generic"
   constraints:
     driverId: PrimaryKey
@@ -1280,6 +1380,10 @@ AadhaarCard:
     updateVerificationStatus:
       kvFunction: updateWithKV
       params: [verificationStatus, updatedAt]
+      where: driverId
+    updateVerificationStatusAndRejectReason:
+      kvFunction: updateWithKV
+      params: [verificationStatus, rejectReason]
       where: driverId
     deleteByPersonId:
       kvFunction: deleteWithKV

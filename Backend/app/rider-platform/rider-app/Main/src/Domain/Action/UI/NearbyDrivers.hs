@@ -48,12 +48,13 @@ import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common (CacheFlow, HasFlowEnv, Meters (..), MonadFlow, fromMaybeM, logDebug, throwError, type (:::))
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LTSTypes
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error
 
 deriving instance Hashable Meters
@@ -80,7 +81,7 @@ postNearbyDrivers (Just personId, merchantId) req = withLogTag $ do
   mbMoc <- CQMOC.findByMerchantIdAndCity merchantId reqCity
   -- Returning empty response for cases where merchant operating city is not found like in case of AnyCity
   flip (maybe makeEmptyNearbyResp) mbMoc $ \moc -> do
-    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = moc.id.getId}) >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
+    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moc.id.getId}) (Just (CQRC.findByMerchantOperatingCityId moc.id)) >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
     case req.travelMode of
       Just DTrip.Bus -> do
         vehicleDataBuckets <- getNearbyBusesAsBuckets moc.id riderConfig req.location

@@ -27,6 +27,8 @@ data ConfigType
   | FRFSConfig
   | PayoutConfig
   | MerchantServiceUsageConfig
+  | MerchantServiceUsageConfigDriver
+  | MerchantServiceUsageConfigRider
   | HotSpotConfig
   | MerchantConfig
   | RideRelatedNotificationConfig
@@ -35,7 +37,6 @@ data ConfigType
   | DriverIntelligentPoolConfig
   | LeaderBoardConfig
   | CoinsConfig
-  | MonetaryRewardConfig
   | DocumentVerificationConfig
   | FleetOwnerDocumentVerificationConfig
   | GoHomeConfig
@@ -51,9 +52,29 @@ data ConfigType
   | SurgePricing
   | BecknConfig
   | MerchantServiceConfig
+  | MerchantServiceConfigDriver
   | Exophone
   | InsuranceConfig
   | VehicleConfig
+  | ExophoneRider
+  | PayoutConfigRider
+  | MerchantPushNotificationRider
+  | RideRelatedNotificationConfigRider
+  | ScheduledPayoutConfig
+  | ReminderConfig
+  | TagActionNotificationConfig
+  | UiDriverConfig
+  | Translation
+  | TranslationDriver
+  | TranslationRider
+  | CancellationReason
+  | MerchantPaymentMethod
+  | PassCategory
+  | IntegratedBPPConfig
+  | IssueConfig
+  | IssueConfigRider
+  | IssueConfigDriver
+  | MonetaryRewardConfig
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''ConfigType)

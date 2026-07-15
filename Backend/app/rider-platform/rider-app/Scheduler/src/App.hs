@@ -17,8 +17,9 @@ module App where
 
 import qualified Client.Main as CM
 import qualified Data.Bool as B
+import Data.Singletons (SingI)
 import qualified Data.Text as T
-import Environment (HandlerCfg, HandlerEnv, buildHandlerEnv)
+import Environment (Flow, HandlerCfg, HandlerEnv, buildHandlerEnv)
 import "rider-app" Environment (AppCfg (..), buildAppEnv)
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Language as L
@@ -64,6 +65,7 @@ import "rider-app" SharedLogic.Scheduler.Jobs.PassExpiryReminderMaster
 import "rider-app" SharedLogic.Scheduler.Jobs.PaymentOrderStatusCheck
 import "rider-app" SharedLogic.Scheduler.Jobs.Payout.MetroIncentivePayout
 import "rider-app" SharedLogic.Scheduler.Jobs.PostRideSafetyNotification
+import "rider-app" SharedLogic.Scheduler.Jobs.ReconcileRewardInflight
 import "rider-app" SharedLogic.Scheduler.Jobs.SafetyCSAlert
 import "rider-app" SharedLogic.Scheduler.Jobs.SafetyIVR
 import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
@@ -75,11 +77,23 @@ import "rider-app" SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBecknConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
-import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
+import qualified Tools.ActorInfo as ActorInfo
+import "rider-app" Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 import "rider-app" Tools.HTTPManager (prepareCRISHttpManager)
 
 instance HasSchemaName Beam.MerchantOperatingCityT where
   schemaName _ = T.pack currentSchemaName
+
+putJobHandlerInListWrapper ::
+  forall t (e :: t).
+  (JobProcessor t, JobInfoProcessor e, SingI e) =>
+  R.FlowRuntime ->
+  HandlerEnv ->
+  (Job e -> Flow ExecutionResult) ->
+  JobHandlersList t ->
+  JobHandlersList t
+putJobHandlerInListWrapper flowRt env jobHandler =
+  putJobHandlerInList (liftIO . runFlowR flowRt env . ActorInfo.withJobIdActorInfoWrapper jobHandler)
 
 schedulerHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle RiderJobType
 schedulerHandle flowRt env =
@@ -95,42 +109,43 @@ schedulerHandle flowRt env =
       reScheduleOnError = QAllJ.reScheduleOnError,
       jobHandlers =
         emptyJobHandlerList
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . checkPNAndSendSMS)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRideNotificationsToRider)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendTagActionNotification)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSafetyIVR)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendCallPoliceApi)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . checkExotelCallStatusAndNotifyBPP)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSafetyCSAlert)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendCustomerRefund)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRidePopupToRider)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . executePaymentIntentJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . cancelExecutePaymentIntentJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . executeCashRideCashbackPayoutJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . postRideSafetyNotification)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runDailyJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runWeeklyJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runMonthlyJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runQuarterlyJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runDailyUpdateTagJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runWeeklyUpdateTagJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runMonthlyUpdateTagJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runQuarterlyUpdateTagJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . updateCrisUtsDataJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . checkMultimodalConfirmFailJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . checkRefundStatusJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . crisReconJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . paymentOrderStatusCheckJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . updateMetroBusinessHour)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runNyRegularMasterJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runPassExpiryReminderMaster)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runNyRegularInstanceJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockCustomer)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . updateCRISRDSBalanceJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . frfsSeatHoldReaper)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . partnerInvoiceDataExportJob)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . dailyPassStatusUpdate)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . runSettlementReportIngestionJob)
+          & putJobHandlerInListWrapper flowRt env checkPNAndSendSMS
+          & putJobHandlerInListWrapper flowRt env sendScheduledRideNotificationsToRider
+          & putJobHandlerInListWrapper flowRt env sendTagActionNotification
+          & putJobHandlerInListWrapper flowRt env sendSafetyIVR
+          & putJobHandlerInListWrapper flowRt env sendCallPoliceApi
+          & putJobHandlerInListWrapper flowRt env checkExotelCallStatusAndNotifyBPP
+          & putJobHandlerInListWrapper flowRt env sendSafetyCSAlert
+          & putJobHandlerInListWrapper flowRt env sendCustomerRefund
+          & putJobHandlerInListWrapper flowRt env sendScheduledRidePopupToRider
+          & putJobHandlerInListWrapper flowRt env executePaymentIntentJob
+          & putJobHandlerInListWrapper flowRt env cancelExecutePaymentIntentJob
+          & putJobHandlerInListWrapper flowRt env executeCashRideCashbackPayoutJob
+          & putJobHandlerInListWrapper flowRt env postRideSafetyNotification
+          & putJobHandlerInListWrapper flowRt env runDailyJob
+          & putJobHandlerInListWrapper flowRt env runWeeklyJob
+          & putJobHandlerInListWrapper flowRt env runMonthlyJob
+          & putJobHandlerInListWrapper flowRt env runQuarterlyJob
+          & putJobHandlerInListWrapper flowRt env runDailyUpdateTagJob
+          & putJobHandlerInListWrapper flowRt env runWeeklyUpdateTagJob
+          & putJobHandlerInListWrapper flowRt env runMonthlyUpdateTagJob
+          & putJobHandlerInListWrapper flowRt env runQuarterlyUpdateTagJob
+          & putJobHandlerInListWrapper flowRt env updateCrisUtsDataJob
+          & putJobHandlerInListWrapper flowRt env checkMultimodalConfirmFailJob
+          & putJobHandlerInListWrapper flowRt env checkRefundStatusJob
+          & putJobHandlerInListWrapper flowRt env crisReconJob
+          & putJobHandlerInListWrapper flowRt env paymentOrderStatusCheckJob
+          & putJobHandlerInListWrapper flowRt env updateMetroBusinessHour
+          & putJobHandlerInListWrapper flowRt env runNyRegularMasterJob
+          & putJobHandlerInListWrapper flowRt env runPassExpiryReminderMaster
+          & putJobHandlerInListWrapper flowRt env runNyRegularInstanceJob
+          & putJobHandlerInListWrapper flowRt env unblockCustomer
+          & putJobHandlerInListWrapper flowRt env updateCRISRDSBalanceJob
+          & putJobHandlerInListWrapper flowRt env frfsSeatHoldReaper
+          & putJobHandlerInListWrapper flowRt env partnerInvoiceDataExportJob
+          & putJobHandlerInListWrapper flowRt env dailyPassStatusUpdate
+          & putJobHandlerInListWrapper flowRt env runSettlementReportIngestionJob
+          & putJobHandlerInListWrapper flowRt env reconcileRewardInflight
     }
 
 runRiderAppScheduler ::

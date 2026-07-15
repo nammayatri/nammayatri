@@ -39,15 +39,17 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (Forkable (fork), GuidLike (generateGUID), MonadTime (getCurrentTime))
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, logDebug, throwError)
+import Kernel.Utils.Common (fromMaybeM, logDebug, logError, throwError)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.Allocator
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Message as MQuery
 import qualified Storage.Queries.MessageReport as MRQuery
@@ -77,23 +79,46 @@ createMediaEntry Common.AddLinkAsMedia {..} = do
             _type = fileType,
             url = fileUrl,
             s3FilePath = Nothing,
-            createdAt = now
+            status = Just Domain.COMPLETED,
+            fileHash = Nothing,
+            createdAt = now,
+            updatedAt = now
           }
 
 postMessageUploadFile :: ShortId DM.Merchant -> Context.City -> Common.UploadFileRequest -> Flow Common.UploadFileResponse
 postMessageUploadFile merchantShortId opCity Common.UploadFileRequest {..} = do
-  -- _ <- validateContentType
   merchant <- findMerchantByShortId merchantShortId
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
-  filePath <- S3.createFilePath "/message-media/" ("org-" <> merchant.id.getId) fileType "" -- TODO: last param is extension (removed it as the content-type header was not comming with proxy api)
+  filePath <- S3.createFilePath "/message-media/" ("org-" <> merchant.id.getId) fileType ""
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let fileUrl =
         transporterConfig.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "message"
           & T.replace "<FILE_PATH>" filePath
-  _ <- fork "S3 put file" $ S3.put (T.unpack filePath) mediaFile
-  createMediaEntry Common.AddLinkAsMedia {url = fileUrl, fileType}
+  id <- generateGUID
+  now <- getCurrentTime
+  let fileEntity =
+        Domain.MediaFile
+          { id,
+            _type = fileType,
+            url = fileUrl,
+            s3FilePath = Just filePath,
+            status = Just Domain.PENDING,
+            fileHash = Nothing,
+            createdAt = now,
+            updatedAt = now
+          }
+  MFQuery.create fileEntity
+  fork "S3 put file" $
+    ( do
+        S3.put (T.unpack filePath) mediaFile
+        MFQuery.updateStatusById Domain.COMPLETED fileEntity.id
+    )
+      `catch` \(e :: SomeException) -> do
+        logError $ "S3 upload failed for media file " <> fileEntity.id.getId <> ": " <> show e
+        MFQuery.updateStatusById Domain.FAILED fileEntity.id
+  return $ Common.UploadFileResponse {fileId = cast fileEntity.id}
 
 -- where
 -- validateContentType = do

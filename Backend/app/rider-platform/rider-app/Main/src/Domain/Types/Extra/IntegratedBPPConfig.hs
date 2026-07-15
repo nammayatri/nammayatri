@@ -16,6 +16,9 @@ data CRISRouteSortingCriteria = FARE | DISTANCE
 data MergeQuoteCriteria = FULFILLMENT | QUOTE_TYPE
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq)
 
+data QREncoding = LATIN1
+  deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, ToSchema)
+
 data EBIXConfig = EBIXConfig
   { agentId :: Text,
     username :: Text,
@@ -30,7 +33,10 @@ instance Show EBIXConfig where
 
 data DIRECTConfig = DIRECTConfig
   { cipherKey :: Base64,
-    qrRefreshTtl :: Maybe Seconds
+    qrRefreshTtl :: Maybe Seconds,
+    redisPrefix :: Maybe Text,
+    busBlockExpiryTime :: Maybe Seconds,
+    busBlockMaxLimit :: Maybe Int
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
@@ -77,7 +83,10 @@ data ONDCBecknConfig = ONDCBecknConfig
     providerInfo :: Maybe ProviderLevelInfo,
     routeBasedVehicleTracking :: Maybe Bool,
     overrideCity :: Maybe Context.City,
-    redisPrefix :: Maybe Text
+    redisPrefix :: Maybe Text,
+    busBlockExpiryTime :: Maybe Seconds,
+    busBlockMaxLimit :: Maybe Int,
+    qrEncoding :: Maybe QREncoding
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)

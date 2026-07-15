@@ -5,10 +5,21 @@ imports:
   Language: Kernel.External.Types
   VehicleCategory: Domain.Types.VehicleCategory
   ServiceTierType: Domain.Types.ServiceTierType
+  TimeBound: Kernel.Types.TimeBound
 
 module: CoinsConfig
 
 apis:
+  - GET: # CoinsConfigListAPI
+      endpoint: /list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - eventName: Text
+        - vehicleCategory: VehicleCategory
+      response:
+        type: CoinsConfigListRes
   - PUT: # Updating Entries
       endpoint: /update
       auth: ApiAuthV2
@@ -30,6 +41,7 @@ types:
     - active: Bool
     - expirationAt: Maybe Int
     - coins: Int
+    - timeBounds: Maybe TimeBound
     - derive: "'HideSecrets"
   CreateCoinsConfigReq:
     - enum: NewCoinsConfig NewCoinsConfigReq, DuplicateCoinsConfig DuplicateCoinsConfigsReq
@@ -37,14 +49,13 @@ types:
   NewCoinsConfigReq:
     - eventFunction: DriverCoinsFunctionType
     - eventName: Text
-    - merchantId: Text
-    - merchantOptCityId: Text
     - coins: Int
     - expirationAt: Maybe Int
     - active: Bool
     - vehicleCategory: VehicleCategory
     - tripCategoryType: Maybe TripCategoryType
     - serviceTierType: Maybe ServiceTierType
+    - timeBounds: Maybe TimeBound
     - eventMessages: [EventMessage]
   DuplicateCoinsConfigsReq:
     - entriesId: Id CoinsConfig
@@ -53,3 +64,15 @@ types:
   EventMessage:
     - message: Text
     - language: Language
+  CoinsConfigListRes:
+    - configs: [CoinsConfigListItem]
+  CoinsConfigListItem:
+    - entriesId: Id CoinsConfig
+    - eventFunction: DriverCoinsFunctionType
+    - eventName: Text
+    - coins: Int
+    - expirationAt: Maybe Int
+    - active: Bool
+    - vehicleCategory: Maybe VehicleCategory
+    - tripCategoryType: Maybe TripCategoryType
+    - timeBounds: TimeBound

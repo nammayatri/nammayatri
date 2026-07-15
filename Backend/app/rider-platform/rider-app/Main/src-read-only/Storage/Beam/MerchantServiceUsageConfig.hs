@@ -25,6 +25,7 @@ import Tools.Beam.UtilsTH
 
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
   { aadhaarVerificationService :: B.C f Kernel.External.AadhaarVerification.AadhaarVerificationService,
+    additionalIssueTicketServices :: B.C f (Kernel.Prelude.Maybe [Kernel.External.Ticket.Types.IssueTicketService]),
     autoComplete :: B.C f Kernel.External.Maps.Types.MapsService,
     cancelPaymentIntent :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Types.PaymentService),
     capturePaymentIntent :: B.C f Kernel.External.Payment.Types.PaymentService,

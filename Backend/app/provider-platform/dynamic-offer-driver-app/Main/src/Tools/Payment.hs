@@ -29,9 +29,13 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.Version
-import qualified Storage.Cac.MerchantServiceUsageConfig as QOMC
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverPlan as QDPlan
 
 createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> m (Payment.CreateOrderReq -> m Payment.CreateOrderResp, Maybe Text)
@@ -71,7 +75,7 @@ runWithServiceConfigAndName ::
   m (req -> m resp, Maybe Text)
 runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName mRoutingId = do
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity serviceName merchantOperatingCity
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.getId, merchantId = Nothing, serviceName = Just serviceName}) (Just (maybeToList <$> CQMSC.findByServiceAndCity serviceName merchantOperatingCity))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show serviceName))
   logDebug $ "runWithServiceConfigAndName: getRoutingId " <> show getRoutingId
   logDebug $ "runWithServiceConfigAndName: serviceConfig " <> show merchantServiceConfig.serviceConfig
@@ -134,10 +138,10 @@ runWithServiceConfig ::
   req ->
   m resp
 runWithServiceConfig func getCfg merchantOpCityId paymentMode req = do
-  orgPaymentsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  orgPaymentsConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let paymentService = modifyPaymentServiceByMode (getCfg orgPaymentsConfig) (fromMaybe DMPM.LIVE paymentMode)
   orgPaymentServiceConfig <-
-    CQMSC.findByServiceAndCity (DMSC.PaymentService paymentService) merchantOpCityId
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.PaymentService paymentService)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.PaymentService paymentService) merchantOpCityId))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Payments" (show paymentService))
   case orgPaymentServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig msc -> func msc req
@@ -158,7 +162,7 @@ runWithUnWrap func merchantId merchantOperatingCity serviceName mRoutingId req =
 
 decidePaymentService :: (ServiceFlow m r) => DMSC.ServiceName -> Maybe Version -> Id DMOC.MerchantOperatingCity -> m DMSC.ServiceName
 decidePaymentService paymentServiceName clientSdkVersion merchantOpCityId = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let paymentService = case clientSdkVersion of
         Just v
           | v >= textToVersionDefault transporterConfig.aaEnabledClientSdkVersion -> DMSC.PaymentService Payment.AAJuspay
@@ -170,7 +174,7 @@ decidePaymentService paymentServiceName clientSdkVersion merchantOpCityId = do
 
 decidePaymentServiceForRecurring :: (ServiceFlow m r) => DMSC.ServiceName -> Id DP.Person -> Id DMOC.MerchantOperatingCity -> DPlan.ServiceNames -> m DMSC.ServiceName
 decidePaymentServiceForRecurring paymentServiceName driverId merchantOpCityId serviceName = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   case transporterConfig.isAAEnabledForRecurring of
     Just True -> do
       mDriverPlan <- QDPlan.findByDriverIdWithServiceName driverId serviceName

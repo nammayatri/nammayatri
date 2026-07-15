@@ -8,6 +8,9 @@ import qualified Data.Text as T
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverPanCard as DPan
+import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as FODVC
 import qualified Domain.Types.HyperVergeVerification as HV
 import qualified Domain.Types.IdfyVerification as IV
@@ -24,15 +27,21 @@ import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption
 import Kernel.External.Types (Language)
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error hiding (Unauthorized)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.DriverOnboarding as SDO
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPlan as QDPlan
 import qualified Storage.Queries.DriverRCAssociation as DRAQuery
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as IQuery
@@ -45,7 +54,7 @@ import qualified Storage.Queries.VehicleNOC as VNOCQuery
 import qualified Storage.Queries.VehiclePUC as VPUCQuery
 import qualified Storage.Queries.VehiclePermit as VPQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
-import Tools.Error (DriverOnboardingError (ImageNotValid))
+import Tools.Error (DriverOnboardingError (FaceMatchFailed, ImageNotValid))
 
 type DocVerificationConfigs = Either [FODVC.FleetOwnerDocumentVerificationConfig] [DVC.DocumentVerificationConfig]
 
@@ -69,6 +78,114 @@ data VehicleDocumentItem = VehicleDocumentItem
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
+data DLDocumentMetadata = DLDocumentMetadata
+  { driverLicenseNumber :: Text,
+    driverDateOfBirth :: Maybe UTCTime,
+    dateOfExpiry :: UTCTime
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data AadhaarDocumentMetadata = AadhaarDocumentMetadata
+  { aadhaarNumber :: Maybe Text,
+    nameOnCard :: Maybe Text,
+    dateOfBirth :: Maybe Text,
+    address :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data PanDocumentMetadata = PanDocumentMetadata
+  { panNumber :: Text,
+    panDocType :: Maybe DPan.PanType,
+    driverDob :: Maybe UTCTime
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data LocalAddressProofDocumentMetadata = LocalAddressProofDocumentMetadata
+  { state :: Maybe Context.IndianState,
+    proofDocumentType :: Maybe DI.AddressDocumentType,
+    address :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+newtype GSTDocumentMetadata = GSTDocumentMetadata
+  { gstNumber :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data RCDocumentMetadata = RCDocumentMetadata
+  { fitnessExpiry :: UTCTime,
+    vehicleNumberPlate :: Text,
+    vehicleVariant :: Maybe Text,
+    vehicleManufacturer :: Maybe Text,
+    vehicleModel :: Maybe Text,
+    vehicleModelYear :: Maybe Int,
+    vehicleColor :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data VehiclePUCDocumentMetadata = VehiclePUCDocumentMetadata
+  { pucNumber :: Maybe Text,
+    pucExpiry :: UTCTime
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data VehicleFitnessCertificateDocumentMetadata = VehicleFitnessCertificateDocumentMetadata
+  { fitnessExpiry :: UTCTime,
+    applicationNumber :: Text,
+    rcNumber :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data VehicleInsuranceDocumentMetadata = VehicleInsuranceDocumentMetadata
+  { policyNumber :: Text,
+    insuranceExpiry :: UTCTime,
+    insuranceProvider :: Text,
+    rcNumber :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data VehiclePermitDocumentMetadata = VehiclePermitDocumentMetadata
+  { permitNumber :: Text,
+    permitExpiry :: UTCTime,
+    regionCovered :: Text,
+    rcNumber :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data UDYAMDocumentMetadata = UDYAMDocumentMetadata
+  { udyamNumber :: Maybe Text,
+    tdsRate :: Maybe Double
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data TANDocumentMetadata = TANDocumentMetadata
+  { documentId :: Text,
+    tdsRate :: Maybe Double
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data LDCDocumentMetadata = LDCDocumentMetadata
+  { documentId :: Text,
+    tdsRate :: Maybe Double
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data DocumentMetadata
+  = DLMetadata DLDocumentMetadata
+  | AadhaarMetadata AadhaarDocumentMetadata
+  | PanMetadata PanDocumentMetadata
+  | LocalAddressProofMetadata LocalAddressProofDocumentMetadata
+  | GSTMetadata GSTDocumentMetadata
+  | RCMetadata RCDocumentMetadata
+  | VehiclePUCMetadata VehiclePUCDocumentMetadata
+  | VehicleFitnessMetadata VehicleFitnessCertificateDocumentMetadata
+  | VehicleInsuranceMetadata VehicleInsuranceDocumentMetadata
+  | VehiclePermitMetadata VehiclePermitDocumentMetadata
+  | UDYAMMetadata UDYAMDocumentMetadata
+  | TANMetadata TANDocumentMetadata
+  | LDCMetadata LDCDocumentMetadata
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
 data DocumentStatusItem = DocumentStatusItem
   { documentType :: DDVC.DocumentType,
     verificationStatus :: ResponseStatus,
@@ -77,7 +194,8 @@ data DocumentStatusItem = DocumentStatusItem
     s3Path :: Maybe Text,
     imageId :: Maybe Text,
     imageId2 :: Maybe Text,
-    documentExpiry :: Maybe UTCTime
+    documentExpiry :: Maybe UTCTime,
+    metadata :: Maybe DocumentMetadata
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -97,7 +215,7 @@ validateMandatoryVehicleDocsForRC transporterConfig rc =
         language = merchantOperatingCity.language
         onlyMandatoryDocs = Just True
         skipMessages = True
-    allDocumentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId merchantOperatingCity.id Nothing
+    allDocumentVerificationConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, documentType = Nothing, vehicleCategory = Nothing}) (Just (CQDVC.findAllByMerchantOpCityId merchantOperatingCity.id Nothing))
     vehicleDocuments <- fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language (Just registrationNo) onlyMandatoryDocs skipMessages
     let status =
           case find (\vehicleDoc -> vehicleDoc.registrationNo == registrationNo) vehicleDocuments of
@@ -223,15 +341,15 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
     vehicleDocumentTypes <- getVehicleDocTypes merchantOpCityId allDocumentVerificationConfigs verifiedVehicleCategory userSelectedVehicleCategory onlyMandatoryDocs
     documents <-
       vehicleDocumentTypes `forM` \docType -> do
-        (mbStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId) <- getProcessedVehicleDocuments entityImagesInfo docType processedVehicle (Just rcImagesInfo)
+        (mbStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbMetadata) <- getProcessedVehicleDocuments entityImagesInfo docType processedVehicle (Just rcImagesInfo)
         case mbStatus of
           Just status -> do
             mbMessage <- documentStatusMessage status Nothing docType mbProcessedUrl language skipMessages
-            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> mbMessage, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = mbExpiry}
+            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> mbMessage, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = mbMetadata}
           Nothing -> do
             (status, mbReason, mbUrl, _, mbS3PathInProgress, mbImageIdInProgress) <- getInProgressVehicleDocuments entityImagesInfo (Just rcImagesInfo) docType docVerificationConfigs
             mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
-            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3PathInProgress, imageId = mbImageIdInProgress, imageId2 = Nothing, documentExpiry = mbExpiry}
+            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3PathInProgress, imageId = mbImageIdInProgress, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = Nothing}
 
     let mbRcImage = find (\img -> img.id == processedVehicle.documentImageId) entityImagesInfo.entityImages
         rcS3Path = mbRcImage <&> (.s3Path)
@@ -279,7 +397,7 @@ fetchProcessedVehicleDocumentsWithoutRC entityImagesInfo allDocumentVerification
 
           documents <-
             vehicleDocumentTypes `forM` \docType -> do
-              return $ DocumentStatusItem {documentType = docType, verificationStatus = NO_DOC_AVAILABLE, verificationMessage = Nothing, verificationUrl = Nothing, s3Path = Nothing, imageId = Nothing, imageId2 = Nothing, documentExpiry = Nothing}
+              return $ DocumentStatusItem {documentType = docType, verificationStatus = NO_DOC_AVAILABLE, verificationMessage = Nothing, verificationUrl = Nothing, s3Path = Nothing, imageId = Nothing, imageId2 = Nothing, documentExpiry = Nothing, metadata = Nothing}
           return
             [ VehicleDocumentItem
                 { registrationNo = vehicle.registrationNo,
@@ -310,11 +428,10 @@ fetchInprogressVehicleDocuments ::
   Flow [VehicleDocumentItem]
 fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language processedVehicleDocuments mbReqRegistrationNo onlyMandatoryDocs skipMessages = do
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
-      mbPersonId = IQuery.getPersonEntityId entityImagesInfo
   mbVerificationReqRecord <- case entityImagesInfo.entity of
     IQuery.PersonEntity person -> do
       -- Driver inspection or status handler
-      inprogressVehicleIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing person.id DVC.VehicleRegistrationCertificate
+      inprogressVehicleIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing person.id (docTypeToText DVC.VehicleRegistrationCertificate)
       inprogressVehicleHV <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing person.id DVC.VehicleRegistrationCertificate
       pure $ getLatestVerificationRecord inprogressVehicleIdfy inprogressVehicleHV
     IQuery.VehicleRCEntity _rc -> do
@@ -336,14 +453,17 @@ fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs 
             else do
               rcNoEnc <- encrypt registrationNo
               rc <- RCQuery.findByCertificateNumberHash (rcNoEnc & hash)
-              (isUnlinked, mbRcId) <- case rc of
-                Just rc_ -> do
-                  iu <- maybe (pure []) (\personId -> DRAQuery.findUnlinkedRC personId rc_.id) mbPersonId
-                  pure (iu, Just rc_.id)
-                Nothing -> pure ([], Nothing)
+              -- VRC-derived "RC link already created (done)" check, replacing the
+              -- driver_rc_association history read (findUnlinkedRC). Reuses the RC row
+              -- fetched just above + transporterConfig from entityImagesInfo, so it adds
+              -- no DB query: if the VRC exists, is not a fleet RC, and
+              -- canCreateRCAssociation holds, the driver-RC link would have been created,
+              -- so this is not an in-progress document.
+              let mbRcId = (.id) <$> rc
+                  rcLinkAlreadyCreated = maybe False (\rc_ -> isNothing rc_.fleetOwnerId && SDO.canCreateRCAssociation entityImagesInfo.transporterConfig rc_) rc
               mbRcImagesInfo <- forM mbRcId $ \rcId -> do
                 IQuery.getRcImagesInfoFromEntityImagesInfo entityImagesInfo rcId vehicleDocsLoadedByRcId
-              if isJust (find (\doc -> doc.registrationNo == registrationNo) processedVehicleDocuments) || not (null isUnlinked)
+              if isJust (find (\doc -> doc.registrationNo == registrationNo) processedVehicleDocuments) || rcLinkAlreadyCreated
                 then return []
                 else do
                   let userSelectedVehicleCategory = fromMaybe DVC.CAR verificationReqRecord.vehicleCategory
@@ -355,7 +475,7 @@ fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs 
                     vehicleDocumentTypes `forM` \docType -> do
                       (status, mbReason, mbUrl, _, mbS3Path, mbImageId) <- getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerificationConfigs
                       mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
-                      return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = Nothing}
+                      return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = Nothing, metadata = Nothing}
                   let mbRcIdText = (.getId) <$> mbRcId
                       mbRcImage =
                         find
@@ -389,10 +509,11 @@ computeAdminDocsVerificationStatus docs
   | all ((== VALID) . (.verificationStatus)) docs = DDVS.ADMIN_APPROVED
   | otherwise = DDVS.ADMIN_PENDING
 
-getProcessedVehicleDocuments :: IQuery.EntityImagesInfo -> DVC.DocumentType -> RC.VehicleRegistrationCertificate -> Maybe IQuery.RcImagesInfo -> Flow (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text)
+getProcessedVehicleDocuments :: IQuery.EntityImagesInfo -> DVC.DocumentType -> RC.VehicleRegistrationCertificate -> Maybe IQuery.RcImagesInfo -> Flow (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe DocumentMetadata)
 getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo = do
   let entity = entityImagesInfo.entity
       (mbS3Path, mbImageId) = getImageMetaFromVehicleImage entityImagesInfo docType mbRcImagesInfo
+      enableMetadata = fromMaybe False entityImagesInfo.transporterConfig.enableDocumentMetadata
       lookupImage imgId =
         let mbImg = find (\img -> img.id == imgId) entityImagesInfo.entityImages
             s3 = mbImg <&> (.s3Path)
@@ -405,46 +526,117 @@ getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo =
             | status == INVALID && not (null vehicleRC.failedRules) = Just $ T.intercalate ", " vehicleRC.failedRules
             | otherwise = vehicleRC.rejectReason
           (s3, iid) = lookupImage vehicleRC.documentImageId
-      return (Just status, reason, Nothing, Just vehicleRC.fitnessExpiry, s3, iid)
+      mbMetadata <-
+        if enableMetadata
+          then do
+            vehicleNumberPlate <- decrypt vehicleRC.certificateNumber
+            pure $
+              Just $
+                RCMetadata
+                  RCDocumentMetadata
+                    { fitnessExpiry = vehicleRC.fitnessExpiry,
+                      vehicleNumberPlate,
+                      vehicleVariant = show <$> vehicleRC.vehicleVariant,
+                      vehicleManufacturer = vehicleRC.vehicleManufacturer,
+                      vehicleModel = vehicleRC.vehicleModel,
+                      vehicleModelYear = vehicleRC.vehicleModelYear,
+                      vehicleColor = vehicleRC.vehicleColor
+                    }
+          else pure Nothing
+      return (Just status, reason, Nothing, Just vehicleRC.fitnessExpiry, s3, iid, mbMetadata)
     DVC.VehiclePermit -> do
       mbDoc <- listToMaybe <$> VPQuery.findByRcId (Just 1) Nothing vehicleRC.id
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
-      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.permitExpiry, s3, iid)
+      mbMetadata <-
+        if enableMetadata
+          then forM mbDoc $ \doc -> do
+            pNo <- decrypt doc.permitNumber
+            rcNo <- decrypt vehicleRC.certificateNumber
+            pure $
+              VehiclePermitMetadata
+                VehiclePermitDocumentMetadata
+                  { permitNumber = pNo,
+                    permitExpiry = doc.permitExpiry,
+                    regionCovered = doc.regionCovered,
+                    rcNumber = rcNo
+                  }
+          else pure Nothing
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.permitExpiry, s3, iid, mbMetadata)
     DVC.VehicleFitnessCertificate -> do
       mbDoc <- listToMaybe <$> VFCQuery.findByRcId (Just 1) Nothing vehicleRC.id
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
-      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, Just vehicleRC.fitnessExpiry, s3, iid)
+      mbMetadata <-
+        if enableMetadata
+          then forM mbDoc $ \doc -> do
+            appNo <- decrypt doc.applicationNumber
+            rcNo <- decrypt vehicleRC.certificateNumber
+            pure $
+              VehicleFitnessMetadata
+                VehicleFitnessCertificateDocumentMetadata
+                  { fitnessExpiry = doc.fitnessExpiry,
+                    applicationNumber = appNo,
+                    rcNumber = rcNo
+                  }
+          else pure Nothing
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, Just vehicleRC.fitnessExpiry, s3, iid, mbMetadata)
     DVC.VehicleInsurance -> do
       mbDoc <- listToMaybe <$> VIQuery.findByRcId (Just 1) Nothing vehicleRC.id
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
-      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), (mbDoc >>= (.rejectReason)), Nothing, vehicleRC.insuranceValidity, s3, iid)
+      mbMetadata <-
+        if enableMetadata
+          then forM mbDoc $ \doc -> do
+            polNo <- decrypt doc.policyNumber
+            rcNo <- decrypt vehicleRC.certificateNumber
+            pure $
+              VehicleInsuranceMetadata
+                VehicleInsuranceDocumentMetadata
+                  { policyNumber = polNo,
+                    insuranceExpiry = doc.policyExpiry,
+                    insuranceProvider = doc.policyProvider,
+                    rcNumber = rcNo
+                  }
+          else pure Nothing
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), (mbDoc >>= (.rejectReason)), Nothing, vehicleRC.insuranceValidity, s3, iid, mbMetadata)
     DVC.VehiclePUC -> do
       mbDoc <- listToMaybe <$> VPUCQuery.findByRcId (Just 1) Nothing vehicleRC.id
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
-      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.pucExpiry, s3, iid)
+      mbMetadata <-
+        if enableMetadata
+          then forM mbDoc $ \doc -> do
+            mbPucNo <- mapM decrypt doc.pucNumber
+            pure $
+              VehiclePUCMetadata
+                VehiclePUCDocumentMetadata
+                  { pucNumber = mbPucNo,
+                    pucExpiry = doc.pucExpiry
+                  }
+          else pure Nothing
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.pucExpiry, s3, iid, mbMetadata)
     DVC.VehicleNOC -> do
       mbDoc <- listToMaybe <$> VNOCQuery.findByRcId (Just 1) Nothing vehicleRC.id
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
-      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, mbDoc <&> (.nocExpiry), s3, iid)
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, mbDoc <&> (.nocExpiry), s3, iid, Nothing)
     DVC.VehicleInspectionForm -> do
       -- Check all vehicle photos based on RC, not driver
       (status, reason, url) <- checkVehiclePhotosStatusByRC mbRcImagesInfo
-      return (Just status, reason, url, Nothing, Nothing, Nothing)
+      return (Just status, reason, url, Nothing, Nothing, Nothing, Nothing)
     DVC.InspectionHub -> do
       registrationNo <- decrypt vehicleRC.certificateNumber
-      status <- getInspectionHubStatusForResponseStatus DOHR.ONBOARDING_INSPECTION Nothing (Just registrationNo)
-      return (status, Nothing, Nothing, Nothing, Nothing, Nothing)
+      (status, reason) <- getInspectionHubStatusAndReason DOHR.ONBOARDING_INSPECTION Nothing (Just registrationNo)
+      return (status, reason, Nothing, Nothing, Nothing, Nothing, Nothing)
+    DVC.BotApproval ->
+      return (Just $ getBotApprovalStatusForVehicle vehicleRC.approved, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
     DVC.SubscriptionPlan -> case entity of
       IQuery.PersonEntity person -> do
         mbPlan <- QDPlan.findByDriverIdWithServiceName (cast person.id) Plan.YATRI_SUBSCRIPTION -- fix later on basis of vehicle category
-        return (Just $ boolToStatus (isJust mbPlan), Nothing, Nothing, Nothing, Nothing, Nothing)
-      IQuery.VehicleRCEntity _rc -> return (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+        return (Just $ boolToStatus (isJust mbPlan), Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+      IQuery.VehicleRCEntity _rc -> return (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
     _ -> do
       let mbLatestImage = case mbRcImagesInfo of
             Just rcImagesInfo -> listToMaybe (IQuery.filterRecentByPersonRCAndImageType rcImagesInfo docType)
             Nothing -> Nothing
           mbStatus = mbLatestImage >>= (.verificationStatus) <&> mapStatus
-      return (mbStatus, Nothing, Nothing, Nothing, mbS3Path, mbImageId)
+      return (mbStatus, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing)
   where
     boolToStatus :: Bool -> ResponseStatus
     boolToStatus = \case
@@ -551,9 +743,16 @@ getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerific
         Nothing -> return Nothing
       case mbRegistrationNo of
         Just registrationNo -> do
-          mbStatus <- getInspectionHubStatusForResponseStatus DOHR.ONBOARDING_INSPECTION Nothing (Just registrationNo)
+          (mbStatus, reason) <- getInspectionHubStatusAndReason DOHR.ONBOARDING_INSPECTION Nothing (Just registrationNo)
           let status = fromMaybe INVALID mbStatus
-          return (status, Nothing, Nothing)
+          return (status, reason, Nothing)
+        Nothing -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
+    DVC.BotApproval -> do
+      mbRc <- case mbRcImagesInfo of
+        Just rcImagesInfo -> RCQuery.findById rcImagesInfo.rcId
+        Nothing -> return Nothing
+      case mbRc of
+        Just rc -> return (getBotApprovalStatusForVehicle rc.approved, Nothing, Nothing)
         Nothing -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
     _ | docType `elem` vehicleDocsByRcIdList -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo docType onlyImageLookup
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
@@ -578,7 +777,7 @@ checkIfUnderProgress entityImagesInfo docType = do
     IQuery.PersonEntity person -> do
       -- Driver inspection or status handler: docType: DriverLicense/VehicleRegistrationCertificate
       let driverId = person.id
-      mbVerificationReqIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing driverId docType
+      mbVerificationReqIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing driverId (docTypeToText docType)
       mbVerificationReqHV <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing driverId docType
       pure $ getLatestVerificationRecord mbVerificationReqIdfy mbVerificationReqHV
     IQuery.VehicleRCEntity _rc -> do
@@ -603,10 +802,15 @@ checkIfUnderProgress entityImagesInfo docType = do
           then return (INVALID, extractImageFailReason latestImage.failureReason, Nothing)
           else return (NO_DOC_AVAILABLE, Nothing, Nothing)
 
+-- | Blank/whitespace-only reject reason -> Nothing, so the status read falls through to the next fallback (image reason / translated status) instead of a blank message.
+nonEmptyReason :: Text -> Maybe Text
+nonEmptyReason t = if T.null (T.strip t) then Nothing else Just t
+
 extractImageFailReason :: Maybe DriverOnboardingError -> Maybe Text
 extractImageFailReason imageError =
   case imageError of
-    Just (ImageNotValid reason) -> Just reason -- only this because we are inserting this type only in manual reject request in update documents dashboard api
+    Just (ImageNotValid reason) -> nonEmptyReason reason -- manual reject reason from the update-documents dashboard api
+    Just FaceMatchFailed -> toMessage FaceMatchFailed -- surfaces the face-match failure in the status API's verificationMessage
     _ -> Nothing
 
 documentStatusMessage :: ResponseStatus -> Maybe Text -> DDVC.DocumentType -> Maybe BaseUrl -> Language -> Bool -> Flow (Maybe Text)
@@ -674,12 +878,12 @@ data VerificationMessage
 
 translateDynamicKey :: Text -> Language -> Flow Text
 translateDynamicKey key lang = do
-  mTranslation <- MTQuery.findByErrorAndLanguage key lang
+  mTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Nothing, messageKey = key, language = Just lang}) (Just (MTQuery.findByErrorAndLanguage key lang))
   return $ fromMaybe key (mTranslation <&> (.message))
 
 toVerificationMessage :: VerificationMessage -> Language -> Flow Text
 toVerificationMessage msg lang = do
-  errorTranslations <- MTQuery.findByErrorAndLanguage (T.pack (show msg)) lang
+  errorTranslations <- getConfig (TranslationDimensions {merchantOperatingCityId = Nothing, messageKey = T.pack (show msg), language = Just lang}) (Just (MTQuery.findByErrorAndLanguage (T.pack (show msg)) lang))
   case errorTranslations of
     Just errorTranslation -> return $ errorTranslation.message
     Nothing -> return "Something went wrong"
@@ -687,33 +891,54 @@ toVerificationMessage msg lang = do
 getLatestVerificationRecord :: Maybe IV.IdfyVerification -> Maybe HV.HyperVergeVerification -> Maybe SDO.VerificationReqRecord
 getLatestVerificationRecord mbIdfyVerificationReq mbHvVerificationReq = do
   case (mbIdfyVerificationReq <&> (.createdAt), mbHvVerificationReq <&> (.createdAt)) of
-    (Just idfyCreatedAt, Just hvCreatedAt) -> if idfyCreatedAt > hvCreatedAt then SDO.makeIdfyVerificationReqRecord <$> mbIdfyVerificationReq else SDO.makeHVVerificationReqRecord <$> mbHvVerificationReq
+    (Just idfyCreatedAt, Just hvCreatedAt) -> if idfyCreatedAt > hvCreatedAt then (SDO.makeIdfyVerificationReqRecord =<< mbIdfyVerificationReq) <|> (SDO.makeHVVerificationReqRecord <$> mbHvVerificationReq) else SDO.makeHVVerificationReqRecord <$> mbHvVerificationReq
     (Nothing, Just _) -> SDO.makeHVVerificationReqRecord <$> mbHvVerificationReq
-    (Just _, Nothing) -> SDO.makeIdfyVerificationReqRecord <$> mbIdfyVerificationReq
+    (Just _, Nothing) -> SDO.makeIdfyVerificationReqRecord =<< mbIdfyVerificationReq
     (Nothing, Nothing) -> Nothing
 
 -- Convert CommonDriverOnboardingDocuments to CommonDocumentItem
 
+findLatestInspectionHubRequest :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DOHR.RequestType -> Maybe (Id DP.Person) -> Maybe Text -> m (Maybe DOHR.OperationHubRequests)
+findLatestInspectionHubRequest requestType mbDriverId mbRegistrationNo = case requestType of
+  DOHR.DRIVER_ONBOARDING_INSPECTION -> case mbDriverId of
+    Just driverId -> runInReplica $ QOHRE.findLatestByDriverIdAndRequestType driverId requestType
+    Nothing -> pure Nothing
+  DOHR.ONBOARDING_INSPECTION -> case mbRegistrationNo of
+    Just registrationNo -> runInReplica $ QOHRE.findLatestByRegistrationNoAndRequestType registrationNo requestType
+    Nothing -> pure Nothing
+  _ -> pure Nothing
+
 checkInspectionHubRequestCreated :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DOHR.RequestType -> Maybe (Id DP.Person) -> Maybe Text -> m (Maybe DOHR.RequestStatus)
-checkInspectionHubRequestCreated requestType mbDriverId mbRegistrationNo = do
-  mbInspectionReq <- case requestType of
-    DOHR.DRIVER_ONBOARDING_INSPECTION -> case mbDriverId of
-      Just driverId -> runInReplica $ QOHRE.findLatestByDriverIdAndRequestType driverId requestType
-      Nothing -> pure Nothing
-    DOHR.ONBOARDING_INSPECTION -> case mbRegistrationNo of
-      Just registrationNo -> runInReplica $ QOHRE.findLatestByRegistrationNoAndRequestType registrationNo requestType
-      Nothing -> pure Nothing
-    _ -> pure Nothing
-  pure $ (.requestStatus) <$> mbInspectionReq
+checkInspectionHubRequestCreated requestType mbDriverId mbRegistrationNo =
+  ((.requestStatus) <$>) <$> findLatestInspectionHubRequest requestType mbDriverId mbRegistrationNo
 
 mapInspectionHubRequestStatusToResponseStatus :: Maybe DOHR.RequestStatus -> Maybe ResponseStatus
 mapInspectionHubRequestStatusToResponseStatus mbRequestStatus = case mbRequestStatus of
   Just DOHR.APPROVED -> Just VALID
-  Just DOHR.PENDING -> Just VALID
+  Just DOHR.PENDING -> Just PENDING
   Just DOHR.REJECTED -> Just INVALID
   Nothing -> Just NO_DOC_AVAILABLE
 
-getInspectionHubStatusForResponseStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DOHR.RequestType -> Maybe (Id DP.Person) -> Maybe Text -> m (Maybe ResponseStatus)
-getInspectionHubStatusForResponseStatus requestType mbDriverId mbRegistrationNo = do
-  mbRequestStatus <- checkInspectionHubRequestCreated requestType mbDriverId mbRegistrationNo
-  pure $ mapInspectionHubRequestStatusToResponseStatus mbRequestStatus
+-- | Inspection-hub status plus the operator's remarks (the rejection reason surfaced to the status APIs).
+getInspectionHubStatusAndReason :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DOHR.RequestType -> Maybe (Id DP.Person) -> Maybe Text -> m (Maybe ResponseStatus, Maybe Text)
+getInspectionHubStatusAndReason requestType mbDriverId mbRegistrationNo = do
+  mbReq <- findLatestInspectionHubRequest requestType mbDriverId mbRegistrationNo
+  pure (mapInspectionHubRequestStatusToResponseStatus ((.requestStatus) <$> mbReq), (mbReq >>= (.remarks)) >>= nonEmptyReason)
+
+-- | BotApproval status is the BOT-owned `approved` flag on the entity: approved -> VALID, otherwise
+--   PENDING (the BOT hasn't approved yet, or approval was revoked when a doc was invalidated/rejected).
+mapApprovedToResponseStatus :: Maybe Bool -> ResponseStatus
+mapApprovedToResponseStatus approved = if approved == Just True then VALID else PENDING
+
+-- | BotApproval for a driver / fleet-owner (person-keyed): fleet roles read FleetOwnerInformation, else DriverInformation.
+getBotApprovalStatusForPerson :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Role -> Id DP.Person -> m (Maybe ResponseStatus)
+getBotApprovalStatusForPerson role personId = do
+  approved <-
+    if SDO.isFleetRole role
+      then (>>= (.approved)) <$> QFOI.findByPrimaryKey personId
+      else (>>= (.approved)) <$> QDI.findById (cast personId)
+  pure . Just $ mapApprovedToResponseStatus approved
+
+-- | BotApproval for a vehicle (RC-keyed): the RC's own `approved` flag.
+getBotApprovalStatusForVehicle :: Maybe Bool -> ResponseStatus
+getBotApprovalStatusForVehicle = mapApprovedToResponseStatus

@@ -1,37 +1,39 @@
-{-# OPTIONS_GHC -Wno-orphans -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.ConfigPilot.Config.MerchantServiceUsageConfig
-  ( MerchantServiceUsageConfigDimensions (..),
-  )
-where
+module Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..)) where
 
-import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
+import qualified Domain.Types.MerchantServiceUsageConfig as DT
 import Kernel.Prelude
-import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
+import qualified Lib.ConfigPilot.Interface.Getter as LCP
+import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
-import Storage.ConfigPilot.Interface.Getter
-import Storage.ConfigPilot.Interface.Types
+import Storage.Beam.Yudhishthira ()
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as SQ
 
 data MerchantServiceUsageConfigDimensions = MerchantServiceUsageConfigDimensions
   { merchantOperatingCityId :: Text
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
-instance ConfigTypeInfo 'MerchantServiceUsageConfig where
-  type DimensionsFor 'MerchantServiceUsageConfig = MerchantServiceUsageConfigDimensions
-  configTypeValue = MerchantServiceUsageConfig
-  sConfigType = SMerchantServiceUsageConfig
+instance ConfigTypeInfo 'MerchantServiceUsageConfigRider where
+  type DimensionsFor 'MerchantServiceUsageConfigRider = MerchantServiceUsageConfigDimensions
+  configTypeValue = MerchantServiceUsageConfigRider
+  sConfigType = SMerchantServiceUsageConfigRider
 
 instance ConfigDimensions MerchantServiceUsageConfigDimensions where
-  type ConfigTypeOf MerchantServiceUsageConfigDimensions = 'MerchantServiceUsageConfig
-  type ConfigValueTypeOf MerchantServiceUsageConfigDimensions = Maybe DMSUC.MerchantServiceUsageConfig
-  getConfigType _ = MerchantServiceUsageConfig
-  getConfigList a = do
-    let mocId = a.merchantOperatingCityId
-    IM.withInMemCache (configPilotInMemKey a) 3600 $ do
-      cfg <- CQMSUC.findByMerchantOperatingCityId (Id mocId)
-      let configWrapper = LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}
-      getConfigImpl a configWrapper (LYT.RIDER_CONFIG MerchantServiceUsageConfig) (Id mocId)
+  type ConfigTypeOf MerchantServiceUsageConfigDimensions = 'MerchantServiceUsageConfigRider
+  type ConfigValueTypeOf MerchantServiceUsageConfigDimensions = Maybe DT.MerchantServiceUsageConfig
+  getConfigType _ = MerchantServiceUsageConfigRider
+  getConfigList a =
+    listToMaybe
+      <$> LCP.resolveConfigList
+        a
+        (LYT.RIDER_CONFIG MerchantServiceUsageConfig)
+        (Id a.merchantOperatingCityId)
+        (maybeToList <$> SQ.findByMerchantOperatingCityId (Id a.merchantOperatingCityId))
+        (([] :: [LCP.DimMatcher MerchantServiceUsageConfigDimensions DT.MerchantServiceUsageConfig]))
+        Nothing

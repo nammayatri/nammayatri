@@ -131,6 +131,9 @@ types:
   CommunicationListType:
     - enum: "LIST_SENT, LIST_RECEIVED, LIST_DRAFT"
     - derive: "HttpInstance"
+  CommunicationTriggerType:
+    - enum: MANUAL, SYSTEM, SCHEDULED
+    - derive: "HttpInstance"
   CTAButtonReq:
     - label: Text
     - url: Text
@@ -153,6 +156,7 @@ types:
     - messageStatus: CommunicationMessageStatus
     - templateId: Maybe Text
     - templateName: Maybe Text
+    - senderName: Maybe Text
     - derive: "'HideSecrets"
   CreateCommunicationResponse:
     - communicationId: Id Communication
@@ -215,7 +219,9 @@ types:
     - deliverySummary: Maybe DeliverySummary
     - createdAt: UTCTime
     - updatedAt: UTCTime
+    - triggerType: Maybe CommunicationTriggerType
   CommunicationMediaFile:
+    - fileId: Maybe (Id File)
     - url: Text
     - fileType: Text
     - thumbnailUrl: Maybe Text

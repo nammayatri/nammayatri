@@ -54,6 +54,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.TransporterConfig as DTConf
+import qualified Domain.Types.VehicleVariant as DTVeh
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, pi)
 import Kernel.Beam.Functions (runInMasterDbAndRedis)
@@ -78,8 +79,11 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Days)
 import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
+import qualified Lib.DriverCoins.IncentiveMetrics as IncentiveMetrics
 import qualified Lib.DriverCoins.Types as DCT
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.LocationUpdates as LocUpd
 import qualified Lib.LocationUpdates.Internal as LocUpdInternal
 import Lib.Scheduler.Environment (JobCreator)
@@ -91,18 +95,21 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
+import qualified SharedLogic.GoogleMobilityBilling as GoogleMobilityBilling
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.Toll ()
 import qualified Storage.Cac.GoHomeConfig as CGHC
-import qualified Storage.Cac.TransporterConfig as QTC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as MerchantS
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.DriverInformation as QDI
@@ -184,19 +191,20 @@ data ServiceHandle m = ServiceHandle
   }
 
 buildEndRideHandle ::
-  LocUpd.LocationUpdateFlow m r c =>
+  (LocUpd.LocationUpdateFlow m r c, HasField "activeDriversListKeyShards" r Int) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe (Id DRide.Ride) ->
+  Bool ->
   m (ServiceHandle m)
-buildEndRideHandle merchantId merchantOpCityId rideId = do
+buildEndRideHandle merchantId merchantOpCityId rideId allowSnapshotVehicleFallback = do
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId rideId True Nothing
   return $
     ServiceHandle
       { findBookingById = QRB.findById,
         findRideById = QRide.findById,
         getMerchant = MerchantS.findById,
-        notifyCompleteToBAP = CallBAP.sendRideCompletedUpdateToBAP,
+        notifyCompleteToBAP = \b r fp pm pu loc -> CallBAP.sendRideCompletedUpdateToBAP b r fp pm pu loc allowSnapshotVehicleFallback,
         endRideTransaction = RideEndInt.endRideTransaction,
         getFarePolicyByEstOrQuoteId = FarePolicy.getFarePolicyByEstOrQuoteId,
         getFarePolicyOnEndRide = FarePolicy.getFarePolicyOnEndRide,
@@ -206,7 +214,7 @@ buildEndRideHandle merchantId merchantOpCityId rideId = do
         finalDistanceCalculation = LocUpd.finalDistanceCalculation defaultRideInterpolationHandler,
         getInterpolatedPoints = LocUpd.getInterpolatedPoints defaultRideInterpolationHandler,
         clearInterpolatedPoints = LocUpd.clearInterpolatedPoints defaultRideInterpolationHandler,
-        findConfig = QTC.findByMerchantOpCityId merchantOpCityId,
+        findConfig = \_ -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)),
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock,
         getRouteAndDistanceBetweenPoints = RideEndInt.getRouteAndDistanceBetweenPoints merchantId merchantOpCityId,
         findPaymentMethodByIdAndMerchantId = CQMPM.findByIdAndMerchantOpCityId,
@@ -234,9 +242,7 @@ getDriverNumberFromRequest req driverId =
       getDriverNumberFromPerson driver
 
 type EndRideFlow m r =
-  ( MonadFlow m,
-    CoreMetrics m,
-    MonadReader r m,
+  ( CoreMetrics m,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     LT.HasLocationService m r,
@@ -247,7 +253,8 @@ type EndRideFlow m r =
     JobCreator r m,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
-    Esq.EsqDBReplicaFlow m r
+    Esq.EsqDBReplicaFlow m r,
+    Finance.HasActorInfo m r
   )
 
 driverEndRide ::
@@ -380,7 +387,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
       toLocation <- booking.toLocation & fromMaybeM (InvalidRequest "Trip end location is required")
       pure (getCoordinates toLocation, Nothing, DRide.CallBased)
 
-  goHomeConfig <- CGHC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId)))
+  goHomeConfig <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (Just <$> CGHC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> booking.merchantOperatingCityId.getId)
   ghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.merchantOperatingCityId (Just goHomeConfig)
 
   homeLocationReached' <-
@@ -598,6 +605,9 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     -- written back to the ride asynchronously by the handler.
     let updRide = updRide'
     QRide.incrementDriverRiderRideCountForDay (cast driverId) booking.riderId
+    when (thresholdConfig.enableMobilityBilling == Just True) $
+      fork "report Google mobility billable event" $
+        GoogleMobilityBilling.reportNavBillableEvent booking updRide
     fork "updating time and latlong in advance ride if any" $ do
       whenJust advanceRide $ \advanceRide' -> do
         QRide.updatePreviousRideTripEndPosAndTime (Just tripEndPoint) (Just now) advanceRide'.id
@@ -621,9 +631,52 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
             DC.incrementMetroRideCount driverId metroRideType expirationPeriod 1
           when (DTC.isDynamicOfferTrip booking.tripCategory && validRideTaken) $ do
             DC.incrementValidRideCount driverId expirationPeriod 1
+            let earningsDelta = maybe 0 (roundToIntegral . getHighPrecMoney) updRide.fare
+                distanceDelta = maybe 0 getMeters updRide.chargeableDistance
+                rideTimeDelta =
+                  fromMaybe 0 $
+                    (\start end -> max 0 (roundToIntegral (diffUTCTime end start)))
+                      <$> updRide.tripStartTime
+                      <*> updRide.tripEndTime
+                vehCategory = DTVeh.getVehicleCategoryFromVehicleVariantDefault updRide.vehicleVariant
+                timeBoundReferenceUtc = fromMaybe updRide.createdAt updRide.tripStartTime
+            DC.incrementValidRideCountForTimeBoundCohort
+              driverId
+              booking.providerId
+              booking.merchantOperatingCityId
+              vehCategory
+              DCT.DynamicOfferTrip
+              expirationPeriod
+              thresholdConfig.timeDiffFromUtc
+              timeBoundReferenceUtc
+            DC.incrementIncentiveMetricsForRide
+              driverId
+              booking.providerId
+              booking.merchantOperatingCityId
+              vehCategory
+              IncentiveMetrics.RideIncentiveDeltas
+                { ridesDelta = 1,
+                  earningsDelta,
+                  distanceMetersDelta = distanceDelta,
+                  rideTimeSecondsDelta = rideTimeDelta
+                }
+              expirationPeriod
+              thresholdConfig.timeDiffFromUtc
+              timeBoundReferenceUtc
             DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.DynamicOfferTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions)
           when (DTC.isRideOtpTrip booking.tripCategory && validRideTaken) $ do
             DC.incrementOTPValidRideCount driverId expirationPeriod 1
+            let vehCategory = DTVeh.getVehicleCategoryFromVehicleVariantDefault updRide.vehicleVariant
+                timeBoundReferenceUtc = fromMaybe updRide.createdAt updRide.tripStartTime
+            DC.incrementValidRideCountForTimeBoundCohort
+              driverId
+              booking.providerId
+              booking.merchantOperatingCityId
+              vehCategory
+              DCT.OTPRideTrip
+              expirationPeriod
+              thresholdConfig.timeDiffFromUtc
+              timeBoundReferenceUtc
             DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.OTPRideTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions)
 
     -- GPS toll-behavior check moved to kafka-consumers RIDE_EVENTS_CONSUMER.

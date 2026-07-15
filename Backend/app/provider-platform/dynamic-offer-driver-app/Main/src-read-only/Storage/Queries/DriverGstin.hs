@@ -11,6 +11,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Documents
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -45,6 +46,18 @@ updateVerificationStatus verificationStatus driverId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateVerificationStatusAndRejectReason ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Documents.VerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
+updateVerificationStatusAndRejectReason verificationStatus rejectReason documentImageId1 = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.verificationStatus verificationStatus,
+      Se.Set Beam.rejectReason rejectReason,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.documentImageId1 $ Se.Eq (Kernel.Types.Id.getId documentImageId1)]
+
 updateVerificationStatusByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
 updateVerificationStatusByImageId verificationStatus documentImageId1 = do
   _now <- getCurrentTime
@@ -71,6 +84,7 @@ updateByPrimaryKey (Domain.Types.DriverGstin.DriverGstin {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.panNumber panNumber,
       Se.Set Beam.pincode pincode,
+      Se.Set Beam.rejectReason rejectReason,
       Se.Set Beam.stateName stateName,
       Se.Set Beam.tradeName tradeName,
       Se.Set Beam.typeOfRegistration typeOfRegistration,

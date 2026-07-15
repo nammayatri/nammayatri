@@ -3,6 +3,7 @@
 
 module Storage.Beam.MessageDictionary where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.MessageDictionary
@@ -12,13 +13,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MessageDictionaryT f = MessageDictionaryT
-  { id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    messageKey :: (B.C f Kernel.Prelude.Text),
-    messageType :: (B.C f Domain.Types.MessageDictionary.MessageType),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { eligibilityLogic :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    messageKey :: B.C f Kernel.Prelude.Text,
+    messageType :: B.C f Domain.Types.MessageDictionary.MessageType,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -28,6 +30,6 @@ instance B.Table MessageDictionaryT where
 
 type MessageDictionary = MessageDictionaryT Identity
 
-$(enableKVPG (''MessageDictionaryT) [('id)] [[('messageKey)], [('messageType)]])
+$(enableKVPG ''MessageDictionaryT ['id] [['messageKey], ['messageType]])
 
-$(mkTableInstances (''MessageDictionaryT) "message_dictionary")
+$(mkTableInstances ''MessageDictionaryT "message_dictionary")

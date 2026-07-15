@@ -9,13 +9,14 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import qualified SharedLogic.PassExpiryReminder as SPER
 import Storage.Beam.SchedulerJob ()
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error
 
 batchRescheduleDelaySeconds :: NominalDiffTime
@@ -55,7 +56,7 @@ scheduleTomorrow ::
   Id DMOC.MerchantOperatingCity ->
   m ()
 scheduleTomorrow merchantId' merchantOpCityId = do
-  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOpCityId))
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) (mbRiderConfig :: Maybe DRC.RiderConfig)
       tzMinutes = getSeconds timeDiffFromUtc `div` 60
       tz = Time.minutesToTimeZone tzMinutes

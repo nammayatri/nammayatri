@@ -8,6 +8,7 @@ import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking
 import qualified Domain.Types.FareBreakup
+import qualified Domain.Types.FareBreakupInfo as DFareBreakupInfo
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.OfferEntity as DOfferEntity
@@ -31,6 +32,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
@@ -40,12 +42,13 @@ import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaym
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
-import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPayoutCfg
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.OfferEntity as QOfferEntity
@@ -53,6 +56,7 @@ import qualified Storage.Queries.PaymentCustomer as QPaymentCustomer
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Payment as TPayment
 
@@ -72,14 +76,19 @@ getcustomer person = do
     then
       return $
         TPayment.CreateCustomerResp
-          { customerId = customer.customerId,
+          { customerId = person.id.getId, -- in-app UPI requires customer.personId only
             clientAuthToken = customer.clientAuthToken,
             clientAuthTokenExpiry = customer.clientAuthTokenExpiry
           }
     else do
       getCustomerResp <- TPayment.getCustomer person.merchantId person.merchantOperatingCityId person.paymentMode customer.customerId
       QPaymentCustomer.updateCATAndExipry getCustomerResp.clientAuthToken getCustomerResp.clientAuthTokenExpiry getCustomerResp.customerId (Just paymentMode)
-      return getCustomerResp
+      return $
+        TPayment.CreateCustomerResp
+          { customerId = person.id.getId, -- in-app UPI requires customer.personId only
+            clientAuthToken = getCustomerResp.clientAuthToken,
+            clientAuthTokenExpiry = getCustomerResp.clientAuthTokenExpiry
+          }
 
 buildCreateCustomer ::
   ( CacheFlow m r,
@@ -113,13 +122,24 @@ getOrCreatePaymentCustomer person = do
     -- Re-check inside the lock: another concurrent request may have already created it
     mbCustomer <- QPaymentCustomer.findByPersonIdAndPaymentMode (Just person.id) (Just paymentMode)
     case mbCustomer of
-      Just customer -> return customer
+      Just customer ->
+        if customer.customerId == person.id.getId
+          then do
+            getCustomerResp <- TPayment.getCustomer person.merchantId person.merchantOperatingCityId person.paymentMode customer.customerId
+            QPaymentCustomer.updateCATExpiryAndCustomerIdByPersonId getCustomerResp.clientAuthToken getCustomerResp.clientAuthTokenExpiry getCustomerResp.customerId (Just person.id) (Just paymentMode)
+            return
+              customer
+                { DPaymentCustomer.customerId = getCustomerResp.customerId,
+                  DPaymentCustomer.clientAuthToken = getCustomerResp.clientAuthToken,
+                  DPaymentCustomer.clientAuthTokenExpiry = getCustomerResp.clientAuthTokenExpiry
+                }
+          else return customer
       Nothing -> do
         -- Create a customer in payment service if not there
         mbEmailDecrypted <- mapM decrypt person.email
         encryptedMobile <- person.mobileNumber & fromMaybeM (InvalidRequest "Person mobile number required to create payment customer")
         phoneDecrypted <- decrypt encryptedMobile
-        let req = CreateCustomerReq {email = mbEmailDecrypted, name = person.firstName, phone = phoneDecrypted, lastName = Nothing, objectReferenceId = person.id.getId, mobileCountryCode = Nothing, optionsGetClientAuthToken = Nothing}
+        let req = CreateCustomerReq {email = mbEmailDecrypted, name = person.firstName, phone = phoneDecrypted, lastName = Nothing, objectReferenceId = person.id.getId, mobileCountryCode = person.mobileCountryCode, optionsGetClientAuthToken = Nothing}
         customerResp <- TPayment.createCustomer person.merchantId person.merchantOperatingCityId person.paymentMode req
         paymentCustomer <- buildCreateCustomer person.id customerResp paymentMode
         QPaymentCustomer.create paymentCustomer
@@ -246,7 +266,7 @@ postPaymentAddTip ::
     API.Types.UI.RidePayment.AddTipRequest ->
     Environment.Flow APISuccess
   )
-postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
+postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   Redis.withWaitOnLockRedisWithExpiry (SPayment.paymentJobExecLockKey rideId.getId) 10 20 $ do
     personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
     person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -259,7 +279,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
     mbRideOfferEntity <- QOfferEntity.findByEntityIdAndEntityType rideId.getId DOfferEntity.RIDE
     let rideDiscountAmount = maybe 0 (.discountAmount) mbRideOfferEntity
         ridePayoutAmount = maybe 0 (.payoutAmount) mbRideOfferEntity
-    fareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE
+    fareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId Domain.Types.FareBreakup.RIDE (runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE)
     when (any (\fb -> fb.description == tipFareBreakupTitle) fareBreakups) $ throwError $ InvalidRequest "Tip already added"
     (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking person
     driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
@@ -321,7 +341,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         -- compares newTotal vs. oldTotal, and since tip is not part of
         -- ledger core (handled separately via createTipLedger), the
         -- existing core entries won't be disturbed.
-        tipRideFareBreakups <- QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE
+        tipRideFareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId Domain.Types.FareBreakup.RIDE (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE)
         let tipLedgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
         mbTipLedgerInfo <- SPayment.buildLedgerInfoFromBreakups tipRideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount 0 tipLedgerCtx
         let tipLedgerInfo =
@@ -345,7 +365,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq (Just tipLedgerInfo)
         case mbPaymentIntentResp of
           Nothing -> do
-            bookingFareBreakup <- QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.BOOKING
+            bookingFareBreakup <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId Domain.Types.FareBreakup.BOOKING (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.BOOKING)
             let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
             mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups bookingFareBreakup rideDiscountAmount ridePayoutAmount applicationFeeAmount 0 ledgerCtx
             let ledgerInfo =
@@ -392,25 +412,14 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
                   QRide.markPaymentStatus Domain.Types.Ride.Failed rideId
                   logError $ "Failed to capture payment intent after tip: " <> paymentIntentResp.paymentIntentId
         QRide.updateTipByRideId (Just tipAmount) rideId
-        createFareBreakup
+        let tipFarePrice = mkPriceFromAPIEntity tipRequest.amount
+        SFareBreakupInfo.addFareBreakupInfoItems rideId.getId Domain.Types.FareBreakup.RIDE [DFareBreakupInfo.FareBreakupInfoItem {description = tipFareBreakupTitle, amount = tipFarePrice.amount, currency = tipFarePrice.currency}] (Just booking.merchantId) (Just booking.merchantOperatingCityId)
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     void $ CallBPPInternal.populateTipAmount merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId tipRequest.amount.amount
   return Success
   where
     tipFareBreakupTitle :: Text
     tipFareBreakupTitle = "RIDE_TIP"
-
-    createFareBreakup = do
-      id <- generateGUID
-      let tipFareBreakup =
-            Domain.Types.FareBreakup.FareBreakup
-              { id,
-                entityId = rideId.getId,
-                entityType = Domain.Types.FareBreakup.RIDE,
-                description = tipFareBreakupTitle,
-                amount = mkPriceFromAPIEntity tipRequest.amount
-              }
-      QFareBreakup.create tipFareBreakup
 
 applicationFeeAmountForTipAmount :: API.Types.UI.RidePayment.AddTipRequest -> HighPrecMoney
 applicationFeeAmountForTipAmount tipRequest = do
@@ -675,7 +684,7 @@ postPaymentClearDues ::
     API.Types.UI.RidePayment.ClearDuesReq ->
     Environment.Flow API.Types.UI.RidePayment.ClearDuesResp
   )
-postPaymentClearDues (mbPersonId, _merchantId) req = do
+postPaymentClearDues (mbPersonId, _merchantId) req = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   duesResp <- SPayment.getDuesForPerson person
@@ -699,7 +708,7 @@ postPaymentRideCapture ::
     Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
     Environment.Flow APISuccess
   )
-postPaymentRideCapture (mbPersonId, _merchantId) rideId = do
+postPaymentRideCapture (mbPersonId, _merchantId) rideId = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   Redis.withWaitOnLockRedisWithExpiry (SPayment.paymentJobExecLockKey rideId.getId) 10 20 $ do
@@ -811,7 +820,7 @@ triggerPendingCashRideCashbackPayoutJob person = do
     Right _ -> pure ()
   where
     schedulePayoutJob = do
-      mbPayoutConfig <- getOneConfig (PayoutDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just DV.CAR, isPayoutEnabled = Nothing, payoutEntity = Nothing})
+      mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just DV.CAR, isPayoutEnabled = Nothing, payoutEntity = Nothing}) (Just (maybeToList <$> CQPayoutCfg.findByCityIdAndVehicleCategory person.merchantOperatingCityId DV.CAR (Just [])))
       case mbPayoutConfig of
         Nothing ->
           logError $ "No payout config found for cashback payout trigger; person=" <> person.id.getId

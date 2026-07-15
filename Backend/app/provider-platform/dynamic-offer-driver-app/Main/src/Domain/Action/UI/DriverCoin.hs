@@ -40,8 +40,10 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverCoins.Coins as Coins
 import Lib.DriverCoins.Types
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPO
@@ -52,9 +54,13 @@ import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.Payment ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPC
+import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.Coins.CoinHistory as CHistory
-import Storage.Queries.Coins.CoinsConfig as SQCC
+import qualified Storage.Queries.Coins.CoinsConfig as SQCC
 import Storage.Queries.DailyStatsExtra as DS
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import Storage.Queries.DriverPlan as SQPlan
@@ -66,7 +72,6 @@ import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Encryption
 import Tools.Error
 import qualified Tools.Payout as Payout
-import Utils.Common.Cac.KeyNameConstants
 
 data CoinTransactionHistoryItem = CoinTransactionHistoryItem
   { coins :: Int,
@@ -140,7 +145,7 @@ data CoinInfo = CoinInfo
 
 getCoinEventSummary :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> UTCTime -> Flow CoinTransactionRes
 getCoinEventSummary (driverId, merchantId_, merchantOpCityId) dateInUTC = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
@@ -205,7 +210,7 @@ getCoinUsageSummary ::
   Maybe CoinRedemptionType ->
   m CoinsUsageRes
 getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) mbLimit mbOffset mbCoinRedemptionType = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
@@ -270,13 +275,13 @@ accumulateCoins targetAmount = takeCoinsRequired (targetAmount, []) False
         else takeCoinsRequired (afterTaking, (coinHis.id.getId, coinsTaken + afterTaking, coinStatus) : result) True []
 
 useCoinsHandler ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    PaymentBeamFlow.BeamFlow m r
+    PaymentBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ConvertCoinToCashReq ->
@@ -299,19 +304,19 @@ useCoinsHandler (driverId, merchantId, merchantOpCityId) ConvertCoinToCashReq {.
     mkLockKey = "ConvertCoinToCash:DriverId:" <> driverId.getId
 
 handler ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    PaymentBeamFlow.BeamFlow m r
+    PaymentBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ConvertCoinToCashReq ->
   m APISuccess
 handler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {..} = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
@@ -379,13 +384,13 @@ handler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {..} = do
     noDriverPlan driverId_ = isNothing <$> SQPlan.findByDriverIdAndServiceName driverId_ DPlan.YATRI_SUBSCRIPTION
 
 redeemCoins ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    PaymentBeamFlow.BeamFlow m r
+    PaymentBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id SP.Person ->
   Id DM.Merchant ->
@@ -398,7 +403,7 @@ redeemCoins ::
 redeemCoins driverId merchantId merchantOpCityId transporterConfig vehCategory driver calculatedAmount = do
   unless (fromMaybe False transporterConfig.enableCoinsToDirectPayout) $
     throwError $ InvalidRequest "Coins to direct payout is not enabled"
-  payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehCategory) merchantOpCityId.getId)
+  payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Just vehCategory, isPayoutEnabled = Nothing}) (Just (maybeToList <$> CQPC.findByPrimaryKey merchantOpCityId vehCategory Nothing)) >>= fromMaybeM (PayoutConfigNotFound (show vehCategory) merchantOpCityId.getId)
   case payoutConfig.coinRedemptionMinimumLimit of
     Just coinRedemptionMinimumLimit -> when (calculatedAmount < coinRedemptionMinimumLimit) $ throwError $ InvalidRequest "Calculated amount is less than the coin redemption minimum limit"
     Nothing -> throwError $ InvalidRequest "Coin redemption minimum limit is not set"
@@ -427,7 +432,7 @@ refundCoins ::
   Text ->
   m ()
 refundCoins driverId merchantId merchantOperatingCityId payoutOrderId = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
   mbVehicle <- QVeh.findById driverId
   let vehCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
@@ -451,7 +456,7 @@ castPayoutOrderStatus payoutOrderStatus =
 
 getRideStatusPastDays :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow RideStatusPastDaysRes
 getRideStatusPastDays (driverId, merchantId_, merchantOpCityId) = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
   localTimeToday <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
@@ -466,7 +471,7 @@ getRideStatusPastDays (driverId, merchantId_, merchantOpCityId) = do
 
 getCoinsInfo :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow CoinInfoRes
 getCoinsInfo (driverId, merchantId, merchantOpCityId) = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $ throwError $ CoinServiceUnavailable merchantId.getId
   driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   vehCategory <-
@@ -474,12 +479,12 @@ getCoinsInfo (driverId, merchantId, merchantOpCityId) = do
       >>= fromMaybeM (DriverWithoutVehicle driverId.getId)
       <&> (\vehicle -> VecVarient.castVehicleVariantToVehicleCategory vehicle.variant)
   let language = fromMaybe ENGLISH (driver.language)
-  activeConfigs <- SQCC.getActiveCoinConfigs merchantId merchantOpCityId vehCategory
+  activeConfigs <- getConfig (CoinsConfigDimensions {merchantOptCityId = merchantOpCityId.getId, merchantId = Just merchantId.getId, active = Just True, vehicleCategory = Just vehCategory, eventFunction = Nothing, serviceTierType = Nothing, eventName = Nothing, tripCategoryType = Nothing, configId = Nothing}) (Just (SQCC.getActiveCoinConfigs merchantId merchantOpCityId vehCategory))
   coinConfigRes <-
     mapM
       ( \activeConfg -> do
           let id = Text.strip (activeConfg.eventName <> "_" <> (show activeConfg.eventFunction))
-          translation <- SQT.findByErrorAndLanguage id language >>= fromMaybeM (CoinInfoTranslationNotFound id (show language))
+          translation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = id, language = Just language}) (Just (SQT.findByErrorAndLanguage id language)) >>= fromMaybeM (CoinInfoTranslationNotFound id (show language))
           case Text.splitOn " | " translation.message of
             [title, description] ->
               pure $

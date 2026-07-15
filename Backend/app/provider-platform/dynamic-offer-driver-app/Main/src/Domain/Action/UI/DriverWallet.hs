@@ -40,6 +40,7 @@ import qualified Data.Time
 import qualified Data.Time.Calendar as Cal
 import Domain.Action.UI.Plan hiding (mkDriverFee)
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
+import Domain.Types.DriverInformation as DI
 import Domain.Types.Extra.Plan
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import qualified Domain.Types.Merchant
@@ -62,6 +63,7 @@ import qualified Kernel.Types.HideSecrets
 import Kernel.Types.Id (Id (..))
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance
   ( Account,
     AccountRole (OwnerLiability, PlatformAsset),
@@ -77,6 +79,7 @@ import Lib.Finance
     runFinance,
     transfer,
   )
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntry
@@ -87,15 +90,17 @@ import qualified Lib.Payment.Payout.Request as PayoutRequest
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.Payment as SPayment
-import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.LedgerEntry as CHLE
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.WalletTransaction as QWalletTransaction
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as Payout
@@ -150,7 +155,7 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
         case mbAssocFleetOwnerId of
           Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId, Just driverId.getId)
           Nothing -> (counterpartyFromRole person.role, driverId.getId, Nothing)
-  transporterConfig <- findByMerchantOpCityId mocId Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (SCTC.findByMerchantOpCityId mocId Nothing)) >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
   now <- getCurrentTime
   let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
       fromDate = fromMaybe (Data.Time.UTCTime (Data.Time.utctDay now) 0) mbFromDate
@@ -208,7 +213,7 @@ fetchWalletRowsFromLedger ::
   UTCTime ->
   m [CHLE.WalletEntryRow]
 fetchWalletRowsFromLedger accountIds mbConcernedIndividualId fromDate toDate = do
-  let allRefs = walletCreditRefs ++ [walletReferencePayout]
+  let allRefs = walletCreditRefs ++ [walletReferencePayout, walletReferenceAirportCashWithdrawal]
   entries <-
     QLedgerEntry.findByAccountsWithConcernedIndividual
       accountIds
@@ -238,7 +243,7 @@ fetchWalletRowsFromCH ::
   UTCTime ->
   m [CHLE.WalletEntryRow]
 fetchWalletRowsFromCH accountIds mbConcernedIndividualId fromDate toDate = do
-  let allRefs = walletCreditRefs ++ [walletReferencePayout]
+  let allRefs = walletCreditRefs ++ [walletReferencePayout, walletReferenceAirportCashWithdrawal]
   CHLE.findWalletEntries accountIds mbConcernedIndividualId fromDate toDate allRefs
 
 -- | Aggregate raw entries into the WalletSummary fields:
@@ -393,6 +398,7 @@ referenceTypeToItemName ref
   | ref == walletReferenceTDSDeductionCash = "TDS (Cash)"
   | ref == walletReferencePayout = "Withdrawal"
   | ref == walletReferenceAirportCashRecharge = "Airport cash recharge (booth)"
+  | ref == walletReferenceAirportCashWithdrawal = "Airport cash withdrawal (booth)"
   | ref == walletReferenceDiscountsOnline = "Discounts Incl. Vat (Online)"
   | ref == walletReferenceDiscountsCash = "Discounts Incl. Vat (Cash)"
   | ref == walletReferenceCommissionOnline = "Commission (Online)"
@@ -530,7 +536,7 @@ loadPayoutContext ::
   m PayoutContext
 loadPayoutContext mbPersonId merchantId mocId = do
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
-  transporterConfig <- findByMerchantOpCityId mocId Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (SCTC.findByMerchantOpCityId mocId Nothing)) >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   payoutVpa <- case person.role of
     DP.FLEET_OWNER -> do
@@ -623,7 +629,7 @@ computePayoutFee (Just feeConfig) amount =
 initiateWalletPayout ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBFlow m r,
     BeamFlow m r,
     ServiceFlow m r,
@@ -702,7 +708,7 @@ postWalletTopup ::
     DriverWallet.TopUpRequest ->
     Environment.Flow PlanSubscribeRes
   )
-postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merchantId mocId
+postWalletTopup (mbPersonId, merchantId, mocId) = ActorInfo.withMbPersonIdActorInfo mbPersonId . doWalletTopup mbPersonId merchantId mocId
   where
     doWalletTopup mbP mId mocId0 r =
       do
@@ -820,11 +826,14 @@ mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId = do
 
 -- | Record airport booth cash recharge: credit driver wallet (PlatformAsset → OwnerLiability)
 --   with referenceType = walletReferenceAirportCashRecharge. Idempotent by referenceId (e.g. booth receipt id).
+--   A negative amount performs a reversal: the accounts are swapped (OwnerLiability → PlatformAsset)
+--   for the absolute amount and no invoice is generated.
 recordAirportCashRecharge ::
   ( BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
   ) =>
   (Id DP.Person, Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
   HighPrecMoney ->
@@ -833,9 +842,19 @@ recordAirportCashRecharge ::
 recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
   when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))
-  when (amount <= 0) $ throwError $ InvalidRequest "Cash recharge amount must be greater than zero"
-  existing <- getEntriesByReference walletReferenceAirportCashRecharge referenceId
+  now <- getCurrentTime
+  effectiveAirport <- QDI.resolveAirportRestriction now driverInfo
+  when (effectiveAirport == DI.BLOCKED) $ throwError DriverNotEnabledForAirport
+  when (amount == 0) $ throwError $ InvalidRequest "Cash recharge amount must not be zero"
+  let isReversal = amount < 0
+      absAmount = abs amount
+      referenceType = if isReversal then walletReferenceAirportCashWithdrawal else walletReferenceAirportCashRecharge
+  existing <- getEntriesByReference referenceType referenceId
   when (null existing) $ do
+    when isReversal $ do
+      currentBalance <- fromMaybe 0 <$> getWalletBalanceByOwner FAccount.DRIVER driverId.getId
+      when (currentBalance < absAmount) $
+        throwError $ InvalidRequest "Insufficient wallet balance for airport cash withdrawal"
     merchantOpCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
     let currency = merchantOpCity.currency
     ctx <- mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId
@@ -856,7 +875,11 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
               periodStart = Nothing,
               periodEnd = Nothing
             }
-    result <- runFinance ctx $ do
-      _ <- transfer PlatformAsset OwnerLiability amount walletReferenceAirportCashRecharge
-      invoice cashRechargeInvoiceConfig
+    result <-
+      runFinance ctx $
+        if isReversal
+          then void $ transfer OwnerLiability PlatformAsset absAmount referenceType
+          else do
+            _ <- transfer PlatformAsset OwnerLiability amount referenceType
+            void $ invoice cashRechargeInvoiceConfig
     void $ fromEitherM (\e -> WalletLedgerEntryFailed ("airport cash recharge: " <> show e)) result

@@ -34,11 +34,16 @@ where
 
 import qualified Data.Aeson as Aeson
 import Domain.Types.Invoice (InvoiceType (..), IssuedToType)
+import Kernel.Beam.Functions (ToTType' (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import Lib.Finance.Audit.Interface (AuditInput (..))
+import qualified Lib.Finance.Audit.Service as Audit
 import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
+import Lib.Finance.Domain.Types.AuditEntry (AuditAction (..))
+import qualified Lib.Finance.Domain.Types.AuditEntry as DAuditEntry
 import Lib.Finance.Domain.Types.DirectTaxTransaction (DirectTaxTransaction (..))
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import Lib.Finance.Domain.Types.IndirectTaxTransaction
@@ -50,12 +55,156 @@ import Lib.Finance.Error.Types
 import Lib.Finance.Invoice.Interface
 import Lib.Finance.Invoice.InvoiceNumber
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
+import qualified Lib.Finance.Storage.Beam.DirectTaxTransaction as BeamDirectTax
+import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamIndirectTax
+import qualified Lib.Finance.Storage.Beam.Invoice as BeamInvoice
 import qualified Lib.Finance.Storage.Queries.Account as QAccount
 import qualified Lib.Finance.Storage.Queries.DirectTaxTransaction as QDirectTax
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceLedgerLink as QLink
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedger
+import qualified Lib.Finance.Utils.SensitiveData as SD
+
+--------------------------------------------------------------------------------
+-- AUDIT HELPERS
+--------------------------------------------------------------------------------
+
+invoiceToAuditValue :: Invoice -> Aeson.Value
+invoiceToAuditValue = Aeson.toJSON . toTType' @BeamInvoice.Invoice . hideInvoiceSensitiveFields
+  where
+    hideInvoiceSensitiveFields :: Invoice -> Invoice
+    hideInvoiceSensitiveFields Invoice {..} =
+      Invoice
+        { issuedToName = Nothing,
+          issuedToAddress = Nothing,
+          supplierGSTIN = SD.maskTaxNo <$> supplierGSTIN,
+          supplierTaxNo = SD.maskTaxNo <$> supplierTaxNo,
+          irn = Nothing,
+          signedQRCode = Nothing,
+          ..
+        }
+
+indirectTaxToAuditValue :: IndirectTaxTransaction -> Aeson.Value
+indirectTaxToAuditValue = Aeson.toJSON . toTType' @BeamIndirectTax.IndirectTaxTransaction . hideIndirectTaxTransactionSensiveFields
+  where
+    hideIndirectTaxTransactionSensiveFields :: IndirectTaxTransaction -> IndirectTaxTransaction
+    hideIndirectTaxTransactionSensiveFields IndirectTaxTransaction {..} =
+      IndirectTaxTransaction
+        { gstinOfParty = SD.maskTaxNo <$> gstinOfParty,
+          issuedToTaxNo = SD.maskTaxNo <$> issuedToTaxNo,
+          ..
+        }
+
+directTaxToAuditValue :: DirectTaxTransaction -> Aeson.Value
+directTaxToAuditValue = Aeson.toJSON . toTType' @BeamDirectTax.DirectTaxTransaction . hideDirectTaxTransactionSensitiveFields
+  where
+    hideDirectTaxTransactionSensitiveFields :: DirectTaxTransaction -> DirectTaxTransaction
+    hideDirectTaxTransactionSensitiveFields DirectTaxTransaction {..} =
+      DirectTaxTransaction
+        { panOfParty = SD.maskTaxNo <$> panOfParty,
+          tanOfDeductee = SD.maskTaxNo <$> tanOfDeductee,
+          ..
+        }
+
+logFinanceEntityAudit ::
+  BeamFlow.BeamFlow m r =>
+  DAuditEntry.AuditEntityType ->
+  Text ->
+  AuditAction ->
+  ActorInfo ->
+  Maybe Aeson.Value ->
+  Aeson.Value ->
+  Text ->
+  Text ->
+  m ()
+logFinanceEntityAudit entityType entityId action actorInfo mbBefore afterState merchantId merchantOperatingCityId = do
+  auditResult <-
+    Audit.logAudit
+      AuditInput
+        { entityType = entityType,
+          entityId = entityId,
+          action = action,
+          actorType = actorInfo.actorType,
+          actorId = actorInfo.actorId,
+          beforeState = mbBefore,
+          afterState = Just afterState,
+          merchantId = merchantId,
+          merchantOperatingCityId = merchantOperatingCityId
+        }
+  case auditResult of
+    Left err -> logWarning $ "Failed to audit " <> show entityType <> " (" <> show action <> "): " <> show err
+    Right _ -> pure ()
+
+auditInvoiceCreate ::
+  BeamFlow.BeamFlow m r =>
+  ActorInfo ->
+  Invoice ->
+  m ()
+auditInvoiceCreate actorInfo invoice =
+  logFinanceEntityAudit
+    DAuditEntry.Invoice
+    invoice.id.getId
+    Created
+    actorInfo
+    Nothing
+    (invoiceToAuditValue invoice)
+    invoice.merchantId
+    invoice.merchantOperatingCityId
+
+auditInvoiceUpdate ::
+  BeamFlow.BeamFlow m r =>
+  ActorInfo ->
+  AuditAction ->
+  Invoice ->
+  Invoice ->
+  m ()
+auditInvoiceUpdate actorInfo action before after =
+  logFinanceEntityAudit
+    DAuditEntry.Invoice
+    after.id.getId
+    action
+    actorInfo
+    (Just $ invoiceToAuditValue before)
+    (invoiceToAuditValue after)
+    after.merchantId
+    after.merchantOperatingCityId
+
+auditIndirectTaxCreate ::
+  BeamFlow.BeamFlow m r =>
+  ActorInfo ->
+  IndirectTaxTransaction ->
+  m ()
+auditIndirectTaxCreate actorInfo txn =
+  logFinanceEntityAudit
+    DAuditEntry.IndirectTaxTransaction
+    txn.id.getId
+    Created
+    actorInfo
+    Nothing
+    (indirectTaxToAuditValue txn)
+    txn.merchantId
+    txn.merchantOperatingCityId
+
+auditDirectTaxCreate ::
+  BeamFlow.BeamFlow m r =>
+  ActorInfo ->
+  DirectTaxTransaction ->
+  m ()
+auditDirectTaxCreate actorInfo txn =
+  logFinanceEntityAudit
+    DAuditEntry.DirectTaxTransaction
+    txn.id.getId
+    Created
+    actorInfo
+    Nothing
+    (directTaxToAuditValue txn)
+    txn.merchantId
+    txn.merchantOperatingCityId
+
+--------------------------------------------------------------------------------
+-- CREATE OPERATIONS
+--------------------------------------------------------------------------------
 
 -- | Create an invoice and link to ledger entries.
 --   If any linked entry targets a GOVERNMENT_INDIRECT account (GST),
@@ -67,12 +216,13 @@ import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedger
 createInvoice ::
   ( BeamFlow.BeamFlow m r,
     Redis.HedisFlow m r,
-    MonadFlow m
+    HasActorInfo m r
   ) =>
   InvoiceInput ->
   [Id LedgerEntry] -> -- Ledger entries to link
   m (Either FinanceError Invoice)
 createInvoice input entryIds = do
+  actorInfo <- asks (.actorInfo)
   now <- getCurrentTime
   invoiceId <- generateGUID
   -- AggregatedCommission uses an isolated CMB counter (gap-less customer-facing
@@ -127,6 +277,10 @@ createInvoice input entryIds = do
             periodEnd = input.periodEnd,
             merchantId = input.merchantId,
             merchantOperatingCityId = input.merchantOperatingCityId,
+            createdBy = Just actorInfo.actorType,
+            createdById = actorInfo.actorId,
+            updatedBy = Just actorInfo.actorType,
+            updatedById = actorInfo.actorId,
             createdAt = now,
             updatedAt = now,
             irn = Nothing,
@@ -135,6 +289,7 @@ createInvoice input entryIds = do
           }
 
   QInvoice.create invoice
+  auditInvoiceCreate actorInfo invoice
 
   -- Create links to ledger entries
   forM_ entryIds $ \entryId -> do
@@ -214,10 +369,11 @@ createInvoice input entryIds = do
 --   When isVat=True, GST-specific columns are zeroed out and new generic columns are populated.
 --   When isVat=False, both old GST columns and new generic columns are populated with the same values.
 createIndirectTaxEntry ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   IndirectTaxInput ->
   m IndirectTaxTransaction
 createIndirectTaxEntry input = do
+  actorInfo <- asks (.actorInfo)
   now <- getCurrentTime
   taxTxnId <- generateGUID
   let taxAmount = input.totalTaxAmount
@@ -266,18 +422,24 @@ createIndirectTaxEntry input = do
             externalCharges = input.externalCharges,
             merchantId = input.merchantId,
             merchantOperatingCityId = input.merchantOperatingCityId,
+            createdBy = Just actorInfo.actorType,
+            createdById = actorInfo.actorId,
+            updatedBy = Just actorInfo.actorType,
+            updatedById = actorInfo.actorId,
             createdAt = now,
             updatedAt = now
           }
   QIndirectTax.create taxTxn
+  auditIndirectTaxCreate actorInfo taxTxn
   pure taxTxn
 
 -- | Create a standalone direct tax (TDS) transaction without an invoice.
 createDirectTaxEntry ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   DirectTaxInput ->
   m DirectTaxTransaction
 createDirectTaxEntry input = do
+  actorInfo <- asks (.actorInfo)
   now <- getCurrentTime
   taxTxnId <- generateGUID
   let netAmountPaid = input.grossAmount - input.tdsAmount
@@ -303,10 +465,15 @@ createDirectTaxEntry input = do
             invoiceNumber = input.invoiceNumber,
             merchantId = input.merchantId,
             merchantOperatingCityId = input.merchantOperatingCityId,
+            createdBy = Just actorInfo.actorType,
+            createdById = actorInfo.actorId,
+            updatedBy = Just actorInfo.actorType,
+            updatedById = actorInfo.actorId,
             createdAt = now,
             updatedAt = now
           }
   QDirectTax.create directTaxTxn
+  auditDirectTaxCreate actorInfo directTaxTxn
   pure directTaxTxn
 
 -- | Get invoice by ID
@@ -325,12 +492,19 @@ getByNumber = QInvoice.findByNumber
 
 -- | Update invoice status
 updateInvoiceStatus ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   Id Invoice ->
   InvoiceStatus ->
   m ()
 updateInvoiceStatus invoiceId newStatus = do
-  QInvoice.updateStatus newStatus invoiceId
+  actorInfo <- asks (.actorInfo)
+  mbBefore <- QInvoice.findById invoiceId
+  forM_ mbBefore $ \before ->
+    when (before.status /= newStatus) $ do
+      QInvoice.updateStatus newStatus (Just actorInfo.actorType) actorInfo.actorId invoiceId
+      mbAfter <- QInvoice.findById invoiceId
+      forM_ mbAfter $ \after ->
+        auditInvoiceUpdate actorInfo StatusChanged before after
 
 -- | Get all ledger entries linked to an invoice
 getEntriesForInvoice ::

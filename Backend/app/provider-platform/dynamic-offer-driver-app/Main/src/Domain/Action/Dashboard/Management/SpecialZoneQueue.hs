@@ -2,6 +2,7 @@
 
 module Domain.Action.Dashboard.Management.SpecialZoneQueue
   ( postSpecialZoneQueueTriggerNotify,
+    getSpecialZoneQueueTriggerNotifyStatus,
     getSpecialZoneQueueQueueStats,
     postSpecialZoneQueueManualQueueAdd,
     postSpecialZoneQueueManualQueueRemove,
@@ -14,7 +15,7 @@ import qualified API.Types.ProviderPlatform.Management.SpecialZoneQueue as SZQT
 import Data.List (nub)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
-import Data.Time (addUTCTime)
+import Data.Time (NominalDiffTime, addUTCTime)
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ServiceTierType as DVST
@@ -28,29 +29,102 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
+import Kernel.Types.Common (Seconds (..))
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.GateInfoExtra as DGI
+import SharedLogic.Allocator (AllocatorJobType (..), TriggerSpecialZoneNotifyJobData (..))
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
+import Storage.Beam.SchedulerJob ()
 import Storage.Beam.SpecialZone ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.SpecialZoneQueueRequestExtra as QSZQR
 import Tools.Error
 
-postSpecialZoneQueueTriggerNotify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> SZQT.TriggerSpecialZoneQueueNotifyReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+-- | Dashboard trigger: previously ran the full force-notify pipeline (LTS queue
+-- lookup, eligibility filtering, FCM/GRPC fan-out) synchronously, which made the
+-- request slow. Now it only validates the gate, mints a triggerRequestId, marks it
+-- active, and schedules a self-rescheduling 'TriggerSpecialZoneNotify' job that does
+-- the heavy work in the allocator and retries every request-validity window until
+-- the required accepts are reached or 5 minutes elapse. The dashboard watches
+-- progress via the parameterless 'getSpecialZoneQueueTriggerNotifyStatus'.
+postSpecialZoneQueueTriggerNotify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> SZQT.TriggerSpecialZoneQueueNotifyReq -> Environment.Flow SZQT.TriggerSpecialZoneQueueNotifyRes)
 postSpecialZoneQueueTriggerNotify merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  -- Fetch the gate up-front: validates the id (immediate dashboard feedback) and
+  -- gives us the request-validity config to use as the retry cadence.
   gate <- QGI.findById (Kernel.Types.Id.Id req.gateId) >>= fromMaybeM (InvalidRequest $ "Gate not found: " <> req.gateId)
-  let mbPriorityIds = fmap (map Kernel.Types.Id.Id) req.forceNotifyDriverIds
-  totalNotified <- SpecialZoneDriverDemand.forceNotifyDriverDemand merchantOpCity.id merchant.id gate req.vehicleType req.driversToNotify mbPriorityIds req.isDemandHigh
-  logInfo $ "Dashboard trigger: notified " <> show totalNotified <> " drivers for gate " <> req.gateId
-  pure Kernel.Types.APISuccess.Success
+  triggerRequestId <- generateGUID
+  now <- getCurrentTime
+  let retryIntervalSec = fromMaybe 15 gate.pickupRequestResponseTimeoutInSec
+      retryTill = addUTCTime triggerRetryWindowSec now
+  -- Stash the target + mark active so the (parameterless) status endpoint can find it.
+  SpecialZoneDriverDemand.setTriggerRequired triggerRequestId req.driversToNotify
+  SpecialZoneDriverDemand.setTriggerGate triggerRequestId req.gateId
+  SpecialZoneDriverDemand.addActiveTrigger merchantOpCity.id triggerRequestId
+  createJobIn @_ @'TriggerSpecialZoneNotify
+    (Just merchant.id)
+    (Just merchantOpCity.id)
+    (secondsToNominalDiffTime $ Seconds 0)
+    TriggerSpecialZoneNotifyJobData
+      { triggerRequestId = triggerRequestId,
+        gateId = req.gateId,
+        vehicleType = req.vehicleType,
+        driversToNotify = req.driversToNotify,
+        forceNotifyDriverIds = req.forceNotifyDriverIds,
+        isDemandHigh = req.isDemandHigh,
+        merchantId = merchant.id,
+        merchantOperatingCityId = merchantOpCity.id,
+        retryIntervalSec = retryIntervalSec,
+        retryTill = retryTill
+      }
+  logInfo $ "Dashboard trigger scheduled: triggerRequestId=" <> triggerRequestId <> " for gate " <> req.gateId
+  pure SZQT.TriggerSpecialZoneQueueNotifyRes {requestId = triggerRequestId}
+
+-- | Status of all currently-active dashboard triggers for this city. Served purely
+-- from Redis counters (no table scan) — a handful of GETs + a ZCARD/ZCOUNT per
+-- active trigger. Also drains the cleanup set (triggers whose retry loop has just
+-- stopped): for each it settles any still-Active rows to Ignored in the DB once,
+-- then removes it from cleanup. Counts: accepted = net committed accepts; pending =
+-- requests still inside their response window; ignored = requests that expired
+-- (validTill passed) without a response.
+getSpecialZoneQueueTriggerNotifyStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow SZQT.TriggerSpecialZoneQueueNotifyStatusRes)
+getSpecialZoneQueueTriggerNotifyStatus merchantShortId opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  now <- getCurrentTime
+  -- Cleanup pass: settle finished triggers' leftover rows to Ignored, then forget them.
+  cleanupIds <- SpecialZoneDriverDemand.getCleanupTriggers merchantOpCity.id
+  forM_ cleanupIds $ \trid -> do
+    QSZQR.markRemainingIgnoredByTriggerRequestId trid
+    SpecialZoneDriverDemand.removeCleanupTrigger merchantOpCity.id trid
+  -- Live snapshot of every still-active trigger, from Redis counters only.
+  activeIds <- SpecialZoneDriverDemand.getActiveTriggers merchantOpCity.id
+  activeRequests <- forM activeIds $ \trid -> do
+    counts <- SpecialZoneDriverDemand.getTriggerCounts trid now
+    pure
+      SZQT.TriggerSpecialZoneQueueNotifyStatus
+        { requestId = trid,
+          gateId = counts.gateId,
+          requiredAccepts = counts.requiredAccepts,
+          totalRequested = counts.totalRequested,
+          accepted = counts.accepted,
+          rejected = counts.rejected,
+          pendingResponse = counts.pendingResponse,
+          ignored = counts.ignored
+        }
+  pure SZQT.TriggerSpecialZoneQueueNotifyStatusRes {activeRequests = activeRequests}
+
+-- | Retry window for a dashboard trigger: keep topping up notifications for 5 minutes.
+triggerRetryWindowSec :: NominalDiffTime
+triggerRetryWindowSec = 5 * 60
 
 postSpecialZoneQueueManualQueueAdd :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> SZQT.ManualQueueAddReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postSpecialZoneQueueManualQueueAdd merchantShortId opCity req = do
@@ -104,7 +178,7 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
   now <- getCurrentTime
   let queueRequestCutoff = addUTCTime (negate (2 * 60 * 60)) now
   -- Fetch VST configs for callout variant mapping.
-  cityServiceTiers <- CQVST.findAllByMerchantOpCityId _merchantOpCity.id Nothing (Just specialLocationId)
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityId _merchantOpCity.id (Just specialLocationId)
   let -- Build callout variants per VST, fallback to castServiceTierToVariant
       getCalloutVars vst =
         if null vst.specialZoneQueueCalloutVariants

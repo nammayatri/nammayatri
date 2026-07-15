@@ -14,10 +14,6 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.MerchantServiceConfig
-  {-# WARNING
-    "This module contains direct calls to the table and redis. \
-  \ Use Storage.ConfigPilot.Config.MerchantServiceConfig (getConfig) instead for reads."
-    #-}
   ( create,
     findByMerchantOpCityIdAndService,
     clearCache,
@@ -184,6 +180,7 @@ getServiceName msc = case msc.serviceConfig of
   IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture
     Ticket.ZendeskConfig _ -> IssueTicketService Ticket.Zendesk
+    Ticket.XyneSpacesConfig _ -> IssueTicketService Ticket.XyneSpaces
   IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
     IncidentReport.ERSSConfig _ -> IncidentReportService IncidentReport.ERSS
   TokenizationServiceConfig tokenizationCfg -> case tokenizationCfg of

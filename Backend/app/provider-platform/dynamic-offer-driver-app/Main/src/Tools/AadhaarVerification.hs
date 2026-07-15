@@ -31,8 +31,11 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Tools.Error
 
 generateAadhaarOtp ::
@@ -58,12 +61,12 @@ runWithServiceConfig ::
   Id DM.MerchantOperatingCity ->
   req ->
   m resp
-runWithServiceConfig func _merchantId merchantOpCityId req = do
+runWithServiceConfig func merchantId merchantOpCityId req = do
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity (DMSC.AadhaarVerificationService merchantServiceUsageConfig.aadhaarVerificationService) merchantOpCityId
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Just merchantId.getId, serviceName = Just (DMSC.AadhaarVerificationService merchantServiceUsageConfig.aadhaarVerificationService)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.AadhaarVerificationService merchantServiceUsageConfig.aadhaarVerificationService) merchantOpCityId))
       >>= fromMaybeM (InternalError $ "No Aadhaar Verification service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId)
   case merchantServiceConfig.serviceConfig of
     DMSC.AadhaarVerificationServiceConfig vsc -> func vsc req

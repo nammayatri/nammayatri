@@ -24,18 +24,18 @@ import Kernel.Utils.Error
 import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
-import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
 reportACIssue :: Id Ride -> Maybe Text -> Flow APISuccess
 reportACIssue rideId apiKey = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  booking <- runInReplica $ QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   merchant <- QM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
 
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId ride.merchantOperatingCityId Nothing Nothing
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId ride.merchantOperatingCityId Nothing
   incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers ride.merchantOperatingCityId ride.driverId
   return Success

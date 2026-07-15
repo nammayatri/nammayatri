@@ -71,7 +71,8 @@ data CommunicationInfoResponse = CommunicationInfoResponse
     status :: CommunicationStatusType,
     deliverySummary :: Kernel.Prelude.Maybe DeliverySummary,
     createdAt :: Kernel.Prelude.UTCTime,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    triggerType :: Kernel.Prelude.Maybe CommunicationTriggerType
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -106,7 +107,12 @@ data CommunicationListType
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-data CommunicationMediaFile = CommunicationMediaFile {url :: Kernel.Prelude.Text, fileType :: Kernel.Prelude.Text, thumbnailUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+data CommunicationMediaFile = CommunicationMediaFile
+  { fileId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.File),
+    url :: Kernel.Prelude.Text,
+    fileType :: Kernel.Prelude.Text,
+    thumbnailUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -138,6 +144,13 @@ data CommunicationTemplateResponse = CommunicationTemplateResponse {templateId :
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data CommunicationTriggerType
+  = MANUAL
+  | SYSTEM
+  | SCHEDULED
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
 data CreateCommunicationRequest = CreateCommunicationRequest
   { title :: Kernel.Prelude.Text,
     body :: Kernel.Prelude.Text,
@@ -155,7 +168,8 @@ data CreateCommunicationRequest = CreateCommunicationRequest
     operatorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     messageStatus :: CommunicationMessageStatus,
     templateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    templateName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    templateName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    senderName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -239,9 +253,9 @@ instance Kernel.Types.HideSecrets.HideSecrets SendCommunicationRequest where
 type API = ("communication" :> (PostCommunicationCreate :<|> GetCommunicationList :<|> GetCommunicationInfo :<|> PostCommunicationSend :<|> PutCommunicationEdit :<|> DeleteCommunicationDelete :<|> GetCommunicationDeliveryStatus :<|> GetCommunicationRecipients :<|> GetCommunicationTemplate))
 
 type PostCommunicationCreate =
-  ( "create" :> MandatoryQueryParam "personId" (Kernel.Types.Id.Id Dashboard.Common.Person) :> ReqBody ('[JSON]) CreateCommunicationRequest
+  ( "create" :> MandatoryQueryParam "personId" (Kernel.Types.Id.Id Dashboard.Common.Person) :> ReqBody '[JSON] CreateCommunicationRequest
       :> Post
-           ('[JSON])
+           '[JSON]
            CreateCommunicationResponse
   )
 
@@ -265,27 +279,27 @@ type GetCommunicationList =
            "personId"
            (Kernel.Types.Id.Id Dashboard.Common.Person)
       :> Get
-           ('[JSON])
+           '[JSON]
            CommunicationListResponse
   )
 
-type GetCommunicationInfo = (Capture "communicationId" (Kernel.Types.Id.Id Dashboard.Common.Communication) :> "info" :> Get ('[JSON]) CommunicationInfoResponse)
+type GetCommunicationInfo = (Capture "communicationId" (Kernel.Types.Id.Id Dashboard.Common.Communication) :> "info" :> Get '[JSON] CommunicationInfoResponse)
 
 type PostCommunicationSend =
-  ( Capture "communicationId" (Kernel.Types.Id.Id Dashboard.Common.Communication) :> "send" :> ReqBody ('[JSON]) SendCommunicationRequest
+  ( Capture "communicationId" (Kernel.Types.Id.Id Dashboard.Common.Communication) :> "send" :> ReqBody '[JSON] SendCommunicationRequest
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 type PutCommunicationEdit =
-  ( Capture "communicationId" (Kernel.Types.Id.Id Dashboard.Common.Communication) :> "edit" :> ReqBody ('[JSON]) EditCommunicationRequest
+  ( Capture "communicationId" (Kernel.Types.Id.Id Dashboard.Common.Communication) :> "edit" :> ReqBody '[JSON] EditCommunicationRequest
       :> Put
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
-type DeleteCommunicationDelete = (Capture "communicationId" (Kernel.Types.Id.Id Dashboard.Common.Communication) :> "delete" :> Delete ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type DeleteCommunicationDelete = (Capture "communicationId" (Kernel.Types.Id.Id Dashboard.Common.Communication) :> "delete" :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type GetCommunicationDeliveryStatus =
   ( Capture "communicationId" (Kernel.Types.Id.Id Dashboard.Common.Communication) :> "deliveryStatus"
@@ -298,7 +312,7 @@ type GetCommunicationDeliveryStatus =
            "offset"
            Kernel.Prelude.Int
       :> Get
-           ('[JSON])
+           '[JSON]
            DeliveryStatusResponse
   )
 
@@ -316,27 +330,27 @@ type GetCommunicationRecipients =
            "offset"
            Kernel.Prelude.Int
       :> Get
-           ('[JSON])
+           '[JSON]
            RecipientsResponse
   )
 
 type GetCommunicationTemplate =
   ( "template" :> MandatoryQueryParam "domain" CommunicationDomainType :> MandatoryQueryParam "channel" CommunicationChannelType
       :> Get
-           ('[JSON])
+           '[JSON]
            CommunicationTemplateResponse
   )
 
 data CommunicationAPIs = CommunicationAPIs
-  { postCommunicationCreate :: (Kernel.Types.Id.Id Dashboard.Common.Person -> CreateCommunicationRequest -> EulerHS.Types.EulerClient CreateCommunicationResponse),
-    getCommunicationList :: (Kernel.Prelude.Maybe (CommunicationListType) -> Kernel.Prelude.Maybe (CommunicationChannelType) -> Kernel.Prelude.Maybe (CommunicationDomainType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Data.Time.Calendar.Day) -> Kernel.Prelude.Maybe (Data.Time.Calendar.Day) -> Kernel.Types.Id.Id Dashboard.Common.Person -> EulerHS.Types.EulerClient CommunicationListResponse),
-    getCommunicationInfo :: (Kernel.Types.Id.Id Dashboard.Common.Communication -> EulerHS.Types.EulerClient CommunicationInfoResponse),
-    postCommunicationSend :: (Kernel.Types.Id.Id Dashboard.Common.Communication -> SendCommunicationRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    putCommunicationEdit :: (Kernel.Types.Id.Id Dashboard.Common.Communication -> EditCommunicationRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    deleteCommunicationDelete :: (Kernel.Types.Id.Id Dashboard.Common.Communication -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getCommunicationDeliveryStatus :: (Kernel.Types.Id.Id Dashboard.Common.Communication -> Kernel.Prelude.Maybe (CommunicationChannelType) -> Kernel.Prelude.Maybe (CommunicationDeliveryStatusType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient DeliveryStatusResponse),
-    getCommunicationRecipients :: (Kernel.Prelude.Maybe (CommunicationRoleType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient RecipientsResponse),
-    getCommunicationTemplate :: (CommunicationDomainType -> CommunicationChannelType -> EulerHS.Types.EulerClient CommunicationTemplateResponse)
+  { postCommunicationCreate :: Kernel.Types.Id.Id Dashboard.Common.Person -> CreateCommunicationRequest -> EulerHS.Types.EulerClient CreateCommunicationResponse,
+    getCommunicationList :: Kernel.Prelude.Maybe CommunicationListType -> Kernel.Prelude.Maybe CommunicationChannelType -> Kernel.Prelude.Maybe CommunicationDomainType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Types.Id.Id Dashboard.Common.Person -> EulerHS.Types.EulerClient CommunicationListResponse,
+    getCommunicationInfo :: Kernel.Types.Id.Id Dashboard.Common.Communication -> EulerHS.Types.EulerClient CommunicationInfoResponse,
+    postCommunicationSend :: Kernel.Types.Id.Id Dashboard.Common.Communication -> SendCommunicationRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    putCommunicationEdit :: Kernel.Types.Id.Id Dashboard.Common.Communication -> EditCommunicationRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    deleteCommunicationDelete :: Kernel.Types.Id.Id Dashboard.Common.Communication -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getCommunicationDeliveryStatus :: Kernel.Types.Id.Id Dashboard.Common.Communication -> Kernel.Prelude.Maybe CommunicationChannelType -> Kernel.Prelude.Maybe CommunicationDeliveryStatusType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient DeliveryStatusResponse,
+    getCommunicationRecipients :: Kernel.Prelude.Maybe CommunicationRoleType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient RecipientsResponse,
+    getCommunicationTemplate :: CommunicationDomainType -> CommunicationChannelType -> EulerHS.Types.EulerClient CommunicationTemplateResponse
   }
 
 mkCommunicationAPIs :: (Client EulerHS.Types.EulerClient API -> CommunicationAPIs)
@@ -357,18 +371,20 @@ data CommunicationUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(mkHttpInstancesForEnum (''CommunicationChannelType))
+$(mkHttpInstancesForEnum ''CommunicationChannelType)
 
-$(mkHttpInstancesForEnum (''CommunicationContentTypeEnum))
+$(mkHttpInstancesForEnum ''CommunicationContentTypeEnum)
 
-$(mkHttpInstancesForEnum (''CommunicationDeliveryStatusType))
+$(mkHttpInstancesForEnum ''CommunicationDeliveryStatusType)
 
-$(mkHttpInstancesForEnum (''CommunicationDomainType))
+$(mkHttpInstancesForEnum ''CommunicationDomainType)
 
-$(mkHttpInstancesForEnum (''CommunicationListType))
+$(mkHttpInstancesForEnum ''CommunicationListType)
 
-$(mkHttpInstancesForEnum (''CommunicationRoleType))
+$(mkHttpInstancesForEnum ''CommunicationRoleType)
 
-$(mkHttpInstancesForEnum (''CommunicationStatusType))
+$(mkHttpInstancesForEnum ''CommunicationStatusType)
 
-$(Data.Singletons.TH.genSingletons [(''CommunicationUserActionType)])
+$(mkHttpInstancesForEnum ''CommunicationTriggerType)
+
+$(Data.Singletons.TH.genSingletons [''CommunicationUserActionType])

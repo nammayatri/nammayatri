@@ -432,6 +432,8 @@ data BecknTag
     SPECIAL_LOCATION_TAG
   | SPECIAL_LOCATION_NAME
   | SPECIAL_LOCATION_SUPPORT_NUMBER
+  | FARE_SETTLEMENT_TYPE
+  | PICKUP_AREA
   | IS_CUSTOMER_PREFFERED_SEARCH_ROUTE
   | IS_BLOCKED_SEARCH_ROUTE
   | TOLL_NAMES
@@ -581,6 +583,10 @@ data BecknTag
   | SUPPLIER_ID -- BPP_INVOICE_INFO: supplier (fleet owner / merchant) id
   | -- Change service tier tags
     NEW_VEHICLE_SERVICE_TIER -- CHANGE_SERVICE_TIER_DETAILS: target tier type
+  | -- Tier upgrade tags (within-family, post-assignment upgrade signal at on_update / ride_assigned)
+    IS_TIER_UPGRADE -- GENERAL_INFO: "true" iff assigned tier ranks above booked tier
+  | ASSIGNED_SERVICE_TIER_TYPE -- GENERAL_INFO: assigned tier enum (e.g. "SEDAN")
+  | ASSIGNED_SERVICE_TIER_NAME -- GENERAL_INFO: merchant-configured display name (e.g. "Sedan")
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -633,6 +639,7 @@ instance CompleteTag BecknTag where
     DISTANCE_TO_NEAREST_DRIVER_METER -> (Just "Distance To Nearest Driver In Meters", Nothing)
     ETA_TO_NEAREST_DRIVER_MIN -> (Just "Agent Duration to Pickup in Seconds", Nothing)
     SPECIAL_LOCATION_TAG -> (Just "Special Zone Tag", Nothing)
+    PICKUP_AREA -> (Just "Pickup Area", Nothing)
     UPGRADE_TO_CAB -> (Just "Request upgraded to cab", Nothing)
     PARCEL_TYPE -> (Just "Delivery Parcel Type", Nothing)
     PARCEL_QUANTITY -> (Just "Delivery Parcel Quantity", Nothing)
@@ -701,6 +708,8 @@ instance CompleteTag BecknTag where
     SPECIAL_LOCATION_TAG -> INFO
     SPECIAL_LOCATION_NAME -> INFO
     SPECIAL_LOCATION_SUPPORT_NUMBER -> INFO
+    FARE_SETTLEMENT_TYPE -> INFO
+    PICKUP_AREA -> INFO
     UPGRADE_TO_CAB -> GENERAL_INFO
     CUSTOMER_DISABILITY_DISABLE -> CUSTOMER_INFO
     IS_PET_RIDE -> PET_ORDER_INFO
@@ -785,6 +794,10 @@ instance CompleteTag BecknTag where
     INITIATED_AS -> DELIVERY
     -- Change service tier tags
     NEW_VEHICLE_SERVICE_TIER -> CHANGE_SERVICE_TIER_DETAILS
+    -- Tier upgrade tags
+    IS_TIER_UPGRADE -> GENERAL_INFO
+    ASSIGNED_SERVICE_TIER_TYPE -> GENERAL_INFO
+    ASSIGNED_SERVICE_TIER_NAME -> GENERAL_INFO
     -- Fare policy tags
     MIN_FARE -> FARE_POLICY
     MIN_FARE_DISTANCE_KM -> FARE_POLICY

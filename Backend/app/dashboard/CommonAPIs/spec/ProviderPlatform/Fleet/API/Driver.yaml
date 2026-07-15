@@ -34,6 +34,8 @@ imports:
   Person: Dashboard.Common
   Merchant: Dashboard.Common
   MerchantOperatingCity: Dashboard.Common
+  IndianState: Kernel.Types.Beckn.Context
+  AddressDocumentType: Dashboard.Common.Driver
 module: Driver
 
 apis:
@@ -394,6 +396,7 @@ apis:
       auth: ApiAuthV2
       query:
         fleetOwnerId: Text
+        operatorCode: Text
       params:
         driverId: Id Driver
       response:
@@ -409,6 +412,7 @@ apis:
               requestorId: Text
             query:
               - fleetOwnerId: Text
+              - operatorCode: Text
             response:
               type: APISuccess
 
@@ -657,6 +661,7 @@ apis:
         - approved: Bool
         - driverDocsVerificationStatus: DocsVerificationStatus
         - driverId: Text
+        - pickLatestDoc: Bool
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
@@ -702,6 +707,7 @@ apis:
         - isRequestorFleerOwner: Bool
         - approved: Bool
         - vehicleDocsVerificationStatus: DocsVerificationStatus
+        - pickLatestDoc: Bool
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
@@ -1530,6 +1536,15 @@ apis:
             response:
               type: APISuccess
 
+  - GET:
+      endpoint: /vehicle/info
+      auth: ApiAuthV2
+      query:
+        - vehicleNo: Text
+        - rcId: Text
+      response:
+        type: VehicleInfo
+
 types:
   AddRidePayoutAccountNumberReq:
     - driverMobileNumber: Text
@@ -1568,10 +1583,11 @@ types:
     - stripeIdNumber: Maybe Text
     - fleetName: Maybe Text
     - fleetType: Maybe FleetType
+    - nomineeName: Maybe Text
+    - nomineeDob: Maybe Day
+    - nomineeRel: Maybe Text
+    - addressState: Maybe IndianState
     - derive: "'HideSecrets"
-  AddressDocumentType:
-    enum: RationCard | UtilityBill | Passport
-    derive: "HttpInstance"
   DriverDetailsRes:
     - driverId: Id Driver
     - firstName: Text
@@ -1733,7 +1749,6 @@ types:
     - vehicleCategory: Maybe VehicleCategory
     - oxygen: Maybe Bool
     - ventilator: Maybe Bool
-    - enableForAirport: Maybe Bool
     - dateOfRegistration: Maybe UTCTime
     - mYManufacturing: Maybe Day
     - vehicleModelYear: Maybe Int
@@ -1990,6 +2005,8 @@ types:
     - createdAt: Maybe UTCTime
     - updatedAt: Maybe UTCTime
     - enabled: Maybe Bool
+    - verified: Maybe Bool
+    - approved: Maybe Bool
     - selectedServiceTiers: [Text]
     - driverDob: Maybe UTCTime
     - failedRules: Maybe [Text]
@@ -2053,6 +2070,9 @@ types:
   FleetOwnerInfoRes:
     - id: Text
     - name: Maybe Text
+    - firstName: Text
+    - middleName: Maybe Text
+    - lastName: Maybe Text
     - mobileNo: Maybe Text
     - blocked: Bool
     - enabled: Bool
@@ -2089,6 +2109,9 @@ types:
     - linkedDriverIds: "[Text]"
     - fleetName: Maybe Text
     - docsVerificationStatus: Maybe DocsVerificationStatus
+    - address: Maybe Text
+    - addressState: Maybe IndianState
+    - addressDocumentType: Maybe AddressDocumentType
     - derive: "'HideSecrets"
   FleetConfig:
     - allowAutomaticRoundTripAssignment: Bool
@@ -2381,6 +2404,43 @@ types:
   EntityOperationType:
     enum: "DRIVER_STATUS | VEHICLE_STATUS | FLEET_OWNER_STATUS"
     derive: "HttpInstance"
+  AssociationDetail:
+    - driverName: Maybe Text
+    - driverMobileNumber: Maybe Text
+    - driverId: Maybe Text
+    - fleetOwnerId: Maybe Text
+    - fleetOwnerName: Maybe Text
+    - fleetOwnerMobileNumber: Maybe Text
+  VehicleInfo:
+    - vehicleNo: Text
+    - rcId: Text
+    - vehicleVariant: Maybe Text
+    - manufacturerModel: Maybe Text
+    - manufacturer: Maybe Text
+    - fitnessExpiry: Maybe UTCTime
+    - pucExpiry: Maybe UTCTime
+    - insuranceValidity: Maybe UTCTime
+    - vehicleClass: Maybe Text
+    - vehicleModel: Maybe Text
+    - vehicleColor: Maybe Text
+    - vehicleManufacturer: Maybe Text
+    - vehicleCapacity: Maybe Int
+    - vehicleEnergyType: Maybe Text
+    - vehicleDoors: Maybe Int
+    - vehicleSeatBelts: Maybe Int
+    - verificationStatus: Maybe Text
+    - airConditioned: Maybe Bool
+    - oxygen: Maybe Bool
+    - ventilator: Maybe Bool
+    - luggageCapacity: Maybe Int
+    - mYManufacturing: Maybe Day
+    - vehicleRating: Maybe Double
+    - vehicleRatingRemark: Maybe Text
+    - vehicleModelYear: Maybe Int
+    - dateOfRegistration: Maybe UTCTime
+    - rejectReason: Maybe Text
+    - approved: Maybe Bool
+    - association: Maybe AssociationDetail
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

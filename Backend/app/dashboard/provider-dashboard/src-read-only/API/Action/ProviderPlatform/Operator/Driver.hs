@@ -25,10 +25,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("driver" :> (GetDriverOperatorFetchHubRequests :<|> GetDriverOperationGetAllHubs :<|> PostDriverOperatorRespondHubRequest :<|> PostDriverOperatorCreateRequest :<|> GetDriverOperatorList :<|> PostDriverOperatorSendJoiningOtp :<|> PostDriverOperatorVerifyJoiningOtp :<|> GetDriverOperatorDashboardAnalyticsAllTime :<|> GetDriverOperatorDashboardAnalytics))
+type API = ("driver" :> (GetDriverOperatorFetchHubRequests :<|> GetDriverOperationGetAllHubs :<|> PostDriverOperatorRespondHubRequest :<|> PostDriverOperatorCreateRequest :<|> GetDriverOperatorList :<|> PostDriverOperatorSendJoiningOtp :<|> PostDriverOperatorVerifyJoiningOtp :<|> GetDriverOperatorDashboardAnalyticsAllTime :<|> GetDriverOperatorDashboardAnalytics :<|> GetDriverReviewQueueRequest :<|> PostDriverSubmitReviewRequest :<|> GetDriverRequestReviewHistory))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getDriverOperatorFetchHubRequests merchantId city :<|> getDriverOperationGetAllHubs merchantId city :<|> postDriverOperatorRespondHubRequest merchantId city :<|> postDriverOperatorCreateRequest merchantId city :<|> getDriverOperatorList merchantId city :<|> postDriverOperatorSendJoiningOtp merchantId city :<|> postDriverOperatorVerifyJoiningOtp merchantId city :<|> getDriverOperatorDashboardAnalyticsAllTime merchantId city :<|> getDriverOperatorDashboardAnalytics merchantId city
+handler merchantId city = getDriverOperatorFetchHubRequests merchantId city :<|> getDriverOperationGetAllHubs merchantId city :<|> postDriverOperatorRespondHubRequest merchantId city :<|> postDriverOperatorCreateRequest merchantId city :<|> getDriverOperatorList merchantId city :<|> postDriverOperatorSendJoiningOtp merchantId city :<|> postDriverOperatorVerifyJoiningOtp merchantId city :<|> getDriverOperatorDashboardAnalyticsAllTime merchantId city :<|> getDriverOperatorDashboardAnalytics merchantId city :<|> getDriverReviewQueueRequest merchantId city :<|> postDriverSubmitReviewRequest merchantId city :<|> getDriverRequestReviewHistory merchantId city
 
 type GetDriverOperatorFetchHubRequests =
   ( ApiAuth
@@ -102,6 +102,30 @@ type GetDriverOperatorDashboardAnalytics =
       :> API.Types.ProviderPlatform.Operator.Driver.GetDriverOperatorDashboardAnalytics
   )
 
+type GetDriverReviewQueueRequest =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_OPERATOR / 'API.Types.ProviderPlatform.Operator.DRIVER / 'API.Types.ProviderPlatform.Operator.Driver.GET_DRIVER_REVIEW_QUEUE_REQUEST)
+      :> API.Types.ProviderPlatform.Operator.Driver.GetDriverReviewQueueRequest
+  )
+
+type PostDriverSubmitReviewRequest =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_OPERATOR / 'API.Types.ProviderPlatform.Operator.DRIVER / 'API.Types.ProviderPlatform.Operator.Driver.POST_DRIVER_SUBMIT_REVIEW_REQUEST)
+      :> API.Types.ProviderPlatform.Operator.Driver.PostDriverSubmitReviewRequest
+  )
+
+type GetDriverRequestReviewHistory =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_OPERATOR / 'API.Types.ProviderPlatform.Operator.DRIVER / 'API.Types.ProviderPlatform.Operator.Driver.GET_DRIVER_REQUEST_REVIEW_HISTORY)
+      :> API.Types.ProviderPlatform.Operator.Driver.GetDriverRequestReviewHistory
+  )
+
 getDriverOperatorFetchHubRequests :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Operator.Driver.RequestStatus -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Operator.Driver.RequestType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id API.Types.ProviderPlatform.Operator.Driver.OperationHub) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Operator.Driver.OperationHubReqResp)
 getDriverOperatorFetchHubRequests merchantShortId opCity apiTokenInfo mbFrom mbTo mbStatus mbReqType mbLimit mbOffset mbDriverId mbMobileNumber mbDriverMobileNumber mbOperationHubId mbOperationHubName mbRegistrationNo = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Operator.Driver.getDriverOperatorFetchHubRequests merchantShortId opCity apiTokenInfo mbFrom mbTo mbStatus mbReqType mbLimit mbOffset mbDriverId mbMobileNumber mbDriverMobileNumber mbOperationHubId mbOperationHubName mbRegistrationNo
 
@@ -128,3 +152,12 @@ getDriverOperatorDashboardAnalyticsAllTime merchantShortId opCity apiTokenInfo =
 
 getDriverOperatorDashboardAnalytics :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Data.Time.Calendar.Day -> Data.Time.Calendar.Day -> Environment.FlowHandler API.Types.ProviderPlatform.Operator.Driver.FilteredOperatorAnalyticsRes)
 getDriverOperatorDashboardAnalytics merchantShortId opCity apiTokenInfo from to = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Operator.Driver.getDriverOperatorDashboardAnalytics merchantShortId opCity apiTokenInfo from to
+
+getDriverReviewQueueRequest :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.Driver.EntityType -> API.Types.ProviderPlatform.Operator.Driver.ReviewRequestType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler API.Types.ProviderPlatform.Operator.Driver.ReviewQueueResp)
+getDriverReviewQueueRequest merchantShortId opCity apiTokenInfo entityType reviewRequestType mbFrom mbTo mbLimit mbOffset mbMobileNumber mbPersonId mbRcNo mbRcId approved = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Operator.Driver.getDriverReviewQueueRequest merchantShortId opCity apiTokenInfo entityType reviewRequestType mbFrom mbTo mbLimit mbOffset mbMobileNumber mbPersonId mbRcNo mbRcId approved
+
+postDriverSubmitReviewRequest :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.Driver.SubmitReviewRequest -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postDriverSubmitReviewRequest merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Operator.Driver.postDriverSubmitReviewRequest merchantShortId opCity apiTokenInfo req
+
+getDriverRequestReviewHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.Driver.EntityType -> API.Types.ProviderPlatform.Operator.Driver.ReviewRequestType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Operator.Driver.ReviewRequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Operator.Driver.ReviewRequestHistoryList)
+getDriverRequestReviewHistory merchantShortId opCity apiTokenInfo entityType reviewRequestType mbFrom mbTo mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbPersonId mbRcNo mbRequestStatus mbRcId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Operator.Driver.getDriverRequestReviewHistory merchantShortId opCity apiTokenInfo entityType reviewRequestType mbFrom mbTo mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbPersonId mbRcNo mbRequestStatus mbRcId

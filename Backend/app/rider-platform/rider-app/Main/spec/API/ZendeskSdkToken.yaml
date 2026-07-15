@@ -1,0 +1,18 @@
+imports: {}
+
+module: ZendeskSdkToken
+
+types:
+  ZendeskJwtReq:
+    user_token: Text
+  ZendeskJwtResp:
+    jwt: Text
+
+apis:
+  - POST:
+      endpoint: /profile/zendeskSdkToken
+      auth: NoAuth
+      request:
+        type: ZendeskJwtReq
+      response:
+        type: ZendeskJwtResp

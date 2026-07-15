@@ -37,9 +37,10 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.Queries.BecknConfig as SQBC
 
 buildConfirmReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>
@@ -50,7 +51,7 @@ buildConfirmReqV2 res = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
   moc <- CQMOC.findByMerchantIdAndCity res.merchant.id res.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> res.merchant.id.getId <> "-city-" <> show res.city)
-  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = moc.id.getId, merchantId = res.merchant.id.getId, domain = Just "MOBILITY", vehicleCategory = Nothing})) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show res.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId)
+  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = moc.id.getId, merchantId = res.merchant.id.getId, domain = Just "MOBILITY", vehicleCategory = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just res.merchant.id) "MOBILITY" (Just moc.id)))) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show res.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId)
   ttl <- bapConfig.confirmTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.city res.merchant.country (Just ttl)
   let message = mkConfirmMessageV2 res bapConfig
@@ -159,7 +160,8 @@ tfCustomer res =
           [ Tags.NIGHT_SAFETY_CHECK Tags.~= show res.nightSafetyCheck,
             Tags.ENABLE_FREQUENT_LOCATION_UPDATES Tags.~= show res.enableFrequentLocationUpdates,
             Tags.ENABLE_OTP_LESS_RIDE Tags.~= show res.enableOtpLessRide,
-            Tags.DRIVER_PREFERENCE Tags.~=? (T.intercalate "&" <$> res.driverPreference)
+            Tags.DRIVER_PREFERENCE Tags.~=? (T.intercalate "&" <$> res.driverPreference),
+            Tags.CUSTOMER_LANGUAGE Tags.~=? (show <$> res.riderLanguage)
           ]
 
 tfVehicle :: DOnInit.OnInitRes -> Maybe Spec.Vehicle

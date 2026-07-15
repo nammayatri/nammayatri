@@ -11,9 +11,11 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBFlow, EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, HighPrecMoney, fromMaybeM)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import Storage.Beam.Payment ()
-import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPC
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.Person as QP
@@ -48,7 +50,7 @@ getDriverPerformance (driverId, _, merchantOpCityId) = do
   let totalReferredDrivers = fromMaybe 0 di.totalReferred
   mbVehicle <- QVeh.findById driverId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
-  payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
+  payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing}) (Just (maybeToList <$> CQPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing)) >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
   driverStats <- QDS.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   let eligiblePayoutAmount = driverStats.totalPayoutEarnings
       totalPayoutAmountPaid = fromMaybe 0.0 driverStats.totalPayoutAmountPaid

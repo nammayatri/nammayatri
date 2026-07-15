@@ -35,8 +35,8 @@ data DigilockerVerification = DigilockerVerification
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, (Show), (ToJSON), (FromJSON))
 
-data SessionStatus = PENDING | SUCCESS | FAILED | CONSENT_DENIED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data SessionStatus = PENDING | SUCCESS | FAILED | CONSENT_DENIED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SessionStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SessionStatus))

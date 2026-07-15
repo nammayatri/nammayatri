@@ -87,12 +87,12 @@ postFRFSTicketServiceCustomerFrfsQuoteV2Confirm :: (Kernel.Types.Id.ShortId Doma
 postFRFSTicketServiceCustomerFrfsQuoteV2Confirm merchantShortId opCity apiTokenInfo customerId quoteId isMockPayment req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
-  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.fRFSTicketServiceDSL.postFRFSTicketServiceCustomerFrfsQuoteV2Confirm) customerId quoteId isMockPayment req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.fRFSTicketServiceDSL.postFRFSTicketServiceCustomerFrfsQuoteV2Confirm) customerId quoteId isMockPayment (Just apiTokenInfo.personId.getId) req)
 
 getFRFSTicketServiceCustomerFrfsBookingStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes)
 getFRFSTicketServiceCustomerFrfsBookingStatus merchantShortId opCity apiTokenInfo customerId bookingId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.fRFSTicketServiceDSL.getFRFSTicketServiceCustomerFrfsBookingStatus) customerId bookingId
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.fRFSTicketServiceDSL.getFRFSTicketServiceCustomerFrfsBookingStatus) customerId bookingId (Just apiTokenInfo.personId.getId)
 
 getFRFSTicketServiceCustomerFrfsRouteSeatLayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow API.Types.UI.FRFSTicketService.SeatLayoutDetailsResp)
 getFRFSTicketServiceCustomerFrfsRouteSeatLayout merchantShortId opCity apiTokenInfo customerId routeId mbVehicleNumber = do

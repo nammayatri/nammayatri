@@ -2,6 +2,7 @@
 
 module Domain.Types.Extra.TransporterConfig where
 
+import Control.Applicative ((<|>))
 import Data.Aeson
 import Data.Aeson.Types
 import Data.ByteString (ByteString)
@@ -14,8 +15,26 @@ import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import GHC.Generics (Generic)
+import Kernel.Types.Common (HighPrecMoney)
 import Sequelize.SQLObject (SQLObject (..), ToSQLObject (..))
 import Prelude
+
+data TdsConfig = TdsConfig {rate :: Double, thresholdAmount :: Maybe HighPrecMoney}
+  deriving (Generic, Show, ToJSON, Read, Eq)
+
+-- | Accepts the new nested @{ rate, thresholdAmount }@ object, and — for
+-- backward compatibility with rows written before TdsConfig existed — a bare
+-- number, read as @{ rate = n, thresholdAmount = Nothing }@. Mirrors the
+-- legacy-shape handling in TollGate's FromJSON. No DB migration required.
+instance FromJSON TdsConfig where
+  parseJSON v = parseNested v <|> parseLegacyRate v
+    where
+      parseNested =
+        withObject "TdsConfig" $ \o ->
+          TdsConfig <$> o .: "rate" <*> o .:? "thresholdAmount"
+      parseLegacyRate =
+        withScientific "TdsConfig" $ \n ->
+          pure TdsConfig {rate = realToFrac n, thresholdAmount = Nothing}
 
 data AppletKey = SosAppletID | RentalAppletID | FleetAppletID deriving (Show, Read, Eq, Ord, Generic)
 

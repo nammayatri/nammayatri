@@ -75,6 +75,8 @@ import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.MerchantPaymentMethod
 import qualified SharedLogic.Payment as SPayment
@@ -84,11 +86,12 @@ import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.ValueAddNP as CQVNP
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.MerchantPaymentMethod (MerchantPaymentMethodDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverOffer as QDOffer
 import qualified Storage.Queries.Estimate as QEstimate
@@ -121,7 +124,8 @@ type SelectFlow m r c =
     HasFlowEnv m r '["version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
     Redis.HedisFlow m r,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
-    ClickhouseFlow m r
+    ClickhouseFlow m r,
+    Finance.HasActorInfo m r
   )
 
 data DSelectReq = DSelectReq
@@ -192,6 +196,7 @@ data DSelectRes = DSelectRes
     driverPreference :: Maybe [Text],
     mbJourneyId :: Maybe (Id DJ.Journey),
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
+    paymentInstrument :: Maybe DMPM.PaymentInstrument,
     paymentMode :: Maybe DMPM.PaymentMode,
     emailDomain :: Maybe Text
   }
@@ -242,7 +247,7 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
   isValueAddNP <- CQVNP.isValueAddNP estimate.providerId
   phoneNumber <- bool (pure Nothing) (getPhoneNo person) isValueAddNP
   searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId searchRequest.merchantOperatingCityId))
   when (disabilityDisable == Just True) $ QSearchRequest.updateDisability searchRequest.id Nothing
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
 
@@ -288,7 +293,7 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
       SPayment.updateDefaultPersonPaymentMethodId person pmId -- Make payment method as default payment method for customer
     SPayment.capturePendingPaymentIfExists person merchantOperatingCityId
 
-  merchantPaymentMethod <- maybe (return Nothing) (QMPM.findById . Id) req.paymentMethodId
+  merchantPaymentMethod <- maybe (return Nothing) (\pmId -> getOneConfig (MerchantPaymentMethodDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, configId = Just pmId}) (Just (maybeToList <$> QMPM.findById (Id pmId)))) req.paymentMethodId
   let paymentMethodInfo = mkPaymentMethodInfo <$> merchantPaymentMethod
   when (maybe False Trip.isDeliveryTrip (DEstimate.tripCategory estimate)) $ do
     validDeliveryDetails <- deliveryDetails & fromMaybeM (InvalidRequest "Delivery details not found for trip category Delivery")

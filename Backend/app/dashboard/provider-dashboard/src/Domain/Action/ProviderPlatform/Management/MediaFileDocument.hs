@@ -63,10 +63,9 @@ getMediaFileDocumentDownloadLink ::
   ShortId DM.Merchant ->
   City.City ->
   ApiTokenInfo ->
-  Common.MediaFileDocumentType ->
   Text ->
   Flow Common.MediaFileDocumentResp
-getMediaFileDocumentDownloadLink merchantShortId opCity apiTokenInfo mediaFileDocumentType rcNumber = do
+getMediaFileDocumentDownloadLink merchantShortId opCity apiTokenInfo fileId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let requestorId = apiTokenInfo.personId.getId
-  Client.callManagementAPI checkedMerchantId opCity (.mediaFileDocumentDSL.getMediaFileDocumentDownloadLink) mediaFileDocumentType rcNumber requestorId
+  Client.callManagementAPI checkedMerchantId opCity (.mediaFileDocumentDSL.getMediaFileDocumentDownloadLink) fileId requestorId

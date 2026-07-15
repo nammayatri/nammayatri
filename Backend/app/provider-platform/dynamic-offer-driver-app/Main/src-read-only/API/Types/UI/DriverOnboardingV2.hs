@@ -23,6 +23,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Servant
 import qualified Servant.Client.Core
+import qualified SharedLogic.DriverOnboarding.VehicleDocs
 import Tools.Auth
 
 data AadhaarCardReq = AadhaarCardReq
@@ -105,6 +106,7 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     isMandatoryForEnabling :: Kernel.Prelude.Bool,
     isReminderSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rcNumberPrefixList :: [Kernel.Prelude.Text],
+    rolesAllowedToUploadDocument :: Kernel.Prelude.Maybe [Domain.Types.Person.Role],
     title :: Kernel.Prelude.Text,
     verificationProvidersPriorityList :: Kernel.Prelude.Maybe [Kernel.External.Verification.Types.VerificationService]
   }
@@ -172,10 +174,10 @@ data DriverVehicleServiceTier = DriverVehicleServiceTier
 
 data DriverVehicleServiceTiers = DriverVehicleServiceTiers
   { airConditioned :: Kernel.Prelude.Maybe AirConditionedTier,
-    canSwitchToAirport :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     canSwitchToInterCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     canSwitchToIntraCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     canSwitchToRental :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableForAirport :: Domain.Types.DriverInformation.AirportRestrictionType,
     tiers :: [DriverVehicleServiceTier]
   }
   deriving stock (Generic)
@@ -250,6 +252,15 @@ data RateCardResp = RateCardResp
     tripCategory :: Domain.Types.Common.TripCategory
   }
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RcVerifyStatusResp = RcVerifyStatusResp
+  { approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    documents :: [SharedLogic.DriverOnboarding.VehicleDocs.DocumentStatusItem],
+    registrationNo :: Kernel.Prelude.Text,
+    verified :: Kernel.Prelude.Bool
+  }
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SSNReq = SSNReq {ssn :: Kernel.Prelude.Text}

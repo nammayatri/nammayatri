@@ -25,7 +25,7 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityAndMessageKeyAndTripCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory -> m [Domain.Types.MerchantPushNotification.MerchantPushNotification])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory -> m ([Domain.Types.MerchantPushNotification.MerchantPushNotification]))
 findAllByMerchantOpCityAndMessageKeyAndTripCategory merchantOperatingCityId key tripCategory = do
   findAllWithKV
     [ Se.And
@@ -37,12 +37,12 @@ findAllByMerchantOpCityAndMessageKeyAndTripCategory merchantOperatingCityId key 
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.MerchantPushNotification.MerchantPushNotification])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.MerchantPushNotification.MerchantPushNotification]))
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findAllByMerchantOpCityIdAndMessageKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> m [Domain.Types.MerchantPushNotification.MerchantPushNotification])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> m ([Domain.Types.MerchantPushNotification.MerchantPushNotification]))
 findAllByMerchantOpCityIdAndMessageKey merchantOperatingCityId key = do
   findAllWithKV
     [ Se.And

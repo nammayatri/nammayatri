@@ -15,18 +15,23 @@
 module SharedLogic.AirportEntryFee
   ( checkAirportEntryFeeBalanceBeforeStartRide,
     deductAirportEntryFeeAtEndRide,
+    ensureDriverEnabledForAirportPickup,
+    isAirportPickupArea,
     requiredEntryFeeForBooking,
   )
 where
 
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, fromEitherM, fromMaybeM, throwError)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance
   ( AccountRole (GovtIndirect, OwnerLiability, ParkingFeeRecipient),
     CounterpartyType (DRIVER),
@@ -34,10 +39,15 @@ import Lib.Finance
     runFinance,
     transfer,
   )
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Queries.SpecialLocation as QSpecialLocation
+import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.FareCalculator as FareCalculator
 import qualified SharedLogic.Finance.Wallet as Wallet
-import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
+import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.DriverInformation as QDI
 import Tools.Error
 
 -- | Required airport entry fee for this booking. Uses booking.pickupGateId (gate where customer is).
@@ -48,6 +58,29 @@ requiredEntryFeeForBooking ::
   m HighPrecMoney
 requiredEntryFeeForBooking booking =
   maybe (pure 0) (FareCalculator.entryFeeForGateId . Id) booking.pickupGateId
+
+isAirportPickupArea ::
+  (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe SL.Area ->
+  m Bool
+isAirportPickupArea mbArea =
+  case mbArea >>= SL.pickupSpecialZoneIdFromArea of
+    Just specialLocationId -> do
+      mbSpecialLocation <- QSpecialLocation.findById (Id specialLocationId)
+      pure $ maybe False (\specialLocation -> specialLocation.category == "SureAirport") mbSpecialLocation
+    Nothing -> pure False
+
+ensureDriverEnabledForAirportPickup ::
+  (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
+  Maybe SL.Area ->
+  UTCTime ->
+  DI.DriverInformation ->
+  m ()
+ensureDriverEnabledForAirportPickup mbArea now driverInfo = do
+  isAirport <- isAirportPickupArea mbArea
+  effectiveAirport <- QDI.resolveAirportRestriction now driverInfo
+  when (isAirport && not (effectiveAirport == DI.ENABLED)) $
+    throwError DriverNotEnabledForAirport
 
 -- | Run balance check before StartRide for airport inner-zone.
 --   If feature flag is off or required amount is 0, does nothing.
@@ -71,7 +104,7 @@ checkAirportEntryFeeBalanceBeforeStartRide enabled driverId booking =
 -- | At EndRide, for airport inner-zone: two transfers via FinanceM — GST to GovtIndirect, net to ParkingFeeRecipient (one per city).
 --   Allows negative balance; does nothing if feature off or required fee 0.
 deductAirportEntryFeeAtEndRide ::
-  (BeamFlow m r, CacheFlow m r, Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m) =>
+  (BeamFlow m r, CacheFlow m r, Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, Finance.HasActorInfo m r) =>
   DRide.Ride ->
   SRB.Booking ->
   m ()
@@ -79,7 +112,7 @@ deductAirportEntryFeeAtEndRide ride booking = do
   totalFee <- requiredEntryFeeForBooking booking
   when (totalFee > 0) $ do
     transporterConfig <-
-      findByMerchantOpCityId booking.merchantOperatingCityId Nothing
+      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing))
         >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
     -- Derive the mode from the booking's payment method rather than hardcoding.
     isOnline <- Wallet.resolveIsOnlineFromBooking booking

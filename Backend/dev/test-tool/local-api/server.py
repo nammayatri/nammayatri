@@ -908,15 +908,210 @@ import uuid as _uuid
 from collections import deque as _deque
 
 REMOTE_EXCLUDES = [
-    ".git", "data", "node_modules", "dist-newstyle",
+    "data", "node_modules", "dist-newstyle",
     "dist", ".direnv", "_build", "result", "result-*",
     ".cabal-dir",
+    ".git",
+    ".hie",
+    "hie",
+    ".nix-deps",
+    ".ci-project-root",
+    ".ci-cabal-dir",
+    "Frontend/android-native", "Frontend/ios",
+    "Frontend/build", "Frontend/dist",
 ]
 REMOTE_DEFAULT_DIR = "/tmp/nammayatri"
 REMOTE_DEFAULT_COMMAND = (
     "cd Backend && nix develop .#backend -c , run-mobility-stack-dev"
 )
 REMOTE_BUFFER_BYTES = 256 * 1024  # last ~256 KB per session for re-attach
+
+# ── SSH key + ServiceDiscovery helpers ──
+
+_SSH_KEY_CANDIDATES = [
+    os.path.expanduser("~/.ssh/id_ed25519"),
+    os.path.expanduser("~/.ssh/id_rsa"),
+    os.path.expanduser("~/.ssh/id_ecdsa"),
+]
+BASE_API_HOST = os.environ.get("BASE_API_HOST", "34.100.155.111")
+BASE_API_PORT = os.environ.get("BASE_API_PORT", "8787")
+
+
+def _find_ssh_key() -> str | None:
+    """Return path to the first existing SSH private key, or None."""
+    for k in _SSH_KEY_CANDIDATES:
+        if os.path.isfile(k):
+            return k
+    return None
+
+
+def _ensure_ssh_key() -> tuple[str, str]:
+    """Find or generate an SSH key. Returns (private_key_path, public_key_str)."""
+    existing = _find_ssh_key()
+    if existing:
+        pub = existing + ".pub"
+        if os.path.isfile(pub):
+            with open(pub) as f:
+                return existing, f.read().strip()
+        # Private key exists but no .pub — regenerate public from private
+        result = subprocess.run(
+            ["ssh-keygen", "-y", "-f", existing],
+            capture_output=True, text=True, check=True,
+        )
+        with open(pub, "w") as f:
+            f.write(result.stdout.strip() + "\n")
+        return existing, result.stdout.strip()
+
+    # No key found — generate ~/.ssh/id_ed25519
+    key_path = _SSH_KEY_CANDIDATES[0]
+    os.makedirs(os.path.dirname(key_path), exist_ok=True)
+    subprocess.run(
+        ["ssh-keygen", "-t", "ed25519", "-f", key_path,
+         "-N", "", "-C", f"{os.environ.get('USER', 'user')}@nammayatri"],
+        capture_output=True, check=True,
+    )
+    with open(key_path + ".pub") as f:
+        return key_path, f.read().strip()
+
+
+def _fetch_machines() -> dict:
+    """Fetch ServiceDiscovery from the base station HTTP API and return
+    a list of MachineInfo dicts the frontend can render in a dropdown.
+
+    Calls  GET http://<BASE_API_HOST>:<BASE_API_PORT>/api/status
+    which returns:
+      { "base": {localIp, awsIp, name, username, resources, usage},
+        "workers": [{localIp, awsIp, name, username, type, resources, usage}, …] }
+
+    Transforms that into:
+      { "machines": [MachineInfo, …], "myIps": [...] }
+    where MachineInfo = {name, role, localIp, awsIp, bestIp, user, type, resources}
+    """
+    if not BASE_API_HOST:
+        return {"machines": [], "myIps": [],
+                "error": "BASE_API_HOST not set — cannot reach base station API"}
+
+    url = f"http://{BASE_API_HOST}:{BASE_API_PORT}/api/status"
+    try:
+        with urllib.request.urlopen(url, timeout=5) as r:
+            data = json.loads(r.read().decode())
+    except Exception as e:
+        return {"machines": [], "myIps": [], "error": f"base station API unreachable: {e}"}
+
+    # Collect this machine's IPs + networks so we can pick the best route.
+    import ipaddress
+    my_networks: list[tuple[str, ipaddress.IPv4Network]] = []
+    try:
+        if sys.platform == "darwin":
+            out = subprocess.check_output(["ifconfig"], text=True, timeout=3)
+            # Parse "inet <ip> netmask <hex>" pairs from ifconfig output
+            for m in re.finditer(r"inet (\d+\.\d+\.\d+\.\d+) netmask (0x[0-9a-fA-F]+)", out):
+                ip_str, mask_hex = m.group(1), m.group(2)
+                if ip_str == "127.0.0.1":
+                    continue
+                mask_int = int(mask_hex, 16)
+                prefix = bin(mask_int).count("1")
+                net = ipaddress.ip_network(f"{ip_str}/{prefix}", strict=False)
+                my_networks.append((ip_str, net))
+        else:
+            out = subprocess.check_output(["hostname", "-I"], text=True, timeout=3).strip()
+            for ip_str in out.split():
+                ip_str = ip_str.strip()
+                if ip_str:
+                    # Default /24 for Linux (hostname -I doesn't give netmask)
+                    net = ipaddress.ip_network(f"{ip_str}/24", strict=False)
+                    my_networks.append((ip_str, net))
+    except Exception:
+        pass
+    my_ips = [ip for ip, _ in my_networks]
+
+    def _pick_best(local_ip: str, aws_ip: str) -> str:
+        """If any of our IPs is on the same subnet as local_ip, use LAN; else VPN."""
+        if not local_ip:
+            return aws_ip or local_ip
+        try:
+            target = ipaddress.ip_address(local_ip)
+            for _, net in my_networks:
+                if target in net:
+                    return local_ip
+        except ValueError:
+            pass
+        return aws_ip or local_ip
+
+    machines: list[dict] = []
+
+    base = data.get("base") or {}
+    if base:
+        best = _pick_best(base.get("localIp", ""), base.get("awsIp", ""))
+        machines.append({
+            "name":      base.get("name", "base"),
+            "role":      "base",
+            "localIp":   base.get("localIp", ""),
+            "awsIp":     base.get("awsIp", ""),
+            "bestIp":    best,
+            "user":      base.get("username", "ubuntu"),
+            "type":      base.get("type", ""),
+            "resources": base.get("resources", {}),
+        })
+
+    for w in data.get("workers", []):
+        best = _pick_best(w.get("localIp", ""), w.get("awsIp", ""))
+        machines.append({
+            "name":      w.get("name", ""),
+            "role":      "worker",
+            "localIp":   w.get("localIp", ""),
+            "awsIp":     w.get("awsIp", ""),
+            "bestIp":    best,
+            "user":      w.get("username", "ubuntu"),
+            "type":      w.get("type", ""),
+            "resources": w.get("resources", {}),
+        })
+
+    return {"machines": machines, "myIps": my_ips}
+
+
+def _setup_ssh(host: str, user: str, port: int = 22) -> dict:
+    """Ensure we can SSH into the target machine.
+
+    Flow:
+      1. Check if user has an SSH key — if not, generate one.
+      2. Test SSH with BatchMode=yes.
+         → If it works: return {status: "ok"}.
+      3. If not: return error telling user to run ssh-copy-id manually.
+    """
+    key_path, pub_key = _ensure_ssh_key()
+
+    # Test if SSH key is already authorized on the remote
+    try:
+        test = subprocess.run(
+            ["ssh",
+             "-o", "StrictHostKeyChecking=accept-new",
+             "-o", "BatchMode=yes",
+             "-o", "ConnectTimeout=5",
+             "-p", str(port),
+             f"{user}@{host}", "echo ok"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if test.returncode == 0:
+            return {
+                "status": "ok",
+                "message": f"SSH key authorized on {user}@{host}",
+                "publicKey": pub_key,
+            }
+    except subprocess.TimeoutExpired:
+        pass  # treat timeout same as auth failure — show ssh-copy-id command
+
+    # SSH failed — user needs to push key manually
+    return {
+        "status": "needs_password",
+        "message": (
+            f"SSH key not authorized on {user}@{host}. "
+            f"Run this in your terminal:\n\n"
+            f"  ssh-copy-id -i {key_path} -p {port} {user}@{host}"
+        ),
+        "publicKey": pub_key,
+    }
+
 
 # ── Multi-user devbox registry ──
 # Stored on the remote host so multiple developers can share a single box
@@ -1186,6 +1381,7 @@ def _ssh_argv(user: str, host: str, port: int, identity: str | None, want_tty: b
         "-o", "ServerAliveInterval=15",
         "-o", "GSSAPIAuthentication=no",
         "-o", "ConnectTimeout=10",
+        "-o", "BatchMode=yes",
         "-p", str(port),
     ]
     if identity:
@@ -1195,6 +1391,56 @@ def _ssh_argv(user: str, host: str, port: int, identity: str | None, want_tty: b
     else:
         argv += [host]
     return argv
+
+
+def _compute_cache_commit(project_root: str, max_n: int = 30) -> str:
+    def _git(args, timeout=20):
+        return subprocess.run(
+            ["git", "-C", project_root, *args],
+            capture_output=True, text=True, timeout=timeout,
+        )
+
+    # 1. best-effort fetch (works offline with stale refs; failures are non-fatal)
+    for fetch_args in (
+        ["fetch", "--quiet", "origin",
+         "refs/tags/minio-pushed/*:refs/tags/minio-pushed/*"],
+        ["fetch", "--quiet", "origin", "main"],
+    ):
+        try:
+            _git(fetch_args, timeout=30)
+        except Exception:  # noqa: BLE001
+            pass
+
+    # 2. merge-base with main (fallback HEAD)
+    base = "HEAD"
+    try:
+        mb = _git(["merge-base", "origin/main", "HEAD"], timeout=15)
+        if mb.returncode == 0 and mb.stdout.strip():
+            base = mb.stdout.strip()
+    except Exception:  # noqa: BLE001
+        pass
+
+    # 3. walk back and return the NEAREST commit carrying a minio-pushed tag —
+    #    the single commit whose build cache cache-restore should pull. CI tags a
+    #    commit once its build is pushed to MinIO. If none of the recent ancestors
+    #    is tagged, return "" and cabal builds from scratch.
+    walk = []
+    try:
+        lg = _git(["log", "--format=%H", "-n", str(max_n), base], timeout=15)
+        if lg.returncode == 0:
+            walk = lg.stdout.split()
+    except Exception:  # noqa: BLE001
+        pass
+
+    for sha in walk:
+        try:
+            r = _git(["rev-parse", "-q", "--verify",
+                      f"refs/tags/minio-pushed/{sha}"], timeout=10)
+            if r.returncode == 0:
+                return sha
+        except Exception:  # noqa: BLE001
+            pass
+    return ""
 
 
 def remote_deploy(body: dict) -> dict:
@@ -1230,7 +1476,13 @@ def remote_deploy(body: dict) -> dict:
     remote_dir = entry["dir"]
 
     target = f"{user}@{host}:{remote_dir}/"
-    ssh_cmd_parts = ["ssh", "-o", "StrictHostKeyChecking=accept-new", "-p", str(port)]
+    ssh_cmd_parts = [
+        "ssh",
+        "-o", "StrictHostKeyChecking=accept-new",
+        "-o", "BatchMode=yes",
+        "-o", "ConnectTimeout=10",
+        "-p", str(port),
+    ]
     if identity:
         ssh_cmd_parts += ["-i", identity]
     ssh_cmd = " ".join(ssh_cmd_parts)
@@ -1256,6 +1508,7 @@ def remote_deploy(body: dict) -> dict:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             bufsize=0,
+            start_new_session=True,
         )
     except FileNotFoundError:
         with session["lock"]:
@@ -1269,16 +1522,35 @@ def remote_deploy(body: dict) -> dict:
         session["running"] = True
         session["buf"].append(f"[deploy] {' '.join(argv)}")
 
-    # After rsync, init a minimal git repo on the remote so Nix copies only
-    # tracked files (much faster than copying the entire untracked directory)
+    cache_commit = _compute_cache_commit(str(PROJECT_ROOT))
+    with session["lock"]:
+        if cache_commit:
+            session["buf"].append(f"[deploy] minio cache commit: {cache_commit}")
+        else:
+            session["buf"].append(
+                "[deploy] no minio-pushed cache commit found — "
+                "cabal will build from scratch"
+            )
+
+    git_ignore_cmd = (
+        "printf '%s\\n' 'dist-newstyle/' 'hie/' '.hie/' '.nix-deps/' "
+        "'.cabal-dir/' '.ci-project-root' '.ci-cabal-dir' '.ci-cache-sha' "
+        "> .git/info/exclude"
+    )
     git_init_cmd = (
         f"cd {shlex.quote(remote_dir)} && "
-        f"git init -q && git add -A && "
+        f"rm -rf .git && git init -q && {git_ignore_cmd} && git add -A && "
         f"GIT_AUTHOR_NAME=deploy GIT_AUTHOR_EMAIL=deploy@deploy "
         f"GIT_COMMITTER_NAME=deploy GIT_COMMITTER_EMAIL=deploy@deploy "
-        f"git commit -q -m deploy --allow-empty 2>/dev/null || true"
+        f"git commit -q -m deploy --allow-empty 2>/dev/null || true; "
+        f"mkdir -p Backend && printf '%s' {shlex.quote(cache_commit)} "
+        f"> Backend/.ci-cache-sha"
     )
-    ssh_base = ["ssh", "-o", "StrictHostKeyChecking=accept-new", "-p", str(port)]
+    ssh_base = [
+        "ssh", "-o", "StrictHostKeyChecking=accept-new",
+        "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
+        "-p", str(port),
+    ]
     if identity:
         ssh_base += ["-i", identity]
     session["post_ssh_argv"] = ssh_base + [f"{user}@{host}", git_init_cmd]
@@ -1306,8 +1578,17 @@ def remote_clear_data(body: dict) -> dict:
     session = _remote_session_make("clear-data", host)
     _remote_register(session)
 
-    # `yes y | … , clear-data` answers the confirmation prompt non-interactively.
-    inner = "cd Backend && yes y | nix develop .#backend -c , clear-data"
+    # Delete data/ contents directly — no nix evaluation needed.
+    inner = (
+        "for entry in data/*/; do"
+        " [ -d \"$entry\" ] || continue;"
+        " name=$(basename \"$entry\");"
+        " case \"$name\" in ny-react-native|control-center) echo \"keeping $name\"; continue;; esac;"
+        " echo \"rm -rf $entry\"; rm -rf -- \"$entry\";"
+        " done;"
+        " find data/ -maxdepth 1 -type f -delete 2>/dev/null || true;"
+        " echo Done."
+    )
 
     if _is_localhost(host):
         argv = ["bash", "-lc", f"cd {PROJECT_ROOT} && {inner}"]
@@ -1330,6 +1611,7 @@ def remote_clear_data(body: dict) -> dict:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             bufsize=0,
+            start_new_session=True,
         )
     except FileNotFoundError as e:
         with session["lock"]:
@@ -1365,7 +1647,7 @@ def remote_cabal_clean(body: dict) -> dict:
     session = _remote_session_make("cabal-clean", host)
     _remote_register(session)
 
-    inner = "cd Backend && nix develop .#backend -c cabal clean"
+    inner = "cd Backend && rm -rf dist-newstyle .ci-project-root .ci-cabal-dir .cabal-dir .nix-deps"
 
     if _is_localhost(host):
         argv = ["bash", "-lc", f"cd {PROJECT_ROOT} && {inner}"]
@@ -1387,6 +1669,7 @@ def remote_cabal_clean(body: dict) -> dict:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             bufsize=0,
+            start_new_session=True,
         )
     except FileNotFoundError as e:
         with session["lock"]:
@@ -2341,22 +2624,34 @@ class LocalApiHandler(BaseHTTPRequestHandler):
 
         # POST /api/remote/deploy
         if method == "POST" and path == "/api/remote/deploy":
-            self._send_json(remote_deploy(self._read_json_body() or {}))
+            try:
+                self._send_json(remote_deploy(self._read_json_body() or {}))
+            except Exception as exc:
+                self._send_json({"error": f"deploy: {exc}"}, 500)
             return True
 
         # POST /api/remote/start
         if method == "POST" and path == "/api/remote/start":
-            self._send_json(remote_start(self._read_json_body() or {}))
+            try:
+                self._send_json(remote_start(self._read_json_body() or {}))
+            except Exception as exc:
+                self._send_json({"error": f"start: {exc}"}, 500)
             return True
 
         # POST /api/remote/clear-data
         if method == "POST" and path == "/api/remote/clear-data":
-            self._send_json(remote_clear_data(self._read_json_body() or {}))
+            try:
+                self._send_json(remote_clear_data(self._read_json_body() or {}))
+            except Exception as exc:
+                self._send_json({"error": f"clear-data: {exc}"}, 500)
             return True
 
         # POST /api/remote/cabal-clean
         if method == "POST" and path == "/api/remote/cabal-clean":
-            self._send_json(remote_cabal_clean(self._read_json_body() or {}))
+            try:
+                self._send_json(remote_cabal_clean(self._read_json_body() or {}))
+            except Exception as exc:
+                self._send_json({"error": f"cabal-clean: {exc}"}, 500)
             return True
 
         # POST /api/remote/input
@@ -2379,7 +2674,10 @@ class LocalApiHandler(BaseHTTPRequestHandler):
         if method == "POST" and path in ("/api/remote/stop", "/api/remote/kill"):
             body = self._read_json_body() or {}
             session_id = (body.get("session") or "").strip()
-            self._send_json(remote_stop(session_id))
+            try:
+                self._send_json(remote_stop(session_id))
+            except Exception as exc:
+                self._send_json({"error": f"stop: {exc}"}, 500)
             return True
 
         # GET /api/remote/status?session=<id>
@@ -2392,6 +2690,26 @@ class LocalApiHandler(BaseHTTPRequestHandler):
         # GET /api/remote/sessions
         if method == "GET" and path == "/api/remote/sessions":
             self._send_json(remote_sessions_list())
+            return True
+
+        # GET /api/remote/machines  — fetch ServiceDiscovery machine list
+        if method == "GET" and path == "/api/remote/machines":
+            self._send_json(_fetch_machines())
+            return True
+
+        # POST /api/remote/setup-ssh  — generate key + test connectivity
+        if method == "POST" and path == "/api/remote/setup-ssh":
+            body = self._read_json_body() or {}
+            host = (body.get("host") or "").strip()
+            user = (body.get("user") or "").strip()
+            port = int(body.get("port") or 22)
+            if not host or not user:
+                self._send_json({"error": "host and user are required"}, 400)
+                return True
+            try:
+                self._send_json(_setup_ssh(host, user, port))
+            except Exception as e:
+                self._send_json({"error": str(e)}, 500)
             return True
 
         # GET /api/remote/stream?session=<id>  (SSE)

@@ -26,16 +26,19 @@ import qualified Kernel.External.Verification.Interface as Verification
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Network.HTTP.Types.URI as URI
-import qualified Storage.Cac.TransporterConfig as CQTC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DigilockerVerification as QDV
 import Tools.Error
 
 getDigiLockerConfig :: Id DMOC.MerchantOperatingCity -> Flow DigilockerTypes.DigiLockerCfg
 getDigiLockerConfig merchantOpCityId = do
   transporterConfig <-
-    CQTC.findByMerchantOpCityId merchantOpCityId Nothing
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
       >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
   unless (transporterConfig.digilockerEnabled == Just True) $
@@ -43,7 +46,7 @@ getDigiLockerConfig merchantOpCityId = do
 
   let serviceName = DMSC.VerificationService Verification.DigiLocker
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity serviceName merchantOpCityId
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just serviceName}) (Just (maybeToList <$> CQMSC.findByServiceAndCity serviceName merchantOpCityId))
       >>= fromMaybeM (InternalError "DigiLocker service config not found. Please configure DigiLocker in merchant_service_config table.")
 
   case merchantServiceConfig.serviceConfig of
@@ -54,7 +57,7 @@ getDigiLockerConfig merchantOpCityId = do
 verifyDigiLockerEnabled :: Id DMOC.MerchantOperatingCity -> Flow ()
 verifyDigiLockerEnabled merchantOpCityId = do
   transporterConfig <-
-    CQTC.findByMerchantOpCityId merchantOpCityId Nothing
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
       >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
   unless (fromMaybe False transporterConfig.digilockerEnabled) $

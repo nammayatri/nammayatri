@@ -33,15 +33,16 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.Finance.Prepaid
 import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.BookingExtra as QBookingE
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 import qualified Storage.Queries.Vehicle as QVehicle
-import Utils.Common.Cac.KeyNameConstants
 
 getSubscriptionTransactions ::
   (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -68,7 +69,7 @@ getSubscriptionTransactions (mbDriverId, _, merchantOperatingCityId) mbFrom mbLi
       isFleetOwner = DCommon.checkFleetOwnerRole driver.role
       counterpartyType = if isFleetOwner then counterpartyFleetOwner else counterpartyDriver
       ownerType = if isFleetOwner then DSP.FLEET_OWNER else DSP.DRIVER
-  tc <- SCTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driverId'))) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  tc <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   let isolationEnabled = fromMaybe False tc.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
   mbVehicleCategory <-
     if isolationEnabled

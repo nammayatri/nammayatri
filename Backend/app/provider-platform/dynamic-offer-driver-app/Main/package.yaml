@@ -116,6 +116,7 @@ dependencies:
   - vector
   - geohash == 1.0.1
   - cereal
+  - hedis
   - beam-core
   - beam-mysql
   - beam-postgres
@@ -136,6 +137,7 @@ dependencies:
   - hashable
   - json-logic-hs
   - yudhishthira
+  - config-pilot
   - behavior-tracker
   - behavior-engine
   - consequence-engine

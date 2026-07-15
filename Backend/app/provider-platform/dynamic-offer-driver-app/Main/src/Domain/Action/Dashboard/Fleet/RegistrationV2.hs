@@ -22,6 +22,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Fleet.RegistrationV2 as Common
 import qualified API.Types.UI.DriverOnboardingV2 as Onboarding
+import qualified Domain.Action.Dashboard.Common.AddressDocumentType as AddrCast
 import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import Domain.Action.Dashboard.Fleet.Referral
 import qualified Domain.Action.Dashboard.Fleet.Registration as DRegistration
@@ -53,10 +54,12 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation as AggCommSched
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MobileNumberValidation as MobileValidation
 import qualified SharedLogic.PersonBankAccount as SPBA
@@ -64,6 +67,8 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as FODVC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverGstin as QGST
 import qualified Storage.Queries.DriverPanCard as QPanCard
@@ -170,13 +175,15 @@ fleetOwnerRegister merchantShortId opCity mbRequestorId req = do
   let updPerson = person{firstName = req.firstName, lastName = Just req.lastName, email = req.email <|> person.email, role = newRole}
   void $ QP.updateByPrimaryKey updPerson
   void $ updateFleetOwnerInfo fleetOwnerInfo req
-  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  -- Registration is now a mandatory (verified-only) doc; recompute so `verified` flips once registeredAt is set.
+  void $ SStatus.refreshDocsVerificationStatusesWithStatus (Just updPerson) (Just transporterConfig) fleetOwnerId
 
   mbReferredOperatorId <- getOperatorIdFromReferralCode req.operatorReferralCode
   whenJust (mbReferredOperatorId <|> mbRequestedOperatorId) $ \referredOperatorId -> do
     fleetAssocs <- QFOA.findAllFleetAssociations fleetOwnerId.getId
     when (null fleetAssocs) $ do
-      fleetOperatorAssocData <- SA.makeFleetOperatorAssociation person.merchantId person.merchantOperatingCityId fleetOwnerId.getId referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      fleetOperatorAssocData <- SA.makeFleetOperatorAssociation person.merchantId person.merchantOperatingCityId fleetOwnerId.getId referredOperatorId DomainRC.defaultAssociationEnd
       QFOA.create fleetOperatorAssocData
       let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
       when allowCacheDriverFlowStatus $ do
@@ -199,7 +206,7 @@ fleetOwnerRegister merchantShortId opCity mbRequestorId req = do
 
 sendFleetOnboardingSms :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()
 sendFleetOnboardingSms fleetOwnerId merchantOperatingCityId = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   when (transporterConfig.sendSmsOnEnablement == Just True) $ do
     merchantOpCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
     merchant <- QMerchant.findById merchantOpCity.merchantId >>= fromMaybeM (MerchantNotFound merchantOpCity.merchantId.getId)
@@ -219,14 +226,17 @@ enableFleetIfPossible :: Id DP.Person -> Maybe Bool -> Maybe FOI.FleetType -> Id
 enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOperatingCityId mbTransporterConfig = do
   transporterConfig <- case mbTransporterConfig of
     Just tc -> pure tc
-    Nothing -> SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+    Nothing -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   registrationPending <-
     if transporterConfig.requireFleetOwnerRegistrationForEnablement == Just True
       then do
         mbFleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId
         pure $ isNothing (mbFleetOwnerInfo >>= (.registeredAt))
       else pure False
-  if registrationPending || adminApprovalRequired == Just True
+  -- Under BOT flow, fleet enablement is owned by the BOT review (submit/review/request →
+  -- recomputeFleetVerifiedAndEnabled), so don't enable here at registration/finalize.
+  let enableBotFlow = transporterConfig.enableBotFlow == Just True
+  if registrationPending || adminApprovalRequired == Just True || enableBotFlow
     then pure False
     else do
       let role = case mbfleetType of
@@ -234,7 +244,7 @@ enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOpe
             Just FOI.BUSINESS_FLEET -> DP.FLEET_BUSINESS
             _ -> DP.FLEET_OWNER
 
-      mandatoryConfigs <- FODVC.findAllMandatoryByMerchantOpCityIdAndRole merchantOperatingCityId role (Just [])
+      mandatoryConfigs <- filter (.isMandatory) <$> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, documentType = Nothing, role = Just role}) (Just (FODVC.findAllMandatoryByMerchantOpCityIdAndRole merchantOperatingCityId role (Just [])))
 
       let isAadhaarMandatory = any (\cfg -> cfg.documentType == DVC.AadhaarCard) mandatoryConfigs
       let isPanMandatory = any (\cfg -> cfg.documentType == DVC.PanCard) mandatoryConfigs
@@ -316,7 +326,7 @@ getOperatorIdFromReferralCode (Just refCode) = do
 
 createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe Bool -> Flow DP.Person
 createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion enabled = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   cloudType <- asks (.cloudType)
   person <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing Nothing (Just deploymentVersion) cloudType merchantId merchantOpCityId isDashboard (Just DP.FLEET_OWNER)
   void $ QP.create person
@@ -330,7 +340,7 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
         if transporterConfig.enableManualDocumentStatusCheck == Just True
           then Just DDVS.ADMIN_PENDING
           else Nothing
-  createFleetOwnerInfo person.id merchantId enabled (Just merchantOpCityId) transporterConfig.taxConfig.defaultTdsRate defaultDocsVerificationStatus
+  createFleetOwnerInfo person.id merchantId enabled (Just merchantOpCityId) ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate) defaultDocsVerificationStatus
   pure person
 
 createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Maybe (Id DMOC.MerchantOperatingCity) -> Maybe Double -> Maybe DDVS.DocsVerificationStatus -> Flow ()
@@ -384,7 +394,11 @@ createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId mbTds
             tollRouteBlockedTill = Nothing,
             weeklyCancellationRateBlockingCooldown = Nothing,
             payoutRegistrationOrderId = Nothing,
-            docsVerificationStatus = mbDocsVerificationStatus
+            docsVerificationStatus = mbDocsVerificationStatus,
+            address = Nothing,
+            addressState = Nothing,
+            addressDocumentType = Nothing,
+            approved = Nothing
           }
   QFOI.create fleetOwnerInfo
   -- Bootstrap the AggregatedCommission scheduler chain for this fleet owner.
@@ -406,7 +420,7 @@ fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled req = do
       countryCode = req.mobileCountryCode
   sendOtpRateLimitOptions <- asks (.sendOtpRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeMobileNumberHitsCountKey mobileNumber) sendOtpRateLimitOptions
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCity.id Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   MobileValidation.validateMobileNumber transporterConfig mobileNumber countryCode merchantOpCity.country
 
   smsCfg <- asks (.smsCfg)
@@ -460,7 +474,8 @@ buildFleetOwnerAuthReq merchantId' opCity Common.FleetOwnerLoginReqV2 {..} =
       registrationLat = Nothing,
       registrationLon = Nothing,
       otpChannel = Nothing,
-      password = Nothing
+      password = Nothing,
+      employeeId = Nothing
     }
 
 updateFleetOwnerInfo ::
@@ -474,7 +489,10 @@ updateFleetOwnerInfo fleetOwnerInfo Common.FleetOwnerRegisterReqV2 {..} = do
         fleetOwnerInfo
           { FOI.fleetType = newFleetType,
             FOI.registeredAt = Just now,
-            FOI.fleetName = fleetName
+            FOI.fleetName = fleetName,
+            FOI.address = address <|> fleetOwnerInfo.address,
+            FOI.addressState = addressState <|> fleetOwnerInfo.addressState,
+            FOI.addressDocumentType = (AddrCast.castFromCommon <$> addressDocumentType) <|> fleetOwnerInfo.addressDocumentType
           }
   void $ QFOI.updateByPrimaryKey updFleetOwnerInfo -- this update will backfill encrypted docs numbers
   -- Keep person.role in sync with fleet_type so role-based config lookups don't drift.

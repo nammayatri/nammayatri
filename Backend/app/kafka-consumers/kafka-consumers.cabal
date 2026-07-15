@@ -96,11 +96,13 @@ library
     , behavior-tracker
     , bytestring
     , cereal
+    , config-pilot
     , containers
     , dynamic-offer-driver-app
     , errors
     , esqueleto
     , euler-hs
+    , finance-kernel
     , hedis
     , hw-kafka-client
     , location-updates
@@ -193,10 +195,12 @@ executable kafka-consumers-exe
     , behavior-tracker
     , bytestring
     , cereal
+    , config-pilot
     , containers
     , errors
     , esqueleto
     , euler-hs
+    , finance-kernel
     , hedis
     , hw-kafka-client
     , kafka-consumers

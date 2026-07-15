@@ -29,6 +29,7 @@ data DriverGstinT f = DriverGstinT
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     panNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     pincode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    rejectReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     stateName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     tradeName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     typeOfRegistration :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

@@ -17,6 +17,7 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.DriverOnboarding.BankAccountVerification as BankAccountVerification
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.PullDocument as PullDocument
+import qualified Domain.Action.UI.DriverOnboarding.SyncVerificationStatus as SyncV
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as VRC
 import qualified Domain.Types.AadhaarCard
 import Domain.Types.BackgroundVerification
@@ -31,6 +32,7 @@ import qualified Domain.Types.DriverGstin as DGST
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPC
 import Domain.Types.DriverSSN
+import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import Domain.Types.FarePolicy
 import qualified Domain.Types.HyperVergeSdkLogs as DomainHVSdkLogs
 import qualified Domain.Types.IdfyVerification as DIV
@@ -41,6 +43,7 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.VehicleCategory as DVC
+import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Domain.Types.VehicleServiceTier
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -61,8 +64,11 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTaxExtra
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
+import qualified Lib.Queries.SpecialLocation as QSpecialLocation
+import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.DriverOnboarding.Digilocker
@@ -74,16 +80,22 @@ import SharedLogic.DriverOnboarding.Digilocker
   )
 import qualified SharedLogic.DriverOnboarding.Digilocker as DigilockerLockerShared
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.PersonBankAccount as SPBA
 import SharedLogic.VehicleServiceTier
-import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
-import qualified Storage.Cac.TransporterConfig as CQTC
+import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as QBV
 import qualified Storage.Queries.Booking as QBooking
@@ -96,8 +108,11 @@ import qualified Storage.Queries.DriverPanCard as QDPC
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverSSN as QDriverSSN
 import qualified Storage.Queries.FleetDriverAssociationExtra as FDA
+import qualified Storage.Queries.FleetRCAssociationExtra as FRCA
 import qualified Storage.Queries.HyperVergeSdkLogs as HVSdkLogsQuery
+import qualified Storage.Queries.HyperVergeVerificationExtra as HVQueryExtra
 import qualified Storage.Queries.IdfyVerification as IVQuery
+import qualified Storage.Queries.IdfyVerificationExtra as IVQueryExtra
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as PersonQuery
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
@@ -108,7 +123,6 @@ import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCE
 import qualified Tools.BackgroundVerification as BackgroundVerificationT
 import Tools.Error
 import qualified Tools.Verification as Verification
-import Utils.Common.Cac.KeyNameConstants
 
 stringToPrice :: Currency -> Text -> Maybe Price
 stringToPrice currency value = do
@@ -126,8 +140,8 @@ mkDocumentVerificationConfigAPIEntity ::
   Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig ->
   Environment.Flow API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity
 mkDocumentVerificationConfigAPIEntity language verificationProvidersPriorityList Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..} = do
-  mbTitle <- MTQuery.findByErrorAndLanguage (show documentType <> "_Title") language
-  mbDescription <- MTQuery.findByErrorAndLanguage (show documentType <> "_Description") language
+  mbTitle <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOperatingCityId.getId, messageKey = show documentType <> "_Title", language = Just language}) (Just (MTQuery.findByErrorAndLanguage (show documentType <> "_Title") language))
+  mbDescription <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOperatingCityId.getId, messageKey = show documentType <> "_Description", language = Just language}) (Just (MTQuery.findByErrorAndLanguage (show documentType <> "_Description") language))
   return $
     API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity
       { title = maybe title (.message) mbTitle,
@@ -162,16 +176,18 @@ getOnboardingConfigs' ::
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Environment.Flow API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
 getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandatory mbOnlyVehicle = do
-  mbMerchantServiceUsageConfig <- CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+  mbMerchantServiceUsageConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
   let verificationProvidersPriorityList = (.verificationProvidersPriorityList) <$> mbMerchantServiceUsageConfig
-  cabConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.CAR Nothing
-  autoConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.AUTO_CATEGORY Nothing
-  bikeConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.MOTORCYCLE Nothing
-  ambulanceConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.AMBULANCE Nothing
-  truckConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.TRUCK Nothing
-  boatConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.BOAT Nothing
-  busConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.BUS Nothing
-  totoConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.TOTO Nothing
+  let mkDims cat = DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, vehicleCategory = Just cat}
+      mkFallback cat = Just (CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId cat Nothing)
+  cabConfigsRaw <- getConfig (mkDims DVC.CAR) (mkFallback DVC.CAR)
+  autoConfigsRaw <- getConfig (mkDims DVC.AUTO_CATEGORY) (mkFallback DVC.AUTO_CATEGORY)
+  bikeConfigsRaw <- getConfig (mkDims DVC.MOTORCYCLE) (mkFallback DVC.MOTORCYCLE)
+  ambulanceConfigsRaw <- getConfig (mkDims DVC.AMBULANCE) (mkFallback DVC.AMBULANCE)
+  truckConfigsRaw <- getConfig (mkDims DVC.TRUCK) (mkFallback DVC.TRUCK)
+  boatConfigsRaw <- getConfig (mkDims DVC.BOAT) (mkFallback DVC.BOAT)
+  busConfigsRaw <- getConfig (mkDims DVC.BUS) (mkFallback DVC.BUS)
+  totoConfigsRaw <- getConfig (mkDims DVC.TOTO) (mkFallback DVC.TOTO)
   cabConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage verificationProvidersPriorityList) (SDO.filterVehicleDocuments cabConfigsRaw mbOnlyVehicle)
   autoConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage verificationProvidersPriorityList) (SDO.filterVehicleDocuments autoConfigsRaw mbOnlyVehicle)
   bikeConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage verificationProvidersPriorityList) (SDO.filterVehicleDocuments bikeConfigsRaw mbOnlyVehicle)
@@ -263,7 +279,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
   let mbDistance = reqDistance
       mbDuration = reqDuration
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast personId)))
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing))
   driverInfo <- runInReplica $ QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   (mbTripCategory, mbPickup, mbVehicleServiceType) <-
     if driverInfo.onRide
@@ -388,7 +404,7 @@ postDriverUpdateAirCondition ::
   )
 postDriverUpdateAirCondition (mbPersonId, _, merchantOperatingCityId) API.Types.UI.DriverOnboardingV2.UpdateAirConditionUpdateRequest {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId (Just []) Nothing
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId Nothing
   SDO.checkAndUpdateAirConditioned False isAirConditioned personId merchantOperatingCityId cityVehicleServiceTiers Nothing True
   now <- getCurrentTime
   QDI.updateLastACStatusCheckedAt (Just now) personId
@@ -406,7 +422,14 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- runInReplica $ QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId (Just []) Nothing
+  baseCityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+  -- Resolve driver location only when special-zone tier names are configured;
+  -- otherwise this endpoint should avoid an extra LTS call on every preferences refresh.
+  mbSpecialLocationId <-
+    if any (isJust . (.specialZone)) baseCityVehicleServiceTiers
+      then getDriverCurrentSpecialLocationId personId
+      else pure Nothing
+  let cityVehicleServiceTiers = map (CQVST.applySpecialZoneName mbSpecialLocationId) baseCityVehicleServiceTiers
   let personLanguage = fromMaybe ENGLISH person.language
 
   driverVehicleServiceTierTypes <- fetchVehicleTierForDriverWithUsageRestriction False (Just driverInfo) (Just vehicle) Nothing (Just cityVehicleServiceTiers) personId merchantOpCityId
@@ -433,10 +456,10 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
       then do
         restrictionMessageItem <-
           if not isACAllowedForDriver
-            then MTQuery.findByErrorAndLanguage "AC_RESTRICTION_MESSAGE" personLanguage
+            then getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = "AC_RESTRICTION_MESSAGE", language = Just personLanguage}) (Just (MTQuery.findByErrorAndLanguage "AC_RESTRICTION_MESSAGE" personLanguage))
             else
               if isACWorkingForVehicle
-                then MTQuery.findByErrorAndLanguage "AC_WORKING_MESSAGE" personLanguage
+                then getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = "AC_WORKING_MESSAGE", language = Just personLanguage}) (Just (MTQuery.findByErrorAndLanguage "AC_WORKING_MESSAGE" personLanguage))
                 else return Nothing
         return $
           Just $
@@ -466,26 +489,32 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
           )
           False
           driverVehicleServiceTierTypes
-      canSwitchToAirport' =
-        foldl
-          ( \canSwitchToAirportForAnyServiceTierSoFar (selectedServiceTier, isUsageRestricted) ->
-              if isUsageRestricted
-                then canSwitchToAirportForAnyServiceTierSoFar
-                else canSwitchToAirportForAnyServiceTierSoFar || fromMaybe True selectedServiceTier.isAirportRideEnabled
-          )
-          False
-          driverVehicleServiceTierTypes
       canSwitchToIntraCity' = any (\(st, _) -> st.vehicleCategory == Just DVC.CAR) driverVehicleServiceTierTypes && (canSwitchToInterCity' || canSwitchToRental')
 
+  airportNow <- getCurrentTime
+  effectiveAirport <- QDI.resolveAirportRestriction airportNow driverInfo
   return $
     API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers
       { tiers = tierOptions,
         canSwitchToRental = if canSwitchToRental' then Just driverInfo.canSwitchToRental else Nothing,
         canSwitchToInterCity = if canSwitchToInterCity' then Just driverInfo.canSwitchToInterCity else Nothing,
         canSwitchToIntraCity = if canSwitchToIntraCity' then Just driverInfo.canSwitchToIntraCity else Nothing,
-        canSwitchToAirport = if canSwitchToAirport' && fromMaybe True vehicle.enableForAirport then Just driverInfo.canSwitchToAirport else Nothing,
+        enableForAirport = effectiveAirport,
         airConditioned = mbAirConditioned
       }
+  where
+    getDriverCurrentSpecialLocationId personId' =
+      ( (listToMaybe <$> LTSFlow.driversLocation [personId'])
+          >>= maybe
+            (pure Nothing)
+            ( \loc ->
+                fmap (.id.getId)
+                  <$> QSpecialLocation.findPickupSpecialLocationByLatLong LatLong {lat = loc.lat, lon = loc.lon}
+            )
+      )
+        `C.catchAll` \err -> do
+          logWarning $ "Unable to resolve special location for driver " <> personId'.getId <> ": " <> show err
+          pure Nothing
 
 postDriverUpdateServiceTiers ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -498,7 +527,7 @@ postDriverUpdateServiceTiers ::
 postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers {..} = do
   -- Todo: Handle oxygen,ventilator here also. For now, frontend can handle
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId (Just []) Nothing
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId Nothing
 
   whenJust airConditioned $ \ac -> SDO.checkAndUpdateAirConditioned False ac.isWorking personId merchantOperatingCityId cityVehicleServiceTiers Nothing False
   driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
@@ -537,15 +566,6 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
           )
           False
           driverVehicleServiceTierTypes
-      canSwitchToAirport' =
-        foldl
-          ( \canSwitchToAirportForAnyServiceTierSoFar (selectedServiceTier, isUsageRestricted) ->
-              if isUsageRestricted
-                then canSwitchToAirportForAnyServiceTierSoFar
-                else canSwitchToAirportForAnyServiceTierSoFar || (fromMaybe driverInfo.canSwitchToAirport canSwitchToAirport && fromMaybe True selectedServiceTier.isAirportRideEnabled)
-          )
-          False
-          driverVehicleServiceTierTypes
 
       canSwitchToIntraCity' =
         if any (\(st, _) -> st.vehicleCategory == Just DVC.CAR) driverVehicleServiceTierTypes && (canSwitchToInterCity' || canSwitchToRental')
@@ -553,7 +573,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
           else True
 
   QDI.updateRentalInterCityAndIntraCitySwitch canSwitchToRental' canSwitchToInterCity' canSwitchToIntraCity' personId
-  QDI.updateAirportSwitch canSwitchToAirport' personId
+  QDI.updateAirportSwitch enableForAirport Nothing Nothing personId
 
   return Success
 
@@ -679,7 +699,7 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let mbPanVerificationService =
         (if isDashboard then merchantServiceUsageConfig.dashboardPanVerificationService else merchantServiceUsageConfig.panVerificationService)
@@ -695,6 +715,8 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
     when (panInfo.verificationStatus == Documents.VALID) $ do
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentAlreadyValidated "PAN"
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  SDO.validateIndividualPANCheck transporterConfig person req.panNumber
   (verificationStatus, mbNameFromGovtDB) <-
     if isDigiLockerFlow
       then pure (Documents.VALID, Nothing)
@@ -704,8 +726,9 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
         _ -> pure (Documents.VALID, Nothing)
 
   let updatedReq = req {API.Types.UI.DriverOnboardingV2.nameOnGovtDB = mbNameFromGovtDB <|> req.nameOnGovtDB}
-  QDPC.upsertPanRecord =<< buildPanCard merchantId person updatedReq verificationStatus (Just merchantOpCityId)
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  mbDriverPanCard <- QDPC.findByDriverId personId
+  panCardDetails <- buildPanCard merchantId person updatedReq verificationStatus (Just merchantOpCityId)
+  QDPC.upsertPanRecord panCardDetails mbDriverPanCard
   let allowPanAadhaarLink = fromMaybe True transporterConfig.allowPanAadhaarLinkage
   unless allowPanAadhaarLink $
     logInfo $
@@ -774,7 +797,7 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
       unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId.getId)
       unless (imageMetadata.imageType == DTO.PanCard) $
         throwError (ImageInvalidType (show DTO.PanCard) "")
-      Redis.withLockRedisAndReturnValue (VRC.imageS3Lock (imageMetadata.s3Path)) 5 $
+      Redis.withLockRedisAndReturnValue (SDO.imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
     checkIfGenuineReq :: (ServiceFlow m r) => API.Types.UI.DriverOnboardingV2.DriverPanReq -> m (Maybe Text)
     checkIfGenuineReq API.Types.UI.DriverOnboardingV2.DriverPanReq {..} = do
@@ -847,6 +870,7 @@ buildPanCard merchantId person API.Types.UI.DriverOnboardingV2.DriverPanReq {..}
         verificationStatus = verificationStatus,
         driverNameOnGovtDB = nameOnGovtDB,
         panAadhaarLinkage = Nothing,
+        rejectReason = Nothing,
         ..
       }
 
@@ -862,11 +886,11 @@ postDriverRegisterGstin (mbPersonId, merchantId, merchantOpCityId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let mbGstVerificationService = merchantServiceUsageConfig.gstVerificationService
 
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mbGstInfo <- QDGTIN.findUnInvalidByGstNumber req.gstNumber
   whenJust mbGstInfo $ \gstInfo -> do
     when (gstInfo.driverId /= personId) $ do
@@ -892,7 +916,7 @@ postDriverRegisterGstin (mbPersonId, merchantId, merchantOpCityId) req = do
       unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId.getId)
       unless (imageMetadata.imageType == DTO.GSTCertificate) $
         throwError (ImageInvalidType (show DTO.GSTCertificate) "")
-      Redis.withLockRedisAndReturnValue (VRC.imageS3Lock (imageMetadata.s3Path)) 5 $
+      Redis.withLockRedisAndReturnValue (SDO.imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
     callIdfy :: Text -> Flow Documents.VerificationStatus
     callIdfy personId = do
@@ -949,6 +973,7 @@ buildGstCard merchantId person API.Types.UI.DriverOnboardingV2.DriverGstinReq {.
         createdAt = now,
         updatedAt = now,
         verificationStatus = verificationStatus,
+        rejectReason = Nothing,
         ..
       }
 
@@ -995,7 +1020,7 @@ postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) 
       "PanAadhaarLink postDriverRegisterAadhaarCard: skipped (no aadhaarNumber after upsert) driverId="
         <> personId.getId
   whenJust mbAadhaarNumber $ \aadhaarNumber -> do
-    transporterConfig <- CQTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
     let allowPanAadhaarLink = fromMaybe True transporterConfig.allowPanAadhaarLinkage
     unless allowPanAadhaarLink $
       logInfo $
@@ -1105,6 +1130,7 @@ createAadhaarRecord personId merchantId merchantOperatingCityId API.Types.UI.Dri
             driverGender = Nothing,
             driverImage = Nothing,
             driverImagePath = Nothing,
+            rejectReason = Nothing,
             ..
           }
   QAadhaarCard.upsertAadhaarRecord aadhaarCard
@@ -1206,7 +1232,7 @@ validateInvoiceEntry entry = do
               ]
 
   -- Validate GST/tax details
-  taxTxns <- QIndirectTaxExtra.findByInvoiceNumber (Just entry.invoiceNumber)
+  taxTxns <- QIndirectTax.findByInvoiceNumber (Just entry.invoiceNumber)
   let totalTaxableValue = sum $ map (.taxableValue) taxTxns
       totalGstAmount = sum $ map (.totalGstAmount) taxTxns
 
@@ -1295,7 +1321,7 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
 getDriverFleetRcs :: (Maybe (Id Domain.Types.Person.Person), Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Maybe Int -> Maybe Int -> Maybe Text -> Flow APITypes.FleetRCListRes
 getDriverFleetRcs (mbDriverId, _, merchantOpCityId) limit offset mbSearchString = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   mbSearchStringHash <- mapM getDbHash mbSearchString
   driverLinkedRcs <- DAQuery.findAllLinkedByDriverId driverId
@@ -1317,7 +1343,7 @@ getDriverFleetRcs (mbDriverId, _, merchantOpCityId) limit offset mbSearchString 
       rcNo <- decrypt rc.certificateNumber
       let isActive = Just rc.id == activeRcId
       isValid <-
-        SStatus.checkAllVehicleDocsVerifiedForRC rc merchantOperatingCity transporterConfig ENGLISH rcNo
+        SStatus.fetchAndCheckVehicleDocsValidForEnabling rc merchantOperatingCity transporterConfig ENGLISH rcNo
           `C.catchAll` \_ -> pure False
       return $
         VRC.LinkedRC
@@ -1332,9 +1358,13 @@ postDriverLinkToFleet ::
   (Maybe (Id Domain.Types.Person.Person), Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
   APITypes.LinkToFleetReq ->
   Flow APISuccess
-postDriverLinkToFleet (mbDriverId, _, _) req = do
+postDriverLinkToFleet (mbDriverId, merchantId, _) req = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
-  fdaForFleetOwner <- FDA.findByDriverIdAndFleetOwnerIdWithStatus driverId req.fleetOwnerId.getId
+  -- Fetch the driver's (non-expired) fleet associations once and reuse them for both the
+  -- this-fleet branching below and the D17 "active with another fleet" guard, avoiding a
+  -- second read on fleet_driver_association.
+  driverFleetAssocs <- FDA.findAllByDriverIdWithStatus driverId
+  let fdaForFleetOwner = DL.find (\fda -> fda.fleetOwnerId == req.fleetOwnerId.getId) driverFleetAssocs
   case req.isRevoke of
     Just True -> do
       case fdaForFleetOwner of
@@ -1346,9 +1376,138 @@ postDriverLinkToFleet (mbDriverId, _, _) req = do
         Just fda | fda.isActive -> throwError $ InvalidRequest "Driver is already linked to this fleet"
         Just _ -> throwError $ InvalidRequest "Driver already has a pending fleet association request with this fleet"
         Nothing -> do
+          merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+          -- Reuse the fleet associations already fetched above; the shared guard only adds the
+          -- driver-operator read (and short-circuits entirely when overwrite is enabled).
+          SA.guardDriverNotAssociated merchant driverId (any (.isActive) driverFleetAssocs)
           let requestReason = fromMaybe "Driver requested to join fleet" req.requestReason
           FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just requestReason)
   return Success
+
+-- | Vehicle-only RC verify-status (driver app). RC resolved by @registrationNo@/@rcId@; access gated on
+--   the calling driver's active DriverRCAssociation. Fleet ownership is not accepted here.
+getDriverRegisterVehicleStatus ::
+  (Maybe (Id Domain.Types.Person.Person), Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
+  Maybe Text ->
+  Maybe Text ->
+  Flow APITypes.RcVerifyStatusResp
+getDriverRegisterVehicleStatus (mbPersonId, _, merchantOpCityId) mbRegistrationNo mbRcId = do
+  callerId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  (registrationNo, verified, approved, documents) <- rcVerifyStatus (DriverCaller callerId merchantOpCityId) mbRegistrationNo mbRcId
+  pure $ APITypes.RcVerifyStatusResp {registrationNo, verified, approved, documents}
+
+-- | Who is asking for RC verify-status; a sum type so driver-with-no-id / dashboard-with-id are
+--   unrepresentable and the driver path can't skip the RC-ownership authz.
+data RcVerifyCaller
+  = -- | Driver app: authorized against its active DriverRCAssociation. The city is only a config-lookup
+    --   key (from the auth token) — NOT matched against the RC's resolved city.
+    DriverCaller (Id Domain.Types.Person.Person) (Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
+  | -- | Dashboard: merchant/city-scoped by ApiAuthV2; the RC's resolved city must match this city.
+    DashboardCaller (Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
+
+-- | Shared RC verify-status core (UI + dashboard): resolve the RC, authorize the caller, check all
+--   mandatory vehicle docs; under @enableBotFlow@ persist RC.verified.
+rcVerifyStatus :: RcVerifyCaller -> Maybe Text -> Maybe Text -> Flow (Text, Bool, Maybe Bool, [SStatus.DocumentStatusItem])
+rcVerifyStatus caller mbRegistrationNo mbRcId = do
+  mbRc <- case (mbRegistrationNo, mbRcId) of
+    (Just registrationNo, _) -> VRCE.findLastVehicleRCWrapper registrationNo
+    (Nothing, Just rcId) -> RCQuery.findById (Id rcId)
+    (Nothing, Nothing) -> throwError (InvalidRequest "Either registrationNo or rcId must be provided")
+  case mbRc of
+    Just rc -> rcVerifyStatusForRC caller rc
+    -- No RC entity yet (verification still pending, e.g. a missed webhook). Re-pull only the RC asked
+    -- about — resolved by registration number from its still-pending row; no number or no row ⇒ nothing
+    -- to sync. Reported NO_DOC_AVAILABLE now; it surfaces once onVerifyRC creates the RC.
+    Nothing -> do
+      -- Flag off ⇒ no lookups, nothing forked; the response is NO_DOC_AVAILABLE either way.
+      let merchantOpCityId = case caller of
+            DriverCaller _ cityId -> cityId
+            DashboardCaller cityId -> cityId
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      when (transporterConfig.enablePullPendingDocVerification == Just True) $
+        whenJust mbRegistrationNo $ \regNo -> do
+          merchantServiceUsageConfig <-
+            getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
+              >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+          let sources = SyncV.pullSourcesFor merchantServiceUsageConfig DTO.VehicleRegistrationCertificate
+          rcHash <- getDbHash regNo
+          -- Read only the tables 'SyncV.pullSourcesFor' allows.
+          mbIdfyRow <- if sources.checkIdfy then IVQueryExtra.findLatestPendingByDocNumberHashAndDocType rcHash DTO.VehicleRegistrationCertificate else pure Nothing
+          mbHvRow <- if sources.checkHyperVerge then HVQueryExtra.findLatestPendingByDocNumberHashAndDocType rcHash DTO.VehicleRegistrationCertificate else pure Nothing
+          let mbRowKey = (mbIdfyRow <&> (\r -> (r.driverId, r.documentImageId1))) <|> (mbHvRow <&> (\r -> (r.driverId, r.documentImageId1)))
+          whenJust mbRowKey $ \(rowDriverId, rowImageId) -> do
+            -- A driver caller may only heal its own row; the dashboard is already merchant/city-scoped.
+            let callerOwnsRow = case caller of
+                  DashboardCaller _ -> True
+                  DriverCaller callerId _ -> callerId == rowDriverId
+            when callerOwnsRow $ do
+              person <- PersonQuery.findById rowDriverId >>= fromMaybeM (PersonNotFound rowDriverId.getId)
+              fork "pullRcStatus" $ SyncV.pullRcStatus person rowImageId.getId
+      pure (fromMaybe "" (mbRegistrationNo <|> mbRcId), False, Nothing, noDocVehicleStatusItems)
+
+-- | Every vehicle doc as NO_DOC_AVAILABLE — the shape the found-RC path returns for absent docs.
+noDocVehicleStatusItems :: [SStatus.DocumentStatusItem]
+noDocVehicleStatusItems = map mkNoDoc SDO.defaultVehicleDocumentTypes
+  where
+    mkNoDoc dt =
+      SStatus.DocumentStatusItem
+        { documentType = dt,
+          verificationStatus = SStatus.NO_DOC_AVAILABLE,
+          verificationMessage = Nothing,
+          verificationUrl = Nothing,
+          s3Path = Nothing,
+          imageId = Nothing,
+          imageId2 = Nothing,
+          documentExpiry = Nothing,
+          metadata = Nothing
+        }
+
+rcVerifyStatusForRC :: RcVerifyCaller -> DVRC.VehicleRegistrationCertificate -> Flow (Text, Bool, Maybe Bool, [SStatus.DocumentStatusItem])
+rcVerifyStatusForRC caller rc = do
+  registrationNo <- decrypt rc.certificateNumber
+  now <- getCurrentTime
+  -- Only the dashboard's city is matched against the RC's resolved city — a driver may legitimately
+  -- hold an RC resolved in another city.
+  let mbPassedCityId = case caller of
+        DashboardCaller cityId -> Just cityId
+        DriverCaller _ _ -> Nothing
+  -- Authz for driver-app callers; reused below for city so we don't re-query.
+  mbCallerAssoc <-
+    case caller of
+      DashboardCaller _ -> pure Nothing
+      DriverCaller callerId _ -> Just <$> (DAQuery.findLinkedByRCIdAndDriverId callerId rc.id now >>= fromMaybeM RCNotLinked)
+  -- City from the RC's associated person: caller (driver) → latest driver → fleet owner → RC's own.
+  mbAssocPerson <- case mbCallerAssoc of
+    Just callerAssoc -> PersonQuery.findById callerAssoc.driverId
+    Nothing -> do
+      mbDriverId <- fmap (.driverId) <$> DAQuery.findLatestLinkedByRCId rc.id now
+      mbPersonId' <- case mbDriverId of
+        Just driverId -> pure (Just driverId)
+        Nothing -> fmap (.fleetOwnerId) . listToMaybe <$> FRCA.findAllActiveAssociationByRCId rc.id
+      maybe (pure Nothing) PersonQuery.findById mbPersonId'
+  merchantOpCityId <-
+    ((mbAssocPerson <&> (.merchantOperatingCityId)) <|> rc.merchantOperatingCityId)
+      & fromMaybeM (InvalidRequest $ "RC has no associated driver/fleet or operating city to derive city from: " <> registrationNo)
+  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+  -- Dashboard: the RC's city must match the caller's path city.
+  whenJust mbPassedCityId $ \passedCityId ->
+    when (passedCityId /= merchantOpCityId) $
+      throwError (InvalidRequest $ "RC belongs to city: " <> show merchantOperatingCity.city)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  (vehicleDocItem, configs) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig ENGLISH registrationNo Nothing
+  -- Re-pull a stuck RC verification when it renders pending — keyed by this RC's image so a fleet
+  -- driver's other RCs are untouched; the synced result shows on the next hit.
+  let rcPending = any (\d -> d.documentType == DTO.VehicleRegistrationCertificate && SyncV.isPullableStatus d.verificationStatus) vehicleDocItem.documents
+      pullEnabled = transporterConfig.enablePullPendingDocVerification == Just True
+  when (pullEnabled && rcPending) $
+    whenJust ((,) <$> mbAssocPerson <*> vehicleDocItem.imageId) $ \(assocPerson, rcImageIdTxt) ->
+      fork "pullRcStatus" $ SyncV.pullRcStatus assocPerson rcImageIdTxt
+  let allValid = SStatus.checkAllVehicleDocsValidForFetchedDocs configs vehicleDocItem
+  -- Persist verified only under enableBotFlow (matches existing config behaviour).
+  when (transporterConfig.enableBotFlow == Just True) $ do
+    rcHash <- getDbHash registrationNo
+    RCQuery.updateVerifiedByCertificateNumberHash (Just allValid) rcHash
+  pure (registrationNo, allValid, rc.approved, vehicleDocItem.documents)
 
 postDriverDigilockerInitiate ::
   ( Maybe (Id Domain.Types.Person.Person),
@@ -1637,7 +1796,7 @@ mkIdfyVerificationEntityPanAadhaarLink person imageId1 requestId now encryptedPa
         documentNumber = encryptedPan,
         issueDateOnDoc = Nothing,
         driverDateOfBirth = Nothing,
-        docType = DTO.PanAadhaarLinkage,
+        docType = docTypeToText DTO.PanAadhaarLinkage,
         status = "pending",
         idfyResponse = Nothing,
         retryCount = Just 0,

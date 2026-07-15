@@ -8,6 +8,7 @@ import Domain.Types.Booking as Domain
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingLocation as DBBL
 import Domain.Types.BookingStatus as Domain
+import qualified Domain.Types.BookingStatus as DRB
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
@@ -18,6 +19,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude (forM_, whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.Prelude hiding (forM_)
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -65,9 +67,42 @@ createBooking booking = do
       locations `forM_` \location ->
         whenNothingM_ (QL.findById location.id) $ do QL.create location
 
-updateStatus :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> BookingStatus -> m ()
-updateStatus rbId rbStatus = do
+mkActiveRidePersonIdCacheKey :: Text -> Text
+mkActiveRidePersonIdCacheKey personId = "ACBL:" <> personId
+
+addActiveBookingAvailableInCache :: (MonadFlow m, CacheFlow m r) => Id Person -> Id Booking -> m ()
+addActiveBookingAvailableInCache personId rbId = do
+  let cacheKey = mkActiveRidePersonIdCacheKey (getId personId)
+  getActiveRideAvailableFromCacheKey personId >>= \case
+    Just existingBookingIds -> when (not (rbId `elem` existingBookingIds)) $ Hedis.set cacheKey (rbId : existingBookingIds)
+    Nothing -> Hedis.setExp cacheKey [(getId rbId)] 86400
+
+removeActiveBookingAvailableInCache :: (MonadFlow m, CacheFlow m r) => Id Person -> Id Booking -> m ()
+removeActiveBookingAvailableInCache personId rbId = do
+  let cacheKey = mkActiveRidePersonIdCacheKey (getId personId)
+  getActiveRideAvailableFromCacheKey personId >>= \case
+    Just existingBookingIds -> do
+      let remainingIds = (filter (/= rbId) existingBookingIds)
+      if null remainingIds
+        then Hedis.del cacheKey
+        else Hedis.setExp cacheKey remainingIds 86400
+    Nothing -> return ()
+
+getActiveRideAvailableFromCacheKey :: (MonadFlow m, CacheFlow m r) => Id Person -> m (Maybe [Id Booking])
+getActiveRideAvailableFromCacheKey personId = do
+  let cacheKey = mkActiveRidePersonIdCacheKey (getId personId)
+  mbBookingIds :: Maybe [Text] <- Hedis.get cacheKey
+  return $ (map (Id)) <$> mbBookingIds
+
+bookingTerminalStatuses :: [BookingStatus]
+bookingTerminalStatuses = [DRB.COMPLETED, DRB.CANCELLED, DRB.REALLOCATED]
+
+updateStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Id Booking -> BookingStatus -> m ()
+updateStatus personId rbId rbStatus = do
   now <- getCurrentTime
+  if rbStatus `elem` bookingTerminalStatuses
+    then removeActiveBookingAvailableInCache personId rbId
+    else addActiveBookingAvailableInCache personId rbId
   updateOneWithKV
     [ Se.Set BeamB.status rbStatus,
       Se.Set BeamB.updatedAt now
@@ -145,7 +180,7 @@ findByOtpAndMerchantAndCity ::
 findByOtpAndMerchantAndCity otpVal (Id merchantId) (Id merchantOpCityId) = do
   now <- getCurrentTime
   let oneHourAgo = addUTCTime (- (60 * 60) :: NominalDiffTime) now
-  findOneWithKVRedis
+  findOneWithKV
     [ Se.And
         [ Se.Is BeamB.otpCode $ Se.Eq (Just otpVal),
           Se.Is BeamB.merchantId $ Se.Eq merchantId,
@@ -487,8 +522,9 @@ updateServiceTierOnChange ::
   Maybe Bool ->
   Maybe Double ->
   Maybe Int ->
+  Maybe Int ->
   m ()
-updateServiceTierOnChange bookingId newServiceTier mbNewFare mbNewQuoteId mbServiceTierName mbServiceTierShortDesc mbIsAC mbAirConditioned mbSeatingCapacity = do
+updateServiceTierOnChange bookingId newServiceTier mbNewFare mbNewQuoteId mbServiceTierName mbServiceTierShortDesc mbIsAC mbAirConditioned mbSeatingCapacity mbLuggageCapacity = do
   now <- getCurrentTime
   let baseSets =
         [ Se.Set BeamB.vehicleVariant newServiceTier,
@@ -501,7 +537,8 @@ updateServiceTierOnChange bookingId newServiceTier mbNewFare mbNewQuoteId mbServ
       acSets = maybe [] (\ac -> [Se.Set BeamB.isAirConditioned (Just ac)]) mbIsAC
       acThresholdSets = maybe [] (\ac -> [Se.Set BeamB.vehicleServiceTierAirConditioned (Just ac)]) mbAirConditioned
       seatSets = maybe [] (\s -> [Se.Set BeamB.vehicleServiceTierSeatingCapacity (Just s)]) mbSeatingCapacity
-  updateOneWithKV (baseSets <> fareSets <> quoteSets <> nameSets <> descSets <> acSets <> acThresholdSets <> seatSets) [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+      luggageSets = maybe [] (\l -> [Se.Set BeamB.vehicleServiceTierLuggageCapacity (Just l)]) mbLuggageCapacity
+  updateOneWithKV (baseSets <> fareSets <> quoteSets <> nameSets <> descSets <> acSets <> acThresholdSets <> seatSets <> luggageSets) [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
 updateEstimatedFare ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

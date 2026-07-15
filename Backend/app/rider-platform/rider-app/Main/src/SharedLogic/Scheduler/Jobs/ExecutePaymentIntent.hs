@@ -29,6 +29,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
@@ -36,6 +37,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Lib.Scheduler
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CancellationFee as CancellationFee
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
 import SharedLogic.Payment as SPayment
@@ -51,7 +53,7 @@ import Tools.Error
 executePaymentIntentJob ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
@@ -114,7 +116,7 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             -- Use ledger entry IDs from Redis if available, otherwise no existing order
             let mbExistingOrderId = mbOrderId
             -- ledgerInfo uses ride fare only (without tip) — tip has its own ledger entry via createTipLedger
-            rideFareBreakups <- QFareBreakup.findAllByEntityIdAndEntityType rideId.getId DFareBreakup.RIDE
+            rideFareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId DFareBreakup.RIDE (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId DFareBreakup.RIDE)
             -- ExecutePaymentIntent is the online-payment scheduler path → isOnline=True.
             let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId booking.merchantOperatingCityId.getId fare.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
             mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups rideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount 0 ledgerCtx
@@ -164,7 +166,7 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
 cancelExecutePaymentIntentJob ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,

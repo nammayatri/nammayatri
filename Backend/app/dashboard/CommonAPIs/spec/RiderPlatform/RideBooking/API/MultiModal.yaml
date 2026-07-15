@@ -47,6 +47,13 @@ apis:
       response:
         type: APISuccess
   - POST:
+      endpoint: /sendDirectMessage/
+      auth: ApiAuthV2
+      request:
+        type: CustomerSendDirectMessageReq
+      response:
+        type: APISuccess
+  - POST:
       endpoint: /addComment/{customerId}/
       auth: ApiAuthV2
       params:
@@ -70,7 +77,14 @@ types:
     variables: Maybe [(Kernel.Prelude.Text, Kernel.Prelude.Text)]
     channel: MediaChannel
   MediaChannel:
-    - enum: WHATSAPP, PUSH_NOTIFICATION, SMS
+    - enum: WHATSAPP, PUSH_NOTIFICATION, SMS, EMAIL
+  CustomerSendDirectMessageReq:
+    titleKey: Maybe MessageKey
+    messageKey: MessageKey
+    variables: Maybe [(Kernel.Prelude.Text, Kernel.Prelude.Text)]
+    channel: MediaChannel
+    destination: Text
+    derive: "'HideSecrets"
   CustomerCommentReq:
     body: Text
   CustomerCommentsResp:

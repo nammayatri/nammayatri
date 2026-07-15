@@ -30,6 +30,16 @@ import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.Coins.CoinsConfig as Queries
 import qualified Tools.DynamicLogic as DynamicLogic
 
+findAllByMerchantOptCityId :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m [CoinsConfig]
+findAllByMerchantOptCityId merchantOpCityId =
+  DynamicLogic.findAllConfigsWithCacheKey
+    (cast merchantOpCityId)
+    (LYT.DRIVER_CONFIG LYT.CoinsConfig)
+    Nothing
+    Nothing
+    (Queries.findAllByMerchantOptCityId merchantOpCityId)
+    ("cachedQueries:Coins:MocId-" <> merchantOpCityId.getId)
+
 fetchFunctionsOnEventbasisInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> DCT.TripCategoryType -> [LYT.ConfigVersionMap] -> m [CoinsConfig]
 fetchFunctionsOnEventbasisInRideFlow eventType merchantId merchantOpCityId vehicleCategory mbServiceTierType tripCategoryType configVersionMap = fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehicleCategory mbServiceTierType tripCategoryType (Just configVersionMap)
 

@@ -77,19 +77,21 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Flow
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyModule.Base as JM
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import SharedLogic.JobScheduler
 import qualified SharedLogic.LocationMapping as SLM
 import SharedLogic.Payment as SPayment
 import qualified SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as QCM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingExtra as QEBooking
@@ -98,6 +100,7 @@ import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as SQQ
@@ -182,11 +185,11 @@ data ValidatedEditDestErrorReq = ValidatedEditDestErrorReq
     bookingUpdateReqDetails :: DBUR.BookingUpdateRequest,
     bookingUpdateReqId :: Id DBUR.BookingUpdateRequest,
     booking :: DRB.Booking,
-    ride :: DRide.Ride
+    ride :: Maybe DRide.Ride
   }
 
 data EditDestSoftUpdateReq = EditDestSoftUpdateReq
-  { bookingDetails :: Common.BookingDetails,
+  { bppBookingId :: Id DRB.BPPBooking,
     fare :: Price,
     fareBreakups :: [Common.DFareBreakup],
     newEstimatedDistance :: HighPrecMeters,
@@ -196,28 +199,26 @@ data EditDestSoftUpdateReq = EditDestSoftUpdateReq
   }
 
 data EditDestConfirmUpdateReq = EditDestConfirmUpdateReq
-  { bookingDetails :: Common.BookingDetails,
+  { bppBookingId :: Id DRB.BPPBooking,
     bookingUpdateRequestId :: Id DBUR.BookingUpdateRequest,
     transactionId :: Text
   }
 
 data ValidatedEditDestSoftUpdateReq = ValidatedEditDestSoftUpdateReq
-  { bookingDetails :: Common.BookingDetails,
-    fare :: Price,
+  { fare :: Price,
     fareBreakups :: [Common.DFareBreakup],
     newEstimatedDistance :: HighPrecMeters,
     currentPoint :: Maybe LatLong,
     bookingUpdateRequestId :: Id DBUR.BookingUpdateRequest,
     booking :: DRB.Booking,
-    ride :: DRide.Ride,
+    ride :: Maybe DRide.Ride,
     bookingUpdateRequest :: DBUR.BookingUpdateRequest
   }
 
 data ValidatedEditDestConfirmUpdateReq = ValidatedEditDestConfirmUpdateReq
-  { bookingDetails :: Common.BookingDetails,
-    bookingUpdateRequestId :: Id DBUR.BookingUpdateRequest,
+  { bookingUpdateRequestId :: Id DBUR.BookingUpdateRequest,
     booking :: DRB.Booking,
-    ride :: DRide.Ride,
+    ride :: Maybe DRide.Ride,
     bookingUpdateRequest :: DBUR.BookingUpdateRequest
   }
 
@@ -474,7 +475,7 @@ onUpdate = \case
   OUValidatedBookingReallocationReq ValidatedBookingReallocationReq {..} -> do
     mbRide <- QRide.findActiveByRBId booking.id
     bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) reallocationSource
-    void $ QRB.updateStatus booking.id DRB.AWAITING_REASSIGNMENT
+    void $ QRB.updateStatus booking.riderId booking.id DRB.AWAITING_REASSIGNMENT
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     QBCR.upsert bookingCancellationReason
     void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
@@ -489,7 +490,7 @@ onUpdate = \case
     logTagInfo ("EstimateId-" <> getId estimate.id) "Estimate repetition."
 
     void $ QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimate.id
-    void $ QRB.updateStatus booking.id DRB.REALLOCATED
+    void $ QRB.updateStatus booking.riderId booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     void $ QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, otherSelectedEstimates = Nothing, validTill = searchReq.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
     void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
@@ -532,7 +533,7 @@ onUpdate = \case
     QBPL.makeAllInactiveByBookingId booking.id
     void $ QRB.createBooking newBooking
     void $ QBPL.createMany newBookingParties
-    void $ QRB.updateStatus booking.id DRB.REALLOCATED
+    void $ QRB.updateStatus booking.riderId booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     void $ QPFS.updateStatus booking.riderId flowStatus
     void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
@@ -542,7 +543,7 @@ onUpdate = \case
   OUValidatedSafetyAlertReq ValidatedSafetyAlertReq {..} -> do
     logDebug $ "Safety alert triggered for rideId: " <> ride.id.getId
     merchantOperatingCityId <- maybe (QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId) >>= pure . (.merchantOperatingCityId)) pure ride.merchantOperatingCityId
-    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
     void $ QRide.updateSafetyJourneyStatus ride.id (DRide.UnexpectedCondition DRide.DriverDeviated)
     rider <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
     safetySettings <- Lib.findSafetySettingsWithFallback (cast booking.riderId) (Lib.getDefaultSafetySettings (cast booking.riderId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults rider))
@@ -563,14 +564,14 @@ onUpdate = \case
     let currentPointLat = (.lat) <$> currentPoint
         currentPointLon = (.lon) <$> currentPoint
     breakups <- traverse (Common.buildFareBreakupV2 bookingUpdateRequestId.getId DFareBreakup.BOOKING_UPDATE_REQUEST) fareBreakups
-    QFareBreakup.createMany breakups
+    SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) breakups
     QBUR.updateMultipleById Nothing (Just newEstimatedDistance) (Just fare.amount) Nothing currentPointLat currentPointLon bookingUpdateRequestId
   OUValidatedEditDestConfirmUpdateReq ValidatedEditDestConfirmUpdateReq {..} -> do
     dropLocMapping <- QLM.getLatestEndByEntityId bookingUpdateRequest.id.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingUpdateRequestId: " <> bookingUpdateRequest.id.getId)
     prevOrder <- QLM.maxOrderByEntity booking.id.getId
     dropLocMap <- SLM.buildLocationMapping' dropLocMapping.locationId booking.id.getId DLM.BOOKING (Just bookingUpdateRequest.merchantId) (Just bookingUpdateRequest.merchantOperatingCityId) prevOrder
     QLM.create dropLocMap
-    fareBreakupsBUR <- QFareBreakup.findAllByEntityIdAndEntityType bookingUpdateRequest.id.getId DFareBreakup.BOOKING_UPDATE_REQUEST
+    fareBreakupsBUR <- SFareBreakupInfo.getFareBreakupsWithFallback bookingUpdateRequest.id.getId DFareBreakup.BOOKING_UPDATE_REQUEST (QFareBreakup.findAllByEntityIdAndEntityType bookingUpdateRequest.id.getId DFareBreakup.BOOKING_UPDATE_REQUEST)
     fareBreakups <-
       mapM
         ( \fareBreakup -> do
@@ -578,18 +579,16 @@ onUpdate = \case
             return fareBreakup{id, entityType = DFareBreakup.BOOKING, entityId = booking.id.getId}
         )
         fareBreakupsBUR
-    QFareBreakup.deleteByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING
-    QFareBreakup.createMany fareBreakups
+    SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) fareBreakups
     estimatedFare <- bookingUpdateRequest.estimatedFare & fromMaybeM (InternalError "Estimated fare not found for bookingUpdateRequestId")
     QRB.updateMultipleById True estimatedFare estimatedFare (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) bookingUpdateRequest.bookingId
-    mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just booking.transactionId)
-    whenJust mbJourneyLeg $ \journeyLeg -> do
-      let journeyId = journeyLeg.journeyId
-      toLocation <- ride.toLocation & fromMaybeM (InvalidRequest $ "toLocation not found for rideId: " <> show ride.id)
-      -- fix it properly later
-      -- JM.cancelRemainingLegs journeyId True booking.riderId
-      QJourneyLeg.updateAfterEditLocation Nothing (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) (Maps.LatLngV2 {latitude = toLocation.lat, longitude = toLocation.lon}) journeyLeg.id
-      JM.updateJourneyChangeLogCounter journeyId
+    whenJust ride $ \_ride -> do
+      mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just booking.transactionId)
+      whenJust mbJourneyLeg $ \journeyLeg -> do
+        let journeyId = journeyLeg.journeyId
+        newDropLocation <- QL.findById dropLocMapping.locationId >>= fromMaybeM (InternalError $ "New drop location not found for locationId: " <> dropLocMapping.locationId.getId)
+        QJourneyLeg.updateAfterEditLocation Nothing (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) (Maps.LatLngV2 {latitude = newDropLocation.lat, longitude = newDropLocation.lon}) journeyLeg.id
+        JM.updateJourneyChangeLogCounter journeyId
     Notify.notifyOnTripUpdate booking ride Nothing
   OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..} -> do
     mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow booking.merchantOperatingCityId "TOLL_CROSSED" Nothing Nothing person.language booking.configInExperimentVersions
@@ -638,8 +637,11 @@ onUpdate = \case
         mbIsAirConditioned = mbNewQuote >>= (.isAirConditioned)
         mbVehicleServiceTierAC = mbNewQuote >>= (.vehicleServiceTierAirConditioned)
         mbSeatingCapacity = mbNewQuote >>= (.vehicleServiceTierSeatingCapacity)
+        mbLuggageCapacity = mbNewQuote >>= (.vehicleServiceTierLuggageCapacity)
     -- Single DB update with all changed fields after BPP confirms
-    QEBooking.updateServiceTierOnChange booking.id newVehicleServiceTier newEstimatedFare mbBapQuoteId mbServiceTierName mbServiceTierShortDesc mbIsAirConditioned mbVehicleServiceTierAC mbSeatingCapacity
+    QEBooking.updateServiceTierOnChange booking.id newVehicleServiceTier newEstimatedFare mbBapQuoteId mbServiceTierName mbServiceTierShortDesc mbIsAirConditioned mbVehicleServiceTierAC mbSeatingCapacity mbLuggageCapacity
+    let newServiceTierName = fromMaybe (show newVehicleServiceTier) mbServiceTierName
+    Notify.notifyOnServiceTierChange booking newServiceTierName
   OUValidatedAddBaggageReq ValidatedAddBaggageReq {..} -> do
     logInfo $ "Add baggage confirmed for booking: " <> booking.id.getId <> " to count: " <> show numberOfLuggages <> ", newFare: " <> show newEstimatedFare
     whenJust newEstimatedFare $ \fare ->
@@ -647,8 +649,7 @@ onUpdate = \case
     -- Replace BOOKING-scoped FareBreakup rows with the recalculated breakdown from BPP.
     unless (null fareBreakups) $ do
       newBreakups <- traverse (Common.buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) fareBreakups
-      QFareBreakup.deleteByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING
-      QFareBreakup.createMany newBreakups
+      SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) newBreakups
 
 validateRequest ::
   ( CacheFlow m r,
@@ -720,16 +721,16 @@ validateRequest = \case
         unless (isJust stopLocation) $ throwError (InvalidRequest $ "Can't find stop to be reached for bpp ride " <> bppRideId.getId)
         return $ OUValidatedStopArrivedReq ValidatedStopArrivedReq {..}
   OUEditDestSoftUpdateReq EditDestSoftUpdateReq {..} -> do
-    let Common.BookingDetails {..} = bookingDetails
-    (ride, booking) <- Common.getRideAndBooking bppBookingId transactionId
-    when (ride.status == DRide.COMPLETED) $ throwError $ RideInvalidStatus "Can't edit the destination of a completed ride."
     bookingUpdateRequest <- runInReplica $ QBUR.findById bookingUpdateRequestId >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with Id:-" <> bookingUpdateRequestId.getId)
+    booking <- QRB.findById bookingUpdateRequest.bookingId >>= fromMaybeM (BookingDoesNotExist bookingUpdateRequest.bookingId.getId)
+    when (booking.status == DRB.COMPLETED || booking.status == DRB.CANCELLED) $ throwError $ RideInvalidStatus "Can't edit the destination of a completed or cancelled booking."
+    ride <- QRide.findByRBId booking.id
     return $ OUValidatedEditDestSoftUpdateReq ValidatedEditDestSoftUpdateReq {..}
   OUEditDestConfirmUpdateReq EditDestConfirmUpdateReq {..} -> do
-    let Common.BookingDetails {..} = bookingDetails
-    (ride, booking) <- Common.getRideAndBooking bppBookingId transactionId
-    when (ride.status == DRide.COMPLETED) $ throwError $ RideInvalidStatus "Can't edit the destination of a completed ride."
     bookingUpdateRequest <- runInReplica $ QBUR.findById bookingUpdateRequestId >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with Id:-" <> bookingUpdateRequestId.getId)
+    booking <- QRB.findById bookingUpdateRequest.bookingId >>= fromMaybeM (BookingDoesNotExist bookingUpdateRequest.bookingId.getId)
+    when (booking.status == DRB.COMPLETED || booking.status == DRB.CANCELLED) $ throwError $ RideInvalidStatus "Can't edit the destination of a completed or cancelled booking."
+    ride <- QRide.findByRBId booking.id
     return $ OUValidatedEditDestConfirmUpdateReq ValidatedEditDestConfirmUpdateReq {..}
   OUTollCrossedEventReq TollCrossedEventReq {..} -> do
     booking <- QEBooking.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId - " <> transactionId)
@@ -745,7 +746,7 @@ validateRequest = \case
   OUEditDestError EditDestErrorReq {..} -> do
     bookingUpdateReqDetails <- runInReplica $ QBUR.findById (Id messageId) >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with Id:-" <> messageId)
     booking <- runInReplica $ QRB.findById bookingUpdateReqDetails.bookingId >>= fromMaybeM (BookingDoesNotExist $ "bookingUpdateReq bookingId:- " <> bookingUpdateReqDetails.bookingId.getId)
-    ride <- runInReplica $ QRide.findByRBId bookingUpdateReqDetails.bookingId >>= fromMaybeM (RideDoesNotExist $ " with bookingUpdateReq bookingId:- " <> bookingUpdateReqDetails.bookingId.getId)
+    ride <- runInReplica $ QRide.findByRBId bookingUpdateReqDetails.bookingId
     return $ OUValidatedEditDestError ValidatedEditDestErrorReq {bookingUpdateReqId = Id messageId, ..}
   OUDestinationReachedReq DestinationReachedReq {..} -> do
     ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)

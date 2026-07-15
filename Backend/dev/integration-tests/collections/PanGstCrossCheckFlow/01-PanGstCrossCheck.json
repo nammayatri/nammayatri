@@ -1,0 +1,1290 @@
+{
+  "info": {
+    "name": "PAN-GST Cross-Check Flow",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Setup: enable is_gst_pan_link_check_required (before any auth caches config)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "update"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"transporter_config\", \"set\": {\"is_gst_pan_link_check_required\": true}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"merchant_id\", \"val\": \"{{merchantId}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('setup flag enable 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: Auth sendOTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_fleet_A}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{merchantId}}\", \"merchantOperatingCity\": \"{{city}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('A auth sendOTP 200', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('authId_A', pm.response.json().authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: Auth verify OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{authId_A}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{authId_A}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"pangst-A\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('A verify 200', () => pm.response.to.have.status(200));",
+              "var j = pm.response.json();",
+              "if (j.person && j.person.id) pm.collectionVariables.set('driverId_A', j.person.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: SQL resolve person",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"person\", \"columns\": [\"id\", \"merchant_id\", \"merchant_operating_city_id\", \"role\"], \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{driverId_A}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('A sql select 200', () => pm.response.to.have.status(200));",
+              "var rows = pm.response.json().rows || [];",
+              "pm.test('A person row present', () => pm.expect(rows.length).to.be.above(0));",
+              "if (rows.length) { pm.collectionVariables.set('mid_A', rows[0].merchant_id); pm.collectionVariables.set('moc_A', rows[0].merchant_operating_city_id); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: SQL set role FLEET_OWNER",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "update"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"person\", \"set\": {\"role\": \"FLEET_OWNER\"}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{driverId_A}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('A role update 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: SQL seed fleet_owner_information",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/insert",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "insert"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"fleet_owner_information\", \"values\": {\"fleet_owner_person_id\": \"{{driverId_A}}\", \"merchant_id\": \"{{mid_A}}\", \"merchant_operating_city_id\": \"{{moc_A}}\", \"fleet_type\": \"NORMAL_FLEET\", \"blocked\": false, \"enabled\": false, \"verified\": false}, \"touch_timestamps\": true, \"on_conflict_do_nothing\": true}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('A FOI seeded', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: SQL set is_gst_pan_link_check_required=true",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "update"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"transporter_config\", \"set\": {\"is_gst_pan_link_check_required\": true}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{moc_A}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('A flag update 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: bust TransporterConfig cache",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/redis/del",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "redis",
+            "del"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"pattern\":\"*CachedQueries:TransporterConfig:MerchantOperatingCityId-{{moc_A}}*\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('A cache bust 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: verify PAN ABCDE1234F (seed counterpart)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/onboarding/verify/%22VERIFY_PAN%22",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "onboarding",
+            "verify",
+            "%22VERIFY_PAN%22"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"driverId\": \"{{driverId_A}}\", \"imageId\": \"{{dummy_image_id}}\", \"identifierNumber\": \"ABCDE1234F\", \"identifierName\": null}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('A: verify PAN ABCDE1234F (seed counterpart) -> 200 (no cross-check rejection)', () => pm.response.to.have.status(200));",
+              "pm.test('A: verify PAN ABCDE1234F (seed counterpart) -> no mismatch msg', () => pm.expect(pm.response.text()).to.not.include('PAN and GST do not belong'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: SQL set seeded driver_pan_card VALID",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "update"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"driver_pan_card\", \"set\": {\"verification_status\": \"VALID\"}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"driver_id\", \"val\": \"{{driverId_A}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('A seed VALID 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: verify GST 29ZZZZZ9999Z1Z5 (MISMATCH->400)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/onboarding/verify/%22VERIFY_GST%22",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "onboarding",
+            "verify",
+            "%22VERIFY_GST%22"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"driverId\": \"{{driverId_A}}\", \"imageId\": \"{{dummy_image_id}}\", \"identifierNumber\": \"29ZZZZZ9999Z1Z5\", \"identifierName\": null}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('A: verify GST 29ZZZZZ9999Z1Z5 (MISMATCH->400) -> 400 (cross-check)', () => pm.response.to.have.status(400));",
+              "pm.test('A: verify GST 29ZZZZZ9999Z1Z5 (MISMATCH->400) -> PAN/GST mismatch msg', () => pm.expect(pm.response.text()).to.include('PAN and GST do not belong'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: Auth sendOTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_fleet_B}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{merchantId}}\", \"merchantOperatingCity\": \"{{city}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('B auth sendOTP 200', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('authId_B', pm.response.json().authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: Auth verify OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{authId_B}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{authId_B}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"pangst-B\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('B verify 200', () => pm.response.to.have.status(200));",
+              "var j = pm.response.json();",
+              "if (j.person && j.person.id) pm.collectionVariables.set('driverId_B', j.person.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: SQL resolve person",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"person\", \"columns\": [\"id\", \"merchant_id\", \"merchant_operating_city_id\", \"role\"], \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{driverId_B}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('B sql select 200', () => pm.response.to.have.status(200));",
+              "var rows = pm.response.json().rows || [];",
+              "pm.test('B person row present', () => pm.expect(rows.length).to.be.above(0));",
+              "if (rows.length) { pm.collectionVariables.set('mid_B', rows[0].merchant_id); pm.collectionVariables.set('moc_B', rows[0].merchant_operating_city_id); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: SQL set role FLEET_OWNER",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "update"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"person\", \"set\": {\"role\": \"FLEET_OWNER\"}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{driverId_B}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('B role update 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: SQL seed fleet_owner_information",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/insert",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "insert"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"fleet_owner_information\", \"values\": {\"fleet_owner_person_id\": \"{{driverId_B}}\", \"merchant_id\": \"{{mid_B}}\", \"merchant_operating_city_id\": \"{{moc_B}}\", \"fleet_type\": \"NORMAL_FLEET\", \"blocked\": false, \"enabled\": false, \"verified\": false}, \"touch_timestamps\": true, \"on_conflict_do_nothing\": true}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('B FOI seeded', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: SQL set is_gst_pan_link_check_required=true",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "update"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"transporter_config\", \"set\": {\"is_gst_pan_link_check_required\": true}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{moc_B}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('B flag update 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: bust TransporterConfig cache",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/redis/del",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "redis",
+            "del"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"pattern\":\"*CachedQueries:TransporterConfig:MerchantOperatingCityId-{{moc_B}}*\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('B cache bust 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: verify GST 29LMNOP9012Q1Z5 (seed counterpart)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/onboarding/verify/%22VERIFY_GST%22",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "onboarding",
+            "verify",
+            "%22VERIFY_GST%22"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"driverId\": \"{{driverId_B}}\", \"imageId\": \"{{dummy_image_id}}\", \"identifierNumber\": \"29LMNOP9012Q1Z5\", \"identifierName\": null}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('B: verify GST 29LMNOP9012Q1Z5 (seed counterpart) -> 200 (no cross-check rejection)', () => pm.response.to.have.status(200));",
+              "pm.test('B: verify GST 29LMNOP9012Q1Z5 (seed counterpart) -> no mismatch msg', () => pm.expect(pm.response.text()).to.not.include('PAN and GST do not belong'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: SQL set seeded driver_gstin VALID",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "update"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"driver_gstin\", \"set\": {\"verification_status\": \"VALID\"}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"driver_id\", \"val\": \"{{driverId_B}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('B seed VALID 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: bust driver_gstin KV (so VALID is read)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/redis/del",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "redis",
+            "del"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"pattern\":\"*driver_gstin*\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('B gstin KV bust 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: verify PAN ZZZZZ9999Z (MISMATCH->400)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/onboarding/verify/%22VERIFY_PAN%22",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "onboarding",
+            "verify",
+            "%22VERIFY_PAN%22"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"driverId\": \"{{driverId_B}}\", \"imageId\": \"{{dummy_image_id}}\", \"identifierNumber\": \"ZZZZZ9999Z\", \"identifierName\": null}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('B: verify PAN ZZZZZ9999Z (MISMATCH->400) -> 400 (cross-check)', () => pm.response.to.have.status(400));",
+              "pm.test('B: verify PAN ZZZZZ9999Z (MISMATCH->400) -> PAN/GST mismatch msg', () => pm.expect(pm.response.text()).to.include('PAN and GST do not belong'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: Auth sendOTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_fleet_C}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{merchantId}}\", \"merchantOperatingCity\": \"{{city}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('C auth sendOTP 200', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('authId_C', pm.response.json().authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: Auth verify OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{authId_C}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{authId_C}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"pangst-C\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('C verify 200', () => pm.response.to.have.status(200));",
+              "var j = pm.response.json();",
+              "if (j.person && j.person.id) pm.collectionVariables.set('driverId_C', j.person.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: SQL resolve person",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"person\", \"columns\": [\"id\", \"merchant_id\", \"merchant_operating_city_id\", \"role\"], \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{driverId_C}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('C sql select 200', () => pm.response.to.have.status(200));",
+              "var rows = pm.response.json().rows || [];",
+              "pm.test('C person row present', () => pm.expect(rows.length).to.be.above(0));",
+              "if (rows.length) { pm.collectionVariables.set('mid_C', rows[0].merchant_id); pm.collectionVariables.set('moc_C', rows[0].merchant_operating_city_id); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: SQL set role FLEET_OWNER",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "update"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"person\", \"set\": {\"role\": \"FLEET_OWNER\"}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{driverId_C}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('C role update 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: SQL seed fleet_owner_information",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/insert",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "insert"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"fleet_owner_information\", \"values\": {\"fleet_owner_person_id\": \"{{driverId_C}}\", \"merchant_id\": \"{{mid_C}}\", \"merchant_operating_city_id\": \"{{moc_C}}\", \"fleet_type\": \"NORMAL_FLEET\", \"blocked\": false, \"enabled\": false, \"verified\": false}, \"touch_timestamps\": true, \"on_conflict_do_nothing\": true}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('C FOI seeded', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: SQL set is_gst_pan_link_check_required=true",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "update"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"transporter_config\", \"set\": {\"is_gst_pan_link_check_required\": true}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{moc_C}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('C flag update 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: bust TransporterConfig cache",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/redis/del",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "redis",
+            "del"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"pattern\":\"*CachedQueries:TransporterConfig:MerchantOperatingCityId-{{moc_C}}*\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('C cache bust 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: verify PAN FGHIJ5678K (seed counterpart)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/onboarding/verify/%22VERIFY_PAN%22",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "onboarding",
+            "verify",
+            "%22VERIFY_PAN%22"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"driverId\": \"{{driverId_C}}\", \"imageId\": \"{{dummy_image_id}}\", \"identifierNumber\": \"FGHIJ5678K\", \"identifierName\": null}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('C: verify PAN FGHIJ5678K (seed counterpart) -> 200 (no cross-check rejection)', () => pm.response.to.have.status(200));",
+              "pm.test('C: verify PAN FGHIJ5678K (seed counterpart) -> no mismatch msg', () => pm.expect(pm.response.text()).to.not.include('PAN and GST do not belong'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: SQL set seeded driver_pan_card VALID",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "update"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"driver_pan_card\", \"set\": {\"verification_status\": \"VALID\"}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"driver_id\", \"val\": \"{{driverId_C}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('C seed VALID 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: verify GST 29FGHIJ5678K1Z5 (MATCH->200)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/onboarding/verify/%22VERIFY_GST%22",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "onboarding",
+            "verify",
+            "%22VERIFY_GST%22"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"driverId\": \"{{driverId_C}}\", \"imageId\": \"{{dummy_image_id}}\", \"identifierNumber\": \"29FGHIJ5678K1Z5\", \"identifierName\": null}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('C: verify GST 29FGHIJ5678K1Z5 (MATCH->200) -> 200 (no cross-check rejection)', () => pm.response.to.have.status(200));",
+              "pm.test('C: verify GST 29FGHIJ5678K1Z5 (MATCH->200) -> no mismatch msg', () => pm.expect(pm.response.text()).to.not.include('PAN and GST do not belong'));"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "function r(){ return '9' + Math.floor(100000000 + Math.random()*899999999); }",
+          "['A','B','C'].forEach(function(k){ var key='_test_fleet_'+k; if(!pm.collectionVariables.get(key)) pm.collectionVariables.set(key, r()); });"
+        ]
+      }
+    }
+  ]
+}

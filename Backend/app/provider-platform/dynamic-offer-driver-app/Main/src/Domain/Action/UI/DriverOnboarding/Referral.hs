@@ -22,6 +22,7 @@ import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Types.DailyStats as DDS
+import qualified Domain.Types.DriverOperatorAssociation as DDOA
 import qualified Domain.Types.DriverReferral as DR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -37,16 +38,20 @@ import Kernel.Types.Predicate
 import Kernel.Types.Validation (Validate)
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation, validateField)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
-import qualified Storage.Cac.TransporterConfig as CCT
+import qualified Storage.Cac.TransporterConfig as SCTC
+import qualified Storage.CachedQueries.Merchant as CQM
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
 import Tools.Error
@@ -118,7 +123,7 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
   if isJust di.referralCode || isJust di.referredByDriverId || isJust di.referredByOperatorId
     then return AlreadyReferred
     else do
-      transporterConfig <- CCT.findByMerchantOpCityId (cast merchantOpCityId) Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
       dr <- validateReferralCodeAndRole transporterConfig personId req.value req.role
       case dr.role of
         Person.DRIVER -> do
@@ -128,9 +133,21 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
           DriverInformation.incrementReferralCountByPersonId (Just newtotalRef) dr.driverId
           return Success
         Person.OPERATOR -> do
+          existingFleetAssocs <- QFDA.findAllByDriverId personId True
+          unless (null existingFleetAssocs) $
+            throwError (InvalidRequest "Fleet-linked drivers cannot apply an operator referral code; their operator is derived from the fleet")
+          merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+          person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+          SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
           DriverInformation.updateReferredByOperatorId (Just dr.driverId.getId) personId
-          driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
-          void $ QDOA.create driverOperatorAssData
+          mbExistingInactiveAssoc <- B.runInReplica $ QDOA.findByDriverIdAndOperatorId personId dr.driverId False
+          case mbExistingInactiveAssoc of
+            Just existingAssoc -> do
+              now <- getCurrentTime
+              QDOA.updateByPrimaryKey existingAssoc {DDOA.isActive = True, DDOA.associatedOn = Just now, DDOA.updatedAt = now}
+            Nothing -> do
+              driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId DomainRC.defaultAssociationEnd True
+              void $ QDOA.create driverOperatorAssData
           Analytics.handleDriverAnalyticsAndFlowStatus
             transporterConfig
             personId
@@ -159,7 +176,7 @@ getDriverDetailsByReferralCode ::
   Flow DriverReferralDetailsRes
 getDriverDetailsByReferralCode (personId, _, merchantOpCityId) value mbRole = do
   when (T.length value < 6) $ throwError (InvalidRequest "Referral code should be at least 6 digits long")
-  transporterConfig <- CCT.findByMerchantOpCityId (cast merchantOpCityId) Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
   dr <- validateReferralCodeAndRole transporterConfig personId value mbRole
   person <- B.runInReplica (QPerson.findById dr.driverId) >>= fromMaybeM (PersonNotFound dr.driverId.getId)
   return $
@@ -179,7 +196,7 @@ makeDriverReferredByOperator ::
 makeDriverReferredByOperator merchantOpCityId driverId referredOperatorId = do
   di <- B.runInReplica (DriverInformation.findById driverId) >>= fromMaybeM DriverInfoNotFound
   unless (isJust di.referralCode || isJust di.referredByDriverId || isJust di.referredByOperatorId) $ do
-    transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     DriverInformation.updateReferredByOperatorId (Just referredOperatorId.getId) driverId
     incrementOnboardedCount DriverReferral referredOperatorId transporterConfig
 

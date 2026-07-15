@@ -18,6 +18,16 @@
 -- Retry budget is read directly from XPENDING's @numTimesDelivered@ — no
 -- in-process counter, no DLQ. When delivery count exceeds @maxDeliveries@ the
 -- entry is XACKed with an error log and an operator must redrive manually.
+--
+-- Successfully-processed entries are XACKed AND XDELed (removed from the
+-- stream) so the stream stays bounded. Failures/crashes are left pending (not
+-- deleted) so they can be reclaimed and retried; malformed and budget-exhausted
+-- entries are XACKed but left in the stream for inspection.
+--
+-- NOTE: XDEL removes an entry for ALL consumer groups, so deleting on success
+-- is only safe because this group is the sole consumer of the stream. If the
+-- stream ever gains a second consumer group, switch to producer-side MAXLEN /
+-- periodic XTRIM MINID instead.
 module Transporter.RedisStream.Flow
   ( run,
     runBatch,
@@ -76,10 +86,21 @@ runBatch flowRt appEnv cfg instanceName batchProcessor =
 -- Internal scaffolding
 ------------------------------------------------------------
 
--- | Given a chunk of records pulled from the stream (either freshly read or
--- claimed from the PEL), return the entry IDs that should be XACKed. Records
--- whose IDs aren't returned stay in the PEL for the next claim cycle.
-type Deliver = [Hedis.StreamsRecord] -> Flow [BS.ByteString]
+-- | Result of delivering a chunk of records pulled from the stream (freshly
+-- read or claimed from the PEL):
+--
+--   * 'toAck'    — entry ids to XACK: successfully-processed entries plus
+--     malformed ones that can never succeed. Ids not listed here stay in the
+--     PEL and get retried/reclaimed on the next claim cycle.
+--   * 'toDelete' — entry ids to also XDEL from the stream. Only the
+--     successfully-processed ids (a subset of 'toAck'); keeps the stream
+--     bounded. Failures are never deleted.
+data DeliverResult = DeliverResult
+  { toAck :: [BS.ByteString],
+    toDelete :: [BS.ByteString]
+  }
+
+type Deliver = [Hedis.StreamsRecord] -> Flow DeliverResult
 
 runInternal :: R.FlowRuntime -> AppEnv -> RedisStreamCfg -> Text -> Deliver -> IO ()
 runInternal flowRt appEnv cfg instanceName deliver = do
@@ -146,9 +167,14 @@ deliverAndAck ::
 deliverAndAck flowRt appEnv cfg streamName deliver records
   | null records = pure ()
   | otherwise = runFlowR flowRt appEnv $ do
-    ackIds <- deliver records
-    unless (null ackIds) $
-      void $ Hedis.xAck streamName cfg.consumerGroupName ackIds
+    DeliverResult {toAck, toDelete} <- deliver records
+    unless (null toAck) $
+      void $ Hedis.xAck streamName cfg.consumerGroupName toAck
+    -- Remove successfully-processed entries from the stream so it stays bounded.
+    -- XACK first: if XDEL fails the entry is still cleared from the PEL (just
+    -- lingers in the stream) rather than becoming a stuck pending entry.
+    unless (null toDelete) $
+      void $ Hedis.xDel streamName toDelete
 
 ------------------------------------------------------------
 -- Sources
@@ -200,7 +226,7 @@ claimEligibleEntries cfg shardId instanceName streamName = do
                 Nothing
             let stuck = filter (isStuck cfg) details
                 (exhausted, retryable) = partition (isBudgetExhausted cfg) stuck
-            forM_ exhausted (exhaustEntry cfg streamName)
+            forM_ exhausted (exhaustEntry cfg shardId streamName)
             if null retryable
               then pure []
               else
@@ -229,8 +255,8 @@ isBudgetExhausted :: RedisStreamCfg -> Hedis.XPendingDetailRecord -> Bool
 isBudgetExhausted cfg Hedis.XPendingDetailRecord {numTimesDelivered} =
   numTimesDelivered >= fromIntegral cfg.maxDeliveries
 
-exhaustEntry :: RedisStreamCfg -> Text -> Hedis.XPendingDetailRecord -> Flow ()
-exhaustEntry cfg streamName Hedis.XPendingDetailRecord {messageId, numTimesDelivered} = do
+exhaustEntry :: RedisStreamCfg -> Int -> Text -> Hedis.XPendingDetailRecord -> Flow ()
+exhaustEntry cfg shardId streamName Hedis.XPendingDetailRecord {messageId, numTimesDelivered} = do
   let entryId = decodeUtf8 messageId
   withLogTag ("entry-" <> entryId) $ do
     logError $
@@ -238,29 +264,36 @@ exhaustEntry cfg streamName Hedis.XPendingDetailRecord {messageId, numTimesDeliv
         <> show numTimesDelivered
         <> "); XACKing without processing"
     void $ Hedis.xAck streamName cfg.consumerGroupName [messageId]
+    -- Dead event: retry budget exhausted, ACKed without processing. Counted per
+    -- shard -> redis_stream_dead_total{shard}.
+    CoreMetrics.incrementRedisStreamDead shardId
 
 ------------------------------------------------------------
 -- Delivery strategies
 ------------------------------------------------------------
 
 perEventDeliver :: FromJSON event => (event -> Flow ()) -> Deliver
-perEventDeliver processor records =
-  fmap catMaybes . forM records $ \rec -> do
+perEventDeliver processor records = do
+  -- Each record yields (id-to-ack?, id-to-delete?).
+  outcomes <- forM records $ \rec -> do
     let entryId = decodeUtf8 rec.recordId
     withLogTag ("entry-" <> entryId) $
       case decodePayload rec.keyValues of
         Nothing -> do
           logError "decode failed; XACKing (malformed entry, cannot retry)"
-          pure (Just rec.recordId)
+          pure (Just rec.recordId, Nothing) -- ack, keep in stream
         Just event -> do
-          result <- withTryCatch ("rs:" <> entryId) (processor event)
+          -- Fixed tag (not per-entry) so try_exception_error_counter stays low
+          -- cardinality: ErrorContext="rs-process", grouped by ErrorCode.
+          result <- withTryCatch "rs-process" (processor event)
           case result of
             Right () -> do
               CoreMetrics.incrementRedisStreamProcessed
-              pure (Just rec.recordId)
+              pure (Just rec.recordId, Just rec.recordId) -- ack + delete
             Left e -> do
               logWarning $ "process failed; entry stays pending; err=" <> show e
-              pure Nothing
+              pure (Nothing, Nothing) -- neither: stays pending
+  pure DeliverResult {toAck = mapMaybe fst outcomes, toDelete = mapMaybe snd outcomes}
 
 perBatchDeliver :: FromJSON event => ([event] -> Flow ()) -> Deliver
 perBatchDeliver batchProcessor records = do
@@ -276,16 +309,16 @@ perBatchDeliver batchProcessor records = do
     withLogTag ("entry-" <> decodeUtf8 rid) $
       logError "decode failed; XACKing (malformed entry, cannot retry)"
   if null events
-    then pure malformedIds
+    then pure DeliverResult {toAck = malformedIds, toDelete = []}
     else do
       result <- withTryCatch "rs-batch" (batchProcessor events)
       case result of
         Right () -> do
           replicateM_ (length validIds) CoreMetrics.incrementRedisStreamProcessed
-          pure (malformedIds <> validIds)
+          pure DeliverResult {toAck = malformedIds <> validIds, toDelete = validIds}
         Left e -> do
           logWarning $ "batch process failed; valid entries stay pending; err=" <> show e
-          pure malformedIds
+          pure DeliverResult {toAck = malformedIds, toDelete = []}
   where
     -- Only used to detect malformed entries; we don't care about the typed result.
     decodePayloadDummy :: [(ByteString, ByteString)] -> Maybe A.Value

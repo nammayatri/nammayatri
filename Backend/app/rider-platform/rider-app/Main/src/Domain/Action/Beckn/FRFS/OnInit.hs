@@ -31,15 +31,17 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified Lib.Payment.Domain.Action as DPayment
 import Lib.Payment.Storage.Beam.BeamFlow
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.FRFSConfig as CQFRFS
 import qualified Storage.CachedQueries.Merchant as QMerch
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -80,7 +82,8 @@ onInit ::
     HasField "isMetroTestTransaction" r Bool,
     Metrics.HasBAPMetrics m r,
     HasShortDurationRetryCfg r c,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    Finance.HasActorInfo m r
   ) =>
   DOnInit ->
   Merchant.Merchant ->
@@ -112,7 +115,7 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
   void $ QFRFSTicketBooking.updateTotalPriceById totalPrice oldBooking.id
   void $ QFRFSTicketBooking.updateIsFareChangedById (Just isFareChanged) oldBooking.id -- Full Ticket Price (Multiplied By Quantity)
   void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) oldBooking.id
-  frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = oldBooking.merchantOperatingCityId.getId}) >>= fromMaybeM (FRFSConfigNotFound oldBooking.merchantOperatingCityId.getId)
+  frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = oldBooking.merchantOperatingCityId.getId}) (Just (CQFRFS.findByMerchantOperatingCityId oldBooking.merchantOperatingCityId (Just []))) >>= fromMaybeM (FRFSConfigNotFound oldBooking.merchantOperatingCityId.getId)
   whenJust onInitReq.bppOrderId (\bppOrderId -> void $ QFRFSTicketBooking.updateBPPOrderIdById (Just bppOrderId) oldBooking.id)
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let booking = oldBooking {FTBooking.totalPrice = totalPrice, FTBooking.journeyOnInitDone = Just True}
@@ -125,10 +128,7 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
     Redis.withLockRedis (key (maybe booking.id.getId (.getId) mbJourneyId)) 60 $ do
       let paymentType = getPaymentType (integratedBPPConfig.platformType == DIBC.MULTIMODAL) booking.vehicleType
       (vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
-      baskets <- case mbJourneyId of
-        Just _ -> do
-          Just <$> createBasketFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType mbEnableOffer
-        Nothing -> return Nothing
+      baskets <- Just <$> createBasketFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType mbEnableOffer
       createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId
   where
     key journeyId = "initJourney-" <> journeyId
@@ -139,7 +139,8 @@ createPayments ::
     EncFlow m r,
     ServiceFlow m r,
     HasField "isMetroTestTransaction" r Bool,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    Finance.HasActorInfo m r
   ) =>
   [FTBooking.FRFSTicketBooking] ->
   Id DMOC.MerchantOperatingCity ->

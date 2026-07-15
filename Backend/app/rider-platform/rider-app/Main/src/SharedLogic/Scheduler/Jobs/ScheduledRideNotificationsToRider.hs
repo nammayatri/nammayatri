@@ -37,13 +37,14 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.Scheduler
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QPerson
@@ -76,7 +77,7 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
       notificationKey = jobData.notificationKey
   booking <- QB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   ride <- QR.findByRBId bookingId >>= fromMaybeM (RideDoesNotExist bookingId.getId)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   let maybeAppId = (HM.lookup RentalAppletID . exotelMap) =<< riderConfig.exotelAppIdMapping
   when (booking.status `notElem` [DB.CANCELLED, DB.REALLOCATED]) $
     sendCommunicationToCustomer $

@@ -21,6 +21,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import qualified Lib.Finance.Account.Service as FAccountSvc
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import qualified Lib.Finance.Domain.Types.LedgerEntry as FLE
 import Lib.Finance.Error.Types (FinanceError (..), LedgerErrorCode (..))
@@ -197,7 +198,7 @@ findEntriesForWallet DWP.BURN = FLedger.getEntriesByReferenceAndFromAccount
 findEntriesForWallet _ = FLedger.getEntriesByReferenceAndToAccount
 
 recordLoyaltyHistory ::
-  (FBeamFlow.BeamFlow m r, MonadFlow m) =>
+  (FBeamFlow.BeamFlow m r, MonadFlow m, Finance.HasActorInfo m r) =>
   DWallet.Wallet ->
   DWP.WalletPaymentKind ->
   HighPrecMoney -> -- aggregated points across this (program, kind) for the transaction
@@ -216,7 +217,7 @@ recordLoyaltyHistory wallet kind points domainEntityId = do
         (Finance.transfer source dest points refType)
 
 recordLoyaltyHistoryReversal ::
-  (FBeamFlow.BeamFlow m r) =>
+  (FBeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   DWallet.Wallet ->
   DWP.WalletPaymentKind ->
   Text -> -- domainEntityId
@@ -318,7 +319,7 @@ reconcileWalletFromProgram wallet program = do
     parsePoints t = realToFrac <$> (readMaybe (T.unpack t) :: Maybe Double)
 
 processLoyaltyInfoFromOrderStatus ::
-  (FBeamFlow.BeamFlow m r, PBeamFlow.BeamFlow m r, Log m, MonadTime m) =>
+  (FBeamFlow.BeamFlow m r, PBeamFlow.BeamFlow m r, Log m, Finance.HasActorInfo m r) =>
   Text -> -- personId
   DOrder.PaymentOrder ->
   Text -> -- domainEntityId (e.g. frfs_ticket_booking_payment.id; caller falls back to orderId when absent) — stamped on each WalletHistory row
@@ -499,7 +500,7 @@ upsertWalletHistory wp wallet programType kind mbCampaignId points mbReversed mb
       pure wh
 
 processProgramLedger ::
-  (FBeamFlow.BeamFlow m r, PBeamFlow.BeamFlow m r, Log m, MonadFlow m) =>
+  (FBeamFlow.BeamFlow m r, PBeamFlow.BeamFlow m r, Log m, Finance.HasActorInfo m r) =>
   DWallet.Wallet ->
   DWP.WalletPaymentKind ->
   HighPrecMoney -> -- aggregated points

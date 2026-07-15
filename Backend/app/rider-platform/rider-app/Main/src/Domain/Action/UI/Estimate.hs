@@ -70,6 +70,7 @@ data EstimateAPIEntity = EstimateAPIEntity
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
+    vehicleServiceTierLuggageCapacity :: Maybe Int,
     validTill :: UTCTime,
     vehicleIconUrl :: Maybe Text,
     boostSearchPreSelectionServiceTierConfig :: Maybe [DVST.ServiceTierType],
@@ -78,7 +79,8 @@ data EstimateAPIEntity = EstimateAPIEntity
     isReferredRide :: Bool,
     isInsured :: Maybe Bool,
     insuredAmount :: Maybe Text,
-    offer :: Maybe SOffer.CumulativeOfferResp
+    offer :: Maybe SOffer.CumulativeOfferResp,
+    area :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

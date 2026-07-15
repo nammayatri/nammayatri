@@ -27,6 +27,7 @@ import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.Location as Domain
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as DRideDetails
 import Environment
@@ -38,15 +39,18 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (Forkable (fork), MonadTime (getCurrentTime), PriceAPIEntity (..), convertMetersToDistance)
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, throwError)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Person (findPerson)
 import qualified SharedLogic.Ride as SRide
-import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.SMS as Sms
 
@@ -55,7 +59,7 @@ getVolunteerBooking merchantShortId opCity otpCode = do
   merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTPAndCity merchantOpCityId.getId otpCode now transporterConfig.specialZoneBookingOtpExpiry >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp otpCode)
   return $ buildMessageInfoResponse booking
   where
@@ -127,8 +131,8 @@ getVolunteerBooking merchantShortId opCity otpCode = do
         { ..
         }
 
-postVolunteerAssignStartOtpRide :: ShortId DM.Merchant -> Context.City -> Common.AssignCreateAndStartOtpRideAPIReq -> Flow APISuccess
-postVolunteerAssignStartOtpRide _ _ Common.AssignCreateAndStartOtpRideAPIReq {..} = do
+postVolunteerAssignStartOtpRide :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Common.AssignCreateAndStartOtpRideAPIReq -> Flow APISuccess
+postVolunteerAssignStartOtpRide _ _ mbRequestorId Common.AssignCreateAndStartOtpRideAPIReq {..} = ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) $ do
   requestor <- findPerson (cast driverId)
   driverInfo <- QDI.findById (cast requestor.id) >>= fromMaybeM (PersonNotFound requestor.id.getId)
   when driverInfo.onRide $ do

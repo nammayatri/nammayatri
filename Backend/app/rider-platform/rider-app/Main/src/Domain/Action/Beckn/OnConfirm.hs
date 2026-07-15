@@ -44,12 +44,14 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingExtra as QRBE
 import qualified Storage.Queries.Person as QPerson
@@ -119,6 +121,8 @@ data RideAssignedInfo = RideAssignedInfo
     favCount :: Maybe Int,
     driverAccountId :: Maybe Payment.AccountId,
     isSafetyPlus :: Bool,
+    isTierUpgrade :: Bool,
+    assignedServiceTierName :: Maybe Text,
     bppInvoiceProviderInfo :: BPPInvoiceProviderInfo
   }
 
@@ -137,7 +141,7 @@ onConfirm ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig, "cloudType" ::: Maybe CloudType],
     CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EncFlow m r,
     SchedulerFlow r,
     EsqDBReplicaFlow m r,
@@ -160,7 +164,7 @@ onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
     when (booking.isDashboardRequest == Just True) $
       fork "sending Booking confirmed dasboard sms" $ do
         let merchantOperatingCityId = booking.merchantOperatingCityId
-        merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+        merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
         if merchantConfig.enableDashboardSms
           then do
             customer <- B.runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
@@ -173,7 +177,7 @@ onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
             logInfo "Merchant not configured to send dashboard sms"
   case booking.bookingDetails of
     DRB.DriverOfferDetails _ -> return ()
-    _ -> void $ QRB.updateStatus booking.id DRB.CONFIRMED
+    _ -> void $ QRB.updateStatus booking.riderId booking.id DRB.CONFIRMED
 -- TODO: Find a Better way to remove this from on_confirm.
 -- void $ QRB.updateStatus booking.id DRB.CONFIRMED
 onConfirm (ValidatedRideAssigned req) = DCommon.rideAssignedReqHandler req

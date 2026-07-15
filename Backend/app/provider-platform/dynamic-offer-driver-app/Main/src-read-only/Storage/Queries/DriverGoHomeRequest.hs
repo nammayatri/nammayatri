@@ -37,9 +37,9 @@ updateByPrimaryKey (Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest {..}) =
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
-      Se.Set Beam.lat lat,
-      Se.Set Beam.lon lon,
-      Se.Set Beam.reachedHome mbReachedHome,
+      Se.Set Beam.lat (lat),
+      Se.Set Beam.lon (lon),
+      Se.Set Beam.reachedHome (mbReachedHome),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.numCancellation numCancellation,

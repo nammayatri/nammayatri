@@ -52,6 +52,9 @@ findByMerchantId merchantId = do findAllWithDb [Se.Is Beam.merchantId $ Se.Eq (K
 findByWrokflowTransactionId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.Image.Image])
 findByWrokflowTransactionId workflowTransactionId = do findAllWithKV [Se.Is Beam.workflowTransactionId $ Se.Eq workflowTransactionId]
 
+findImagesByIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id Domain.Types.Image.Image] -> m [Domain.Types.Image.Image])
+findImagesByIds id = do findAllWithKV [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> id)]
+
 findImagesByPersonAndType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DocumentVerificationConfig.DocumentType -> m [Domain.Types.Image.Image])
@@ -116,6 +119,20 @@ updateVerificationStatusAndFailureReasonByRcIdAndImageType verificationStatus fa
           Se.Is Beam.imageType $ Se.Eq imageType
         ]
     ]
+
+updateVerificationStatusByIds ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Documents.VerificationStatus -> [Kernel.Types.Id.Id Domain.Types.Image.Image] -> m ())
+updateVerificationStatusByIds verificationStatus id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> id)]]
+
+updateVerificationStatusAndFailureReasonForIds ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Documents.VerificationStatus -> Kernel.Prelude.Maybe Tools.Error.DriverOnboardingError -> [Kernel.Types.Id.Id Domain.Types.Image.Image] -> m ())
+updateVerificationStatusAndFailureReasonForIds verificationStatus failureReason id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.failureReason failureReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.Image.Image))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

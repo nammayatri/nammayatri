@@ -25,9 +25,10 @@ import Kernel.Prelude
 import Kernel.Types.Beckn.Ack
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Storage.Beam.SystemConfigs ()
-import Storage.ConfigPilot.Interface.Getter (TxnIdKey (..))
-import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import TransactionLogs.PushLogs
 
@@ -40,7 +41,7 @@ onTrack ::
   SignatureAuthResult ->
   OnTrack.OnTrackReqV2 ->
   FlowHandler AckResponse
-onTrack _ reqV2 = withFlowHandlerBecknAPI do
+onTrack _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.onTrackReqContext
   L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do
@@ -51,6 +52,6 @@ onTrack _ reqV2 = withFlowHandlerBecknAPI do
       fork "on track processing" $
         DOnTrack.onTrack validatedReq
       fork "on track received pushing ondc logs" do
-        booking <- QRB.findById validatedReq.ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BookingId:-" <> validatedReq.ride.bookingId.getId)
+        booking <- QBookingLite.findByIdLite validatedReq.ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BookingId:-" <> validatedReq.ride.bookingId.getId)
         void $ pushLogs "on_track" (toJSON reqV2) booking.merchantId.getId "MOBILITY"
     pure Ack

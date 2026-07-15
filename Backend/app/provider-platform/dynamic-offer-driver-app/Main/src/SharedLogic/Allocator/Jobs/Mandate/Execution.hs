@@ -23,10 +23,12 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
-import Kernel.Types.Id (Id, cast)
+import Kernel.Types.Id (Id (Id), cast)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Payment.Domain.Action as APayments
 import Lib.Scheduler
+import qualified SharedLogic.ActiveDriversList as ADL
 import SharedLogic.Allocator
 import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual, roundToHalf)
 import SharedLogic.Payment
@@ -36,6 +38,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.Invoice as QINV
@@ -51,7 +54,8 @@ startMandateExecutionForDriver ::
     Esq.EsqDBReplicaFlow m r,
     EncFlow m r,
     HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasField "activeDriversListKeyShards" r Int
   ) =>
   Job 'MandateExecution ->
   m ExecutionResult
@@ -66,13 +70,17 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
         serviceName = fromMaybe YATRI_SUBSCRIPTION jobData.serviceName
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
-    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     subscriptionConfig <-
       CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
         >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
     let limit = transporterConfig.driverFeeMandateExecutionBatchSize
     executionDate' <- getCurrentTime
-    driverFees <- QDF.findDriverFeeInRangeWithOrderNotExecutedAndPendingByServiceName merchantId merchantOpCityId limit startTime endTime serviceName
+    driverFees <- case jobData.shardNum of
+      Nothing -> QDF.findDriverFeeInRangeWithOrderNotExecutedAndPendingByServiceName merchantId merchantOpCityId limit startTime endTime serviceName
+      Just shardNum -> do
+        driverIds <- ADL.getNextDriverBatch ("Execution:" <> merchantId.getId <> ":" <> merchantOpCityId.getId <> ":" <> show serviceName) shardNum startTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) limit
+        QDF.findDriverFeeInRangeWithOrderNotExecutedAndPendingByServiceNameByDriverIds merchantId merchantOpCityId limit startTime endTime serviceName (Id <$> driverIds)
     if null driverFees
       then return Complete
       else do

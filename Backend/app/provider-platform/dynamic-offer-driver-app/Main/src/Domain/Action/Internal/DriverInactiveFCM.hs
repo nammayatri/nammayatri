@@ -25,7 +25,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import Tools.Notifications
 
 data DriverInactiveFCMReq = DriverInactiveFCMReq
@@ -38,7 +38,7 @@ driverInactiveFCM :: DriverInactiveFCMReq -> Flow APISuccess
 driverInactiveFCM req = do
   let driverId = req.driverId
       rideId = req.rideId
-  ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  ride <- QRideLite.findByIdLite rideId >>= fromMaybeM (RideNotFound rideId.getId)
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   pingDriver person
   _merchantId <- fromMaybeM (InternalError "Ride does not have a merchantId") $ ride.merchantId
