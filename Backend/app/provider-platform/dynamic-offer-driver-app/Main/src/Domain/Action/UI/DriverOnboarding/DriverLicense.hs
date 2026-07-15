@@ -245,17 +245,17 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
                   let existingFleetIds = [assoc.fleetOwnerId | assoc <- allAssocs, assoc.driverId == dnd.driverId]
                       targetFleetIds = [assoc.fleetOwnerId | assoc <- allAssocs, assoc.driverId == personId]
                       sharedFleets = filter (`elem` existingFleetIds) targetFleetIds
-                  cleanupImages
-                  unless (null sharedFleets) $ throwError DLAlreadyExistsInFleet
+                  -- cleanupImages only on error paths; the INVALID path proceeds with verification and still needs the images
+                  unless (null sharedFleets) $ cleanupImages >> throwError DLAlreadyExistsInFleet
                   when (dnd.verificationStatus == Documents.VALID && not (null existingFleetIds)) $
-                    throwError DLLinkedToAnotherFleet
+                    cleanupImages >> throwError DLLinkedToAnotherFleet
                   case dnd.verificationStatus of
                     Documents.INVALID -> do
                       Query.deleteByDriverId dnd.driverId
                       whenJust mDrdToDelete $ \_ -> Query.deleteByDriverId personId
                       proceedWith dobForNew
-                    Documents.VALID -> throwError DLAlreadyLinked
-                    _ -> throwError DLAlreadyInProcessing
+                    Documents.VALID -> cleanupImages >> throwError DLAlreadyLinked
+                    _ -> cleanupImages >> throwError DLAlreadyInProcessing
         case mDrd of
           Just drd -> do
             -- Compare DRD's stored hash directly with input hash — avoids an extra DB call
@@ -278,6 +278,10 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
                     if fromMaybe False documentVerificationConfig.allowLicenseTransfer || fromMaybe False transporterConfig.allowDlReupload
                       then proceedWith Nothing
                       else cleanupImages >> throwError (DocumentAlreadyValidated "DL")
+                  -- Stale PENDING (verification webhook never arrived): re-kick verification
+                  -- instead of blocking the driver forever behind DLAlreadyInProcessing.
+                  Documents.PENDING
+                    | drd.updatedAt < addUTCTime (negate nominalDay) now -> proceedWith Nothing -- Should we store this config or fixed this just like we did
                   _ -> throwError DLAlreadyInProcessing
               else -- DRD.L1 != Lr: driver has a different DL — short-circuit where possible
               case drd.verificationStatus of
@@ -341,10 +345,14 @@ verifyDLFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerifi
 verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard mbVehicleCategory mbReqId mbTxnId = do
   now <- getCurrentTime
   encryptedDL <- encrypt dlNumber
-  -- Upsert a PENDING DL record immediately so the license is claimed before async verification completes
+  -- Upsert a PENDING DL record immediately so the license is claimed before async verification completes.
+  -- Store it under the NORMALIZED DL hash so it matches the normalized comparison/lookup in verifyDL
+  -- (and the normalized final record in onVerifyDLHandler) — otherwise upsert keys on a different
+  -- licenseNumberHash and creates a duplicate row when the callback lands.
+  normalizedEncryptedDL <- encrypt (VC.normalizeDocumentNumber dlNumber)
   dlId <- generateGUID
   let farFutureExpiry = addUTCTime (nominalDay * 365 * 100) now
-  let pendingDL = (createDL person.merchantId documentVerificationConfig person.id Nothing Nothing Nothing dlId imageId1 imageId2 nameOnTheCard dateOfIssue mbVehicleCategory now encryptedDL farFutureExpiry) {Domain.verificationStatus = Documents.PENDING}
+  let pendingDL = (createDL person.merchantId documentVerificationConfig person.id Nothing Nothing Nothing dlId imageId1 imageId2 nameOnTheCard dateOfIssue mbVehicleCategory now normalizedEncryptedDL farFutureExpiry) {Domain.verificationStatus = Documents.PENDING}
   Query.upsert pendingDL
   case mbReqId of
     Just reqId -> HVQuery.create =<< mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard reqId now Domain.Success encryptedDL mbTxnId
@@ -460,7 +468,10 @@ onVerifyDLHandler :: Person.Person -> Maybe Text -> Maybe Text -> Maybe [Idfy.Co
 onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificationConfig imageId1 imageId2 nameOnTheCard dateOfIssue vehicleCategory = do
   now <- getCurrentTime
   id <- generateGUID
-  mEncryptedDL <- encrypt `mapM` dlNumber
+  -- Normalize before hashing/storing so this final record collides-and-updates the PENDING record
+  -- (stored under the normalized hash in verifyDLFlow) instead of creating a duplicate DL row, and
+  -- so it matches the normalized comparison/lookup in verifyDL.
+  mEncryptedDL <- encrypt `mapM` (VC.normalizeDocumentNumber <$> dlNumber)
   let mLicenseExpiry = convertTextToUTC dlExpiry
   let mDriverLicense = createDL person.merchantId documentVerificationConfig person.id covDetails name dob id imageId1 imageId2 nameOnTheCard dateOfIssue vehicleCategory now <$> mEncryptedDL <*> mLicenseExpiry
 
