@@ -97,6 +97,8 @@ module SharedLogic.Finance.RidePayment
     ridePaymentRefTollRefundVAT,
     ridePaymentRefParkingRefund,
     ridePaymentRefParkingRefundVAT,
+    ridePaymentRefCancellationFeeRefund,
+    ridePaymentRefCancellationFeeRefundVAT,
 
     -- * Settlement reason constants
     settledReasonRidePayment,
@@ -247,6 +249,14 @@ ridePaymentRefParkingRefund = "ParkingRefund"
 
 ridePaymentRefParkingRefundVAT :: Text
 ridePaymentRefParkingRefundVAT = "ParkingRefundVAT"
+
+-- Refund of a cancellation fee. Distinct from the charge-side 'CancellationFee' /
+-- 'CancellationGST' — those record the fee, these record giving it back.
+ridePaymentRefCancellationFeeRefund :: Text
+ridePaymentRefCancellationFeeRefund = "CancellationFeeRefund"
+
+ridePaymentRefCancellationFeeRefundVAT :: Text
+ridePaymentRefCancellationFeeRefundVAT = "CancellationFeeRefundVAT"
 
 -- ---------------------------------------------------------------------------
 -- Settlement reason constants
@@ -1037,9 +1047,11 @@ refundRefTypesForComponent = \case
   DFareBreakup.RIDE_FARE -> (ridePaymentRefRideFareRefund, ridePaymentRefRideFareRefundVAT)
   DFareBreakup.TOLL -> (ridePaymentRefTollRefund, ridePaymentRefTollRefundVAT)
   DFareBreakup.PARKING -> (ridePaymentRefParkingRefund, ridePaymentRefParkingRefundVAT)
+  DFareBreakup.CANCELLATION_FEE -> (ridePaymentRefCancellationFeeRefund, ridePaymentRefCancellationFeeRefundVAT)
 
--- | All refund leg refTypes: the 6 per-component legs (base + VAT for ride-fare/toll/parking).
---   Used to find every refund leg for a ride (dedup / settle / void / cap-check).
+-- | Every per-component refund leg refType (base + VAT for each 'FareComponent'). Used to find
+--   every refund leg for a ride (dedup / settle / void / cap-check) — a component missing here is
+--   invisible to the cap check, so it must list all of them.
 refundLegRefTypes :: [Text]
 refundLegRefTypes =
   [ ridePaymentRefRideFareRefund,
@@ -1047,7 +1059,9 @@ refundLegRefTypes =
     ridePaymentRefTollRefund,
     ridePaymentRefTollRefundVAT,
     ridePaymentRefParkingRefund,
-    ridePaymentRefParkingRefundVAT
+    ridePaymentRefParkingRefundVAT,
+    ridePaymentRefCancellationFeeRefund,
+    ridePaymentRefCancellationFeeRefundVAT
   ]
 
 getRefundLegEntries :: (BeamFlow.BeamFlow m r) => Text -> m [LE.LedgerEntry]
@@ -1410,10 +1424,15 @@ createRefundInvoice ::
   m ()
 createRefundInvoice rideId refundsRequestId splits = do
   let activeStatuses = [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid]
-  -- Parent ride invoice: header source (customer/merchant/currency) + referenceInvoiceNumber.
-  mbSource <- listToMaybe <$> QInvoiceExtra.findByReferenceIdWithOptions rideId (Just DInvType.Ride) Nothing activeStatuses (Just 1) (Just 0)
+  -- Parent invoice: header source (customer/merchant/currency) + referenceInvoiceNumber. Prefer the
+  -- Ride invoice; fall back to RideCancellation, since a cancelled ride's Ride invoice was voided and
+  -- the fee (the only thing a cancelled ride refunds) lives on its RideCancellation invoice instead.
+  mbRideInvoice <- listToMaybe <$> QInvoiceExtra.findByReferenceIdWithOptions rideId (Just DInvType.Ride) Nothing activeStatuses (Just 1) (Just 0)
+  mbSource <- case mbRideInvoice of
+    Just inv -> pure (Just inv)
+    Nothing -> listToMaybe <$> QInvoiceExtra.findByReferenceIdWithOptions rideId (Just DInvType.RideCancellation) Nothing activeStatuses (Just 1) (Just 0)
   case mbSource of
-    Nothing -> logInfo $ "createRefundInvoice: no ride invoice for ride " <> rideId <> "; skipping refund invoice"
+    Nothing -> logInfo $ "createRefundInvoice: no ride or cancellation invoice for ride " <> rideId <> "; skipping refund invoice"
     Just srcInv -> do
       let lineItems = concatMap mkRefundLineItems splits
           anyVat = any (\s -> s.vatAmount > 0) splits
@@ -1466,12 +1485,12 @@ createRefundInvoice rideId refundsRequestId splits = do
           logInfo $ "createRefundInvoice: created refund invoice " <> newInv.id.getId <> " for ride " <> rideId <> " refundRequest " <> refundsRequestId
 
 -- | Per-component refund invoice lines: a negative Fare + a negative inline Tax (shared
---   groupId). Toll/Parking are flagged external (mirrors the ride invoice) so they render
---   as their own lines; only Ride Fare is the taxable base.
+--   groupId). Ride fare and cancellation fee are regular taxable lines; toll/parking are
+--   flagged external, mirroring the ride invoice.
 mkRefundLineItems :: RefundComponentSplit -> [InvoiceLineItem]
 mkRefundLineItems s =
   let (fareDesc, fareType, taxDesc, taxType, gId) = refundLineItemMeta s.component
-      isExt = case s.component of DFareBreakup.RIDE_FARE -> False; _ -> True
+      isExt = case s.component of DFareBreakup.RIDE_FARE -> False; DFareBreakup.CANCELLATION_FEE -> False; _ -> True
       mkNeg desc dtype amt typ =
         if amt > 0
           then Just InvoiceLineItem {description = desc, descriptionType = Just dtype, quantity = 1, unitPrice = negate amt, lineTotal = negate amt, isExternalCharge = isExt, groupId = Just gId, itemType = Just typ}
@@ -1483,3 +1502,4 @@ refundLineItemMeta = \case
   DFareBreakup.RIDE_FARE -> ("Ride Fare Refund", RideFareRefund, "Ride Fare Refund VAT", RideFareRefundTax, "g-refund-ridefare")
   DFareBreakup.TOLL -> ("Toll Refund", TollRefund, "Toll Refund VAT", TollRefundTax, "g-refund-toll")
   DFareBreakup.PARKING -> ("Parking Refund", ParkingRefund, "Parking Refund VAT", ParkingRefundTax, "g-refund-parking")
+  DFareBreakup.CANCELLATION_FEE -> ("Cancellation Fee Refund", CancellationFeeRefund, "Cancellation Fee Refund VAT", CancellationFeeRefundTax, "g-refund-cancellation")
