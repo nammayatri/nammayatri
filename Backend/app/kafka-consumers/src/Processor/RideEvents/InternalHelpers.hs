@@ -14,8 +14,6 @@ module Processor.RideEvents.InternalHelpers
   )
 where
 
-import qualified Data.Aeson as A
-import qualified Data.Aeson.Key as AKey
 import qualified Data.Text as T
 import Data.Time
   ( Day,
@@ -67,6 +65,7 @@ import Kernel.Utils.Time (secondsFromTimeOfDay)
 import qualified "dynamic-offer-driver-app" Lib.DriverCoins.Coins as DC
 import qualified "dynamic-offer-driver-app" Lib.DriverCoins.Types as DCT
 import qualified Lib.Finance.Core.Types as Finance
+import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
 import "dynamic-offer-driver-app" SharedLogic.FareCalculator (timeZoneIST)
 import "dynamic-offer-driver-app" SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import "dynamic-offer-driver-app" SharedLogic.Finance.Wallet (createWalletEntryDelta, walletReferenceD2DReferral)
@@ -170,7 +169,7 @@ sendReferralFCM validRide ride booking mbRiderDetails transporterConfig = do
           Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey referredDriverId.getId) 3 3 $ do
             QDailyStats.updateReferralStatsByDriverId (stats.activatedValidRides + 1) (stats.referralEarnings + deltaReferralEarnings) newPayoutStatus referredDriverId (utctDay localTime)
           when (payoutConfig.d2dPayoutType == DPC.WALLET) $
-            creditReferralWallet deltaReferralEarnings referredDriverId stats.id "d2cReferralEarnings" ride.currency referredDriver.merchantId.getId referredDriver.merchantOperatingCityId.getId
+            creditReferralWallet deltaReferralEarnings referredDriverId stats.id D2CReferralEarnings ride.currency referredDriver.merchantId.getId referredDriver.merchantOperatingCityId.getId
         Nothing -> do
           newId <- generateGUIDText
           now <- getCurrentTime
@@ -208,7 +207,7 @@ sendReferralFCM validRide ride booking mbRiderDetails transporterConfig = do
                   }
           QDailyStats.create dailyStatsOfDriver'
           when (payoutConfig.d2dPayoutType == DPC.WALLET) $
-            creditReferralWallet deltaReferralEarnings referredDriverId newId "d2cReferralEarnings" ride.currency referredDriver.merchantId.getId referredDriver.merchantOperatingCityId.getId
+            creditReferralWallet deltaReferralEarnings referredDriverId newId D2CReferralEarnings ride.currency referredDriver.merchantId.getId referredDriver.merchantOperatingCityId.getId
 
     payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId
 
@@ -314,7 +313,7 @@ sendDriverToDriverReferralReward validRide ride _booking mbRiderDetails transpor
             QDailyStats.updateD2dReferralCount (stats.d2dReferralCounts + 1) referringDriverId (utctDay localTime)
 
           when (payoutConfig.d2dPayoutType == DPC.WALLET) $
-            creditReferralWallet deltaD2dEarnings referringDriverId stats.id "d2dReferralEarnings" ride.currency referringDriver.merchantId.getId referringDriver.merchantOperatingCityId.getId
+            creditReferralWallet deltaD2dEarnings referringDriverId stats.id D2DReferralEarnings ride.currency referringDriver.merchantId.getId referringDriver.merchantOperatingCityId.getId
         Nothing -> do
           newId <- generateGUIDText
           now <- getCurrentTime
@@ -353,7 +352,7 @@ sendDriverToDriverReferralReward validRide ride _booking mbRiderDetails transpor
           QDailyStats.create dailyStatsOfDriver'
 
           when (payoutConfig.d2dPayoutType == DPC.WALLET) $
-            creditReferralWallet deltaD2dEarnings referringDriverId newId "d2dReferralEarnings" ride.currency referringDriver.merchantId.getId referringDriver.merchantOperatingCityId.getId
+            creditReferralWallet deltaD2dEarnings referringDriverId newId D2DReferralEarnings ride.currency referringDriver.merchantId.getId referringDriver.merchantOperatingCityId.getId
 
     getD2DRewardAmount payoutConfig = do
       let mbAmount = payoutConfig.referralRewardAmountPerRideForD2DPayout
@@ -365,6 +364,8 @@ sendDriverToDriverReferralReward validRide ride _booking mbRiderDetails transpor
 -- Wallet credit (shared between sendReferralFCM and sendDriverToDriverReferralReward)
 ------------------------------------------------------------
 
+data EarningsKey = D2CReferralEarnings | D2DReferralEarnings
+
 creditReferralWallet ::
   ( CacheFlow m r,
     Esq.EsqDBFlow m r,
@@ -373,23 +374,31 @@ creditReferralWallet ::
   HighPrecMoney ->
   Id DP.Person ->
   Text ->
-  Text ->
+  EarningsKey ->
   Currency ->
   Text ->
   Text ->
   m ()
-creditReferralWallet amount driverId_ dailyStatsId earningsKey currency merchantId merchantOperatingCityId =
+creditReferralWallet amount driverId_ dailyStatsId earningKey currency merchantId merchantOperatingCityId =
   when (amount > 0) $ do
     mbFleetDriverAssociation <- QFDAE.findByDriverId driverId_ True
     let mbFleetOwnerId = (\fda -> Id fda.fleetOwnerId) <$> mbFleetDriverAssociation
     let (counterparty, ownerId) = case mbFleetOwnerId of
           Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
           Nothing -> (counterpartyDriver, driverId_.getId)
+        (d2cReferralEarnings, d2dReferralEarnings) = case earningKey of
+          D2CReferralEarnings -> (Just amount, Nothing)
+          D2DReferralEarnings -> (Nothing, Just amount)
     let metadata =
-          A.object
-            [ AKey.fromText earningsKey A..= amount,
-              "dailyStatsId" A..= dailyStatsId
-            ]
+          LedgerEntryMetadata
+            { subscriptionAllocations = Nothing,
+              reason = Nothing,
+              driverPayable = Nothing,
+              payoutOrderId = Nothing,
+              d2cReferralEarnings,
+              d2dReferralEarnings,
+              dailyStatsId = Just dailyStatsId
+            }
     resp <-
       createWalletEntryDelta
         counterparty

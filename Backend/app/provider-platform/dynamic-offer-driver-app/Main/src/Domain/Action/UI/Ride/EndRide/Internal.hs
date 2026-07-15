@@ -95,6 +95,7 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, runFinance, transfer, transferWithoutAttribution, transfer_)
 import qualified Lib.Finance.Core.Types as Finance
+import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -336,6 +337,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
         Just fleetOwnerId -> do
           Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey fleetOwnerId.getId) 10 10 $ do
             revenueAmount <- getPrepaidRevenueAmount fare mbVC
+            mbMetadata <- mkRideDebitAllocationMetadata counterpartyFleetOwner fleetOwnerId.getId DSP.FLEET_OWNER fare mbVC
             _ <-
               debitPrepaidBalance
                 counterpartyFleetOwner
@@ -346,7 +348,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
                 booking.providerId.getId
                 booking.merchantOperatingCityId.getId
                 booking.id.getId
-                Nothing
+                mbMetadata
                 mbVC
                 >>= fromEitherM (\err -> InternalError ("Failed to debit prepaid balance: " <> show err))
             (contributingPurchaseIds, anyExhausted) <- checkAndMarkExhaustedSubscriptions counterpartyFleetOwner fleetOwnerId.getId DSP.FLEET_OWNER mbVC
@@ -368,6 +370,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
         Nothing -> do
           Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
             revenueAmount <- getPrepaidRevenueAmount fare mbVC
+            mbMetadata <- mkRideDebitAllocationMetadata counterpartyDriver ride.driverId.getId DSP.DRIVER fare mbVC
             newBalance <-
               debitPrepaidBalance
                 counterpartyDriver
@@ -378,7 +381,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
                 booking.providerId.getId
                 booking.merchantOperatingCityId.getId
                 booking.id.getId
-                Nothing
+                mbMetadata
                 mbVC
                 >>= fromEitherM (\err -> InternalError ("Failed to debit prepaid balance: " <> show err))
             driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -407,6 +410,27 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
               let unsubscribedMessage = "Your subscription balance is low. Please recharge to get rides"
                   unsubscribedTitle = "Low Balance Alert!"
               sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_UNSUBSCRIBED unsubscribedTitle unsubscribedMessage driver driver.deviceToken
+
+    mkRideDebitAllocationMetadata counterpartyType ownerId ownerType fare mbVC = do
+      allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION mbVC
+      mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId mbVC
+      let balanceBefore = fromMaybe 0 mbBalance
+          sortedActive = DL.sortOn (.purchaseTimestamp) allActive
+          allocations = computeFifoSubscriptionAllocations fare balanceBefore sortedActive
+      pure $
+        if null allocations
+          then Nothing
+          else
+            Just
+              LedgerEntryMetadata
+                { subscriptionAllocations = Just allocations,
+                  reason = Nothing,
+                  driverPayable = Nothing,
+                  payoutOrderId = Nothing,
+                  d2cReferralEarnings = Nothing,
+                  d2dReferralEarnings = Nothing,
+                  dailyStatsId = Nothing
+                }
 
     getPrepaidRevenueAmount fare mbVC = do
       (ownerType', ownerId') <- case ride.fleetOwnerId of

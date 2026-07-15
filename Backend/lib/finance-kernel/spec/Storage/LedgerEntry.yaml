@@ -32,6 +32,23 @@ LedgerEntry:
       enum: "RefundRequest"
       derive: "HttpInstance"
 
+    # Typed ledger metadata (DB column stays JSON Value). Use this to keep known fields
+    # structured and avoid opaque free-form JSON for sensitive / recon attribution data.
+    SubscriptionCreditAllocation:
+      subscriptionPurchaseId: Text
+      amount: HighPrecMoney
+      derive': "Generic, Show, Eq, ToJSON, FromJSON, ToSchema"
+
+    LedgerEntryMetadata:
+      subscriptionAllocations: Maybe [SubscriptionCreditAllocation]
+      reason: Maybe Text
+      driverPayable: Maybe HighPrecMoney
+      payoutOrderId: Maybe Text
+      d2cReferralEarnings: Maybe HighPrecMoney
+      d2dReferralEarnings: Maybe HighPrecMoney
+      dailyStatsId: Maybe Text
+      derive': "Generic, Show, Eq, ToJSON, FromJSON, ToSchema"
+
   # NOTE: Mask sensitive values in ledgerEntryToAuditValue (Ledger.Service)
   fields:
     id: Id LedgerEntry
@@ -54,7 +71,7 @@ LedgerEntry:
     # is Value (json), so any non-NULL row broke every ledger read (BeamRowReadError), and prod's
     # heavy table can't afford the full-rewrite ALTER to json. The old column stays for backward compatibility,
     # but is never read or written again. sqlType json below is REQUIRED,as Value defaults to text otherwise.
-    metadataV2: Maybe Value # SENSITIVE
+    metadataV2: Maybe LedgerEntryMetadata
     fromStartingBalance: Maybe HighPrecMoney
     toStartingBalance: Maybe HighPrecMoney
     fromEndingBalance: Maybe HighPrecMoney
@@ -75,6 +92,15 @@ LedgerEntry:
 
   sqlType:
     metadataV2: "json"
+
+  beamType:
+    metadataV2: Maybe Value
+
+  fromTType:
+    metadataV2: metadataV2 >>= Kernel.Utils.JSON.valueToMaybe|E
+
+  toTType:
+    metadataV2: Data.Aeson.toJSON <$> metadataV2|E
 
   constraints:
     id: PrimaryKey

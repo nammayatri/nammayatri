@@ -687,7 +687,7 @@ createWalletEntryDelta ::
   Text -> -- Merchant operating city ID
   Text -> -- Reference type
   Text -> -- Reference ID
-  Maybe Value ->
+  Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntryMetadata ->
   m (Either FinanceError HighPrecMoney)
 createWalletEntryDelta counterpartyType ownerId delta currency merchantId merchantOperatingCityId referenceType referenceId metadata = do
   if delta == 0
