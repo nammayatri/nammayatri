@@ -152,7 +152,8 @@ notifyErrorToSupport person merchantId merchantOpCityId driverPhone _ errs = do
           classification = Ticket.DRIVER,
           rideDescription = Nothing,
           ticketContext = Just Ticket.IssueTicket,
-          becknIssueId = Nothing
+          becknIssueId = Nothing,
+          xyneChannelId = Nothing
         }
 
 throwImageError :: Id Domain.Image -> DriverOnboardingError -> Flow b
