@@ -128,6 +128,7 @@ data BotSavedLocation = BotSavedLocation
 -- (absent until the ride reaches @TRIP_ASSIGNED@).
 data BotBookingDetails = BotBookingDetails
   { bookingId :: Text,
+    rideId :: Maybe Text, -- rideList[0].id (SOS target + tracking link; absent until TRIP_ASSIGNED)
     bookingStatus :: Text, -- booking.status
     rideStatus :: Maybe Text, -- rideList[0].status
     rideStartTime :: Maybe UTCTime, -- presence => started
@@ -170,7 +171,8 @@ data MerchantCtx = MerchantCtx
     flexiRentalDistanceM :: Int,
     flexiRentalDurationS :: Int,
     flexiIntroVideoUrl :: Maybe Text,
-    flexiSupportPhone :: Maybe Text
+    flexiSupportPhone :: Maybe Text,
+    nyTrackingUrl :: Text -- ride-share tracking URL template ({rideId} placeholder)
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 

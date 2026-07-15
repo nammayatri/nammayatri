@@ -98,7 +98,8 @@ data RegisteredRide = RegisteredRide
     personId :: Text, -- opaque auth handle for backend polls
     rideType :: RideType,
     language :: Maybe SupportedLanguage,
-    lastStage :: Maybe Text -- last pushed stage (confirmed/assigned/arrived/started)
+    lastStage :: Maybe Text, -- last pushed stage (confirmed/assigned/arrived/started)
+    createdAt :: UTCTime -- registration time (newest-first ordering for multi-booking users)
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 

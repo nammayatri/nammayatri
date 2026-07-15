@@ -559,6 +559,7 @@ in  { esqDBCfg
                    , flexiRentalDurationS : Integer
                    , flexiIntroVideoUrl : Optional Text
                    , flexiSupportPhone : Optional Text
+                   , nyTrackingUrl : Text
                    }
                }
     , metaBotEnabled = False

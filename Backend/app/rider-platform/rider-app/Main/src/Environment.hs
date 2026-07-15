@@ -121,7 +121,8 @@ data MetaBotCfg = MetaBotCfg
     flexiRentalDistanceM :: Int,
     flexiRentalDurationS :: Int,
     flexiIntroVideoUrl :: Maybe Text,
-    flexiSupportPhone :: Maybe Text
+    flexiSupportPhone :: Maybe Text,
+    nyTrackingUrl :: Text
   }
   deriving (Generic, FromDhall, Show)
 

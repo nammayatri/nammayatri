@@ -23,6 +23,8 @@ where
 
 import Control.Applicative ((<|>))
 import Data.Char (isAsciiLower, isAsciiUpper, isDigit)
+import Data.List (sortOn)
+import Data.Ord (Down (..))
 import qualified Data.Text as T
 import Data.Time (addUTCTime)
 import Kernel.Prelude
@@ -103,7 +105,7 @@ runEngine env ev ctx = do
       input = T.strip (rawInput ev)
       lower = T.toLower input
   if
-      | "lang:" `T.isPrefixOf` input -> handleLang env ev ctx (T.drop 5 input) -- :103-118
+      | Just langCode <- T.stripPrefix "lang:" input, isLangCode langCode -> handleLang env ev ctx langCode -- :103-118 (anchored to lang:<word>)
       | input == "choose_language" || input == "more_languages" -> handleChooseLanguage env ev ctx input -- :120-123
       | lower `elem` cancelTriggers || "cancel:" `T.isPrefixOf` input -> handleCancel env ev ctx input -- :126-129
       | any (`T.isInfixOf` lower) statusTriggers -> case ctx.personId of -- :131-140
@@ -740,7 +742,7 @@ handleStatus env ev ctx = do
       resetContext env ev
       replyButtons env to s.noActiveRidesBook [btn s.bookARide "book"]
     Just b -> do
-      let trackingLink = buildTrackingLink b
+      let trackingLink = buildTrackingLink env.cfg.merchant b
           lns =
             [s.activeRide]
               <> maybe [] (\d -> [s.driverLabel d]) b.driverName
@@ -767,7 +769,7 @@ handleTracking env ev ctx = do
     Just b -> do
       let rideStatusUp = maybe "" T.toUpper b.rideStatus
           statusText = if rideStatusUp == "INPROGRESS" then s.rideInProgressStatus else s.rideNotStarted
-          trackingLink = buildTrackingLink b
+          trackingLink = buildTrackingLink env.cfg.merchant b
           lns =
             [statusText]
               <> maybe [] (\d -> [s.driverLabel d]) b.driverName
@@ -782,13 +784,12 @@ handleTracking env ev ctx = do
 -- | Resolve the rider's live booking via the durable registry + getBookingDetails
 -- (@engine.ts:1599-1612@). Terminal (completed/cancelled) → Nothing.
 --
--- Divergence note: TS sorts multiple registry entries newest-first by
--- @createdAt@; 'RegisteredRide' carries no @createdAt@, so we take the head
--- (typically the sole entry).
+-- Multiple registry entries are sorted newest-first by @createdAt@ (TS parity);
+-- typically there is a sole entry.
 resolveActiveBooking :: Monad m => BotEnv m -> InboundEvent -> BotAuth -> m (Maybe BotBookingDetails)
 resolveActiveBooking env ev auth = do
   rides <- env.registry.listByUser (mkUserKey env.cfg.merchant ev)
-  case listToMaybe rides of
+  case listToMaybe (sortOn (Down . (.createdAt)) rides) of
     Nothing -> pure Nothing
     Just r -> do
       eb <- env.backend.getBookingDetails auth r.bookingId
@@ -797,11 +798,25 @@ resolveActiveBooking env ev auth = do
           | classifyStage b `notElem` [StageCompleted, StageCancelled] -> pure (Just b)
         _ -> pure Nothing
 
--- | Build a tracking link (@engine.ts:1471-1477@). Fidelity note: 'MerchantCtx'
--- has no @nyTrackingUrl@ and 'BotBookingDetails' no separate rideId, so we use the
--- default template with the bookingId. (The link text is not golden-projected.)
-buildTrackingLink :: BotBookingDetails -> Text
-buildTrackingLink b = T.replace "{rideId}" b.bookingId "https://www.nammayatri.in/u?vp=shareRide&rideId={rideId}"
+-- | A @lang:<code>@ command is anchored to word-chars after the prefix; @lang:@
+-- followed by anything else falls through the intercept chain (only well-formed
+-- codes are the switch command, not a message that merely starts with "lang:").
+isLangCode :: Text -> Bool
+isLangCode c = not (T.null c) && T.all isWordChar c
+  where
+    isWordChar ch = isAsciiLower ch || isAsciiUpper ch || isDigit ch || ch == '_'
+
+-- | Build a tracking link (@engine.ts:1471-1477@): the merchant's URL template with
+-- the ride id substituted (falling back to the bookingId until a ride is assigned,
+-- and to the default template if the merchant's URL is unset — TS @|| default@).
+-- The link text is not golden-projected.
+buildTrackingLink :: MerchantCtx -> BotBookingDetails -> Text
+buildTrackingLink merchant b =
+  let template = if T.null merchant.nyTrackingUrl then defaultTrackingUrl else merchant.nyTrackingUrl
+   in T.replace "{rideId}" (fromMaybe b.bookingId b.rideId) template
+
+defaultTrackingUrl :: Text
+defaultTrackingUrl = "https://www.nammayatri.in/u?vp=shareRide&rideId={rideId}"
 
 -- ---------------------------------------------------------------------------
 -- Cancel (engine.ts:1282-1355, 153-178)
@@ -906,16 +921,20 @@ handleSosTrigger env ev ctx = do
   eb <- env.backend.getActiveBookings auth ctx.selectStartedAt
   let bookings = either (const []) identity eb
   case bookings of
-    (b : _) -> do
-      -- rideId: BotBookingDetails exposes no separate ride id, so use bookingId.
-      esos <- env.backend.triggerSOS auth b.bookingId Nothing
-      case esos of
-        Left err -> do
-          reply env to (s.sosFailed err.botErrorMessage)
-          save env ev ctx {state = Tracking}
-        Right sosId -> do
-          save env ev ctx {sosId = Just sosId, state = Tracking}
-          replyButtons env to s.sosTriggered [btn s.markSafeButton "mark_safe_confirm"]
+    (b : _) -> case b.rideId of
+      -- SOS targets the RIDE id (rideList[0].id); no assigned ride => nothing to SOS.
+      Nothing -> do
+        reply env to (s.sosFailed "No active ride found")
+        save env ev ctx {state = Tracking}
+      Just rid -> do
+        esos <- env.backend.triggerSOS auth rid Nothing
+        case esos of
+          Left err -> do
+            reply env to (s.sosFailed err.botErrorMessage)
+            save env ev ctx {state = Tracking}
+          Right sosId -> do
+            save env ev ctx {sosId = Just sosId, state = Tracking}
+            replyButtons env to s.sosTriggered [btn s.markSafeButton "mark_safe_confirm"]
     [] -> do
       reply env to (s.sosFailed "No active ride found")
       save env ev ctx {state = Tracking}
@@ -1047,7 +1066,8 @@ sendHowItWorks env ev ctx = do
 
 -- | Register a booking with the durable ride tracker (@engine.ts:1498-1515@).
 registerRide' :: Monad m => BotEnv m -> InboundEvent -> Text -> FlowContext -> Text -> m ()
-registerRide' env ev bookingId ctx stage =
+registerRide' env ev bookingId ctx stage = do
+  now <- env.clock.now
   env.registry.registerRide
     RegisteredRide
       { bookingId = bookingId,
@@ -1058,7 +1078,8 @@ registerRide' env ev bookingId ctx stage =
         personId = fromMaybe "" ctx.personId,
         rideType = fromMaybe Flexi ctx.rideType,
         language = ctx.language,
-        lastStage = Just stage
+        lastStage = Just stage,
+        createdAt = now
       }
 
 -- | Advance the persisted last-pushed stage on a registry entry (@ride.update@).
