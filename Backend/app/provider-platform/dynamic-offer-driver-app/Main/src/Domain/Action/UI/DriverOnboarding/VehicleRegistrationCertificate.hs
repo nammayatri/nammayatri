@@ -37,6 +37,8 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     validateRCResponse,
     VerificationReqRecord (..),
     normalizeDocumentNumber,
+    validateByRegex,
+    activateRC,
   )
 where
 

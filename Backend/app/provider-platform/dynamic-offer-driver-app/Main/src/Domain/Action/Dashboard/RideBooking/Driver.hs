@@ -62,7 +62,6 @@ import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST
-import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -951,14 +950,10 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
           createReminder ODC.VehiclePermit personId merchant.id merchantOpCityId (Just newRC.id.getId) (Just permitExpiry) Nothing
         whenJust newRC.insuranceValidity $ \insuranceValidity ->
           createReminder ODC.VehicleInsurance personId merchant.id merchantOpCityId (Just newRC.id.getId) (Just insuranceValidity) Nothing
-        cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
-        -- as we create new rc, need to pass onboard inspection before activate rc and create vehicle
+
         unless (transporterConfig.requiresOnboardingInspection == Just True || DCommon.checkFleetOwnerRole requestor.role) $ do
           driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
-          let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' requestor merchant.id req.registrationNo newRC merchantOpCityId now req.vehicleTags
-          QVehicle.create vehicle
-          when (vehicle.variant == DV.SUV) $
-            QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
+          DomainRC.activateRC driverInfo' merchant.id merchantOpCityId transporterConfig now newRC
       logTagInfo "dashboard -> addVehicle : " (show personId)
     Nothing -> throwError $ InvalidRequest "Registration Number is empty"
   pure Success
