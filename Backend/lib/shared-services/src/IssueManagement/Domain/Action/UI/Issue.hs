@@ -953,6 +953,7 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
         -- same answer just re-fetches the same messages without growing the chat.
         (RESOLVED, Just Common.ESCALATE) -> do
           QIR.updateCustomerResponse issueReportId Common.ESCALATE
+          whenJust customerRating $ \rating -> updateTicketCsat issueReport rating merchantId merchantOpCityId issueHandle
           issueConfig <- issueHandle.findIssueConfig merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
           issueMessageTranslation <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) issueConfig.onCustomerNotSatisfiedMsgs
           let issueMessages = mkIssueMessageList (sequence issueMessageTranslation) language issueConfig mbRideInfoRes

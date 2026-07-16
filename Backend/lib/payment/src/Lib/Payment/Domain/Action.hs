@@ -708,7 +708,6 @@ getRefundStatusService orderId merchantOpCityId getRefundStatusCall = do
       PInterface.RefundPaymentResp
         { refundId = refund.id.getId,
           status = refund.status,
-          amount = Nothing,
           errorCode = refund.errorCode,
           errorMessage = refund.errorMessage,
           amount = Just refund.refundAmount
