@@ -738,7 +738,8 @@ getRefundStatusService orderId mbRefundsId merchantOpCityId getRefundStatusCall 
           status = refund.status,
           amount = refund.actualRefundedAmount,
           errorCode = refund.errorCode,
-          errorMessage = refund.errorMessage
+          errorMessage = refund.errorMessage,
+          amount = Just refund.refundAmount
         }
 
 -- create order -----------------------------------------------------

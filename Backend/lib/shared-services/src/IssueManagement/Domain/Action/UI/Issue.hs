@@ -122,7 +122,15 @@ data ServiceHandle m = ServiceHandle
     -- every chat message. @Nothing@ makes the call a no-op. Only XyneSpaces
     -- has a matching endpoint; Kapture/Zendesk fold status into
     -- 'updateTicket' already.
-    mbUpdateTicketStatus :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketStatusReq -> m ())
+    mbUpdateTicketStatus :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketStatusReq -> m ()),
+    -- | Optional CSAT-only sync via XyneSpaces' @POST
+    -- /api/csat/external/:ticketId@. Decoupled from 'updateTicket' /
+    -- 'mbUpdateTicketStatus' the same way those two are decoupled from each
+    -- other — a satisfaction rating is a distinct event from a chat comment
+    -- or a status change. The domain-level 'updateTicketCsat' invokes this
+    -- when a status update carries a 'Common.CustomerRating'. @Nothing@ makes
+    -- the call a no-op. Only XyneSpaces has a matching endpoint.
+    mbUpdateTicketCsat :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketCsatReq -> m ())
   }
 
 getLanguage :: EsqDBReplicaFlow m r => Id Person -> Maybe Language -> ServiceHandle m -> m Language
@@ -945,6 +953,7 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
         -- same answer just re-fetches the same messages without growing the chat.
         (RESOLVED, Just Common.ESCALATE) -> do
           QIR.updateCustomerResponse issueReportId Common.ESCALATE
+          whenJust customerRating $ \rating -> updateTicketCsat issueReport rating merchantId merchantOpCityId issueHandle
           issueConfig <- issueHandle.findIssueConfig merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
           issueMessageTranslation <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) issueConfig.onCustomerNotSatisfiedMsgs
           let issueMessages = mkIssueMessageList (sequence issueMessageTranslation) language issueConfig mbRideInfoRes
@@ -961,6 +970,7 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
         (CLOSED, _) -> do
           QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
           whenJust customerResponse $ QIR.updateCustomerResponse issueReportId
+          whenJust customerRating $ \rating -> updateTicketCsat issueReport rating merchantId merchantOpCityId issueHandle
           pure $
             Common.IssueStatusUpdateRes
               { messages = []
@@ -970,6 +980,7 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
           QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
           whenJust customerResponse $ QIR.updateCustomerResponse issueReportId
           updateTicketStatus issueReport TIT.Reopened merchantId merchantOpCityId issueHandle "Ticket reopened"
+          whenJust customerRating $ \rating -> updateTicketCsat issueReport rating merchantId merchantOpCityId issueHandle
           issueConfig <- issueHandle.findIssueConfig merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
           issueMessageTranslation <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) issueConfig.onIssueReopenMsgs
           let issueMessages = mkIssueMessageList (sequence issueMessageTranslation) language issueConfig mbRideInfoRes
@@ -1022,6 +1033,41 @@ updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHa
           withTryCatch
             "updateTicketStatus:xyne"
             (syncStatus merchantId merchantOperatingCityId TIT.UpdateTicketStatusReq {xyneTicketId = xyneTicketId, status = status})
+
+-- | Best-effort CSAT sync to the ticket provider (XyneSpaces-only endpoint).
+-- Narrower than 'updateTicketStatus' by design: a satisfaction rating is a
+-- distinct event from a chat comment, so no 'updateTicket' comment-write
+-- accompanies it. No-op when the issue has no provider ticket or the app does
+-- not wire 'mbUpdateTicketCsat'.
+updateTicketCsat ::
+  ( EncFlow m r,
+    BeamFlow m r
+  ) =>
+  D.IssueReport ->
+  Common.CustomerRating ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  ServiceHandle m ->
+  m ()
+updateTicketCsat issueReport rating merchantId merchantOperatingCityId issueHandle =
+  case issueReport.ticketId of
+    Nothing -> return ()
+    Just ticketId ->
+      whenJust issueHandle.mbUpdateTicketCsat $ \syncCsat -> do
+        let xyneTicketId =
+              case find (\e -> e.service == TicketTypes.XyneSpaces) (fromMaybe [] issueReport.additionalTicketIds) of
+                Just entry -> entry.ticketId
+                Nothing -> ticketId
+            -- Only "GOOD" is confirmed from Xyne's docs (see the caveat on
+            -- 'TIT.UpdateTicketCsatReq'); "BAD" and the 5/1 score pairing are
+            -- unverified against Xyne's schema and may need adjusting.
+            (ratingText, score) = case rating of
+              Common.THUMBS_UP -> ("GOOD" :: Text, 5 :: Int)
+              Common.THUMBS_DOWN -> ("BAD", 1)
+        void $
+          withTryCatch
+            "updateTicketCsat:xyne"
+            (syncCsat merchantId merchantOperatingCityId TIT.UpdateTicketCsatReq {xyneTicketId = xyneTicketId, rating = ratingText, score = score, comment = Nothing})
 
 processIssueReportTypeActions ::
   BeamFlow m r =>
