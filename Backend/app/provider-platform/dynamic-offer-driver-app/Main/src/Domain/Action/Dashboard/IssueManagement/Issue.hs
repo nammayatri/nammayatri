@@ -34,6 +34,7 @@ import qualified IssueManagement.Domain.Types.Issue.IssueCategory
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage
 import qualified IssueManagement.Domain.Types.Issue.IssueOption
 import qualified IssueManagement.Domain.Types.Issue.IssueReport
+import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
@@ -178,14 +179,25 @@ postIssueChatMessage ::
   Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport ->
   IssueManagement.Common.Dashboard.Issue.SendChatMessageByUserReq ->
   Environment.Flow IssueManagement.Common.UI.Issue.ChatMessageItem
-postIssueChatMessage (Kernel.Types.Id.ShortId merchantShortId) city issueReportId req =
-  DIssue.sendDashboardChatMessage
-    (Kernel.Types.Id.ShortId merchantShortId)
-    city
-    (Kernel.Types.Id.cast issueReportId)
-    dashboardIssueHandle
-    Common.DRIVER
-    req
+postIssueChatMessage (Kernel.Types.Id.ShortId merchantShortId) city issueReportId req = do
+  res <-
+    DIssue.sendDashboardChatMessage
+      (Kernel.Types.Id.ShortId merchantShortId)
+      city
+      (Kernel.Types.Id.cast issueReportId)
+      dashboardIssueHandle
+      Common.DRIVER
+      req
+  mbIssueReport <- QIR.findById (Kernel.Types.Id.cast issueReportId)
+  Kernel.Prelude.whenJust mbIssueReport $ \issueReport ->
+    DAI.forwardChatToTicketServiceAs
+      "Control Centre Agent"
+      issueReport
+      Common.DRIVER
+      dashboardIssueHandle
+      req.message
+      (Kernel.Prelude.fromMaybe [] req.mediaFileIds)
+  pure res
 
 getIssueChatMessages ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

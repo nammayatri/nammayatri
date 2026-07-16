@@ -939,7 +939,9 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
                 if alreadyAppended
                   then issueReport.chats
                   else issueReport.chats ++ map (\message -> mkIssueChat IssueMessage message.id.getId now) issueMessages
-          unless alreadyAppended $ QIR.updateChats issueReportId updatedChats
+          unless alreadyAppended $ do
+            QIR.updateChats issueReportId updatedChats
+            mapM_ (\message -> forwardChatToTicketServiceAs "Auto Reply" issueReport identifier issueHandle message.message []) issueMessages
           pure $ Common.IssueStatusUpdateRes {messages = issueMessages}
         _ | issueReport.status == status -> pure Common.IssueStatusUpdateRes {messages = []}
         (CLOSED, _) -> do
@@ -962,6 +964,7 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
           now <- getCurrentTime
           let updatedChats = issueReport.chats ++ map (\message -> mkIssueChat IssueMessage message.id.getId now) issueMessages
           QIR.updateChats issueReportId updatedChats
+          mapM_ (\message -> forwardChatToTicketServiceAs "Auto Reply" issueReport identifier issueHandle message.message []) issueMessages
           pure $
             Common.IssueStatusUpdateRes
               { messages = issueMessages
@@ -1475,6 +1478,67 @@ forwardChatToTicketService issueReport identifier issueHandle messageText mediaI
       case result of
         Right _ -> pure ()
         Left err -> logTagInfo "Update Ticket (chat) failed - " (show err)
+
+-- | Same forwarding behaviour as 'forwardChatToTicketService', but for messages
+-- not authored by the ticket's own rider/driver (Control Centre dashboard replies,
+-- system-generated Auto Reply prompts) — takes an explicit sender label instead of
+-- resolving 'issueReport.personId' via 'findPersonById'.
+forwardChatToTicketServiceAs ::
+  BeamFlow m r =>
+  Text ->
+  D.IssueReport ->
+  Identifier ->
+  ServiceHandle m ->
+  Text ->
+  [Id D.MediaFile] ->
+  m ()
+forwardChatToTicketServiceAs senderLabel issueReport identifier issueHandle messageText mediaIds =
+  case (issueReport.merchantId, issueReport.merchantOperatingCityId) of
+    (Just merchantId, Just mocId) -> do
+      shouldForward <- maybe (pure False) (\chk -> chk merchantId mocId) issueHandle.mbShouldForwardChatToTicketService
+      when shouldForward $ doForward merchantId mocId
+    _ -> pure ()
+  where
+    doForward merchantId mocId = do
+      mbCategory <- case issueReport.categoryId of
+        Just cid -> CQIC.findById cid identifier
+        Nothing -> pure Nothing
+      mediaUrls <- fmap catMaybes . forM mediaIds $ \mfId -> do
+        mbFile <- CQMF.findById mfId identifier
+        traverse (mediaFileToTicketUri issueHandle) mbFile
+      let xyneTicketId =
+            case find (\e -> e.service == TicketTypes.XyneSpaces) (fromMaybe [] issueReport.additionalTicketIds) of
+              Just entry -> entry.ticketId
+              Nothing -> fromMaybe issueReport.id.getId issueReport.ticketId
+          ticketReq =
+            TIT.UpdateTicketReq
+              { comment = messageText,
+                ticketId = xyneTicketId,
+                status = TIT.Pending,
+                rideDescription = Nothing,
+                issueDetails =
+                  Just
+                    TIT.UpdateIssueDetails
+                      { issueDescription = Nothing,
+                        issueId = Just issueReport.id.getId,
+                        mediaFiles = if null mediaUrls then Nothing else Just mediaUrls,
+                        subCategory = Nothing,
+                        vehicleCategory = Nothing,
+                        category = (.category) <$> mbCategory
+                      },
+                requesterId = Nothing,
+                ticketContext = Just TIT.IssueTicket,
+                name = Just senderLabel,
+                phoneNo = Nothing,
+                xyneChannelId = mbCategory >>= (.xyneChannelId)
+              }
+      let call = case issueHandle.mbUpdateTicketOnService of
+            Just onService -> onService merchantId mocId TicketTypes.XyneSpaces ticketReq
+            Nothing -> issueHandle.updateTicket merchantId mocId [] ticketReq
+      result <- withTryCatch "updateTicket:operatorOrAutoChatMessage" call
+      case result of
+        Right _ -> pure ()
+        Left err -> logTagInfo "Update Ticket (operator/auto chat) failed - " (show err)
 
 -- | Fetches chat messages on an issue ordered by createdAt ascending.
 -- Optionally filters to messages strictly newer than @since@. Used by both
