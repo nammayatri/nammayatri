@@ -187,6 +187,7 @@ $(YTH.generateGenericDefault ''DCC.CoinsConfig)
 
 $(genToSchema ''DTP.PayoutConfig)
 $(genToSchema ''DTRN.RideRelatedNotificationConfig)
+$(genToSchema ''DTT.TransporterConfig)
 $(genToSchema ''DTPN.MerchantPushNotification)
 $(genToSchema ''DTD.DriverPoolConfig)
 $(genToSchema ''DMSUC.MerchantServiceUsageConfig)
@@ -438,11 +439,11 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let configWrap = LYT.Config defaultConfig Nothing 1
       logicData :: (LYT.Config DTPN.MerchantPushNotification) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DTPN.MerchantPushNotification)) transporterConfig.referralLinkPassword req logicData
-    -- LYT.DRIVER_CONFIG LYT.TransporterConfig -> do
-    --   def <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTT.TransporterConfig)) >>= fromMaybeM (InvalidRequest "Transporter config not found")
-    --   let configWrap = LYT.Config def Nothing 1
-    --   logicData :: (LYT.Config DTT.TransporterConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-    --   YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DTT.TransporterConfig) transporterConfig.referralLinkPassword req logicData
+    LYT.DRIVER_CONFIG LYT.TransporterConfig -> do
+      defaultConfig <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTT.TransporterConfig)) >>= fromMaybeM (InvalidRequest "Transporter config not found")
+      let configWrap = LYT.Config defaultConfig Nothing 1
+      logicData :: (LYT.Config DTT.TransporterConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DTT.TransporterConfig)) transporterConfig.referralLinkPassword req logicData
     LYT.INVOICE_TEMPLATE _scope -> do
       logicData :: FRT.InvoiceContext <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy A.Value) transporterConfig.referralLinkPassword req logicData

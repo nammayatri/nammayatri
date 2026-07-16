@@ -28,7 +28,7 @@ import qualified Kernel.Types.Version
 import qualified SharedLogic.BehaviourManagement.IssueBreach
 import qualified Tools.Beam.UtilsTH
 
-data TransporterConfigD (s :: UsageSafety) = TransporterConfig
+data TransporterConfig = TransporterConfig
   { aaEnabledClientSdkVersion :: Kernel.Prelude.Text,
     authPhoneNumberCountThreshold1 :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     authPhoneNumberCountThreshold2 :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -337,7 +337,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     weeklyMinRidesForNudging :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     weeklyOffenceSuspensionTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
 data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), Eq)
 
@@ -504,16 +504,6 @@ data TaxConfig = TaxConfig
     subscriptionTdsRate :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig
   }
   deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), (Eq))
-
-type TransporterConfig = TransporterConfigD ('Safe)
-
-instance FromJSON (TransporterConfigD 'Unsafe)
-
-instance ToJSON (TransporterConfigD 'Unsafe)
-
-instance FromJSON (TransporterConfigD 'Safe)
-
-instance ToJSON (TransporterConfigD 'Safe)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CallingOption))
 
