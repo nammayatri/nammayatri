@@ -1912,6 +1912,7 @@ MerchantServiceConfig:
   fields:
     merchantId: Id Merchant
     serviceConfig: Domain.Types.Extra.MerchantServiceConfig.ServiceConfigD s
+    runInCloud: Maybe CloudType
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     updatedAt: UTCTime
     createdAt: UTCTime
@@ -1919,6 +1920,8 @@ MerchantServiceConfig:
     serviceConfig:
       serviceName: Domain.Types.MerchantServiceConfig.ServiceName
       configJSON: Value
+  beamType:
+    runInCloud: Maybe Text
   constraints:
     merchantId: PrimaryKey
     serviceName: PrimaryKey
@@ -1934,9 +1937,11 @@ MerchantServiceConfig:
   toTType:
     serviceName: getServiceName
     configJSON: getConfigJSON
+    runInCloud: (Kernel.Prelude.fmap Kernel.Prelude.show)|I
   fromTType:
     serviceConfig: Storage.Queries.Transformers.MerchantServiceConfig.mkServiceConfig
       configJSON serviceName|EM
+    runInCloud: (Kernel.Prelude.>>= (Kernel.Prelude.readMaybe . Data.Text.unpack))|I
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
     - EXTRA_QUERY_FILE

@@ -253,6 +253,7 @@ buildMerchantServiceConfig merchantId merchantOperatingCityId serviceConfig = do
       { merchantId,
         serviceConfig,
         merchantOperatingCityId,
+        runInCloud = Nothing,
         updatedAt = now,
         createdAt = now
       }
