@@ -544,27 +544,28 @@ in  { esqDBCfg
     , metaAppSecret = env:META_APP_SECRET as Text ? ""
     , metaVerifyToken = env:META_VERIFY_TOKEN as Text ? ""
     , metaWebhookMerchants =
-        [] : List
-               { phoneNumberId : Text
-               , merchantShortId : Text
-               , city : Text
-               , botCfg :
-                   { merchantLabel : Text
-                   , rideMode : Text
-                   , flexiBaseFare : Optional Double
-                   , flexiPerKm : Optional Double
-                   , flexiServiceArea : Optional Text
-                   , flexiServiceRadiusKm : Optional Double
-                   , flexiRentalDistanceM : Integer
-                   , flexiRentalDurationS : Integer
-                   , flexiIntroVideoUrl : Optional Text
-                   , flexiSupportPhone : Optional Text
-                   , nyTrackingUrl : Text
-                   }
-               }
-    , metaBotEnabled = False
-    , metaAllowedPhones = [ "9999999999" ]
-    , metaTrackerEnabled = False
+      [ { phoneNumberId = "1112862375253677"
+        , merchantShortId = "NAMMA_YATRI"
+        , city = "Bangalore"
+        , botCfg =
+          { merchantLabel = "namma_yatri"
+          , rideMode = "both"
+          , flexiBaseFare = None Double
+          , flexiPerKm = None Double
+          , flexiServiceArea = None Text
+          , flexiServiceRadiusKm = None Double
+          , flexiRentalDistanceM = +10000
+          , flexiRentalDurationS = +3600
+          , flexiIntroVideoUrl = None Text
+          , flexiSupportPhone = Some "+91 80000 00000"
+          , nyTrackingUrl =
+              "https://www.nammayatri.in/u?vp=shareRide&rideId={rideId}"
+          }
+        }
+      ]
+    , metaBotEnabled = True
+    , metaAllowedPhones = [ "9361176218" ]
+    , metaTrackerEnabled = True
     , metaTrackerPollMs = +3000
     , metaSessionTtlSec = +1800
     , metaTrackerMaxAgeSec = +10800
