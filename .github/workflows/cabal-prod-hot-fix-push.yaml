@@ -7,6 +7,7 @@ on:
       - "prodHotPush-BAP"
       - "prodHotPush-BPP"
       - "prodHotPush-International"
+      - "ci/test-strip-binaries" # temp: remove after testing
   workflow_dispatch:
 
 # Cancel in-progress Pull Request workflows if a new workflow is triggered, or a new commit is pushed to the branch.
@@ -72,7 +73,7 @@ jobs:
             name: Cabal Incremental Prod Release Build
             continue-on-error: false
       fail-fast: false
-    runs-on: x86_64_${{ github.ref_name }}_push
+    runs-on: ${{ startsWith(github.ref_name, 'prodHotPush-') && format('x86_64_{0}_push', github.ref_name) || 'x86_64_prodHotPush-BPP_push' }}
     outputs:
       docker-image-name: ${{ steps.docker.outputs.base_image }}
     steps:
@@ -174,6 +175,12 @@ jobs:
           mkdir -p "$STAGING/bin" "$STAGING/opt/app"
 
           find Backend/dist-newstyle/build -type f | awk -F/ '$NF == $(NF-1) && !seen[$NF]++ {print}' | xargs -I{} cp {} "$STAGING/bin/"
+
+          echo "Binary sizes before strip:"
+          du -sh "$STAGING/bin/"* | sort -rh | head -10
+          strip --strip-unneeded "$STAGING/bin/"* 2>/dev/null || true
+          echo "Binary sizes after strip:"
+          du -sh "$STAGING/bin/"* | sort -rh | head -10
 
           for f in "$STAGING/bin/"*; do
             ln -sf "../../bin/$(basename "$f")" "$STAGING/opt/app/$(basename "$f")"
