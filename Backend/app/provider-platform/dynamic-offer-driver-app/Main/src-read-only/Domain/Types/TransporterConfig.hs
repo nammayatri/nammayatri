@@ -117,6 +117,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     deactivateRCOnUnlink :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     defaultOnboardingAs :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.OnboardingAs,
     defaultPopupDelay :: Kernel.Types.Common.Seconds,
+    defaultRefundDeductFromDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     deleteDriverBankAccountWhenLinkToFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     demandHotspotsConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DemandHotspotsConfig,
     digilockerEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -492,6 +493,7 @@ data SubscriptionConfig = SubscriptionConfig
 data TaxConfig = TaxConfig
   { airportEntryFeeGst :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.GstBreakup,
     businessTds :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig,
+    commissionVatPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     defaultTdsRate :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig,
     individualLinked :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig,
     individualNotLinked :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig,

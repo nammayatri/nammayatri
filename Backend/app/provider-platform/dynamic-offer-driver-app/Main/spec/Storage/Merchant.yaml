@@ -1018,6 +1018,7 @@ TransporterConfig:
       individualNotLinked: Maybe TdsConfig
       businessTds: Maybe TdsConfig
       serviceVatPercentage: Maybe Double
+      commissionVatPercentage: Maybe Double
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     CommissionAggregationFrequency:
       enum: "DAILY, WEEKLY, MONTHLY"
@@ -1071,6 +1072,7 @@ TransporterConfig:
     editLocDriverPermissionNeeded: Bool
     rideTimeEstimatedThreshold: Seconds
     includeDriverCurrentlyOnRide: Bool
+    defaultRefundDeductFromDriver: Maybe Bool
     defaultPopupDelay: Seconds
     popupDelayToAddAsPenalty: Maybe Seconds
     fleetAlertThreshold: Maybe Seconds

@@ -74,6 +74,7 @@ data RiderConfig = RiderConfig
     enableLocalPoliceSupport :: Kernel.Prelude.Bool,
     enableMultiModalForAllUsers :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableOnlinePaymentRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enablePaymentRefunds :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableRewardsManagement :: Kernel.Prelude.Bool,
     enableRideEndOffers :: Kernel.Prelude.Bool,
     enableRideHailingOffers :: Kernel.Prelude.Bool,

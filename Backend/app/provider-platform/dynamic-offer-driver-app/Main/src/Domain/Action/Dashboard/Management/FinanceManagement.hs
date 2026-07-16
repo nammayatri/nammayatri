@@ -419,10 +419,12 @@ fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceI
         let mbIssuedToId =
               case mbInvoiceType of
                 Just Ride -> Nothing
+                Just Refund -> Nothing
                 _ -> mbFleetOwnerOrDriverId
             mbSupplierId =
               case mbInvoiceType of
                 Just Ride -> mbFleetOwnerOrDriverId
+                Just Refund -> mbFleetOwnerOrDriverId
                 _ -> Nothing
         QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
           merchantOpCityId.getId
@@ -515,7 +517,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
       let (rideIds, subscriptionIds) = foldr extractIds ([], []) (catMaybes ledgerEntries)
 
       -- Get payment method from payment_transaction via invoice.paymentOrderId
-      mbPaymentMethod <- case invoice.paymentOrderId of
+      mbPaymentMethod <- case invoice.entityReferenceId of
         Just orderId -> do
           txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
           pure $ listToMaybe txns >>= (.paymentMethod)
@@ -1440,7 +1442,7 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
       let items = parseLineItems inv.lineItems
       taxTxns <- QIndirectTax.findByInvoiceNumber (Just inv.invoiceNumber)
       let mbTaxTxn = Kernel.Prelude.listToMaybe taxTxns
-      (mbPayType, mbBrand, mbLast4) <- case inv.paymentOrderId of
+      (mbPayType, mbBrand, mbLast4) <- case inv.entityReferenceId of
         Just orderId -> do
           txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
           let mbTxn = Kernel.Prelude.listToMaybe txns

@@ -134,7 +134,8 @@ populateTipAmount rideId tipAmount apiKey = ActorInfo.withRequestIdActorInfo $ d
     invoiceToInput inv ctx lineItems =
       InvoiceI.InvoiceInput
         { invoiceType = inv.invoiceType,
-          paymentOrderId = inv.paymentOrderId,
+          entityReferenceId = inv.entityReferenceId,
+          referenceInvoiceNumber = Nothing,
           issuedToType = inv.issuedToType,
           issuedToId = inv.issuedToId,
           issuedToName = inv.issuedToName,

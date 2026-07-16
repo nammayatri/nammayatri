@@ -367,7 +367,9 @@ data RefundPaymentServiceReq = RefundPaymentServiceReq
     driverAccountId :: Maybe Payment.AccountId,
     email :: Maybe Text,
     amount :: Maybe HighPrecMoney,
-    retryIfFailed :: Bool
+    retryIfFailed :: Bool,
+    -- Nothing = fresh attempt; Just rid = retry that specific Refunds row (only when FAILED).
+    refundsId :: Maybe (Id Refunds)
   }
   deriving (Show, Eq, Generic)
 
@@ -615,6 +617,8 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
             }
 
 -- | Unified refund service. Replaces both createRefundService and initiateStripeRefundService.
+-- Caller must enforce any refund_request-level invariants (e.g. single-in-flight) before calling;
+-- this service only discriminates Stripe attempts via req.refundsId.
 refundPaymentService ::
   forall m r.
   ( EncFlow m r,
@@ -634,13 +638,20 @@ refundPaymentService req refundCall = do
   where
     processRefund :: DOrder.PaymentOrder -> m (Maybe PInterface.RefundPaymentResp)
     processRefund order = do
-      existingOrderRefunds <- HQRefunds.findLatestByOrderId order.shortId
-      case existingOrderRefunds of
+      mbExistingForThisAttempt <- case req.refundsId of
+        Nothing -> pure Nothing
+        Just rid -> HQRefunds.findById rid
+      case mbExistingForThisAttempt of
         Nothing -> initiateNewRefund order
-        Just latestRefunds ->
-          if req.retryIfFailed && latestRefunds.status == PInterface.REFUND_FAILURE
+        Just thisRefunds ->
+          -- Skip retry when Stripe accepted the prior attempt: the FAILED status is then a DB-side
+          -- anomaly (lost race with Stripe's response) and a fresh call would double-charge. Webhook
+          -- will reconcile.
+          if req.retryIfFailed
+            && thisRefunds.status == PInterface.REFUND_FAILURE
+            && isNothing thisRefunds.idAssignedByServiceProvider
             then initiateNewRefund order
-            else pure Nothing -- refund already exists and not retrying
+            else pure Nothing
     initiateNewRefund :: DOrder.PaymentOrder -> m (Maybe PInterface.RefundPaymentResp)
     initiateNewRefund order = do
       let refundAmount = fromMaybe order.amount req.amount
@@ -664,15 +675,29 @@ refundPaymentService req refundCall = do
         Right response -> do
           now <- getCurrentTime
           let newCompletedAt = calculateCompletedAt response.status now
-          HQRefunds.updateRefundsEntryByStripeResponse req.merchantOpCityId (Just response.refundId) response.errorCode response.status (Just True) newCompletedAt refundsEntry mbAction
-          pure $ Just response
+          HQRefunds.updateRefundsEntryByStripeResponse req.merchantOpCityId (Just response.refundId) response.errorCode response.status (Just True) newCompletedAt response.amount refundsEntry mbAction
+          -- Return the internal refunds.id (not Stripe's) so the caller links refund_request.refunds_id —
+          -- the same id the Stripe webhook looks up via metadata.
+          pure $ Just response {PInterface.refundId = refundId}
         Left err -> do
           logError $ "Refund API Call Failure with Error: " <> show err
           HQRefunds.updateIsApiCallSuccess req.merchantOpCityId (Just False) refundsEntry mbAction
-          pure Nothing
+          -- Flip status to REFUND_FAILURE so retry works (else the row is stuck at REFUND_PENDING forever).
+          HQRefunds.updateRefundStatus req.merchantOpCityId PInterface.REFUND_FAILURE refundsEntry mbAction
+          -- Surface the failed attempt so the caller links refund_request.refunds_id — the
+          -- dashboard reads status/errorCode off that link, and a retry targets this row via it.
+          pure $
+            Just
+              PInterface.RefundPaymentResp
+                { refundId = refundId,
+                  status = PInterface.REFUND_FAILURE,
+                  amount = Nothing,
+                  errorCode = Nothing,
+                  errorMessage = Nothing
+                }
 
--- | Unified refund status check. Fetches latest refund for an order and refreshes
---   status from the payment gateway.
+-- | Refresh status from the payment gateway for a specific Stripe attempt.
+--   Caller passes the Refunds row id; Nothing means no attempt yet → no refresh.
 getRefundStatusService ::
   forall m r.
   ( EncFlow m r,
@@ -680,34 +705,38 @@ getRefundStatusService ::
     Finance.HasActorInfo m r
   ) =>
   Id DOrder.PaymentOrder ->
+  Maybe (Id Refunds) ->
   Id MerchantOperatingCity ->
   (Payment.GetRefundReq -> m PInterface.RefundPaymentResp) ->
   m (Maybe PInterface.RefundPaymentResp)
-getRefundStatusService orderId merchantOpCityId getRefundStatusCall = do
-  order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
-  existingRefund <- HQRefunds.findLatestByOrderId order.shortId
-  case existingRefund of
+getRefundStatusService orderId mbRefundsId merchantOpCityId getRefundStatusCall = do
+  case mbRefundsId of
     Nothing -> pure Nothing
-    Just refund -> do
-      case refund.idAssignedByServiceProvider of
-        Nothing -> pure $ Just $ mkRespFromRefund refund
-        Just serviceProviderId -> do
-          let getReq = Payment.GetRefundReq {id = Payment.RefundId serviceProviderId, driverAccountId = ""}
-          resp <- withTryCatch "getRefundStatusCall" (getRefundStatusCall getReq)
-          case resp of
-            Right result -> do
-              now <- getCurrentTime
-              let newCompletedAt = calculateCompletedAt result.status now
-              HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId (Just serviceProviderId) result.errorCode result.status refund.isApiCallSuccess newCompletedAt refund (Just "get refund status service")
-              pure $ Just result
-            Left err -> do
-              logError $ "Get refund status failed: " <> show err
-              pure $ Just $ mkRespFromRefund refund
+    Just rid -> do
+      _ <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
+      HQRefunds.findById rid >>= \case
+        Nothing -> pure Nothing
+        Just refund -> case refund.idAssignedByServiceProvider of
+          Nothing -> pure $ Just $ mkRespFromRefund refund
+          Just serviceProviderId -> do
+            let getReq = Payment.GetRefundReq {id = Payment.RefundId serviceProviderId, driverAccountId = ""}
+            resp <- withTryCatch "getRefundStatusCall" (getRefundStatusCall getReq)
+            case resp of
+              Right result -> do
+                now <- getCurrentTime
+                let newCompletedAt = calculateCompletedAt result.status now
+                HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId (Just serviceProviderId) result.errorCode result.status refund.isApiCallSuccess newCompletedAt result.amount refund (Just "get refund status service")
+                -- Return the internal refunds.id (matches refundPaymentService).
+                pure $ Just result {PInterface.refundId = refund.id.getId}
+              Left err -> do
+                logError $ "Get refund status failed: " <> show err
+                pure $ Just $ mkRespFromRefund refund
   where
     mkRespFromRefund refund =
       PInterface.RefundPaymentResp
         { refundId = refund.id.getId,
           status = refund.status,
+          amount = refund.actualRefundedAmount,
           errorCode = refund.errorCode,
           errorMessage = refund.errorMessage,
           amount = Just refund.refundAmount
@@ -2122,7 +2151,7 @@ updateRefundsByWebhook merchantOpCityId refundInfo = do
   when (refundInfo.errorCode /= refunds.errorCode || refundInfo.status /= refunds.status) $ do
     now <- getCurrentTime
     let newCompletedAt = calculateCompletedAt refundInfo.status now
-    HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId refunds.idAssignedByServiceProvider refundInfo.errorCode refundInfo.status refunds.isApiCallSuccess newCompletedAt refunds (Just "update refunds by webhook")
+    HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId refunds.idAssignedByServiceProvider refundInfo.errorCode refundInfo.status refunds.isApiCallSuccess newCompletedAt (Just refundInfo.amount) refunds (Just "update refunds by webhook")
 
 --- notification api ----------
 
@@ -2315,7 +2344,8 @@ mkRefundsEntry merchantId requestId orderShortId amount refundStatus = do
         createdAt = now,
         updatedAt = now,
         arn = Nothing,
-        completedAt = Nothing
+        completedAt = Nothing,
+        actualRefundedAmount = Nothing
       }
 
 upsertRefundStatus :: (BeamFlow m r, Finance.HasActorInfo m r) => Id MerchantOperatingCity -> DOrder.PaymentOrder -> Payment.RefundsData -> m (Maybe Refunds)
@@ -2329,8 +2359,8 @@ upsertRefundStatus merchantOpCityId order Payment.RefundsData {..} =
           HQRefunds.findById (Id requestId)
             >>= \case
               Just refundEntry -> do
-                HQRefunds.updateRefundsEntryByResponse merchantOpCityId initiatedBy idAssignedByServiceProvider errorMessage errorCode status arn newCompletedAt refundEntry mbAction
-                return $ refundEntry {status = status, initiatedBy = initiatedBy, idAssignedByServiceProvider = idAssignedByServiceProvider, errorMessage = errorMessage, errorCode = errorCode, arn = arn, completedAt = newCompletedAt}
+                HQRefunds.updateRefundsEntryByResponse merchantOpCityId initiatedBy idAssignedByServiceProvider errorMessage errorCode status arn newCompletedAt (Just amount) refundEntry mbAction
+                return $ refundEntry {status = status, initiatedBy = initiatedBy, idAssignedByServiceProvider = idAssignedByServiceProvider, errorMessage = errorMessage, errorCode = errorCode, arn = arn, completedAt = newCompletedAt, actualRefundedAmount = Just amount}
               Nothing -> do
                 refundEntry <- mkRefundsEntry order.merchantId requestId order.shortId order.amount status
                 HQRefunds.create merchantOpCityId refundEntry mbAction
