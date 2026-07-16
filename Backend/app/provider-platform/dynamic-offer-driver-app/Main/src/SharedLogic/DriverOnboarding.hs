@@ -1129,7 +1129,7 @@ runDeferredFaceMatchOnSelfie person selfieCreatedAt = do
                 case docType of
                   ODC.DriverLicense -> DLQuery.updateVerificationStatusAndRejectReason Documents.INVALID (fromMaybe "Face match failed" mbReason) docImg.id
                   ODC.PanCard -> DPQuery.updateVerificationStatusAndRejectReason Documents.INVALID mbReason docImg.id
-                  ODC.AadhaarCard -> QAadhaarCard.updateVerificationStatusAndRejectReason Documents.INVALID mbReason person.id
+                  ODC.AadhaarCard -> QAadhaarCard.updateVerificationStatusAndRejectReasonByFrontImageId Documents.INVALID mbReason (Just docImg.id)
                   _ -> pure ()
               FMPass -> promotePendingToValid docType docImg
               _ -> pure ()
@@ -1149,7 +1149,7 @@ runDeferredFaceMatchOnSelfie person selfieCreatedAt = do
         mbAadhaar <- QAadhaarCard.findByPrimaryKey person.id
         whenJust mbAadhaar $ \aadhaar ->
           when (aadhaar.verificationStatus == Documents.PENDING) $
-            QAadhaarCard.updateVerificationStatus Documents.VALID person.id
+            QAadhaarCard.updateVerificationStatusByFrontImageId Documents.VALID (Just docImg.id)
       _ -> pure ()
 
 -- | Once a VALID selfie exists, a DRIVER may upload a new one only while every face-match-bound doc (DL/PAN/Aadhaar with faceMatchSourceDoc set) is absent or INVALID.
