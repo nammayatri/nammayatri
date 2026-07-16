@@ -881,7 +881,7 @@ loadLoyaltyProgramMap ::
   (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
-  m (Maybe (Map.Map Text FAccount.CounterpartyType))
+  m (Maybe (Map.Map Text (FAccount.CounterpartyType, Maybe HighPrecMoney)))
 loadLoyaltyProgramMap merchantId merchantOperatingCityId = do
   mbCfg <-
     getOneConfig
@@ -895,6 +895,6 @@ loadLoyaltyProgramMap merchantId merchantOperatingCityId = do
   pure $ case mbCfg of
     Just cfg -> case cfg.serviceConfig of
       DMSC.JuspayWalletServiceConfig (Payment.JuspayConfig jcfg) ->
-        Map.mapMaybe (readMaybe . T.unpack) <$> jcfg.loyaltyProgramMap
+        Map.mapMaybe (\e -> (,) <$> readMaybe (T.unpack e.programType) <*> pure e.conversionRate) <$> jcfg.loyaltyProgramMap
       _ -> Nothing
     Nothing -> Nothing
