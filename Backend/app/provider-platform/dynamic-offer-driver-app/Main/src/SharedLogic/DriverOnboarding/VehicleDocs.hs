@@ -18,6 +18,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan as Plan
+import qualified Domain.Types.ReviewRequest as DRR
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRegistrationCertificate as RC
@@ -46,6 +47,7 @@ import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.OperationHubRequestsExtra as QOHRE
+import qualified Storage.Queries.ReviewRequestExtra as QRRE
 import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleFitnessCertificate as VFCQuery
@@ -930,14 +932,22 @@ getInspectionHubStatusAndReason requestType mbDriverId mbRegistrationNo = do
 mapApprovedToResponseStatus :: Maybe Bool -> ResponseStatus
 mapApprovedToResponseStatus approved = if approved == Just True then VALID else PENDING
 
--- | BotApproval for a driver / fleet-owner (person-keyed): fleet roles read FleetOwnerInformation, else DriverInformation.
+-- | BotApproval status: @approved@ is the source of truth. Driver approval is two-phase — phase 1 sets @approved = True@
+--   with the ReviewRequest still IN_PROGRESS, phase 2 completes it. So for drivers, @approved == True@ + latest BOT_REVIEW
+--   IN_PROGRESS reports PENDING; every other case follows @approved@. Fleet is single-phase, so the flag alone suffices.
 getBotApprovalStatusForPerson :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Role -> Id DP.Person -> m (Maybe ResponseStatus)
-getBotApprovalStatusForPerson role personId = do
-  approved <-
-    if SDO.isFleetRole role
-      then (>>= (.approved)) <$> QFOI.findByPrimaryKey personId
-      else (>>= (.approved)) <$> QDI.findById (cast personId)
-  pure . Just $ mapApprovedToResponseStatus approved
+getBotApprovalStatusForPerson role personId =
+  if SDO.isFleetRole role
+    then do
+      approved <- (>>= (.approved)) <$> QFOI.findByPrimaryKey personId
+      pure . Just $ mapApprovedToResponseStatus approved
+    else do
+      approved <- (>>= (.approved)) <$> QDI.findById (cast personId)
+      case mapApprovedToResponseStatus approved of
+        VALID -> do
+          mbReview <- QRRE.findLatestByEntityAndType personId.getId DRR.DRIVER DRR.BOT_REVIEW Nothing
+          pure . Just $ if ((.requestStatus) <$> mbReview) == Just DRR.IN_PROGRESS then PENDING else VALID
+        other -> pure $ Just other
 
 -- | BotApproval for a vehicle (RC-keyed): the RC's own `approved` flag.
 getBotApprovalStatusForVehicle :: Maybe Bool -> ResponseStatus
