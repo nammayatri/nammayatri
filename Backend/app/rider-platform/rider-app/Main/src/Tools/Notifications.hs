@@ -750,6 +750,8 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParti
       toLocationDestination = do
         destinationAdd <- case booking.bookingDetails of
           SRB.RentalDetails _ -> Nothing
+          -- Destination-less like Rental — no toLocation to show in the notification.
+          SRB.EasyBookingDetails _ -> Nothing
           SRB.OneWayDetails details -> Just details.toLocation
           SRB.DriverOfferDetails details -> Just details.toLocation
           SRB.OneWaySpecialZoneDetails details -> Just details.toLocation
@@ -926,6 +928,8 @@ notifyOnEstOrQuoteReallocated cancellationSource booking estOrQuoteId = do
       toLocationDestination = do
         destinationAdd <- case booking.bookingDetails of
           SRB.RentalDetails _ -> Nothing
+          -- Destination-less like Rental — no toLocation to show in the notification.
+          SRB.EasyBookingDetails _ -> Nothing
           SRB.OneWayDetails details -> Just details.toLocation
           SRB.DriverOfferDetails details -> Just details.toLocation
           SRB.OneWaySpecialZoneDetails details -> Just details.toLocation

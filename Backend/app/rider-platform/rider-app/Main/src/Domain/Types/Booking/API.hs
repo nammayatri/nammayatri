@@ -406,6 +406,9 @@ mkBookingAPIDetails booking requesterId = case booking.bookingDetails of
   AmbulanceDetails details -> return $ AmbulanceAPIDetails . mkAmbulanceAPIDetails $ details
   DeliveryDetails details -> DeliveryAPIDetails <$> mkDeliveryAPIDetails details
   MeterRideDetails details -> return $ MeterRideAPIDetails . mkMeterRideAPIDetails $ details
+  -- Reuses RentalAPIDetails' wire shape (same underlying RentalBookingDetails type) — see
+  -- the matching note in SharedLogic/Quote.hs's mkQuoteAPIDetails.
+  EasyBookingDetails details -> return $ RentalAPIDetails . mkRentalAPIDetails $ details
   where
     mkOneWayAPIDetails OneWayBookingDetails {..} =
       OneWayBookingAPIDetails

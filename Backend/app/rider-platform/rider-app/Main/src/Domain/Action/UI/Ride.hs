@@ -140,6 +140,8 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
         toLocation = case booking.bookingDetails of
           DB.OneWayDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.RentalDetails _ -> Nothing
+          -- No destination to report for EasyBooking either, same as Rental.
+          DB.EasyBookingDetails _ -> Nothing
           DB.OneWaySpecialZoneDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.InterCityDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.DriverOfferDetails details -> Just $ makeLocationAPIEntity details.toLocation

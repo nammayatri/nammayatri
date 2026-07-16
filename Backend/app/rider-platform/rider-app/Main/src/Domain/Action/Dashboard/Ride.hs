@@ -476,6 +476,7 @@ mkFareProductType :: DTB.BookingDetails -> FareProductType
 mkFareProductType bookingDetails = case bookingDetails of
   DTB.OneWayDetails _ -> ONE_WAY
   DTB.RentalDetails _ -> RENTAL
+  DTB.EasyBookingDetails _ -> EASY_BOOKING
   DTB.DriverOfferDetails _ -> DRIVER_OFFER
   DTB.OneWaySpecialZoneDetails _ -> ONE_WAY_SPECIAL_ZONE
   DTB.InterCityDetails _ -> INTER_CITY
