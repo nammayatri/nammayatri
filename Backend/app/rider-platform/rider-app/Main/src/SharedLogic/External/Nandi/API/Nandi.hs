@@ -286,6 +286,8 @@ type OperatorOperatorsAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :
 
 type OperatorWaybillStatusAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "waybill" :> "status" :> ReqBody '[JSON] UpdateWaybillStatusReq :> Post '[JSON] RowsAffectedResp
 
+type OperatorWaybillStatusV2API = "internal" :> "operator" :> Capture "gtfs_id" Text :> "waybill" :> "status" :> "v2" :> QueryParam "reset_trips" Bool :> ReqBody '[JSON] UpdateWaybillStatusReq :> Post '[JSON] RowsAffectedResp
+
 type OperatorWaybillFleetAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "waybill" :> "fleet" :> ReqBody '[JSON] UpdateWaybillFleetReq :> Post '[JSON] RowsAffectedResp
 
 type OperatorWaybillTabletAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "waybill" :> "tablet" :> ReqBody '[JSON] UpdateWaybillTabletReq :> Post '[JSON] RowsAffectedResp
@@ -356,6 +358,9 @@ operatorOperatorsAPI = Proxy
 
 operatorWaybillStatusAPI :: Proxy OperatorWaybillStatusAPI
 operatorWaybillStatusAPI = Proxy
+
+operatorWaybillStatusV2API :: Proxy OperatorWaybillStatusV2API
+operatorWaybillStatusV2API = Proxy
 
 operatorWaybillFleetAPI :: Proxy OperatorWaybillFleetAPI
 operatorWaybillFleetAPI = Proxy
@@ -429,6 +434,9 @@ getOperatorOperators = ET.client operatorOperatorsAPI
 
 postOperatorWaybillStatus :: Text -> UpdateWaybillStatusReq -> ET.EulerClient RowsAffectedResp
 postOperatorWaybillStatus = ET.client operatorWaybillStatusAPI
+
+postOperatorWaybillStatusV2 :: Text -> Maybe Bool -> UpdateWaybillStatusReq -> ET.EulerClient RowsAffectedResp
+postOperatorWaybillStatusV2 = ET.client operatorWaybillStatusV2API
 
 postOperatorWaybillFleet :: Text -> UpdateWaybillFleetReq -> ET.EulerClient RowsAffectedResp
 postOperatorWaybillFleet = ET.client operatorWaybillFleetAPI

@@ -1205,7 +1205,8 @@ data NandiTripDetail = NandiTripDetail
 
 data UpdateWaybillStatusReq = UpdateWaybillStatusReq
   { waybill_id :: Value,
-    status :: WaybillStatus
+    status :: WaybillStatus,
+    waybill_no :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 

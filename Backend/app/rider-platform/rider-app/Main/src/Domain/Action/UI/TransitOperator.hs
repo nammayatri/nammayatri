@@ -153,7 +153,12 @@ transitOperatorGetOperatorsUtil merchantShortId city vehicleCategory role = do
 transitOperatorUpdateWaybillStatusUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> UpdateWaybillStatusReq -> Flow RowsAffectedResp
 transitOperatorUpdateWaybillStatusUtil merchantShortId city vehicleCategory req = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
-  NandiFlow.operatorWaybillStatus baseUrl gtfsId req
+  resetTrips <- case (req.status, req.waybill_no) of
+    (WaybillOnline, Just waybillNo) -> do
+      mbCursor <- Hedis.get (waybillNo <> ":tripnumber")
+      pure (isNothing (mbCursor :: Maybe Int))
+    _ -> pure False
+  NandiFlow.operatorWaybillStatusV2 baseUrl gtfsId resetTrips req
 
 transitOperatorUpdateWaybillFleetUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> UpdateWaybillFleetReq -> Flow RowsAffectedResp
 transitOperatorUpdateWaybillFleetUtil merchantShortId city vehicleCategory req = do
