@@ -72,7 +72,6 @@ import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Interface.Stripe as Stripe
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payment.Stripe.Types.Common as Stripe
-import Kernel.External.Payment.Stripe.Webhook (RawByteString (..))
 import qualified Kernel.External.Payment.Types as Payment
 import qualified Kernel.External.Wallet as Wallet
 import Kernel.Prelude hiding (head)
@@ -82,6 +81,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
+import Kernel.Types.Servant (RawByteString (..))
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.JourneyModule.Utils as JMU
