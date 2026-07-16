@@ -23,3 +23,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN distance_u
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN std_code text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN gstin text ;
