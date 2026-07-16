@@ -225,3 +225,8 @@ decompressGzipBody bs
         logWarning $ "FRFS callback: gzip decompression failed (" <> show err <> "); using raw body"
         pure bs
   | otherwise = pure bs
+
+-- | Pure gzip compression, counterpart to 'decompressGzipBody'. Compression of
+-- a well-formed strict ByteString does not throw, so this stays pure.
+compressGzipBody :: ByteString -> ByteString
+compressGzipBody = BL.toStrict . GZip.compress . BL.fromStrict

@@ -136,6 +136,8 @@ data RiderConfig = RiderConfig
     nyRegularMinGapSeconds :: Kernel.Types.Common.Seconds,
     nyRegularSubscriptionBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     offerListCacheVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    otpPlanCacheEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    otpPlanCacheTtlSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     passExpiryReminderBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     passExpiryReminderDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     passExpiryReminderNextRunLocalTime :: Kernel.Prelude.Maybe Data.Time.TimeOfDay,

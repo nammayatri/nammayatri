@@ -138,6 +138,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.Cancel as SharedCancel
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.MultiModal.PlanCache as PlanCache
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
@@ -2216,7 +2217,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                 walkSpeed = Nothing
               }
       transitServiceReq <- TMultiModal.getTransitServiceReq routeServiceabilityContext.merchantId routeServiceabilityContext.merchantOperatingCityId
-      otpResponse <- JMU.measureLatency (MultiModal.getTransitRoutes Nothing transitServiceReq transitRoutesReq >>= fromMaybeM (OTPServiceUnavailable "No routes found from OTP")) ("MultiModal.getTransitRoutes req=" <> show transitRoutesReq)
+      otpResponse <- JMU.measureLatency (PlanCache.getTransitRoutesCached routeServiceabilityContext.merchantOperatingCityId Nothing transitServiceReq transitRoutesReq >>= fromMaybeM (OTPServiceUnavailable "No routes found from OTP")) ("MultiModal.getTransitRoutes req=" <> show transitRoutesReq)
       oneWayRouteWithWalkLegs <- JMU.getBestOneWayRoute MultiModalTypes.Bus otpResponse.routes (Just srcCode') (Just destCode') & fromMaybeM (getRouteNotFoundError MultiModalTypes.Bus srcCode' destCode')
       pure $ onlyBusLegs oneWayRouteWithWalkLegs
 

@@ -47,7 +47,8 @@ data BAPMetricsContainer = BAPMetricsContainer
     emptyVehiclesCounter :: EmptyVehiclesCounterMetric,
     vehicleHistoricCounter :: VehicleHistoricCounterMetric,
     vehicleScheduleBasedActiveTripCounter :: VehicleScheduleBasedActiveTripCounterMetric,
-    vehicleWaybillStatusCounter :: VehicleWaybillStatusCounterMetric
+    vehicleWaybillStatusCounter :: VehicleWaybillStatusCounterMetric,
+    otpPlanCacheCounter :: OtpPlanCacheCounterMetric
   }
 
 type SearchRequestCounterMetric = P.Vector P.Label3 P.Counter
@@ -74,6 +75,9 @@ type VehicleScheduleBasedActiveTripCounterMetric = P.Vector P.Label3 P.Counter
 
 type VehicleWaybillStatusCounterMetric = P.Vector P.Label4 P.Counter
 
+-- Labels: (result ∈ hit|miss|error, merchantOperatingCityId)
+type OtpPlanCacheCounterMetric = P.Vector P.Label2 P.Counter
+
 registerBAPMetricsContainer :: Seconds -> IO BAPMetricsContainer
 registerBAPMetricsContainer searchDurationTimeout = do
   searchRequestCounter <- registerSearchRequestCounterMetric
@@ -95,6 +99,7 @@ registerBAPMetricsContainer searchDurationTimeout = do
   initDuration <- registerDurationMetric searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_init_round_trip" "beckn_init_round_trip_failure_counter"
   confirmDuration <- registerDurationMetric searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_confirm_round_trip" "beckn_confirm_round_trip_failure_counter"
   createOrderDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_create_order_frfs_round_trip" "beckn_create_order_frfs_round_trip_failure_counter"
+  otpPlanCacheCounter <- registerOtpPlanCacheCounterMetric
   return $ BAPMetricsContainer {..}
 
 registerSearchRequestCounterMetric :: IO SearchRequestCounterMetric
@@ -126,6 +131,9 @@ registerVehicleScheduleBasedActiveTripCounterMetric = P.register $ P.vector ("me
 
 registerVehicleWaybillStatusCounterMetric :: IO VehicleWaybillStatusCounterMetric
 registerVehicleWaybillStatusCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId", "waybill_status") $ P.counter $ P.Info "vehicle_waybill_status_count" ""
+
+registerOtpPlanCacheCounterMetric :: IO OtpPlanCacheCounterMetric
+registerOtpPlanCacheCounterMetric = P.register $ P.vector ("result", "merchantOperatingCityId") $ P.counter $ P.Info "otp_plan_cache_events_total" "OTP plan-response Redis cache hits/misses/errors"
 
 registerSearchDurationMetric :: Seconds -> IO SearchDurationMetric
 registerSearchDurationMetric searchDurationTimeout = do

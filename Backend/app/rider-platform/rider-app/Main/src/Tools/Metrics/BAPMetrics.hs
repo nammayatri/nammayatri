@@ -77,6 +77,12 @@ incrementRideCreatedRequestCount' bmContainer merchantId merchantOperatingCityId
   let rideCreatedCounter = bmContainer.rideCreatedCounter
   liftIO $ P.withLabel rideCreatedCounter (merchantId, version.getDeploymentVersion, category, merchantOperatingCityId) P.incCounter
 
+-- | Bump the OTP plan-response cache counter. result ∈ {"hit","miss","error"}.
+incrementOtpPlanCacheCounter :: HasBAPMetrics m r => Text -> Text -> m ()
+incrementOtpPlanCacheCounter result merchantOperatingCityId = do
+  bmContainer <- asks (.bapMetrics)
+  liftIO $ P.withLabel bmContainer.otpPlanCacheCounter (result, merchantOperatingCityId) P.incCounter
+
 incrementSearchRequestCount :: HasBAPMetrics m r => Text -> Text -> m ()
 incrementSearchRequestCount merchantName merchantOperatingCityId = do
   bmContainer <- asks (.bapMetrics)

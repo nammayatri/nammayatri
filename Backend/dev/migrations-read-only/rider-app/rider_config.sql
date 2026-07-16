@@ -766,3 +766,14 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN non_allowed_override_fleet_no_serv
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN otp_plan_cache_ttl_seconds integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN otp_plan_cache_enabled boolean ;
+
+
+------- SQL updates -------
+

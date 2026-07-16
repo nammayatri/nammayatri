@@ -103,6 +103,8 @@ RiderConfig:
     metroFareCachingAllowed: Maybe Bool
     suburbanFareCachingAllowed: Maybe Bool
     busFareCachingAllowed: Maybe Bool
+    otpPlanCacheEnabled: Maybe Bool # per-city opt-in for the OTP plan-response Redis cache (Nothing => disabled)
+    otpPlanCacheTtlSeconds: Maybe Int # backstop TTL for cached OTP plans; feedVersion is the primary invalidation
     ptCircuitBreakerConfig: Maybe Value
     localPoliceNumber: Maybe Text
     enableSupportForSafety: Bool

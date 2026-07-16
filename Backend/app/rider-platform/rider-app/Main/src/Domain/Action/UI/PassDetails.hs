@@ -44,7 +44,6 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, encrypt)
 import qualified Kernel.External.Maps.Google.MapsClient.Types as GT
 import Kernel.External.Maps.Types (LatLong (..))
-import qualified Kernel.External.MultiModal.Interface as KMultiModal
 import Kernel.External.MultiModal.Interface.Types (GeneralVehicleType (..), GetTransitRoutesReq (..), MultiModalLeg, SortingType (..))
 import qualified Kernel.External.MultiModal.OpenTripPlanner.Types as OTPTypes
 import qualified Kernel.Prelude
@@ -58,6 +57,7 @@ import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, logInfo)
 import qualified Kernel.Utils.Common as Utils
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.MultiModal.PlanCache as PlanCache
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
@@ -353,7 +353,7 @@ stagesViaOTP riderConfig integratedBPPConfig srcStopCode destStopCode srcLL dest
             walkSpeed = Nothing
           }
 
-  eOtpResponse <- withTryCatch "stagesViaOTP:getTransitRoutes" (KMultiModal.getTransitRoutes Nothing transitServiceReq transitRoutesReq)
+  eOtpResponse <- withTryCatch "stagesViaOTP:getTransitRoutes" (PlanCache.getTransitRoutesCached integratedBPPConfig.merchantOperatingCityId Nothing transitServiceReq transitRoutesReq)
   otpResponse <- case eOtpResponse of
     Right (Just r) -> pure r
     _ -> Utils.throwError $ InvalidRequest $ "No routes found between stops " <> srcStopCode <> " and " <> destStopCode

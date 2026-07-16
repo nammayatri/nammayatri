@@ -41,7 +41,6 @@ import Environment
 import EulerHS.Prelude hiding (id, state)
 import Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
-import qualified Kernel.External.MultiModal.Interface as KMultiModal
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.Prelude as KP
@@ -81,6 +80,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.GateInfoExtra as GD
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.MultiModal.PlanCache as PlanCache
 import SharedLogic.Offer as SOffer
 import SharedLogic.Search
 import Storage.Beam.SpecialZone ()
@@ -424,7 +424,7 @@ getMultiModalTransitOptions userPreferences merchantId merchantOperatingCityId r
             walkSpeed = Nothing
           }
   transitServiceReq <- TMultiModal.getTransitServiceReq merchantId merchantOperatingCityId
-  otpResponse <- KMultiModal.getTransitRoutes Nothing transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
+  otpResponse <- PlanCache.getTransitRoutesCached merchantOperatingCityId Nothing transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
   logDebug $ "[getMultiModalTransitOptions - OTP Response]" <> show otpResponse
 
   let processedRoutes = map (processRoute riderConfig.maximumWalkDistance) otpResponse.routes

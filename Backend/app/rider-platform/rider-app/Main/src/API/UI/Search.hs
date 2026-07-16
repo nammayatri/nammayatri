@@ -77,7 +77,6 @@ import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.External.Maps.Types
 import qualified Kernel.External.Maps.Types as MapsTypes
 import qualified Kernel.External.MultiModal.Interface as MInterface
-import qualified Kernel.External.MultiModal.Interface as MultiModal
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import qualified Kernel.External.Slack.Flow as SF
 import Kernel.External.Slack.Types (SlackConfig)
@@ -102,6 +101,7 @@ import qualified Lib.JourneyModule.Utils as JMU
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.MultiModal.PlanCache as PlanCache
 import SharedLogic.Search as DSearch
 import qualified SharedLogic.SyncSearchDispatch as SSD
 import Storage.Beam.SystemConfigs ()
@@ -489,7 +489,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                   walkSpeed = if isSingleMode then riderConfig.singleModeWalkSpeed else Nothing
                 }
         transitServiceReq <- TMultiModal.getTransitServiceReq searchRequest.merchantId merchantOperatingCityId
-        otpResponse' <- JMU.measureLatency (MultiModal.getTransitRoutes (Just searchRequest.id.getId) transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")) "getTransitRoutes"
+        otpResponse' <- JMU.measureLatency (PlanCache.getTransitRoutesCached merchantOperatingCityId (Just searchRequest.id.getId) transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")) "getTransitRoutes"
         let otpResponse'' = MInterface.MultiModalResponse (map mkRouteDetailsForWalkLegs otpResponse'.routes)
         logDebug $ "[Multimodal - OTP Response]" <> show otpResponse'' <> show searchRequest.id.getId
         -- Add default auto leg if no routes are found

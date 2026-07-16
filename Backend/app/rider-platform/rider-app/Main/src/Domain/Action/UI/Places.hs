@@ -20,6 +20,7 @@ import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyModule.Utils as JMU
+import qualified SharedLogic.MultiModal.PlanCache as PlanCache
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
@@ -57,7 +58,7 @@ getMultiModalModes req toLatLong merchantId person merchantOperatingCityId = do
             walkSpeed = Nothing
           }
   transitServiceReq <- TMultiModal.getTransitServiceReq merchantId person.merchantOperatingCityId
-  MultiModal.getTransitRoutes (Just person.id.getId) transitServiceReq transitRoutesReq
+  PlanCache.getTransitRoutesCached person.merchantOperatingCityId (Just person.id.getId) transitServiceReq transitRoutesReq
 
 mkRecentLocation :: Maybe MultiModal.MultiModalResponse -> DRecntLoc.RecentLocation -> Maybe API.MultiModalLocation
 mkRecentLocation multimodalRoutes recentLoc =

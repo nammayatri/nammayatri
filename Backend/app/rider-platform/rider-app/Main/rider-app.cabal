@@ -526,6 +526,7 @@ library
       SharedLogic.MerchantPaymentMethod
       SharedLogic.MessageBuilder
       SharedLogic.MetroOffer
+      SharedLogic.MultiModal.PlanCache
       SharedLogic.NyRegularSubscriptionHasher
       SharedLogic.NySubscription
       SharedLogic.Offer
