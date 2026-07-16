@@ -402,17 +402,20 @@ buildBookingItem _person bookingAPIEntity = do
             }
 
 -- | Get destination location from booking details
-getToLocation :: DBAPI.BookingAPIEntity -> Maybe LocationAPIEntity
-getToLocation booking =
-  case booking.bookingDetails of
-    DBAPI.OneWayAPIDetails details -> Just details.toLocation
-    DBAPI.DriverOfferAPIDetails details -> Just details.toLocation
-    DBAPI.OneWaySpecialZoneAPIDetails details -> Just details.toLocation
-    DBAPI.InterCityAPIDetails details -> Just details.toLocation
-    DBAPI.AmbulanceAPIDetails details -> Just details.toLocation
-    DBAPI.DeliveryAPIDetails details -> Just details.toLocation
-    DBAPI.RentalAPIDetails details -> details.stopLocation
-    DBAPI.MeterRideAPIDetails details -> details.toLocation
+getToLocation' :: DBooking.Booking -> Maybe LocationAPIEntity
+getToLocation' booking =
+  SLoc.makeLocationAPIEntity
+    <$> case booking.bookingDetails of
+      DRB.OneWayDetails details -> Just details.toLocation
+      DRB.DriverOfferDetails details -> Just details.toLocation
+      DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+      DRB.InterCityDetails details -> Just details.toLocation
+      DRB.AmbulanceDetails details -> Just details.toLocation
+      DRB.DeliveryDetails details -> Just details.toLocation
+      DRB.RentalDetails details -> details.stopLocation
+      DRB.MeterRideDetails details -> details.toLocation
+      -- Reuses RentalBookingDetails's stopLocation field like Rental does above.
+      DRB.EasyBookingDetails details -> details.stopLocation
 
 -- | Format address from LocationAddress
 formatAddress :: LocationAPIEntity -> Text

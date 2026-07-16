@@ -32,6 +32,7 @@ data RiderPreferredOption
   | Delivery
   | PublicTransport
   | FixedRoute
+  | EasyBooking -- new destination-less, Regular/Progressive-fare category; fully derived, no hand-written instances to update
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(mkBeamInstancesForEnumAndList ''RiderPreferredOption)

@@ -375,6 +375,7 @@ getToLocationFromBooking booking =
   case booking.bookingDetails of
     DBAPI.OneWayAPIDetails details -> Just details.toLocation
     DBAPI.RentalAPIDetails details -> details.stopLocation
+    DBAPI.EasyBookingAPIDetails details -> details.stopLocation
     DBAPI.InterCityAPIDetails details -> Just details.toLocation
     DBAPI.AmbulanceAPIDetails details -> Just details.toLocation
     DBAPI.DeliveryAPIDetails details -> Just details.toLocation

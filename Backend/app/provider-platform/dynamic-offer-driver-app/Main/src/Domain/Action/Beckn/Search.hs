@@ -689,6 +689,7 @@ resolveGateNavigationInstruction gateMap mbArea tripCategoryKey = do
   gateId <- mbArea >>= SL.pickupGateIdFromArea
   gate <- M.lookup gateId gateMap
   GExtra.navigationInstructionFor gate tripCategoryKey
+
 buildQuote ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -987,6 +988,25 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
         if maybe True not dsReq.isMultimodalSearch && tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
           then (dsReq.pickupTime, True)
           else (now, False)
+      -- Local (non-intercity) bundle, scoped to what the rider actually asked for.
+      -- Cuts wasted DB/ML work for categories the rider didn't pick.
+      localBundleForPreference = case dsReq.riderPreferredOption of
+        DRPO.OneWay ->
+          if isScheduled
+            then [OneWay OneWayRideOtp, OneWay OneWayOnDemandStaticOffer]
+            else [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer]
+        DRPO.Rental ->
+          [Rental OnDemandStaticOffer]
+            <> [Rental RideOtp | not isScheduled]
+        DRPO.Ambulance ->
+          [Ambulance OneWayOnDemandDynamicOffer | not isScheduled]
+        DRPO.Delivery ->
+          [Delivery OneWayOnDemandDynamicOffer | not isScheduled]
+        DRPO.EasyBooking ->
+          -- Only OnDemandStaticOffer wired up for now — RideOtp deliberately deferred
+          -- to a follow-up PR (mirrors Rental's own two-mode dispatch above once added).
+          [EasyBooking OnDemandStaticOffer]
+        _ -> []
       tripCategories =
         if checkIfMeterRideSearch dsReq.isMeterRideSearch
           then [OneWay MeterRide]
@@ -1002,12 +1022,18 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
                       else do
                         [InterCity OneWayOnDemandStaticOffer destinationTravelCityName]
                           <> (if not isScheduled then [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
-                  else do
-                    [Rental OnDemandStaticOffer]
-                      <> (if not isScheduled then [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer, Ambulance OneWayOnDemandDynamicOffer, Rental RideOtp, Delivery OneWayOnDemandDynamicOffer] else [OneWay OneWayRideOtp, OneWay OneWayOnDemandStaticOffer])
-              Nothing ->
-                [Rental OnDemandStaticOffer]
-                  <> [Rental RideOtp | not isScheduled]
+                  else localBundleForPreference
+              -- FIX (per review): rerouting this whole branch through localBundleForPreference
+              -- had a much bigger blast radius than intended — riderPreferredOption falls
+              -- back to OneWay in several places (no tag, unparseable tag, unrecognized
+              -- category code from an external BPP), and localBundleForPreference's catch-all
+              -- (`_ -> []`) would then return zero categories for InterCity/PublicTransport/
+              -- FixedRoute, or OneWay categories that need a destination we don't have here.
+              -- Scoped down to only carve out EasyBooking; every other preference keeps the
+              -- exact previous hardcoded-to-Rental behavior for destination-less searches.
+              Nothing -> case dsReq.riderPreferredOption of
+                DRPO.EasyBooking -> [EasyBooking OnDemandStaticOffer]
+                _ -> [Rental OnDemandStaticOffer] <> [Rental RideOtp | not isScheduled]
 
   TripOption {..}
   where

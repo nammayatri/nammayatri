@@ -25,7 +25,7 @@ import EulerHS.Prelude hiding (length, map, readMaybe)
 import Kernel.Storage.Esqueleto (derivePersistField)
 
 -- TODO :: Deprecated, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
-data FareProductType = ONE_WAY | RENTAL | DRIVER_OFFER | ONE_WAY_SPECIAL_ZONE | INTER_CITY | AMBULANCE
+data FareProductType = ONE_WAY | RENTAL | DRIVER_OFFER | ONE_WAY_SPECIAL_ZONE | INTER_CITY | AMBULANCE | EASY_BOOKING
   deriving (Generic, Show, Read, Eq, Ord, FromJSON, ToJSON, ToSchema)
 
 derivePersistField "FareProductType"
@@ -39,6 +39,7 @@ getFareProductType tripCategory =
     Rental _ -> RENTAL
     InterCity _ _ -> INTER_CITY
     Ambulance _ -> AMBULANCE
+    EasyBooking _ -> EASY_BOOKING
     _ -> DRIVER_OFFER
 
 -- TODO :: Deprecated, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
@@ -55,3 +56,4 @@ getTripCategory mbTripCategory fareProductType =
         RENTAL -> Rental OnDemandStaticOffer
         INTER_CITY -> InterCity OneWayOnDemandStaticOffer Nothing
         AMBULANCE -> Ambulance OneWayOnDemandDynamicOffer
+        EASY_BOOKING -> EasyBooking OnDemandStaticOffer

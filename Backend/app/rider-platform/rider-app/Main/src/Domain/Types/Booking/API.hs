@@ -205,6 +205,7 @@ data BookingAPIDetails
   | AmbulanceAPIDetails AmbulanceBookingAPIDetails
   | DeliveryAPIDetails DeliveryBookingAPIDetails
   | MeterRideAPIDetails MeterRideBookingAPIDetails
+  | EasyBookingAPIDetails EasyBookingAPIDetails
   deriving (Show, Generic)
 
 instance ToJSON BookingAPIDetails where
@@ -221,6 +222,10 @@ data RentalBookingAPIDetails = RentalBookingAPIDetails
     otpCode :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+-- EasyBooking reuses Rental's wire shape (same fields), but gets its own
+-- fareProductType tag ("EASY_BOOKING", see Tools/JSON.hs) instead of "RENTAL".
+type EasyBookingAPIDetails = RentalBookingAPIDetails
 
 data OneWayBookingAPIDetails = OneWayBookingAPIDetails
   { toLocation :: LocationAPIEntity,
@@ -398,6 +403,7 @@ mkBookingAPIDetails booking requesterId = case booking.bookingDetails of
   AmbulanceDetails details -> return $ AmbulanceAPIDetails . mkAmbulanceAPIDetails $ details
   DeliveryDetails details -> DeliveryAPIDetails <$> mkDeliveryAPIDetails details
   MeterRideDetails details -> return $ MeterRideAPIDetails . mkMeterRideAPIDetails $ details
+  EasyBookingDetails details -> return $ EasyBookingAPIDetails . mkRentalAPIDetails $ details
   where
     mkOneWayAPIDetails OneWayBookingDetails {..} =
       OneWayBookingAPIDetails

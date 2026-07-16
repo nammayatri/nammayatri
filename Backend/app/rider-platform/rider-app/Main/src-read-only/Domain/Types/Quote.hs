@@ -97,6 +97,7 @@ data QuoteAPIDetails
   | OneWaySpecialZoneAPIDetails Domain.Action.UI.SpecialZoneQuote.SpecialZoneQuoteAPIEntity
   | DeliveryAPIDetails Domain.Action.UI.DriverOffer.DriverOfferAPIEntity
   | MeterRideAPIDetails Domain.Types.Quote.MeterRideQuoteAPIDetails
+  | EasyBookingAPIDetails Domain.Types.RentalDetails.RentalDetailsAPIEntity
   deriving (Generic, Show)
 
 data QuoteDetails
@@ -108,6 +109,7 @@ data QuoteDetails
   | OneWaySpecialZoneDetails Domain.Types.SpecialZoneQuote.SpecialZoneQuote
   | DeliveryDetails Domain.Types.DriverOffer.DriverOffer
   | MeterRideDetails Domain.Types.Quote.MeterRideQuoteDetails
+  | EasyBookingDetails Domain.Types.RentalDetails.RentalDetails
   deriving (Generic, Show)
 
 data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, Show)

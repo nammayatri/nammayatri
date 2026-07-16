@@ -342,6 +342,8 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
       (toLocation, stops) = case booking.bookingDetails of
         DRB.OneWayDetails details -> (Just details.toLocation, details.stops)
         DRB.RentalDetails _ -> (Nothing, [])
+        -- EasyBooking is destination-less like Rental: no toLocation, no stops.
+        DRB.EasyBookingDetails _ -> (Nothing, [])
         DRB.DriverOfferDetails details -> (Just details.toLocation, details.stops)
         DRB.OneWaySpecialZoneDetails details -> (Just details.toLocation, details.stops)
         DRB.InterCityDetails details -> (Just details.toLocation, [])
@@ -1954,6 +1956,8 @@ createRecentLocationForTaxi booking = do
   let mbToLocation = case booking.bookingDetails of
         DRB.OneWayDetails details -> Just details.toLocation
         DRB.RentalDetails _ -> Nothing
+        -- No recent-location entry for EasyBooking either — no destination to record.
+        DRB.EasyBookingDetails _ -> Nothing
         DRB.DriverOfferDetails details -> Just details.toLocation
         DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
         DRB.InterCityDetails details -> Just details.toLocation

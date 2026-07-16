@@ -35,7 +35,9 @@ Quote:
 
   types:
     QuoteDetails:
-      enum: OneWayDetails OneWayQuoteDetails, AmbulanceDetails DriverOffer, InterCityDetails InterCityDetails, RentalDetails RentalDetails, DriverOfferDetails DriverOffer, OneWaySpecialZoneDetails SpecialZoneQuote, DeliveryDetails DriverOffer, MeterRideDetails MeterRideQuoteDetails
+      # EasyBookingDetails reuses RentalDetails's shape — both are destination-less quotes,
+      # so no new quote-details type/table was needed.
+      enum: OneWayDetails OneWayQuoteDetails, AmbulanceDetails DriverOffer, InterCityDetails InterCityDetails, RentalDetails RentalDetails, DriverOfferDetails DriverOffer, OneWaySpecialZoneDetails SpecialZoneQuote, DeliveryDetails DriverOffer, MeterRideDetails MeterRideQuoteDetails, EasyBookingDetails RentalDetails
       derive': Generic,Show
 
     OneWayQuoteDetails:
@@ -47,7 +49,10 @@ Quote:
       quoteId: Text
 
     QuoteAPIDetails:
-      enum: OneWayAPIDetails OneWayQuoteAPIDetails, AmbulanceAPIDetails DriverOfferAPIEntity, InterCityAPIDetails InterCityDetailsAPIEntity, RentalAPIDetails RentalDetailsAPIEntity, DriverOfferAPIDetails DriverOfferAPIEntity, OneWaySpecialZoneAPIDetails SpecialZoneQuoteAPIEntity, DeliveryAPIDetails DriverOfferAPIEntity, MeterRideAPIDetails MeterRideQuoteAPIDetails
+      # EasyBookingAPIDetails reuses RentalDetailsAPIEntity's shape (same pattern as
+      # AmbulanceAPIDetails/DeliveryAPIDetails sharing DriverOfferAPIEntity above) but gets
+      # its own fareProductType tag ("EASY_BOOKING", see Tools/JSON.hs) instead of "RENTAL".
+      enum: OneWayAPIDetails OneWayQuoteAPIDetails, AmbulanceAPIDetails DriverOfferAPIEntity, InterCityAPIDetails InterCityDetailsAPIEntity, RentalAPIDetails RentalDetailsAPIEntity, DriverOfferAPIDetails DriverOfferAPIEntity, OneWaySpecialZoneAPIDetails SpecialZoneQuoteAPIEntity, DeliveryAPIDetails DriverOfferAPIEntity, MeterRideAPIDetails MeterRideQuoteAPIDetails, EasyBookingAPIDetails RentalDetailsAPIEntity
       derive': Generic,Show
 
     OneWayQuoteAPIDetails:

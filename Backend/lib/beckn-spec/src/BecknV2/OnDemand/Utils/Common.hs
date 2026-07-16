@@ -188,6 +188,12 @@ tripCategoryToFulfillmentType = \case
   InterCity _ _ -> show Enums.INTER_CITY
   Ambulance _ -> show Enums.AMBULANCE_FLOW
   OneWay MeterRide -> show Enums.METER_RIDE
+  -- FulfillmentType is a fixed Beckn/ONDC protocol enum with no EasyBooking value;
+  -- reuse RENTAL since EasyBooking is structurally the same shape (destination-less,
+  -- quote-based) as Rental for protocol purposes, even though its fare policy differs.
+  -- Only OnDemandStaticOffer is ever produced for EasyBooking currently, so unlike
+  -- Rental (which special-cases RideOtp above), there's no as-pattern needed here yet.
+  EasyBooking _ -> show Enums.RENTAL
   _ -> show Enums.DELIVERY
 
 -- | Map internal trip category to ONDC v2.1.0 category code
@@ -200,6 +206,9 @@ tripCategoryToCategoryCode = \case
   InterCity _ _ -> "INTERCITY_TRIP"
   Ambulance _ -> "ON_DEMAND_TRIP"
   Delivery _ -> "ON_DEMAND_TRIP"
+  -- No wildcard on this function, so this was the first compile error EasyBooking's
+  -- addition surfaced — new Beckn category code for the destination-less search.
+  EasyBooking _ -> "ON_DEMAND_EASY_BOOKING"
 
 mkCategory :: TripCategory -> Spec.Category
 mkCategory tc =

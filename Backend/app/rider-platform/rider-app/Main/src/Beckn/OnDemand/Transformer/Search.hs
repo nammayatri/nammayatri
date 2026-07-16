@@ -117,6 +117,8 @@ riderPreferredOptionToCategory rpo = do
         DRPO.Delivery -> "ON_DEMAND_TRIP"
         DRPO.PublicTransport -> "ON_DEMAND_TRIP"
         DRPO.FixedRoute -> "ON_DEMAND_TRIP"
+        -- New Beckn category code for the destination-less EasyBooking search.
+        DRPO.EasyBooking -> "ON_DEMAND_EASY_BOOKING"
   Just $
     BecknV2.OnDemand.Types.Category
       { categoryDescriptor =

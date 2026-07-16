@@ -52,6 +52,9 @@ createBooking booking = do
       DRB.AmbulanceDetails detail -> return (Just detail.toLocation, [])
       DRB.DeliveryDetails detail -> return (Just detail.toLocation, [])
       DRB.MeterRideDetails detail -> return (detail.toLocation, [])
+      -- Same shape as RentalDetails (reused RentalBookingDetails type) — a stop
+      -- location if the rider added one, no other stops, no fixed destination.
+      DRB.EasyBookingDetails detail -> return (detail.stopLocation, [])
   when (notNull stops) $ processMultipleLocations stops
   whenJust mbToLocation $ \toLocation -> processSingleLocation toLocation SLM.buildDropLocationMapping
   createBooking' booking
