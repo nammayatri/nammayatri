@@ -23,7 +23,7 @@ import qualified Domain.Types.Extra.TransporterConfig as Extra
 import qualified Domain.Types.KnowledgeCenter as DKC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import Domain.Types.TransporterConfig (TransporterConfig, TransporterConfigD (..))
+import Domain.Types.TransporterConfig (TransporterConfig (..))
 import EulerHS.Types (base64Decode)
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
