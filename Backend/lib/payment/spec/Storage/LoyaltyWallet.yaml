@@ -11,8 +11,13 @@ imports:
 # CounterpartyType used on the linked finance_account row. The Juspay
 # `programId` is resolved to a `programType` via LoyaltyProgramConfig.
 #
-# `availableBalance` mirrors the finance-kernel ledger balance and is also
-# snapped to Juspay's loyaltyInfo value on every post-CHARGED reconciliation.
+# `availableBalance`, lifetimeEarned/Burned, topup/cashbackEarned are all in
+# POINTS, snapped to Juspay's loyaltyInfo pockets on every post-CHARGED
+# reconciliation. The linked finance-kernel ledger/account is in ₹ (MONETARY):
+# account balance = availableBalance * conversionRate. `conversionRate` is the
+# latest ₹-per-point rate seen from the programs API (burn rate value/points);
+# Nothing until a rate is observed. Per-row ₹ value is also stored on
+# WalletHistory.benefitValue; points stay auditable via WalletHistory.points.
 Wallet:
   tableName: wallet
 
@@ -28,6 +33,7 @@ Wallet:
     lifetimeBurned: HighPrecMoney
     topupEarned: HighPrecMoney
     cashbackEarned: HighPrecMoney
+    conversionRate: Maybe HighPrecMoney
     merchantId: Text
     merchantOperatingCityId: Maybe Text
     createdAt: UTCTime
@@ -53,7 +59,7 @@ Wallet:
       where: id
     syncFromLoyaltyInfo:
       kvFunction: updateWithKV
-      params: [availableBalance, lifetimeEarned, lifetimeBurned, topupEarned, cashbackEarned]
+      params: [availableBalance, lifetimeEarned, lifetimeBurned, topupEarned, cashbackEarned, conversionRate]
       where: id
 
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"

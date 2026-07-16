@@ -15,6 +15,7 @@ data WalletT f = WalletT
   { accountId :: B.C f Kernel.Prelude.Text,
     availableBalance :: B.C f Kernel.Types.Common.HighPrecMoney,
     cashbackEarned :: B.C f Kernel.Types.Common.HighPrecMoney,
+    conversionRate :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f Kernel.Types.Common.Currency,
     id :: B.C f Kernel.Prelude.Text,

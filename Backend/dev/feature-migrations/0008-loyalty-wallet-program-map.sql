@@ -46,7 +46,7 @@ BEGIN
   -- otherwise loyaltyInfo / order-status calls hit real Juspay (PASETO auth fails).
   v_existing_cfg := v_existing_cfg
     || jsonb_build_object(
-         'loyaltyProgramMap',      jsonb_build_object(v_program_id, 'LOYALTY_WALLET'),
+         'loyaltyProgramMap',      jsonb_build_object(v_program_id, jsonb_build_object('programType', 'LOYALTY_WALLET', 'conversionRate', 1)),
          'url',                    'http://localhost:8080/juspay/',
          'returnUrl',              'http://localhost:8080/juspay/return',
          'walletRewardApiVersion', '2'
@@ -62,7 +62,7 @@ BEGIN
     SET config_json = (
           config_json::jsonb
           || jsonb_build_object(
-               'loyaltyProgramMap',      jsonb_build_object(v_program_id, 'LOYALTY_WALLET'),
+               'loyaltyProgramMap',      jsonb_build_object(v_program_id, jsonb_build_object('programType', 'LOYALTY_WALLET', 'conversionRate', 1)),
                'url',                    'http://localhost:8080/juspay/',
                'returnUrl',              'http://localhost:8080/juspay/return',
                'walletRewardApiVersion', '2'

@@ -14,6 +14,7 @@ data Wallet = Wallet
   { accountId :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account,
     availableBalance :: Kernel.Types.Common.HighPrecMoney,
     cashbackEarned :: Kernel.Types.Common.HighPrecMoney,
+    conversionRate :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     id :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.Wallet.Wallet,

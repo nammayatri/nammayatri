@@ -108,7 +108,7 @@ getLoyaltyInfo ::
 getLoyaltyInfo customerId merchantId merchantOperatingCityId = do
   resp <- LoyaltyWallet.loyaltyInfo customerId merchantId merchantOperatingCityId
   mbProgramMap <- TPayment.loadLoyaltyProgramMap merchantId merchantOperatingCityId
-  let resolveProgramType pid = T.pack . show <$> (Map.lookup pid =<< mbProgramMap)
+  let resolveProgramType pid = T.pack . show . fst <$> (Map.lookup pid =<< mbProgramMap)
   pure $ map (WalletSummary.toLoyaltyProgramSummary resolveProgramType) (fromMaybe [] resp.programs)
 
 -- | Type alias for fulfillment status handler function
