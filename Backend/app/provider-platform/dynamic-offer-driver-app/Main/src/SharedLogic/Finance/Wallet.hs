@@ -527,7 +527,7 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig i
   mbMerchant <- CQM.findById merchantId
   mbMerchantOpCity <- CQMOC.findById booking.merchantOperatingCityId
   let mName = mbMerchant <&> (.name)
-      mGstin = mbMerchant >>= (.gstin)
+      mGstin = (mbMerchantOpCity >>= (.gstin)) <|> (mbMerchant >>= (.gstin))
       mVatNumber = mbMerchant >>= (.vatNumber)
       mShortId = mbMerchant <&> (.shortId.getShortId)
       address =

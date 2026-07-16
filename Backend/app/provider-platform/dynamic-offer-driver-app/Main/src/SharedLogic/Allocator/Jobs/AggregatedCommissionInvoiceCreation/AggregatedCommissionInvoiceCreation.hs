@@ -16,6 +16,7 @@ module SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.Aggregated
   )
 where
 
+import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.Map.Strict as M
 import Data.Time.Calendar (Day, addDays, fromGregorian, gregorianMonthLength, toGregorian)
@@ -142,7 +143,7 @@ tryEmitInvoice mId mocId issuedToId issuedToType periodStart periodEnd mbInvoice
   -- PDF seller block just shows live-fetched business ID + VAT.
   let sellerName = mbInvoiceConfig >>= (.invoiceSellerName)
       sellerAddress = mbInvoiceConfig >>= (.invoiceSellerAddress)
-  emitInvoice merchant sellerName sellerAddress mocCity.currency mocId rinfo issuedToId issuedToType periodStart periodEnd mbInvoiceConfig
+  emitInvoice merchant mocCity sellerName sellerAddress rinfo issuedToId issuedToType periodStart periodEnd mbInvoiceConfig
 
 -- | Supplier-side fields per recipient. FLEET_OWNER pulls from FleetOwnerInformation;
 -- DRIVER only carries the display name (no address/tax IDs at supplier level).
@@ -193,10 +194,9 @@ emitInvoice ::
     Finance.HasActorInfo m r
   ) =>
   DM.Merchant ->
+  DMOC.MerchantOperatingCity ->
   Maybe Text -> -- sellerName
   Maybe Text -> -- sellerAddress
-  Currency ->
-  Id DMOC.MerchantOperatingCity ->
   RecipientInfo ->
   Text -> -- recipientId
   BeckInvoice.IssuedToType ->
@@ -204,9 +204,9 @@ emitInvoice ::
   UTCTime ->
   Maybe DTC.InvoiceConfig ->
   m ()
-emitInvoice merchant sellerName sellerAddress currency mocId info recipientId recipientType pStart pEnd mbInvoiceConfig = do
+emitInvoice merchant moc sellerName sellerAddress info recipientId recipientType pStart pEnd mbInvoiceConfig = do
   let batchSize = fromMaybe defaultCommissionAggregationBatchSize (mbInvoiceConfig >>= (.commissionAggregationBatchSize))
-  commissions <- fetchAllCommissionsInRange mocId.getId pStart pEnd (Just recipientId) batchSize
+  commissions <- fetchAllCommissionsInRange moc.id.getId pStart pEnd (Just recipientId) batchSize
   if null commissions
     then logInfo $ "AggCom: empty period for " <> show recipientType <> " " <> recipientId <> " [" <> show pStart <> ", " <> show pEnd <> "]; skipping emit"
     else do
@@ -229,7 +229,7 @@ emitInvoice merchant sellerName sellerAddress currency mocId info recipientId re
                 supplierGSTIN = info.riGstin,
                 supplierTaxNo = info.riVatNumber,
                 supplierId = Just recipientId,
-                merchantGstin = merchant.gstin,
+                merchantGstin = moc.gstin <|> merchant.gstin,
                 referenceId = Nothing,
                 gstinOfParty = info.riGstin,
                 panOfParty = info.riPanNumberDec,
@@ -239,12 +239,12 @@ emitInvoice merchant sellerName sellerAddress currency mocId info recipientId re
                 tanOfDeductee = Nothing,
                 lineItems = concatMap flattenInvoice commissions,
                 gstBreakdown = Nothing, -- per-line VAT already booked on underlying Commission rows
-                currency = currency,
+                currency = moc.currency,
                 dueAt = Nothing,
                 periodStart = Just pStart,
                 periodEnd = Just pEnd,
                 merchantId = merchant.id.getId,
-                merchantOperatingCityId = mocId.getId,
+                merchantOperatingCityId = moc.id.getId,
                 merchantShortId = merchant.shortId.getShortId,
                 isVat = isVat,
                 issuedToTaxNo = info.riVatNumber,

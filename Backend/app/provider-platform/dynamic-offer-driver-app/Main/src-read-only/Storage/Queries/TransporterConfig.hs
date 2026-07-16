@@ -38,11 +38,7 @@ update :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Transport
 update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
   _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.authPhoneNumberCountThreshold1 authPhoneNumberCountThreshold1,
-      Se.Set Beam.authPhoneNumberCountThreshold2 authPhoneNumberCountThreshold2,
-      Se.Set Beam.authPhoneNumberCountWindow1 authPhoneNumberCountWindow1,
-      Se.Set Beam.authPhoneNumberCountWindow2 authPhoneNumberCountWindow2,
-      Se.Set Beam.pickupLocThreshold pickupLocThreshold,
+    [ Se.Set Beam.pickupLocThreshold pickupLocThreshold,
       Se.Set Beam.dropLocThreshold dropLocThreshold,
       Se.Set Beam.rideTimeEstimatedThreshold rideTimeEstimatedThreshold,
       Se.Set Beam.defaultPopupDelay defaultPopupDelay,
@@ -80,6 +76,10 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.knowledgeCenterSopTypes ((Just . Data.Aeson.toJSON) knowledgeCenterSopTypes),
       Se.Set Beam.driverSearchBlacklistDurationSeconds driverSearchBlacklistDurationSeconds,
       Se.Set Beam.driverRiderBlacklistDurationSeconds driverRiderBlacklistDurationSeconds,
+      Se.Set Beam.authPhoneNumberCountThreshold1 authPhoneNumberCountThreshold1,
+      Se.Set Beam.authPhoneNumberCountThreshold2 authPhoneNumberCountThreshold2,
+      Se.Set Beam.authPhoneNumberCountWindow1 authPhoneNumberCountWindow1,
+      Se.Set Beam.authPhoneNumberCountWindow2 authPhoneNumberCountWindow2,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]

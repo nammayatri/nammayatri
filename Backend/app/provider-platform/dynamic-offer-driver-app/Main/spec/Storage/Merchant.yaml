@@ -359,6 +359,7 @@ MerchantOperatingCity:
     currency: Currency
     distanceUnit: DistanceUnit
     stdCode: Maybe Text
+    gstin: Maybe Text
   sqlType:
     city: character varying(255)
     currency: character varying(255)
@@ -1969,6 +1970,10 @@ TransporterConfig:
         - knowledgeCenterSopTypes
         - driverSearchBlacklistDurationSeconds
         - driverRiderBlacklistDurationSeconds
+        - authPhoneNumberCountThreshold1
+        - authPhoneNumberCountThreshold2
+        - authPhoneNumberCountWindow1
+        - authPhoneNumberCountWindow2
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId

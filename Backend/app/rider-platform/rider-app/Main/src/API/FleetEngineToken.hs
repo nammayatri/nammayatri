@@ -15,12 +15,11 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import Environment
 import Kernel.Prelude
+import Kernel.Types.App (MandatoryQueryParam)
 import Kernel.Types.Id
 import Servant
 import Tools.Auth (TokenAuth)
 import Tools.FlowHandling (withFlowHandlerAPIPersonId)
-import Kernel.Types.App (MandatoryQueryParam)
-
 
 type API =
   TokenAuth

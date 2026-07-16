@@ -24,10 +24,6 @@ import Tools.Beam.UtilsTH
 
 data TransporterConfigT f = TransporterConfigT
   { aaEnabledClientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    authPhoneNumberCountThreshold1 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    authPhoneNumberCountThreshold2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    authPhoneNumberCountWindow1 :: B.C f (Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions),
-    authPhoneNumberCountWindow2 :: B.C f (Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions),
     aadhaarImageResizeConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     aadhaarVerificationRequired :: B.C f Kernel.Prelude.Bool,
     acStatusCheckGap :: B.C f Kernel.Prelude.Int,
@@ -59,6 +55,10 @@ data TransporterConfigT f = TransporterConfigT
     arrivedPickupThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     arrivedStopThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     arrivingPickupThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
+    authPhoneNumberCountThreshold1 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    authPhoneNumberCountThreshold2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    authPhoneNumberCountWindow1 :: B.C f (Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions),
+    authPhoneNumberCountWindow2 :: B.C f (Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions),
     automaticRCActivationCutOff :: B.C f Kernel.Types.Common.Seconds,
     badDebtBatchSize :: B.C f Kernel.Prelude.Int,
     badDebtRescheduleTime :: B.C f Kernel.Types.Common.Seconds,
