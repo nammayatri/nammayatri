@@ -20,6 +20,7 @@ imports:
   Minutes: Kernel.Types.Common
   TripCategory: Domain.Types.Common
   VehicleCategory : BecknV2.OnDemand.Enums
+  FareSettlementType: Lib.Types.SpecialLocation
 
 Estimate:
   tableName: estimate
@@ -109,6 +110,7 @@ Estimate:
     specialLocationTag : Maybe Text
     specialLocationName : Maybe Text
     area : Maybe Text
+    fareSettlementType : Maybe FareSettlementType
     serviceTierName : Maybe Text
     serviceTierShortDesc : Maybe Text
     clientSdkVersion: Maybe Version

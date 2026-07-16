@@ -27,6 +27,7 @@ deriving instance Read Domain.GatesInfo
 derivePersistField "Domain.GatesInfo"
 derivePersistField "Domain.SpecialLocationType"
 derivePersistField "Domain.RenderType"
+derivePersistField "Domain.FareSettlementType"
 
 mkPersist
   defaultSqlSettings
@@ -50,6 +51,7 @@ mkPersist
       isQueueEnabled Bool Maybe
       enforceTollRoute Bool Maybe
       supportNumber Text Maybe
+      fareSettlementType Domain.FareSettlementType Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

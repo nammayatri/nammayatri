@@ -34,6 +34,7 @@ data FareProducts = FareProducts
     specialLocationName :: Maybe Text,
     specialLocationTag :: Maybe Text,
     specialLocationSupportNumber :: Maybe Text,
+    fareSettlementType :: Maybe SL.FareSettlementType,
     mbPickupDropArea :: Maybe SL.Area
   }
 
@@ -108,6 +109,7 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
                   specialLocationName = Just pickupSpecialLocation.locationName,
                   specialLocationTag = Just specialLocationTag,
                   specialLocationSupportNumber = pickupSpecialLocation.supportNumber,
+                  fareSettlementType = pickupSpecialLocation.fareSettlementType,
                   mbPickupDropArea = Nothing
                 }
 
@@ -127,6 +129,7 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
                 specialLocationName = Just specialLocationName,
                 specialLocationTag = Just specialLocationTag,
                 specialLocationSupportNumber = pickupSpecialLocation.supportNumber,
+                fareSettlementType = pickupSpecialLocation.fareSettlementType,
                 mbPickupDropArea = Nothing
               }
     fetchAllGateFareProducts pickupSpecialLocation specialLocationTag = do
@@ -150,6 +153,7 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
             specialLocationName = Just pickupSpecialLocation.locationName,
             specialLocationTag = Just specialLocationTag,
             specialLocationSupportNumber = pickupSpecialLocation.supportNumber,
+            fareSettlementType = pickupSpecialLocation.fareSettlementType,
             mbPickupDropArea = Nothing
           }
     getDropFareProductsAndSpecialLocationTag dropSpecialLocation specialLocationTag = do
@@ -163,6 +167,7 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
             specialLocationName = Just specialLocationName,
             specialLocationTag = Just specialLocationTag,
             specialLocationSupportNumber = dropSpecialLocation.supportNumber,
+            fareSettlementType = dropSpecialLocation.fareSettlementType,
             mbPickupDropArea = Nothing
           }
 
@@ -176,6 +181,7 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
             specialLocationName = Nothing,
             specialLocationTag = Nothing,
             specialLocationSupportNumber = Nothing,
+            fareSettlementType = Nothing,
             mbPickupDropArea = Nothing
           }
 
