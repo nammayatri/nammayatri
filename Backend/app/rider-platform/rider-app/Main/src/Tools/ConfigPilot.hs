@@ -95,7 +95,7 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
       frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CQFRFS.findByMerchantOperatingCityId (cast merchantOpCityId) (Just [])))
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList frfsConfig)}
     LYTU.RIDER_CONFIG LYTU.HotSpotConfig -> do
-      hsCfg <- getConfig (HotSpotConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId}) Nothing
+      hsCfg <- getConfig (HotSpotConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId}) (Just (SQHSC.findConfigByMerchantId (cast merchantId)))
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList hsCfg)}
     LYTU.RIDER_CONFIG LYTU.MerchantPaymentMethod -> do
       mpmCfgs <- getConfigList (MerchantPaymentMethodDimensions {merchantOperatingCityId = merchantOpCityId.getId, configId = Nothing})
@@ -104,13 +104,13 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
       crCfgs <- getConfigList (CancellationReasonDimensions {merchantOperatingCityId = merchantOpCityId.getId, cancellationStage = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON crCfgs}
     LYTU.RIDER_CONFIG LYTU.Translation -> do
-      tlCfg <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = "", language = Nothing}) Nothing
+      tlCfg <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = "", language = Nothing}) (Just (listToMaybe <$> SQTL.findAllByMerchantOperatingCityId (cast merchantOpCityId)))
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList tlCfg)}
     LYTU.RIDER_CONFIG LYTU.IntegratedBPPConfig -> do
       ibcCfgs <- getConfigList (IntegratedBPPConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, configId = Nothing, agencyKey = Nothing, domain = Nothing, vehicleCategory = Nothing, platformType = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON ibcCfgs}
     LYTU.RIDER_CONFIG LYTU.IssueConfig -> do
-      icCfg <- getConfig (IssueConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, identifier = ""}) Nothing
+      icCfg <- getConfig (IssueConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, identifier = ""}) (Just (SQIC.findByMerchantOpCityId (cast merchantOpCityId)))
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList icCfg)}
     LYTU.RIDER_CONFIG LYTU.PassCategory -> do
       pcCfgs <- getConfigList (PassCategoryDimensions {merchantOperatingCityId = merchantOpCityId.getId, configId = Nothing})

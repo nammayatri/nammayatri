@@ -153,6 +153,7 @@ import qualified Storage.Queries.CancellationReason as SQCR
 import qualified Storage.Queries.HotSpotConfig as SQHSC
 import qualified Storage.Queries.IntegratedBPPConfig as SQIBC
 import qualified Storage.Queries.MerchantPaymentMethod as SQMPM
+import qualified Storage.Queries.MerchantServiceConfig as SQMSC
 import qualified Storage.Queries.PassCategory as SQPC
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Translations as SQTL
@@ -879,7 +880,7 @@ postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity req = do
       cfg <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId}) (Just (SQMerchantSUC.findByMerchantOperatingCityId (Id mocId)))
       pure LYTU.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
     LYTU.MerchantServiceConfig -> do
-      cfgs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = dimLookup "serviceName" dims}) Nothing
+      cfgs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = dimLookup "serviceName" dims}) (Just (SQMSC.findAllByMerchantOperatingCityId (Id mocId)))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.BecknConfig -> do
       cfgs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, domain = dimLookup "domain" dims, vehicleCategory = dimLookup "vehicleCategory" dims}) (Just (SQBC.findByMerchantId (Just merchantOperatingCity.merchantId)))
