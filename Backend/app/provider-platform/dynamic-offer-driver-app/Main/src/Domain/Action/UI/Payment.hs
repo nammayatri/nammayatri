@@ -710,13 +710,13 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                   issuedByName = Just merchant.name,
                   issuedByAddress = issuedByAddress,
                   gstinOfParty = gstinOfParty,
-                  merchantGstin = merchant.gstin,
+                  merchantGstin = merchantOperatingCity.gstin <|> merchant.gstin,
                   merchantShortId = getShortId merchant.shortId
                 }
         -- Resolve seller (merchant) and buyer (driver/fleet owner) GSTINs for B2B
         -- jurisdiction detection. Seller GSTIN is plain text on Merchant; buyer
         -- GSTIN is encrypted on DriverGstin and must be decrypted.
-        let sellerGstin = merchant.gstin
+        let sellerGstin = merchantOperatingCity.gstin <|> merchant.gstin
         buyerGstin <- traverse (decrypt . (.gstin)) mbBuyerGstinRow
         -- For FLEET_BUSINESS with both GSTINs present, use GSTIN state-code
         -- comparison (proper B2B path). Otherwise fall back to merchant-vs-opCity
