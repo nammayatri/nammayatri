@@ -1615,7 +1615,9 @@ getInProgressDriverDocuments role driverId entityImagesInfo docType possibleVehi
     DDVC.Permissions -> return (VALID, Nothing, Nothing)
     DDVC.ProfilePhoto -> do
       let mbImages = IQuery.filterRecentLatestByEntityIdAndImageType entityImagesInfo DDVC.ProfilePhoto
-      return (maybe NO_DOC_AVAILABLE mapStatus (mbImages >>= (.verificationStatus)), Nothing, Nothing)
+          profileStatus = maybe NO_DOC_AVAILABLE mapStatus (mbImages >>= (.verificationStatus))
+          profileReason = if profileStatus == INVALID then extractImageFailReason (mbImages >>= (.failureReason)) else Nothing
+      return (profileStatus, profileReason, Nothing)
     DDVC.UploadProfile -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.UploadProfile onlyImageLookup filteredDocVerificationConfigs
     DDVC.DrivingSchoolCertificate -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.DrivingSchoolCertificate onlyImageLookup filteredDocVerificationConfigs
     DDVC.PoliceVerificationCertificate -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.PoliceVerificationCertificate onlyImageLookup filteredDocVerificationConfigs
