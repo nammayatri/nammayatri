@@ -1385,6 +1385,14 @@ AadhaarCard:
       kvFunction: updateWithKV
       params: [verificationStatus, rejectReason]
       where: driverId
+    updateVerificationStatusByFrontImageId:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus]
+      where: aadhaarFrontImageId
+    updateVerificationStatusAndRejectReasonByFrontImageId:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus, rejectReason]
+      where: aadhaarFrontImageId
     deleteByPersonId:
       kvFunction: deleteWithKV
       where: driverId
