@@ -12,12 +12,14 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version
 import qualified Tools.Beam.UtilsTH
 
 data MerchantServiceConfigD (s :: UsageSafety) = MerchantServiceConfig
   { createdAt :: Kernel.Prelude.UTCTime,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    runInCloud :: Kernel.Prelude.Maybe Kernel.Types.Version.CloudType,
     serviceConfig :: Domain.Types.Extra.MerchantServiceConfig.ServiceConfigD s,
     updatedAt :: Kernel.Prelude.UTCTime
   }

@@ -265,6 +265,7 @@ MerchantServiceConfig:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     serviceConfig: Domain.Types.Extra.MerchantServiceConfig.ServiceConfigD s
+    runInCloud: Maybe CloudType
     updatedAt: UTCTime
     createdAt: UTCTime
 
@@ -276,6 +277,8 @@ MerchantServiceConfig:
     serviceConfig:
       serviceName: Domain.Types.MerchantServiceConfig.ServiceName
       configJSON: Data.Aeson.Value
+  beamType:
+    runInCloud: Maybe Text
   sqlType:
     serviceName: character varying(50)
     configJSON: json
@@ -284,10 +287,12 @@ MerchantServiceConfig:
     serviceName: PrimaryKey
   fromTType:
     serviceConfig: Storage.Queries.Transformers.MerchantServiceConfig.getServiceConfigFromDomain serviceName configJSON|EM
+    runInCloud: (Kernel.Prelude.>>= (Kernel.Prelude.readMaybe . Data.Text.unpack))|I
 
   toTType:
     serviceName: (fst $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig)|E
     configJSON: (snd $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig)|E
+    runInCloud: (Kernel.Prelude.fmap Kernel.Prelude.show)|I
 
   queries:
     findAllByMerchantOperatingCityId:
