@@ -103,9 +103,9 @@ import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSRLite
 import qualified Storage.Queries.Quote as SQQ
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.Transformers.Booking as STB
 import Tools.Error
 import Tools.Maps (LatLong)
@@ -246,7 +246,7 @@ data ValidatedEstimateRepetitionReq = ValidatedEstimateRepetitionReq
     cancellationSource :: DBCR.CancellationSource,
     booking :: DRB.Booking,
     ride :: DRide.Ride,
-    searchReq :: DSR.SearchRequest,
+    searchReq :: QSRLite.SearchRequestLite,
     estimate :: DEstimate.Estimate
   }
 
@@ -694,7 +694,7 @@ validateRequest = \case
       isValidRideStatus status = status `elem` [DRide.NEW, DRide.INPROGRESS]
   OUEstimateRepetitionReq EstimateRepetitionReq {..} -> do
     (ride, booking) <- Common.getRideAndBooking bppBookingId searchRequestId.getId
-    searchReq <- QSR.findById searchRequestId >>= fromMaybeM (SearchRequestNotFound searchRequestId.getId)
+    searchReq <- QSRLite.findByIdLite searchRequestId >>= fromMaybeM (SearchRequestNotFound searchRequestId.getId)
     estimate <- QEstimate.findByBPPEstimateId bppEstimateId >>= fromMaybeM (EstimateDoesNotExist bppEstimateId.getId)
     return $ OUValidatedEstimateRepetitionReq ValidatedEstimateRepetitionReq {..}
   OUQuoteRepetitionReq QuoteRepetitionReq {..} -> do

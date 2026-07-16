@@ -78,9 +78,9 @@ import qualified Storage.Queries.FareParameters as QFP
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.QueriesExtra.SearchRequestLite as SQSRLite
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.SearchRequest as SQSR
 import Toll.SharedLogic.TollsDetector
 import Tools.Error
 import qualified Tools.Maps as Maps
@@ -308,7 +308,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     whenJust mbRide $ \ride -> do
       pickupMapForRide <- SLM.buildPickUpLocationMapping startLocation.id ride.id.getId DLM.RIDE (Just merchantId) (Just mocId)
       QLM.create pickupMapForRide
-    searchReq <- SQSR.findByTransactionIdAndMerchantId transactionId merchantId >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
+    searchReq <- SQSRLite.findByTransactionIdAndMerchantIdLite transactionId merchantId >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
     pickupMapForSearchReq <- SLM.buildPickUpLocationMapping startLocation.id searchReq.id.getId DLM.SEARCH_REQUEST (Just merchantId) (Just mocId)
     QLM.create pickupMapForSearchReq
     whenJust mbPerson $ \person -> whenJust mbRide $ \ride -> do

@@ -108,10 +108,10 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFP
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSRLite
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRiderDetails
-import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Constants
 import Tools.DynamicLogic
@@ -478,7 +478,7 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
              in Just expectedDistance
           else Nothing
       driverWaitingTime = if isJust ride.driverArrivalTime then Just (round $ diffUTCTime now (fromJust ride.driverArrivalTime)) else Nothing
-  mbSearchRequest <- QSR.findByTransactionIdAndMerchantId booking.transactionId booking.providerId
+  mbSearchRequest <- QSRLite.findByTransactionIdAndMerchantIdLite booking.transactionId booking.providerId
   let userSdkVersionText = Version.versionToText <$> (mbSearchRequest >>= (.userSdkVersion))
   mbPaymentMethod <- forM booking.paymentMethodId $ \pmId ->
     CQMPM.findByIdAndMerchantOpCityId pmId booking.merchantOperatingCityId

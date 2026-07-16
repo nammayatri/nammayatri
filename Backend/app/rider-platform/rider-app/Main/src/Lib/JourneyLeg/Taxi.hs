@@ -42,6 +42,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSearchRequestLite
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
@@ -182,7 +183,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
           )
           legData.cancelEstimateId
       Nothing -> do
-        searchReq <- QSearchRequest.findById legData.searchRequestId >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legData.searchRequestId.getId)
+        searchReq <- QSearchRequestLite.findByIdLite legData.searchRequestId >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legData.searchRequestId.getId)
         case legData.journeyLeg.legPricingId of
           Just pricingId -> do
             withTryCatch "cancelSearch:TaxiCancel" (cancelSearch' (searchReq.riderId, searchReq.merchantId) (Id pricingId))

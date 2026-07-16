@@ -112,6 +112,7 @@ import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSearchRequestLite
 import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Auth
@@ -236,7 +237,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
   -- TODO : remove this code after multiple search req issue get fixed from frontend
   --BEGIN
   whenJust merchant.stuckRideAutoCancellationBuffer $ \stuckRideAutoCancellationBuffer -> do
-    mbSReq <- QSearchRequest.findLastSearchRequestInKV personId
+    mbSReq <- QSearchRequestLite.findLastSearchRequestInKVLite personId
     shouldCancelPrevSearch <- maybe (return False) (checkValidSearchReq merchant.scheduleRideBufferTime) mbSReq
     when shouldCancelPrevSearch $ do
       fork "handle multiple search request issue" $ do
@@ -1056,7 +1057,7 @@ searchTrigger' (personId, merchantId) req mbBundleVersion mbClientVersion mbClie
   -- TODO : remove this code after multiple search req issue get fixed from frontend
   --BEGIN
   whenJust merchant.stuckRideAutoCancellationBuffer $ \stuckRideAutoCancellationBuffer -> do
-    mbSReq <- QSearchRequest.findLastSearchRequestInKV personId
+    mbSReq <- QSearchRequestLite.findLastSearchRequestInKVLite personId
     shouldCancelPrevSearch <- maybe (return False) (checkValidSearchReq merchant.scheduleRideBufferTime) mbSReq
     when shouldCancelPrevSearch $ do
       fork "handle multiple search request issue" $ do

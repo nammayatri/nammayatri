@@ -92,7 +92,7 @@ import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.NotificationSoundsConfig as SQNSC
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.PersonDisability as PD
-import qualified Storage.Queries.SearchRequest as QSearchReq
+import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSearchReqLite
 import qualified Storage.Queries.Transformers.Booking as TBooking
 import Tools.Error
 import qualified Tools.SMS as Sms
@@ -1009,7 +1009,7 @@ notifyOnQuoteReceived ::
   DQuote.Quote ->
   m ()
 notifyOnQuoteReceived quote = do
-  searchRequest <- QSearchReq.findById quote.requestId >>= fromMaybeM (SearchRequestDoesNotExist quote.requestId.getId)
+  searchRequest <- QSearchReqLite.findByIdLite quote.requestId >>= fromMaybeM (SearchRequestDoesNotExist quote.requestId.getId)
   person <- Person.findById searchRequest.riderId >>= fromMaybeM (PersonNotFound searchRequest.riderId.getId)
   let entity = Notification.Entity Notification.Product quote.requestId.getId ()
       dynamicParams = EmptyDynamicParam

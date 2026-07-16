@@ -262,11 +262,11 @@ import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonExtra as QPersonExtra
+import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSRLite
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteTripStopMapping as QRTSM
-import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.TripAlertRequest as QTAR
 import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -4972,7 +4972,7 @@ postDriverFleetScheduledBookingReassign merchantShortId _opCity fleetOwnerId Com
 
   -- 4. Get quote and search request for creating new booking
   quote <- QQuote.findById (Id oldBooking.quoteId) >>= fromMaybeM (InvalidRequest $ "Quote not found: " <> oldBooking.quoteId)
-  searchReq <- QSR.findById quote.searchRequestId >>= fromMaybeM (InvalidRequest $ "Search request not found: " <> quote.searchRequestId.getId)
+  searchReq <- QSRLite.findByIdLite quote.searchRequestId >>= fromMaybeM (InvalidRequest $ "Search request not found: " <> quote.searchRequestId.getId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = oldBooking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId oldBooking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound oldBooking.merchantOperatingCityId.getId)
 
   -- 5. Cancel old ride using cancelRideTransaction
