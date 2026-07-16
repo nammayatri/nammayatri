@@ -29,3 +29,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN std_code t
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN cloud_type text ;
 ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN cloud_base_url text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN gstin text ;
