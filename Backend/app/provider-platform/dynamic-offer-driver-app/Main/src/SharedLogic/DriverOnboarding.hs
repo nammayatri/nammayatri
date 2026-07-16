@@ -1107,13 +1107,14 @@ runDeferredFaceMatchOnSelfie person selfieCreatedAt = do
     matchDeferredDoc config = do
       let docType = config.documentType
           qualifies img = img.verificationStatus /= Just Documents.INVALID && isNothing img.workflowTransactionId && img.createdAt < selfieCreatedAt
+          linkedDocImage mbImageId = do
+            mbImg <- maybe (pure Nothing) ImageQuery.findById mbImageId
+            pure $ case mbImg of
+              Just img | qualifies img -> Just img
+              _ -> Nothing
       mbDocImg <- case docType of
-        ODC.AadhaarCard -> do
-          mbFrontImageId <- (>>= (.aadhaarFrontImageId)) <$> QAadhaarCard.findByPrimaryKey person.id
-          mbImg <- maybe (pure Nothing) ImageQuery.findById mbFrontImageId
-          pure $ case mbImg of
-            Just img | qualifies img -> Just img
-            _ -> Nothing
+        ODC.AadhaarCard -> linkedDocImage =<< (>>= (.aadhaarFrontImageId)) <$> QAadhaarCard.findByPrimaryKey person.id
+        ODC.DriverLicense -> linkedDocImage =<< fmap (.documentImageId1) <$> DLQuery.findByDriverId person.id
         _ -> DL.find qualifies <$> ImageQuery.findRecentByPersonIdAndImageType person.id docType
       whenJust mbDocImg $ \docImg -> do
         mbVerificationRow <- listToMaybe <$> IVQuery.findLatestByDocTypeAndDocumentImageId1 (Just 1) Nothing person.id (docTypeToText docType) docImg.id
