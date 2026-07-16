@@ -84,9 +84,9 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Person as QPers
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSRLite
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
-import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
 import qualified Storage.Queries.Vehicle as QVeh
@@ -333,7 +333,7 @@ cancelSearch ::
   ST.SearchTry ->
   m ()
 cancelSearch _merchantId searchTry = do
-  searchRequest <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
+  searchRequest <- QSRLite.findByIdLite searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   callWithErrorHandling searchRequest.transactionId $ do
     -- Lock Description: This is a Lock held between Init and Cancel Search, if Init is OnGoing the Booking will be created post the lock release and Cancel Search will fail with `CancelSearchLockNotAcquired`.
     -- Lock Release: Any Exceptions or at end of this function.
@@ -381,7 +381,7 @@ validateCancelSearchRequest ::
   m ST.SearchTry
 validateCancelSearchRequest merchantId _ req = do
   let transactionId = req.transactionId
-  searchReq <- QSR.findByTransactionIdAndMerchantId transactionId merchantId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> transactionId <> ",merchantId-" <> merchantId.getId)
+  searchReq <- QSRLite.findByTransactionIdAndMerchantIdLite transactionId merchantId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> transactionId <> ",merchantId-" <> merchantId.getId)
   QST.findTryByRequestId searchReq.id >>= fromMaybeM (SearchTryDoesNotExist $ "searchRequestId-" <> searchReq.id.getId)
 
 validateCancelRequest ::

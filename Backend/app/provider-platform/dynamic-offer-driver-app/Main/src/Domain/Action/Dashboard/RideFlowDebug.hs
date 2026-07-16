@@ -24,7 +24,6 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Trip as DTrip
 import Environment
@@ -35,9 +34,9 @@ import Kernel.Types.Id
 import qualified Storage.Clickhouse.Estimate as CHEstimate
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverQuote as QDriverQuote
+import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSRLite
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
 
 -- | Detected flow type based on tripCategory
@@ -80,7 +79,7 @@ getRideFlowDebug _merchantShortId _merchantOpCityId mbRideId mbBookingId mbSearc
   mbSearchReq' <- case mbSearchReq of
     Just sr -> pure (Just sr)
     Nothing -> case mbBooking of
-      Just booking -> QSR.findByTransactionId booking.transactionId
+      Just booking -> QSRLite.findByTransactionIdLite booking.transactionId
       Nothing -> pure Nothing
 
   -- Step 3: Find downstream entities
@@ -146,7 +145,7 @@ resolveChain ::
   Maybe Text ->
   Maybe Text ->
   Maybe (ShortId Common.Ride) ->
-  Flow (Maybe DRide.Ride, Maybe DBooking.Booking, Maybe DSR.SearchRequest)
+  Flow (Maybe DRide.Ride, Maybe DBooking.Booking, Maybe QSRLite.SearchRequestLite)
 resolveChain mbRideId mbBookingId mbSearchRequestId mbRideShortId = do
   mbRide <- case mbRideShortId of
     Just shortId -> QRide.findRideByRideShortId (ShortId $ getShortId shortId)
@@ -161,9 +160,9 @@ resolveChain mbRideId mbBookingId mbSearchRequestId mbRideShortId = do
       Nothing -> pure Nothing
 
   mbSearchReq <- case mbBooking of
-    Just booking -> QSR.findByTransactionId booking.transactionId
+    Just booking -> QSRLite.findByTransactionIdLite booking.transactionId
     Nothing -> case mbSearchRequestId of
-      Just srId -> QSR.findById (Id srId)
+      Just srId -> QSRLite.findByIdLite (Id srId)
       Nothing -> pure Nothing
 
   pure (mbRide, mbBooking, mbSearchReq)
@@ -171,7 +170,7 @@ resolveChain mbRideId mbBookingId mbSearchRequestId mbRideShortId = do
 -- | Compute current flow stage
 computeCurrentStage ::
   FlowType ->
-  Maybe DSR.SearchRequest ->
+  Maybe QSRLite.SearchRequestLite ->
   [DST.SearchTry] ->
   [CHEstimate.Estimate] ->
   [DQuote.Quote] ->
@@ -230,7 +229,7 @@ computeCurrentStage flowType mbSR searchTries estimates quotes driverQuotes mbBo
 -- | Build flow-specific timeline
 buildTimeline ::
   FlowType ->
-  Maybe DSR.SearchRequest ->
+  Maybe QSRLite.SearchRequestLite ->
   [DST.SearchTry] ->
   [CHEstimate.Estimate] ->
   [DQuote.Quote] ->
@@ -254,7 +253,7 @@ buildTimeline flowType mbSR searchTries estimates quotes driverQuotes mbBooking 
 -- → Start → End
 -- =============================================
 buildDynamicTimeline ::
-  Maybe DSR.SearchRequest ->
+  Maybe QSRLite.SearchRequestLite ->
   [DST.SearchTry] ->
   [CHEstimate.Estimate] ->
   [DDQ.DriverQuote] ->
@@ -305,7 +304,7 @@ buildDynamicTimeline mbSR searchTries estimates driverQuotes mbBooking mbRide =
 -- → Start → End
 -- =============================================
 buildStaticTimeline ::
-  Maybe DSR.SearchRequest ->
+  Maybe QSRLite.SearchRequestLite ->
   [DST.SearchTry] ->
   [DQuote.Quote] ->
   Maybe DBooking.Booking ->
@@ -351,7 +350,7 @@ buildStaticTimeline mbSR searchTries quotes mbBooking mbRide =
 -- → Start → End
 -- =============================================
 buildRideOtpTimeline ::
-  Maybe DSR.SearchRequest ->
+  Maybe QSRLite.SearchRequestLite ->
   [DQuote.Quote] ->
   Maybe DBooking.Booking ->
   Maybe DRide.Ride ->
@@ -447,7 +446,7 @@ rideDriverDetail = fmap (\r -> "driverId=" <> r.driverId.getId)
 -- | Detect potential issues (flow-aware)
 detectIssues ::
   FlowType ->
-  Maybe DSR.SearchRequest ->
+  Maybe QSRLite.SearchRequestLite ->
   [DST.SearchTry] ->
   [CHEstimate.Estimate] ->
   [DQuote.Quote] ->
@@ -483,7 +482,7 @@ detectIssues flowType mbSR searchTries estimates quotes driverQuotes mbBooking m
     ]
 
 -- | Mapper functions: domain types -> API debug types
-mkSearchRequestDebug :: DSR.SearchRequest -> Common.BPPSearchRequestDebug
+mkSearchRequestDebug :: QSRLite.SearchRequestLite -> Common.BPPSearchRequestDebug
 mkSearchRequestDebug sr =
   Common.BPPSearchRequestDebug
     { id = sr.id.getId,

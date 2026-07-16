@@ -24,7 +24,6 @@ import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.SearchRequest as DSR
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -32,9 +31,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (distanceToMeters)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSRLite
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.SearchRequest as QSR
 
 getBAPFlowDebug ::
   ShortId DM.Merchant ->
@@ -79,7 +78,7 @@ resolveBAP ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
-  Flow (Maybe DSR.SearchRequest, Maybe DBooking.Booking, Maybe DRide.Ride)
+  Flow (Maybe QSRLite.SearchRequestLite, Maybe DBooking.Booking, Maybe DRide.Ride)
 resolveBAP mbTransactionId mbBapBookingId mbBppBookingId mbBapSearchRequestId mbBapRideShortId mbBapRideId = do
   -- Try to find ride by ID or shortId first
   mbRideFromId <- case mbBapRideId of
@@ -105,12 +104,12 @@ resolveBAP mbTransactionId mbBapBookingId mbBppBookingId mbBapSearchRequestId mb
         Just x -> Just x
         Nothing -> mbTransactionId
   mbSearchReq <- case mbSrId of
-    Just srId -> B.runInReplica $ QSR.findById (Id srId)
+    Just srId -> B.runInReplica $ QSRLite.findByIdLite (Id srId)
     Nothing -> case mbBooking of
       Just booking -> do
         mbEst <- B.runInReplica $ QEstimate.findByBPPEstimateId (Id booking.bppEstimateId)
         case mbEst of
-          Just est -> B.runInReplica $ QSR.findById est.requestId
+          Just est -> B.runInReplica $ QSRLite.findByIdLite est.requestId
           Nothing -> pure Nothing
       Nothing -> pure Nothing
 
@@ -124,7 +123,7 @@ resolveBAP mbTransactionId mbBapBookingId mbBppBookingId mbBapSearchRequestId mb
   pure (mbSearchReq, mbBooking, mbRide)
 
 -- | Mapper functions: domain types -> API debug types
-mkBAPSearchRequestDebug :: DSR.SearchRequest -> Common.BAPSearchRequestDebug
+mkBAPSearchRequestDebug :: QSRLite.SearchRequestLite -> Common.BAPSearchRequestDebug
 mkBAPSearchRequestDebug sr =
   Common.BAPSearchRequestDebug
     { id = sr.id.getId,

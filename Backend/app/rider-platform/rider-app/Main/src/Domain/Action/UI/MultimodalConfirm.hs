@@ -93,7 +93,6 @@ import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.RouteDetails as RD
 import qualified Domain.Types.RouteStopMapping as DRSM
 import Domain.Types.RouteStopTimeTable (SourceType (..))
-import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Station as DStation
 import qualified Domain.Types.VehicleActionHistory
 import Domain.Utils (castTravelModeToVehicleCategory, mapConcurrently)
@@ -167,9 +166,9 @@ import qualified Storage.Queries.JourneyLegExtra as QJourneyLegExtra
 import qualified Storage.Queries.JourneyLegMapping as QJourneyLegMapping
 import Storage.Queries.MultimodalPreferences as QMP
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSearchRequestLite
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RouteDetails as QRouteDetails
-import Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.VehicleActionHistory as QVAH
 import System.Environment (lookupEnv)
 import System.IO.Unsafe (unsafePerformIO)
@@ -456,7 +455,7 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
     throwError (JourneyLegCannotBeCancelled (show journeyLeg.sequenceNumber))
 
   whenJust journeyLeg.legSearchId $ \legSearchId -> do
-    searchReq <- QSearchRequest.findById (Id legSearchId) >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legSearchId)
+    searchReq <- QSearchRequestLite.findByIdLite (Id legSearchId) >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legSearchId)
     mbEstimate <- maybe (pure Nothing) (QEstimate.findById . Id) journeyLeg.legPricingId
     whenJust mbEstimate $ \estimate -> do
       when (estimate.status `elem` [DEst.COMPLETED, DEst.CANCELLED, DEst.GOT_DRIVER_QUOTE, DEst.DRIVER_QUOTE_CANCELLED]) $
@@ -469,7 +468,7 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs
   where
-    mkTaxiLegConfirmReq :: DSR.SearchRequest -> Id DEstimate.Estimate -> TaxiLegRequest
+    mkTaxiLegConfirmReq :: QSearchRequestLite.SearchRequestLite -> Id DEstimate.Estimate -> TaxiLegRequest
     mkTaxiLegConfirmReq searchReq estimateId = do
       TaxiLegRequestConfirm $
         TaxiLegRequestConfirmData
@@ -1523,7 +1522,7 @@ getMultimodalOrderSimilarJourneyLegs (mbPersonId, merchantId) journeyId legOrder
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   journey <- JM.getJourney journeyId
   legs <- QJourneyLeg.getJourneyLegs journeyId
-  mbSearchRequest <- QSearchRequest.findById (Id journey.searchRequestId)
+  mbSearchRequest <- QSearchRequestLite.findByIdLite (Id journey.searchRequestId)
   journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   let groupCode = JMTypes.mkJourneyLegGroupCode (Id journey.searchRequestId) journeyLeg.mode journeyLeg.fromStopDetails journeyLeg.toStopDetails
   journeyLegs <- QJourneyLeg.findByGroupCode groupCode

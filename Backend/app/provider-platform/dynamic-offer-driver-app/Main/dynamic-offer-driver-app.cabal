@@ -866,6 +866,7 @@ library
       Storage.Queries.PurchaseHistoryExtra
       Storage.Queries.QueriesExtra.BookingLite
       Storage.Queries.QueriesExtra.RideLite
+      Storage.Queries.QueriesExtra.SearchRequestLite
       Storage.Queries.Quote
       Storage.Queries.RatingExtra
       Storage.Queries.RCStatsExtra

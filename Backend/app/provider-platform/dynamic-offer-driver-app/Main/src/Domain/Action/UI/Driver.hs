@@ -322,6 +322,7 @@ import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.MetaData as QMeta
 import qualified Storage.Queries.OperationHubRequests as QOHR
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSRLite
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.RegistrationToken as QRegister
@@ -1919,7 +1920,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       -- Handle queue skip for special zone rides — forked so a slow Redis/LTS hop
       -- can't add latency to the driver-respond hot path.
       fork "specialZoneQueueSkipOnDriverReject" $ do
-        searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
+        searchReq <- QSRLite.findByIdLite searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
         SpecialZoneDriverDemand.handleQueueSkipIfApplicable searchReq.pickupZoneGateId (show searchTry.vehicleServiceTier) driverId merchantId (searchTry.id.getId <> ":" <> driverId.getId)
       unlockRedisQuoteKeys
     Pulled -> do

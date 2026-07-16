@@ -33,6 +33,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as SQP
+import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSRLite
 import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Tools.Notifications as Notify
@@ -66,7 +67,7 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
           ride <- QR.findActiveByRBId bookingUpdateReq.bookingId >>= fromMaybeM (InternalError $ "Ride not found for bookingId: " <> bookingUpdateReq.bookingId.getId)
           QB.updateIsPickupOrDestinationEdited (Just True) booking.id
           fork "updateIsReallocationEnabled" $ do
-            searchReq <- QSR.findByTransactionIdAndMerchantId booking.transactionId bookingUpdateReq.merchantId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> booking.transactionId <> ",merchantId-" <> bookingUpdateReq.merchantId.getId)
+            searchReq <- QSRLite.findByTransactionIdAndMerchantIdLite booking.transactionId bookingUpdateReq.merchantId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> booking.transactionId <> ",merchantId-" <> bookingUpdateReq.merchantId.getId)
             QSR.updateIsReallocationEnabled (Just False) searchReq.id
           dropLocMapping <- QLM.getLatestEndByEntityId bookingUpdateReqId.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingUpdateReqId: " <> bookingUpdateReqId.getId)
           mbDropLocation <- QL.findById dropLocMapping.locationId
@@ -131,7 +132,7 @@ postEditResultNoRide booking bookingUpdateReq dropLocation = do
   dropLocMapBooking <- SLM.buildLocationMapping' burDropLocMapping.locationId booking.id.getId DLM.BOOKING (Just booking.providerId) (Just booking.merchantOperatingCityId) prevOrder
   QLM.create dropLocMapBooking
   fork "updateIsReallocationEnabled" $ do
-    searchReq <- QSR.findByTransactionIdAndMerchantId booking.transactionId booking.providerId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> booking.transactionId <> ",merchantId-" <> booking.providerId.getId)
+    searchReq <- QSRLite.findByTransactionIdAndMerchantIdLite booking.transactionId booking.providerId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> booking.transactionId <> ",merchantId-" <> booking.providerId.getId)
     QSR.updateIsReallocationEnabled (Just False) searchReq.id
   let estimatedDistance = highPrecMetersToMeters <$> bookingUpdateReq.estimatedDistance
   QB.updateMultipleById bookingUpdateReq.estimatedFare bookingUpdateReq.maxEstimatedDistance estimatedDistance bookingUpdateReq.fareParamsId.getId bookingUpdateReq.bookingId
