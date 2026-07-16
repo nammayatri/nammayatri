@@ -71,7 +71,6 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantConfigDebugLogUpdate,
     filterUnboundedFareProducts,
     filterBoundedFareProductsFromSnapshot,
-    buildFarePolicyUsageCount,
     getMerchantCityList,
   )
 where
@@ -2600,12 +2599,6 @@ filterBoundedFareProductsFromSnapshot allFareProducts area vehicleServiceTier tr
         then (boundedFilter (SQF.removeCityFromTripCategory tripCategory), SQF.removeCityFromTripCategory tripCategory)
         else (results, tripCategory)
 
--- | Build a map of FarePolicyId → number of FareProducts referencing it.
--- Used to detect orphaned FarePolicies without per-product DB queries.
--- Extracted for testability — pure, no DB access.
-buildFarePolicyUsageCount :: [DFareProduct.FareProduct] -> Map.Map (Id FarePolicy.FarePolicy) Int
-buildFarePolicyUsageCount = Map.fromListWith (+) . map (\fp -> (fp.farePolicyId, 1))
-
 postMerchantConfigFarePolicyUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertFarePolicyReq -> Flow Common.UpsertFarePolicyResp
 postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
@@ -2615,18 +2608,12 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       logTagInfo "Updating Fare Policies for merchant: " (show merchant.id <> " and city: " <> show opCity)
       flatFarePolicies <- readCsv merchant.id merchantOpCity.distanceUnit req.file merchantOpCity.id
       logTagInfo "Read file: " (show flatFarePolicies)
-      -- Pre-fetch ALL fare products for this city (enabled AND disabled) in two queries.
-      -- The combined snapshot is used for BOTH:
-      --   1. Finding old fare products to replace — disabled ones must also be replaced so
-      --      the domain stays unique (consistent with the upfront uniqueness check below).
-      --   2. Building the orphan-check usage count — a FarePolicy must not be deleted while
-      --      a disabled FareProduct still references it.
+      -- Pre-fetch ALL fare products for this city (enabled AND disabled) in two queries,
+      -- used to find old fare products to replace — disabled ones must also be replaced so
+      -- the domain stays unique (consistent with the upfront uniqueness check below).
       enabledCityFareProducts <- SQF.findAllFareProductByMerchantOpCityId merchantOpCity.id True
       disabledCityFareProducts <- SQF.findAllFareProductByMerchantOpCityId merchantOpCity.id False
       let allCityFareProducts = enabledCityFareProducts ++ disabledCityFareProducts
-      -- Usage count: how many FareProducts (any state) reference each FarePolicyId.
-      -- Threaded through the fold; decremented on delete; policy deleted when count reaches 0.
-      let farePolicyUsageCount = buildFarePolicyUsageCount allCityFareProducts
       -- Reject conflicting groups upfront: two groups with the same lookup domain
       -- (area, vehicleServiceTier, tripCategory, searchSource, timeBounds) but different
       -- enabled/disableRecompute would both create a FareProduct for the same domain,
@@ -2643,7 +2630,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               <> "Please deduplicate: "
               <> show duplicateKeys
       let boundedAlreadyDeletedMap = Map.empty :: Map.Map Text Bool
-      (farePolicyErrors, _, _) <- foldlM (processFarePolicyGroup merchantOpCity allCityFareProducts) ([], boundedAlreadyDeletedMap, farePolicyUsageCount) groups
+      (farePolicyErrors, _) <- foldlM (processFarePolicyGroup merchantOpCity allCityFareProducts) ([], boundedAlreadyDeletedMap) groups
       return $
         Common.UpsertFarePolicyResp
           { unprocessedFarePolicies = farePolicyErrors,
@@ -2664,12 +2651,12 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       where
         fst7 (dr, c, t, tr, a, tb, ss, en, _) = (dr, c, t, tr, a, tb, ss, en)
 
-    processFarePolicyGroup :: DMOC.MerchantOperatingCity -> [DFareProduct.FareProduct] -> ([Text], Map.Map Text Bool, Map.Map (Id FarePolicy.FarePolicy) Int) -> [(Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)] -> Flow ([Text], Map.Map Text Bool, Map.Map (Id FarePolicy.FarePolicy) Int)
+    processFarePolicyGroup :: DMOC.MerchantOperatingCity -> [DFareProduct.FareProduct] -> ([Text], Map.Map Text Bool) -> [(Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)] -> Flow ([Text], Map.Map Text Bool)
     processFarePolicyGroup _ _ _ [] = throwError $ InvalidRequest "Empty Fare Policy Group"
-    processFarePolicyGroup merchantOpCity allCityFareProducts (errors, boundedAlreadyDeletedMap, farePolicyUsageCount) (x : xs) = do
+    processFarePolicyGroup merchantOpCity allCityFareProducts (errors, boundedAlreadyDeletedMap) (x : xs) = do
       let (disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBounds, searchSource, enabled', firstFarePolicy) = x
       if city /= opCity
-        then return (errors <> ["Can't process fare policy for different city: " <> show city <> ", please login with this city in dashboard"], boundedAlreadyDeletedMap, farePolicyUsageCount)
+        then return (errors <> ["Can't process fare policy for different city: " <> show city <> ", please login with this city in dashboard"], boundedAlreadyDeletedMap)
         else do
           let mergeFarePolicy newId firstFarePolicy'@FarePolicy.FarePolicy {..} = do
                 let remainingfarePolicies = map (\(_, _, _, _, _, _, _, _, fp) -> fp) xs
@@ -2788,7 +2775,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               belowMinMsg = "Base fare is below the minimum base fare for this city (area: " <> show area <> ", vehicleServiceTier: " <> show vehicleServiceTier <> ", tripCategory: " <> show tripCategory <> ")."
               newErrors = if anyBelowMin then errors <> [belowMinMsg] else errors
           if anyBelowMin && not allowUpdate
-            then return (newErrors, boundedAlreadyDeletedMap, farePolicyUsageCount)
+            then return (newErrors, boundedAlreadyDeletedMap)
             else do
               CQFP.create finalFarePolicy
               case finalFarePolicy.farePolicyDetails of
@@ -2838,22 +2825,18 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                                 markBoundedAreadyDeleted merchanOperatingCityId vehicleServiceTier tripCategory area searchSource boundedAlreadyDeletedMap
                         return (fareProducts, updatedBoundedAlreadyDeletedMap)
 
-              -- Delete old fare products. Use the in-memory usage count to decide whether the
-              -- FarePolicy itself is now orphaned (no remaining FareProducts reference it),
-              -- avoiding one DB query per old fare product.
+              -- Delete old fare products first, then per unique FarePolicy check whether
+              -- ANY FareProduct (across all cities / merchants) still references it before
+              -- deleting the policy.  A per-city in-memory count would undercount policies
+              -- shared across cities (e.g. cloned via postMerchantConfigOperatingCityCreate),
+              -- silently orphaning them.  One extra query per unique policy is cheap here.
               -- NOTE: Cache clearing is deferred until AFTER the new FareProduct is created
               -- in the DB, to minimise the window where concurrent search requests could
               -- query an empty DB state and cache empty results.
-              newFarePolicyUsageCount <-
-                foldlM
-                  ( \usageCount fp -> do
-                      let currentCount = Map.findWithDefault 0 fp.farePolicyId usageCount
-                      when (currentCount <= 1) $ CQFP.delete fp.farePolicyId
-                      CQFProduct.delete fp.id
-                      return $ Map.adjust (subtract 1) fp.farePolicyId usageCount
-                  )
-                  farePolicyUsageCount
-                  oldFareProducts
+              forM_ oldFareProducts $ \fp -> CQFProduct.delete fp.id
+              forM_ (DL.nub (map (.farePolicyId) oldFareProducts)) $ \fpId -> do
+                stillReferenced <- SQF.findAllFareProductByFarePolicyId fpId
+                when (null stillReferenced) $ CQFP.delete fpId
 
               id <- generateGUID
               let farePolicyId = finalFarePolicy.id
@@ -2866,7 +2849,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               forM_ oldFareProducts CQFProduct.clearCache
               CQFProduct.clearCache fareProduct
 
-              return (newErrors, newBoundedAlreadyDeletedMap, newFarePolicyUsageCount)
+              return (newErrors, newBoundedAlreadyDeletedMap)
 
     checkIfvehicleServiceTierExists vehicleServiceTier merchanOperatingCityId = CQVST.findByServiceTierTypeAndCityId vehicleServiceTier merchanOperatingCityId (Just []) Nothing >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
 
@@ -3470,7 +3453,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         CQFProduct.findAllFareProductByMerchantOpCityId newMerchantOperatingCityId >>= \case
           [] -> do
             fareProducts <- CQFProduct.findAllFareProductByMerchantOpCityId baseOperatingCityId
-            newFareProducts <- mapM (buildFareProduct newMerchantId newMerchantOperatingCityId) fareProducts
+            newFareProducts <- mapM (buildFareProduct newMerchantId newMerchantOperatingCityId now) fareProducts
             return $ Just newFareProducts
           _ -> return Nothing
       else return Nothing
@@ -3682,7 +3665,16 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         whenJust mbNewOperatingCity $ \newOperatingCity -> CQMOC.create newOperatingCity
         whenJust mbInteglligentPoolConfig $ \newIntelligentPoolConfig -> CQDIPC.create newIntelligentPoolConfig
         whenJust mbDriverPoolConfigs $ \newDriverPoolConfigs -> mapM_ CQDPC.create newDriverPoolConfigs
-        whenJust mbFareProducts $ \newFareProducts -> mapM_ CQFProduct.create newFareProducts
+        whenJust mbFareProducts $ \newFareProductPairs ->
+          forM_ newFareProductPairs $ \(mbClonedPolicy, fareProduct) -> do
+            whenJust mbClonedPolicy $ \cloned -> do
+              CQFP.create cloned
+              case cloned.farePolicyDetails of
+                FarePolicy.AmbulanceDetails details ->
+                  forM_ (NE.toList details.slabs) $ \slab ->
+                    QueriesFPAD.create (cloned.id, slab)
+                _ -> pure ()
+            CQFProduct.create fareProduct
         whenJust mbVehicleServiceTier $ \newVehicleServiceTiers -> CQVST.createMany newVehicleServiceTiers
         whenJust mbGoHomeConfig $ \newGoHomeConfig -> CGHC.create newGoHomeConfig
         whenJust mbLeaderBoardConfig $ \newLeaderBoardConfigs -> mapM_ CQLBC.create newLeaderBoardConfigs
@@ -3839,15 +3831,39 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             ..
           }
 
-    buildFareProduct mId newCityId DFareProduct.FareProduct {..} = do
+    -- Clone the source FarePolicy so the new FareProduct owns its own row.
+    -- Reusing the base city's farePolicyId breaks the CSV upsert flow, which
+    -- decides orphaning from a per-city snapshot and can delete a policy still
+    -- referenced by the base city.  Returns the cloned policy (to be created
+    -- alongside the product) or Nothing if the source policy is missing.
+    buildFareProduct mId newCityId currentTime DFareProduct.FareProduct {..} = do
       newId <- generateGUID
-      return $
-        DFareProduct.FareProduct
-          { id = newId,
-            merchantId = mId,
-            merchantOperatingCityId = newCityId,
-            ..
-          }
+      mbSourcePolicy <- CQFP.findById Nothing farePolicyId
+      (mbClonedPolicy, newFarePolicyId) <- case mbSourcePolicy of
+        Nothing -> do
+          logError $ "buildFareProduct: source FarePolicy " <> farePolicyId.getId <> " not found; new FareProduct will reference the original id"
+          return (Nothing, farePolicyId)
+        Just sourcePolicy -> do
+          newFpId <- generateGUID
+          let cloned =
+                (sourcePolicy :: FarePolicy.FarePolicy)
+                  { FarePolicy.id = newFpId,
+                    FarePolicy.merchantId = Just mId,
+                    FarePolicy.merchantOperatingCityId = Just newCityId,
+                    FarePolicy.createdAt = currentTime,
+                    FarePolicy.updatedAt = currentTime
+                  }
+          return (Just cloned, newFpId)
+      return
+        ( mbClonedPolicy,
+          DFareProduct.FareProduct
+            { id = newId,
+              merchantId = mId,
+              merchantOperatingCityId = newCityId,
+              farePolicyId = newFarePolicyId,
+              ..
+            }
+        )
 
     buildVehicleServiceTier mId newCityId DVST.VehicleServiceTier {..} = do
       newId <- generateGUID
