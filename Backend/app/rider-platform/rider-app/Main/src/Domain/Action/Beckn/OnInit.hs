@@ -181,6 +181,8 @@ onInit req = do
 
     getToLocationFromBookingDetails = \case
       DRB.RentalDetails _ -> Nothing
+      -- EasyBooking is destination-less like Rental — no toLocation to report on init.
+      DRB.EasyBookingDetails _ -> Nothing
       DRB.OneWayDetails details -> Just details.toLocation
       DRB.DriverOfferDetails details -> Just details.toLocation
       DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
@@ -276,6 +278,8 @@ buildOnInitResFromBooking bookingId = do
 
     getToLocationFromBookingDetails = \case
       DRB.RentalDetails _ -> Nothing
+      -- EasyBooking is destination-less like Rental — no toLocation to report on init.
+      DRB.EasyBookingDetails _ -> Nothing
       DRB.OneWayDetails details -> Just details.toLocation
       DRB.DriverOfferDetails details -> Just details.toLocation
       DRB.OneWaySpecialZoneDetails details -> Just details.toLocation

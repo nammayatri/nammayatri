@@ -290,6 +290,8 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       (toLocation, stops) = case booking.bookingDetails of
         DB.OneWayDetails details -> (Just details.toLocation, details.stops)
         DB.RentalDetails _ -> (Nothing, [])
+        -- EasyBooking is destination-less like Rental: no toLocation, no stops.
+        DB.EasyBookingDetails _ -> (Nothing, [])
         DB.DriverOfferDetails details -> (Just details.toLocation, details.stops)
         DB.OneWaySpecialZoneDetails details -> (Just details.toLocation, details.stops)
         DB.InterCityDetails details -> (Just details.toLocation, [])

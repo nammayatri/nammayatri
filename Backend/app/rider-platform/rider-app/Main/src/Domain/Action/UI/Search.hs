@@ -185,6 +185,31 @@ extractSearchDetails now = \case
         city = Nothing,
         ..
       }
+  -- New EasyBooking category: destination-less like Rental, but no stops/route fields to fill.
+  EasyBookingSearch EasyBookingSearchReq {..} ->
+    SearchDetails
+      { riderPreferredOption = DRPO.EasyBooking,
+        roundTrip = False,
+        stops = [],
+        hasStops = Nothing,
+        returnTime = Nothing,
+        driverIdentifier_ = Nothing,
+        routeCode = Nothing,
+        destinationStopCode = Nothing,
+        originStopCode = Nothing,
+        platformType = Nothing,
+        vehicleCategory = Nothing,
+        currentLocation = Nothing,
+        busLocationData = [],
+        fromSpecialLocationId = Nothing,
+        toSpecialLocationId = Nothing,
+        enforceTollRoute = Nothing,
+        fareParametersInRateCard = Nothing,
+        placeNameSource = Nothing,
+        recentLocationId = Nothing,
+        city = Nothing,
+        ..
+      }
   InterCitySearch InterCitySearchReq {..} ->
     SearchDetails
       { riderPreferredOption = DRPO.InterCity,
@@ -587,6 +612,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       AmbulanceSearch _ -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide Nothing
       InterCitySearch _ -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide Nothing
       RentalSearch rentalReq -> processRentalSearch person rentalReq stopsLatLong originCity
+      EasyBookingSearch easyBookingReq -> processEasyBookingSearch person easyBookingReq originCity
       DeliverySearch _ -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide Nothing
       PTSearch _ -> do
         return
@@ -648,6 +674,23 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
           stopCity <- Serviceability.validateServiceability stop [] person
           unless (stopCity == originCity) $ throwError RideNotServiceable
           return (RouteDetails Nothing (Just rentalReq.estimatedRentalDistance) (Just rentalReq.estimatedRentalDuration) Nothing (Just (RouteInfo (Just rentalReq.estimatedRentalDuration) Nothing (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] [] Nothing Nothing)) Nothing, Nothing)
+
+    -- No destination, no rider-given distance/duration estimate at all — the quote shown
+    -- will just be the base fare from the regular (Progressive) fare policy; the real fare
+    -- gets computed from actual GPS distance at end-ride.
+    processEasyBookingSearch :: SearchRequestFlow m r => DPerson.Person -> EasyBookingSearchReq -> Context.City -> m (RouteDetails, Maybe Text)
+    processEasyBookingSearch _person _easyBookingReq _originCity =
+      return
+        ( RouteDetails
+            { longestRouteDistance = Nothing,
+              shortestRouteDistance = Nothing,
+              shortestRouteDuration = Nothing,
+              shortestRouteStaticDuration = Nothing,
+              shortestRouteInfo = Nothing,
+              multipleRoutes = Nothing
+            },
+          Nothing
+        )
 
     updateRideSearchHotSpot :: SearchRequestFlow m r => DPerson.Person -> SearchReqLocation -> Merchant -> Maybe Bool -> Maybe Bool -> m ()
     updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation = do

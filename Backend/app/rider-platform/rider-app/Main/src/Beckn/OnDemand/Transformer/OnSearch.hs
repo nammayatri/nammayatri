@@ -97,7 +97,23 @@ tfQuotesInfo provider fulfillments validTill item = do
       vehicleIconUrl = Beckn.OnDemand.Utils.OnSearch.getVehicleIconUrl item
   quoteOrEstId_ <- Beckn.OnDemand.Utils.OnSearch.getQuoteFulfillmentId item
   fulfillment <- find (\f -> f.fulfillmentId == Just quoteOrEstId_) fulfillments & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing fulfillment for item")
-  tripCategory <- (fulfillment.fulfillmentType >>= (Just . BecknV2.OnDemand.Utils.Common.fulfillmentTypeToTripCategory)) & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing fulfillment type")
+  fulfillmentTripCategory <- (fulfillment.fulfillmentType >>= (Just . BecknV2.OnDemand.Utils.Common.fulfillmentTypeToTripCategory)) & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing fulfillment type")
+  -- FIX: EasyBooking has no dedicated FulfillmentType slot (it's a fixed protocol enum), so
+  -- tripCategoryToFulfillmentType reuses RENTAL's wire value for it. On the way back here,
+  -- fulfillmentTypeToTripCategory can only decode that as `Rental _`, never `EasyBooking` —
+  -- causing EasyBooking quotes to be misidentified as real Rental quotes, which then failed
+  -- validation (buildRentalQuoteInfo requires Rental-package tags EasyBooking never sets,
+  -- so the rider-app's /on_search handler rejected every EasyBooking callback with
+  -- "Missing rental quote details" — confirmed in logs as an HTTP 400 on-search response).
+  -- The item's own category id ("ON_DEMAND_EASY_BOOKING", set via tripCategoryToCategoryCode)
+  -- is the one signal that still distinguishes it, so use that to override when present.
+  let tripCategory =
+        if maybe False ("ON_DEMAND_EASY_BOOKING" `elem`) item.itemCategoryIds
+          then -- Only OnDemandStaticOffer is ever produced for EasyBooking right now
+          -- (see driver-app's Search.hs), so hardcode it here too — RideOtp is
+          -- deliberately deferred to a follow-up PR.
+            EasyBooking OnDemandStaticOffer
+          else fulfillmentTripCategory
   case tripCategoryToPricingPolicy tripCategory of
     EstimateBased _ -> do
       let bppEstimateId_ = Id itemId_
@@ -169,6 +185,10 @@ tfQuotesInfo provider fulfillments validTill item = do
             interCityQuoteInfo <- buildInterCityQuoteInfo item quoteOrEstId_ currency & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing intercity quote details")
             pure $ Domain.Action.Beckn.OnSearch.InterCityDetails interCityQuoteInfo
           OneWay MeterRide -> pure $ Domain.Action.Beckn.OnSearch.MeterRideDetails (Domain.Action.Beckn.OnSearch.MeterRideQuoteDetails {quoteId = quoteOrEstId_})
+          -- Just the quote id, like OneWay/MeterRide above — the actual price is carried
+          -- generically via quoteBreakupList_/estimatedFare_, not a per-category preview field.
+          -- RideOtp mode not handled yet — never produced (see the tripCategory override above).
+          EasyBooking OnDemandStaticOffer -> pure $ Domain.Action.Beckn.OnSearch.EasyBookingDetails (Domain.Action.Beckn.OnSearch.EasyBookingQuoteDetails {quoteId = quoteOrEstId_})
           ft -> throwError (InternalError $ "tfQuotesInfo not implemented for fulfillmentType: " <> show ft)
       pure $
         Right $
