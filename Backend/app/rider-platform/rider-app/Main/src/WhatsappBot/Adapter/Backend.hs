@@ -62,7 +62,7 @@ import qualified SharedLogic.Search as SLS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QR
 import qualified Tools.ActorInfo as ActorInfo
-import Tools.Error (GenericError (InvalidRequest))
+import Tools.Error (BookingError (BookingDoesNotExist), GenericError (InvalidRequest))
 import qualified Tools.Maps as Maps
 import qualified WhatsappBot.Cities as Cities
 import WhatsappBot.Handles (BackendHandle (..))
@@ -330,7 +330,7 @@ mkBackendHandle merchantId mocId ctx =
 -- ownership pre-check. reasonStage from the fetched booking status (client.ts:650).
 cancelRideImpl :: Id DM.Merchant -> Id SP.Person -> Text -> Flow ()
 cancelRideImpl merchantId pid bookingId = do
-  booking <- QRB.findById (Id bookingId) >>= fromMaybeM (InvalidRequest "booking not found")
+  booking <- QRB.findById (Id bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId)
   unless (booking.riderId == pid) $ throwError (InvalidRequest "not your booking")
   mRide <- B.runInReplica $ QR.findActiveByRBId booking.id
   let stage =

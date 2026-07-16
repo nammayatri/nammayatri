@@ -54,7 +54,7 @@ module GoldenReplay
   )
 where
 
-import Control.Concurrent (forkIO)
+import Control.Concurrent (forkIO, killThread)
 import Control.Concurrent.MVar (MVar, newEmptyMVar, putMVar, readMVar, takeMVar, tryPutMVar)
 import Data.Aeson (Value (String), eitherDecodeStrict', encode, object, (.=))
 import qualified Data.ByteString as BS
@@ -67,6 +67,7 @@ import qualified Data.Text as T
 import Data.Time.Clock (addUTCTime, diffUTCTime)
 import qualified Kernel.External.Meta as Meta
 import Kernel.Prelude
+import System.Timeout (timeout)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase)
 import WhatsappBot.Engine (handleMessage, scopedSessionId)
@@ -495,8 +496,10 @@ fixtureMerchant :: Text -> MerchantCtx
 fixtureMerchant pn
   | pn == "pn_reg" =
     base {merchantLabel = "REG", rideMode = RideModeRegular, flexiEnabled = False, regularEnabled = True}
-  | otherwise =
+  | pn == "pn_flexi" =
     base {merchantLabel = "FLEXI", rideMode = RideModeFlexi, flexiEnabled = True, regularEnabled = False}
+  | otherwise =
+    error ("fixtureMerchant: unknown phone_number_id " <> pn)
   where
     base =
       MerchantCtx
@@ -632,14 +635,21 @@ ctxLabel lbl i mnote = lbl <> "[" <> show i <> "]" <> maybe "" (\n -> " " <> T.u
 runConcurrent :: World -> MerchantCtx -> InboundEvent -> InboundEvent -> IO ()
 runConcurrent w merchantCtx ev cev = do
   let botEnv = wEnv w
+      waitMicros = 5000000 -- 5s guard: a wedged handler fails the assertion instead of hanging the suite
   done <- newEmptyMVar
   _ <- botEnv.sessions.resolveSession (scopedSessionId merchantCtx ev)
-  _ <- forkIO (handleMessage botEnv ev `finally` putMVar done ())
-  takeMVar (wReached w) -- forked handler has recorded up to the gate and is blocked
-  _ <- botEnv.sessions.resolveSession (scopedSessionId merchantCtx cev)
-  handleMessage botEnv cev
-  putMVar (wRelease w) () -- un-stall the gate; the fork resumes and finishes
-  takeMVar done
+  tid <- forkIO (handleMessage botEnv ev `finally` putMVar done ())
+  reachedOk <- timeout waitMicros (takeMVar (wReached w)) -- forked handler recorded up to the gate and blocked
+  case reachedOk of
+    Nothing -> killThread tid >> assertFailure "runConcurrent: forked handler never reached the gate (timeout)"
+    Just () -> do
+      _ <- botEnv.sessions.resolveSession (scopedSessionId merchantCtx cev)
+      handleMessage botEnv cev
+      putMVar (wRelease w) () -- un-stall the gate; the fork resumes and finishes
+      finishedOk <- timeout waitMicros (takeMVar done)
+      case finishedOk of
+        Nothing -> killThread tid >> assertFailure "runConcurrent: forked handler did not finish after release (timeout)"
+        Just () -> pure ()
 
 runStep :: World -> MerchantCtx -> Int -> Step -> Assertion
 runStep w merchantCtx i step = do

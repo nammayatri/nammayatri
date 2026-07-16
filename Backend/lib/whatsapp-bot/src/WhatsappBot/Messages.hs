@@ -110,7 +110,9 @@ buildDriverCard b lang =
 -- (@flexi-messages.ts:90-95@). @flexiArrived@ branches internally on empty OTP.
 buildArrived :: BotBookingDetails -> Maybe SupportedLanguage -> BuiltMessage
 buildArrived b lang =
-  BuiltMessage {bmText = (t lang).flexiArrived (fromMaybe "" b.rideOtp), bmButtons = []}
+  BuiltMessage {bmText = s.flexiArrived (fromMaybe "" b.rideOtp), bmButtons = []}
+  where
+    s = t lang
 
 -- | Start-OTP entered — trip underway (@flexi-messages.ts:99-110@). The End-ride
 -- button is rental-only, gated on the end OTP's presence.
@@ -146,6 +148,8 @@ buildEnded b lang =
 buildCancelled :: Maybe SupportedLanguage -> BuiltMessage
 buildCancelled lang =
   BuiltMessage
-    { bmText = (t lang).flexiRideCancelled,
-      bmButtons = [OutButton {btnId = "book", btnTitle = (t lang).flexiBookAnother, btnDesc = Nothing}]
+    { bmText = s.flexiRideCancelled,
+      bmButtons = [OutButton {btnId = "book", btnTitle = s.flexiBookAnother, btnDesc = Nothing}]
     }
+  where
+    s = t lang

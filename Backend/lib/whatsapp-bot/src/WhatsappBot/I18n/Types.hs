@@ -26,7 +26,7 @@ import Kernel.Prelude hiding (error)
 
 -- | The six supported languages (@i18n/types.ts:1@).
 data SupportedLanguage = En | Hi | Gu | Kn | Ta | Te
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, Enum, Bounded)
+  deriving (Eq, Ord, Show, Read, Generic, Enum, Bounded)
 
 allLanguages :: [SupportedLanguage]
 allLanguages = [minBound .. maxBound]
@@ -44,6 +44,19 @@ languageCode = \case
 -- | Parse a language code; unknown -> Nothing (caller falls back to 'En').
 parseLanguage :: Text -> Maybe SupportedLanguage
 parseLanguage t = find ((== t) . languageCode) allLanguages
+
+-- languageCode/parseLanguage are the single source of truth for the lowercase
+-- wire/storage codes (matching the TS @SupportedLanguage@ string), so JSON is
+-- (de)serialized through them — not the capitalised constructor names a derived
+-- instance would emit (@"En"@), which would make persisted FlowContext /
+-- StoredPerson / RegisteredRide records incompatible with the TS connector.
+instance ToJSON SupportedLanguage where
+  toJSON = toJSON . languageCode
+
+instance FromJSON SupportedLanguage where
+  parseJSON v = do
+    t <- parseJSON v
+    maybe (fail $ "Unknown SupportedLanguage code: " <> toString t) pure (parseLanguage t)
 
 -- | The full string table each language must implement (@i18n/types.ts:3-141@).
 -- Field order mirrors the TS interface verbatim. Fields that were

@@ -44,15 +44,15 @@ toEvent contacts msg = do
   pure
     InboundEvent
       { fromPhone = msg.from,
-        waId = (\c -> c.waId) <$> contact,
-        profileName = contact >>= (\c -> c.profile) >>= (\p -> p.name),
+        waId = (.waId) <$> contact,
+        profileName = contact >>= (.profile) >>= (.name),
         messageId = msg.id,
         kind = k
       }
 
 parseKind :: Meta.MetaInboundMessage -> Maybe InboundKind
 parseKind msg = case msg.type_ of
-  "text" -> Just (InText (maybe "" (\t -> t.body) msg.text))
+  "text" -> Just (InText (maybe "" (.body) msg.text))
   "interactive" ->
     Just . InButtonTap $ case msg.interactive of
       Just (Meta.MetaButtonReply d) -> d.id

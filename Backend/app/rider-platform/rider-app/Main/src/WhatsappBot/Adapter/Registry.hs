@@ -82,5 +82,12 @@ mkRideRegistry trackMaxAgeSec =
     ridesFor :: Text -> (RegisteredRide -> Bool) -> Flow [RegisteredRide]
     ridesFor setKey keep = do
       bids <- Redis.sMembers setKey
-      rides <- catMaybes <$> mapM (Redis.get . rideKey) bids
+      rides <- fmap catMaybes . forM bids $ \bid -> do
+        mRide <- Redis.get (rideKey bid)
+        case mRide of
+          -- Read-repair: the blob expired but its id lingers in the set (whose
+          -- TTL keeps getting bumped by active rides), so prune it — matches the
+          -- TS list()/listByUser() srem so the index can't grow unboundedly.
+          Nothing -> void (Redis.srem setKey [bid]) >> pure Nothing
+          Just r -> pure (Just r)
       pure (filter keep rides)
