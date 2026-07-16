@@ -727,7 +727,7 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                         igst
                 else
                   computeGstBreakdownByPlace
-                    transporterConfig.taxConfig.rideGst
+                    transporterConfig.taxConfig.subscriptionGst
                     (Just $ show merchant.state)
                     (Just $ show merchantOperatingCity.state)
                     (Just $ show merchant.city)
@@ -803,7 +803,7 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
   let totalGst = driverFee.platformFee.cgst + driverFee.platformFee.sgst
       gstBreakdown =
         computeGstBreakdownByPlace
-          transporterConfig.taxConfig.rideGst
+          transporterConfig.taxConfig.subscriptionGst
           (Just $ show merchant.state)
           (Just $ show merchantOperatingCity.state)
           (Just $ show merchant.city)
