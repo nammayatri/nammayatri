@@ -562,6 +562,7 @@ appendAgentResolvedChats issueReport targetStatus merchantOpCityId identifier is
               )
               issueMessageIds
     QIR.updateChats issueReport.id updatedChats
+    mapM_ (\im -> UIR.forwardChatToTicketServiceAs "Auto Reply" issueReport identifier issueHandle im.message []) (catMaybes mbIssueMessages)
   pure effectiveStatus
 
 issueAddComment ::
