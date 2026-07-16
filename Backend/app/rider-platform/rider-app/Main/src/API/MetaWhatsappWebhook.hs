@@ -13,7 +13,8 @@
 -}
 
 -- | Public root-level Meta WhatsApp Cloud API webhook (Juspay/Stripe style),
--- mounted in "API". Two routes under @whatsapp/webhook@: the GET verification
+-- mounted in "API". Two routes under @webhook/whatsapp@ (matches the TS
+-- connector's path, so the Meta callback URL needs no change): the GET verification
 -- handshake (echo @hub.challenge@) and the POST inbound message delivery
 -- (raw body kept for HMAC verification). Wiring shape from
 -- @API.Internal.XyneWebhook@.
@@ -33,8 +34,8 @@ import Kernel.Utils.Common
 import Servant
 
 type API =
-  "whatsapp"
-    :> "webhook"
+  "webhook"
+    :> "whatsapp"
     :> ( QueryParam "hub.mode" Kernel.Prelude.Text
            :> QueryParam "hub.verify_token" Kernel.Prelude.Text
            :> QueryParam "hub.challenge" Kernel.Prelude.Text
