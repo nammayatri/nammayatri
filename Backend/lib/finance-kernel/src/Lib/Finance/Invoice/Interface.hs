@@ -31,9 +31,10 @@ import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 data ItemType = Tax | Fare | Adjustment
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
--- | Typed description key. The renderer maps each constructor to a locale-
--- specific display string. Keep this enum in sync with the creators that emit
--- new invoice line types.
+-- | Typed description key — the invoice-template JsonLogic's translation map switches on
+-- the constructor tag, so every DISTINCT display label needs its own constructor
+-- (a shared one can only translate to a single string). Keep in sync with the
+-- creators that emit new invoice line types.
 data LineItemDescription
   = BaseFare
   | RideFare
@@ -63,6 +64,35 @@ data LineItemDescription
   | CashbackOffer
   | VatInput
   | OfferDiscount
+  | -- nammayatri itemized-receipt fareBreakup tags
+    DistanceFare
+  | TimeFare
+  | PickupCharges
+  | WaitingCharges
+  | NightShiftCharge
+  | ServiceCharge
+  | GovernmentCharge
+  | PlatformFee
+  | CongestionCharge
+  | DriverAddition
+  | CustomerAddition
+  | PriorityCharges
+  | EarlyEndRideCharges
+  | PetCharges
+  | RideCancellationCharges
+  | RideCancellationTax
+  | DistanceBasedCharges
+  | ExtraTimeCharges
+  | OptionalDriverRequest
+  | RideGst
+  | TaxesGst
+  | CancellationCharges
+  | CancellationDues
+  | PerStopCharges
+  | DriverAllowance
+  | AirportConvenienceFee
+  | BusinessDiscount
+  | PersonalDiscount
   deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON)
 
 -- | groupId is required for Fare/Tax (pairing); Nothing for Adjustment.

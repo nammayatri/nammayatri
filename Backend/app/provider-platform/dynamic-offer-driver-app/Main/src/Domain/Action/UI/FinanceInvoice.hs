@@ -232,7 +232,15 @@ getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLi
               mbCardLastFour = mbLast4,
               mbRecipientBusinessId = mbRecipientBid,
               mbSellerBusinessId = mbSellerBid,
-              mbSellerVatNumber = mbSellerVat
+              mbSellerVatNumber = mbSellerVat,
+              rideShortId = Nothing,
+              driverName = Nothing,
+              vehicleNumber = Nothing,
+              pickupAddress = Nothing,
+              dropAddress = Nothing,
+              rideDate = Nothing,
+              rideStartTime = Nothing,
+              rideEndTime = Nothing
             }
       mbInvType = case inv.invoiceType of
         AggregatedCommission -> Just AggregatedCommission

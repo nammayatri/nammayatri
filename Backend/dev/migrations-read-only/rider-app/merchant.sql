@@ -124,3 +124,9 @@ ALTER TABLE atlas_app.merchant ADD COLUMN cloud_base_url text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant ADD COLUMN use_fare_breakup_line_items boolean ;
