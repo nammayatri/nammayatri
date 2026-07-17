@@ -64,7 +64,8 @@ import qualified Lib.Finance.Reconciliation.Types as ReconT
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerExtra
 import SharedLogic.Finance.Prepaid
-  ( expiryCreditTransferReferenceType,
+  ( attributableRideDebitAmount,
+    expiryCreditTransferReferenceType,
     getSubscriptionRemainingAvailableBalance,
     prepaidRideDebitReferenceType,
   )
@@ -217,11 +218,10 @@ fetchTargets _scope subIds = do
     QLedgerExtra.findByReferenceTypesAndReferenceIds
       [prepaidRideDebitReferenceType]
       allBookingIds
-  let debitsByBooking :: HM.HashMap Text HighPrecMoney
-      debitsByBooking =
-        HM.fromListWith
-          (+)
-          [(e.referenceId, e.amount) | e <- debitEntries, e.status == DLE.SETTLED]
+  let settledDebits = filter ((== DLE.SETTLED) . (.status)) debitEntries
+      debitsByBookingId :: HM.HashMap Text [DLE.LedgerEntry]
+      debitsByBookingId =
+        HM.fromListWith (++) [(e.referenceId, [e]) | e <- settledDebits]
 
   -- Bulk: expiry-credit-transfer ledger entries keyed by sub id.
   expiryEntries <-
@@ -238,8 +238,12 @@ fetchTargets _scope subIds = do
   -- so the sum-check in defaultClassify hits @planRideCredit@ regardless
   -- of whether the sub is still ACTIVE or has reached EXPIRED/EXHAUSTED.
   forM ridesBySub $ \(subId, rides) -> do
-    let debitTotal = sum [HM.lookupDefault 0 r.bookingId.getId debitsByBooking | r <- rides]
-        expiryTotal = HM.lookupDefault 0 subId expiriesBySub
+    debitTotal <-
+      fmap sum $
+        forM rides $ \ride -> do
+          let entries = HM.lookupDefault [] ride.bookingId.getId debitsByBookingId
+          fmap sum $ forM entries $ attributableRideDebitAmount (Id subId)
+    let expiryTotal = HM.lookupDefault 0 subId expiriesBySub
         consumed = debitTotal + expiryTotal
     mbRemaining <- case HM.lookup subId subsById of
       Just sub -> getSubscriptionRemainingAvailableBalance sub consumed
