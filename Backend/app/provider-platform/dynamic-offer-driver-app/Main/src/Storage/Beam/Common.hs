@@ -19,6 +19,7 @@ import Kernel.Prelude (Generic)
 import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamITT
 import qualified Lib.Finance.Storage.Beam.LedgerEntry as BeamLE
 import qualified Lib.Finance.Storage.Beam.PgPaymentSettlementReport as BeamPgReport
+import Storage.Beam.AadhaarCard
 import Storage.Beam.Booking
 import Storage.Beam.BookingCancellationReason
 import Storage.Beam.CallStatus
@@ -70,7 +71,8 @@ atlasDB :: B.DatabaseSettings be AtlasDB
 atlasDB =
   B.defaultDbSettings
     `B.withDbModification` B.dbModification
-      { exophone = exophoneTable,
+      { aadhaarCard = aadhaarCardTable,
+        exophone = exophoneTable,
         geometry = geometryTable,
         geometryGeom = geometryGeomTable,
         interCityTravelCities = interCityTravelCitiesTable,
@@ -121,7 +123,8 @@ atlasDB =
       }
 
 data AtlasDB f = AtlasDB
-  { exophone :: f (B.TableEntity ExophoneT),
+  { aadhaarCard :: f (B.TableEntity AadhaarCardT),
+    exophone :: f (B.TableEntity ExophoneT),
     geometry :: f (B.TableEntity GeometryT),
     geometryGeom :: f (B.TableEntity BeamGeomG.GeometryGeomT),
     interCityTravelCities :: f (B.TableEntity InterCityTravelCitiesT),
