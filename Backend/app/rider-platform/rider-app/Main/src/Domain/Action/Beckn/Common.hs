@@ -904,11 +904,15 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
         Nothing -> totalFare.amount
       offerBasePrice = mkPrice (Just totalFare.currency) discountApplicableFareAmountTaxIncl
+  -- A tip added while the ride was running is not part of the fare (it never enters the BPP's
+  -- fare params, so it carries no commission or tax) but it is part of what the rider owes.
+  -- `fare` stays the fare the policy computed; `totalFare` is what is actually collected.
+  let totalFareWithTip = mkPrice (Just totalFare.currency) (totalFare.amount + maybe 0 (.amount) ride.tipAmount)
   let rideCommission = maybe booking.commission Just commission
       updRide =
         ride{status = DRide.COMPLETED,
              fare = Just fare,
-             totalFare = Just totalFare,
+             totalFare = Just totalFareWithTip,
              chargeableDistance = convertHighPrecMetersToDistance distanceUnit <$> chargeableDistance,
              traveledDistance = convertHighPrecMetersToDistance distanceUnit <$> traveledDistance,
              tollConfidence,
@@ -1112,6 +1116,11 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
               }
           ]
       else pure []
+  -- The tip rides in on the Beckn quote breakup as BUYER_ADDITIONAL_AMOUNT — the BPP emits that line
+  -- whenever ride.tipAmount > 0. We store it as-is, so the fare breakup the rider app shows is exactly
+  -- the one the driver sent: single source on the wire, no local reconstruction. (Tips added after the
+  -- ride has already completed don't arrive on a fresh quote; those are written directly in
+  -- Domain.Action.UI.RidePayment under the same title.)
   SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) (breakups <> offerDiscountBreakup)
   QPFS.clearCache booking.riderId
   createRecentLocationForTaxi booking
