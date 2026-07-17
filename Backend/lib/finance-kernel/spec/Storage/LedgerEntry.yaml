@@ -8,6 +8,7 @@ imports:
   Value: Data.Aeson
   Account: Lib.Finance.Domain.Types.Account
   ActorType: Lib.Finance.Core.Types
+  LedgerEntryMetadata: Lib.Finance.Domain.Types.Extra.LedgerEntry
 
 LedgerEntry:
   tableName: finance_ledger_entry
@@ -31,23 +32,6 @@ LedgerEntry:
     EntityReferenceType:
       enum: "RefundRequest"
       derive: "HttpInstance"
-
-    # Typed ledger metadata (DB column stays JSON Value). Use this to keep known fields
-    # structured and avoid opaque free-form JSON for sensitive / recon attribution data.
-    SubscriptionCreditAllocation:
-      subscriptionPurchaseId: Text
-      amount: HighPrecMoney
-      derive': "Generic, Show, Eq, ToJSON, FromJSON, ToSchema"
-
-    LedgerEntryMetadata:
-      subscriptionAllocations: Maybe [SubscriptionCreditAllocation]
-      reason: Maybe Text
-      driverPayable: Maybe HighPrecMoney
-      payoutOrderId: Maybe Text
-      d2cReferralEarnings: Maybe HighPrecMoney
-      d2dReferralEarnings: Maybe HighPrecMoney
-      dailyStatsId: Maybe Text
-      derive': "Generic, Show, Eq, ToJSON, FromJSON, ToSchema"
 
   # NOTE: Mask sensitive values in ledgerEntryToAuditValue (Ledger.Service)
   fields:
@@ -174,6 +158,7 @@ LedgerEntry:
 
   extraOperations:
     - GENERATE_INDEXES
+    - EXTRA_DOMAIN_TYPE_FILE
 
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

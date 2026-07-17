@@ -1,7 +1,8 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Lib.Finance.Domain.Types.LedgerEntry where
+module Lib.Finance.Domain.Types.LedgerEntry (module Lib.Finance.Domain.Types.LedgerEntry, module ReExport) where
 
 import Data.Aeson
 import Kernel.Prelude
@@ -10,6 +11,8 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.TH
 import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.Account
+import Lib.Finance.Domain.Types.Extra.LedgerEntry as ReExport
+import qualified Lib.Finance.Domain.Types.Extra.LedgerEntry
 import qualified Tools.Beam.UtilsTH
 
 data LedgerEntry = LedgerEntry
@@ -28,7 +31,7 @@ data LedgerEntry = LedgerEntry
     id :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry,
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Text,
-    metadata :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntryMetadata,
+    metadata :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Extra.LedgerEntry.LedgerEntryMetadata,
     reconciliationStatus :: Kernel.Prelude.Maybe Data.Aeson.Value,
     referenceId :: Kernel.Prelude.Text,
     referenceType :: Kernel.Prelude.Text,
@@ -55,21 +58,7 @@ data EntryStatus = PENDING | DUE | SETTLED | VOIDED deriving (Eq, Ord, Show, Rea
 
 data EntryType = Expense | Revenue | LiabilityCreated | LiabilitySettled | Reversal deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data LedgerEntryMetadata = LedgerEntryMetadata
-  { d2cReferralEarnings :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    d2dReferralEarnings :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    dailyStatsId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    driverPayable :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    payoutOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    subscriptionAllocations :: Kernel.Prelude.Maybe [Lib.Finance.Domain.Types.LedgerEntry.SubscriptionCreditAllocation]
-  }
-  deriving (Generic, (Show), (Eq), (ToJSON), (FromJSON), (ToSchema))
-
 data SettlementStatus = UNSETTLED | PROCESSING | PAID_OUT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-
-data SubscriptionCreditAllocation = SubscriptionCreditAllocation {amount :: Kernel.Types.Common.HighPrecMoney, subscriptionPurchaseId :: Kernel.Prelude.Text}
-  deriving (Generic, (Show), (Eq), (ToJSON), (FromJSON), (ToSchema))
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EntityReferenceType))
 
