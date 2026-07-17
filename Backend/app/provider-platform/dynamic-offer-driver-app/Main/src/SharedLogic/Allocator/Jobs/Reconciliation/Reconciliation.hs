@@ -58,7 +58,8 @@ import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator (AllocatorJobType (..), ReconciliationJobData (..))
 import SharedLogic.Finance.Prepaid
-  ( expiryCreditTransferReferenceType,
+  ( attributableRideDebitAmount,
+    expiryCreditTransferReferenceType,
     getSubscriptionRemainingAvailableBalance,
     prepaidRideDebitReferenceType,
     subscriptionCreditReferenceType,
@@ -760,7 +761,8 @@ calculateSubscriptionConsumedAmount subscription = do
     fmap sum $
       forM rides $ \ride -> do
         entries <- QLedger.findByReference prepaidRideDebitReferenceType ride.bookingId.getId
-        pure $ sum $ map (.amount) $ filter ((== LedgerEntry.SETTLED) . (.status)) entries
+        let settled = filter ((== LedgerEntry.SETTLED) . (.status)) entries
+        fmap sum $ forM settled $ attributableRideDebitAmount subscription.id
   expiryEntries <- QLedger.findByReference expiryCreditTransferReferenceType subscription.id.getId
   let expiryAmount = sum $ map (.amount) $ filter ((== LedgerEntry.SETTLED) . (.status)) expiryEntries
   pure (rideDebitAmount + expiryAmount)

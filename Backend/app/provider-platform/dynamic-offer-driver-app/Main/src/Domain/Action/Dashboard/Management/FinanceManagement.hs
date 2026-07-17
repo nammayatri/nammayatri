@@ -362,12 +362,16 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
     -- Calculate utilized value from RideSubscriptionDebit ledger entries
     calculateUtilizedValue :: Id DSP.SubscriptionPurchase -> Flow HighPrecMoney
     calculateUtilizedValue subId = do
+      -- Get all rides linked to this subscription
       rides <- QRide.findAllBySubscriptionPurchaseId subId
+      let bookingIds = map (\r -> r.bookingId.getId) rides
+
+      -- Sum all RideSubscriptionDebit entries for these booking IDs
       utilized <- fmap sum $
-        forM rides $ \ride -> do
-          entries <- QLedgerEntry.findByReference "RideSubscriptionDebit" ride.bookingId.getId
-          let settled = filter ((== LedgerEntry.SETTLED) . (.status)) entries
-          fmap sum $ forM settled $ FinancePrepaid.attributableRideDebitAmount subId
+        forM bookingIds $ \bId -> do
+          entries <- QLedgerEntry.findByReference "RideSubscriptionDebit" bId
+          fmap sum $ forM entries $ FinancePrepaid.attributableRideDebitAmount subId
+
       pure utilized
 
     calculateRevenueRecognized :: Id DSP.SubscriptionPurchase -> Flow HighPrecMoney
@@ -387,8 +391,7 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
     buildLinkedRideItem :: Id DSP.SubscriptionPurchase -> DRide.Ride -> Flow API.LinkedRideItem
     buildLinkedRideItem subId ride = do
       entries <- QLedgerEntry.findByReference "RideSubscriptionDebit" ride.bookingId.getId
-      let settled = filter ((== LedgerEntry.SETTLED) . (.status)) entries
-      rideSubscriptionDebitAmount <- fmap sum $ forM settled $ FinancePrepaid.attributableRideDebitAmount subId
+      rideSubscriptionDebitAmount <- fmap sum $ forM entries $ FinancePrepaid.attributableRideDebitAmount subId
 
       pure $
         API.LinkedRideItem
