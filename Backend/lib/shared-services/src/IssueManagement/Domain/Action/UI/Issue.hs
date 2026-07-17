@@ -1529,8 +1529,7 @@ forwardChatToTicketServiceAs senderLabel issueReport identifier issueHandle mess
                 requesterId = Nothing,
                 ticketContext = Just TIT.IssueTicket,
                 name = Just senderLabel,
-                phoneNo = Nothing,
-                xyneChannelId = mbCategory >>= (.xyneChannelId)
+                phoneNo = Nothing
               }
       let call = case issueHandle.mbUpdateTicketOnService of
             Just onService -> onService merchantId mocId TicketTypes.XyneSpaces ticketReq
