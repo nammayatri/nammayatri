@@ -39,6 +39,7 @@ module SharedLogic.FareCalculator
     componentAmount,
     discountApplicableComponents,
     projectFareParamsBreakup,
+    allocateCarriedDuesTax,
     clampDiscountToDiscountable,
     ComponentMap,
     entryFeeForGateId,
@@ -431,6 +432,10 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     customerExtraFee :: Maybe HighPrecMoney,
     nightShiftCharge :: Maybe HighPrecMoney,
     customerCancellationDues :: Maybe HighPrecMoney,
+    -- | VAT portion inside 'customerCancellationDues' (dues are carried GROSS).
+    --   Lets the partition emit the cancellation slots split instead of
+    --   gross-with-zero-tax; Nothing on paths with no dues context (tax = 0).
+    customerCancellationDuesTax :: Maybe HighPrecMoney,
     estimatedRideDuration :: Maybe Seconds,
     estimatedCongestionCharge :: Maybe HighPrecMoney,
     nightShiftOverlapChecking :: Bool,
@@ -602,7 +607,7 @@ calculateFareParametersHandler params = do
             tollFareTaxExclusive = Nothing,
             tollFareTax = Nothing,
             cancellationFeeTaxExclusive = Nothing,
-            cancellationTax = Nothing,
+            cancellationTax = params.customerCancellationDuesTax,
             parkingChargeTaxExclusive = Nothing,
             parkingChargeTax = Nothing
           }
@@ -1157,8 +1162,12 @@ applyConfiguredCharges farePolicy fareParams = do
       discAppTaxExcl = sum $ map (componentAmount componentMap) discountApplicableComponents
       tollExcl = fromMaybe 0 fareParams.tollCharges
       tollTax = fromMaybe 0 tollVatValue
-      cancellationExcl = fromMaybe 0 fareParams.customerCancellationDues
-      cancellationTaxV = fromMaybe 0 fareParams.cancellationTax
+      -- Carried due is GROSS; its VAT rides in fareParams.cancellationTax —
+      -- carried forward on recompute paths, so possibly stale vs the gross.
+      -- Clamp to [0, gross]: excl never negative, excl + tax == gross always.
+      cancellationGross = fromMaybe 0 fareParams.customerCancellationDues
+      cancellationTaxV = min cancellationGross (max 0 (fromMaybe 0 fareParams.cancellationTax))
+      cancellationExcl = cancellationGross - cancellationTaxV
       parkingExcl = parkingBase
       parkingTax = parkingTaxValue
 
@@ -1435,6 +1444,17 @@ discountApplicableComponents =
     ExtraTimeFareComponent,
     AmbulanceDistBasedFareComponent
   ]
+
+-- | VAT inside a GROSS carried-dues total. Cancel time folds fee+VAT into one
+--   running total on rider_details; the split survives only on the PENDING
+--   dues rows — pass their (fee, VAT) sums. Ratio, not raw taxSum: waive-offs
+--   (Domain.Action.Internal.CancellationDues) shrink the running total but
+--   never the rows, so raw taxSum would declare more VAT than the customer
+--   pays; the ratio scales it (and a full carry collapses to exactly taxSum).
+allocateCarriedDuesTax :: HighPrecMoney -> (HighPrecMoney, HighPrecMoney) -> Maybe HighPrecMoney
+allocateCarriedDuesTax gross (feeSum, taxSum)
+  | gross <= 0 || taxSum <= 0 || feeSum + taxSum <= 0 = Nothing
+  | otherwise = Just (gross * taxSum / (feeSum + taxSum))
 
 -- | Project FareParameters into the canonical eight-slot wire breakup.
 --   Trivial record-to-record projection — the numbers are computed at

@@ -860,6 +860,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               petCharges = booking.fareParams.petCharges,
               estimatedCongestionCharge = endRideCongestionCharge,
               customerCancellationDues = booking.fareParams.customerCancellationDues,
+              customerCancellationDuesTax = booking.fareParams.cancellationTax,
               nightShiftOverlapChecking = DTC.isFixedNightCharge booking.tripCategory,
               timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc,
               tollCharges = ride.tollCharges,

@@ -351,6 +351,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                   customerExtraFee = Nothing,
                   nightShiftCharge = Nothing,
                   customerCancellationDues = Nothing,
+                  customerCancellationDuesTax = Nothing,
                   nightShiftOverlapChecking = isFixedNightCharge tripCategory,
                   estimatedDistance = mbDistance,
                   estimatedRideDuration = minutesToSeconds <$> mbDuration,

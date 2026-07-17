@@ -401,6 +401,7 @@ calculateFareParametersForFarePolicy transporterConfig fullFarePolicy mbDistance
             customerExtraFee = Nothing,
             nightShiftCharge = Nothing,
             customerCancellationDues = Nothing,
+            customerCancellationDuesTax = Nothing,
             nightShiftOverlapChecking = False, ---------considered only for one way
             estimatedDistance = mbDistance,
             estimatedRideDuration = mbDuration,
