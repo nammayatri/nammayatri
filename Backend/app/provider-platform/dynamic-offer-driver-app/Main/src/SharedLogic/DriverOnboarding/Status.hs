@@ -1475,7 +1475,13 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
     DVC.NomineeDetails -> do
       mbIdentityInfo <- QDII.findByDriverId driverId
       let hasNominee = maybe False (\info -> isJust info.nomineeName && isJust info.nomineeRelationship && isJust info.nomineeDob) mbIdentityInfo
-      return (if hasNominee then Just VALID else Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
+          mbNomineeMetadata =
+            if enableMetadata
+              then
+                mbIdentityInfo <&> \info ->
+                  NomineeDetailsMetadata NomineeDetailsDocumentMetadata {nomineeName = info.nomineeName, nomineeDob = info.nomineeDob, nomineeRelationship = info.nomineeRelationship}
+              else Nothing
+      return (if hasNominee then Just VALID else Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, mbNomineeMetadata)
     DVC.FleetRegistration -> do
       mbRegisteredAt <-
         if SDO.isFleetRole role
@@ -1483,11 +1489,33 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
           else pure Nothing
       return (VALID <$ mbRegisteredAt, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
     DVC.BankingDetails -> do
-      hasBankingDetails <-
-        if SDO.isFleetRole role
-          then maybe False (isJust . (.payoutVpa)) <$> QFOI.findByPrimaryKey driverId
-          else maybe False (\di -> isJust di.driverBankAccountDetails || isJust di.payerVpa) <$> DIQuery.findById (cast driverId)
-      return (if hasBankingDetails then Just VALID else Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+      if SDO.isFleetRole role
+        then do
+          mbFleetInfo <- QFOI.findByPrimaryKey driverId
+          let hasBankingDetails = maybe False (isJust . (.payoutVpa)) mbFleetInfo
+              mbBankingMetadata =
+                if enableMetadata
+                  then
+                    mbFleetInfo <&> \fi ->
+                      BankingDetailsMetadata BankingDetailsDocumentMetadata {accountNumber = fi.payoutVpaBankAccount, ifscCode = Nothing, nameAtBank = Nothing, upiId = fi.payoutVpa}
+                  else Nothing
+          return (if hasBankingDetails then Just VALID else Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, mbBankingMetadata)
+        else do
+          mbDriverInfo <- DIQuery.findById (cast driverId)
+          let hasBankingDetails = maybe False (\di -> isJust di.driverBankAccountDetails || isJust di.payerVpa) mbDriverInfo
+              mbBankingMetadata =
+                if enableMetadata
+                  then
+                    mbDriverInfo <&> \di ->
+                      BankingDetailsMetadata
+                        BankingDetailsDocumentMetadata
+                          { accountNumber = di.driverBankAccountDetails >>= (.accountNumber),
+                            ifscCode = di.driverBankAccountDetails >>= (.ifscCode),
+                            nameAtBank = di.driverBankAccountDetails >>= (.nameAtBank),
+                            upiId = di.payerVpa
+                          }
+                  else Nothing
+          return (if hasBankingDetails then Just VALID else Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, mbBankingMetadata)
     _ -> commonDocStatus docType
 
 callGetDLGetStatus :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()

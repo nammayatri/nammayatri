@@ -10,6 +10,7 @@ import qualified Dashboard.Common.Driver
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
+import qualified Data.Time
 import qualified Domain.Types.VehicleCategory
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
@@ -27,6 +28,15 @@ data AadhaarDocumentMetadata = AadhaarDocumentMetadata
     address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     nameOnCard :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BankingDetailsDocumentMetadata = BankingDetailsDocumentMetadata
+  { accountNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    ifscCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    nameAtBank :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    upiId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -70,6 +80,8 @@ data DocumentMetadata
   | UDYAMMetadata UDYAMDocumentMetadata
   | TANMetadata TANDocumentMetadata
   | LDCMetadata LDCDocumentMetadata
+  | NomineeDetailsMetadata NomineeDetailsDocumentMetadata
+  | BankingDetailsMetadata BankingDetailsDocumentMetadata
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -149,6 +161,14 @@ data LocalAddressProofDocumentMetadata = LocalAddressProofDocumentMetadata
   { address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     proofDocumentType :: Kernel.Prelude.Maybe Dashboard.Common.Driver.AddressDocumentType,
     state :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data NomineeDetailsDocumentMetadata = NomineeDetailsDocumentMetadata
+  { nomineeDob :: Kernel.Prelude.Maybe Data.Time.Day,
+    nomineeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    nomineeRelationship :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

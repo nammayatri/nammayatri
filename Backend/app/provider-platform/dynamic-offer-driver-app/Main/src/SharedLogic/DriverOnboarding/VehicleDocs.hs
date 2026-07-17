@@ -5,6 +5,7 @@ module SharedLogic.DriverOnboarding.VehicleDocs where
 import Control.Applicative ((<|>))
 import Data.List (nub)
 import qualified Data.Text as T
+import Data.Time (Day)
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
@@ -172,6 +173,21 @@ data LDCDocumentMetadata = LDCDocumentMetadata
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
+data NomineeDetailsDocumentMetadata = NomineeDetailsDocumentMetadata
+  { nomineeName :: Maybe Text,
+    nomineeDob :: Maybe Day,
+    nomineeRelationship :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data BankingDetailsDocumentMetadata = BankingDetailsDocumentMetadata
+  { accountNumber :: Maybe Text,
+    ifscCode :: Maybe Text,
+    nameAtBank :: Maybe Text,
+    upiId :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
 data DocumentMetadata
   = DLMetadata DLDocumentMetadata
   | AadhaarMetadata AadhaarDocumentMetadata
@@ -186,6 +202,8 @@ data DocumentMetadata
   | UDYAMMetadata UDYAMDocumentMetadata
   | TANMetadata TANDocumentMetadata
   | LDCMetadata LDCDocumentMetadata
+  | NomineeDetailsMetadata NomineeDetailsDocumentMetadata
+  | BankingDetailsMetadata BankingDetailsDocumentMetadata
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
 data DocumentStatusItem = DocumentStatusItem
