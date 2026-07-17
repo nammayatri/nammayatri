@@ -146,7 +146,7 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
                   serviceName = Just (DMSC.SettlementService service)
                 }
             )
-            Nothing
+            (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService mId mOpCityId (DMSC.SettlementService service)))
         pure $ case mbConfig of
           Just cfg -> case cfg.serviceConfig of
             DMSC.SettlementServiceConfig settlementCfg -> Just settlementCfg
