@@ -47,6 +47,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as FODVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverLicense as DLQuery
@@ -394,7 +395,7 @@ getOnboardingVehicleDocuments merchantShortId opCity mbRcNo mbRcId enableDocumen
   entityImages <- IQuery.findAllByEntityId transporterConfig entity
   now <- getCurrentTime
   let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now, enableDocumentMetadata = fromMaybe False enableDocumentMetadata}
-  allDocumentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId merchantOpCity.id Nothing
+  allDocumentVerificationConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId, documentType = Nothing, vehicleCategory = Nothing}) (Just (CQDVC.findAllByMerchantOpCityId merchantOpCity.id Nothing))
   registrationNo <- decrypt rc.certificateNumber
   let skipMessages = True
   vehicleDocuments <- VehicleDocs.fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs ENGLISH (Just registrationNo) Nothing skipMessages

@@ -776,6 +776,13 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
           { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
             LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DCC.CoinsConfig))
           }
+    LYT.DRIVER_CONFIG LYT.TransporterConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "TransporterConfig default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTT.TransporterConfig))
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
+            LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DTT.TransporterConfig))
+          }
     _ -> throwError $ InvalidRequest "Domain schema not available"
 
 getNammaTagQueryAll :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.Chakra -> Environment.Flow LYT.ChakraQueryResp

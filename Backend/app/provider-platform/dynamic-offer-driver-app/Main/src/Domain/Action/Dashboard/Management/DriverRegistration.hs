@@ -2494,7 +2494,7 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
         mbDocType <- getRejectTargetDocumentType rejectReq
         isMandatoryDoc <- case mbDocType of
           Just docType -> do
-            docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId docType Nothing
+            docConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType, vehicleCategory = Nothing}) (Just (CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId docType Nothing))
             pure $ Kernel.Prelude.any (\config -> fromMaybe config.isMandatory config.isMandatoryForEnabling) docConfigs
           Nothing -> pure False
         when isMandatoryDoc $ AC.guardNoLiveRideByDriver personId

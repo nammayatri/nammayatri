@@ -31,7 +31,9 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RewardCampaignExtra as QRCmpE
 import qualified Storage.Queries.RewardCohort as QRC
@@ -62,7 +64,7 @@ evaluateRewardsIfEnabled ::
   Maybe Bool ->
   m ()
 evaluateRewardsIfEnabled riderId moCityId completedAt mbIsValidRide = do
-  enabled <- maybe False (.enableRewardsManagement) <$> CQRC.findByMerchantOperatingCityId moCityId
+  enabled <- maybe False (.enableRewardsManagement) <$> getConfig (RiderConfigDimensions {merchantOperatingCityId = moCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId moCityId))
   when enabled $ evaluateRewardsForRider riderId moCityId completedAt mbIsValidRide
 
 evaluateRewardsForRider ::
