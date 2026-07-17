@@ -11,6 +11,7 @@ module SharedLogic.FareBreakupInfo
   )
 where
 
+import qualified BecknV2.OnDemand.Enums as BecknEnums
 import qualified Data.Map.Strict as Map
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.FareBreakupInfo
@@ -23,10 +24,12 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.FareBreakupInfo as QFareBreakupInfo
 
--- | Canonical description for the rider's tip line in a RIDE fare breakup. The BPP emits the
--- same amount over Beckn as BUYER_ADDITIONAL_AMOUNT; ride completion normalises it to this.
+-- | Canonical description for the rider's tip line in a RIDE fare breakup. This is exactly the
+-- title the BPP emits over Beckn for a tip (BUYER_ADDITIONAL_AMOUNT), so the line the driver sends
+-- flows straight through to what the rider app stores and matches on — one source, no translation.
+-- Tied to the enum so it can never drift from the wire value.
 tipFareBreakupTitle :: Text
-tipFareBreakupTitle = "RIDE_TIP"
+tipFareBreakupTitle = show BecknEnums.BUYER_ADDITIONAL_AMOUNT
 
 getFareBreakupInfo ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

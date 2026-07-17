@@ -1114,26 +1114,12 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
               }
           ]
       else pure []
-  -- The BPP sends the tip as a BUYER_ADDITIONAL_AMOUNT quotation-breakup line, but the rider app
-  -- writes and matches on RIDE_TIP. Drop the BPP's line and rebuild it from ride.tipAmount under
-  -- the canonical name, so the two agree. Rebuilding here (rather than relying on the line the
-  -- rider app wrote when the tip was added) also keeps the tip intact if this handler is replayed:
-  -- the write below REPLACES the breakup list for this ride.
-  tipBreakup <- case ride.tipAmount of
-    Just tip | tip.amount > 0 -> do
-      guid <- generateGUID
-      pure
-        [ DFareBreakup.FareBreakup
-            { id = guid,
-              entityId = ride.id.getId,
-              entityType = DFareBreakup.RIDE,
-              amount = tip,
-              description = SFareBreakupInfo.tipFareBreakupTitle
-            }
-        ]
-    _ -> pure []
-  let breakupsWithoutBppTip = filter (\fb -> fb.description /= show BecknEnums.BUYER_ADDITIONAL_AMOUNT && fb.description /= SFareBreakupInfo.tipFareBreakupTitle) breakups
-  SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) (breakupsWithoutBppTip <> tipBreakup <> offerDiscountBreakup)
+  -- The tip rides in on the Beckn quote breakup as BUYER_ADDITIONAL_AMOUNT — the BPP emits that line
+  -- whenever ride.tipAmount > 0. We store it as-is, so the fare breakup the rider app shows is exactly
+  -- the one the driver sent: single source on the wire, no local reconstruction. (Tips added after the
+  -- ride has already completed don't arrive on a fresh quote; those are written directly in
+  -- Domain.Action.UI.RidePayment under the same title.)
+  SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) (breakups <> offerDiscountBreakup)
   QPFS.clearCache booking.riderId
   createRecentLocationForTaxi booking
   checkAndUpdateJourneyTerminalStatusForNormalRide booking DJourney.COMPLETED
