@@ -538,6 +538,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         enabled = info.enabled,
         blocked = info.blocked,
         blockedReason = info.blockedReason,
+        blockLiftTime = info.blockExpiryTime,
         verified = info.verified,
         subscribed = info.subscribed,
         onboardingDate = info.lastEnabledOn,
