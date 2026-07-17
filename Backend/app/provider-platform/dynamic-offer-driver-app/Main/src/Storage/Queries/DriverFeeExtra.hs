@@ -1009,18 +1009,6 @@ findOriginalCancellationPenaltiesForSubscriptionFee subscriptionFeeIds =
         ]
     ]
 
-findParentRecurringExecutionBySplitOfDriverFeeIds ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
-  [Id DriverFee] ->
-  m [DriverFee]
-findParentRecurringExecutionBySplitOfDriverFeeIds splitOfDriverFeeIds =
-  findAllWithKV
-    [ Se.And
-        [ Se.Is BeamDF.id $ Se.In ((.getId) <$> splitOfDriverFeeIds),
-          Se.Is BeamDF.feeType $ Se.Eq RECURRING_EXECUTION_INVOICE
-        ]
-    ]
-
 moveCancellationPenaltiesToIndisputeWindow ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   ServiceNames ->
