@@ -22,6 +22,7 @@ imports:
   AuditAction: Lib.Finance.Domain.Types.AuditEntry
   AuditEntityType: Lib.Finance.Domain.Types.AuditEntry
   ActorType: Lib.Finance.Core.Types
+  SubscriptionCreditAllocation: Lib.Finance.Domain.Types.LedgerEntry
 
 importPackageOverrides:
   Domain.Types.Invoice: "beckn-spec"
@@ -605,6 +606,7 @@ types:
     - debitAmount: Maybe HighPrecMoney
     - openingBalance: Maybe HighPrecMoney
     - closingBalance: Maybe HighPrecMoney
+    - subscriptionAllocations: Maybe [SubscriptionCreditAllocation]
 
   # ----- Earnings Summary -----
   EarningsSummaryRes:
