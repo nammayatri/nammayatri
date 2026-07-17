@@ -67,6 +67,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQPerson
 import Storage.ConfigPilot.Config.IssueConfig (IssueConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingExtra as QBE
@@ -161,7 +162,7 @@ fetchMediaBase64FromS3 mf = case mf.s3FilePath of
 -- is running alongside another provider as a secondary.
 isXyneTicketService :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Flow Bool
 isXyneTicketService _merchantId mocId = do
-  mbUsage <- CQMSUC.findByMerchantOperatingCityId (cast mocId)
+  mbUsage <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId (cast mocId)))
   pure $ maybe False xyneInUse mbUsage
   where
     xyneInUse c =

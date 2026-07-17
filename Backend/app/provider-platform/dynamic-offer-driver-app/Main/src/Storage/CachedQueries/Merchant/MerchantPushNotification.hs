@@ -33,8 +33,11 @@ import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Yudhishthira.Types as LYT
 import Storage.Beam.Yudhishthira ()
+import Storage.ConfigPilot.Config.MerchantPushNotification (MerchantPushNotificationDimensions (..))
 import qualified Storage.Queries.MerchantPushNotification as Queries
 import qualified Tools.DynamicLogic as DynamicLogic
 
@@ -48,30 +51,31 @@ findAllByMerchantOpCityId id mbConfigVersionMap =
 findMatchingMerchantPN :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> Maybe Notification.SubCategory -> Maybe Language -> Maybe [LYT.ConfigVersionMap] -> m (Maybe MerchantPushNotification)
 findMatchingMerchantPN merchantOperatingCityId messageKey tripCategory subCategory personLanguage mbConfigVersionMap = do
   merchantPNs <-
-    DynamicLogic.findAllConfigsWithCacheKey
-      (cast merchantOperatingCityId)
-      (LYT.DRIVER_CONFIG LYT.MerchantPushNotification)
-      mbConfigVersionMap
-      Nothing
-      (Queries.findAllByMerchantOpCityIdAndMessageKeyAndTripCategory merchantOperatingCityId messageKey tripCategory)
-      (makeMerchantOpCityIdAndMessageKeyAndTripCategory merchantOperatingCityId messageKey tripCategory)
-  logDebug $ "merchantPNs: " <> show merchantPNs
+    getConfig
+      (MerchantPushNotificationDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, key = Just messageKey, tripCategory = tripCategory})
+      (Just $ findAllByMessageKeyAndTripCategory merchantOperatingCityId messageKey tripCategory mbConfigVersionMap)
   if null merchantPNs
     then do
       pnsWithOutTripCategory <-
-        DynamicLogic.findAllConfigsWithCacheKey
-          (cast merchantOperatingCityId)
-          (LYT.DRIVER_CONFIG LYT.MerchantPushNotification)
-          mbConfigVersionMap
-          Nothing
-          (Queries.findAllByMerchantOpCityIdAndMessageKeyAndTripCategory merchantOperatingCityId messageKey Nothing)
-          (makeMerchantOpCityIdAndMessageKeyAndTripCategory merchantOperatingCityId messageKey Nothing)
-      return $ findMatchingNotification pnsWithOutTripCategory
+        getConfig
+          (MerchantPushNotificationDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, key = Just messageKey, tripCategory = Nothing})
+          (Just $ findAllByMessageKeyAndTripCategory merchantOperatingCityId messageKey Nothing mbConfigVersionMap)
+      return $ findMatchingNotification (filter (isNothing . (.tripCategory)) pnsWithOutTripCategory)
     else return $ findMatchingNotification merchantPNs
   where
     findMatchingNotification pns =
       find (\pn -> Just pn.language == personLanguage && pn.fcmSubCategory == subCategory) pns
         <|> find (\pn -> pn.language == ENGLISH && pn.fcmSubCategory == subCategory) pns
+
+findAllByMessageKeyAndTripCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> Maybe [LYT.ConfigVersionMap] -> m [MerchantPushNotification]
+findAllByMessageKeyAndTripCategory merchantOperatingCityId messageKey tripCategory mbConfigVersionMap =
+  DynamicLogic.findAllConfigsWithCacheKey
+    (cast merchantOperatingCityId)
+    (LYT.DRIVER_CONFIG LYT.MerchantPushNotification)
+    mbConfigVersionMap
+    Nothing
+    (Queries.findAllByMerchantOpCityIdAndMessageKeyAndTripCategory merchantOperatingCityId messageKey tripCategory)
+    (makeMerchantOpCityIdAndMessageKeyAndTripCategory merchantOperatingCityId messageKey tripCategory)
 
 findAllByMerchantOpCityIdInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> [LYT.ConfigVersionMap] -> m [MerchantPushNotification]
 findAllByMerchantOpCityIdInRideFlow id configVersionMap =
@@ -86,16 +90,18 @@ makeMerchantOpCityIdAndMessageKeyAndTripCategory id messageKey tripCategory = "C
 
 -- Call it after any update
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> m ()
-clearCache merchantOpCityId messageKey tripCategory =
+clearCache merchantOpCityId messageKey tripCategory = do
   DynamicLogic.clearConfigCacheWithPrefix
     (makeMerchantOpCityIdAndMessageKeyAndTripCategory merchantOpCityId messageKey tripCategory)
     (cast merchantOpCityId)
     (LYT.DRIVER_CONFIG LYT.MerchantPushNotification)
     Nothing
+  invalidateConfigInMem LYT.MerchantPushNotification
 
 clearCacheById :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m ()
-clearCacheById merchantOpCityId =
+clearCacheById merchantOpCityId = do
   DynamicLogic.clearConfigCache
     (cast merchantOpCityId)
     (LYT.DRIVER_CONFIG LYT.MerchantPushNotification)
     Nothing
+  invalidateConfigInMem LYT.MerchantPushNotification

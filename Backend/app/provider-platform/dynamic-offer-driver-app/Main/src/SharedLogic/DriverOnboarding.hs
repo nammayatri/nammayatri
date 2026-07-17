@@ -1093,7 +1093,7 @@ resolveFaceMatchVerificationStatus person config docImageId mbDocImage mbPlainDo
 -- | On selfie upload, face-match earlier non-SDK doc images: skip while the doc's webhook is pending (the handler resolves it), else run now and promote PENDING->VALID or flip INVALID.
 faceMatchBoundConfigs :: Person.Person -> Flow [ODC.DocumentVerificationConfig]
 faceMatchBoundConfigs person =
-  DL.nubBy (\a b -> a.documentType == b.documentType) . filter (\c -> isJust c.faceMatchSourceDoc && isJust (faceCompareDocTag c.documentType)) <$> CQDVC.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
+  DL.nubBy (\a b -> a.documentType == b.documentType) . filter (\c -> isJust c.faceMatchSourceDoc && isJust (faceCompareDocTag c.documentType)) <$> getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, documentType = Nothing, vehicleCategory = Nothing}) (Just (CQDVC.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing))
 
 runDeferredFaceMatchOnSelfie :: Person.Person -> UTCTime -> Flow ()
 runDeferredFaceMatchOnSelfie person selfieCreatedAt = do

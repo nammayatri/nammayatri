@@ -2086,9 +2086,8 @@ MerchantPushNotification:
   configPilot:
     configType: MerchantPushNotification
     fetchQuery: findAllByMerchantOpCityId
-    fetchQueryArgs: "(Just [])"
     returnType: List
-    queryModule: Storage.CachedQueries.Merchant.MerchantPushNotification
+    queryModule: Storage.Queries.MerchantPushNotification
     filterDimensions:
       - key
       - tripCategory
