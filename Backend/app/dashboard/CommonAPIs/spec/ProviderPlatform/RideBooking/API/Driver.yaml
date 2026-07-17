@@ -297,6 +297,7 @@ types:
     - enabled: Bool
     - blocked: Bool
     - blockedReason: Maybe Text
+    - blockLiftTime: Maybe UTCTime
     - verified: Bool
     - subscribed: Bool
     - canDowngradeToSedan: Bool
