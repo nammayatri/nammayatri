@@ -907,6 +907,8 @@ attributableRideDebitAmount (Id subPurchaseId) entry =
         logWarning $
           "RideSubscriptionDebit allocation sum mismatch for referenceId="
             <> entry.referenceId
+            <> " entry.id="
+            <> show entry.id
             <> " entry.amount="
             <> show entry.amount
             <> " allocationSum="
