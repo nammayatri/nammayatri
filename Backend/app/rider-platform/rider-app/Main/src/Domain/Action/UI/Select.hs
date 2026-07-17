@@ -319,7 +319,7 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
     QJourney.updateByPrimaryKey journey
     QJourneyLeg.updateByPrimaryKey journeyLeg
   let emailToUse = if billingCategory == Just BUSINESS then person.businessEmail else person.email
-  decryptedEmail <- mapM decrypt emailToUse
+  decryptedEmail <- if searchRequest.isDashboardRequest == Just True then pure Nothing else mapM decrypt emailToUse
   let emailDomain = T.strip . snd <$> (decryptedEmail >>= (\e -> if T.isInfixOf "@" e then Just (T.breakOn "@" e) else Nothing))
   let emailDomain' = T.drop 1 <$> emailDomain -- drop the leading '@'
   pure

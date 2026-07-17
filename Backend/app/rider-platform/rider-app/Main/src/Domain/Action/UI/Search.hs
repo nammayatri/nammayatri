@@ -345,9 +345,9 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     _ -> return Nothing
 
   let parseDomain mbEmail = T.drop 1 . T.strip . snd <$> (mbEmail >>= (\e -> if T.isInfixOf "@" e then Just (T.breakOn "@" e) else Nothing))
-  decryptedEmail <- mapM decrypt person.email
+  decryptedEmail <- if isDashboardRequest_ then pure Nothing else mapM decrypt person.email
   decryptedBusinessEmail <-
-    if person.businessProfileVerified == Just True
+    if not isDashboardRequest_ && person.businessProfileVerified == Just True
       then mapM decrypt person.businessEmail
       else pure Nothing
   let emailDomain = parseDomain decryptedEmail

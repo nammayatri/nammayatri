@@ -1528,7 +1528,6 @@ postDriverAirportPreference merchantShortId opCity driverId req = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   now <- getCurrentTime
   when (req.enableForAirport == Common.BLOCKED) $ do
     driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
