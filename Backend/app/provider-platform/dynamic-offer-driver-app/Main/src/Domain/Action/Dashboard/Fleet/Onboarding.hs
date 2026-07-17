@@ -337,6 +337,21 @@ castDocumentMetadata = \case
         { documentId = l.documentId,
           tdsRate = l.tdsRate
         }
+  VehicleDocs.NomineeDetailsMetadata n ->
+    CommonOnboarding.NomineeDetailsMetadata
+      CommonOnboarding.NomineeDetailsDocumentMetadata
+        { nomineeName = n.nomineeName,
+          nomineeDob = n.nomineeDob,
+          nomineeRelationship = n.nomineeRelationship
+        }
+  VehicleDocs.BankingDetailsMetadata b ->
+    CommonOnboarding.BankingDetailsMetadata
+      CommonOnboarding.BankingDetailsDocumentMetadata
+        { accountNumber = b.accountNumber,
+          ifscCode = b.ifscCode,
+          nameAtBank = b.nameAtBank,
+          upiId = b.upiId
+        }
 
 castPanType :: DPan.PanType -> CommonDriverRegistration.PanType
 castPanType DPan.INDIVIDUAL = CommonDriverRegistration.INDIVIDUAL

@@ -20,6 +20,7 @@ imports:
   Ride: Domain.Types.Ride
   VerifiedBy: Domain.Types.DriverPanCard
   DocsVerificationStatus: Dashboard.Common
+  CRCVerificationResponse: Kernel.External.Verification.Types
 module: Driver
 
 apis:
@@ -359,6 +360,10 @@ types:
     - upiId: Maybe Text
     - fleetOwnerId: Maybe Text
     - docsVerificationStatus: Maybe DocsVerificationStatus
+    - courtRecord: Maybe CourtRecordResult
+  CourtRecordResult:
+    - result: Maybe CRCVerificationResponse
+    - errorMessage: Maybe Text
   DriverAssociationInfo:
     - personId: Id Person
     - name: Maybe Text

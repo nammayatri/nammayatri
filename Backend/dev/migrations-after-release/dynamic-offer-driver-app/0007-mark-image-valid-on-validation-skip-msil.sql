@@ -42,4 +42,16 @@ WHERE document_type IN (
     WHERE merchant_short_id = 'MSIL_PARTNER'
   );
 
+UPDATE atlas_driver_offer_bpp.fleet_owner_document_verification_config
+SET roles_allowed_to_upload_document_text = '{OPERATOR,FLEET_OWNER,FLEET_BUSINESS,DRIVER}'::text[]
+WHERE document_type IN (
+    'OperatorPartnerCode',
+    'BankingDetails',
+    'BotApproval'
+  )
+  AND merchant_operating_city_id IN (
+    SELECT id FROM atlas_driver_offer_bpp.merchant_operating_city
+    WHERE merchant_short_id = 'MSIL_PARTNER'
+  );
+
 ALTER TABLE atlas_driver_offer_bpp.driver_udyam ALTER COLUMN document_image_id SET DEFAULT '29e68d5e-cd70-4d39-bd55-a2fe831524eb'; -- Please do not run this query in production.
