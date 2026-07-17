@@ -33,6 +33,7 @@ library
       Lib.Finance.Audit.Service
       Lib.Finance.Core.Money
       Lib.Finance.Core.Types
+      Lib.Finance.Domain.Types.Extra.LedgerEntry
       Lib.Finance.Error.Types
       Lib.Finance.FinanceM
       Lib.Finance.Invoice.Interface
