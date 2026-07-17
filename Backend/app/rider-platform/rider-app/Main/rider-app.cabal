@@ -365,6 +365,7 @@ library
       Domain.Types.Beckn.FRFS.OnCancel
       Domain.Types.Beckn.FRFS.OnSearch
       Domain.Types.Booking.API
+      Domain.Types.BookingLite
       Domain.Types.CacType
       Domain.Types.Common
       Domain.Types.DeliveryDetails

@@ -36,6 +36,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingStatus as SRB
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Client as DC
+import Domain.Types.Common (TripCategory)
 import qualified Domain.Types.Journey as DJ
 import Domain.Types.Location
 import Domain.Types.LocationAddress
@@ -49,6 +50,7 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.Ride as DTR
 import qualified Domain.Types.RideStatus as SRide
+import qualified Domain.Types.ServiceTierType as DVST
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, pack, safeHead)
@@ -82,6 +84,7 @@ import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.BookingExtra as QBL
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import Storage.Queries.JourneyExtra as SQJ
 import qualified Storage.Queries.Location as QL
@@ -277,6 +280,48 @@ data BookingListResV2 = BookingListResV2
 
 data BookingAPIEntityV2 = Ride SRB.BookingAPIEntity | MultiModalRide APITypes.JourneyInfoResp | MultiModalPass PassAPI.PurchasedPassAPIEntity
   deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+-- ============================================================================
+-- listV3 (lightweight My Rides). Slim taxi rows; journeys/passes unchanged.
+-- ToSchema is what surfaces these in /openapi for the frontend codegen.
+-- ============================================================================
+
+data BookingListResV3 = BookingListResV3
+  { list :: [BookingAPIEntityV3],
+    bookingOffset :: Maybe Int,
+    journeyOffset :: Maybe Int,
+    passOffset :: Maybe Int,
+    hasMoreData :: Bool
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+data BookingAPIEntityV3
+  = RideLite BookingAPIEntityLite
+  | MultiModalRideV3 APITypes.JourneyInfoResp
+  | MultiModalPassV3 PassAPI.PurchasedPassAPIEntity
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+data BookingAPIEntityLite = BookingAPIEntityLite
+  { bookingId :: Id SRB.Booking,
+    rideId :: Maybe (Id DTR.Ride),
+    status :: SRB.BookingStatus,
+    isScheduled :: Bool,
+    rideScheduledTime :: UTCTime,
+    createdAt :: UTCTime,
+    -- [from, ...stops, to] display names; frontend reads index 0 and last.
+    locationNames :: [Text],
+    fare :: HighPrecMoney,
+    currency :: Currency,
+    serviceTierName :: Maybe Text,
+    vehicleServiceTierType :: DVST.ServiceTierType,
+    vehicleIconUrl :: Maybe Text,
+    isAirConditioned :: Maybe Bool,
+    tripCategory :: Maybe TripCategory,
+    cancellationChargesOnCancel :: Maybe HighPrecMoney,
+    cancellationFeeStatus :: Maybe DTR.CancellationFeeStatus,
+    cancellationSource :: Maybe Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 bookingListV2ByCustomerLookup :: Id Merchant.Merchant -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SLT.BillingCategory] -> [SLT.RideType] -> Maybe [SRB.BookingStatus] -> Maybe [DJ.JourneyStatus] -> Maybe Bool -> Maybe SRB.BookingRequestType -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow BookingListResV2
 bookingListV2ByCustomerLookup merchantId mbLimit mbOffset mbBookingOffset mbJourneyOffset mbFromDate' mbToDate' billingCategoryList rideTypeList mbBookingStatusList mbJourneyStatusList mbIsPaymentSuccess mbBookingRequestType mbMobileNo mbCountryCode mbEmail mbCustomerId = do
@@ -565,6 +610,126 @@ buildApiEntityForRideOrJourneyOrPassWithCounts personId finalLimit bookings jour
           logError $ "No legs info for journeyId: " <> show journey.id <> ", skipping from booking list"
           return Nothing
         else Just <$> generateJourneyInfoResponse journey legsInfo
+
+-- ============================================================================
+-- listV3: lightweight My Rides. Taxi rows built from column projections (no
+-- per-row location decode); journeys/passes reuse the V2 build path unchanged.
+-- Query budget ~5/page instead of ~40-60. See the *Lite queries in Storage.Queries.BookingExtra.
+--
+-- COMPILE-PENDING: written without a local Haskell build. Likely iteration
+-- points flagged with NOTE. Cross-stream pagination is a first-cut approximation
+-- of V2's interleaved offsets.
+-- ============================================================================
+bookingListV3 ::
+  (Id Person.Person, Id Merchant.Merchant) ->
+  Maybe Integer ->
+  Maybe Integer ->
+  Maybe Integer ->
+  Maybe Integer ->
+  Maybe Integer ->
+  Maybe Integer ->
+  Maybe Integer ->
+  [SLT.BillingCategory] ->
+  [SLT.RideType] ->
+  [SRB.BookingStatus] ->
+  [DJ.JourneyStatus] ->
+  Maybe Bool ->
+  Flow BookingListResV3
+bookingListV3 (personId, _merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate' mbToDate' billingCategoryList rideTypeList bookingStatusList journeyStatusList mbIsPaymentSuccess = do
+  let limit = maybe 10 fromIntegral mbLimit
+      mbFromDate = millisecondsToUTC <$> mbFromDate'
+      mbToDate = millisecondsToUTC <$> mbToDate'
+      mbInitialBookingOffset = mbBookingOffset <|> mbOffset
+      mbInitialJourneyOffset = mbJourneyOffset <|> mbOffset
+      mbInitialPassOffset = mbPassOffset <|> mbOffset
+
+  -- 1. Lite taxi rows (projection, no location/ride decode).
+  liteRows0 <- QBL.findAllLiteByRiderId personId (Just (fromIntegral limit)) mbInitialBookingOffset mbFromDate mbToDate bookingStatusList
+  let liteRows = filter (matchesLiteFilters billingCategoryList rideTypeList) liteRows0
+
+  -- 2. Batched supporting data for the whole page.
+  let bookingIds = (.bookingId) <$> liteRows
+  rides <- QBL.findLiteRidesByBookingIds bookingIds
+  -- Names come free from the denormalized column; only rows created before it
+  -- existed fall back to a single batched location query.
+  let rowsNeedingFallback = filter (\r -> maybe True null r.locationNames) liteRows
+  fallbackNames <- if null rowsNeedingFallback then pure [] else QBL.resolveLocationNames rowsNeedingFallback
+  let rideByBooking bId = find (\r -> r.bookingId == bId) rides
+      fallbackArr bId = case find (\(b, _) -> b == bId) fallbackNames of
+        Just (_, (f, mbT)) -> f : maybe [] (\t -> [t]) mbT
+        Nothing -> []
+      namesByBooking row = case row.locationNames of
+        Just ns | not (null ns) -> ns
+        _ -> fallbackArr row.bookingId
+
+  -- 3. Journeys (unchanged; PERSONAL + NORMAL only, like V2). Reuse the V2
+  --    builder with empty bookings to get journey/pass entities + offsets.
+  let shouldIncludeJourneys =
+        (null billingCategoryList || SLT.PERSONAL `elem` billingCategoryList)
+          && (null rideTypeList || SLT.NORMAL `elem` rideTypeList)
+  allJourneys <-
+    if shouldIncludeJourneys
+      then getJourneyList personId (Just (fromIntegral limit)) mbInitialJourneyOffset mbFromDate' mbToDate' journeyStatusList mbIsPaymentSuccess
+      else pure []
+  (journeyPassEntities, _, finalJourneyOffset, finalPassOffset) <-
+    buildApiEntityForRideOrJourneyOrPassWithCounts personId limit [] allJourneys [] (Just 0) mbInitialJourneyOffset mbInitialPassOffset False
+
+  -- 4. Build lite ride items paired with their sort time (startTime).
+  let liteTimed = map (\row -> (row.startTime, RideLite (makeBookingAPIEntityLite row (rideByBooking row.bookingId) (namesByBooking row)))) liteRows
+  -- Journey/pass items keep their V2-built order; pair with journey createdAt
+  -- (NOTE: pass time not threaded here — first cut treats them as journey-timed).
+  let jpTimed = zipWith (\j e -> (j.createdAt, toV3 e)) allJourneys (mapMaybe onlyMultiModal journeyPassEntities)
+
+  -- 5. Merge by time desc, cap at limit.
+  let merged = take limit $ sortOn (Down . fst) (liteTimed <> jpTimed)
+      finalBookingOffset = fromMaybe 0 (fromIntegral <$> mbInitialBookingOffset) + length liteRows
+      hasMoreData = length liteRows + length allJourneys >= limit
+
+  pure $
+    BookingListResV3
+      { list = map snd merged,
+        bookingOffset = Just finalBookingOffset,
+        journeyOffset = Just finalJourneyOffset,
+        passOffset = Just finalPassOffset,
+        hasMoreData = hasMoreData
+      }
+  where
+    -- NOTE: mirror SB.matchesRideType / matchesBillingCategory but on the lite row.
+    matchesLiteFilters bcs rts row =
+      (null bcs || maybe False (`elem` bcs) row.billingCategory)
+        && (null rts || True) -- TODO: map tripCategory -> RideType like SB.matchesRideType
+        -- V2 built entity -> V3 (journey/pass payloads are identical types).
+    toV3 (MultiModalRide j) = MultiModalRideV3 j
+    toV3 (MultiModalPass p) = MultiModalPassV3 p
+    toV3 (Ride _) = error "unexpected fat Ride entity in listV3 journey/pass build"
+    onlyMultiModal e@(MultiModalRide _) = Just e
+    onlyMultiModal e@(MultiModalPass _) = Just e
+    onlyMultiModal (Ride _) = Nothing
+
+-- | Pure assembler for a lite row. computedPrice(=ride.totalFare) ?? estimatedFare.
+-- NOTE: currency defaulted (INR) — thread from a booking/ride currency column when confirmed.
+-- NOTE: cancellationSource omitted (batch booking_cancellation_reason to fill it).
+makeBookingAPIEntityLite :: QBL.BookingLiteRow -> Maybe QBL.RideLiteRow -> [Text] -> BookingAPIEntityLite
+makeBookingAPIEntityLite row mbRide names =
+  BookingAPIEntityLite
+    { bookingId = row.bookingId,
+      rideId = (.rideId) <$> mbRide,
+      status = row.status,
+      isScheduled = fromMaybe False row.isScheduled,
+      rideScheduledTime = row.startTime,
+      createdAt = row.createdAt,
+      locationNames = names,
+      fare = fromMaybe row.estimatedFare (mbRide >>= (.totalFare)),
+      currency = INR,
+      serviceTierName = row.serviceTierName,
+      vehicleServiceTierType = row.vehicleServiceTierType,
+      vehicleIconUrl = row.vehicleIconUrl,
+      isAirConditioned = row.isAirConditioned,
+      tripCategory = row.tripCategory,
+      cancellationChargesOnCancel = mbRide >>= (.cancellationChargesOnCancel),
+      cancellationFeeStatus = mbRide >>= (.cancellationFeeStatus),
+      cancellationSource = Nothing
+    }
 
 favouriteBookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> DriverNo -> Flow FavouriteBookingListRes
 favouriteBookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId driver = do
