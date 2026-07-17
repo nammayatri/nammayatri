@@ -27,6 +27,7 @@ module Lib.DriverCoins.Coins
     sendCoinsNotificationV2,
     safeIncrBy,
     getValidRideCountByDriverIdKey,
+    getValidRideCountByDriverIdWindowKey,
     getOTPValidRideCountByDriverIdKey,
     incrementMetroRideCount,
     incrementIncentiveMetricsForRide,
