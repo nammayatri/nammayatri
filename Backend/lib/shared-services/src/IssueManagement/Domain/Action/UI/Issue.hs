@@ -356,6 +356,34 @@ createMediaEntry url fileType filePath = do
             updatedAt = now
           }
 
+-- | Maps an upload's MIME type to the file extension used in the S3 key,
+-- rejecting anything outside the allowlist. Shared by the issue media
+-- upload flows and FileManagement's upload.
+validateContentType :: (MonadThrow m, Log m) => S3.FileType -> Text -> m Text
+validateContentType fileType reqContentType =
+  case fileType of
+    -- Audio: native mobile recorders (Android mp3, iOS m4a) plus browser
+    -- MediaRecorder outputs (webm on Chrome/Firefox, ogg on FF fallback).
+    S3.Audio | reqContentType == "audio/wave" -> pure "wav"
+    S3.Audio | reqContentType == "audio/wav" -> pure "wav"
+    S3.Audio | reqContentType == "audio/mpeg" -> pure "mp3"
+    S3.Audio | reqContentType == "audio/mp3" -> pure "mp3"
+    S3.Audio | reqContentType == "audio/mp4" -> pure "m4a"
+    S3.Audio | reqContentType == "audio/aac" -> pure "aac"
+    S3.Audio | reqContentType == "audio/webm" -> pure "webm"
+    S3.Audio | "audio/webm;" `T.isPrefixOf` reqContentType -> pure "webm"
+    S3.Audio | reqContentType == "audio/ogg" -> pure "ogg"
+    S3.Audio | "audio/ogg;" `T.isPrefixOf` reqContentType -> pure "ogg"
+    -- Image: common camera/picker outputs.
+    S3.Image | reqContentType == "image/png" -> pure "png"
+    S3.Image | reqContentType == "image/jpeg" -> pure "jpg"
+    S3.Image | reqContentType == "image/jpg" -> pure "jpg"
+    S3.Image | reqContentType == "image/gif" -> pure "gif"
+    S3.Image | reqContentType == "image/webp" -> pure "webp"
+    S3.Image | reqContentType == "image/heic" -> pure "heic"
+    S3.Image | reqContentType == "image/heif" -> pure "heif"
+    _ -> throwError $ FileFormatNotSupported reqContentType
+
 issueMediaUpload' ::
   ( BeamFlow m r,
     MonadTime m,
@@ -392,7 +420,7 @@ mediaUploadToS3 ::
   Text ->
   m Common.IssueMediaUploadRes
 mediaUploadToS3 mediaFileSizeUpperLimit mediaFileUrlPattern Common.IssueMediaUploadReq {..} domain identifier = do
-  contentType <- validateContentType
+  contentType <- validateContentType fileType reqContentType
   fileSize <- L.runIO $ withFile file ReadMode hFileSize
   when (fileSize > fromIntegral mediaFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
@@ -412,30 +440,6 @@ mediaUploadToS3 mediaFileSizeUpperLimit mediaFileUrlPattern Common.IssueMediaUpl
         logError $ "S3 upload failed for issue media file " <> uploadRes.fileId.getId <> ": " <> show e
         QMF.updateStatusById D.FAILED uploadRes.fileId
   return uploadRes
-  where
-    validateContentType = do
-      case fileType of
-        -- Audio: native mobile recorders (Android mp3, iOS m4a) plus browser
-        -- MediaRecorder outputs (webm on Chrome/Firefox, ogg on FF fallback).
-        S3.Audio | reqContentType == "audio/wave" -> pure "wav"
-        S3.Audio | reqContentType == "audio/wav" -> pure "wav"
-        S3.Audio | reqContentType == "audio/mpeg" -> pure "mp3"
-        S3.Audio | reqContentType == "audio/mp3" -> pure "mp3"
-        S3.Audio | reqContentType == "audio/mp4" -> pure "m4a"
-        S3.Audio | reqContentType == "audio/aac" -> pure "aac"
-        S3.Audio | reqContentType == "audio/webm" -> pure "webm"
-        S3.Audio | "audio/webm;" `T.isPrefixOf` reqContentType -> pure "webm"
-        S3.Audio | reqContentType == "audio/ogg" -> pure "ogg"
-        S3.Audio | "audio/ogg;" `T.isPrefixOf` reqContentType -> pure "ogg"
-        -- Image: common camera/picker outputs.
-        S3.Image | reqContentType == "image/png" -> pure "png"
-        S3.Image | reqContentType == "image/jpeg" -> pure "jpg"
-        S3.Image | reqContentType == "image/jpg" -> pure "jpg"
-        S3.Image | reqContentType == "image/gif" -> pure "gif"
-        S3.Image | reqContentType == "image/webp" -> pure "webp"
-        S3.Image | reqContentType == "image/heic" -> pure "heic"
-        S3.Image | reqContentType == "image/heif" -> pure "heif"
-        _ -> throwError $ FileFormatNotSupported reqContentType
 
 issueMediaUpload ::
   ( BeamFlow m r,
@@ -449,7 +453,7 @@ issueMediaUpload ::
   Common.IssueMediaUploadReq ->
   m Common.IssueMediaUploadRes
 issueMediaUpload (personId, merchantId) issueHandle Common.IssueMediaUploadReq {..} = do
-  contentType <- validateContentType
+  contentType <- validateContentType fileType reqContentType
   person <- issueHandle.findPersonById personId >>= fromMaybeM (PersonNotFound personId.getId)
   config <- issueHandle.findMerchantConfig merchantId person.merchantOperatingCityId (Just personId)
   fileSize <- L.runIO $ withFile file ReadMode hFileSize
@@ -471,30 +475,6 @@ issueMediaUpload (personId, merchantId) issueHandle Common.IssueMediaUploadReq {
         logError $ "S3 upload failed for issue media file " <> uploadRes.fileId.getId <> ": " <> show e
         QMF.updateStatusById D.FAILED uploadRes.fileId
   return uploadRes
-  where
-    validateContentType = do
-      case fileType of
-        -- Audio: native mobile recorders (Android mp3, iOS m4a) plus browser
-        -- MediaRecorder outputs (webm on Chrome/Firefox, ogg on FF fallback).
-        S3.Audio | reqContentType == "audio/wave" -> pure "wav"
-        S3.Audio | reqContentType == "audio/wav" -> pure "wav"
-        S3.Audio | reqContentType == "audio/mpeg" -> pure "mp3"
-        S3.Audio | reqContentType == "audio/mp3" -> pure "mp3"
-        S3.Audio | reqContentType == "audio/mp4" -> pure "m4a"
-        S3.Audio | reqContentType == "audio/aac" -> pure "aac"
-        S3.Audio | reqContentType == "audio/webm" -> pure "webm"
-        S3.Audio | "audio/webm;" `T.isPrefixOf` reqContentType -> pure "webm"
-        S3.Audio | reqContentType == "audio/ogg" -> pure "ogg"
-        S3.Audio | "audio/ogg;" `T.isPrefixOf` reqContentType -> pure "ogg"
-        -- Image: common camera/picker outputs.
-        S3.Image | reqContentType == "image/png" -> pure "png"
-        S3.Image | reqContentType == "image/jpeg" -> pure "jpg"
-        S3.Image | reqContentType == "image/jpg" -> pure "jpg"
-        S3.Image | reqContentType == "image/gif" -> pure "gif"
-        S3.Image | reqContentType == "image/webp" -> pure "webp"
-        S3.Image | reqContentType == "image/heic" -> pure "heic"
-        S3.Image | reqContentType == "image/heif" -> pure "heif"
-        _ -> throwError $ FileFormatNotSupported reqContentType
 
 fetchMedia :: (HasField "s3Env" r (S3.S3Env m), MonadReader r m, BeamFlow m r) => (Id Person, Id Merchant) -> Text -> m Text
 fetchMedia _personId filePath =

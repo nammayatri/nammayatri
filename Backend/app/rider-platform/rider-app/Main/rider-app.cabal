@@ -290,6 +290,7 @@ library
       Domain.Action.UI.FavouriteDriver
       Domain.Action.UI.Feedback
       Domain.Action.UI.FeedbackForm
+      Domain.Action.UI.File
       Domain.Action.UI.FinanceInvoice
       Domain.Action.UI.FollowRide
       Domain.Action.UI.FRFSInternal
@@ -896,6 +897,7 @@ library
       API.Action.UI.EditLocation
       API.Action.UI.EstimateBP
       API.Action.UI.FavouriteDriver
+      API.Action.UI.File
       API.Action.UI.FinanceInvoice
       API.Action.UI.FollowRide
       API.Action.UI.FRFSInternal
