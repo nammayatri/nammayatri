@@ -311,6 +311,21 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
       let mbRouteName = mbFirstRouteStation <&> (.longName)
       let mbServiceTierType = mbFirstRouteStation >>= (.vehicleServiceTier) <&> (._type)
 
+      -- Derive the real scheduled departure time for the trip so time-tiered logic
+      -- (e.g. cancellation charges in ExternalBPP/Flow/Common.hs) is measured against the
+      -- actual bus departure rather than the booking creation time. Bus-only: metro/subway
+      -- have no waybill schedule and leave firstTripId Nothing, so they fall back to `now`.
+      bookingStartTime <-
+        case (firstTripId, mbRouteCode) of
+          (Just tripId, Just routeCode) -> do
+            mbScheduledStartTime <- getScheduledTripStartTime tripId routeCode quote'.fromStationCode integratedBppConfig
+            case mbScheduledStartTime of
+              Just scheduledStartTime -> pure scheduledStartTime
+              Nothing -> do
+                logWarning $ "buildAndCreateBooking: no scheduled departure resolved for tripId=" <> tripId <> ", falling back to booking time for startTime"
+                pure now
+          _ -> pure now
+
       let booking =
             DFRFSTicketBooking.FRFSTicketBooking
               { id = uuid,
@@ -334,7 +349,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 cashbackStatus = if isJust quote.discountedTickets then Just DFTB.PENDING else Nothing,
                 bppDelayedInterest = quote.bppDelayedInterest,
                 journeyOnInitDone = Nothing,
-                startTime = Just now, -- TODO
+                startTime = Just bookingStartTime,
                 isFareChanged = Just isFareChanged,
                 integratedBppConfigId = quote.integratedBppConfigId,
                 googleWalletJWTUrl = Nothing,
@@ -415,6 +430,38 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 bufferTime + max 0 timeUntilTripSec
           logInfo $ "Dynamic TTL calculated: tripStart=" <> show tripStartTime <> " ttl=" <> show finalTtl
           pure finalTtl
+
+    -- Resolve the scheduled departure time for a bus trip from the live waybill schedule.
+    -- Prefers the rider's boarding stop (matched on stop code); falls back to the trip's
+    -- earliest stop when the boarding stop is not present. Returns Nothing when the schedule
+    -- is unavailable or empty so callers can fall back safely.
+    getScheduledTripStartTime ::
+      ( MonadFlow m,
+        ServiceFlow m r,
+        HasShortDurationRetryCfg r c,
+        HasBAPMetrics m r
+      ) =>
+      Text -> -- tripId (format: waybillNo-tripNumber)
+      Text -> -- routeCode
+      Text -> -- boarding stop code
+      DIBC.IntegratedBPPConfig ->
+      m (Maybe UTCTime)
+    getScheduledTripStartTime tripId routeCode boardingStopCode integratedBPPConfig = do
+      let (waybillNo, tripNo) = JourneyUtils.getWaybillNoAndTripNoFromTripId tripId
+      mbSchedule <- withTryCatch "getScheduledTripStartTime:getBusTripSchedule" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig)
+      case mbSchedule of
+        Left err -> do
+          logWarning $ "getScheduledTripStartTime: failed to fetch bus trip schedule for tripId=" <> tripId <> ": " <> show err
+          pure Nothing
+        Right schedule ->
+          case concatMap (.eta) schedule of
+            [] -> do
+              logWarning $ "getScheduledTripStartTime: empty schedule for tripId=" <> tripId
+              pure Nothing
+            allEtas -> do
+              let mbBoardingEta = listToMaybe (filter (\e -> e.stopCode == boardingStopCode) allEtas)
+                  chosenEta = fromMaybe (minimumBy (comparing (.arrivalTimeUnix)) allEtas) mbBoardingEta
+              pure $ Just (unixToUTC chosenEta.arrivalTimeUnix)
 
 postFrfsQuoteV2ConfirmUtil :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategories crisSdkResponse isSingleMode mbEnableOffer mbIsMockPayment integratedBppConfig mbTripId = do
