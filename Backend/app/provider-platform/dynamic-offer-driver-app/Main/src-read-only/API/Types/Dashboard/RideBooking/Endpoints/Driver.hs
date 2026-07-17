@@ -97,6 +97,7 @@ data DriverInfoRes = DriverInfoRes
     enabled :: Kernel.Prelude.Bool,
     blocked :: Kernel.Prelude.Bool,
     blockedReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    blockLiftTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     verified :: Kernel.Prelude.Bool,
     subscribed :: Kernel.Prelude.Bool,
     canDowngradeToSedan :: Kernel.Prelude.Bool,
