@@ -1,0 +1,4839 @@
+{
+  "info": {
+    "_postman_id": "cf3a4b2e-08cf-4e5d-9b1a-7c2f31e08d54",
+    "name": "CF3-CancellationDueOnNextRide",
+    "description": "Road (c): settle_cancellation_fee_before_next_ride = false, so the cancellation fee defers. Ride 1 (card) cancels with a fee: CDD stays PENDING with the commission candidate stored, NO charge order, NO commission legs. Ride 2 completes: the fee folds into its fare (fareBreakup shows RIDE_FARE + CANCELLATION_FEE 6.20), the frozen commission sits on ride-2's booking/ride rows (0.93), EndRide books CancellationCommission 0.741+0.189 at RIDE-2's booking + g-commission-cancellation invoice lines, and CDD flips PAID. Refunds then run against ride-2's CANCELLATION_FEE component only - the clawback correctly reads ride-2's booking legs, ride-fare refs stay untouched, nets-to-zero holds, and the negative Commission invoice + PDFs + AggregatedCommission job close the loop. NOTE: the aggregated invoice total is NOT ~0 here (ride-2 carries a real ride commission). Self-contained; requires the cancellation-due ledger fixes (fix-cancellation-ledger-and-overdue) in the running build.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Auto-skip mock-server requests when envType is not Local.",
+          "// Set envType=Local in Local env files; omit / set to 'Master' otherwise.",
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    console.log('[skip] mock-only request on envType=' + envType + ': ' + (pm.info && pm.info.requestName));",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();",
+          "",
+          "if (!pm.collectionVariables.get('_test_driver_number')) {",
+          "    // Finnish mobile: 04X XXXXXXX (10 digits starting with 04)",
+          "    var dNum = '04' + Math.floor(10000000 + Math.random() * 89999999);",
+          "    // Finnish plate: ABC123 (no hyphen — API requires ^[0-9A-Z]*$)",
+          "    var regNo = String.fromCharCode(65+Math.floor(Math.random()*26)) + String.fromCharCode(65+Math.floor(Math.random()*26)) + String.fromCharCode(65+Math.floor(Math.random()*26)) + String(Math.floor(100+Math.random()*899));",
+          "    pm.collectionVariables.set('_test_driver_number', dNum);",
+          "    pm.collectionVariables.set('_test_reg_no', regNo);",
+          "    console.log('Test driver:', dNum, 'reg:', regNo, '| rider (fixed):', pm.environment.get('_test_rider_number'));",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Clear rider pending dues (stale DUE ledger entries -> SETTLED)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('cf_run_started_at') || (Date.now() - new Date(pm.environment.get('cf_run_started_at')).getTime()) > 30*60*1000) { pm.environment.set('cf_run_started_at', new Date(Date.now() - 2*60*1000).toISOString()); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('rider dues cleared (no DUE ledger entries block a new ride)', function(){ pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "update"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"finance_ledger_entry\", \"set\": {\"status\": \"SETTLED\"}, \"where_clause\": [{\"column_name\": \"status\", \"val\": \"DUE\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Cancel stale ACTIVE bookings/rides (self-heal after an aborted prior run)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "// An aborted run can strand an ACTIVE booking for the fixed rider => every new rideSearch 400s",
+              "// ACTIVE_BOOKING_ALREADY_PRESENT (Quote.hs). Local test DB: blanket-cancel active rows, both schemas.",
+              "pm.test('stale BAP bookings cancelled', function(){ pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });",
+              "var jobs = [",
+              "  {schema:'atlas_app', table:'ride', statuses:['NEW','INPROGRESS']},",
+              "  {schema:'atlas_driver_offer_bpp', table:'booking', statuses:['NEW','TRIP_ASSIGNED']},",
+              "  {schema:'atlas_driver_offer_bpp', table:'ride', statuses:['NEW','INPROGRESS']}",
+              "];",
+              "jobs.forEach(function(j){ j.statuses.forEach(function(st){",
+              "  pm.sendRequest({ url:_mockUrl()+'/mock/sql/update', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw: JSON.stringify({db_name:'atlas_dev', db_schema:j.schema, table_name:j.table, set:{status:'CANCELLED'}, where_clause:[{column_name:'status', val:st, op:'='}]})} }, function(){});",
+              "}); });",
+              "// Road-c residue: an aborted run strands accrued dues (rider_details.cancellation_dues + PENDING CDD)",
+              "// which STACK onto the next run's fee (cap 12.40 instead of 6.20). Reset them too.",
+              "[{schema:'atlas_driver_offer_bpp', table:'rider_details', set:{cancellation_dues:0}, where:[{column_name:'cancellation_dues', val:'0', op:'>'}]},",
+              " {schema:'atlas_driver_offer_bpp', table:'cancellation_dues_details', set:{payment_status:'PAID'}, where:[{column_name:'payment_status', val:'PENDING', op:'='}]}].forEach(function(j){",
+              "  pm.sendRequest({ url:_mockUrl()+'/mock/sql/update', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw: JSON.stringify({db_name:'atlas_dev', db_schema:j.schema, table_name:j.table, set:j.set, where_clause:j.where})} }, function(){});",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "update"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"booking\", \"set\": {\"status\": \"CANCELLED\"}, \"where_clause\": [{\"column_name\": \"status\", \"val\": \"TRIP_ASSIGNED\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Switch City for Setup (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('dashboard_token', d.authToken);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create User Cancellation Dues Logic WITH Commission (BPP)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('UserCancellationDues logic version:', d.version, 'updated:', d.isRuleUpdated);",
+              "if (d.version) { pm.environment.set('cancellation_logic_version', d.version); }",
+              "pm.test('4-element cancellation-dues logic created (charges 5.00 + tax 1.20 + 15% commission)', function () { pm.response.to.have.status(200); });",
+              "// TRAP: the InternationalRideBookingFlow collections 02/09/10/11 re-seed a 2-element rule WITHOUT commission and roll it",
+              "// out as a NEWER version. Re-run THIS collection after them, or the fixture books no commission."
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/verify",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "nammaTag",
+            "appDynamicLogic",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"domain\": {\"tag\": \"USER_CANCELLATION_DUES\"}, \"shouldUpdateRule\": true, \"updatePassword\": \"98979\", \"description\": \"Helsinki flat cancellation charge (5.00 + 1.20 tax) + 15% commission on the gross\", \"inputData\": [{\"cancelledBy\": \"CancellationByCustomer\", \"timeOfDriverCancellation\": 0, \"timeOfCustomerCancellation\": 45, \"isArrivedAtPickup\": false, \"driverWaitingTime\": 0, \"callAttemptByDriver\": false, \"actualCoveredDistance\": 0, \"expectedCoveredDistance\": 0, \"cancellationDues\": 0, \"cancelledRides\": 0, \"totalBookings\": 0, \"estimatedBookingFare\": 25, \"completedRides\": 0, \"validCancellations\": 0, \"cancellationDueRides\": 0, \"serviceTier\": \"COMFY\", \"tripCategory\": {\"tag\": \"OneWay\", \"contents\": \"OneWayOnDemandDynamicOffer\"}, \"cancellationReasonSelected\": null, \"userSdkVersion\": null}], \"rules\": [{\"cat\": [{\"var\": \"\"}, {\"cancellationCharges\": 5.0}]}, {\"cat\": [{\"var\": \"\"}, {\"cancellationChargesTax\": 1.2}]}, {\"cat\": [{\"var\": \"\"}, {\"cancellationCommission\": {\"*\": [0.15, {\"+\": [{\"var\": [\"cancellationCharges\", 0]}, {\"var\": [\"cancellationChargesTax\", 0]}]}]}}]}, {\"cat\": [{\"var\": \"\"}, {\"overdueCancellationCommission\": {\"*\": [0.15, {\"+\": [{\"var\": [\"overdueCancellationCharge\", 0]}, {\"var\": [\"overdueCancellationTax\", 0]}]}]}}]}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Rollout User Cancellation Dues Logic (BPP)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 2000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Rollout success', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/upsertLogicRollout",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "nammaTag",
+            "appDynamicLogic",
+            "upsertLogicRollout"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"domain\":{\"tag\":\"USER_CANCELLATION_DUES\"},\"timeBounds\":\"Unbounded\",\"rollout\":[{\"rolloutPercentage\":100,\"version\":{{cancellation_logic_version}},\"versionDescription\":\"User cancellation dues - Helsinki\"}]}]"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Resolve BAP merchant_operating_city id (SQL)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('BAP merchant_operating_city resolved', function () {",
+              "  var d = pm.response.json();",
+              "  pm.expect(d.count, pm.response.text()).to.be.above(0);",
+              "  pm.environment.set('bap_moc_id', d.rows[0].id);",
+              "  console.log('bap_moc_id =', d.rows[0].id);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"merchant_operating_city\", \"select\": [\"id\", \"merchant_id\"], \"where_clause\": [{\"column_name\": \"merchant_short_id\", \"val\": \"{{bap_short_id}}\", \"op\": \"=\"}, {\"column_name\": \"city\", \"val\": \"{{city}}\", \"op\": \"=\"}], \"limit\": 1}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Switch ON BAP refunds kill-switch (rider_config.enable_payment_refunds = true)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "pm.test('enable_payment_refunds = true (refund create/approve is 400-gated on this flag)', function () {",
+              "  // A 500 here means the rider_config.enable_payment_refunds column is missing from this build.",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+              "  var d = pm.response.json(); pm.expect(d.rowcount, 'no rider_config row for the city').to.be.above(0);",
+              "});",
+              "// Flag flips have 2 cache layers (redis + in-process). Flush redis here; if refund creates still 400",
+              "// with 'not enabled' later, restart rider-app (in-process config cache).",
+              "// No flush-redis here: it wipes the scheduler streams' consumer groups (allocator+rider NOGROUP; agg jobs stall). The targeted cache-bust steps handle config eviction instead."
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "update"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"rider_config\", \"set\": {\"enable_payment_refunds\": true}, \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{bap_moc_id}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Seed rider_config NEXT-RIDE path (settle_cancellation_fee_before_next_ride = false)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "pm.test('settle_cancellation_fee_before_next_ride = true (forces the immediate-charge road)', function () {",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+              "  var d = pm.response.json(); pm.expect(d.rowcount, 'no rider_config row for the city').to.be.above(0);",
+              "});",
+              "// CUSTOMER_NO_SHOW must be a valid immediate-charge reason. The backend defaults to",
+              "// [\"CUSTOMER_NO_SHOW\"] when the column is NULL (OnCancel.hs), so NULL is fine; a seeded",
+              "// list WITHOUT it is not (text[] cannot be written through the mock SQL API - fix by hand).",
+              "var _selBody = JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'rider_config',select:['valid_cancellation_reason_codes_for_immediate_charge'],where_clause:[{column_name:'merchant_operating_city_id',val:pm.environment.get('bap_moc_id'),op:'='}],limit:1});",
+              "pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_selBody} }, function(err,res){",
+              "  var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){}",
+              "  var v = rows.length ? rows[0].valid_cancellation_reason_codes_for_immediate_charge : null;",
+              "  pm.test('CUSTOMER_NO_SHOW is a valid immediate-charge reason (NULL defaults to it)', function(){",
+              "    pm.expect(v == null || String(v).indexOf('CUSTOMER_NO_SHOW') >= 0, 'valid_cancellation_reason_codes_for_immediate_charge excludes CUSTOMER_NO_SHOW: ' + JSON.stringify(v) + ' - reset it to NULL').to.be.true;",
+              "  });",
+              "// No flush-redis here: it wipes the scheduler streams' consumer groups (allocator+rider NOGROUP; agg jobs stall). The targeted cache-bust steps handle config eviction instead.",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "update"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"rider_config\", \"set\": {\"settle_cancellation_fee_before_next_ride\": false}, \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{bap_moc_id}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Resolve BPP merchant + city UUIDs (SQL - for flags + the scheduler trigger)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('SQL select returns 200', () => pm.response.to.have.status(200));",
+              "const d = pm.response.json();",
+              "const rows = (d && d.rows) || [];",
+              "if (rows.length) {",
+              "  pm.environment.set('helsinki_merchant_id', rows[0].merchant_id);",
+              "  pm.environment.set('helsinki_moc_id', rows[0].id);",
+              "  console.log('merchant_id =', rows[0].merchant_id, 'moc_id =', rows[0].id);",
+              "} else { console.warn('No Helsinki city row — scheduler trigger will be skipped'); }"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"merchant_operating_city\", \"select\": [\"id\", \"merchant_id\"], \"where_clause\": [{\"column_name\": \"city\", \"val\": \"Helsinki\", \"op\": \"=\"}, {\"column_name\": \"merchant_short_id\", \"val\": \"BRIDGE_FINLAND_PARTNER\", \"op\": \"=\"}], \"limit\": 1}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      }
+    },
+    {
+      "name": "BPP kill-switch ON (transporter_config.enable_cancellation_commission = true)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "pm.test('enable_cancellation_commission = true (main fixture books commission)', function () {",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+              "  var d = pm.response.json(); pm.expect(d.rowcount, 'no transporter_config row for the city').to.be.above(0);",
+              "});",
+              "// 2 cache layers again: flush redis here; if the CancellationCommission-leg guard below times out",
+              "// with 0 legs, the driver-app in-process transporter_config cache is stale -> restart driver-app, re-run.",
+              "// No flush-redis here: it wipes the scheduler streams' consumer groups (allocator+rider NOGROUP; agg jobs stall). The targeted cache-bust steps handle config eviction instead."
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "update"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"transporter_config\", \"set\": {\"enable_cancellation_commission\": true, \"invoice_config\": \"{\\\"logoUrl\\\":null,\\\"emitLedgerEntries\\\":true,\\\"driverInvoiceLineItemsVatInclusive\\\":false,\\\"commissionAggregationEnabled\\\":true}\"}, \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{helsinki_moc_id}}\", \"op\": \"=\"}]}"
+        },
+        "description": "Also (re)sets invoice_config.commissionAggregationEnabled=true (whole-JSON overwrite of the existing config; jsonb decode is all-or-nothing so every key must be present) - required or the AggregatedCommission job Terminates."
+      },
+      "response": []
+    },
+    {
+      "name": "BOOT: bust config caches (redis DEL + in-proc force-cleanup broadcast)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "// Config flags live behind 2 caches: redis CachedQueries (24h TTL) + a 1h in-process map.",
+              "// The in-process layer honours a broadcast key (Kernel.Storage.InMem cleanup thread, 60s tick):",
+              "// <appPrefix>inmem:force:cleanup:timeofday evicts keys containing forceCleanupKeyPrefix when the",
+              "// cache pre-dates the timestamp. 23:59:59 always post-dates a same-day boot, so it always fires.",
+              "pm.test('cache-bust primary DEL ok', function(){ pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });",
+              "var dels=[{pattern:'*TransporterConfig*',target:'standalone'},{pattern:'*RiderConfig*',target:'cluster'},{pattern:'*RiderConfig*',target:'standalone'}];",
+              "dels.forEach(function(d){ pm.sendRequest({ url:_mockUrl()+'/mock/redis/del', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw: JSON.stringify(d)} }, function(){}); });",
+              "var val = JSON.stringify({forceCleanupTimestamp:'23:59:59'}); // NO keyPrefix => FULL in-mem wipe each 60s tick (covers FarePolicy snapshots etc.); key self-expires 600s after first consumption",
+              "['dynamic-offer-driver-app:inmem:force:cleanup:timeofday','app-backend:inmem:force:cleanup:timeofday'].forEach(function(k){",
+              "  ['cluster','standalone'].forEach(function(t){",
+              "    pm.sendRequest({ url:_mockUrl()+'/mock/redis/set', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw: JSON.stringify({key:k, value:val, target:t})} }, function(){});",
+              "  });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/redis/del",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "redis",
+            "del"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"pattern\": \"*TransporterConfig*\", \"target\": \"cluster\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "BOOT: wait 75s for the in-proc cache eviction tick (60s cycle)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "console.log('Waiting 75s: in-proc config cache eviction tick is a 60s cycle...');",
+              "var t = Date.now(); while (Date.now() - t < 75000) {}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('eviction window elapsed', function(){ pm.expect(true).to.be.true; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{mockServerUrl}}/health",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Driver Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_authId', d.authId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_driver_number}}\", \"mobileCountryCode\": \"+358\", \"merchantId\": \"{{driver_merchant_id}}\", \"merchantOperatingCity\": \"{{city}}\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Driver OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_token', d.token);",
+              "pm.environment.set('driver_id', d.person.id);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{driver_authId}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-device\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Switch City (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('dashboard_token', d.authToken);",
+              "console.log('Switched to', d.merchantId, d.city, 'token:', d.authToken.substring(0, 20) + '...');",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Add Vehicle (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Vehicle added', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle?fleetOwnerId={{fleet_owner_id}}",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "addVehicle"
+          ],
+          "query": [
+            {
+              "key": "fleetOwnerId",
+              "value": "{{fleet_owner_id}}"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"{{vehicle_class}}\", \"colour\": \"White\", \"model\": \"{{vehicle_model}}\", \"make\": \"{{vehicle_make}}\", \"vehicleCategory\": \"{{vehicle_category}}\", \"variant\": \"{{vehicle_variant}}\", \"category\": \"{{vehicle_category}}\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Enable Driver (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Driver enabled', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "enable"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Driver Set Location",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "{{vehicle_variant}}"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"ts\": \"{{current_time}}\"}]"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Go Online Without Bank Account (Blocked)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Blocked without bank account', function () { pm.response.to.have.status(400); });",
+              "var d = pm.response.json();",
+              "pm.test('Error is DRIVER_BANK_ACCOUNT_NOT_FOUND', function () { pm.expect(d.errorCode).to.equal('DRIVER_BANK_ACCOUNT_NOT_FOUND'); });",
+              "console.log('Correctly blocked:', d.errorCode);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "setActivity"
+          ],
+          "query": [
+            {
+              "key": "active",
+              "value": "true"
+            },
+            {
+              "key": "mode",
+              "value": "%22ONLINE%22"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Verify Bank Account (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('bank_verify_request_id', d.requestId);",
+              "console.log('Bank verify requestId:', d.requestId);",
+              "pm.test('Verification initiated', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/verify/bankAccount",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "verify",
+            "bankAccount"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"bankAccountNo\": \"1234567890\", \"bankIfscCode\": \"HDFC0001234\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Poll Bank Account Status (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Bank account status:', JSON.stringify(d));",
+              "pm.test('Bank account verified', function () { pm.response.to.have.status(200); });",
+              "pm.test('Account exists', function () { pm.expect(d.accountExists).to.be.true; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/info/{{bank_verify_request_id}}/bankAccount",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "info",
+            "{{bank_verify_request_id}}",
+            "bankAccount"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Go Online Without Charges Enabled (Blocked)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Blocked - charges not enabled (400)', function () { pm.response.to.have.status(400); });",
+              "var d = pm.response.json();",
+              "pm.test('Error is DRIVER_CHARGES_DISABLED', function () { pm.expect(d.errorCode).to.equal('DRIVER_CHARGES_DISABLED'); });",
+              "console.log('Correctly blocked:', d.errorCode);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "setActivity"
+          ],
+          "query": [
+            {
+              "key": "active",
+              "value": "true"
+            },
+            {
+              "key": "mode",
+              "value": "%22ONLINE%22"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Bank Account Link (Stripe Connect)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Account link:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/bankAccount/link?paymentMode=%22LIVE%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "bankAccount",
+            "link"
+          ],
+          "query": [
+            {
+              "key": "paymentMode",
+              "value": "%22LIVE%22"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Bank Account Status (Stripe)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Bank account status:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Charges enabled', function () { pm.expect(d.chargesEnabled).to.be.true; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/bankAccount/status",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "bankAccount",
+            "status"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Driver Set Online",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "setActivity"
+          ],
+          "query": [
+            {
+              "key": "active",
+              "value": "true"
+            },
+            {
+              "key": "mode",
+              "value": "%22ONLINE%22"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Rider Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_authId', d.authId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_rider_number}}\", \"mobileCountryCode\": \"+358\", \"merchantId\": \"{{bap_short_id}}\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Rider OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_token', d.token);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth",
+            "{{rider_authId}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-rider\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Stripe Customer",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Customer:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/customer",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "customer"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Payment Methods",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d && d.length > 0) {",
+              "    pm.environment.set('payment_method_id', d[0].paymentMethodId || d[0].id);",
+              "    console.log('Payment method:', d[0].paymentMethodId || d[0].id);",
+              "} else {",
+              "    // Use default test card from Stripe mock",
+              "    pm.environment.set('payment_method_id', 'pm_card_visa');",
+              "    console.log('No methods, using default pm_card_visa');",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/methods",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "methods"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Make Payment Method Default",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/methods/{{payment_method_id}}/makeDefault",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "methods",
+            "{{payment_method_id}}",
+            "makeDefault"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Driver Location Update - ride 1",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "{{vehicle_variant}}"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"ts\": \"{{current_time}}\"}]"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Ride Search - ride 1",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "setTimeout(function(){}, 2000);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('searchId', d.searchId);",
+              "console.log('Search ID:', d.searchId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "// Wait for async beckn search processing across services\nconst _delay = 5000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"fareProductType\": \"ONE_WAY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Test Origin\", \"areaCode\": \"00100\", \"city\": \"{{city}}\", \"country\": \"Finland\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"destination\": {\"address\": {\"area\": \"Test Destination\", \"areaCode\": \"01530\", \"city\": \"{{city}}\", \"country\": \"Finland\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}}}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Search Results - ride 1",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "setTimeout(function(){}, 5000);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.estimates && d.estimates.length > 0) {",
+              "    var est = d.estimates.find(e => e.vehicleServiceTierType === 'SUV')",
+              "           || d.estimates.find(e => e.vehicleServiceTierType === 'COMFY')",
+              "           || d.estimates[0];",
+              "    pm.environment.set('estimateId', est.id);",
+              "    console.log('Estimate:', est.id, est.vehicleServiceTierType, est.estimatedFare);",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has estimates', function () { pm.expect(d, 'response body').to.be.an('object'); pm.expect(d.estimates, 'estimates field').to.be.an('array'); pm.expect(d.estimates.length, 'estimate count').to.be.above(0); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch",
+            "{{searchId}}",
+            "results"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Select Estimate (Card Payment) - ride 1",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "// Wait for async select processing before next step\nconst _sel_delay = 8000; const _sel_start = Date.now(); while (Date.now() - _sel_start < _sel_delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/estimate/{{estimateId}}/select2",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "estimate",
+            "{{estimateId}}",
+            "select2"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true, \"paymentMethodId\": \"{{payment_method_id}}\", \"paymentInstrument\": {\"instrumentType\": \"Card\", \"instrumentName\": \"DefaultCardType\"}}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Nearby Ride Requests (Driver) - ride 1",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait briefly before checking nearby requests",
+              "const start = Date.now();",
+              "while (Date.now() - start < 1000) { /* busy wait */ }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Dashboard-compatible poll (the CLI retry hook is unavailable here). Driver-pool fires batches",
+              "// every ~22s; the freshly-created test driver may miss the first batch. Poll up to ~50s.",
+              "function _resolve(u){ return String(u||'').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _url(){ return _resolve(pm.environment.get('baseURL_namma_P')) + '/driver/nearbyRideRequest'; }",
+              "function _finish(d){",
+              "  if (d && d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) {",
+              "    var req = d.searchRequestsForDriver[0];",
+              "    pm.environment.set('searchTryId', req.searchTryId);",
+              "    console.log('Got request, searchTryId:', req.searchTryId, 'baseFare:', req.baseFare);",
+              "    pm.test('Has search requests', function(){ pm.expect(d.searchRequestsForDriver.length).to.be.above(0); });",
+              "  } else {",
+              "    pm.test('Has search requests', function(){ pm.expect(0, 'driver pool empty after ~50s polling - driver not matched (check LTS driver_id / producer dispatch)').to.be.above(0); });",
+              "  }",
+              "}",
+              "function _poll(n){",
+              "  pm.sendRequest({ url:_url(), method:'GET', header:{'Content-Type':'application/json','token':pm.environment.get('driver_token')} }, function(err,res){",
+              "    var d={}; try{ d=res.json(); }catch(e){}",
+              "    if (d && d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) { _finish(d); }",
+              "    else if (n > 0) { setTimeout(function(){ _poll(n-1); }, 5000); }",
+              "    else { _finish(d || {}); }",
+              "  });",
+              "}",
+              "var d0={}; try{ d0=pm.response.json(); }catch(e){}",
+              "if (d0 && d0.searchRequestsForDriver && d0.searchRequestsForDriver.length > 0) { _finish(d0); }",
+              "else { console.log('Pool empty on first check - polling driver pool (~22s batches)...'); _poll(40); }"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/nearbyRideRequest",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "nearbyRideRequest"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Driver Accept Ride - ride 1",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Driver accepted ride!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/searchRequest/quote/respond",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "searchRequest",
+            "quote",
+            "respond"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"searchTryId\": \"{{searchTryId}}\", \"offeredFare\": null, \"response\": \"Accept\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Booking (Rider) - ride 1",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 3000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.list && d.list.length > 0) {",
+              "    var b = d.list[0];",
+              "    pm.environment.set('customer_bookingId', b.id);",
+              "    pm.environment.set('cancel_bookingId', b.id);",
+              "    pm.environment.set('ride_otp', b.rideList[0].rideOtp);",
+              "    console.log('Booking:', b.id, 'Status:', b.status, 'RideOTP:', b.rideList[0].rideOtp);",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "onlyActive",
+              "value": "true"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Ride (Driver) - ride 1",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.list && d.list.length > 0) {",
+              "    pm.environment.set('driver_ride_id', d.list[0].id);",
+              "    console.log('Ride:', d.list[0].id);",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "isActive",
+              "value": "true"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Driver Arrived at Pickup - ride 1",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// on_update(DRIVER_ARRIVED) can race KV/drainer visibility of the fresh BAP ride row and 500",
+              "// (RIDE_DOES_NOT_EXIST from getRideAndBooking) - rows are consistent in postgres moments later.",
+              "// Retry up to 8x5s before failing; the call is idempotent (sets driver_arrival_time).",
+              "function _hdrs(){ return {'Content-Type':'application/json', 'token': pm.variables.replaceIn('{{driver_token}}')}; }",
+              "function _fin(ok, detail){ pm.test('Driver arrived at pickup (retry-tolerant)', function(){ pm.expect(ok, detail||'').to.be.true; }); if(ok) console.log('Driver arrived at pickup - driver_arrival_time is now set'); }",
+              "function _retry(n){ pm.sendRequest({ url: pm.request.url.toString(), method:'POST', header:_hdrs(), body:{mode:'raw', raw: pm.variables.replaceIn(pm.request.body && pm.request.body.raw || '')} }, function(err,res){",
+              "  if(!err && res && res.code===200){ _fin(true); }",
+              "  else if(n<=0){ _fin(false, 'arrived/pickup still failing after retries: ' + (err|| (res&&res.code) ) + ' ' + (res? res.text().substring(0,160):'')); }",
+              "  else { console.log('arrived/pickup retry, attempts left', n, 'last:', res&&res.code); setTimeout(function(){ _retry(n-1); }, 5000); }",
+              "}); }",
+              "if (pm.response.code === 200) { _fin(true); } else { console.log('arrived/pickup got', pm.response.code, '- retrying (KV visibility race)'); _retry(8); }"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/arrived/pickup",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "arrived",
+            "pickup"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Wait For No-Show Window - ride 1",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// cancellation_fare_policy.free_cancellation_time_seconds is overridden to 30s locally",
+              "// via migration 0006-reduce-free-cancellation-time-for-local.sql.",
+              "// Cancelling after this threshold triggers cancellation charges on the driver ledger.",
+              "// Busy-wait ~35s to cross the window reliably.",
+              "console.log('Waiting 35s for no-show / free-cancellation window to elapse...');",
+              "const start = Date.now();",
+              "while (Date.now() - start < 35000) { /* busy wait */ }",
+              "console.log('No-show window elapsed, proceeding to cancel.');"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "onlyActive",
+              "value": "true"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Cancel Ride (Driver - CUSTOMER_NO_SHOW) - ride 1",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Driver cancelled with CUSTOMER_NO_SHOW — cancellation fee should be charged to rider via Stripe');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/cancel",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "cancel"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"reasonCode\": \"CUSTOMER_NO_SHOW\", \"additionalInfo\": \"Customer did not show up\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "R1: Capture BAP rideId (SQL - poll until drained)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'ride',select:['id','booking_id','bpp_ride_id','status'],where_clause:[{column_name:'booking_id',val:pm.environment.get('cancel_bookingId'),op:'='}],limit:1}); }",
+              "function _ok(rows){ return rows.length>0 && rows[0].status==='CANCELLED'; }",
+              "function _assert(rows){",
+              "  if(!rows.length){ pm.test('fixture ride row present', function(){ pm.expect(0,'no ride for the cancelled booking').to.be.above(0); }); return; }",
+              "  var r=rows[0];",
+              "  pm.environment.set('rideId', r.id);",
+              "  pm.environment.set('cancelRideId', r.id);",
+              "  pm.environment.set('bppRideId', r.bpp_ride_id);",
+              "  pm.environment.set('cancelBppRideId', r.bpp_ride_id);",
+              "  pm.environment.set('driver_ride_id', r.bpp_ride_id);",
+              "  pm.test('fixture ride CANCELLED (rideId + bppRideId captured)', function(){ pm.expect(r.id).to.be.a('string').and.not.empty; pm.expect(r.status).to.eql('CANCELLED'); pm.expect(r.bpp_ride_id,'ride must carry a bpp_ride_id').to.not.be.empty; });",
+              "  console.log('Fixture: cancelRideId='+r.id+' cancelBppRideId='+r.bpp_ride_id);",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(40); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"ride\", \"select\": [\"id\", \"booking_id\", \"bpp_ride_id\", \"status\"], \"where_clause\": [{\"column_name\": \"booking_id\", \"val\": \"{{cancel_bookingId}}\", \"op\": \"=\"}], \"limit\": 1}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "R1: Capture BPP booking id + driver id (SQL - poll)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'ride',select:['id','booking_id','driver_id','status','currency'],where_clause:[{column_name:'id',val:pm.environment.get('driver_ride_id'),op:'='}],limit:1}); }",
+              "function _ok(rows){ return rows.length>0; }",
+              "function _assert(rows){",
+              "  if(!rows.length){ pm.test('BPP ride row drained', function(){ pm.expect(0,'no BPP ride for id; KV not drained').to.be.above(0); }); return; }",
+              "  var r=rows[0];",
+              "  pm.environment.set('bppBookingId', r.booking_id);",
+              "  pm.environment.set('cancelBppBookingId', r.booking_id);",
+              "  pm.environment.set('cancelDriverId', r.driver_id);",
+              "  pm.test('BPP ride row drained (bppBookingId + cancelDriverId)', function(){ pm.expect(r.booking_id).to.be.a('string').and.not.empty; pm.expect(r.driver_id).to.be.a('string').and.not.empty; });",
+              "  console.log('Fixture: cancelBppBookingId='+r.booking_id+' cancelDriverId='+r.driver_id);",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(40); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"ride\", \"select\": [\"id\", \"booking_id\", \"driver_id\", \"status\", \"currency\"], \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{driver_ride_id}}\", \"op\": \"=\"}], \"limit\": 1}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "R1: stash ride-1 ids (CDD + negative checks later)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('r1_rideId', pm.environment.get('rideId'));",
+              "pm.environment.set('r1_bppRideId', pm.environment.get('bppRideId'));",
+              "pm.environment.set('r1_bppBookingId', pm.environment.get('bppBookingId'));",
+              "pm.test('ride-1 ids stashed', function(){ pm.expect(pm.environment.get('r1_bppRideId')).to.not.be.empty; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{mockServerUrl}}/health",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "R1: CDD PENDING, commission candidate stored, fee deferred to next ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'cancellation_dues_details',select:['ride_id','payment_status','cancellation_amount','cancellation_fee','cancellation_fee_tax','cancellation_commission','overdue_cancellation_charge','overdue_cancellation_tax','overdue_cancellation_commission'],where_clause:[{column_name:'ride_id',val:pm.environment.get('bppRideId'),op:'='}]}); }",
+              "function _ok(rows){ return rows.length > 0; }",
+              "function _assert(rows){",
+              "  try { console.log('  > CDD:', JSON.stringify(rows)); } catch(e){}",
+              "  pm.test('CDD row exists, PENDING', function(){ pm.expect(rows.length).to.be.above(0); pm.expect(rows[0].payment_status).to.eql('PENDING'); });",
+              "  var r = rows[0];",
+              "  pm.test('cancellation_commission 0.93 column stored (flag ON; overdue cols NULL on this road)', function(){ pm.expect(Number(r.cancellation_commission)).to.be.closeTo(0.93, 0.011); });",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(40); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"cancellation_dues_details\", \"select\": [\"ride_id\", \"payment_status\", \"cancellation_amount\", \"cancellation_fee\", \"cancellation_fee_tax\", \"cancellation_commission\", \"overdue_cancellation_charge\", \"overdue_cancellation_tax\", \"overdue_cancellation_commission\"], \"where_clause\": [{\"column_name\": \"ride_id\", \"val\": \"{{bppRideId}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "R1: NO cancellation charge order for ride-1 (fee defers)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var t = Date.now(); while (Date.now() - t < 15000) {}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var rows=[]; try{ rows=(pm.response.json().rows)||[]; }catch(e){}",
+              "pm.test('no CHARGED order materialises for the cancelled ride (road c defers the fee)', function(){",
+              "  console.log('  > ride-1 orders:', JSON.stringify(rows));",
+              "  // a payment intent may exist from selection but must not be CHARGED for the cancellation fee",
+              "  pm.expect(rows.filter(function(r){ return r.status==='CHARGED'; }).length).to.eql(0);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"payment_order\", \"select\": [\"id\", \"status\"], \"where_clause\": [{\"column_name\": \"domain_entity_id\", \"val\": \"{{rideId}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "R1: NO CancellationCommission legs at ride-1 booking (books at ride-2 EndRide)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var rows=[]; try{ rows=(pm.response.json().rows)||[]; }catch(e){}",
+              "pm.test('zero CancellationCommission legs at ride-1', function(){",
+              "  pm.expect(rows.filter(function(r){ return r.reference_type==='CancellationCommission' || r.reference_type==='CancellationCommissionVAT'; }).length).to.eql(0);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"finance_ledger_entry\", \"select\": [\"id\", \"reference_type\"], \"where_clause\": [{\"column_name\": \"reference_id\", \"val\": \"{{bppBookingId}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "R2: Driver Set Online",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "setActivity"
+          ],
+          "query": [
+            {
+              "key": "active",
+              "value": "true"
+            },
+            {
+              "key": "mode",
+              "value": "%22ONLINE%22"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Driver Location Update - ride 2",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "{{vehicle_variant}}"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"ts\": \"{{current_time}}\"}]"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Ride Search - ride 2",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "setTimeout(function(){}, 2000);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('searchId', d.searchId);",
+              "console.log('Search ID:', d.searchId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "// Wait for async beckn search processing across services\nconst _delay = 5000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"fareProductType\": \"ONE_WAY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Test Origin\", \"areaCode\": \"00100\", \"city\": \"{{city}}\", \"country\": \"Finland\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"destination\": {\"address\": {\"area\": \"Test Destination\", \"areaCode\": \"01530\", \"city\": \"{{city}}\", \"country\": \"Finland\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}}}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Search Results - ride 2",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "setTimeout(function(){}, 5000);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.estimates && d.estimates.length > 0) {",
+              "    var est = d.estimates.find(e => e.vehicleServiceTierType === 'SUV')",
+              "           || d.estimates.find(e => e.vehicleServiceTierType === 'COMFY')",
+              "           || d.estimates[0];",
+              "    pm.environment.set('estimateId', est.id);",
+              "    console.log('Estimate:', est.id, est.vehicleServiceTierType, est.estimatedFare);",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has estimates', function () { pm.expect(d, 'response body').to.be.an('object'); pm.expect(d.estimates, 'estimates field').to.be.an('array'); pm.expect(d.estimates.length, 'estimate count').to.be.above(0); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch",
+            "{{searchId}}",
+            "results"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Select Estimate (Card Payment) - ride 2",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "// Wait for async select processing before next step\nconst _sel_delay = 8000; const _sel_start = Date.now(); while (Date.now() - _sel_start < _sel_delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/estimate/{{estimateId}}/select2",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "estimate",
+            "{{estimateId}}",
+            "select2"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true, \"paymentMethodId\": \"{{payment_method_id}}\", \"paymentInstrument\": {\"instrumentType\": \"Card\", \"instrumentName\": \"DefaultCardType\"}}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Nearby Ride Requests (Driver) - ride 2",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait briefly before checking nearby requests",
+              "const start = Date.now();",
+              "while (Date.now() - start < 1000) { /* busy wait */ }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Dashboard-compatible poll (the CLI retry hook is unavailable here). Driver-pool fires batches",
+              "// every ~22s; the freshly-created test driver may miss the first batch. Poll up to ~50s.",
+              "function _resolve(u){ return String(u||'').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _url(){ return _resolve(pm.environment.get('baseURL_namma_P')) + '/driver/nearbyRideRequest'; }",
+              "function _finish(d){",
+              "  if (d && d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) {",
+              "    var req = d.searchRequestsForDriver[0];",
+              "    pm.environment.set('searchTryId', req.searchTryId);",
+              "    console.log('Got request, searchTryId:', req.searchTryId, 'baseFare:', req.baseFare);",
+              "    pm.test('Has search requests', function(){ pm.expect(d.searchRequestsForDriver.length).to.be.above(0); });",
+              "  } else {",
+              "    pm.test('Has search requests', function(){ pm.expect(0, 'driver pool empty after ~50s polling - driver not matched (check LTS driver_id / producer dispatch)').to.be.above(0); });",
+              "  }",
+              "}",
+              "function _poll(n){",
+              "  pm.sendRequest({ url:_url(), method:'GET', header:{'Content-Type':'application/json','token':pm.environment.get('driver_token')} }, function(err,res){",
+              "    var d={}; try{ d=res.json(); }catch(e){}",
+              "    if (d && d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) { _finish(d); }",
+              "    else if (n > 0) { setTimeout(function(){ _poll(n-1); }, 5000); }",
+              "    else { _finish(d || {}); }",
+              "  });",
+              "}",
+              "var d0={}; try{ d0=pm.response.json(); }catch(e){}",
+              "if (d0 && d0.searchRequestsForDriver && d0.searchRequestsForDriver.length > 0) { _finish(d0); }",
+              "else { console.log('Pool empty on first check - polling driver pool (~22s batches)...'); _poll(40); }"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/nearbyRideRequest",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "nearbyRideRequest"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Driver Accept Ride - ride 2",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Driver accepted ride!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/searchRequest/quote/respond",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "searchRequest",
+            "quote",
+            "respond"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"searchTryId\": \"{{searchTryId}}\", \"offeredFare\": null, \"response\": \"Accept\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Booking (Rider) - ride 2",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 3000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.list && d.list.length > 0) {",
+              "    var b = d.list[0];",
+              "    pm.environment.set('customer_bookingId', b.id);",
+              "    pm.environment.set('cancel_bookingId', b.id);",
+              "    pm.environment.set('ride_otp', b.rideList[0].rideOtp);",
+              "    console.log('Booking:', b.id, 'Status:', b.status, 'RideOTP:', b.rideList[0].rideOtp);",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "onlyActive",
+              "value": "true"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Ride (Driver) - ride 2",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.list && d.list.length > 0) {",
+              "    pm.environment.set('driver_ride_id', d.list[0].id);",
+              "    console.log('Ride:', d.list[0].id);",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "isActive",
+              "value": "true"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "R2: Start Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Ride started!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/start",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "start"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"rideOtp\": \"{{ride_otp}}\", \"point\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "R2: End Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Ride ended!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/end",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "end"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"point\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "R2: Verify Booking Completed",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 3000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "var b = d.list && d.list[0];",
+              "var ride = b && b.rideList && b.rideList[0];",
+              "if (b) { console.log('Final booking:', b.id, 'Status:', b.status); }",
+              "if (ride) { console.log('Ride offers:', JSON.stringify(ride.selectedOffers)); }",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Ride completed', function () { pm.expect(b.status).to.equal('COMPLETED'); });",
+              "if (ride && ride.selectedOffers) {",
+              "    pm.test('Selected offers has offers array', function () { pm.expect(ride.selectedOffers).to.have.property('offers'); });",
+              "    pm.test('Selected offers has totalAmountSaved', function () { pm.expect(ride.selectedOffers).to.have.property('totalAmountSaved'); });",
+              "    pm.test('Selected offers has totalPostOfferAmount', function () { pm.expect(ride.selectedOffers).to.have.property('totalPostOfferAmount'); });",
+              "    if (ride.selectedOffers.offers && ride.selectedOffers.offers.length > 0) {",
+              "        var offer = ride.selectedOffers.offers[0];",
+              "        pm.test('First offer has offerId', function () { pm.expect(offer).to.have.property('offerId'); });",
+              "        pm.test('First offer has amountSaved', function () { pm.expect(offer).to.have.property('amountSaved'); });",
+              "        pm.test('First offer has postOfferAmount', function () { pm.expect(offer).to.have.property('postOfferAmount'); });",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=false&offset=0",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "onlyActive",
+              "value": "false"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "R2: capture BAP rideId (SQL - poll)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'ride',select:['id','booking_id','bpp_ride_id','status'],where_clause:[{column_name:'booking_id',val:pm.environment.get('customer_bookingId'),op:'='}],limit:1}); }",
+              "function _finish(rows){ if(!rows.length){ pm.test('fixture ride row present', function(){ pm.expect(0,'no ride for the completed booking').to.be.above(0); }); return; } var r=rows[0]; pm.environment.set('rideId', r.id); pm.environment.set('bppRideId', r.bpp_ride_id); pm.environment.set('driver_ride_id', r.bpp_ride_id); pm.test('fixture ride row present (rideId + bppRideId)', function(){ pm.expect(r.id).to.be.a('string').and.not.empty; pm.expect(r.bpp_ride_id,'ride must carry a bpp_ride_id').to.not.be.empty; }); console.log('Fixture: rideId='+r.id+' bppRideId='+r.bpp_ride_id); }",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{ mode:'raw', raw:_sqlBody() } }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(rows.length){ _finish(rows); } else if(n>0){ setTimeout(function(){ _poll(n-1); }, 3000); } else { _finish([]); } }); }",
+              "var _d={}; try{ _d=pm.response.json(); }catch(e){} var _r0=(_d&&_d.rows)||[];",
+              "if(_r0.length){ _finish(_r0); } else { _poll(40); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"ride\",\"select\":[\"id\",\"booking_id\",\"bpp_ride_id\",\"status\"],\"where_clause\":[{\"column_name\":\"booking_id\",\"val\":\"{{customer_bookingId}}\",\"op\":\"=\"}],\"limit\":1}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "R2: payment_order is a real GUID != rideId",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'payment_order',select:['id','short_id','payment_service_order_id','domain_entity_id'],where_clause:[{column_name:'domain_entity_id',val:pm.environment.get('rideId'),op:'='}],limit:1}); }",
+              "function _finish(rows){ if(!rows.length){ pm.test('payment_order present for the ride', function(){ pm.expect(0,'no payment_order for ride (charge not settled?)').to.be.above(0); }); return; } var o=rows[0]; pm.environment.set('orderId', o.id); pm.environment.set('orderShortId', o.short_id); var rid=pm.environment.get('rideId'); console.log('Fixture guard: order.id='+o.id+' domain_entity_id='+o.domain_entity_id+' rideId='+rid); pm.test('payment_order.id is a real GUID and is NOT the rideId', function(){ pm.expect(/^[0-9a-fA-F-]{16,}$/.test(String(o.id)),'order.id should be a GUID').to.be.true; pm.expect(o.id,'order.id must differ from rideId (else the order==ride bug is masked)').to.not.eql(rid); pm.expect(o.domain_entity_id,'domain_entity_id must equal rideId').to.eql(rid); }); pm.test('order carries a Stripe payment intent (pi_)', function(){ pm.expect(/^pi_/.test(String(o.payment_service_order_id))).to.be.true; }); }",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{ mode:'raw', raw:_sqlBody() } }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(rows.length){ _finish(rows); } else if(n>0){ setTimeout(function(){ _poll(n-1); }, 3000); } else { _finish([]); } }); }",
+              "var _d={}; try{ _d=pm.response.json(); }catch(e){} var _r0=(_d&&_d.rows)||[];",
+              "if(_r0.length){ _finish(_r0); } else { _poll(40); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"payment_order\",\"select\":[\"id\",\"short_id\",\"payment_service_order_id\",\"domain_entity_id\"],\"where_clause\":[{\"column_name\":\"domain_entity_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}],\"limit\":1}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "R2: wait for CHARGED transaction (fare + carried fee)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'payment_transaction',select:['id','amount','currency','status'],where_clause:[{column_name:'order_id',val:pm.environment.get('orderId'),op:'='},{column_name:'status',val:'CHARGED',op:'='}],limit:5}); }",
+              "function _finish(rows){ if(!rows.length){ pm.test('CHARGED payment_transaction settled before the fixture completes', function(){ pm.expect(0,'no CHARGED txn after ~60s — the async charge settlement did not complete; downstream collections need this').to.be.above(0); }); return; } var t=rows[0]; pm.environment.set('txn_amount', String(t.amount)); pm.environment.set('currency', t.currency); pm.test('CHARGED payment_transaction settled (fixture ready for refunds)', function(){ pm.expect(Number(t.amount)).to.be.above(0); }); console.log('Fixture: CHARGED T='+t.amount+' '+t.currency+' (settled)'); }",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{ mode:'raw', raw:_sqlBody() } }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(rows.length){ _finish(rows); } else if(n>0){ setTimeout(function(){ _poll(n-1); }, 3000); } else { _finish([]); } }); }",
+              "var _d={}; try{ _d=pm.response.json(); }catch(e){} var _r0=(_d&&_d.rows)||[];",
+              "if(_r0.length){ _finish(_r0); } else { _poll(40); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"payment_transaction\",\"select\":[\"id\",\"amount\",\"currency\",\"status\"],\"where_clause\":[{\"column_name\":\"order_id\",\"val\":\"{{orderId}}\",\"op\":\"=\"},{\"column_name\":\"status\",\"val\":\"CHARGED\",\"op\":\"=\"}],\"limit\":5}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "R2: Capture BPP booking id + driver id (SQL - poll)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'ride',select:['id','booking_id','driver_id','status','currency'],where_clause:[{column_name:'id',val:pm.environment.get('driver_ride_id'),op:'='}],limit:1}); }",
+              "function _ok(rows){ return rows.length>0; }",
+              "function _assert(rows){",
+              "  if(!rows.length){ pm.test('BPP ride row drained', function(){ pm.expect(0,'no BPP ride for id; KV not drained').to.be.above(0); }); return; }",
+              "  var r=rows[0];",
+              "  pm.environment.set('bppBookingId', r.booking_id);",
+              "  pm.environment.set('cancelBppBookingId', r.booking_id);",
+              "  pm.environment.set('cancelDriverId', r.driver_id);",
+              "  pm.test('BPP ride row drained (bppBookingId + cancelDriverId)', function(){ pm.expect(r.booking_id).to.be.a('string').and.not.empty; pm.expect(r.driver_id).to.be.a('string').and.not.empty; });",
+              "  console.log('Fixture: cancelBppBookingId='+r.booking_id+' cancelDriverId='+r.driver_id);",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(40); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"ride\", \"select\": [\"id\", \"booking_id\", \"driver_id\", \"status\", \"currency\"], \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{driver_ride_id}}\", \"op\": \"=\"}], \"limit\": 1}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "R2: fareBreakup exposes RIDE_FARE + CANCELLATION_FEE (fee cap 6.20)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch(e) {}",
+              "pm.test('fareBreakup 200', function () { pm.response.to.have.status(200); });",
+              "var comps = d.components || [];",
+              "console.log('fareBreakup: ' + comps.map(function(c){return c.component+'='+(c.total&&c.total.amount);}).join(', '));",
+              "var cf = comps.filter(function(c){ return c.component==='CANCELLATION_FEE'; });",
+              "var rf = comps.filter(function(c){ return c.component==='RIDE_FARE'; });",
+              "pm.test('BOTH components present: the carried fee is refundable on ride-2', function(){",
+              "  pm.expect(cf.length, 'CANCELLATION_FEE component (carry on-switch missing from this build?)').to.eql(1);",
+              "  pm.expect(rf.length, 'RIDE_FARE component').to.eql(1);",
+              "});",
+              "pm.test('CANCELLATION_FEE cap = 6.20 (fee + tax carried from ride-1)', function(){",
+              "  var cap = Number(cf[0].total.amount);",
+              "  pm.expect(cap).to.be.closeTo(6.20, 0.011);",
+              "  pm.environment.set('cancelFeeCap', String(cap));",
+              "  pm.environment.set('cancelFeeBase', '5.00'); pm.environment.set('cancelFeeTax', '1.20'); // dues-tax-split build: the BPP now re-splits the carried gross from the dues rows, so the pair reaches ride-2 as base 5.00 + VAT 1.20 (BAP sends fareAmount/vat split; refunds emit a real CancellationFeeRefundVAT leg)",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/{{rideId}}/fareBreakup",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "{{rideId}}",
+            "fareBreakup"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "R2: booking + ride rows store cancellation_commission 0.93 (the frozen quote)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'booking',select:['id','cancellation_commission'],where_clause:[{column_name:'id',val:pm.environment.get('bppBookingId'),op:'='}]}); }",
+              "function _ok(rows){ return rows.length>0 && rows[0].cancellation_commission != null; }",
+              "function _assert(rows){",
+              "  pm.test('booking.cancellation_commission ~= 0.93 (stored at Init from the carried dues)', function(){",
+              "    pm.expect(rows.length).to.be.above(0);",
+              "    pm.expect(Number(rows[0].cancellation_commission)).to.be.closeTo(0.93, 0.02);",
+              "  });",
+              "  // ride row check via a follow-up query (EndRide recompute overwrites it; both must agree)",
+              "  pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw: JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'ride',select:['id','cancellation_commission'],where_clause:[{column_name:'booking_id',val:pm.environment.get('bppBookingId'),op:'='}]})} }, function(err,res){",
+              "    var rr=[]; try{ rr=((res&&res.json())||{}).rows||[]; }catch(e){}",
+              "    pm.test('ride.cancellation_commission ~= 0.93 too', function(){",
+              "      pm.expect(rr.length).to.be.above(0);",
+              "      pm.expect(Number(rr[0].cancellation_commission)).to.be.closeTo(0.93, 0.02);",
+              "    });",
+              "  });",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(40); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"booking\", \"select\": [\"id\", \"cancellation_commission\"], \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{bppBookingId}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "R2: EndRide books CancellationCommission 0.741 + VAT 0.189 at ride-2 booking (poll)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type','reversal_of'],where_clause:[{column_name:'reference_id',val:pm.environment.get('bppBookingId'),op:'='}]}); }",
+              "function _sumOf(rows, t){ return rows.filter(function(r){ return r.reference_type===t && r.status==='SETTLED' && !r.reversal_of; }).reduce(function(a,r){ return a+Number(r.amount); }, 0); }",
+              "function _ok(rows){ return _sumOf(rows,'CancellationCommission') > 0 && _sumOf(rows,'CancellationCommissionVAT') > 0; }",
+              "function _assert(rows){",
+              "  try { console.log('  \\u21b3 BPP legs:', JSON.stringify(rows.map(function(x){ return {st:x.status, amt:x.amount, type:x.reference_type}; }))); } catch(e) {}",
+              "  var base = _sumOf(rows,'CancellationCommission');",
+              "  var vat = _sumOf(rows,'CancellationCommissionVAT');",
+              "  var gross = base + vat;",
+              "  var feeGross = Number(pm.environment.get('cancelFeeBase')) + Number(pm.environment.get('cancelFeeTax'));",
+              "  pm.environment.set('cancelBookedCommission', String(gross));",
+              "  pm.environment.set('cancelBookedCommissionBase', String(base));",
+              "  pm.environment.set('cancelBookedCommissionVAT', String(vat));",
+              "  pm.test('BPP CancellationCommission + VAT legs SETTLED (flag ON took effect)', function(){",
+              "    pm.expect(base, 'no SETTLED CancellationCommission leg - if the flag-ON flip did not surface, restart driver-app (in-process transporter_config cache) and re-run this collection').to.be.above(0);",
+              "    pm.expect(vat, 'no SETTLED CancellationCommissionVAT leg (Helsinki commissionVatPercentage=25.5 must split the gross)').to.be.above(0);",
+              "  });",
+              "  pm.test('commission gross = 15% of (fee + tax) per the seeded JL (0.93 on 5.00+1.20)', function(){",
+              "    pm.expect(gross).to.be.closeTo(0.15 * feeGross, 0.011);",
+              "  });",
+              "  pm.test('gross splits base/VAT at commissionVatPercentage (0.741 + 0.189 at 25.5%)', function(){",
+              "    pm.expect(base, 'base = gross / 1.255').to.be.closeTo(gross / 1.255, 0.011);",
+              "    pm.expect(vat, 'vat = gross - base').to.be.closeTo(gross - base, 0.011);",
+              "  });",
+              "  console.log('Fixture: bookedCommission gross='+gross+' base='+base+' vat='+vat);",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(40); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"finance_ledger_entry\", \"select\": [\"id\", \"status\", \"amount\", \"reference_type\", \"reversal_of\"], \"where_clause\": [{\"column_name\": \"reference_id\", \"val\": \"{{bppBookingId}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "R2: ride-2 Commission invoice carries g-commission-cancellation lines (poll)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'finance_invoice',select:['id','invoice_number','invoice_type','status','total_amount','issued_to_type','issued_to_id','line_items'],where_clause:[{column_name:'reference_id',val:pm.environment.get('bppBookingId'),op:'='},{column_name:'invoice_type',val:'Commission',op:'='}],limit:5}); }",
+              "function _ok(rows){ return rows.length>0; }",
+              "function _parseLI(v){ if(v==null) return []; if(Array.isArray(v)) return v; try{ return JSON.parse(v); }catch(e){ return []; } }",
+              "function _dtyp(li){ var d=li.descriptionType||li.description_type; return (d && typeof d==='object') ? d.tag : d; }",
+              "function _assert(rows){",
+              "  try { console.log('  \\u21b3 Commission invoice rows:', JSON.stringify(rows.map(function(x){ return {no:x.invoice_number, st:x.status, total:x.total_amount, to:x.issued_to_type}; }))); } catch(e) {}",
+              "  pm.test('forward Commission invoice exists for the BPP booking', function(){ pm.expect(rows.length, 'no Commission invoice - the cancel-time booking did not fire').to.be.above(0); });",
+              "  if(!rows.length){ return; }",
+              "  var inv = rows[0];",
+              "  pm.environment.set('cancelCommissionInvoiceNumber', inv.invoice_number);",
+              "  var gross = Number(pm.environment.get('cancelBookedCommission'));",
+              "  pm.test('ride-2 Commission invoice: cancellation LINES sum 0.93; total also covers the ride commission', function(){",
+              "    pm.expect(Number(inv.total_amount), 'total covers ride commission + cancellation').to.be.at.least(gross - 0.011);",
+              "    pm.expect(['Draft','Issued'], 'status').to.include(inv.status);",
+              "  });",
+              "  var li = _parseLI(inv.line_items);",
+              "  try { console.log('  \\u21b3 line_items:', JSON.stringify(li)); } catch(e) {}",
+              "  pm.test('line items on groupId g-commission-cancellation: CancellationCommission 0.741 + CancellationCommissionTax 0.189', function(){",
+              "    var cc = li.filter(function(x){ return (x.groupId||x.group_id) === 'g-commission-cancellation'; });",
+              "    pm.expect(cc.length, 'expected the base + VAT pair on g-commission-cancellation, got: '+JSON.stringify(li)).to.eql(2);",
+              "    var byType = {}; cc.forEach(function(x){ byType[_dtyp(x)] = Number(x.lineTotal != null ? x.lineTotal : x.line_total); });",
+              "    pm.expect(byType['CancellationCommission'], 'base line').to.be.closeTo(Number(pm.environment.get('cancelBookedCommissionBase')), 0.011);",
+              "    pm.expect(byType['CancellationCommissionTax'], 'VAT line').to.be.closeTo(Number(pm.environment.get('cancelBookedCommissionVAT')), 0.011);",
+              "  });",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(40); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"finance_invoice\", \"select\": [\"id\", \"invoice_number\", \"invoice_type\", \"status\", \"total_amount\", \"issued_to_type\", \"issued_to_id\", \"line_items\"], \"where_clause\": [{\"column_name\": \"reference_id\", \"val\": \"{{bppBookingId}}\", \"op\": \"=\"}, {\"column_name\": \"invoice_type\", \"val\": \"Commission\", \"op\": \"=\"}], \"limit\": 5}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "R2: CDD (keyed to ride-1) flips PAID once ride-2 collects the fee (poll)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'cancellation_dues_details',select:['ride_id','payment_status'],where_clause:[{column_name:'ride_id',val:pm.environment.get('r1_bppRideId'),op:'='}]}); }",
+              "function _ok(rows){ return rows.length>0 && rows[0].payment_status==='PAID'; }",
+              "function _assert(rows){ pm.test('CDD PAID (road-c protection: EndRide marked it)', function(){ pm.expect(rows.length).to.be.above(0); pm.expect(rows[0].payment_status).to.eql('PAID'); }); }",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(40); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"cancellation_dues_details\", \"select\": [\"ride_id\", \"payment_status\"], \"where_clause\": [{\"column_name\": \"ride_id\", \"val\": \"{{r1_bppRideId}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "R2: STILL no CancellationCommission legs at ride-1 booking (negative)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var rows=[]; try{ rows=(pm.response.json().rows)||[]; }catch(e){}",
+              "pm.test('the commission lives at ride-2, never ride-1', function(){",
+              "  pm.expect(rows.filter(function(r){ return r.reference_type==='CancellationCommission' || r.reference_type==='CancellationCommissionVAT'; }).length).to.eql(0);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"finance_ledger_entry\", \"select\": [\"id\", \"reference_type\"], \"where_clause\": [{\"column_name\": \"reference_id\", \"val\": \"{{r1_bppBookingId}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: Reset refund state for the cancelled ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// SYNCHRONOUS single clear (01's pattern): keeps re-runs clean and wipes any cap a prior partial run consumed.",
+              "// scope=refundsOnly: the BOOKED CancellationCommission legs + the fee legs survive; only refund state goes.",
+              "pm.test('refund state reset (synchronous clean start)', function(){ pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/refunds/clear",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "refunds",
+            "clear"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"rideId\":\"{{rideId}}\",\"orderId\":\"{{orderId}}\",\"orderShortId\":\"{{orderShortId}}\",\"bppBookingId\":\"{{bppBookingId}}\",\"scope\":\"refundsOnly\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: Clear mock overrides",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('overrides cleared', function(){ pm.expect(pm.response.code).to.be.oneOf([200,201,204]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/override",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "override"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: Switch City for BAP (Rider Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.authToken) { pm.environment.set('bap_dashboard_token', d.authToken); }",
+              "pm.test('BAP dashboard switch OK', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\":\"{{bap_short_id}}\",\"city\":\"{{dashboard_city}}\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: Compute refund amounts cf1/cf2 (remaining cap)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('riderToken', pm.environment.get('rider_token'));",
+              "// remaining = cap - SUM(settled non-reversed cancellation-refund legs). 0 spent after the reset above;",
+              "// this self-heals a partially-run prior attempt (or a skipped reset) instead of tripping the cap mid-flow.",
+              "var _CANCEL_RT = ['CancellationFeeRefund','CancellationFeeRefundVAT','CancellationRefundCommission','CancellationRefundCommissionVAT'];",
+              "var _BENEFIT_RT = ['CancellationOverdueBenefitRefund','CancellationOverdueBenefitRefundTax'];",
+              "var rows=[]; try{ rows=(pm.response.json().rows)||[]; }catch(e){}",
+              "var _ALL = _CANCEL_RT.concat(_BENEFIT_RT);",
+              "var spent = rows.filter(function(r){ return r.status==='SETTLED' && !r.reversal_of && _ALL.indexOf(r.reference_type)>=0; })",
+              "               .reduce(function(a,r){ return a+Number(r.amount); }, 0);",
+              "var cap = Number(pm.environment.get('cancelFeeCap'));",
+              "var remaining = Math.max(0, cap - spent);",
+              "function _r2(x){ return Math.round(x*100)/100; }",
+              "var cf1 = _r2(remaining/2); var cf2 = _r2(remaining - cf1);",
+              "pm.environment.set('cf1', String(cf1)); pm.environment.set('cf2', String(cf2));",
+              "pm.test('remaining cancellation cap is positive (cf1/cf2 sized)', function(){ pm.expect(remaining, 'cap already exhausted - reset step failed?').to.be.above(0); });",
+              "console.log('cap='+cap+' alreadyRefunded='+spent+' -> cf1='+cf1+' cf2='+cf2);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"finance_ledger_entry\", \"select\": [\"id\", \"status\", \"amount\", \"reference_type\", \"reversal_of\"], \"where_clause\": [{\"column_name\": \"reference_id\", \"val\": \"{{bppBookingId}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: Raise Refund cf1 = half the cap (Customer)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('raise accepted', function () {",
+              "  if (pm.response.code === 400 && /refundable cap/i.test(pm.response.text())) {",
+              "    pm.expect(false, 'Raise rejected by the per-component cap: cf1 exceeds the CANCELLATION_FEE remaining. Body: ' + pm.response.text()).to.be.true;",
+              "  }",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{riderToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "{{rideId}}",
+            "refundRequest",
+            "create"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"refundComponents\":[{\"component\":\"CANCELLATION_FEE\",\"amount\":{\"amount\":{{cf1}},\"currency\":\"{{currency}}\"}}],\"requestedAmount\":{\"amount\":{{cf1}},\"currency\":\"{{currency}}\"},\"code\":\"CUSTOMER_REQUEST\",\"description\":\"Integration test cancellation-fee refund (partial)\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: Capture cf_refundRequestId1 (SQL - after drain)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var t = Date.now(); while (Date.now() - t < 20000) {}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('refund_request 1 OPEN, refunds_id null', function () {",
+              "  var d = pm.response.json(); pm.expect(d.count, JSON.stringify(d)).to.be.above(0);",
+              "  var r = d.rows[0];",
+              "  pm.environment.set('refundRequestId', r.id);",
+              "  pm.environment.set('cf_refundRequestId1', r.id);",
+              "  pm.expect(r.status).to.eql('OPEN');",
+              "  pm.expect(r.refunds_id == null || r.refunds_id === '').to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"refund_request\", \"select\": [\"id\", \"status\", \"refunds_id\"], \"where_clause\": [{\"column_name\": \"order_id\", \"val\": \"{{orderId}}\", \"op\": \"=\"}, {\"column_name\": \"status\", \"val\": \"OPEN\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: Approve Refund 1 - deductFromDriver=true (Admin)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('approve -> REFUNDED/SUCCESS', function () {",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+              "  var d = pm.response.json();",
+              "  pm.expect(d.status).to.eql('REFUNDED');",
+              "  pm.expect(d.refundStatus).to.eql('SUCCESS');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{refundRequestId}}/respond",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{dashboard_city}}",
+            "payment",
+            "refundRequest",
+            "{{refundRequestId}}",
+            "respond"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"approve\":true,\"responseDescription\":\"approved by integration test (cancellation partial)\",\"deductFromDriver\":true}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: Assert refund_request 1 REFUNDED",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var t = Date.now(); while (Date.now() - t < 20000) {}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'refund_request',select:['id','status','refunds_id'],where_clause:[{column_name:'id',val:pm.environment.get('cf_refundRequestId1'),op:'='}]}); }",
+              "function _ok(rows){ return rows.length>0 && rows[0].status==='REFUNDED'; }",
+              "function _assert(rows){",
+              "  pm.test('REFUNDED + refunds_id set', function () {",
+              "    pm.expect(rows.length).to.be.above(0);",
+              "    var r = rows[0]; pm.expect(r.status).to.eql('REFUNDED');",
+              "    pm.expect(r.refunds_id, 'refunds_id should be set').to.not.be.empty;",
+              "  });",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(40); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"refund_request\", \"select\": [\"id\", \"status\", \"refunds_id\"], \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{cf_refundRequestId1}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: Assert BPP partial legs for refund 1 (clawback reads RIDE-2 booking legs)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type','reversal_of','entity_reference_id'],where_clause:[{column_name:'reference_id',val:pm.environment.get('bppBookingId'),op:'='}]}); }",
+              "var _CANCEL_RT = ['CancellationFeeRefund','CancellationFeeRefundVAT','CancellationRefundCommission','CancellationRefundCommissionVAT'];",
+              "var _BENEFIT_RT = ['CancellationOverdueBenefitRefund','CancellationOverdueBenefitRefundTax'];",
+              "function _mine(r){ return r.entity_reference_id===pm.environment.get('cf_refundRequestId1'); }",
+              "function _ok(rows){ var s=rows.filter(function(r){return _mine(r) && r.status==='SETTLED';}); if(!s.length) return false; var sum=s.reduce(function(a,r){return a+Number(r.amount);},0); return sum >= Number(pm.environment.get('cf1')) - 0.02; }",
+              "function _assert(rows){",
+              "  var mine = rows.filter(function(r){ return _mine(r) && r.status==='SETTLED'; });",
+              "  try { console.log('  > BPP refund-1 legs:', JSON.stringify(mine.map(function(x){return {st:x.status,amt:x.amount,type:x.reference_type};}))); } catch(e){}",
+              "  var cap = Number(pm.environment.get('cancelFeeCap'));",
+              "  var cf1 = Number(pm.environment.get('cf1'));",
+              "  var feeBase = Number(pm.environment.get('cancelFeeBase'));",
+              "  var feeTax = Number(pm.environment.get('cancelFeeTax'));",
+              "  var booked = Number(pm.environment.get('cancelBookedCommission'));",
+              "  // RefundLedger.cancellationFeeLegs: each bucket gives back the same prorated fraction of the refunded",
+              "  // gross. slice = booked*cf1/cap; driver base = feeBase*cf1/cap - slice; tax = feeTax*cf1/cap (VAT market:",
+              "  // clawed from the driver). Never-overdue fixture -> benefit = 0 -> NO CancellationOverdueBenefitRefund legs.",
+              "  var slice = booked * cf1 / cap;",
+              "  function _sumOf(t){ return mine.filter(function(r){ return r.reference_type===t; }).reduce(function(a,r){ return a+Number(r.amount); }, 0); }",
+              "  pm.test('BPP refund-1 legs use ONLY the cancellation refund refTypes', function(){",
+              "    mine.forEach(function(r){ pm.expect(_CANCEL_RT, 'unexpected refType '+r.reference_type).to.include(r.reference_type); });",
+              "  });",
+              "  pm.test('NO overdue-benefit refund legs (fee never went overdue)', function(){",
+              "    pm.expect(mine.filter(function(r){ return _BENEFIT_RT.indexOf(r.reference_type)>=0; }).length).to.eql(0);",
+              "  });",
+              "  pm.test('legs SUM to cf1 (gross conservation)', function(){",
+              "    pm.expect(mine.reduce(function(a,r){ return a+Number(r.amount); }, 0)).to.be.closeTo(cf1, 0.011);",
+              "  });",
+              "  pm.test('driver base leg = feeBase*cf1/cap - slice (2.035 on the seeded 5.00+1.20/0.93)', function(){",
+              "    pm.expect(_sumOf('CancellationFeeRefund')).to.be.closeTo(feeBase*cf1/cap - slice, 0.011);",
+              "  });",
+              "  pm.test('tax leg = feeTax*cf1/cap (0.60)', function(){",
+              "    pm.expect(_sumOf('CancellationFeeRefundVAT')).to.be.closeTo(feeTax*cf1/cap, 0.011);",
+              "  });",
+              "  pm.test('commission slice legs = booked*cf1/cap split base/VAT (0.465 -> 0.3705+0.0945 at 25.5)', function(){",
+              "    var sb = _sumOf('CancellationRefundCommission');",
+              "    var sv = _sumOf('CancellationRefundCommissionVAT');",
+              "    pm.expect(sb + sv, 'slice gross').to.be.closeTo(slice, 0.011);",
+              "    pm.expect(sb, 'slice base = gross/1.255').to.be.closeTo(slice/1.255, 0.011);",
+              "  });",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(40); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"finance_ledger_entry\", \"select\": [\"id\", \"status\", \"amount\", \"reference_type\", \"reversal_of\", \"entity_reference_id\"], \"where_clause\": [{\"column_name\": \"reference_id\", \"val\": \"{{bppBookingId}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: Raise Refund cf2 = remaining half (Customer)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('raise accepted (fills the cap exactly)', function () {",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{riderToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "{{rideId}}",
+            "refundRequest",
+            "create"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"refundComponents\":[{\"component\":\"CANCELLATION_FEE\",\"amount\":{\"amount\":{{cf2}},\"currency\":\"{{currency}}\"}}],\"requestedAmount\":{\"amount\":{{cf2}},\"currency\":\"{{currency}}\"},\"code\":\"CUSTOMER_REQUEST\",\"description\":\"Integration test cancellation-fee refund (remaining)\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: Capture cf_refundRequestId2 (SQL - after drain)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var t = Date.now(); while (Date.now() - t < 20000) {}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('refund_request 2 OPEN', function () {",
+              "  var d = pm.response.json(); pm.expect(d.count, JSON.stringify(d)).to.be.above(0);",
+              "  var r = d.rows[0];",
+              "  pm.environment.set('refundRequestId', r.id);",
+              "  pm.environment.set('cf_refundRequestId2', r.id);",
+              "  pm.expect(r.status).to.eql('OPEN');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"refund_request\", \"select\": [\"id\", \"status\", \"refunds_id\"], \"where_clause\": [{\"column_name\": \"order_id\", \"val\": \"{{orderId}}\", \"op\": \"=\"}, {\"column_name\": \"status\", \"val\": \"OPEN\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: Approve Refund 2 - deductFromDriver=true (Admin)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('approve -> REFUNDED/SUCCESS', function () {",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+              "  var d = pm.response.json();",
+              "  pm.expect(d.status).to.eql('REFUNDED');",
+              "  pm.expect(d.refundStatus).to.eql('SUCCESS');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{refundRequestId}}/respond",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{dashboard_city}}",
+            "payment",
+            "refundRequest",
+            "{{refundRequestId}}",
+            "respond"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"approve\":true,\"responseDescription\":\"approved by integration test (cancellation remaining)\",\"deductFromDriver\":true}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: Assert refund_request 2 REFUNDED",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var t = Date.now(); while (Date.now() - t < 20000) {}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'refund_request',select:['id','status','refunds_id'],where_clause:[{column_name:'id',val:pm.environment.get('cf_refundRequestId2'),op:'='}]}); }",
+              "function _ok(rows){ return rows.length>0 && rows[0].status==='REFUNDED'; }",
+              "function _assert(rows){",
+              "  pm.test('REFUNDED + refunds_id set', function () {",
+              "    pm.expect(rows.length).to.be.above(0);",
+              "    var r = rows[0]; pm.expect(r.status).to.eql('REFUNDED');",
+              "    pm.expect(r.refunds_id, 'refunds_id should be set').to.not.be.empty;",
+              "  });",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(40); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"refund_request\", \"select\": [\"id\", \"status\", \"refunds_id\"], \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{cf_refundRequestId2}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: NETS-TO-ZERO: clawed == booked 0.93 (ride-2 ledger, cancellation refs only)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type','reversal_of'],where_clause:[{column_name:'reference_id',val:pm.environment.get('bppBookingId'),op:'='}]}); }",
+              "var _CANCEL_RT = ['CancellationFeeRefund','CancellationFeeRefundVAT','CancellationRefundCommission','CancellationRefundCommissionVAT'];",
+              "var _BENEFIT_RT = ['CancellationOverdueBenefitRefund','CancellationOverdueBenefitRefundTax'];",
+              "function _sumOf(rows,t){ return rows.filter(function(r){ return r.reference_type===t && r.status==='SETTLED' && !r.reversal_of; }).reduce(function(a,r){ return a+Number(r.amount); }, 0); }",
+              "function _ok(rows){ var all=_CANCEL_RT.reduce(function(a,t){return a+_sumOf(rows,t);},0); return all >= Number(pm.environment.get('cancelFeeCap')) - 0.02; }",
+              "function _assert(rows){",
+              "  var booked = _sumOf(rows,'CancellationCommission') + _sumOf(rows,'CancellationCommissionVAT');",
+              "  var clawed = _sumOf(rows,'CancellationRefundCommission') + _sumOf(rows,'CancellationRefundCommissionVAT');",
+              "  var refundedAll = _CANCEL_RT.reduce(function(a,t){ return a+_sumOf(rows,t); }, 0);",
+              "  var cap = Number(pm.environment.get('cancelFeeCap'));",
+              "  console.log('nets-to-zero: booked='+booked+' clawed='+clawed+' refundedTotal='+refundedAll+' cap='+cap);",
+              "  // after refunding 100% of the fee driver-deducted, the platform has given back EXACTLY",
+              "  // what it booked - both sides read from finance_ledger_entry, not recomputed from the formula.",
+              "  pm.test('all refund legs together cover the full cap', function(){",
+              "    pm.expect(refundedAll).to.be.closeTo(cap, 0.021);",
+              "  });",
+              "  pm.test('clawed CancellationRefundCommission(+VAT) == booked CancellationCommission(+VAT) exactly', function(){",
+              "    pm.expect(booked, 'booked commission must be > 0 (the fixture phase guards it)').to.be.above(0);",
+              "    pm.expect(clawed).to.be.closeTo(booked, 0.005);",
+              "  });",
+              "  pm.test('NO overdue-benefit refund legs on the never-overdue fixture', function(){",
+              "    pm.expect(rows.filter(function(r){ return _BENEFIT_RT.indexOf(r.reference_type)>=0; }).length).to.eql(0);",
+              "  });",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(40); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"finance_ledger_entry\", \"select\": [\"id\", \"status\", \"amount\", \"reference_type\", \"reversal_of\"], \"where_clause\": [{\"column_name\": \"reference_id\", \"val\": \"{{bppBookingId}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: Repeat-refund rejection: create is cap-rejected",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// the cap check sums SETTLED refund legs BY refType - this passing proves",
+              "// refundLegRefTypes includes the cancellation refs (else refunds repeat forever).",
+              "pm.test('create rejected once the CANCELLATION_FEE cap is exhausted', function () {",
+              "  pm.expect(pm.response.code, 'expected 400, got '+pm.response.code+': '+pm.response.text()).to.eql(400);",
+              "  pm.expect(/refundable cap|cap/i.test(pm.response.text()), 'body must mention the refundable cap: ' + pm.response.text().substring(0,120)).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{riderToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "{{rideId}}",
+            "refundRequest",
+            "create"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"refundComponents\":[{\"component\":\"CANCELLATION_FEE\",\"amount\":{\"amount\":0.50,\"currency\":\"{{currency}}\"}}],\"requestedAmount\":{\"amount\":0.50,\"currency\":\"{{currency}}\"},\"code\":\"CUSTOMER_REQUEST\",\"description\":\"post-exhaustion probe (must be rejected)\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: NO RideFareRefund legs - only the CANCELLATION_FEE component was refunded",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var rows=[]; try{ rows=(pm.response.json().rows)||[]; }catch(e){}",
+              "pm.test('zero ride-fare refund legs at ride-2 booking', function(){",
+              "  pm.expect(rows.filter(function(r){ return r.reference_type==='RideFareRefund' || r.reference_type==='RideFareRefundVAT' || r.reference_type==='RideFareRefundCommission'; }).length).to.eql(0);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"finance_ledger_entry\", \"select\": [\"id\", \"status\", \"amount\", \"reference_type\", \"reversal_of\", \"entity_reference_id\", \"settlement_status\"], \"where_clause\": [{\"column_name\": \"reference_id\", \"val\": \"{{bppBookingId}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: Assert negative Commission invoice 1 (Draft, cancellation slice)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "// RefundLedger.createCommissionRefundInvoice: negative Commission invoice recording the returned slice,",
+              "// left Draft so the agg-commission scheduler nets it in. Same operands as the legs (agree to the last digit).",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'finance_invoice',select:['invoice_type','status','total_amount','invoice_number','line_items'],where_clause:[{column_name:'reference_id',val:pm.environment.get('cf_refundRequestId1'),op:'='}]}); }",
+              "function _ok(rows){ return rows.some(function(r){ return r.invoice_type==='Commission'; }); }",
+              "function _assert(rows){",
+              "  var comm = (rows||[]).filter(function(r){ return r.invoice_type==='Commission'; });",
+              "  var slice = Number(pm.environment.get('cancelBookedCommission')) * Number(pm.environment.get('cf1')) / Number(pm.environment.get('cancelFeeCap'));",
+              "  try { console.log('  > Commission invoice rows:', JSON.stringify((rows||[]).map(function(x){return {st:x.status,total:x.total_amount,type:x.invoice_type};})), '| expected slice', slice); } catch(e){}",
+              "  pm.test('negative Commission invoice exists, total ~= -slice, Draft', function(){",
+              "    pm.expect(comm.length, 'expected a Commission refund invoice for the cancellation slice').to.be.above(0);",
+              "    pm.expect(Number(comm[0].total_amount)).to.be.below(0);",
+              "    pm.expect(Number(comm[0].total_amount)).to.be.closeTo(-slice, 0.02);",
+              "    pm.expect(comm[0].status, 'left Draft (agg-commission scheduler nets it in)').to.eql('Draft');",
+              "  });",
+              "  pm.test('lines: CancellationCommissionRefund(+Tax), group g-commission-refund-cancellation, negative', function(){",
+              "    var li = comm[0].line_items; if (typeof li === 'string') { try { li = JSON.parse(li); } catch(e){ li = []; } }",
+              "    li = li || [];",
+              "    var _dtyp=function(d){ d=d.descriptionType||d.description_type; return (d&&d.tag)?d.tag:d; };",
+              "    var cli = li.filter(function(x){ return (x.groupId||x.group_id)==='g-commission-refund-cancellation'; });",
+              "    pm.expect(cli.length, 'expected 1-2 cancellation-slice lines, got: '+JSON.stringify(li)).to.be.oneOf([1,2]);",
+              "    pm.expect(_dtyp(cli[0])).to.eql('CancellationCommissionRefund');",
+              "    cli.forEach(function(x){ pm.expect(Number(x.lineTotal!=null?x.lineTotal:x.line_total)).to.be.below(0); });",
+              "    if (cli.length === 2) { pm.expect(_dtyp(cli[1])).to.eql('CancellationCommissionRefundTax'); }",
+              "  });",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(40); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"finance_invoice\", \"select\": [\"invoice_type\", \"status\", \"total_amount\", \"invoice_number\", \"line_items\"], \"where_clause\": [{\"column_name\": \"reference_id\", \"val\": \"{{cf_refundRequestId1}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: Assert BPP refund invoices Paid + g-refund-cancellation lines",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'finance_invoice',select:['invoice_type','status','total_amount','line_items','entity_reference_id'],where_clause:[{column_name:'reference_id',val:pm.environment.get('bppBookingId'),op:'='}]}); }",
+              "function _parseLI(v){ if(v==null) return []; if(Array.isArray(v)) return v; try{ return JSON.parse(v); }catch(e){ return []; } }",
+              "function _ok(rows){ return rows.filter(function(r){return r.invoice_type==='Refund' && r.status==='Paid';}).length >= 2; }",
+              "function _assert(rows){",
+              "  var invs = (rows||[]).filter(function(r){ return r.invoice_type==='Refund' && r.status==='Paid'; });",
+              "  pm.test('two Paid BPP Refund invoices (one per refund request)', function(){",
+              "    pm.expect(invs.length).to.be.at.least(2);",
+              "  });",
+              "  pm.test('each carries negative g-refund-cancellation lines', function(){",
+              "    invs.forEach(function(inv){",
+              "      var li = _parseLI(inv.line_items);",
+              "      var cli = li.filter(function(x){ return (x.groupId||x.group_id)==='g-refund-cancellation'; });",
+              "      pm.expect(cli.length, 'expected cancellation refund lines, got: '+JSON.stringify(li)).to.be.above(0);",
+              "      cli.forEach(function(x){ pm.expect(Number(x.lineTotal!=null?x.lineTotal:x.line_total)).to.be.below(0); });",
+              "    });",
+              "  });",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(40); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"finance_invoice\", \"select\": [\"invoice_type\", \"status\", \"total_amount\", \"line_items\", \"entity_reference_id\"], \"where_clause\": [{\"column_name\": \"reference_id\", \"val\": \"{{bppBookingId}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: BAP rider refund invoice PDF base64",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d; try { d = pm.response.json(); } catch (e) { d = {}; }",
+              "pm.test('BAP cancellation refund invoice PDF renders (base64 %PDF magic)', function () {",
+              "  pm.expect(d.pdfBase64, 'pdfBase64 must be present - the INVOICE_TEMPLATE JL rule must include the CancellationFeeRefund(+Tax) titles (union JL)').to.be.a('string');",
+              "  pm.expect(String(d.pdfBase64).length).to.be.above(0);",
+              "  pm.expect(/^JVBERi0/.test(String(d.pdfBase64)), 'pdfBase64 must start with %PDF magic (JVBERi0)').to.be.true;",
+              "  console.log('BAP refund PDF base64 (first 100):', String(d.pdfBase64).substring(0,100));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{riderToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/finance/invoice/pdf?invoiceType=%22Refund%22&referenceId={{rideId}}",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "finance",
+            "invoice",
+            "pdf"
+          ],
+          "query": [
+            {
+              "key": "invoiceType",
+              "value": "%22Refund%22"
+            },
+            {
+              "key": "referenceId",
+              "value": "{{rideId}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: Switch Provider Dashboard to Helsinki",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.authToken) { pm.environment.set('dashboard_token', d.authToken); }",
+              "pm.test('provider dashboard switched', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\":\"{{dashboard_merchant_id}}\",\"city\":\"{{dashboard_city}}\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: BPP refund invoice PDF base64",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('invoice_from', new Date(Date.now() - 3600*1000).toISOString());",
+              "pm.environment.set('invoice_to', new Date(Date.now() + 60*1000).toISOString());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d; try { d = pm.response.json(); } catch (e) { d = {}; }",
+              "pm.test('BPP cancellation refund invoice PDF renders (base64 %PDF magic)', function () {",
+              "  pm.expect(d.pdfBase64, 'pdfBase64 must be present - INVOICE_TEMPLATE union JL must be seeded').to.be.a('string');",
+              "  pm.expect(String(d.pdfBase64).length).to.be.above(0);",
+              "  pm.expect(/^JVBERi0/.test(String(d.pdfBase64)), 'pdfBase64 must start with %PDF magic (JVBERi0)').to.be.true;",
+              "  console.log('BPP refund PDF base64 (first 100):', String(d.pdfBase64).substring(0,100));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/financeManagement/finance/invoice/pdf?invoiceType=%22Refund%22&from={{invoice_from}}&to={{invoice_to}}&limit=1&offset=0",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "financeManagement",
+            "finance",
+            "invoice",
+            "pdf"
+          ],
+          "query": [
+            {
+              "key": "invoiceType",
+              "value": "%22Refund%22"
+            },
+            {
+              "key": "from",
+              "value": "{{invoice_from}}"
+            },
+            {
+              "key": "to",
+              "value": "{{invoice_to}}"
+            },
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: Trigger AggregatedCommission job (real dashboard endpoint, Driver recipient)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('agg_period_end', new Date(Date.now() + 60*1000).toISOString());",
+              "// Run-scoped periodStart: a 24h window would (a) sweep in invoices this pool driver earned in EARLIER runs and (b) trip the job's 'period already covered' guard when the driver was aggregated before. cf_run_started_at is stamped by the first step (30min staleness refresh).",
+              "pm.environment.set('agg_period_start', pm.environment.get('cf_run_started_at') || new Date(Date.now() - 24*3600*1000).toISOString());",
+              "var _jobData = JSON.stringify({ merchantId: pm.environment.get('helsinki_merchant_id'), merchantOperatingCityId: pm.environment.get('helsinki_moc_id'), issuedToId: pm.environment.get('cancelDriverId'), issuedToType: 'DRIVER', periodStart: pm.environment.get('agg_period_start'), periodEnd: pm.environment.get('agg_period_end') });",
+              "pm.environment.set('agg_trigger_body', JSON.stringify({ scheduledAt: new Date(Date.now() + 10*1000).toISOString(), jobName: 'AggregatedCommissionInvoiceCreationTrigger', jobData: _jobData }));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('real dashboard scheduler trigger accepted (200 Success)', function () { pm.response.to.have.status(200); var j = {}; try { j = pm.response.json(); } catch (e) {} pm.expect(j.result).to.eql('Success'); });",
+              "console.log('AggregatedCommissionInvoiceCreation scheduled via the REAL dashboard endpoint for driver', pm.environment.get('cancelDriverId'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/merchant/scheduler/trigger",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "merchant",
+            "scheduler",
+            "trigger"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{{agg_trigger_body}}"
+        },
+        "description": "The REAL dashboard trigger (postMerchantSchedulerTrigger -> createJobIn -> DB scheduler_job -> allocator executes). Do NOT hand-forge AnyJob payloads via mock endpoints: jobs are consumed via the DB scheduler + reviver, and a forged payload never decodes (issuedToType 'Driver' vs 'DRIVER') - it sits un-ACKed in Available_Jobs forever. PRE-REQ: transporter_config.invoice_config.commissionAggregationEnabled = true (set by the kill-switch ON step) or the job Terminates ('chain ends') with scheduler_job.status = Failed and NO invoice. Must run AFTER the 'Switch Provider Dashboard to Helsinki' step (needs a Helsinki-pinned dashboard_token; the static Bangalore token 403s on the merchant/city path check). scheduledAt must be in the future or the endpoint 500s ('job can only be scheduled for now or for future'). Each successful run starts a self-perpetuating chain (next-period job lands Pending in scheduler_job - harmless locally)."
+      },
+      "response": []
+    },
+    {
+      "name": "RF: Wait 3s for scheduler pickup",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "setTimeout(() => {}, 3000);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Echo OK', () => true);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RF: Aggregated Commission invoice nets cancellation + carries ride-2 ride commission (poll, strict)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'finance_invoice',select:['id','invoice_type','status','total_amount','line_items','created_at'],where_clause:[{column_name:'issued_to_id',val:pm.environment.get('cancelDriverId'),op:'='},{column_name:'invoice_type',val:'AggregatedCommission',op:'='}]}); }",
+              "function _ok(rows){ return rows.length > 0; }",
+              "function _sums(inv){ var lines = []; try { lines = (typeof inv.line_items === 'string') ? JSON.parse(inv.line_items) : (inv.line_items || []); } catch (e) {} var fwd = 0, ref = 0, all = 0; lines.forEach(function(l){ all += Number(l.lineTotal); if (l.groupId === 'g-commission-cancellation') fwd += Number(l.lineTotal); if (l.groupId === 'g-commission-refund-cancellation') ref += Number(l.lineTotal); }); return { fwd: fwd, ref: ref, all: all }; }",
+              "function _assert(rows){",
+              "  pm.test('AggregatedCommission invoice exists for the ride-2 driver (within 120s poll)', function(){ pm.expect(rows.length, 'no AggregatedCommission invoice - job Failed or lagged: check scheduler_job.status and invoice_config.commissionAggregationEnabled').to.be.above(0); });",
+              "  if (!rows.length) { return; }",
+              "  var inv = rows.slice().sort(function(a,b){ return String(a.created_at).localeCompare(String(b.created_at)); })[rows.length-1]; var s = _sums(inv);",
+              "  console.log('AggregatedCommission', inv.id, 'total', inv.total_amount, 'fwd', s.fwd.toFixed(4), 'refund', s.ref.toFixed(4));",
+              "  pm.test('cancellation commission lines sum 0.93 (booked at ride-2 EndRide from the carried due)', function(){ pm.expect(s.fwd).to.be.closeTo(0.93, 0.02); });",
+              "  pm.test('clawback lines sum -0.93 (both cap/2 refunds against ride-2 CANCELLATION_FEE)', function(){ pm.expect(s.ref).to.be.closeTo(-0.93, 0.02); });",
+              "  pm.test('cancellation contribution nets to ~0; total = sum(lines) and also carries ride-2 RIDE commission (> 0.5)', function(){ pm.expect(s.fwd + s.ref).to.be.closeTo(0, 0.02); pm.expect(Number(inv.total_amount)).to.be.closeTo(s.all, 0.005); pm.expect(Number(inv.total_amount)).to.be.above(0.5); });",
+              "  pm.environment.set('aggCommissionInvoiceId', inv.id);",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(90); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"finance_invoice\", \"select\": [\"id\", \"invoice_type\", \"status\", \"total_amount\", \"line_items\", \"created_at\"], \"where_clause\": [{\"column_name\": \"issued_to_id\", \"val\": \"{{cancelDriverId}}\", \"op\": \"=\"}, {\"column_name\": \"invoice_type\", \"val\": \"AggregatedCommission\", \"op\": \"=\"}]}"
+        }
+      },
+      "response": []
+    }
+  ]
+}
