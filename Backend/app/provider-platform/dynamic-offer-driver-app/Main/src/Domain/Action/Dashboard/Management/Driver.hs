@@ -368,6 +368,8 @@ postDriverDisable merchantShortId opCity reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
+  driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+  unless driverInf.enabled $ throwError DriverNotEnabled
   Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False Nothing
   QDriverInfo.updateDisabledReasonFlag (Just DrInfo.DriverDisabled) driverId
   logTagInfo "dashboard -> disableDriver : " (show personId)
@@ -407,6 +409,7 @@ postDriverBlockWithReason merchantShortId opCity reqDriverId dashboardUserName r
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+  unless driverInf.enabled $ throwError DriverNotEnabled
   when (driverInf.blocked) $ throwError DriverAccountAlreadyBlocked
   QDriverInfo.updateDynamicBlockedStateWithActivity driverId req.blockReason req.blockTimeInHours dashboardUserName merchantId req.reasonCode driver.merchantOperatingCityId DTDBT.Dashboard True Nothing Nothing ByDashboard
   case req.blockTimeInHours of
@@ -435,6 +438,7 @@ postDriverBlock merchantShortId opCity reqDriverId = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && driver.merchantOperatingCityId == merchantOpCityId) $ throwError (PersonDoesNotExist personId.getId)
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+  unless driverInf.enabled $ throwError DriverNotEnabled
   when (not driverInf.blocked) (void $ QDriverInfo.updateBlockedState driverId True Nothing merchantId driver.merchantOperatingCityId DTDBT.Dashboard)
   logTagInfo "dashboard -> blockDriver : " (show personId)
   pure Success
