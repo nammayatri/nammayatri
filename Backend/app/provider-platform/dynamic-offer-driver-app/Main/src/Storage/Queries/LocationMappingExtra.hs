@@ -15,26 +15,24 @@ latestTag :: Text
 latestTag = "LATEST"
 
 -- | Count of mapping rows for an entity (all versions). Prefer 'maxOrderByEntity'
--- when only the next order is needed. Scoped by secondary key 'entityId';
--- location_mapping history per entity is expected to stay small.
+-- when only the next order is needed. Scoped by secondary key 'entityId'.
 countOrders :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m Int
 countOrders entityId =
-  findAllWithOptionsKV
+  findAllWithKVAndConditionalDB
     [Se.Is BeamLM.entityId $ Se.Eq entityId]
-    (Se.Desc BeamLM.order)
-    Nothing
     Nothing
     <&> length
 
--- | Highest mapping order for an entity. Uses a single ordered row (limit 1)
--- instead of loading the full history into memory just to take 'maximum'.
+-- | Highest mapping order for an entity.
+-- Uses ConditionalDB (same mesh path as other location_mapping secondary-key reads) with
+-- Desc order, then keeps the first row — equivalent to 'maximum' on orders without building
+-- an intermediate order list. Do not switch to findAllWithOptionsKV here: OptionsKV uses a
+-- different multi-cloud secondary-Redis policy than ConditionalDB.
 maxOrderByEntity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m Int
 maxOrderByEntity entityId =
-  findAllWithOptionsKV
+  findAllWithKVAndConditionalDB
     [Se.Is BeamLM.entityId $ Se.Eq entityId]
-    (Se.Desc BeamLM.order)
-    (Just 1)
-    (Just 0)
+    (Just (Se.Desc BeamLM.order))
     <&> maybe 0 order . listToMaybe
 
 findByEntityIdOrderAndVersion :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> Text -> m [LocationMapping]
@@ -52,17 +50,18 @@ findByEntityId entityId =
 
 getLatestStartByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe LocationMapping)
 getLatestStartByEntityId entityId =
-  -- Limit 1: only the pickup (order 0) LATEST row is needed; avoid loading the full mapping history.
-  findAllWithOptionsKV
+  -- Keep ConditionalDB (not findOneWithKV / OptionsKV): secondary-key mesh lookups can miss
+  -- the true LATEST mapping unless Redis is checked with findAllMatching and DB fallback when
+  -- KV has no live match. See commits 6cd96adb / 80d7ec82 (rider-app).
+  -- Order by createdAt desc so if multiple order-0 LATEST rows exist we pick the newest.
+  findAllWithKVAndConditionalDB
     [ Se.And
         [ Se.Is BeamLM.entityId $ Se.Eq entityId,
           Se.Is BeamLM.order $ Se.Eq 0,
           Se.Is BeamLM.version $ Se.Eq latestTag
         ]
     ]
-    (Se.Desc BeamLM.createdAt)
-    (Just 1)
-    (Just 0)
+    (Just (Se.Desc BeamLM.createdAt))
     <&> listToMaybe
 
 getLatestStopsByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [LocationMapping]
@@ -83,17 +82,15 @@ getLatestStopsByEntityId' entityId =
 
 getLatestEndByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe LocationMapping)
 getLatestEndByEntityId entityId =
-  -- Limit 1 with Desc order: only the highest-order LATEST stop/drop is needed.
-  findAllWithOptionsKV
+  -- ConditionalDB + Desc order + take first: correct mesh semantics, then only keep max order.
+  findAllWithKVAndConditionalDB
     [ Se.And
         [ Se.Is BeamLM.entityId $ Se.Eq entityId,
           Se.Is BeamLM.order $ Se.Not $ Se.Eq 0,
           Se.Is BeamLM.version $ Se.Eq latestTag
         ]
     ]
-    (Se.Desc BeamLM.order)
-    (Just 1)
-    (Just 0)
+    (Just (Se.Desc BeamLM.order))
     <&> listToMaybe
 
 findAllByEntityIdAndOrder :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> m [LocationMapping]
