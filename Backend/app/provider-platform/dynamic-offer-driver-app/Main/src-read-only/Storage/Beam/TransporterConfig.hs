@@ -17,8 +17,8 @@ import qualified Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.City
-import qualified Kernel.Types.SlidingWindowCounters
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.SlidingWindowCounters
 import Tools.Beam.UtilsTH
 
 data TransporterConfigT f = TransporterConfigT

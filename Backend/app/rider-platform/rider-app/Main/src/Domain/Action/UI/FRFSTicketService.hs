@@ -1582,6 +1582,33 @@ postFrfsFleetOperatorTripAction (mbPersonId, merchantId) req = do
             hasUpcomingTrips = rolledBackTrip < gimsOps.number_of_trips
           }
 
+-- | Notify every confirmed passenger of a trip that their bus has started.
+-- Lives on the rider app because it needs rider `Person` device tokens (atlas_app);
+-- the provider (BPP) tripAction triggers it over the internal API in `FRFSInternal`.
+notifyBusTripStartedForTrip :: Text -> Environment.Flow ()
+notifyBusTripStartedForTrip tripId = do
+  -- Fetch all confirmed bookings for this trip
+  bookings <- QFRFSTicketBooking.findAllConfirmedByTripId tripId
+  unless (null bookings) $ do
+    -- Fetch person details for each booking
+    let riderIds = map (.riderId) bookings
+    persons <- QP.findAllByIds riderIds
+    let personMap = Map.fromList $ map (\p -> (p.id, p)) persons
+    -- Process all passengers sequentially in this single thread
+    forM_ bookings $ \booking -> do
+      -- Get journeyId for this booking
+      mbJourneyId <- CQJourneyLeg.findJourneyIdByLegSearchId booking.searchId.getId
+      case Map.lookup booking.riderId personMap of
+        Nothing -> pure ()
+        Just person -> do
+          -- Send trip start notification sequentially
+          let routeName = fromMaybe "" booking.routeName
+          let vehicleNo = fromMaybe "" booking.vehicleNumber
+          logInfo $ "Notifying passenger " <> person.id.getId <> " that bus trip has started on route " <> routeName <> "for journeyId" <> show mbJourneyId
+          -- Sends push (primary) + opt-in WhatsApp (secondary), both handled inside notifyBusTripStarted.
+          -- The WhatsApp `trip_tracking_enabled` template carries a static deep link, so no URL variable is passed.
+          Notifications.notifyBusTripStarted person vehicleNo routeName tripId mbJourneyId
+
 postFrfsFleetOperatorCurrentOperation ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant

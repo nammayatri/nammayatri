@@ -9,14 +9,14 @@ module Domain.Action.Dashboard.EmailVerification
   )
 where
 
-import qualified Data.Text as T
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Text as T
 import Domain.Types.Person as DP
 import qualified Domain.Types.ServerName as DTServer
 import Kernel.External.Encryption (encrypt)
 import Kernel.Prelude
-import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
