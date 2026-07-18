@@ -12,6 +12,7 @@ import qualified Domain.Action.UI.FRFSInternal
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
@@ -22,10 +23,25 @@ type API =
       :> Get
            '[JSON]
            API.Types.UI.FRFSTicketService.FRFSTripPassengerManifestResp
+      :<|> "frfs"
+      :> "trip"
+      :> Capture
+           "tripId"
+           Kernel.Prelude.Text
+      :> "notifyTripStarted"
+      :> Header
+           "token"
+           Kernel.Prelude.Text
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = getFrfsTripRouteManifest
+handler = getFrfsTripRouteManifest :<|> postFrfsTripNotifyTripStarted
 
 getFrfsTripRouteManifest :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTripPassengerManifestResp)
 getFrfsTripRouteManifest a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSInternal.getFrfsTripRouteManifest a3 a2 a1
+
+postFrfsTripNotifyTripStarted :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postFrfsTripNotifyTripStarted a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSInternal.postFrfsTripNotifyTripStarted a2 a1

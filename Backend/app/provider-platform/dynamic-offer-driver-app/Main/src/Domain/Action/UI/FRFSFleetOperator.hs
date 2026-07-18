@@ -25,10 +25,10 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common (Seconds (..))
 import Kernel.Types.Id (Id (..), getId)
 import Kernel.Types.TimeBound (TimeBound (..))
-import Kernel.Utils.Common (fromMaybeM, getCurrentTime, logError, logInfo, throwError)
+import Kernel.Utils.Common (fork, fromMaybeM, getCurrentTime, logError, logInfo, throwError)
 import qualified Lib.GtfsDataServer.Flow as NandiFlow
 import Lib.GtfsDataServer.Types
-import SharedLogic.CallBAPInternal (getFrfsTripManifest)
+import SharedLogic.CallBAPInternal (getFrfsTripManifest, notifyFrfsTripStarted)
 import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, findIntegratedBPPConfig, getGimsBaseUrl)
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error (GenericError (InvalidRequest))
@@ -190,12 +190,12 @@ postFrfsFleetOperatorTripAction (_, _merchantId, merchantOpCityId) req = do
   let epochNow = round (utcTimeToPOSIXSeconds now * 1000) :: Int64
   logInfo $ "FRFSFleetOperator: Trip action - " <> show act
   case act of
-    TripStart -> handleTripStart baseUrl gtfsId anchor numTrips redisKey epochNow
-    TripEnd -> handleTripEnd baseUrl gtfsId anchor redisKey numTrips
+    TripStart -> handleTripStart baseUrl gtfsId anchor numTrips redisKey epochNow wbNo
+    TripEnd -> handleTripEnd baseUrl gtfsId anchor redisKey numTrips epochNow
     TripReset -> handleTripReset baseUrl gtfsId anchor redisKey numTrips
     TripRollback -> handleTripRollback baseUrl gtfsId anchor redisKey epochNow numTrips
   where
-    handleTripStart baseUrl gtfsId anchor numTrips redisKey epochNow = do
+    handleTripStart baseUrl gtfsId anchor numTrips redisKey epochNow wbNo = do
       let lockKey = redisKey <> ":lock"
       lockAcquired <- Hedis.setNxExpire lockKey 30 ("1" :: Text)
       unless lockAcquired $ do
@@ -223,13 +223,20 @@ postFrfsFleetOperatorTripAction (_, _merchantId, merchantOpCityId) req = do
               }
         Hedis.setExp redisKey nextTrip 172800
         logInfo $ "FRFSFleetOperator: Trip start successful - trip " <> show nextTrip
+        -- Notify confirmed passengers (on the rider app) that their bus has started, over the
+        -- internal API. Forked so a slow/failed rider-app call never blocks the conductor's start.
+        -- tripId matches the rider-app format (`makeTripIdFromWaybillNoAndTripNo`): waybill-tripNo.
+        fork "NotifyRiderFrfsTripStarted" $ do
+          bapInternal <- asks (.appBackendBapInternal)
+          let tripId = wbNo <> "-" <> show nextTrip
+          void $ notifyFrfsTripStarted bapInternal.apiKey bapInternal.url tripId
         return $
           FleetOperatorTripActionResp
             { currentTripNumber = nextTrip,
               hasUpcomingTrips = nextTrip < numTrips
             }
 
-    handleTripEnd baseUrl gtfsId anchor redisKey numTrips = do
+    handleTripEnd baseUrl gtfsId anchor redisKey numTrips epochNow = do
       let lockKey = redisKey <> ":lock"
       lockAcquired <- Hedis.setNxExpire lockKey 30 ("1" :: Text)
       unless lockAcquired $ do
@@ -249,7 +256,7 @@ postFrfsFleetOperatorTripAction (_, _merchantId, merchantOpCityId) req = do
             GimsTripActionReq
               { action = GimsTripActionEnd,
                 tripNumber = Just currentTrip,
-                timestamp = Nothing,
+                timestamp = Just epochNow,
                 gimsConductorId = ct,
                 gimsDriverId = dt,
                 vehicleNumber = vn

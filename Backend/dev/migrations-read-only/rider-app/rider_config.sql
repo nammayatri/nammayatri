@@ -700,3 +700,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN sync_search_dispatch_config jsonb 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN student_pass_verify_config json ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN bus_tracking_notification_tiers text ;
