@@ -706,3 +706,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN student_pass_verify_config json ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN special_location_tier_order_config json ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_rewards_management boolean ;
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN bus_tracking_notification_tiers text ;

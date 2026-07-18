@@ -39,6 +39,7 @@ data RiderConfig = RiderConfig
     busTicketAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     busTierSortingConfig :: Kernel.Prelude.Maybe [Domain.Types.RiderConfig.BusTierSortingConfig],
     busTrackingConfig :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.BusTrackingConfig,
+    busTrackingNotificationTiers :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
     busTransitTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
     busTripTtl :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationPaymentDelay :: Kernel.Prelude.NominalDiffTime,
@@ -203,7 +204,7 @@ data RiderConfig = RiderConfig
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Show, (Generic), (ToJSON), (FromJSON), (Eq))
+  deriving (Show, Generic, ToJSON, FromJSON, Eq)
 
 data BusTierSortingConfig = BusTierSortingConfig {rank :: Kernel.Prelude.Int, tier :: BecknV2.FRFS.Enums.ServiceTierType} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
@@ -258,8 +259,8 @@ data SpecialVehicleNotificationConfig = SpecialVehicleNotificationConfig {notifi
 data StudentPassVerifyConfig = StudentPassVerifyConfig {distanceThresholdMeters :: Kernel.Types.Common.Meters, minMatchingStops :: Kernel.Prelude.Int, validityDurationDays :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ExternalSOSFlow))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSFlow)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ExternalSOSTriggerSource))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSTriggerSource)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ServiceTierSource))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierSource)

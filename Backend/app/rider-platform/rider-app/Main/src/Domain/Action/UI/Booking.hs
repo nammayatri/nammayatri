@@ -337,8 +337,8 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
         journeyListFork <-
           awaitableFork "bookingListV2->getJourneyList" $
             if shouldIncludeJourneys
-                then getJourneyList personId integralLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
-                else pure []
+              then getJourneyList personId integralLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
+              else pure []
 
         (rbList, allbookings) <-
           L.await Nothing bookingListFork >>= \case

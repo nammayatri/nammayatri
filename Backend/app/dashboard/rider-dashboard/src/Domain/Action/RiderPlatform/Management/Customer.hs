@@ -13,7 +13,7 @@ module Domain.Action.RiderPlatform.Management.Customer
     postCustomerPersonId,
     postCustomerUpdatePaymentMode,
     postCustomerOffersList,
-    postCustomerApplyOffer
+    postCustomerApplyOffer,
   )
 where
 
