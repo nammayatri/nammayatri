@@ -48,13 +48,17 @@ import qualified Storage.Queries.DriverInformation as QDI
 import Tools.Error
 
 -- | Required airport entry fee for this booking. Uses booking.pickupGateId (gate where customer is).
---   Returns 0 if no gateId or no fee configured.
+--   Returns Nothing if no gateId or no fee configured.
 requiredEntryFeeForBooking ::
   (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r) =>
-  SRB.Booking ->
-  m HighPrecMoney
-requiredEntryFeeForBooking booking =
-  maybe (pure 0) (FareCalculator.entryFeeForGateId . Id) booking.pickupGateId
+  Bool ->
+  Maybe Text ->
+  m (Maybe HighPrecMoney)
+requiredEntryFeeForBooking enabled mbGateId
+  | not enabled = pure Nothing
+  | otherwise = do
+    fee <- maybe (pure 0) (FareCalculator.entryFeeForGateId . Id) mbGateId
+    pure $ if fee > 0 then Just fee else Nothing
 
 isAirportPickupArea ::
   (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -89,25 +93,25 @@ checkAirportEntryFeeBalanceBeforeStartRide ::
   Id DP.Person ->
   SRB.Booking ->
   m ()
-checkAirportEntryFeeBalanceBeforeStartRide enabled driverId booking =
-  when enabled $ do
-    required <- requiredEntryFeeForBooking booking
-    when (required > 0) $ do
-      mbAccount <- Wallet.getWalletAccountByOwner DRIVER driverId.getId
-      let available = maybe 0 (.balance) mbAccount
-      when (available < required) $
-        throwError $ InsufficientAirportBalance required available
+checkAirportEntryFeeBalanceBeforeStartRide enabled driverId booking = do
+  mbRequired <- requiredEntryFeeForBooking enabled booking.pickupGateId
+  whenJust mbRequired $ \required -> do
+    mbAccount <- Wallet.getWalletAccountByOwner DRIVER driverId.getId
+    let available = maybe 0 (.balance) mbAccount
+    when (available < required) $
+      throwError $ InsufficientAirportBalance required available
 
 -- | At EndRide, for airport inner-zone: two transfers via FinanceM — GST to GovtIndirect, net to ParkingFeeRecipient (one per city).
 --   Allows negative balance; does nothing if feature off or required fee 0.
 deductAirportEntryFeeAtEndRide ::
   (BeamFlow m r, CacheFlow m r, Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m) =>
+  Bool ->
   DRide.Ride ->
   SRB.Booking ->
   m ()
-deductAirportEntryFeeAtEndRide ride booking = do
-  totalFee <- requiredEntryFeeForBooking booking
-  when (totalFee > 0) $ do
+deductAirportEntryFeeAtEndRide enabled ride booking = do
+  mbTotalFee <- requiredEntryFeeForBooking enabled booking.pickupGateId
+  whenJust mbTotalFee $ \totalFee -> do
     transporterConfig <-
       findByMerchantOpCityId booking.merchantOperatingCityId Nothing
         >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)

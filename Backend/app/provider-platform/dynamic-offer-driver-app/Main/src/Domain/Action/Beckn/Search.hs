@@ -86,7 +86,7 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
-import SharedLogic.AirportEntryFee ()
+import SharedLogic.AirportEntryFee (isAirportPickupArea, requiredEntryFeeForBooking)
 import SharedLogic.BlockedRouteDetector
 import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
@@ -558,6 +558,8 @@ selectDriversAndMatchFarePolicies :: DM.Merchant -> Id DMOC.MerchantOperatingCit
 selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocation transporterConfig isScheduled area farePolicies now isValueAddNP sreq paymentMode = do
   driverPoolCfg <- CDP.getSearchDriverPoolConfig merchantOpCityId mbDistance area sreq
   cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow merchantOpCityId sreq.configInExperimentVersions (SL.pickupSpecialZoneIdFromArea area)
+  airportEntryFee <- requiredEntryFeeForBooking (fromMaybe False transporterConfig.airportEntryFeeEnabled) sreq.pickupGateId
+  isAirportRequest <- isAirportPickupArea (Just area)
   let driverPoolCfg' = fromJust driverPoolCfg
       currentRideTripCategoryValidForForwardBatching = driverPoolCfg'.currentRideTripCategoryValidForForwardBatching
       calculateDriverPoolReq =
@@ -575,6 +577,8 @@ selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocat
             govtCharges = Nothing,
             tollCharges = Nothing,
             parkingCharge = Nothing,
+            airportEntryFee,
+            isAirportRequest,
             paymentInstrument = Nothing,
             excludeDriverIds = [],
             prevAttemptedDriverIds = [],
