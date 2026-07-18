@@ -27,6 +27,7 @@ import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.EmptyDynamicParam
 import Domain.Types.Estimate (Estimate)
 import qualified Domain.Types.EstimateStatus as DEstimate
+import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.Journey
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantMessage as DMM
@@ -75,6 +76,7 @@ import SharedLogic.Quote
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.FollowRide as CQFollowRide
+import qualified Storage.CachedQueries.JourneyLeg as CQJourneyLeg
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Sos as CQSos
@@ -85,6 +87,7 @@ import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.NotificationSoundsConfig as SQNSC
 import qualified Storage.Queries.Person as Person
@@ -1945,6 +1948,7 @@ data BusNotificationType
   = TRIP_STARTED
   | APPROACHING
   | AT_STOP
+  | TRACKING_AVAILABLE_ON_START
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data BusNotificationEntityData = BusNotificationEntityData
@@ -1989,3 +1993,103 @@ notifyBusTripStarted person vehicleNumber routeName tripId mbJourneyId = do
     [("vehicleNumber", vehicleNumber), ("routeName", routeName)]
     Nothing
     Nothing
+  -- Secondary channel: WhatsApp for opted-in riders (additive, best-effort).
+  -- The `trip_tracking_enabled` template carries a static deep link, so no variables are passed.
+  sendWhatsAppTemplateIfOptedIn person DMM.WHATSAPP_BUS_TRIP_STARTED []
+
+-- | Best-effort opt-in WhatsApp template send. Sends only when the rider is enrolled (`OPT_IN`) and a
+-- non-empty template is configured for the given key in their operating city. Any miss (no phone /
+-- no template / empty templateId / provider error) degrades to a log line and never throws into the
+-- caller, so it is safe to run alongside a push notification.
+sendWhatsAppTemplateIfOptedIn ::
+  ServiceFlow m r =>
+  Person.Person ->
+  DMM.MessageKey ->
+  [Maybe Text] ->
+  m ()
+sendWhatsAppTemplateIfOptedIn person messageKey variables =
+  when (person.whatsappNotificationEnrollStatus == Just Whatsapp.OPT_IN) $ do
+    mbMobileNumber <- mapM decrypt person.mobileNumber
+    let mbPhoneNumber = (<>) <$> person.mobileCountryCode <*> mbMobileNumber
+    case mbPhoneNumber of
+      Nothing -> logInfo $ "whatsapp.skipped key=" <> show messageKey <> " riderId=" <> person.id.getId <> " reason=noPhone"
+      Just phoneNumber -> do
+        mbMerchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey Nothing
+        case mbMerchantMessage of
+          Just merchantMessage
+            | not (T.null merchantMessage.templateId) -> do
+              result <-
+                try @_ @SomeException $
+                  Whatsapp.whatsAppSendMessageWithTemplateIdAPI
+                    person.merchantId
+                    person.merchantOperatingCityId
+                    ( Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq
+                        phoneNumber
+                        merchantMessage.templateId
+                        variables
+                        Nothing
+                        Nothing
+                    )
+              case result of
+                Right resp
+                  | resp._response.status == "success" ->
+                    logInfo $ "whatsapp.sent key=" <> show messageKey <> " riderId=" <> person.id.getId
+                Right resp ->
+                  logError $ "whatsapp.failed key=" <> show messageKey <> " riderId=" <> person.id.getId <> " status=" <> resp._response.status
+                Left err ->
+                  logError $ "whatsapp.failed key=" <> show messageKey <> " riderId=" <> person.id.getId <> " err=" <> show err
+          _ -> logInfo $ "whatsapp.skipped key=" <> show messageKey <> " riderId=" <> person.id.getId <> " reason=noTemplate"
+
+-- | On FRFS shuttle booking confirmation (payment fulfillment success), send the reassurance:
+-- push `SHUTTLE_TRACKING_ON_START` (carries journeyId) + opt-in WhatsApp `shuttle_booking_confirmation`
+-- ("thanks for booking, live tracking appears once your trip starts"). Gated on the booking's service
+-- tier being in RiderConfig.busTrackingNotificationTiers (per-city feature flag).
+-- Returns True when it handled a shuttle booking, so the caller SUPPRESSES the generic
+-- FULFILLMENT_SUCCESS push; returns False for non-shuttle bookings (caller sends the generic push).
+-- Best-effort; never throws.
+notifyShuttleBookingConfirmed ::
+  ServiceFlow m r =>
+  Id Person ->
+  Id DFRFSTicketBooking.FRFSTicketBooking ->
+  m Bool
+notifyShuttleBookingConfirmed personId bookingId = do
+  mbBooking <- QFRFSTicketBooking.findById bookingId
+  case mbBooking of
+    Nothing -> pure False
+    Just booking -> do
+      mbRiderConfig <- CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId
+      let allowedTiers = fromMaybe [] (mbRiderConfig >>= (.busTrackingNotificationTiers))
+          isShuttle = maybe False (`elem` allowedTiers) booking.serviceTierType
+      if not isShuttle
+        then pure False
+        else do
+          person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+          mbJourneyId <- CQJourneyLeg.findJourneyIdByLegSearchId booking.searchId.getId
+          let routeName = fromMaybe "" booking.routeName
+              entityData =
+                BusNotificationEntityData
+                  { tripId = Nothing,
+                    vehicleNumber = "",
+                    routeId = routeName,
+                    stopCode = Nothing,
+                    stopName = Nothing,
+                    notificationType = TRACKING_AVAILABLE_ON_START,
+                    journeyId = mbJourneyId <&> (.getId)
+                  }
+              entity = Notification.Entity Notification.Product person.id.getId entityData
+          -- Push (primary): shuttle-only booking-confirmed + tracking-on-start reassurance.
+          dynamicNotifyPerson
+            person
+            (createNotificationReq "SHUTTLE_TRACKING_ON_START" identity)
+            EmptyDynamicParam
+            entity
+            Nothing
+            [("routeName", routeName)]
+            Nothing
+            Nothing
+          -- WhatsApp (secondary, opt-in): template `shuttle_booking_confirmation`.
+          let origin = fromMaybe "" booking.fromStationName
+              destination = fromMaybe "" booking.toStationName
+              departure = maybe "" showTimeIst booking.startTime
+          sendWhatsAppTemplateIfOptedIn person DMM.WHATSAPP_SHUTTLE_BOOKING_CONFIRMED [Just routeName, Just origin, Just destination, Just departure]
+          pure True

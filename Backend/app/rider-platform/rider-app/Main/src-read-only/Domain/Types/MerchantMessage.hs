@@ -61,7 +61,9 @@ data MessageKey
   | SEND_TOTP
   | SPECIAL_ZONE_BOOKING_INVOICE_TITLE
   | WHATSAPP_REWARD_UNLOCK
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
+  | WHATSAPP_BUS_TRIP_STARTED
+  | WHATSAPP_SHUTTLE_BOOKING_CONFIRMED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
 
 type MerchantMessage = MerchantMessageD 'Safe
 
