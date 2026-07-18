@@ -244,7 +244,7 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
       _ -> return $ mkPaymentStatusResp paymentStatusResponse paymentOrder.paymentFulfillmentStatus paymentOrder.domainEntityId
   -- Create the Recon Entry and Trigger the Refund Notifications
   case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
-    Right (newPaymentFulfillmentStatus, _, mbDomainTransactionId) -> do
+    Right (newPaymentFulfillmentStatus, mbDomainEntityId, mbDomainTransactionId) -> do
       whenJust paymentOrder.paymentFulfillmentStatus $ \oldPaymentFulfillmentStatus -> do
         let personId = cast @DPayment.Person @Person.Person paymentOrder.personId
         when (newPaymentFulfillmentStatus /= oldPaymentFulfillmentStatus) $ do
@@ -265,7 +265,18 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
               DPayment.FulfillmentPending -> do
                 when (paymentOrder.status /= updatedPaymentOrder.status && updatedPaymentOrder.status == Payment.CHARGED) $ do
                   TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_PENDING paymentOrder.id personId paymentService
-              DPayment.FulfillmentSucceeded -> TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_SUCCESS paymentOrder.id personId paymentService
+              DPayment.FulfillmentSucceeded -> do
+                -- FRFS shuttle bookings get a dedicated shuttle-only reassurance (push + opt-in WhatsApp,
+                -- "tracking available once trip starts"), gated on RiderConfig.busTrackingNotificationTiers.
+                -- When that fires, we SUPPRESS the generic FULFILLMENT_SUCCESS push for that booking; every
+                -- other case (non-shuttle FRFS, non-FRFS) still gets the generic push. Fails safe.
+                handledByShuttle <- case mbDomainEntityId of
+                  Just entityId
+                    | paymentService `elem` [DOrder.FRFSBusBooking, DOrder.FRFSMultiModalBooking] ->
+                      TNotifications.notifyShuttleBookingConfirmed personId (Id entityId)
+                  _ -> pure False
+                unless handledByShuttle $
+                  TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_SUCCESS paymentOrder.id personId paymentService
               _ -> pure ()
         -- Invalidate the Offer List Cache
         case newPaymentFulfillmentStatus of
