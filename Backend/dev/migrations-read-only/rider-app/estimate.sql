@@ -668,3 +668,8 @@ ALTER TABLE atlas_app.estimate ADD COLUMN estimate_breakup_list_json json ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.estimate ADD COLUMN area text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN navigation_instruction text ;

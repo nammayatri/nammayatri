@@ -212,6 +212,7 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
             billingCategory = billingCategory,
             selectedOfferId = estimate.selectedOfferId,
             area = estimate.area,
+            navigationInstruction = estimate.navigationInstruction,
             ..
           }
   pure quote

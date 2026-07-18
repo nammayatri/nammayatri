@@ -46,6 +46,7 @@ data Quote = Quote
     itemId :: Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    navigationInstruction :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     providerId :: Kernel.Prelude.Text,
     providerUrl :: Kernel.Types.Common.BaseUrl,
     quoteBreakupList :: [Domain.Types.QuoteBreakup.QuoteBreakup],

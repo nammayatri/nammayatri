@@ -70,3 +70,7 @@ maxDriverThresholdFor gate variant =
 demandThresholdFor :: GateInfo -> Text -> Maybe Int
 demandThresholdFor gate variant =
   (Map.lookup variant =<< gate.demandThresholds) <|> gate.defaultDemandThreshold
+
+navigationInstructionFor :: GateInfo -> Text -> Maybe Text
+navigationInstructionFor gate key =
+  (Map.lookup key =<< gate.navigationInstructions) <|> gate.walkDescription

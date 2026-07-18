@@ -47,6 +47,7 @@ data Quote = Quote
     isBlockedRoute :: Maybe Bool,
     tollNames :: Maybe [Text],
     area :: Maybe Text,
+    navigationInstruction :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)

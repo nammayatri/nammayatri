@@ -52,6 +52,7 @@ data QuoteT f = QuoteT
     itemId :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    navigationInstruction :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     providerId :: B.C f Kernel.Prelude.Text,
     providerUrl :: B.C f Kernel.Prelude.Text,
     quoteBreakupListJson :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
