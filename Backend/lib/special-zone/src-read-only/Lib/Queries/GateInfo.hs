@@ -55,6 +55,7 @@ updateByPrimaryKey (Lib.Types.GateInfo.GateInfo {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.minDriverThresholdsJson (Lib.Queries.Transformers.GateInfo.encodeThresholdMap minDriverThresholds),
       Se.Set Beam.name name,
+      Se.Set Beam.navigationInstructionsJson (Lib.Queries.Transformers.GateInfo.encodeTextMap navigationInstructions),
       Se.Set Beam.notificationActiveTillInSec notificationActiveTillInSec,
       Se.Set Beam.notificationCooldownInSec notificationCooldownInSec,
       Se.Set Beam.pickupRequestResponseTimeoutInSec pickupRequestResponseTimeoutInSec,

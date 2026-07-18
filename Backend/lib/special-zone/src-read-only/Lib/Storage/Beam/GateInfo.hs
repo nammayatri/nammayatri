@@ -31,6 +31,7 @@ data GateInfoT f = GateInfoT
     merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
     minDriverThresholdsJson :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     name :: (B.C f Kernel.Prelude.Text),
+    navigationInstructionsJson :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     notificationActiveTillInSec :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     notificationCooldownInSec :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     pickupRequestResponseTimeoutInSec :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
