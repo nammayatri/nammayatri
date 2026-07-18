@@ -100,15 +100,21 @@ findAllByRiderId limit offset riderId mbVehicleCategory = do
     limit
     offset
 
+-- | Ops/recon query: provider + time window + status. Always ordered newest-first.
+-- Time-bounded by 'createdAtAfter' (call sites use a short lookback, e.g. 1h).
+-- Prefer this over status-only scans; status alone is not a secondary key.
 findAllByProviderNameAndCreatedAtAfterAndStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> UTCTime -> DFRFSTicketBookingStatus.FRFSTicketBookingStatus -> m [FRFSTicketBooking]
 findAllByProviderNameAndCreatedAtAfterAndStatus providerName createdAtAfter status = do
-  findAllWithKV
+  findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.providerName $ Se.Eq providerName,
           Se.Is Beam.createdAt $ Se.GreaterThanOrEq createdAtAfter,
           Se.Is Beam.status $ Se.Eq status
         ]
     ]
+    (Se.Desc Beam.createdAt)
+    Nothing
+    Nothing
 
 findAllByTripId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m [FRFSTicketBooking]
 findAllByTripId tripId = do

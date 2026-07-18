@@ -48,28 +48,33 @@ upsert mapping = do
   when (null allEntityIdAndOrder) $ createWithKV mapping
 
 getLatestStartByEntityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe LocationMapping)
-getLatestStartByEntityId entityId = do
-  -- Switched from findOneWithKV to findAllWithKVAndConditionalDB to fix the issue of not getting the latest mapping.
-  findAllWithKVAndConditionalDB
+getLatestStartByEntityId entityId =
+  -- Limit 1: only the pickup (order 0) LATEST row is needed; avoid loading the full mapping history.
+  findAllWithOptionsKV
     [ Se.And
         [ Se.Is BeamLM.entityId $ Se.Eq entityId,
           Se.Is BeamLM.order $ Se.Eq 0,
           Se.Is BeamLM.version $ Se.Eq latestTag
         ]
     ]
-    Nothing
+    (Se.Desc BeamLM.createdAt)
+    (Just 1)
+    (Just 0)
     <&> listToMaybe
 
 getLatestEndByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe LocationMapping)
 getLatestEndByEntityId entityId =
-  findAllWithKVAndConditionalDB
+  -- Limit 1 with Desc order: only the highest-order LATEST stop/drop is needed.
+  findAllWithOptionsKV
     [ Se.And
         [ Se.Is BeamLM.entityId $ Se.Eq entityId,
           Se.Is BeamLM.order $ Se.Not $ Se.Eq 0,
           Se.Is BeamLM.version $ Se.Eq latestTag
         ]
     ]
-    (Just (Se.Desc BeamLM.order))
+    (Se.Desc BeamLM.order)
+    (Just 1)
+    (Just 0)
     <&> listToMaybe
 
 getLatestStopsByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [LocationMapping]
@@ -88,13 +93,16 @@ getLatestStopsByEntityId' entityId =
     ]
     (Just (Se.Asc BeamLM.order))
 
+-- | Highest mapping order for an entity. Uses a single ordered row (limit 1)
+-- instead of loading the full history into memory just to take 'maximum'.
 maxOrderByEntity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m Int
-maxOrderByEntity entityId = do
-  lms <- findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId] Nothing
-  let orders = map order lms
-  case orders of
-    [] -> pure 0
-    _ -> pure $ maximum orders
+maxOrderByEntity entityId =
+  findAllWithOptionsKV
+    [Se.Is BeamLM.entityId $ Se.Eq entityId]
+    (Se.Desc BeamLM.order)
+    (Just 1)
+    (Just 0)
+    <&> maybe 0 order . listToMaybe
 
 updatePastMappingVersions :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> m ()
 updatePastMappingVersions entityId order = do
@@ -103,8 +111,17 @@ updatePastMappingVersions entityId order = do
   let lenMappings = if isVersioned then length mappings else 0
   traverse_ (`incrementVersion` lenMappings) mappings
 
+-- | Count of mapping rows for an entity (all versions). Prefer 'maxOrderByEntity'
+-- when only the next order is needed. Scoped by secondary key 'entityId';
+-- location_mapping history per entity is expected to stay small.
 countOrders :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m Int
-countOrders entityId = findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId] Nothing <&> length
+countOrders entityId =
+  findAllWithOptionsKV
+    [Se.Is BeamLM.entityId $ Se.Eq entityId]
+    (Se.Desc BeamLM.order)
+    Nothing
+    Nothing
+    <&> length
 
 findByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [LocationMapping]
 findByEntityId entityId =

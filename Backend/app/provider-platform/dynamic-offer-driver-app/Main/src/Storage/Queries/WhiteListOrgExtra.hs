@@ -15,15 +15,20 @@ import Storage.Queries.OrphanInstances.WhiteListOrg ()
 
 -- Extra code goes here --
 
+-- | Empty-vs-nonempty check for whitelist mode (call sites only use '== 0').
+-- Fetches at most one row instead of loading every whitelist entry for the city.
 countTotalSubscribers :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Id MerchantOperatingCity -> m Int
 countTotalSubscribers merchantId merchantOperatingCityId =
-  findAllWithKV
+  findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
         ]
     ]
-    <&> length
+    (Se.Asc Beam.id)
+    (Just 1)
+    (Just 0)
+    <&> \rows -> if null rows then 0 else 1
 
 findBySubscriberIdAndDomain ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

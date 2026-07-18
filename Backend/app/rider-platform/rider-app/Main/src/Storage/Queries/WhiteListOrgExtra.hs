@@ -14,8 +14,16 @@ import Storage.Queries.OrphanInstances.WhiteListOrg ()
 
 -- Extra code goes here --
 
+-- | Empty-vs-nonempty check for whitelist mode (call sites only use '== 0').
+-- Fetches at most one row instead of loading the entire white_list_org table.
 countTotalSubscribers :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m Int
-countTotalSubscribers = findAllWithKV [Se.Is Beam.id $ Se.Not $ Se.Eq ""] <&> length
+countTotalSubscribers =
+  findAllWithOptionsKV
+    [Se.Is Beam.id $ Se.Not $ Se.Eq ""]
+    (Se.Asc Beam.id)
+    (Just 1)
+    (Just 0)
+    <&> \rows -> if null rows then 0 else 1
 
 -- TODO:: remove it, For backward compatibility
 findBySubscriberIdAndDomain :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> Domain -> m (Maybe WhiteListOrg)

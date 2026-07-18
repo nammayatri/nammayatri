@@ -30,8 +30,8 @@ findAllByOrderId paymentOrderId = do findAllWithKV [Se.Is Beam.paymentOrderId $ 
 
 findAllByStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus -> m ([Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPayment]))
-findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
+  (Maybe Int -> Maybe Int -> Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus -> m ([Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPayment]))
+findAllByStatus limit offset status = do findAllWithOptionsKV [Se.Is Beam.status $ Se.Eq status] (Se.Desc Beam.createdAt) limit offset
 
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

@@ -532,8 +532,12 @@ FRFSTicketBooking:
       kvFunction: findOneWithKV
       where: searchId
     findAllByStatus:
-      kvFunction: findAllWithKV
+      # status is not a SecondaryKey; require pagination to avoid unbounded table scans
+      kvFunction: findAllWithOptionsKV
       where: status
+      orderBy:
+        field: createdAt
+        order: desc
     updateStatusById:
       kvFunction: updateWithKV
       params: [status, updatedAt]
@@ -730,8 +734,12 @@ FRFSTicketBookingPayment:
       kvFunction: findAllWithKV
       where: paymentOrderId
     findAllByStatus:
-      kvFunction: findAllWithKV
+      # status is not a SecondaryKey; require pagination to avoid unbounded table scans
+      kvFunction: findAllWithOptionsKV
       where: status
+      orderBy:
+        field: createdAt
+        order: desc
     updateStatusByTicketBookingId:
       kvFunction: updateWithKV
       params: [status, updatedAt]
