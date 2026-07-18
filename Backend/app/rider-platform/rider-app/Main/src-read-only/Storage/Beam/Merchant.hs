@@ -13,7 +13,6 @@ import qualified Kernel.Types.Base64
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Geofencing
-import qualified Kernel.Types.Version
 import Tools.Beam.UtilsTH
 
 data MerchantT f = MerchantT
