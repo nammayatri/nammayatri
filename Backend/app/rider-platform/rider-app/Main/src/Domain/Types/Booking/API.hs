@@ -60,6 +60,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
+import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
+import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
@@ -156,7 +160,24 @@ data BookingAPIEntity = BookingAPIEntity
     displayBookingId :: Maybe Text,
     driverPreference :: Maybe [Text],
     specialLocationSupportNumber :: Maybe Text,
-    commissionCharge :: Maybe HighPrecMoney
+    commissionCharge :: Maybe HighPrecMoney,
+    refunds :: [RideRefundInfo]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+-- | One row per refund attempt, newest first. A row exists only once a refund was approved and sent
+--   to the gateway, so open and rejected requests never appear. Retries append a row; only the latest
+--   of a retried chain is non-FAILURE.
+data RideRefundInfo = RideRefundInfo
+  { id :: Id DRefunds.Refunds,
+    status :: Payment.RefundStatus,
+    amount :: HighPrecMoney,
+    createdAt :: UTCTime,
+    -- | Bank-traceable reference, assigned up to 7 business days after the refund succeeds and Nothing
+    --   forever when the payment partner has no reference scheme. Reads the refunds.arn column, which
+    --   predates the non-card methods that also populate it.
+    reference :: Maybe Text,
+    referenceType :: Maybe Text -- acquirer_reference_number | stan | rrn; cards only
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -303,8 +324,9 @@ makeBookingAPIEntity ::
   Bool ->
   Bool ->
   Maybe BookingCancellationReasonAPIEntity ->
+  [RideRefundInfo] ->
   m BookingAPIEntity
-makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreakups fareBreakups mbExophone paymentMethodId hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon mbCancellationReason = do
+makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreakups fareBreakups mbExophone paymentMethodId hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon mbCancellationReason refunds = do
   bookingDetails <- mkBookingAPIDetails booking requesterId
   merchant <- CQM.findById booking.merchantId
   let isOnlinePayment = maybe False (.onlinePayment) merchant
@@ -386,7 +408,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         displayBookingId = booking.displayBookingId,
         driverPreference = booking.driverPreference,
         specialLocationSupportNumber = booking.specialLocationSupportNumber,
-        commissionCharge = booking.commission
+        commissionCharge = booking.commission,
+        refunds = refunds
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
@@ -529,7 +552,7 @@ getActiveSos' mbRide personId = do
 makeCancellationReasonAPIEntity :: BookingCancellationReason -> BookingCancellationReasonAPIEntity
 makeCancellationReasonAPIEntity BookingCancellationReason {..} = BookingCancellationReasonAPIEntity {..}
 
-buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, ClickhouseFlow m r, BeamFlow m r) => Booking -> Id Person.Person -> Bool -> m BookingAPIEntity
+buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, ClickhouseFlow m r, BeamFlow m r, PaymentBeamFlow.BeamFlow m r) => Booking -> Id Person.Person -> Bool -> m BookingAPIEntity
 buildBookingAPIEntity booking personId dontNeedFareBreakup = do
   -- mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
   mbRide <- runInReplica $ QRide.findByRBId booking.id
@@ -545,7 +568,19 @@ buildBookingAPIEntity booking personId dontNeedFareBreakup = do
     if booking.status == CANCELLED
       then QBCR.findByRideBookingId booking.id
       else return Nothing
-  makeBookingAPIEntity personId booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon (makeCancellationReasonAPIEntity <$> mbCancellationReason)
+  refunds <- maybe (pure []) (getRideRefunds . (.id)) mbRide
+  makeBookingAPIEntity personId booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon (makeCancellationReasonAPIEntity <$> mbCancellationReason) refunds
+
+makeRideRefundInfo :: DRefunds.Refunds -> RideRefundInfo
+makeRideRefundInfo DRefunds.Refunds {..} = RideRefundInfo {amount = refundAmount, reference = arn, ..}
+
+-- | The ride's order is keyed by domainEntityId (the tip order uses "tip:<rideId>", so an exact match
+--   excludes it), and refunds hang off the order's shortId, not its id.
+getRideRefunds :: PaymentBeamFlow.BeamFlow m r => Id DRide.Ride -> m [RideRefundInfo]
+getRideRefunds rideId = do
+  mbOrder <- QPaymentOrder.findByDomainEntityId rideId.getId
+  refunds <- maybe (pure []) (HQRefunds.findAllByOrderId . (.shortId)) mbOrder
+  pure $ sortOn (Down . (.createdAt)) $ map makeRideRefundInfo refunds
 
 --Note :- if you are adding and extra field in BookingStatusAPIEntity then add it in BookingAPIEntity as well
 buildBookingStatusAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> m BookingStatusAPIEntity
