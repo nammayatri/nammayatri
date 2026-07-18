@@ -1,5 +1,6 @@
 imports:
   FRFSTripPassengerManifestResp: API.Types.UI.FRFSTicketService
+  APISuccess: Kernel.Types.APISuccess
 
 module: FRFSInternal
 
@@ -16,3 +17,12 @@ apis:
         routeId: Text
       response:
         type: "API.Types.UI.FRFSTicketService.FRFSTripPassengerManifestResp"
+  - POST:
+      endpoint: /frfs/trip/{tripId}/notifyTripStarted
+      auth: NoAuth
+      headers:
+        token: Text
+      params:
+        tripId: Text
+      response:
+        type: "Kernel.Types.APISuccess.APISuccess"
