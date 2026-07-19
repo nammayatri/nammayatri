@@ -825,10 +825,8 @@ types:
   DriverPoolConfigItem:
     - minRadiusOfSearch: Meters
     - maxRadiusOfSearch: Meters
-    - radiusStepSize: Meters
     - minRadiusOfSearchWithUnit: Distance
     - maxRadiusOfSearchWithUnit: Distance
-    - radiusStepSizeWithUnit: Distance
     - driverPositionInfoExpiry: Maybe Seconds
     - actualDistanceThreshold: Maybe Meters
     - actualDistanceThresholdOnRide: Maybe Meters
@@ -857,10 +855,8 @@ types:
   DriverPoolConfigUpdateReq:
     - minRadiusOfSearch: Maybe (MandatoryValue Meters)
     - maxRadiusOfSearch: Maybe (MandatoryValue Meters)
-    - radiusStepSize: Maybe (MandatoryValue Meters)
     - minRadiusOfSearchWithUnit: Maybe (MandatoryValue Distance)
     - maxRadiusOfSearchWithUnit: Maybe (MandatoryValue Distance)
-    - radiusStepSizeWithUnit: Maybe (MandatoryValue Distance)
     - driverPositionInfoExpiry: Maybe (OptionalValue Seconds)
     - actualDistanceThreshold: Maybe (OptionalValue Meters)
     - actualDistanceThresholdOnRide: Maybe (OptionalValue Meters)
@@ -880,10 +876,8 @@ types:
   DriverPoolConfigCreateReq:
     - minRadiusOfSearch: Meters
     - maxRadiusOfSearch: Meters
-    - radiusStepSize: Meters
     - minRadiusOfSearchWithUnit: Maybe Distance
     - maxRadiusOfSearchWithUnit: Maybe Distance
-    - radiusStepSizeWithUnit: Maybe Distance
     - driverPositionInfoExpiry: Maybe Seconds
     - actualDistanceThreshold: Maybe Meters
     - actualDistanceThresholdOnRide: Maybe Meters
@@ -931,7 +925,6 @@ types:
   DriverPoolConfigListItem:
     - minRadiusOfSearch: Meters
     - maxRadiusOfSearch: Meters
-    - radiusStepSize: Meters
     - driverPositionInfoExpiry: Maybe Seconds
     - actualDistanceThreshold: Maybe Meters
     - maxDriverQuotesRequired: Int

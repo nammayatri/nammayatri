@@ -79,6 +79,8 @@ recordPGFeeLedgerEntries feeType config merchantId merchantOpCityId referenceId 
             counterpartyId = merchantId,
             concernedIndividualId = Nothing,
             referenceId = referenceId,
+            entityReferenceId = Nothing,
+            entityReferenceType = Nothing,
             merchantName = Nothing,
             merchantShortId = Nothing,
             issuedByAddress = Nothing,

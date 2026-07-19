@@ -140,6 +140,9 @@ RiderConfig:
     exotelStatusCheckSchedulerDelay: Int
     incidentReportSupport: Bool
     settleCancellationFeeBeforeNextRide: Maybe Bool
+    immediateCaptureDriverCancellationFee: Maybe Bool
+    immediateCaptureRiderCancellationFee: Maybe Bool
+    enablePaymentRefunds: Maybe Bool
     syncSearchDispatchConfig: Maybe SyncSearchDispatchConfig
     validCancellationReasonCodesForImmediateCharge: "Maybe [Text]"
     cxAgentDetails: "Maybe [CxAgentDetails]"
@@ -155,6 +158,7 @@ RiderConfig:
     permissibleModes: "Maybe [GeneralVehicleType]"
     busTransitTypes: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
     subwayTransitTypes: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
+    busTrackingNotificationTiers: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
     journeyOptionsSortingType: Maybe JourneyOptionsSortingType
     maxAllowedPublicTransportLegs: Int
     driverReferredSearchReqExpiry: Maybe Seconds

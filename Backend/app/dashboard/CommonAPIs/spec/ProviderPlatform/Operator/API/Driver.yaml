@@ -283,6 +283,9 @@ types:
     - vehicle: Maybe Text
     - vehicleNo: Maybe Text
     - isRcActive: Bool
+    - approved: Maybe Bool
+    - verified: Maybe Bool
+    - enabled: Maybe Bool
     - documents: Maybe StatusRes
   VerifyOperatorJoiningOtpReq:
     - mobileCountryCode: Text

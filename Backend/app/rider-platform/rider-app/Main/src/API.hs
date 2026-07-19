@@ -41,6 +41,7 @@ import qualified Kernel.External.Payment.Stripe.Webhook as Stripe
 import qualified Kernel.External.Payout.Juspay.Webhook as JuspayPayout
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import Kernel.Types.Servant (RawByteString (..))
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.BasicAuth ()
 import Kernel.Utils.Servant.HTML
@@ -163,7 +164,7 @@ stripeWebhookHandler ::
   Maybe TPayment.PaymentServiceType ->
   Maybe Text ->
   Maybe Text ->
-  Stripe.RawByteString ->
+  RawByteString ->
   FlowHandler AckResponse
 stripeWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader =
   withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo . Payment.stripeWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader
@@ -174,7 +175,7 @@ stripeTestWebhookHandler ::
   Maybe TPayment.PaymentServiceType ->
   Maybe Text ->
   Maybe Text ->
-  Stripe.RawByteString ->
+  RawByteString ->
   FlowHandler AckResponse
 stripeTestWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader =
   withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo . Payment.stripeTestWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader

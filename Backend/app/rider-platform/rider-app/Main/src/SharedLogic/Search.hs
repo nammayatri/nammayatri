@@ -136,7 +136,9 @@ data PublicTransportSearchReq = PublicTransportSearchReq
     busLocationData :: Maybe [RL.BusLocation],
     firstMileRemoved :: Maybe Bool,
     doMultimodalSearch :: Maybe Bool,
-    userPreferredServiceTier :: Maybe Spec.ServiceTierType
+    userPreferredServiceTier :: Maybe Spec.ServiceTierType,
+    originStopIntegratedBppConfigId :: Maybe (Id DIBPC.IntegratedBPPConfig),
+    destinationStopIntegratedBppConfigId :: Maybe (Id DIBPC.IntegratedBPPConfig)
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

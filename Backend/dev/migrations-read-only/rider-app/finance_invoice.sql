@@ -71,3 +71,13 @@ ALTER TABLE atlas_app.finance_invoice ADD COLUMN updated_by_id text ;
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN updated_by text ;
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN created_by_id text ;
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN created_by text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_invoice ADD COLUMN reference_invoice_number text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_invoice ADD COLUMN entity_reference_id text ;

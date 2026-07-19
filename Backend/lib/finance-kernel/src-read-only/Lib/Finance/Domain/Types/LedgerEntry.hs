@@ -19,6 +19,8 @@ data LedgerEntry = LedgerEntry
     createdBy :: Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType,
     createdById :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     currency :: Kernel.Types.Common.Currency,
+    entityReferenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    entityReferenceType :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntityReferenceType,
     entryType :: Lib.Finance.Domain.Types.LedgerEntry.EntryType,
     fromAccountId :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account,
     fromEndingBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -47,11 +49,17 @@ data LedgerEntry = LedgerEntry
   }
   deriving (Generic)
 
+data EntityReferenceType = RefundRequest deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
 data EntryStatus = PENDING | DUE | SETTLED | VOIDED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data EntryType = Expense | Revenue | LiabilityCreated | LiabilitySettled | Reversal deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data SettlementStatus = UNSETTLED | PROCESSING | PAID_OUT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EntityReferenceType))
+
+$(mkHttpInstancesForEnum (''EntityReferenceType))
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EntryStatus))
 

@@ -52,6 +52,6 @@ instance B.Table DriverPlanT where
 
 type DriverPlan = DriverPlanT Identity
 
-$(enableKVPG ''DriverPlanT ['driverId] [['mandateId]])
+$(enableKVPGWithPartialIndex ''DriverPlanT ['driverId] [['mandateId]] [SKeyPartial [('serviceName, "YATRI_RENTAL")]])
 
 $(mkTableInstances ''DriverPlanT "driver_plan")

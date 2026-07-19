@@ -93,6 +93,7 @@ DriverPlan:
   constraints:
     driverId: PrimaryKey
     mandateId: SecondaryKey
+    serviceName: "!SecondaryKeyPartial serviceName:YATRI_RENTAL"
 
 
 

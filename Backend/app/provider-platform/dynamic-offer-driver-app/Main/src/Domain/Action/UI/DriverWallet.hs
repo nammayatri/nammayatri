@@ -403,6 +403,8 @@ referenceTypeToItemName ref
   | ref == walletReferenceDiscountsCash = "Discounts Incl. Vat (Cash)"
   | ref == walletReferenceCommissionOnline = "Commission (Online)"
   | ref == walletReferenceCommissionCash = "Commission (Cash)"
+  | ref == walletReferenceCommissionVATOnline = "Commission VAT (Online)"
+  | ref == walletReferenceCommissionVATCash = "Commission VAT (Cash)"
   | ref == walletReferenceDeductedAtPaymentByPlatform = "Commission Deducted at Payment"
   | otherwise = ref
 
@@ -806,6 +808,8 @@ mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId = do
         counterpartyId = driverId.getId,
         concernedIndividualId = Just driverId.getId,
         referenceId = referenceId,
+        entityReferenceId = Nothing,
+        entityReferenceType = Nothing,
         merchantName = mName,
         merchantShortId = mShortId,
         issuedByAddress = address,
