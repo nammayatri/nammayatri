@@ -311,33 +311,35 @@ postFrfsFleetOperatorTripAction (_, _merchantId, merchantOpCityId) req = do
         throwError $ InvalidRequest "Could not acquire lock for trip action"
       mbCurrentTrip <- Hedis.get redisKey
       let currentTrip = fromMaybe 0 (mbCurrentTrip :: Maybe Int)
-      -- Previous real trip_number strictly before the current one (largest tripNum < currentTrip).
-      case listToMaybe (reverse (filter (< currentTrip) tripNums)) of
-        Nothing -> do
-          void $ Hedis.del lockKey
-          throwError $ InvalidRequest "No trip to rollback"
-        Just rolledBackTrip -> do
-          let GimsOperationAnchor {gimsConductorId = ct, gimsDriverId = dt, vehicleNumber = vn} = anchor
-          flip finally (void $ Hedis.del lockKey) $ do
-            void $
-              NandiFlow.gimsTripAction
-                baseUrl
-                gtfsId
-                GimsTripActionReq
-                  { action = GimsTripActionStart,
-                    tripNumber = Just rolledBackTrip,
-                    timestamp = Just epochNow,
-                    gimsConductorId = ct,
-                    gimsDriverId = dt,
-                    vehicleNumber = vn
-                  }
-            Hedis.setExp redisKey rolledBackTrip 172800
-            logInfo $ "FRFSFleetOperator: Trip rollback successful - trip " <> show rolledBackTrip
-            return $
-              FleetOperatorTripActionResp
-                { currentTripNumber = rolledBackTrip,
-                  hasUpcomingTrips = not (null (filter (> rolledBackTrip) tripNums))
-                }
+      when (currentTrip <= 0) $ do
+        void $ Hedis.del lockKey
+        throwError $ InvalidRequest "No trip to rollback"
+      let GimsOperationAnchor {gimsConductorId = ct, gimsDriverId = dt, vehicleNumber = vn} = anchor
+      flip finally (void $ Hedis.del lockKey) $ do
+        -- Revert just the current frontier trip back to UPCOMING (de-activate + un-complete),
+        -- leaving NO trip active. Matches GIMS `rollback` semantics and the rider-app path.
+        void $
+          NandiFlow.gimsTripAction
+            baseUrl
+            gtfsId
+            GimsTripActionReq
+              { action = GimsTripActionRollback,
+                tripNumber = Just currentTrip,
+                timestamp = Just epochNow,
+                gimsConductorId = ct,
+                gimsDriverId = dt,
+                vehicleNumber = vn
+              }
+        -- Step the cursor back to the previous real trip so the next "Start Next" re-starts the
+        -- rolled-back trip; if none remains, clear the cursor entirely (largest tripNum < currentTrip).
+        let newCursor = fromMaybe 0 (listToMaybe (reverse (filter (< currentTrip) tripNums)))
+        if newCursor <= 0 then void (Hedis.del redisKey) else Hedis.setExp redisKey newCursor 172800
+        logInfo $ "FRFSFleetOperator: Trip rollback successful - reverted trip " <> show currentTrip <> ", cursor now " <> show newCursor
+        return $
+          FleetOperatorTripActionResp
+            { currentTripNumber = 0, -- no active trip after a rollback
+              hasUpcomingTrips = not (null (filter (> newCursor) tripNums))
+            }
 
 -- | Get current operation details
 postFrfsFleetOperatorCurrentOperation ::

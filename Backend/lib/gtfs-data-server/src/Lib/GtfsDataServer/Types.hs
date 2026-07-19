@@ -206,18 +206,21 @@ data GimsTripAction
   = GimsTripActionStart
   | GimsTripActionEnd
   | GimsTripActionReset
+  | GimsTripActionRollback
   deriving (Show, Read, Eq, Ord, Generic)
 
 instance ToJSON GimsTripAction where
   toJSON GimsTripActionStart = toJSON ("start" :: Text)
   toJSON GimsTripActionEnd = toJSON ("end" :: Text)
   toJSON GimsTripActionReset = toJSON ("reset" :: Text)
+  toJSON GimsTripActionRollback = toJSON ("rollback" :: Text)
 
 instance FromJSON GimsTripAction where
   parseJSON = withText "GimsTripAction" $ \case
     "start" -> pure GimsTripActionStart
     "end" -> pure GimsTripActionEnd
     "reset" -> pure GimsTripActionReset
+    "rollback" -> pure GimsTripActionRollback
     v -> fail $ "Unknown GimsTripAction: " <> T.unpack v
 
 data GimsTripActionReq = GimsTripActionReq
