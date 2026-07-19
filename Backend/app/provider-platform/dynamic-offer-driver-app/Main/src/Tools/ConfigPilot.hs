@@ -13,6 +13,7 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getConfigList)
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as LYTBF
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as LTSCADLE
@@ -23,18 +24,27 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types.AppDynamicLogicElement as LYTADLE
 import qualified Lib.Yudhishthira.Types.ConfigPilot as LYTC
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.CachedQueries.CoinsConfig as CQCC
-import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
-import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
-import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as SCMDPC
-import qualified Storage.CachedQueries.Merchant.MerchantMessage as SCMM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as SCMMPN
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
-import qualified Storage.CachedQueries.Merchant.PayoutConfig as SCMP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCMTC
-import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCR
 import qualified Storage.CachedQueries.UiDriverConfig as SCU
+import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.DriverPoolConfig (DriverPoolConfigDimensions (..))
+import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
+import Storage.ConfigPilot.Config.LeaderBoardConfigs (LeaderBoardConfigsDimensions (..))
+import Storage.ConfigPilot.Config.MerchantMessage (MerchantMessageDimensions (..))
+import Storage.ConfigPilot.Config.MerchantPushNotification (MerchantPushNotificationDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
+import Storage.ConfigPilot.Config.ReminderConfig (ReminderConfigDimensions (..))
+import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.ScheduledPayoutConfig (ScheduledPayoutConfigDimensions (..))
+import Storage.ConfigPilot.Config.TagActionNotificationConfig (TagActionNotificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Coins.CoinsConfig as SQCC
 import qualified Storage.Queries.DocumentVerificationConfig as SQDVC
 import qualified Storage.Queries.DriverPoolConfig as SCMD
@@ -43,7 +53,6 @@ import qualified Storage.Queries.GoHomeConfig as SQGHC
 import qualified Storage.Queries.LeaderBoardConfigs as SQLBC
 import qualified Storage.Queries.MerchantMessage as SQM
 import qualified Storage.Queries.MerchantPushNotification as SQMPN
-import qualified Storage.Queries.MerchantServiceConfigExtra as SQMSCE
 import qualified Storage.Queries.MerchantServiceUsageConfig as SQMSUC
 import qualified Storage.Queries.PayoutConfig as SCP
 import qualified Storage.Queries.ReminderConfig as SQRMC
@@ -57,52 +66,52 @@ returnConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LYT.LogicDomain 
 returnConfigs logicDomain merchantOpCityId merchantId opCity = do
   case logicDomain of
     LYT.DRIVER_CONFIG LYT.DriverPoolConfig -> do
-      driverPoolCfg <- SCMDPC.findAllByMerchantOpCityId (cast merchantOpCityId) (Just []) Nothing
+      driverPoolCfg <- getConfigList (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Nothing, area = Nothing, vehicleVariant = Nothing, tripCategory = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON driverPoolCfg}
     LYT.DRIVER_CONFIG LYT.TransporterConfig -> do
-      transporterCfg <- SCMTC.getTransporterConfigFromDB (cast merchantOpCityId)
+      transporterCfg <- getConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCMTC.getTransporterConfigFromDB (cast merchantOpCityId)))
       return LYT.TableDataResp {configs = map A.toJSON (maybeToList transporterCfg)}
     LYT.DRIVER_CONFIG LYT.PayoutConfig -> do
-      payoutCfg <- SCMP.findAllByMerchantOpCityId (cast merchantOpCityId) (Just [])
+      payoutCfg <- getConfigList (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, isPayoutEnabled = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON payoutCfg}
     LYT.DRIVER_CONFIG LYT.RideRelatedNotificationConfig -> do
-      rideRelatedNotificationCfg <- SCR.findAllByMerchantOperatingCityId (cast merchantOpCityId) (Just [])
+      rideRelatedNotificationCfg <- getConfigList (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, timeDiffEvent = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON rideRelatedNotificationCfg}
     LYT.DRIVER_CONFIG LYT.MerchantMessage -> do
-      merchantMessage <- SCMM.findAllByMerchantOpCityId (cast merchantOpCityId) (Just [])
+      merchantMessage <- getConfigList (MerchantMessageDimensions {merchantOperatingCityId = merchantOpCityId.getId, messageKey = Nothing, vehicleCategory = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON merchantMessage}
     LYT.DRIVER_CONFIG LYT.MerchantPushNotification -> do
-      merchantPushNotification <- SCMMPN.findAllByMerchantOpCityId (cast merchantOpCityId) (Just [])
+      merchantPushNotification <- getConfig (MerchantPushNotificationDimensions {merchantOperatingCityId = merchantOpCityId.getId, key = Nothing, tripCategory = Nothing}) (Just (SCMMPN.findAllByMerchantOpCityId (cast merchantOpCityId) (Just [])))
       return LYT.TableDataResp {configs = map A.toJSON merchantPushNotification}
     LYT.DRIVER_CONFIG LYT.MerchantServiceUsageConfigDriver -> do
-      msuc <- CQMSUC.findByMerchantOpCityId (cast merchantOpCityId)
+      msuc <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CQMSUC.findByMerchantOpCityId (cast merchantOpCityId)))
       return LYT.TableDataResp {configs = map A.toJSON (maybeToList msuc)}
     LYT.DRIVER_CONFIG LYT.DocumentVerificationConfig -> do
-      dvCfg <- CQDVC.findAllByMerchantOpCityId (cast merchantOpCityId) (Just [])
+      dvCfg <- getConfigList (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, vehicleCategory = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON dvCfg}
     LYT.DRIVER_CONFIG LYT.GoHomeConfig -> do
-      goHomeCfg <- CQGHC.findByMerchantOpCityId (cast merchantOpCityId)
-      return LYT.TableDataResp {configs = [A.toJSON goHomeCfg]}
+      goHomeCfg <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CQGHC.findByMerchantOpCityId (cast merchantOpCityId)))
+      return LYT.TableDataResp {configs = map A.toJSON (maybeToList goHomeCfg)}
     LYT.DRIVER_CONFIG LYT.LeaderBoardConfig -> do
-      lbCfg <- SQLBC.findAllByMerchantOpCityId (cast merchantOpCityId)
+      lbCfg <- getConfigList (LeaderBoardConfigsDimensions {merchantOperatingCityId = merchantOpCityId.getId, leaderBoardType = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON lbCfg}
     LYT.DRIVER_CONFIG LYT.ReminderConfig -> do
-      reminderCfg <- SQRMC.findAllByMerchantOpCityId (cast merchantOpCityId)
+      reminderCfg <- getConfigList (ReminderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON reminderCfg}
     LYT.DRIVER_CONFIG LYT.ScheduledPayoutConfig -> do
-      spCfg <- SQSPC.findAllByMerchantOpCityId (cast merchantOpCityId)
+      spCfg <- getConfigList (ScheduledPayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, isEnabled = Nothing, payoutCategory = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON spCfg}
     LYT.DRIVER_CONFIG LYT.TagActionNotificationConfig -> do
-      tanCfg <- SQTANC.findAllByMerchantOperatingCityId (cast merchantOpCityId)
+      tanCfg <- getConfigList (TagActionNotificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, notificationKey = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON tanCfg}
     LYT.DRIVER_CONFIG LYT.FleetOwnerDocumentVerificationConfig -> do
-      fodvCfg <- CQFODVC.findAllByMerchantOpCityId (cast merchantOpCityId) (Just [])
+      fodvCfg <- getConfigList (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, role = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON fodvCfg}
     LYT.DRIVER_CONFIG LYT.CoinsConfig -> do
-      coinsCfg <- CQCC.findAllByMerchantOptCityId (cast merchantOpCityId)
+      coinsCfg <- getConfigList (CoinsConfigDimensions {merchantOptCityId = merchantOpCityId.getId, eventFunction = Nothing, merchantId = Nothing, active = Nothing, vehicleCategory = Nothing, serviceTierType = Nothing, eventName = Nothing, tripCategoryType = Nothing, configId = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON coinsCfg}
     LYT.DRIVER_CONFIG LYT.MerchantServiceConfig -> do
-      mscCfg <- SQMSCE.findAllMerchantOpCityId (cast merchantOpCityId)
+      mscCfg <- getConfigList (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON mscCfg}
     LYT.UI_DRIVER dt pt -> do
       let uiConfigReq = LYT.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
