@@ -1,0 +1,29 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           dashboard-repl-check
+version:        0.1.0.0
+description:    Thin package whose sole purpose is to pull in both rider-dashboard and provider-dashboard so a single cabal repl covers the entire dashboard dep tree.
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2023 Juspay Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+library
+  other-modules:
+      Paths_dashboard_repl_check
+  build-depends:
+      provider-dashboard
+    , rider-dashboard
+  default-language: Haskell2010
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie

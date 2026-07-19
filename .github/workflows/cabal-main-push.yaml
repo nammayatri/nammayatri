@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   cabal-build:
-    name: Dashboard Repl Artifact Build
+    name: Cabal Build + Dashboard Repl Artifact
     runs-on: x86_64_main_push
     steps:
       - name: Checkout repository
@@ -34,18 +34,17 @@ jobs:
           CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
 
           if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
-            echo "Cache key changed, busting cabal store, HIE and repl caches"
+            echo "Cache key changed, busting dist-newstyle, cabal store, HIE and repl caches"
+            rm -rf "$CACHE_ROOT/dist-newstyle"
             rm -rf "$CACHE_ROOT/.cabal-dir"
             rm -rf "$CACHE_ROOT/hie"
-            rm -rf "$CACHE_ROOT/dist-newrepl-rider-dashboard"
-            rm -rf "$CACHE_ROOT/dist-newrepl-provider-dashboard"
+            rm -rf "$CACHE_ROOT/dist-newrepl-dashboard-check"
           fi
 
-          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir" "$CACHE_ROOT/dist-newrepl-rider-dashboard" "$CACHE_ROOT/dist-newrepl-provider-dashboard"
+          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir" "$CACHE_ROOT/dist-newrepl-dashboard-check"
           echo "$CURRENT_KEY" > "$KEY_FILE"
           ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
-          ln -sfn "$CACHE_ROOT/dist-newrepl-rider-dashboard" Backend/dist-newrepl-rider-dashboard
-          ln -sfn "$CACHE_ROOT/dist-newrepl-provider-dashboard" Backend/dist-newrepl-provider-dashboard
+          ln -sfn "$CACHE_ROOT/dist-newrepl-dashboard-check" Backend/dist-newrepl-dashboard-check
 
       - name: Link HIE dirs to persistent cache
         run: |
@@ -59,24 +58,22 @@ jobs:
             ln -sfn "$HIE_CACHE/$pkg" "$pkg/.hie"
           done
 
-      - name: Build repl artifacts (rider-dashboard)
+      - name: Build (incremental cabal)
         run: |
           nix develop .#backend --command bash -c "
             export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir
             cd Backend
-            cabal repl rider-dashboard \
-              --repl-options='-fno-code -fwrite-interface' \
-              --builddir=dist-newrepl-rider-dashboard <<< ':quit'
+            cabal build all 2>&1
           "
 
-      - name: Build repl artifacts (provider-dashboard)
+      - name: Build repl artifacts (dashboard-repl-check)
         run: |
           nix develop .#backend --command bash -c "
             export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir
             cd Backend
-            cabal repl provider-dashboard \
+            cabal repl dashboard-repl-check \
               --repl-options='-fno-code -fwrite-interface' \
-              --builddir=dist-newrepl-provider-dashboard <<< ':quit'
+              --builddir=dist-newrepl-dashboard-check <<< ':quit'
           "
 
       - name: Setup MinIO client
@@ -93,7 +90,7 @@ jobs:
           rm -rf "$CACHE_ROOT/.nix-deps"
           mkdir -p "$CACHE_ROOT/.nix-deps"
           cd "$CACHE_ROOT"
-          for hi in $(find dist-newrepl-rider-dashboard -name "*.hi" -print -quit 2>/dev/null); do
+          for hi in $(find dist-newrepl-dashboard-check -name "*.hi" -print -quit 2>/dev/null); do
             strings "$hi" | grep -oE '/nix/store/[^ ]+\.a$' | sort -u | while read -r dep; do
               if [ -f "$dep" ]; then
                 rel="${dep#/}"
@@ -105,13 +102,9 @@ jobs:
           done
           cd -
 
-          tar -I 'zstd -T0 -3' -cf rider-dashboard.tar.zst -C "$CACHE_ROOT" dist-newrepl-rider-dashboard/
-          mc cp rider-dashboard.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/rider-dashboard.tar.zst"
-          rm -f rider-dashboard.tar.zst
-
-          tar -I 'zstd -T0 -3' -cf provider-dashboard.tar.zst -C "$CACHE_ROOT" dist-newrepl-provider-dashboard/
-          mc cp provider-dashboard.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/provider-dashboard.tar.zst"
-          rm -f provider-dashboard.tar.zst
+          tar -I 'zstd -T0 -3' -cf dashboard-check.tar.zst -C "$CACHE_ROOT" dist-newrepl-dashboard-check/
+          mc cp dashboard-check.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/dashboard-check.tar.zst"
+          rm -f dashboard-check.tar.zst
 
           tar -I 'zstd -T0 -3' -cf repl-support.tar.zst -C "$CACHE_ROOT" --exclude='.cabal-dir/logs' hie/ .cabal-dir/ .nix-deps/
           mc cp repl-support.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/repl-support.tar.zst"

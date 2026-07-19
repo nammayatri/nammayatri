@@ -1,28 +1,6 @@
 name: Cabal PR Repl Check — Rider Dashboard
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches:
-      - "main"
-    paths:
-      # Rider app — changes here cascade into rider-dashboard
-      - "Backend/app/rider-platform/**"
-      # Rider dashboard sources
-      - "Backend/app/dashboard/rider-dashboard/**"
-      # Shared dashboard packages that rider-dashboard pulls in
-      - "Backend/app/dashboard/CommonAPIs/**"
-      - "Backend/app/dashboard/Lib/**"
-      # Shared libraries
-      - "Backend/lib/**"
-      # Cabal / nix build inputs that affect compilation
-      - "Backend/cabal.project"
-      - "Backend/default.nix"
-      - "Backend/nix/**"
-      - "flake.nix"
-      - "flake.lock"
-      # This workflow itself
-      - ".github/workflows/cabal-pr-repl-check-rider-dashboard.yaml"
   workflow_dispatch:
 
 concurrency:
