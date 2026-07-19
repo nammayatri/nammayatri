@@ -712,3 +712,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_rewards_management boolean 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN bus_tracking_notification_tiers text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ALTER COLUMN bus_tracking_notification_tiers TYPE text[];

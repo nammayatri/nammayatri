@@ -531,6 +531,7 @@ RiderConfig:
     kaptureConfig: "json"
     exotelAppIdMapping: "json"
     cxAgentDetails: text []
+    busTrackingNotificationTiers: text[]
     sensitiveWords: text []
     sensitiveWordsForExactMatch: text []
     validCancellationReasonCodesForImmediateCharge: text []
