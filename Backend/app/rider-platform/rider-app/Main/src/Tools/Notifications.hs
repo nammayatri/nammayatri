@@ -27,7 +27,6 @@ import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.EmptyDynamicParam
 import Domain.Types.Estimate (Estimate)
 import qualified Domain.Types.EstimateStatus as DEstimate
-import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.Journey
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantMessage as DMM
@@ -87,6 +86,7 @@ import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.NotificationSoundsConfig as SQNSC
