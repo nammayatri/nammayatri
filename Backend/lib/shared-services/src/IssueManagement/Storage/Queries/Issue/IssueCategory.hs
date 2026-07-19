@@ -33,6 +33,7 @@ updateByPrimaryKey IssueCategory {..} =
       Set BeamIC.igmCategory igmCategory,
       Set BeamIC.enableKapture enableKapture,
       Set BeamIC.showInDefault showInDefault,
+      Set BeamIC.xyneChannelId xyneChannelId,
       Set BeamIC.createdAt createdAt,
       Set BeamIC.updatedAt updatedAt
     ]
@@ -127,5 +128,6 @@ instance ToTType' BeamIC.IssueCategory IssueCategory where
         BeamIC.updatedAt = updatedAt,
         BeamIC.igmCategory = igmCategory,
         BeamIC.enableKapture = enableKapture,
-        BeamIC.showInDefault = showInDefault
+        BeamIC.showInDefault = showInDefault,
+        BeamIC.xyneChannelId = xyneChannelId
       }

@@ -39,11 +39,12 @@ buildConfirmReq ::
   DBooking.FRFSTicketBooking ->
   BecknConfig ->
   Text ->
+  Text ->
   Utils.BppData ->
   Context.City ->
   [DCategorySelect] ->
   m (Spec.ConfirmReq)
-buildConfirmReq rider booking bapConfig txnId bppData city categories = do
+buildConfirmReq rider booking bapConfig txnId paymentId bppData city categories = do
   let transactionId = booking.searchId.getId
       messageId = booking.id.getId
 
@@ -57,17 +58,17 @@ buildConfirmReq rider booking bapConfig txnId bppData city categories = do
   pure $
     Spec.ConfirmReq
       { confirmReqContext = context,
-        confirmReqMessage = tfConfirmMessage rider booking txnId mPaymentParams mSettlementType categories
+        confirmReqMessage = tfConfirmMessage rider booking txnId paymentId mPaymentParams mSettlementType categories
       }
 
-tfConfirmMessage :: (Maybe RiderName, Maybe RiderNumber) -> DBooking.FRFSTicketBooking -> Text -> Maybe BknPaymentParams -> Maybe Text -> [DCategorySelect] -> Spec.ConfirmReqMessage
-tfConfirmMessage rider booking txnId mPaymentParams mSettlementType categories =
+tfConfirmMessage :: (Maybe RiderName, Maybe RiderNumber) -> DBooking.FRFSTicketBooking -> Text -> Text -> Maybe BknPaymentParams -> Maybe Text -> [DCategorySelect] -> Spec.ConfirmReqMessage
+tfConfirmMessage rider booking txnId paymentId mPaymentParams mSettlementType categories =
   Spec.ConfirmReqMessage
-    { confirmReqMessageOrder = tfOrder rider booking txnId mPaymentParams mSettlementType categories
+    { confirmReqMessageOrder = tfOrder rider booking txnId paymentId mPaymentParams mSettlementType categories
     }
 
-tfOrder :: (Maybe RiderName, Maybe RiderNumber) -> DBooking.FRFSTicketBooking -> Text -> Maybe BknPaymentParams -> Maybe Text -> [DCategorySelect] -> Spec.Order
-tfOrder rider booking txnId mPaymentParams mSettlementType categories =
+tfOrder :: (Maybe RiderName, Maybe RiderNumber) -> DBooking.FRFSTicketBooking -> Text -> Text -> Maybe BknPaymentParams -> Maybe Text -> [DCategorySelect] -> Spec.Order
+tfOrder rider booking txnId paymentId mPaymentParams mSettlementType categories =
   Spec.Order
     { orderBilling = tfBilling rider,
       orderCancellation = Nothing,
@@ -76,7 +77,7 @@ tfOrder rider booking txnId mPaymentParams mSettlementType categories =
       orderFulfillments = Nothing,
       orderId = Nothing,
       orderItems = tfItems booking categories,
-      orderPayments = tfPayments booking categories txnId mPaymentParams mSettlementType,
+      orderPayments = tfPayments booking categories txnId paymentId mPaymentParams mSettlementType,
       orderProvider = tfProvider booking,
       orderQuote = Nothing,
       orderTags = Nothing,
@@ -123,12 +124,12 @@ tfQuantity quantity =
               }
       }
 
-tfPayments :: DBooking.FRFSTicketBooking -> [DCategorySelect] -> Text -> Maybe BknPaymentParams -> Maybe Text -> Maybe [Spec.Payment]
-tfPayments _ categories txnId mPaymentParams mSettlementType = do
+tfPayments :: DBooking.FRFSTicketBooking -> [DCategorySelect] -> Text -> Text -> Maybe BknPaymentParams -> Maybe Text -> Maybe [Spec.Payment]
+tfPayments _ categories txnId paymentId mPaymentParams mSettlementType = do
   let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromDCategorySelect categories)
   Just $
     singleton $
-      Utils.mkPaymentForConfirmReq Spec.PAID (Just $ encodeToText fareParameters.totalPrice.amount) (Just txnId) mPaymentParams mSettlementType (Just fareParameters.currency) Nothing
+      Utils.mkPaymentForConfirmReq Spec.PAID (Just $ encodeToText fareParameters.totalPrice.amount) (Just txnId) mPaymentParams mSettlementType (Just fareParameters.currency) Nothing (Just paymentId)
 
 tfProvider :: DBooking.FRFSTicketBooking -> Maybe Spec.Provider
 tfProvider booking =

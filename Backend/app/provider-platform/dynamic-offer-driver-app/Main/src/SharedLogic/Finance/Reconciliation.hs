@@ -33,6 +33,8 @@ module SharedLogic.Finance.Reconciliation
     ReconEntryInput (..),
     mkDefaultReconEntryInput,
     mkReconEntry,
+    subscriptionIndirectTaxTxn,
+    subscriptionPurchaseGstAmounts,
     -- Standardised mismatch reason strings
     reasonUnknownRideMode,
     reasonUnsupportedBookingStatus,
@@ -42,6 +44,10 @@ module SharedLogic.Finance.Reconciliation
     reasonNoMatchingSubscription,
     reasonAmountMismatch,
     reasonNoMatchingPayoutRequest,
+    reasonMissingSubscriptionTransaction,
+    reasonPartialSubscriptionConsumption,
+    reasonOverSubscriptionConsumption,
+    reasonSubscriptionCreditBalanceMismatch,
   )
 where
 
@@ -97,6 +103,7 @@ data ReconciliationJobType
   | DSSRvsSubscription
   | PgPaymentVsSubscription
   | PgPayoutVsPayoutRequest
+  | PurchaseVsSubscriptionTransaction
   | OtherRecon Text
   deriving (Show, Eq, Generic)
 
@@ -110,6 +117,7 @@ instance FromJSON ReconciliationJobType where
   parseJSON (A.String "PayoutRecon") = pure PayoutRecon
   parseJSON (A.String "PgPaymentVsSubscription") = pure PgPaymentVsSubscription
   parseJSON (A.String "PgPayoutVsPayoutRequest") = pure PgPayoutVsPayoutRequest
+  parseJSON (A.String "PurchaseVsSubscriptionTransaction") = pure PurchaseVsSubscriptionTransaction
   parseJSON (A.String t) = pure $ OtherRecon t
   parseJSON _ = fail "Invalid ReconciliationJobType"
 
@@ -120,6 +128,7 @@ jobTypeKey DSSRvsSubscription = "DSSRvsSubscription"
 jobTypeKey PayoutRecon = "PayoutRecon"
 jobTypeKey PgPaymentVsSubscription = "PgPaymentVsSubscription"
 jobTypeKey PgPayoutVsPayoutRequest = "PgPayoutVsPayoutRequest"
+jobTypeKey PurchaseVsSubscriptionTransaction = "PurchaseVsSubscriptionTransaction"
 jobTypeKey (OtherRecon t) = t
 
 -- ────────────────────────────────────────────────────────────────────
@@ -209,6 +218,18 @@ reasonAmountMismatch = "Amount mismatch"
 reasonNoMatchingPayoutRequest :: Text
 reasonNoMatchingPayoutRequest = "No matching credited payout request found"
 
+reasonMissingSubscriptionTransaction :: Text
+reasonMissingSubscriptionTransaction = "Missing subscription credit transaction"
+
+reasonPartialSubscriptionConsumption :: Text
+reasonPartialSubscriptionConsumption = "Partial subscription consumption"
+
+reasonOverSubscriptionConsumption :: Text
+reasonOverSubscriptionConsumption = "Over-consumption of subscription entitlement"
+
+reasonSubscriptionCreditBalanceMismatch :: Text
+reasonSubscriptionCreditBalanceMismatch = "Subscription credit balance mismatch"
+
 -- ────────────────────────────────────────────────────────────────────
 -- Shared pure helpers
 -- ────────────────────────────────────────────────────────────────────
@@ -283,8 +304,19 @@ data ReconEntryInput = ReconEntryInput
     targetId :: Maybe Text,
     settlementDate :: Maybe UTCTime,
     transactionDate :: Maybe UTCTime,
+    pgTransactionDate :: Maybe UTCTime,
     rrn :: Maybe Text,
-    settlementMode :: Maybe Text
+    utr :: Maybe Text,
+    settlementMode :: Maybe Text,
+    pgOrderId :: Maybe Text,
+    pgTxnId :: Maybe Text,
+    paymentOrderId :: Maybe Text,
+    subscriptionAmountExclGst :: Maybe HighPrecMoney,
+    gstOnSubscription :: Maybe HighPrecMoney,
+    totalTransactionAmount :: Maybe HighPrecMoney,
+    purchaseStatus :: Maybe Text,
+    planName :: Maybe Text,
+    remainingSubscriptionBalance :: Maybe HighPrecMoney
   }
 
 mkDefaultReconEntryInput :: ReconEntry.ReconciliationType -> ReconEntryInput
@@ -306,9 +338,48 @@ mkDefaultReconEntryInput rt =
       targetId = Nothing,
       settlementDate = Nothing,
       transactionDate = Nothing,
+      pgTransactionDate = Nothing,
       rrn = Nothing,
-      settlementMode = Nothing
+      utr = Nothing,
+      settlementMode = Nothing,
+      pgOrderId = Nothing,
+      pgTxnId = Nothing,
+      paymentOrderId = Nothing,
+      subscriptionAmountExclGst = Nothing,
+      gstOnSubscription = Nothing,
+      totalTransactionAmount = Nothing,
+      purchaseStatus = Nothing,
+      planName = Nothing,
+      remainingSubscriptionBalance = Nothing
     }
+
+data SubscriptionPurchaseGstAmounts = SubscriptionPurchaseGstAmounts
+  { amountExclGst :: HighPrecMoney,
+    gst :: HighPrecMoney,
+    totalInclGst :: HighPrecMoney
+  }
+  deriving (Show, Eq)
+
+subscriptionIndirectTaxTxn :: [IndirectTax.IndirectTaxTransaction] -> Maybe IndirectTax.IndirectTaxTransaction
+subscriptionIndirectTaxTxn =
+  find (\txn -> txn.transactionType == IndirectTax.Subscription)
+
+subscriptionPurchaseGstAmounts :: HighPrecMoney -> Maybe IndirectTax.IndirectTaxTransaction -> SubscriptionPurchaseGstAmounts
+subscriptionPurchaseGstAmounts planFee =
+  maybe
+    ( SubscriptionPurchaseGstAmounts
+        { amountExclGst = planFee,
+          gst = 0,
+          totalInclGst = planFee
+        }
+    )
+    ( \tax ->
+        SubscriptionPurchaseGstAmounts
+          { amountExclGst = tax.taxableValue,
+            gst = tax.totalGstAmount,
+            totalInclGst = tax.taxableValue + tax.totalGstAmount
+          }
+    )
 
 mkReconEntry :: ReconEntryInput -> UTCTime -> Id ReconEntry.ReconciliationEntry -> ReconEntry.ReconciliationEntry
 mkReconEntry inp now entryId =
@@ -342,8 +413,19 @@ mkReconEntry inp now entryId =
           targetId = inp.targetId,
           settlementDate = inp.settlementDate,
           transactionDate = inp.transactionDate,
+          pgTransactionDate = inp.pgTransactionDate,
           rrn = inp.rrn,
-          settlementMode = inp.settlementMode
+          utr = inp.utr,
+          settlementMode = inp.settlementMode,
+          pgOrderId = inp.pgOrderId,
+          pgTxnId = inp.pgTxnId,
+          paymentOrderId = inp.paymentOrderId,
+          subscriptionAmountExclGst = inp.subscriptionAmountExclGst,
+          gstOnSubscription = inp.gstOnSubscription,
+          totalTransactionAmount = inp.totalTransactionAmount,
+          purchaseStatus = inp.purchaseStatus,
+          planName = inp.planName,
+          remainingSubscriptionBalance = inp.remainingSubscriptionBalance
         }
 
 -- ────────────────────────────────────────────────────────────────────

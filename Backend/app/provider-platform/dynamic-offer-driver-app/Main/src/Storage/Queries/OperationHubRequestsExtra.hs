@@ -53,16 +53,17 @@ findAllRequestsInRange from to limit offset mbMobileNumberHash mbDriverMobileNum
             B.select $
               B.limit_ (toInteger limit) $
                 B.offset_ (toInteger offset) $
-                  B.filter_'
-                    ( \(operationHubRequests, creator, operationHub, _driverPerson) ->
-                        commonFilters operationHubRequests creator operationHub
-                    )
-                    do
-                      operationHubRequests <- B.all_ (BeamCommon.operationHubRequests BeamCommon.atlasDB)
-                      operationHub <- B.join_ (BeamCommon.operationHub BeamCommon.atlasDB) (\operationHub -> BeamOHR.operationHubId operationHubRequests B.==. BeamOH.id operationHub)
-                      creator <- B.leftJoin_' (B.all_ (BeamCommon.person BeamCommon.atlasDB)) (\creator -> B.sqlBool_ (BeamOHR.creatorId operationHubRequests B.==. BeamP.id creator))
-                      driverPerson <- B.join_' (BeamCommon.person BeamCommon.atlasDB) (\dp -> BeamOHR.driverId operationHubRequests B.==?. B.just_ (BeamP.id dp) B.&&?. BeamP.mobileNumberHash dp B.==?. B.val_ (Just driverMobileNumberHash))
-                      pure (operationHubRequests, creator, operationHub, driverPerson)
+                  B.orderBy_ (\(operationHubRequests, _, _, _) -> B.desc_ operationHubRequests.updatedAt) $
+                    B.filter_'
+                      ( \(operationHubRequests, creator, operationHub, _driverPerson) ->
+                          commonFilters operationHubRequests creator operationHub
+                      )
+                      do
+                        operationHubRequests <- B.all_ (BeamCommon.operationHubRequests BeamCommon.atlasDB)
+                        operationHub <- B.join_ (BeamCommon.operationHub BeamCommon.atlasDB) (\operationHub -> BeamOHR.operationHubId operationHubRequests B.==. BeamOH.id operationHub)
+                        creator <- B.leftJoin_' (B.all_ (BeamCommon.person BeamCommon.atlasDB)) (\creator -> B.sqlBool_ (BeamOHR.creatorId operationHubRequests B.==. BeamP.id creator))
+                        driverPerson <- B.join_' (BeamCommon.person BeamCommon.atlasDB) (\dp -> BeamOHR.driverId operationHubRequests B.==?. B.just_ (BeamP.id dp) B.&&?. BeamP.mobileNumberHash dp B.==?. B.val_ (Just driverMobileNumberHash))
+                        pure (operationHubRequests, creator, operationHub, driverPerson)
       pure $ fmap (map (\(a, b, c, _) -> (a, b, c))) r
     Nothing ->
       -- No driver mobile filter: skip the join entirely
@@ -71,15 +72,16 @@ findAllRequestsInRange from to limit offset mbMobileNumberHash mbDriverMobileNum
           B.select $
             B.limit_ (toInteger limit) $
               B.offset_ (toInteger offset) $
-                B.filter_'
-                  ( \(operationHubRequests, creator, operationHub) ->
-                      commonFilters operationHubRequests creator operationHub
-                  )
-                  do
-                    operationHubRequests <- B.all_ (BeamCommon.operationHubRequests BeamCommon.atlasDB)
-                    operationHub <- B.join_ (BeamCommon.operationHub BeamCommon.atlasDB) (\operationHub -> BeamOHR.operationHubId operationHubRequests B.==. BeamOH.id operationHub)
-                    creator <- B.leftJoin_' (B.all_ (BeamCommon.person BeamCommon.atlasDB)) (\creator -> B.sqlBool_ (BeamOHR.creatorId operationHubRequests B.==. BeamP.id creator))
-                    pure (operationHubRequests, creator, operationHub)
+                B.orderBy_ (\(operationHubRequests, _, _) -> B.desc_ operationHubRequests.updatedAt) $
+                  B.filter_'
+                    ( \(operationHubRequests, creator, operationHub) ->
+                        commonFilters operationHubRequests creator operationHub
+                    )
+                    do
+                      operationHubRequests <- B.all_ (BeamCommon.operationHubRequests BeamCommon.atlasDB)
+                      operationHub <- B.join_ (BeamCommon.operationHub BeamCommon.atlasDB) (\operationHub -> BeamOHR.operationHubId operationHubRequests B.==. BeamOH.id operationHub)
+                      creator <- B.leftJoin_' (B.all_ (BeamCommon.person BeamCommon.atlasDB)) (\creator -> B.sqlBool_ (BeamOHR.creatorId operationHubRequests B.==. BeamP.id creator))
+                      pure (operationHubRequests, creator, operationHub)
   case res of
     Right res' -> do
       finalRes <- forM res' $ \(operationHubRequests, mbPerson, operationHub) -> runMaybeT $ do

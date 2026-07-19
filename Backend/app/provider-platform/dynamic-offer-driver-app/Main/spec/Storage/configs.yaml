@@ -25,7 +25,7 @@ DriverPoolConfig:
     merchantOperatingCityId: Id MerchantOperatingCity
     minRadiusOfSearch: Meters
     maxRadiusOfSearch: Meters
-    radiusStepSize: Meters
+    radiusStepSize: Maybe Meters
     driverPositionInfoExpiry: Maybe Seconds
     actualDistanceThreshold: Maybe Meters
     maxDriverQuotesRequired: Int
@@ -103,6 +103,7 @@ DriverPoolConfig:
     enableForwardBatching: "false"
     maxParallelSearchRequestsOnRide: "1"
     selfRequestIfRiderIsDriver: "false"
+    radiusStepSize: "500"
 
   queries:
     findAllByMerchantOpCityId:

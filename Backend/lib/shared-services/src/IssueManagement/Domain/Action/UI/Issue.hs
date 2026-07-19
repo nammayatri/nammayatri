@@ -122,7 +122,15 @@ data ServiceHandle m = ServiceHandle
     -- every chat message. @Nothing@ makes the call a no-op. Only XyneSpaces
     -- has a matching endpoint; Kapture/Zendesk fold status into
     -- 'updateTicket' already.
-    mbUpdateTicketStatus :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketStatusReq -> m ())
+    mbUpdateTicketStatus :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketStatusReq -> m ()),
+    -- | Optional CSAT-only sync via XyneSpaces' @POST
+    -- /api/csat/external/:ticketId@. Decoupled from 'updateTicket' /
+    -- 'mbUpdateTicketStatus' the same way those two are decoupled from each
+    -- other — a satisfaction rating is a distinct event from a chat comment
+    -- or a status change. The domain-level 'updateTicketCsat' invokes this
+    -- when a status update carries a 'Common.CustomerRating'. @Nothing@ makes
+    -- the call a no-op. Only XyneSpaces has a matching endpoint.
+    mbUpdateTicketCsat :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketCsatReq -> m ())
   }
 
 getLanguage :: EsqDBReplicaFlow m r => Id Person -> Maybe Language -> ServiceHandle m -> m Language
@@ -699,7 +707,8 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             classification = castIdentifierToClassification identifier,
             rideDescription = Just info,
             becknIssueId,
-            ticketContext = Just TIT.IssueTicket
+            ticketContext = Just TIT.IssueTicket,
+            xyneChannelId = category.xyneChannelId
           }
 
     buildRideInfo :: (BeamFlow m r, EncFlow m r) => MerchantOperatingCity -> UTCTime -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> ServiceHandle m -> m TIT.RideInfo
@@ -945,6 +954,7 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
         -- same answer just re-fetches the same messages without growing the chat.
         (RESOLVED, Just Common.ESCALATE) -> do
           QIR.updateCustomerResponse issueReportId Common.ESCALATE
+          whenJust customerRating $ \rating -> updateTicketCsat issueReport rating merchantId merchantOpCityId issueHandle
           issueConfig <- issueHandle.findIssueConfig merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
           issueMessageTranslation <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) issueConfig.onCustomerNotSatisfiedMsgs
           let issueMessages = mkIssueMessageList (sequence issueMessageTranslation) language issueConfig mbRideInfoRes
@@ -955,12 +965,15 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
                 if alreadyAppended
                   then issueReport.chats
                   else issueReport.chats ++ map (\message -> mkIssueChat IssueMessage message.id.getId now) issueMessages
-          unless alreadyAppended $ QIR.updateChats issueReportId updatedChats
+          unless alreadyAppended $ do
+            QIR.updateChats issueReportId updatedChats
+            mapM_ (\message -> forwardChatToTicketServiceAs "Auto Reply" issueReport identifier issueHandle message.message []) issueMessages
           pure $ Common.IssueStatusUpdateRes {messages = issueMessages}
         _ | issueReport.status == status -> pure Common.IssueStatusUpdateRes {messages = []}
         (CLOSED, _) -> do
           QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
           whenJust customerResponse $ QIR.updateCustomerResponse issueReportId
+          whenJust customerRating $ \rating -> updateTicketCsat issueReport rating merchantId merchantOpCityId issueHandle
           pure $
             Common.IssueStatusUpdateRes
               { messages = []
@@ -969,13 +982,15 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
           QIR.updateIssueReopenedCount issueReportId (issueReport.reopenedCount + 1)
           QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
           whenJust customerResponse $ QIR.updateCustomerResponse issueReportId
-          updateTicketStatus issueReport TIT.Reopened merchantId merchantOpCityId issueHandle "Ticket reopened"
+          updateTicketStatus issueReport TIT.Reopened merchantId merchantOpCityId issueHandle identifier "Ticket reopened"
+          whenJust customerRating $ \rating -> updateTicketCsat issueReport rating merchantId merchantOpCityId issueHandle
           issueConfig <- issueHandle.findIssueConfig merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
           issueMessageTranslation <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) issueConfig.onIssueReopenMsgs
           let issueMessages = mkIssueMessageList (sequence issueMessageTranslation) language issueConfig mbRideInfoRes
           now <- getCurrentTime
           let updatedChats = issueReport.chats ++ map (\message -> mkIssueChat IssueMessage message.id.getId now) issueMessages
           QIR.updateChats issueReportId updatedChats
+          mapM_ (\message -> forwardChatToTicketServiceAs "Auto Reply" issueReport identifier issueHandle message.message []) issueMessages
           pure $
             Common.IssueStatusUpdateRes
               { messages = issueMessages
@@ -991,12 +1006,16 @@ updateTicketStatus ::
   Id Merchant ->
   Id MerchantOperatingCity ->
   ServiceHandle m ->
+  Identifier ->
   Text ->
   m ()
-updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHandle comment =
+updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHandle identifier comment =
   case issueReport.ticketId of
     Nothing -> return ()
     Just ticketId -> do
+      mbCategoryChannelId <- case issueReport.categoryId of
+        Just cid -> ((.xyneChannelId) =<<) <$> CQIC.findById cid identifier
+        Nothing -> pure Nothing
       ticketResponse <-
         withTryCatch
           "updateTicket:updateIssue"
@@ -1005,7 +1024,7 @@ updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHa
           -- dispatcher fans out to each secondary and logs their failures
           -- separately without affecting this Right/Left outcome (which reflects
           -- only the primary update).
-          (issueHandle.updateTicket merchantId merchantOperatingCityId (fromMaybe [] issueReport.additionalTicketIds) TIT.UpdateTicketReq {comment = comment, ticketId = ticketId, status = status, rideDescription = Nothing, issueDetails = Nothing, requesterId = Nothing, ticketContext = Nothing, name = Nothing, phoneNo = Nothing})
+          (issueHandle.updateTicket merchantId merchantOperatingCityId (fromMaybe [] issueReport.additionalTicketIds) TIT.UpdateTicketReq {comment = comment, ticketId = ticketId, status = status, rideDescription = Nothing, issueDetails = Nothing, requesterId = Nothing, ticketContext = Nothing, name = Nothing, phoneNo = Nothing, xyneChannelId = mbCategoryChannelId})
       case ticketResponse of
         Left err -> logTagInfo "Update Ticket API failed - " $ show err
         Right _ -> return ()
@@ -1021,7 +1040,42 @@ updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHa
         void $
           withTryCatch
             "updateTicketStatus:xyne"
-            (syncStatus merchantId merchantOperatingCityId TIT.UpdateTicketStatusReq {xyneTicketId = xyneTicketId, status = status})
+            (syncStatus merchantId merchantOperatingCityId TIT.UpdateTicketStatusReq {xyneTicketId = xyneTicketId, status = status, xyneChannelId = mbCategoryChannelId})
+
+-- | Best-effort CSAT sync to the ticket provider (XyneSpaces-only endpoint).
+-- Narrower than 'updateTicketStatus' by design: a satisfaction rating is a
+-- distinct event from a chat comment, so no 'updateTicket' comment-write
+-- accompanies it. No-op when the issue has no provider ticket or the app does
+-- not wire 'mbUpdateTicketCsat'.
+updateTicketCsat ::
+  ( EncFlow m r,
+    BeamFlow m r
+  ) =>
+  D.IssueReport ->
+  Common.CustomerRating ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  ServiceHandle m ->
+  m ()
+updateTicketCsat issueReport rating merchantId merchantOperatingCityId issueHandle =
+  case issueReport.ticketId of
+    Nothing -> return ()
+    Just ticketId ->
+      whenJust issueHandle.mbUpdateTicketCsat $ \syncCsat -> do
+        let xyneTicketId =
+              case find (\e -> e.service == TicketTypes.XyneSpaces) (fromMaybe [] issueReport.additionalTicketIds) of
+                Just entry -> entry.ticketId
+                Nothing -> ticketId
+            -- Only "GOOD" is confirmed from Xyne's docs (see the caveat on
+            -- 'TIT.UpdateTicketCsatReq'); "BAD" and the 5/1 score pairing are
+            -- unverified against Xyne's schema and may need adjusting.
+            (ratingText, score) = case rating of
+              Common.THUMBS_UP -> ("GOOD" :: Text, 5 :: Int)
+              Common.THUMBS_DOWN -> ("BAD", 1)
+        void $
+          withTryCatch
+            "updateTicketCsat:xyne"
+            (syncCsat merchantId merchantOperatingCityId TIT.UpdateTicketCsatReq {xyneTicketId = xyneTicketId, rating = ratingText, score = score, comment = Nothing})
 
 processIssueReportTypeActions ::
   BeamFlow m r =>
@@ -1448,7 +1502,8 @@ forwardChatToTicketService issueReport identifier issueHandle messageText mediaI
                 requesterId = Nothing,
                 ticketContext = Just TIT.IssueTicket,
                 name = mbSenderName,
-                phoneNo = mbSenderPhone
+                phoneNo = mbSenderPhone,
+                xyneChannelId = mbCategory >>= (.xyneChannelId)
               }
       -- Prefer the targeted-service handle so we hit Xyne regardless of
       -- whether it is the primary or a secondary. Fall back to the general
@@ -1460,6 +1515,67 @@ forwardChatToTicketService issueReport identifier issueHandle messageText mediaI
       case result of
         Right _ -> pure ()
         Left err -> logTagInfo "Update Ticket (chat) failed - " (show err)
+
+-- | Same forwarding behaviour as 'forwardChatToTicketService', but for messages
+-- not authored by the ticket's own rider/driver (Control Centre dashboard replies,
+-- system-generated Auto Reply prompts) — takes an explicit sender label instead of
+-- resolving 'issueReport.personId' via 'findPersonById'.
+forwardChatToTicketServiceAs ::
+  BeamFlow m r =>
+  Text ->
+  D.IssueReport ->
+  Identifier ->
+  ServiceHandle m ->
+  Text ->
+  [Id D.MediaFile] ->
+  m ()
+forwardChatToTicketServiceAs senderLabel issueReport identifier issueHandle messageText mediaIds =
+  case (issueReport.merchantId, issueReport.merchantOperatingCityId) of
+    (Just merchantId, Just mocId) -> do
+      shouldForward <- maybe (pure False) (\chk -> chk merchantId mocId) issueHandle.mbShouldForwardChatToTicketService
+      when shouldForward $ doForward merchantId mocId
+    _ -> pure ()
+  where
+    doForward merchantId mocId = do
+      mbCategory <- case issueReport.categoryId of
+        Just cid -> CQIC.findById cid identifier
+        Nothing -> pure Nothing
+      mediaUrls <- fmap catMaybes . forM mediaIds $ \mfId -> do
+        mbFile <- CQMF.findById mfId identifier
+        traverse (mediaFileToTicketUri issueHandle) mbFile
+      let xyneTicketId =
+            case find (\e -> e.service == TicketTypes.XyneSpaces) (fromMaybe [] issueReport.additionalTicketIds) of
+              Just entry -> entry.ticketId
+              Nothing -> fromMaybe issueReport.id.getId issueReport.ticketId
+          ticketReq =
+            TIT.UpdateTicketReq
+              { comment = messageText,
+                ticketId = xyneTicketId,
+                status = TIT.Pending,
+                rideDescription = Nothing,
+                issueDetails =
+                  Just
+                    TIT.UpdateIssueDetails
+                      { issueDescription = Nothing,
+                        issueId = Just issueReport.id.getId,
+                        mediaFiles = if null mediaUrls then Nothing else Just mediaUrls,
+                        subCategory = Nothing,
+                        vehicleCategory = Nothing,
+                        category = (.category) <$> mbCategory
+                      },
+                requesterId = Nothing,
+                ticketContext = Just TIT.IssueTicket,
+                name = Just senderLabel,
+                phoneNo = Nothing,
+                xyneChannelId = mbCategory >>= (.xyneChannelId)
+              }
+      let call = case issueHandle.mbUpdateTicketOnService of
+            Just onService -> onService merchantId mocId TicketTypes.XyneSpaces ticketReq
+            Nothing -> issueHandle.updateTicket merchantId mocId [] ticketReq
+      result <- withTryCatch "updateTicket:operatorOrAutoChatMessage" call
+      case result of
+        Right _ -> pure ()
+        Left err -> logTagInfo "Update Ticket (operator/auto chat) failed - " (show err)
 
 -- | Fetches chat messages on an issue ordered by createdAt ascending.
 -- Optionally filters to messages strictly newer than @since@. Used by both

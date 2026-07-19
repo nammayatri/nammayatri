@@ -642,7 +642,7 @@ rideAssignedReqHandler req = do
                       financeCtx = ledgerCtx
                     }
                   mbLedgerInfo
-          result <- RidePaymentFinance.createRidePaymentLedger ledgerCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.tollFare ledgerInfo.tollVatAmount ledgerInfo.platformFee ledgerInfo.offerDiscountAmount ledgerInfo.cashbackPayoutAmount ledgerInfo.rideVatAbsorbedOnDiscount
+          result <- RidePaymentFinance.createRidePaymentLedger ledgerCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.tollFare ledgerInfo.tollVatAmount ledgerInfo.parkingCharge ledgerInfo.parkingChargeVat ledgerInfo.platformFee ledgerInfo.offerDiscountAmount ledgerInfo.cashbackPayoutAmount ledgerInfo.rideVatAbsorbedOnDiscount
           case result of
             Right _ -> logInfo $ "Cash ride assigned: created PENDING BAP ledger + invoice for ride: " <> ride.id.getId
             Left err -> logError $ "Cash ride ledger create failed at assign: " <> show err
@@ -828,7 +828,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
                 Just existingTicketId ->
                   void $
                     withTryCatch "updateTicket:autoConvertSos" $
-                      Ticket.updateSosTicket person.merchantId person.merchantOperatingCityId TIT.UpdateTicketReq {comment = "SOS converted from non-ride to ride", ticketId = existingTicketId, status = TIT.Pending, rideDescription = Just rideInfo, issueDetails = Nothing, requesterId = sos.requesterId, ticketContext = Just TIT.SOSAlert, name = Nothing, phoneNo = Nothing}
+                      Ticket.updateSosTicket person.merchantId person.merchantOperatingCityId TIT.UpdateTicketReq {comment = "SOS converted from non-ride to ride", ticketId = existingTicketId, status = TIT.Pending, rideDescription = Just rideInfo, issueDetails = Nothing, requesterId = sos.requesterId, ticketContext = Just TIT.SOSAlert, name = Nothing, phoneNo = Nothing, xyneChannelId = Nothing}
                 Nothing -> do
                   let trackLink = case riderConfig.sosTrackingLink of
                         Just sosLink -> Text.replace "{#vp#}" "sosTracking" sosLink <> sos.id.getId
@@ -904,11 +904,15 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
         Nothing -> totalFare.amount
       offerBasePrice = mkPrice (Just totalFare.currency) discountApplicableFareAmountTaxIncl
+  -- A tip added while the ride was running is not part of the fare (it never enters the BPP's
+  -- fare params, so it carries no commission or tax) but it is part of what the rider owes.
+  -- `fare` stays the fare the policy computed; `totalFare` is what is actually collected.
+  let totalFareWithTip = mkPrice (Just totalFare.currency) (totalFare.amount + maybe 0 (.amount) ride.tipAmount)
   let rideCommission = maybe booking.commission Just commission
       updRide =
         ride{status = DRide.COMPLETED,
              fare = Just fare,
-             totalFare = Just totalFare,
+             totalFare = Just totalFareWithTip,
              chargeableDistance = convertHighPrecMetersToDistance distanceUnit <$> chargeableDistance,
              traveledDistance = convertHighPrecMetersToDistance distanceUnit <$> traveledDistance,
              tollConfidence,
@@ -995,6 +999,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           cashLedgerInfo.gstAmount
           cashLedgerInfo.tollFare
           cashLedgerInfo.tollVatAmount
+          cashLedgerInfo.parkingCharge
+          cashLedgerInfo.parkingChargeVat
           cashLedgerInfo.platformFee
           cashLedgerInfo.offerDiscountAmount
           cashLedgerInfo.cashbackPayoutAmount
@@ -1110,6 +1116,11 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
               }
           ]
       else pure []
+  -- The tip rides in on the Beckn quote breakup as BUYER_ADDITIONAL_AMOUNT — the BPP emits that line
+  -- whenever ride.tipAmount > 0. We store it as-is, so the fare breakup the rider app shows is exactly
+  -- the one the driver sent: single source on the wire, no local reconstruction. (Tips added after the
+  -- ride has already completed don't arrive on a fresh quote; those are written directly in
+  -- Domain.Action.UI.RidePayment under the same title.)
   SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) (breakups <> offerDiscountBreakup)
   QPFS.clearCache booking.riderId
   createRecentLocationForTaxi booking
@@ -1382,10 +1393,18 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
                   _ -> return ()
                 syncCancellationLedger CallBPPInternal.OverdueCancellationLedger
             else do
-              let scheduleAfter = riderConfig.cancellationPaymentDelay
-                  cancelExecutePaymentIntentJobData = CancelExecutePaymentIntentJobData {bookingId = booking.id, personId = booking.riderId, cancellationAmount = fee, cancellationTax = cancellationTax, rideId = ride.id}
-              logDebug $ "Scheduling cancel execute payment intent job for order: " <> show scheduleAfter
-              createJobIn @_ @'CancelExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (cancelExecutePaymentIntentJobData :: CancelExecutePaymentIntentJobData)
+              -- Manual due: do NOT capture. Cancel/void the ride payment, create a pending
+              -- cancellation due and sync it to the BPP; the rider clears it before the next ride.
+              logDebug $ "[CancellationSettlement] immediateCharge=false, creating manual cancellation due for rideId=" <> ride.id.getId
+              if ride.onlinePayment
+                then void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
+                else void $ RidePaymentFinance.voidRidePaymentEntriesAndInvoice ride.id.getId
+              dueLedgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationBase cancellationTax
+              case dueLedgerResp of
+                Right (_mbInvoiceId, pendingEntryIds) ->
+                  RidePaymentFinance.markEntriesAsDue pendingEntryIds
+                _ -> return ()
+              syncCancellationLedger CallBPPInternal.OverdueCancellationLedger
         (_, Just ride) -> do
           when ride.onlinePayment $ do
             logInfo $ "Cancel payment intent due to rider configs: rideId: " <> ride.id.getId
@@ -1412,6 +1431,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
           let callAtemptByDriver = isJust mbCallStatus
               currentTime = floor $ utcTimeToPOSIXSeconds now
               rideCreatedTime = floor $ utcTimeToPOSIXSeconds ride.createdAt
+              bookingCreatedTime = floor $ utcTimeToPOSIXSeconds booking.createdAt
               driverArrivalTime = floor . utcTimeToPOSIXSeconds <$> ride.driverArrivalTime
               tagData =
                 Y.CancelRideTagData
@@ -1421,6 +1441,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
                     callAtemptByDriver,
                     currentTime,
                     rideCreatedTime,
+                    bookingCreatedTime,
                     merchantOperatingCityId = booking.merchantOperatingCityId,
                     driverArrivalTime
                   }

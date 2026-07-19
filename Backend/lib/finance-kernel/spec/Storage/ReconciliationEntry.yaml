@@ -20,12 +20,12 @@ ReconciliationEntry:
 
     # Matches TypeScript ReconStatus
     ReconciliationStatus:
-      enum: "MATCHED, HIGHER_IN_TARGET, LOWER_IN_TARGET, MISSING_IN_TARGET"
+      enum: "MATCHED, HIGHER_IN_TARGET, LOWER_IN_TARGET, MISSING_IN_TARGET, MISSING_IN_SOURCE"
       derive: "ToParamSchema"
 
     # Matches JSON bookingId field
     ReconciliationType:
-      enum: "DSR_VS_LEDGER, DSR_VS_SUBSCRIPTION, DSSR_VS_SUBSCRIPTION, PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION, PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST"
+      enum: "DSR_VS_LEDGER, DSR_VS_SUBSCRIPTION, DSSR_VS_SUBSCRIPTION, SUBSCRIPTION_PURCHASE_VS_SUBSCRIPTION_TRANSACTION, PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION, PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST"
       derive: "ToParamSchema"
 
     # Matches JSON mode field
@@ -69,8 +69,21 @@ ReconciliationEntry:
     settlementId: Maybe Text  # PG settlement batch ID from pg_*_settlement_report.settlement_id
     settlementDate: Maybe UTCTime  # from settlement report
     transactionDate: Maybe UTCTime  # purchaseTimestamp / createdAt
+    pgTransactionDate: Maybe UTCTime  # external PG txn date (transactionDate is internal)
     rrn: Maybe Text  # bank reference number
+    utr: Maybe Text  # bank UTR (distinct from rrn)
     settlementMode: Maybe Text  # payment method
+    pgOrderId: Maybe Text  # PG order id (external; not paymentOrderId)
+    pgTxnId: Maybe Text  # PG transaction id
+    paymentOrderId: Maybe Text  # internal payment_order.id (linked from subscription_purchase)
+    subscriptionAmountExclGst: Maybe HighPrecMoney  # internal base excl. GST (breakdown of expectedDsrValue)
+    gstOnSubscription: Maybe HighPrecMoney  # internal GST portion
+    totalTransactionAmount: Maybe HighPrecMoney  # internal total incl. GST (= expectedDsrValue for External PG Settlement Report vs Internal PG Settlement Summary)
+
+    # Subscription purchase snapshot at reconciliation time
+    purchaseStatus: Maybe Text  # subscription_purchase.status at EOD job run
+    planName: Maybe Text  # plan.name at EOD job run
+    remainingSubscriptionBalance: Maybe HighPrecMoney  # remaining wallet/FIFO attributable to this subscription
 
     # For debugging - store raw values as JSON
     sourceDetails: Maybe Text

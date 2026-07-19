@@ -244,7 +244,7 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
       _ -> return $ mkPaymentStatusResp paymentStatusResponse paymentOrder.paymentFulfillmentStatus paymentOrder.domainEntityId
   -- Create the Recon Entry and Trigger the Refund Notifications
   case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
-    Right (newPaymentFulfillmentStatus, _, mbDomainTransactionId) -> do
+    Right (newPaymentFulfillmentStatus, mbDomainEntityId, mbDomainTransactionId) -> do
       whenJust paymentOrder.paymentFulfillmentStatus $ \oldPaymentFulfillmentStatus -> do
         let personId = cast @DPayment.Person @Person.Person paymentOrder.personId
         when (newPaymentFulfillmentStatus /= oldPaymentFulfillmentStatus) $ do
@@ -265,7 +265,18 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
               DPayment.FulfillmentPending -> do
                 when (paymentOrder.status /= updatedPaymentOrder.status && updatedPaymentOrder.status == Payment.CHARGED) $ do
                   TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_PENDING paymentOrder.id personId paymentService
-              DPayment.FulfillmentSucceeded -> TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_SUCCESS paymentOrder.id personId paymentService
+              DPayment.FulfillmentSucceeded -> do
+                -- FRFS shuttle bookings get a dedicated shuttle-only reassurance (push + opt-in WhatsApp,
+                -- "tracking available once trip starts"), gated on RiderConfig.busTrackingNotificationTiers.
+                -- When that fires, we SUPPRESS the generic FULFILLMENT_SUCCESS push for that booking; every
+                -- other case (non-shuttle FRFS, non-FRFS) still gets the generic push. Fails safe.
+                handledByShuttle <- case mbDomainEntityId of
+                  Just entityId
+                    | paymentService `elem` [DOrder.FRFSBusBooking, DOrder.FRFSMultiModalBooking] ->
+                      TNotifications.notifyShuttleBookingConfirmed personId (Id entityId)
+                  _ -> pure False
+                unless handledByShuttle $
+                  TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_SUCCESS paymentOrder.id personId paymentService
               _ -> pure ()
         -- Invalidate the Offer List Cache
         case newPaymentFulfillmentStatus of
@@ -807,6 +818,14 @@ getOrderIdForRide rideId = do
   mbOrder <- QPaymentOrder.findByDomainEntityId rideId.getId
   pure $ (.id) <$> mbOrder
 
+-- | Inverse of getOrderIdForRide: a refund_request's orderId is a payment_order id, NOT a ride id.
+--   payment_order.id is an independently generated GUID; the rideId lives on the order's
+--   domainEntityId — never cast the order GUID to a ride GUID.
+getRideIdForOrder :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DOrder.PaymentOrder -> m (Maybe (Id Ride.Ride))
+getRideIdForOrder orderId = do
+  mbOrder <- QPaymentOrder.findById orderId
+  pure $ Id <$> ((.domainEntityId) =<< mbOrder)
+
 -- | Retrieve ALL payment orders for a ride (ride PI + tip PI).
 --   Useful for capture, refund, and status operations that need to act on all orders.
 getAllOrdersForRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Ride.Ride -> m [DOrder.PaymentOrder]
@@ -914,6 +933,8 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
             ledgerInfo.gstAmount
             ledgerInfo.tollFare
             ledgerInfo.tollVatAmount
+            ledgerInfo.parkingCharge
+            ledgerInfo.parkingChargeVat
             ledgerInfo.platformFee
             ledgerInfo.offerDiscountAmount
             ledgerInfo.cashbackPayoutAmount
@@ -1024,7 +1045,7 @@ makeRefundPayment merchantId merchantOpCityId paymentMode refundReq = do
   let refundCall = TPayment.refundPayment merchantId merchantOpCityId paymentMode Nothing
   DPayment.refundPaymentService refundReq refundCall
 
--- | Unified refund status check. Replaces refreshStripeRefund.
+-- | Refresh status for the given Refunds row. Nothing in mbRefundsId = no attempt yet → no refresh.
 getRefundStatusForOrder ::
   ( EncFlow m r,
     EsqDBFlow m r,
@@ -1037,11 +1058,12 @@ getRefundStatusForOrder ::
   Id DMOC.MerchantOperatingCity ->
   Maybe DMPM.PaymentMode ->
   Id DOrder.PaymentOrder ->
+  Maybe (Id DRefunds.Refunds) ->
   m (Maybe Payment.RefundPaymentResp)
-getRefundStatusForOrder merchantId merchantOpCityId paymentMode orderId = do
+getRefundStatusForOrder merchantId merchantOpCityId paymentMode orderId mbRefundsId = do
   let getRefundStatusCall = TPayment.getRefundStatus merchantId merchantOpCityId paymentMode
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
-  DPayment.getRefundStatusService orderId commonMerchantOperatingCityId getRefundStatusCall
+  DPayment.getRefundStatusService orderId mbRefundsId commonMerchantOperatingCityId getRefundStatusCall
 
 paymentErrorHandler ::
   ( EncFlow m r,
@@ -1427,6 +1449,8 @@ zeroEffectivePaymentDueToOffer merchantId merchantOperatingCityId rideId person 
         li.gstAmount
         li.tollFare
         li.tollVatAmount
+        li.parkingCharge
+        li.parkingChargeVat
         li.platformFee
         discountAmount
         li.rideVatAbsorbedOnDiscount

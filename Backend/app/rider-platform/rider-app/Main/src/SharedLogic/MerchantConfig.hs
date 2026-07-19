@@ -28,6 +28,8 @@ module SharedLogic.MerchantConfig
     blockCustomerByIP,
     updateCustomerAuthCountersByIP,
     isIPBlocked,
+    updateCustomerAuthCountersByPhone,
+    checkAuthLimitExceededByPhone,
   )
 where
 
@@ -236,3 +238,41 @@ isIPBlocked clientIP = Redis.withNonCriticalCrossAppRedis $ do
       let blockKey = "Customer:IPBlocked:" <> clientIP
       blockResult <- Redis.get blockKey
       return $ isJust (blockResult :: Maybe Text)
+
+-- | Redis key for the phone-number-hashed auth sliding-window counter.
+-- The phone number is passed as a hash (never the raw number) so no PII is stored in Redis.
+mkPhoneAuthCounterKey :: Text -> Text -> Text
+mkPhoneAuthCounterKey windowTag phoneNumberHash = "Customer:PhoneAuthCount:" <> phoneNumberHash <> ":" <> windowTag
+
+-- | Increment both configured phone-number auth sliding windows using the first
+-- merchant config (if any). No-op for a window that is not configured (Nothing).
+updateCustomerAuthCountersByPhone :: (CacheFlow m r, MonadFlow m) => Text -> [DMC.MerchantConfig] -> m ()
+updateCustomerAuthCountersByPhone phoneNumberHash merchantConfigs = Redis.withNonCriticalCrossAppRedis $
+  whenJust (listToMaybe merchantConfigs) $ \mc -> do
+    whenJust mc.authPhoneNumberCountWindow1 $ SWC.incrementWindowCount (mkPhoneAuthCounterKey "W1" phoneNumberHash)
+    whenJust mc.authPhoneNumberCountWindow2 $ SWC.incrementWindowCount (mkPhoneAuthCounterKey "W2" phoneNumberHash)
+
+-- | Returns @Just resetSeconds@ (the tripped window's length in seconds) when the phone
+-- number has already reached a configured sliding-window auth limit; @Nothing@ otherwise.
+-- Only the first merchant config (if any) is consulted.
+-- A window is enforced only when BOTH its threshold and window options are configured.
+checkAuthLimitExceededByPhone :: (CacheFlow m r, MonadFlow m) => [DMC.MerchantConfig] -> Text -> m (Maybe Int)
+checkAuthLimitExceededByPhone merchantConfigs phoneNumberHash = Redis.withNonCriticalCrossAppRedis $
+  case listToMaybe merchantConfigs of
+    Nothing -> pure Nothing
+    Just mc -> do
+      r1 <- windowExceeded "W1" mc.authPhoneNumberCountWindow1 mc.authPhoneNumberCountThreshold1
+      case r1 of
+        Just _ -> pure r1
+        Nothing -> windowExceeded "W2" mc.authPhoneNumberCountWindow2 mc.authPhoneNumberCountThreshold2
+  where
+    windowExceeded windowTag mbWindow mbThreshold =
+      case (mbWindow, mbThreshold) of
+        (Just window, Just threshold) -> do
+          authCount <- SWC.getCurrentWindowCount (mkPhoneAuthCounterKey windowTag phoneNumberHash) window
+          if authCount >= fromIntegral threshold
+            then do
+              logInfo $ "Phone-number auth rate limit hit for window " <> windowTag <> " with count " <> show authCount
+              pure $ Just (fromIntegral window.period * fromIntegral (SWC.convertPeriodTypeToSeconds window.periodType) :: Int)
+            else pure Nothing
+        _ -> pure Nothing

@@ -25,6 +25,7 @@ Refunds:
     isApiCallSuccess: Maybe Bool
     arn: Maybe Text
     completedAt: Maybe UTCTime
+    actualRefundedAmount: Maybe HighPrecMoney
 
   constraints:
     orderId: SecondaryKey
@@ -50,11 +51,11 @@ Refunds:
       where: orderId
     updateRefundsEntryByResponse:
       kvFunction: updateWithKV
-      params: [initiatedBy, idAssignedByServiceProvider, errorMessage, errorCode, status, arn, completedAt]
+      params: [initiatedBy, idAssignedByServiceProvider, errorMessage, errorCode, status, arn, completedAt, actualRefundedAmount]
       where: id
     updateRefundsEntryByStripeResponse:
       kvFunction: updateWithKV
-      params: [idAssignedByServiceProvider, errorCode, status, isApiCallSuccess, completedAt]
+      params: [idAssignedByServiceProvider, errorCode, status, isApiCallSuccess, completedAt, actualRefundedAmount]
       where: id
     updateIsApiCallSuccess:
       kvFunction: updateWithKV

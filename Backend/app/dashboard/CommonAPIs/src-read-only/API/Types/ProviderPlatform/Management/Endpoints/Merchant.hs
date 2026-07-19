@@ -301,10 +301,8 @@ instance Kernel.Types.HideSecrets.HideSecrets DriverIntelligentPoolConfigUpdateR
 data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
   { minRadiusOfSearch :: Kernel.Types.Common.Meters,
     maxRadiusOfSearch :: Kernel.Types.Common.Meters,
-    radiusStepSize :: Kernel.Types.Common.Meters,
     minRadiusOfSearchWithUnit :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     maxRadiusOfSearchWithUnit :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
-    radiusStepSizeWithUnit :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     driverPositionInfoExpiry :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     actualDistanceThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     actualDistanceThresholdOnRide :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
@@ -345,10 +343,8 @@ instance Kernel.Types.HideSecrets.HideSecrets DriverPoolConfigCreateReq where
 data DriverPoolConfigItem = DriverPoolConfigItem
   { minRadiusOfSearch :: Kernel.Types.Common.Meters,
     maxRadiusOfSearch :: Kernel.Types.Common.Meters,
-    radiusStepSize :: Kernel.Types.Common.Meters,
     minRadiusOfSearchWithUnit :: Kernel.Types.Common.Distance,
     maxRadiusOfSearchWithUnit :: Kernel.Types.Common.Distance,
-    radiusStepSizeWithUnit :: Kernel.Types.Common.Distance,
     driverPositionInfoExpiry :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     actualDistanceThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     actualDistanceThresholdOnRide :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
@@ -379,7 +375,6 @@ data DriverPoolConfigItem = DriverPoolConfigItem
 data DriverPoolConfigListItem = DriverPoolConfigListItem
   { minRadiusOfSearch :: Kernel.Types.Common.Meters,
     maxRadiusOfSearch :: Kernel.Types.Common.Meters,
-    radiusStepSize :: Kernel.Types.Common.Meters,
     driverPositionInfoExpiry :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     actualDistanceThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     maxDriverQuotesRequired :: Kernel.Prelude.Int,
@@ -428,10 +423,8 @@ type DriverPoolConfigRes = [DriverPoolConfigItem]
 data DriverPoolConfigUpdateReq = DriverPoolConfigUpdateReq
   { minRadiusOfSearch :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue Kernel.Types.Common.Meters),
     maxRadiusOfSearch :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue Kernel.Types.Common.Meters),
-    radiusStepSize :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue Kernel.Types.Common.Meters),
     minRadiusOfSearchWithUnit :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue Kernel.Types.Common.Distance),
     maxRadiusOfSearchWithUnit :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue Kernel.Types.Common.Distance),
-    radiusStepSizeWithUnit :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue Kernel.Types.Common.Distance),
     driverPositionInfoExpiry :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Types.Common.Seconds),
     actualDistanceThreshold :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Types.Common.Meters),
     actualDistanceThresholdOnRide :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Types.Common.Meters),

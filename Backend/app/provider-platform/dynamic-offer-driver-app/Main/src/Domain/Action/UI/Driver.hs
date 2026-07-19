@@ -840,6 +840,9 @@ data GetConsentReq = GetConsentReq
 
 data GetCityResp = GetCityResp
   { city :: Maybe Text,
+    state :: Maybe Context.IndianState,
+    language :: Maybe Maps.Language,
+    location :: LatLong,
     status :: APISuccess
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -2950,21 +2953,30 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig serviceName = d
 getCity :: GetCityReq -> Flow GetCityResp
 getCity req = do
   let latLng = LatLong {lat = req.lat, lon = req.lon}
+      mkResp mbCity mbState mbLang = GetCityResp {city = mbCity, state = mbState, language = mbLang, location = latLng, status = APISuccess.Success}
+      withMOCInfo cityVal mbMId = do
+        mbMoc <- case mbMId of
+          Just mId -> CQMOC.findByMerchantIdAndCity mId cityVal
+          Nothing -> return Nothing
+        return $ mkResp (Just $ show cityVal) ((.state) <$> mbMoc) ((.language) <$> mbMoc)
   case req.merchantId of -- only for backward compatibility, Nothing part to be removed later
     Just mId -> do
       merchant <- CQM.findById mId >>= fromMaybeM (MerchantDoesNotExist mId.getId)
       nearestAndSourceCity <- withTryCatch "getNearestOperatingAndSourceCity:getCity" $ getNearestOperatingAndSourceCity merchant latLng
       case nearestAndSourceCity of
-        Left _ -> return GetCityResp {city = Nothing, status = APISuccess.Success}
-        Right nearestSourceCity -> return GetCityResp {city = Just $ show nearestSourceCity.nearestOperatingCity.city, status = APISuccess.Success}
+        Left _ -> return $ mkResp Nothing Nothing Nothing
+        Right nearestSourceCity -> do
+          let cs = nearestSourceCity.nearestOperatingCity
+          mbMoc <- CQMOC.findByMerchantIdAndCity mId cs.city
+          return $ mkResp (Just $ show cs.city) (Just cs.state) ((.language) <$> mbMoc)
     Nothing -> do
       geometry <- runInReplica $ QGeometry.findGeometriesContainingGps latLng
       case filter (\geom -> geom.city /= Context.City "AnyCity") geometry of
         [] ->
           find (\geom -> geom.city == Context.City "AnyCity") geometry & \case
-            Just anyCityGeom -> return GetCityResp {city = Just $ show anyCityGeom.city, status = APISuccess.Success}
-            Nothing -> return GetCityResp {city = Nothing, status = APISuccess.Success}
-        (g : _) -> return GetCityResp {city = Just $ show g.city, status = APISuccess.Success}
+            Just anyCityGeom -> withMOCInfo anyCityGeom.city Nothing
+            Nothing -> return $ mkResp Nothing Nothing Nothing
+        (g : _) -> withMOCInfo g.city Nothing
 
 data DriverFeeResp = DriverFeeResp
   { createdAt :: UTCTime, -- window start day

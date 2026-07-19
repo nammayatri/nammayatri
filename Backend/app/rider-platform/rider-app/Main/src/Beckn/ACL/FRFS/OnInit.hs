@@ -55,6 +55,7 @@ buildOnInitReq onInitReq = do
   orderPaymentParams <- orderPayment.paymentParams & fromMaybeM (InvalidRequest "PaymentParams not found")
   bankAccNum <- orderPaymentParams.paymentParamsBankAccountNumber & fromMaybeM (InvalidRequest "PaymentParamsBankAccountNumber not found")
   bankCode <- orderPaymentParams.paymentParamsBankCode & fromMaybeM (InvalidRequest "PaymentParamsBankCode not found")
+  let bppPaymentId = orderPayment.paymentId
 
   totalPrice <- quotation.quotationPrice >>= Utils.parsePrice & fromMaybeM (InvalidRequest "Invalid quotationPrice")
 
@@ -71,5 +72,6 @@ buildOnInitReq onInitReq = do
         validTill = ttl,
         bankAccNum,
         bankCode,
-        bppOrderId = Nothing
+        bppOrderId = Nothing,
+        bppPaymentId
       }
