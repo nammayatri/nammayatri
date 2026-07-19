@@ -26,7 +26,7 @@ formatDate day =
     padZero n = if n < 10 then "0" <> show n else show n
 
 localDateStr :: UTCTime -> NominalDiffTime -> Text
-localDateStr referenceTime diffTimeFromUTC = formatDate (utctDay (addUTCTime diffTimeFromUTC referenceTime))
+localDateStr referenceTime _diffTimeFromUTC = formatDate (utctDay referenceTime)
 
 mkActiveDriversSetKey :: MonadTime m => Int -> Text -> NominalDiffTime -> m Text
 mkActiveDriversSetKey shards driverId diffTimeFromUTC = do
@@ -72,15 +72,15 @@ addDriverToActiveList driverId diffTimeFromUTC = do
 
 mkDriverQueueKey :: Text -> Int -> UTCTime -> NominalDiffTime -> Text
 mkDriverQueueKey jobKeyPrefix shardNum referenceTime diffTimeFromUTC =
-  jobKeyPrefix <> ":DriverQueue:" <> localDateStr referenceTime diffTimeFromUTC <> ":{shard-" <> show shardNum <> "}"
+  jobKeyPrefix <> ":DriverQueue:" <> localDateStr referenceTime diffTimeFromUTC <> ":" <> Text.pack (formatTime defaultTimeLocale "%H:%M:%S" referenceTime) <> ":{shard-" <> show shardNum <> "}"
 
 mkDriverQueuePopulatedFlagKey :: Text -> Int -> UTCTime -> NominalDiffTime -> Text
 mkDriverQueuePopulatedFlagKey jobKeyPrefix shardNum referenceTime diffTimeFromUTC =
-  jobKeyPrefix <> ":DriverQueue:Populated:" <> localDateStr referenceTime diffTimeFromUTC <> ":{shard-" <> show shardNum <> "}"
+  jobKeyPrefix <> ":DriverQueue:Populated:" <> localDateStr referenceTime diffTimeFromUTC <> ":" <> Text.pack (formatTime defaultTimeLocale "%H:%M:%S" referenceTime) <> ":{shard-" <> show shardNum <> "}"
 
 mkDriverQueueLockKey :: Text -> Int -> UTCTime -> NominalDiffTime -> Text
 mkDriverQueueLockKey jobKeyPrefix shardNum referenceTime diffTimeFromUTC =
-  jobKeyPrefix <> ":DriverQueue:Lock:" <> localDateStr referenceTime diffTimeFromUTC <> ":{shard-" <> show shardNum <> "}"
+  jobKeyPrefix <> ":DriverQueue:Lock:" <> localDateStr referenceTime diffTimeFromUTC <> ":" <> Text.pack (formatTime defaultTimeLocale "%H:%M:%S" referenceTime) <> ":{shard-" <> show shardNum <> "}"
 
 -- | Drains up to `limit` driverIds from a job-specific queue, scoped per (job, merchant, city,
 --   service, shard, day) via `jobKeyPrefix`. The queue is populated exactly once per scope from

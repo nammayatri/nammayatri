@@ -92,6 +92,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.Translations as CQTranslations
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Journey as QJourney
@@ -193,7 +194,9 @@ estimateBuildLockKey searchReqid = "Customer:Estimate:Build:" <> searchReqid
 translateServiceTierText :: Id DMOC.MerchantOperatingCity -> Lang.Language -> Maybe Text -> Flow (Maybe Text)
 translateServiceTierText mocId language mbText = case mbText of
   Just text ->
-    CQTranslations.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache mocId text language
+    getConfig
+      (TranslationDimensions {merchantOperatingCityId = Just mocId.getId, messageKey = text, language = Just language})
+      (Just (CQTranslations.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache mocId text language))
       <&> Just . maybe text (.message)
   Nothing -> pure Nothing
 

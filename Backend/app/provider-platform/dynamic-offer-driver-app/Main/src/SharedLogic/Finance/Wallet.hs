@@ -109,6 +109,8 @@ module SharedLogic.Finance.Wallet
     resolveIsOnlineFromBooking,
     walletReferenceCommissionOnline,
     walletReferenceCommissionCash,
+    walletReferenceCommissionVATOnline,
+    walletReferenceCommissionVATCash,
     walletReferenceVATOnline,
     walletReferenceVATCash,
     walletReferenceD2DReferral,
@@ -122,6 +124,15 @@ module SharedLogic.Finance.Wallet
     walletReferenceDiscountsOnline,
     walletReferenceDiscountsCash,
     walletReferenceDeductedAtPaymentByPlatform,
+    walletReferenceRideFareRefund,
+    walletReferenceRideFareRefundVAT,
+    walletReferenceTollRefund,
+    walletReferenceTollRefundVAT,
+    walletReferenceParkingRefund,
+    walletReferenceParkingRefundVAT,
+    walletReferenceRideFareRefundCommission,
+    walletReferenceRideFareRefundCommissionVAT,
+    splitGrossByVatPct,
     getRedeemableEntryIds,
     settleWalletEntries,
     getPayoutEligibilityData,
@@ -222,6 +233,12 @@ walletReferenceCommissionOnline = "CommissionOnline"
 walletReferenceCommissionCash :: Text
 walletReferenceCommissionCash = "CommissionCash"
 
+walletReferenceCommissionVATOnline :: Text
+walletReferenceCommissionVATOnline = "CommissionVATOnline"
+
+walletReferenceCommissionVATCash :: Text
+walletReferenceCommissionVATCash = "CommissionVATCash"
+
 walletReferenceDeductedAtPaymentByPlatform :: Text
 walletReferenceDeductedAtPaymentByPlatform = "DeductedAtPaymentByPlatform"
 
@@ -270,6 +287,34 @@ walletReferenceAirportEntryFee = "AirportEntryFee"
 walletReferenceWalletIncentive :: Text
 walletReferenceWalletIncentive = "WalletIncentive"
 
+-- Per-component refund refTypes. Same string values as the BAP side
+-- (SharedLogic.Finance.RidePayment) so cap/settlement reconcile across BAP+BPP.
+-- All-caps VAT matches the ride-side 'TollVAT'.
+walletReferenceRideFareRefund :: Text
+walletReferenceRideFareRefund = "RideFareRefund"
+
+walletReferenceRideFareRefundVAT :: Text
+walletReferenceRideFareRefundVAT = "RideFareRefundVAT"
+
+walletReferenceTollRefund :: Text
+walletReferenceTollRefund = "TollRefund"
+
+walletReferenceTollRefundVAT :: Text
+walletReferenceTollRefundVAT = "TollRefundVAT"
+
+walletReferenceParkingRefund :: Text
+walletReferenceParkingRefund = "ParkingRefund"
+
+walletReferenceParkingRefundVAT :: Text
+walletReferenceParkingRefundVAT = "ParkingRefundVAT"
+
+-- BPP-only: the platform's commission slice on a Case-2 ride-fare refund.
+walletReferenceRideFareRefundCommission :: Text
+walletReferenceRideFareRefundCommission = "RideFareRefundCommission"
+
+walletReferenceRideFareRefundCommissionVAT :: Text
+walletReferenceRideFareRefundCommissionVAT = "RideFareRefundCommissionVAT"
+
 -- | Single source of truth: all wallet reference types that represent
 --   redeemable credit entries (i.e. entries that increase driver wallet balance
 --   and should be tracked for settlement/payout).
@@ -294,6 +339,8 @@ walletCreditRefs =
     walletReferenceCustomerCancellationGST,
     walletReferenceCommissionOnline,
     walletReferenceCommissionCash,
+    walletReferenceCommissionVATOnline,
+    walletReferenceCommissionVATCash,
     walletReferenceWalletIncentive,
     walletReferenceVATOnline,
     walletReferenceVATCash,
@@ -315,6 +362,17 @@ walletTransferFromMerchantRefs =
     walletReferenceDiscountsOnline,
     walletReferenceDiscountsCash
   ]
+
+-- | Split a VAT-inclusive gross into (base, vat); the rate is inclusive ("25.5" ⇒ vat = gross × 25.5/125.5).
+--   Neither side is rounded: renderers derive the shown VAT % from the stored pair, and rounding
+--   one side skews it (25.5 prints as 25.65). Nothing / non-positive rate ⇒ (gross, 0).
+splitGrossByVatPct :: Maybe Double -> HighPrecMoney -> (HighPrecMoney, HighPrecMoney)
+splitGrossByVatPct mbPct gross = case mbPct of
+  Just pct
+    | pct > 0 ->
+      let vat = HighPrecMoney (gross.getHighPrecMoney * (toRational pct / toRational (100 + pct)))
+       in (gross - vat, vat)
+  _ -> (gross, 0)
 
 -- Time helpers (shared across getWalletTransactions, postWalletPayout, postWalletTopup)
 
@@ -477,6 +535,8 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig i
         counterpartyId = cId,
         concernedIndividualId = Just ride.driverId.getId,
         referenceId = booking.id.getId,
+        entityReferenceId = Nothing,
+        entityReferenceType = Nothing,
         merchantName = mName,
         merchantShortId = mShortId,
         issuedByAddress = address,
@@ -557,6 +617,8 @@ financeCtxFromRide booking ride mbPanCard isOnline = do
         counterpartyId = cId,
         concernedIndividualId = Just ride.driverId.getId,
         referenceId = booking.id.getId,
+        entityReferenceId = Nothing,
+        entityReferenceType = Nothing,
         merchantName = Nothing,
         merchantShortId = Nothing,
         issuedByAddress = Nothing,
@@ -638,6 +700,8 @@ createWalletEntryDelta counterpartyType ownerId delta currency merchantId mercha
                     status = SETTLED,
                     referenceType = referenceType,
                     referenceId = referenceId,
+                    entityReferenceId = Nothing,
+                    entityReferenceType = Nothing,
                     metadata = metadata,
                     merchantId = merchantId,
                     merchantOperatingCityId = merchantOperatingCityId,

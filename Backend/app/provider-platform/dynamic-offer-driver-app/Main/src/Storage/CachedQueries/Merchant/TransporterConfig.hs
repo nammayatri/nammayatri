@@ -27,8 +27,6 @@ module Storage.CachedQueries.Merchant.TransporterConfig
   )
 where
 
-import Data.Coerce (coerce)
-import Domain.Types.Common
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.TransporterConfig
 import Kernel.Prelude as KP
@@ -47,14 +45,14 @@ getTransporterConfigFromDB id = do
   let key = makeMerchantOpCityIdKey id
   IM.withInMemCache [key] 3600 $ do
     Hedis.withCrossAppRedis (Hedis.safeGet key) >>= \case
-      Just a -> return . Just $ coerce @(TransporterConfigD 'Unsafe) @TransporterConfig a
+      Just a -> return $ Just a
       Nothing -> flip whenJust cacheTransporterConfig /=<< Queries.findByMerchantOpCityId id
 
 cacheTransporterConfig :: (CacheFlow m r) => TransporterConfig -> m ()
 cacheTransporterConfig cfg = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let merchantIdKey = makeMerchantOpCityIdKey cfg.merchantOperatingCityId
-  Hedis.withCrossAppRedis $ Hedis.setExp merchantIdKey (coerce @TransporterConfig @(TransporterConfigD 'Unsafe) cfg) expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp merchantIdKey cfg expTime
 
 makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:TransporterConfig:MerchantOperatingCityId-" <> id.getId

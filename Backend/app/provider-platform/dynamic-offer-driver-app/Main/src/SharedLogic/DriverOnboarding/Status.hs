@@ -290,12 +290,13 @@ fetchVehicleDocStatusesForRC ::
   Language ->
   Text ->
   Maybe Bool ->
+  Bool ->
   Flow (VehicleDocumentItem, [DVC.DocumentVerificationConfig])
-fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig language reqRegistrationNo onlyMandatoryDocs = do
+fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig language reqRegistrationNo onlyMandatoryDocs enableDocumentMetadata = do
   let entity = IQuery.VehicleRCEntity rc
   entityImages <- IQuery.findAllByEntityId transporterConfig entity
   now <- getCurrentTime
-  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now}
+  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now, enableDocumentMetadata}
   allDocumentVerificationConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, documentType = Nothing, vehicleCategory = Nothing}) (Just (CQDVC.findAllByMerchantOpCityId merchantOperatingCity.id Nothing))
   let skipMessages = True -- Skip translations, only need status check for inspection
   vehicleDocumentsUnverified <- fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language (Just reqRegistrationNo) onlyMandatoryDocs skipMessages
@@ -313,7 +314,7 @@ fetchAndCheckVehicleDocsValidForEnabling ::
   Text ->
   Flow Bool
 fetchAndCheckVehicleDocsValidForEnabling rc merchantOperatingCity transporterConfig language reqRegistrationNo = do
-  (vehicleDoc, allDocumentVerificationConfigs) <- fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig language reqRegistrationNo (Just True)
+  (vehicleDoc, allDocumentVerificationConfigs) <- fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig language reqRegistrationNo (Just True) False
   pure $ checkAllVehicleDocsValidForEnabling allDocumentVerificationConfigs vehicleDoc Nothing
 
 -- | All mandatory vehicle docs VALID, over already-fetched statuses (no fetch).
@@ -366,7 +367,7 @@ fetchDriverDocStatusesForPerson person merchantOperatingCity transporterConfig l
   let entity = IQuery.PersonEntity person
   entityImages <- IQuery.findAllByEntityId transporterConfig entity
   now <- getCurrentTime
-  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now}
+  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now, enableDocumentMetadata = False}
   let skipMessages = True -- Skip translations, only need status check for inspection
   VehicleDocsContext {allDocVerificationConfigs, vehicleDocumentsUnverified} <-
     buildVehicleDocsContext person entityImagesInfo language onlyMandatoryDocs skipMessages Nothing
@@ -398,7 +399,7 @@ refreshVehicleDocsVerificationStatusForRC mbTransporterConfig rcId = do
     let entity = IQuery.VehicleRCEntity rc
     entityImages <- IQuery.findAllByEntityId transporterConfig entity
     now <- getCurrentTime
-    let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now}
+    let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now, enableDocumentMetadata = False}
         language = merchantOperatingCity.language
         onlyMandatoryDocs = Just True
         skipMessages = True
@@ -518,7 +519,7 @@ loadPersonStatusContext mbPerson mbTransporterConfig personId = do
   let entity = IQuery.PersonEntity person
   entityImages <- IQuery.findAllByEntityId transporterConfig entity
   now <- getCurrentTime
-  let statusEntityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now}
+  let statusEntityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now, enableDocumentMetadata = False}
   pure PersonStatusContext {statusPerson = person, statusEntityImagesInfo}
 
 buildVehicleDocsContext ::
@@ -811,7 +812,7 @@ fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleC
       driverId = person.id
       transporterConfig = entityImagesInfo.transporterConfig
       isDigiLockerEnabled = fromMaybe False transporterConfig.digilockerEnabled
-      enableMetadata = fromMaybe False transporterConfig.enableDocumentMetadata
+      enableMetadata = entityImagesInfo.enableDocumentMetadata
 
   digilockerDocStatusMap <- if isDigiLockerEnabled then getDigilockerDocStatusMap driverId else pure DocStatus.emptyDocStatusMap
 
@@ -1402,8 +1403,9 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
                 mbAddressFields <&> \(address, addressState, addressDocumentType) ->
                   LocalAddressProofMetadata LocalAddressProofDocumentMetadata {state = addressState, proofDocumentType = addressDocumentType, address = address}
               else Nothing
-      let statusWithoutAddress = if isJust mbImageId then Just INVALID else Just NO_DOC_AVAILABLE
-      return (if hasAddressDetails then status else statusWithoutAddress, reason, url, Nothing, mbS3Path, mbImageId, Nothing, mbLocalMetadata)
+      let finalStatus = if hasAddressDetails then status else if isJust mbImageId then Just INVALID else Just NO_DOC_AVAILABLE
+          rejectReason = if finalStatus == Just INVALID then (Id <$> mbImageId) >>= lookupImageFailReason else Nothing
+      return (finalStatus, reason <|> rejectReason, url, Nothing, mbS3Path, mbImageId, Nothing, mbLocalMetadata)
     DVC.DriverVehicleNOC -> do
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.DriverVehicleNOC
       return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
@@ -1473,7 +1475,13 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
     DVC.NomineeDetails -> do
       mbIdentityInfo <- QDII.findByDriverId driverId
       let hasNominee = maybe False (\info -> isJust info.nomineeName && isJust info.nomineeRelationship && isJust info.nomineeDob) mbIdentityInfo
-      return (if hasNominee then Just VALID else Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
+          mbNomineeMetadata =
+            if enableMetadata
+              then
+                mbIdentityInfo <&> \info ->
+                  NomineeDetailsMetadata NomineeDetailsDocumentMetadata {nomineeName = info.nomineeName, nomineeDob = info.nomineeDob, nomineeRelationship = info.nomineeRelationship}
+              else Nothing
+      return (if hasNominee then Just VALID else Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, mbNomineeMetadata)
     DVC.FleetRegistration -> do
       mbRegisteredAt <-
         if SDO.isFleetRole role
@@ -1481,11 +1489,33 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
           else pure Nothing
       return (VALID <$ mbRegisteredAt, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
     DVC.BankingDetails -> do
-      hasBankingDetails <-
-        if SDO.isFleetRole role
-          then maybe False (isJust . (.payoutVpa)) <$> QFOI.findByPrimaryKey driverId
-          else maybe False (\di -> isJust di.driverBankAccountDetails || isJust di.payerVpa) <$> DIQuery.findById (cast driverId)
-      return (if hasBankingDetails then Just VALID else Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+      if SDO.isFleetRole role
+        then do
+          mbFleetInfo <- QFOI.findByPrimaryKey driverId
+          let hasBankingDetails = maybe False (isJust . (.payoutVpa)) mbFleetInfo
+              mbBankingMetadata =
+                if enableMetadata
+                  then
+                    mbFleetInfo <&> \fi ->
+                      BankingDetailsMetadata BankingDetailsDocumentMetadata {accountNumber = fi.payoutVpaBankAccount, ifscCode = Nothing, nameAtBank = Nothing, upiId = fi.payoutVpa}
+                  else Nothing
+          return (if hasBankingDetails then Just VALID else Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, mbBankingMetadata)
+        else do
+          mbDriverInfo <- DIQuery.findById (cast driverId)
+          let hasBankingDetails = maybe False (\di -> isJust di.driverBankAccountDetails || isJust di.payerVpa) mbDriverInfo
+              mbBankingMetadata =
+                if enableMetadata
+                  then
+                    mbDriverInfo <&> \di ->
+                      BankingDetailsMetadata
+                        BankingDetailsDocumentMetadata
+                          { accountNumber = di.driverBankAccountDetails >>= (.accountNumber),
+                            ifscCode = di.driverBankAccountDetails >>= (.ifscCode),
+                            nameAtBank = di.driverBankAccountDetails >>= (.nameAtBank),
+                            upiId = di.payerVpa
+                          }
+                  else Nothing
+          return (if hasBankingDetails then Just VALID else Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, mbBankingMetadata)
     _ -> commonDocStatus docType
 
 callGetDLGetStatus :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()
@@ -1614,7 +1644,9 @@ getInProgressDriverDocuments role driverId entityImagesInfo docType possibleVehi
     DDVC.Permissions -> return (VALID, Nothing, Nothing)
     DDVC.ProfilePhoto -> do
       let mbImages = IQuery.filterRecentLatestByEntityIdAndImageType entityImagesInfo DDVC.ProfilePhoto
-      return (maybe NO_DOC_AVAILABLE mapStatus (mbImages >>= (.verificationStatus)), Nothing, Nothing)
+          profileStatus = maybe NO_DOC_AVAILABLE mapStatus (mbImages >>= (.verificationStatus))
+          profileReason = if profileStatus == INVALID then extractImageFailReason (mbImages >>= (.failureReason)) else Nothing
+      return (profileStatus, profileReason, Nothing)
     DDVC.UploadProfile -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.UploadProfile onlyImageLookup filteredDocVerificationConfigs
     DDVC.DrivingSchoolCertificate -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.DrivingSchoolCertificate onlyImageLookup filteredDocVerificationConfigs
     DDVC.PoliceVerificationCertificate -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.PoliceVerificationCertificate onlyImageLookup filteredDocVerificationConfigs

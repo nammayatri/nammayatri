@@ -91,7 +91,7 @@ getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled 
       transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCity.id Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
       let entity = IQuery.PersonEntity person
       entityImages <- IQuery.findAllByEntityId transporterConfig entity
-      let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
+      let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now, enableDocumentMetadata = False}
       let shouldActivateRc = False
           skipMessages = False -- Need translations for API response
       statusRes <-

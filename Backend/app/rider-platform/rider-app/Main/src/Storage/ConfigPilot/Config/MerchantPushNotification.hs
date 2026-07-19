@@ -5,7 +5,9 @@
 module Storage.ConfigPilot.Config.MerchantPushNotification (MerchantPushNotificationDimensions (..)) where
 
 import qualified Domain.Types.MerchantPushNotification as DT
+import qualified Domain.Types.Trip
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Id
 import qualified Lib.ConfigPilot.Interface.Getter as LCP
 import Lib.ConfigPilot.Interface.Types
@@ -15,7 +17,9 @@ import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.MerchantPushNotification as SQ
 
 data MerchantPushNotificationDimensions = MerchantPushNotificationDimensions
-  { merchantOperatingCityId :: Text
+  { merchantOperatingCityId :: Text,
+    key :: Maybe Kernel.Prelude.Text,
+    tripCategory :: Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -31,8 +35,10 @@ instance ConfigDimensions MerchantPushNotificationDimensions where
   getConfigList a =
     LCP.resolveConfigList
       a
-      (LYT.RIDER_CONFIG MerchantPushNotification)
+      (LYT.RIDER_CONFIG MerchantPushNotificationRider)
       (Id a.merchantOperatingCityId)
       (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
-      ([] :: [LCP.DimMatcher MerchantPushNotificationDimensions DT.MerchantPushNotification])
+      [ LCP.DimMatcher (.key) (Just . (.key)) (==),
+        LCP.DimMatcher (.tripCategory) (.tripCategory) (==)
+      ]
       Nothing

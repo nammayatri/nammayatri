@@ -5,6 +5,7 @@ module API.Types.UI.RidePayment where
 import qualified AWS.S3
 import Data.Aeson
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.FareBreakup
 import qualified Domain.Types.RefundRequest
 import qualified Domain.Types.Ride
 import EulerHS.Prelude hiding (id)
@@ -46,6 +47,19 @@ data DueAmountRide = DueAmountRide {amount :: Kernel.Types.Common.HighPrecMoney,
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FareBreakupComponent = FareBreakupComponent
+  { component :: Domain.Types.FareBreakup.FareComponent,
+    exclTax :: Kernel.Types.Common.PriceAPIEntity,
+    tax :: Kernel.Types.Common.PriceAPIEntity,
+    total :: Kernel.Types.Common.PriceAPIEntity
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FareBreakupRes = FareBreakupRes {components :: Kernel.Prelude.Maybe [FareBreakupComponent], totalAmount :: Kernel.Types.Common.PriceAPIEntity}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data GetDueAmountResp = GetDueAmountResp
   { currency :: Kernel.Prelude.Maybe Kernel.Types.Common.Currency,
     gstDue :: Kernel.Types.Common.HighPrecMoney,
@@ -67,13 +81,21 @@ data PaymentMethodsResponse = PaymentMethodsResponse {defaultPaymentMethodId :: 
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data RefundComponentReq = RefundComponentReq {amount :: Kernel.Types.Common.PriceAPIEntity, component :: Domain.Types.FareBreakup.FareComponent}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RefundRequestListResp = RefundRequestListResp {refundRequests :: [RefundRequestResp]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data RefundRequestReq = RefundRequestReq
   { code :: Domain.Types.RefundRequest.RefundRequestCode,
     description :: Kernel.Prelude.Text,
     evidence :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fileType :: Kernel.Prelude.Maybe AWS.S3.FileType,
-    reqContentType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    requestedAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity
+    refundComponents :: [RefundComponentReq],
+    reqContentType :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

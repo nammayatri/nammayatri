@@ -17,6 +17,7 @@ module Storage.Beam.Common where
 import qualified Database.Beam as B
 import Kernel.Prelude (Generic)
 import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamITT
+import qualified Lib.Finance.Storage.Beam.LedgerEntry as BeamLE
 import qualified Lib.Finance.Storage.Beam.PgPaymentSettlementReport as BeamPgReport
 import Storage.Beam.Booking
 import Storage.Beam.BookingCancellationReason
@@ -115,6 +116,7 @@ atlasDB =
         commonDriverOnboardingDocuments = commonDriverOnboardingDocumentsTable,
         subscriptionPurchase = subscriptionPurchaseTable,
         indirectTaxTransaction = BeamITT.indirectTaxTransactionTable,
+        financeLedgerEntry = BeamLE.ledgerEntryTable,
         pgPaymentSettlementReport = BeamPgReport.pgPaymentSettlementReportTable
       }
 
@@ -165,6 +167,7 @@ data AtlasDB f = AtlasDB
     commonDriverOnboardingDocuments :: f (B.TableEntity CommonDriverOnboardingDocumentsT),
     subscriptionPurchase :: f (B.TableEntity SubscriptionPurchaseT),
     indirectTaxTransaction :: f (B.TableEntity BeamITT.IndirectTaxTransactionT),
+    financeLedgerEntry :: f (B.TableEntity BeamLE.LedgerEntryT),
     pgPaymentSettlementReport :: f (B.TableEntity BeamPgReport.PgPaymentSettlementReportT)
   }
   deriving (Generic, B.Database be)

@@ -14,7 +14,7 @@ import qualified Kernel.Types.Documents
 import Tools.Beam.UtilsTH
 
 data DriverUdyamT f = DriverUdyamT
-  { documentImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+  { documentImageId :: B.C f Kernel.Prelude.Text,
     driverId :: B.C f Kernel.Prelude.Text,
     enterpriseName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     enterpriseType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

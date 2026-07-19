@@ -14,7 +14,7 @@ import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as SQ
+import qualified Storage.Queries.MerchantPushNotification as SQ
 
 data MerchantPushNotificationDimensions = MerchantPushNotificationDimensions
   { merchantOperatingCityId :: Text,
@@ -37,7 +37,7 @@ instance ConfigDimensions MerchantPushNotificationDimensions where
       a
       (LYT.DRIVER_CONFIG MerchantPushNotification)
       (Id a.merchantOperatingCityId)
-      (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId) (Just []))
+      (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
       [ LCP.DimMatcher (.key) (Just . (.key)) (==),
         LCP.DimMatcher (.tripCategory) (.tripCategory) (==)
       ]

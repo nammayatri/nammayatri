@@ -86,7 +86,7 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
       bcCfgs <- getConfigList (BecknConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, domain = Nothing, vehicleCategory = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON bcCfgs}
     LYTU.RIDER_CONFIG LYTU.MerchantPushNotificationRider -> do
-      mpnCfgs <- getConfig (MerchantPushNotificationDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CQMPN.findAllByMerchantOpCityId (cast merchantOpCityId) (Just [])))
+      mpnCfgs <- getConfig (MerchantPushNotificationDimensions {merchantOperatingCityId = merchantOpCityId.getId, key = Nothing, tripCategory = Nothing}) (Just (CQMPN.findAllByMerchantOpCityId (cast merchantOpCityId) (Just [])))
       return LYTU.TableDataResp {configs = map A.toJSON mpnCfgs}
     LYTU.RIDER_CONFIG LYTU.ExophoneRider -> do
       exoCfgs <- getConfigList (ExophoneDimensions {merchantOperatingCityId = merchantOpCityId.getId, phoneNumber = Nothing, callService = Nothing})
@@ -95,7 +95,7 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
       frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CQFRFS.findByMerchantOperatingCityId (cast merchantOpCityId) (Just [])))
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList frfsConfig)}
     LYTU.RIDER_CONFIG LYTU.HotSpotConfig -> do
-      hsCfg <- getConfig (HotSpotConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId}) Nothing
+      hsCfg <- getConfig (HotSpotConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId}) (Just (SQHSC.findConfigByMerchantId (cast merchantId)))
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList hsCfg)}
     LYTU.RIDER_CONFIG LYTU.MerchantPaymentMethod -> do
       mpmCfgs <- getConfigList (MerchantPaymentMethodDimensions {merchantOperatingCityId = merchantOpCityId.getId, configId = Nothing})
@@ -104,13 +104,13 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
       crCfgs <- getConfigList (CancellationReasonDimensions {merchantOperatingCityId = merchantOpCityId.getId, cancellationStage = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON crCfgs}
     LYTU.RIDER_CONFIG LYTU.Translation -> do
-      tlCfg <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = "", language = Nothing}) Nothing
+      tlCfg <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = "", language = Nothing}) (Just (listToMaybe <$> SQTL.findAllByMerchantOperatingCityId (cast merchantOpCityId)))
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList tlCfg)}
     LYTU.RIDER_CONFIG LYTU.IntegratedBPPConfig -> do
       ibcCfgs <- getConfigList (IntegratedBPPConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, configId = Nothing, agencyKey = Nothing, domain = Nothing, vehicleCategory = Nothing, platformType = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON ibcCfgs}
     LYTU.RIDER_CONFIG LYTU.IssueConfig -> do
-      icCfg <- getConfig (IssueConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, identifier = ""}) Nothing
+      icCfg <- getConfig (IssueConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, identifier = ""}) (Just (SQIC.findByMerchantOpCityId (cast merchantOpCityId)))
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList icCfg)}
     LYTU.RIDER_CONFIG LYTU.PassCategory -> do
       pcCfgs <- getConfigList (PassCategoryDimensions {merchantOperatingCityId = merchantOpCityId.getId, configId = Nothing})
@@ -149,9 +149,9 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
     LYTU.RIDER_CONFIG LYTU.MerchantPaymentMethod -> do
       handleConfigUpdateViaJson SQMPM.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.MerchantPaymentMethod) >> invalidateConfigInMem LYTU.MerchantPaymentMethod) SQMPM.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.RIDER_CONFIG LYTU.Translation -> do
-      handleConfigUpdateViaJson SQTL.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.Translation) >> invalidateConfigInMem LYTU.Translation) SQTL.updateByPrimaryKey (cast merchantOpCityId)
+      handleConfigUpdateViaJson SQTL.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.Translation) >> invalidateConfigInMem LYTU.TranslationRider) SQTL.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.RIDER_CONFIG LYTU.IssueConfig -> do
-      handleConfigUpdateViaJson (SQIC.findAllByMerchantOperatingCityId . cast) (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.IssueConfig) >> invalidateConfigInMem LYTU.IssueConfig) SQIC.updateByPrimaryKey (cast merchantOpCityId)
+      handleConfigUpdateViaJson (SQIC.findAllByMerchantOperatingCityId . cast) (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.IssueConfig) >> invalidateConfigInMem LYTU.IssueConfigRider) SQIC.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.RIDER_CONFIG LYTU.PassCategory -> do
       handleConfigUpdateViaJson SQPC.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.PassCategory) >> invalidateConfigInMem LYTU.PassCategory) SQPC.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.UI_RIDER dt pt -> do
@@ -289,3 +289,19 @@ getTSServiceUrl :: (CoreMetrics m, MonadFlow m, CPT.HasTSServiceConfig m r) => m
 getTSServiceUrl = do
   tsServiceConfig <- asks (.tsServiceConfig)
   pure tsServiceConfig.url
+
+-- | Map a LogicDomain's generic inner ConfigType to the rider-specific config-pilot cache
+-- ConfigType (i.e. what 'getConfigType' returns for that config's dimensions). Identity for
+-- configs whose cache type is already un-suffixed. Used at the dynamic invalidation sites in
+-- Domain.Action.Dashboard.NammaTag, where only the generic runtime ConfigType is available;
+-- passing the generic value straight to invalidateConfigInMem misses the suffixed Redis bucket.
+toCacheConfigType :: LYTU.ConfigType -> LYTU.ConfigType
+toCacheConfigType cfgType = case cfgType of
+  LYTU.Translation -> LYTU.TranslationRider
+  LYTU.IssueConfig -> LYTU.IssueConfigRider
+  LYTU.PayoutConfig -> LYTU.PayoutConfigRider
+  LYTU.RideRelatedNotificationConfig -> LYTU.RideRelatedNotificationConfigRider
+  LYTU.MerchantPushNotification -> LYTU.MerchantPushNotificationRider
+  LYTU.MerchantServiceUsageConfig -> LYTU.MerchantServiceUsageConfigRider
+  LYTU.Exophone -> LYTU.ExophoneRider
+  other -> other

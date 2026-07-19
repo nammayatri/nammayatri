@@ -152,7 +152,8 @@ notifyErrorToSupport person merchantId merchantOpCityId driverPhone _ errs = do
           classification = Ticket.DRIVER,
           rideDescription = Nothing,
           ticketContext = Just Ticket.IssueTicket,
-          becknIssueId = Nothing
+          becknIssueId = Nothing,
+          xyneChannelId = Nothing
         }
 
 throwImageError :: Id Domain.Image -> DriverOnboardingError -> Flow b
@@ -1092,7 +1093,7 @@ resolveFaceMatchVerificationStatus person config docImageId mbDocImage mbPlainDo
 -- | On selfie upload, face-match earlier non-SDK doc images: skip while the doc's webhook is pending (the handler resolves it), else run now and promote PENDING->VALID or flip INVALID.
 faceMatchBoundConfigs :: Person.Person -> Flow [ODC.DocumentVerificationConfig]
 faceMatchBoundConfigs person =
-  DL.nubBy (\a b -> a.documentType == b.documentType) . filter (\c -> isJust c.faceMatchSourceDoc && isJust (faceCompareDocTag c.documentType)) <$> CQDVC.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
+  DL.nubBy (\a b -> a.documentType == b.documentType) . filter (\c -> isJust c.faceMatchSourceDoc && isJust (faceCompareDocTag c.documentType)) <$> getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, documentType = Nothing, vehicleCategory = Nothing}) (Just (CQDVC.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing))
 
 runDeferredFaceMatchOnSelfie :: Person.Person -> UTCTime -> Flow ()
 runDeferredFaceMatchOnSelfie person selfieCreatedAt = do
@@ -1105,8 +1106,17 @@ runDeferredFaceMatchOnSelfie person selfieCreatedAt = do
   where
     matchDeferredDoc config = do
       let docType = config.documentType
-      docImages <- ImageQuery.findRecentByPersonIdAndImageType person.id docType
-      whenJust (DL.find (\img -> img.verificationStatus /= Just Documents.INVALID && isNothing img.workflowTransactionId && img.createdAt < selfieCreatedAt) docImages) $ \docImg -> do
+          qualifies img = img.verificationStatus /= Just Documents.INVALID && isNothing img.workflowTransactionId && img.createdAt < selfieCreatedAt
+          linkedDocImage mbImageId = do
+            mbImg <- maybe (pure Nothing) ImageQuery.findById mbImageId
+            pure $ case mbImg of
+              Just img | qualifies img -> Just img
+              _ -> Nothing
+      mbDocImg <- case docType of
+        ODC.AadhaarCard -> linkedDocImage =<< (>>= (.aadhaarFrontImageId)) <$> QAadhaarCard.findByPrimaryKey person.id
+        ODC.DriverLicense -> linkedDocImage =<< fmap (.documentImageId1) <$> DLQuery.findByDriverId person.id
+        _ -> DL.find qualifies <$> ImageQuery.findRecentByPersonIdAndImageType person.id docType
+      whenJust mbDocImg $ \docImg -> do
         mbVerificationRow <- listToMaybe <$> IVQuery.findLatestByDocTypeAndDocumentImageId1 (Just 1) Nothing person.id (docTypeToText docType) docImg.id
         let webhookPending = maybe False ((`elem` inProgressIdfyStatuses) . (.status)) mbVerificationRow
         if webhookPending
@@ -1114,11 +1124,13 @@ runDeferredFaceMatchOnSelfie person selfieCreatedAt = do
           else do
             outcome <- runDocFaceMatch person config docImg.id Nothing Nothing
             case outcome of
-              FMFail -> case docType of
-                ODC.DriverLicense -> DLQuery.updateVerificationStatus Documents.INVALID docImg.id
-                ODC.PanCard -> DPQuery.updateVerificationStatus Documents.INVALID person.id
-                ODC.AadhaarCard -> QAadhaarCard.updateVerificationStatus Documents.INVALID person.id
-                _ -> pure ()
+              FMFail -> do
+                let mbReason = toMessage FaceMatchFailed
+                case docType of
+                  ODC.DriverLicense -> DLQuery.updateVerificationStatusAndRejectReason Documents.INVALID (fromMaybe "Face match failed" mbReason) docImg.id
+                  ODC.PanCard -> DPQuery.updateVerificationStatusAndRejectReason Documents.INVALID mbReason docImg.id
+                  ODC.AadhaarCard -> QAadhaarCard.updateVerificationStatusAndRejectReasonByFrontImageId Documents.INVALID mbReason (Just docImg.id)
+                  _ -> pure ()
               FMPass -> promotePendingToValid docType docImg
               _ -> pure ()
     -- Promote only PENDING records belonging to this exact image; legacy VALID rows are never touched.
@@ -1136,8 +1148,8 @@ runDeferredFaceMatchOnSelfie person selfieCreatedAt = do
       ODC.AadhaarCard -> do
         mbAadhaar <- QAadhaarCard.findByPrimaryKey person.id
         whenJust mbAadhaar $ \aadhaar ->
-          when (aadhaar.aadhaarFrontImageId == Just docImg.id && aadhaar.verificationStatus == Documents.PENDING) $
-            QAadhaarCard.updateVerificationStatus Documents.VALID person.id
+          when (aadhaar.verificationStatus == Documents.PENDING) $
+            QAadhaarCard.updateVerificationStatusByFrontImageId Documents.VALID (Just docImg.id)
       _ -> pure ()
 
 -- | Once a VALID selfie exists, a DRIVER may upload a new one only while every face-match-bound doc (DL/PAN/Aadhaar with faceMatchSourceDoc set) is absent or INVALID.

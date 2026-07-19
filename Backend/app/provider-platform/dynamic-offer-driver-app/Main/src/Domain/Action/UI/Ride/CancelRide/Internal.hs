@@ -356,6 +356,7 @@ updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig = 
       currentTime = floor $ utcTimeToPOSIXSeconds now
       rideCreatedTime = floor $ utcTimeToPOSIXSeconds ride.createdAt
       driverArrivalTime = floor . utcTimeToPOSIXSeconds <$> (ride.driverArrivalTime)
+      bookingCreatedTime = floor $ utcTimeToPOSIXSeconds booking.createdAt
       tagData =
         TY.CancelRideTagData
           { ride = ride{status = DRide.CANCELLED},
@@ -369,7 +370,7 @@ updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig = 
   let allTags = ride.rideTags <> eitherToMaybe nammaTags
   QRide.updateRideTags allTags ride.id
   let tags = fromMaybe [] allTags
-  when (bookingCReason.reasonCode == Just userNoShowCancellationReason && validUserNoShowCancellation `notElem` tags) $
+  when (maybe False (`elem` validCancellationPenaltyReasonCodes transporterConfig) bookingCReason.reasonCode && validUserNoShowCancellation `notElem` tags) $
     logError $ "Customer no show tag was not applied: rideId: " <> ride.id.getId
   Analytics.updateCancellationAnalyticsAndDriverStats transporterConfig ride bookingCReason
   return $ fromMaybe [] allTags
@@ -485,7 +486,12 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
   let isCashPayment = case mbPaymentMethod of
         Nothing -> True
         Just pm -> pm.paymentInstrument == DMPM.Cash
-  let logicInput =
+      -- Payment-method exception: skip the cancellation fee entirely for configured instruments (e.g. Cash).
+      -- A booking without a payment method is treated as Cash, matching isCashPayment above.
+      bookingPaymentInstrument = maybe DMPM.Cash (.paymentInstrument) mbPaymentMethod
+      isCancellationFeeExemptPaymentMethod = bookingPaymentInstrument `elem` fromMaybe [] transporterConfig.cancellationFeePaymentMethodExceptions
+  let timeSinceBooking = round $ diffUTCTime now booking.createdAt
+      logicInput =
         UserCancellationDues.UserCancellationDuesData
           { cancelledBy = cancellationType,
             timeOfDriverCancellation = timeOfCancellation,
@@ -506,9 +512,10 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
             tripCategory = booking.tripCategory,
             cancellationReasonSelected = reasonCode,
             userSdkVersion = userSdkVersionText,
-            isCashPayment = isCashPayment
+            isCashPayment = isCashPayment,
+            timeSinceBooking = timeSinceBooking
           }
-  if transporterConfig.canAddCancellationFee
+  if transporterConfig.canAddCancellationFee && not isCancellationFeeExemptPaymentMethod
     then do
       localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
       (allLogics, mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES localTime mbExistingVersion Nothing
@@ -527,13 +534,21 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
             A.Error e -> do
               logError $ "Error in parsing UserCancellationDuesResult - " <> show e <> " - " <> show resp.result <> " - " <> show logicInput <> " - " <> show allLogics
               return (Just 0, Nothing, Nothing, Nothing)
-      when (reasonCode == Just userNoShowCancellationReason && fromMaybe 0 cancellationCharge <= 0) $
+      when (maybe False (`elem` validCancellationPenaltyReasonCodes transporterConfig) reasonCode && fromMaybe 0 cancellationCharge <= 0) $
         logError $ "User no show charges was not applied: " <> show cancellationCharge <> ": rideId: " <> ride.id.getId <> ". Please check dynamic logic"
       pure (cancellationCharge, cancellationTax, mbVersion, overdueCharge, overdueTax)
     else return (Nothing, Nothing, Nothing, Nothing, Nothing)
 
+-- | Default no-show cancellation reason, used when transporter_config leaves the penalty reasons unset.
 userNoShowCancellationReason :: DTCR.CancellationReasonCode
 userNoShowCancellationReason = DTCR.CancellationReasonCode "CUSTOMER_NO_SHOW"
+
+-- | Cancellation reason codes that qualify a driver cancellation as a penalizable no-show.
+-- Configurable per operating city via transporter_config.validCancellationPenaltyReasons;
+-- falls back to CUSTOMER_NO_SHOW when unset.
+validCancellationPenaltyReasonCodes :: DTC.TransporterConfig -> [DTCR.CancellationReasonCode]
+validCancellationPenaltyReasonCodes transporterConfig =
+  maybe [userNoShowCancellationReason] (map DTCR.CancellationReasonCode) transporterConfig.validCancellationPenaltyReasons
 
 getCancellationCharges ::
   ( EsqDBFlow m r,

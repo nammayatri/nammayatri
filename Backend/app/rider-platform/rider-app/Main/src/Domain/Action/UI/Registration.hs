@@ -370,6 +370,16 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
         whenJust mbMerchantConfigId $ \mcId ->
           SMC.blockCustomerByIP clientIP (Just mcId) riderConfig.blockedUntilInMins
 
+  -- Phone-number-based auth rate limit (hashed phone, two configurable sliding windows).
+  whenJust ((.hash) <$> person.mobileNumber) $ \mobileNumberHash ->
+    -- DbHash's ToJSON instance hex-encodes it, so this yields a stable non-PII Text
+    -- key without a direct Text.Hex dependency (same idiom as the OTP counters below).
+    case A.toJSON mobileNumberHash of
+      A.String phoneNumberHashText -> do
+        mbResetSeconds <- SMC.checkAuthLimitExceededByPhone merchantConfigs phoneNumberHashText
+        whenJust mbResetSeconds $ \resetSeconds -> throwError (HitsLimitError resetSeconds)
+        SMC.updateCustomerAuthCountersByPhone phoneNumberHashText merchantConfigs
+      _ -> pure ()
   checkSlidingWindowLimit (authHitsCountKey person)
   smsCfg <- asks (.smsCfg)
   let entityId = getId $ person.id

@@ -27,6 +27,7 @@ module Lib.DriverCoins.Coins
     sendCoinsNotificationV2,
     safeIncrBy,
     getValidRideCountByDriverIdKey,
+    getValidRideCountByDriverIdWindowKey,
     getOTPValidRideCountByDriverIdKey,
     incrementMetroRideCount,
     incrementIncentiveMetricsForRide,
@@ -955,7 +956,7 @@ incrementValidRideCountForTimeBoundCohort ::
   UTCTime ->
   m ()
 incrementValidRideCountForTimeBoundCohort driverId merchantId merchantOpCityId vehCategory tripCategoryType expirationPeriod timeDiffFromUtc timeBoundReferenceUtc = do
-  configs <- SQCC.getActiveCoinConfigs merchantId merchantOpCityId vehCategory
+  configs <- getConfig (CoinsConfigDimensions {merchantOptCityId = merchantOpCityId.getId, merchantId = Just merchantId.getId, active = Just True, vehicleCategory = Just vehCategory, eventFunction = Nothing, serviceTierType = Nothing, eventName = Nothing, tripCategoryType = Nothing, configId = Nothing}) (Just (SQCC.getActiveCoinConfigs merchantId merchantOpCityId vehCategory))
   let cohortTimeBoundConfigs =
         filter
           ( \cc ->
@@ -1006,7 +1007,7 @@ incrementIncentiveMetricsForRide ::
   UTCTime ->
   m ()
 incrementIncentiveMetricsForRide driverId merchantId merchantOpCityId vehCategory deltas expirationPeriod timeDiffFromUtc timeBoundReferenceUtc = do
-  configs <- SQCC.getActiveCoinConfigs merchantId merchantOpCityId vehCategory
+  configs <- getConfig (CoinsConfigDimensions {merchantOptCityId = merchantOpCityId.getId, merchantId = Just merchantId.getId, active = Just True, vehicleCategory = Just vehCategory, eventFunction = Nothing, serviceTierType = Nothing, eventName = Nothing, tripCategoryType = Nothing, configId = Nothing}) (Just (SQCC.getActiveCoinConfigs merchantId merchantOpCityId vehCategory))
   let metricsConfigs =
         filter
           ( \cc ->

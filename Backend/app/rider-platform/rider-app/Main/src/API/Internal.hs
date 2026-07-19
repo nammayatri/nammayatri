@@ -60,6 +60,7 @@ type API =
            :<|> ZendeskWebhook.API
            :<|> XyneWebhook.API
            :<|> NotificationWebhook.API
+           :<|> XyneWebhook.BearerAPI
        )
 
 handler :: FlowServer API
@@ -89,3 +90,4 @@ handler =
     :<|> ZendeskWebhook.handler
     :<|> XyneWebhook.handler
     :<|> NotificationWebhook.handler
+    :<|> XyneWebhook.bearerHandler
