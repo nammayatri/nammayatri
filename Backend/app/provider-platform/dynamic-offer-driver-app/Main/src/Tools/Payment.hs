@@ -100,10 +100,7 @@ fetchOfferSKUConfig ::
   DMSC.ServiceName ->
   m (Maybe Text)
 fetchOfferSKUConfig merchantOperatingCity serviceName = do
-  mbMerchantServiceConfig <-
-    getOneConfig
-      (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.getId, merchantId = Nothing, serviceName = Just serviceName})
-      (Just (maybeToList <$> CQMSC.findByServiceAndCity serviceName merchantOperatingCity))
+  mbMerchantServiceConfig <- CQMSC.findByServiceAndCity serviceName merchantOperatingCity
   pure $ case mbMerchantServiceConfig <&> (.serviceConfig) of
     Just (DMSC.PaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
     Just (DMSC.RentalPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
