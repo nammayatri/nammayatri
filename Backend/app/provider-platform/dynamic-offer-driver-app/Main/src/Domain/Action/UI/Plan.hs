@@ -1037,6 +1037,7 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
   driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   orderId <- generateGUIDText
   orderShortId <- generateShortId
+  offerBasket <- Payment.mkOfferBasket merchantOpCityId (Just subscriptionConfig.paymentServiceName) effectivePlanFee
   let driverEmail = fromMaybe "test@juspay.in" driver.email
       amount = plan.registrationAmount
       createOrderReq =
@@ -1058,7 +1059,7 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
             optionsGetUpiDeepLinks = mbDeepLinkData >>= (.sendDeepLink),
             metadataExpiryInMins = mbDeepLinkData >>= (.expiryTimeInMinutes),
             splitSettlementDetails = Nothing,
-            basket = Nothing,
+            basket = Just offerBasket,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing

@@ -141,6 +141,8 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
   logInfo $ "split details: " <> show splitSettlementDetails
   when (amount <= 0) $ throwError (InternalError "Invalid Amount :- should be greater than 0")
   unless (isJust existingInvoice) $ QIN.createMany invoices
+  paymentServiceName <- TPayment.decidePaymentService serviceName driver.clientSdkVersion driver.merchantOperatingCityId
+  offerBasket <- TPayment.mkOfferBasket opCity (Just paymentServiceName) amount
   let createOrderReq =
         CreateOrderReq
           { orderId = invoiceId.getId,
@@ -160,14 +162,13 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
             metadataExpiryInMins = mbDeepLinkData >>= (.expiryTimeInMinutes),
             splitSettlementDetails = splitSettlementDetails,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-            basket = Nothing,
+            basket = Just offerBasket,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person driver.id
-  paymentServiceName <- TPayment.decidePaymentService serviceName driver.clientSdkVersion driver.merchantOperatingCityId
   (createOrderCall, pseudoClientId) <- TPayment.createOrder merchantId opCity paymentServiceName (Just driver.id.getId) -- api call
   mCreateOrderRes <-
     if (isJust existingInvoice && amount < 1) -- In case driver fee was cleared with coins and remaining amount is less than 1 (Juspay create order fails)
@@ -413,6 +414,9 @@ createOrderV2 (personId, merchantId, merchantOperatingCityId) createOrderReq mbP
 
   -- Decide payment service provider based on person's clientSdkVersion
   paymentServiceName <- TPayment.decidePaymentService defaultPaymentServiceName person.clientSdkVersion merchantOperatingCityId
+  -- Build the offer basket (productId from merchant service config, quantity 1) instead of sending Nothing
+  offerBasket <- TPayment.mkOfferBasket merchantOperatingCityId (Just paymentServiceName) createOrderReq.amount
+  let createOrderReqWithBasket = (createOrderReq :: Payment.CreateOrderReq) {Payment.basket = Just offerBasket}
   entityName <- case paymentServiceType of
     DOrder.STCL -> pure DPayment.DRIVER_STCL
     _ -> throwError $ InternalError $ "Unhandled Payment Service Type, " <> show paymentServiceType
@@ -433,7 +437,7 @@ createOrderV2 (personId, merchantId, merchantOperatingCityId) createOrderReq mbP
       (Just entityName) -- mbEntityName
       paymentServiceType -- DOrder.STCL
       False -- isTestTransaction
-      createOrderReq
+      createOrderReqWithBasket
       createOrderCall
       Nothing -- mbCreateWalletCall
       False -- isMockPayment
@@ -462,6 +466,7 @@ createWalletTopupOrder (driverId, merchantId, mocId) amount mbExistingOrderId = 
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound mocId.getId)
   let paymentServiceName = DMSC.AirportReachargeService merchantServiceUsageConfig.createBankAccount
   (orderId, orderShortId) <- handleExistingOrder mbExistingOrderId
+  offerBasket <- TPayment.mkOfferBasket mocId (Just paymentServiceName) amount
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = orderId,
@@ -481,7 +486,7 @@ createWalletTopupOrder (driverId, merchantId, mocId) amount mbExistingOrderId = 
             metadataExpiryInMins = Nothing,
             splitSettlementDetails = Nothing,
             metadataGatewayReferenceId = Nothing,
-            basket = Nothing,
+            basket = Just offerBasket,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing
