@@ -113,6 +113,13 @@ putEdcMachineUpdate (mbRequestorId, _merchantId) mappingId req = do
   _requestorId <- mbRequestorId & fromMaybeM (InvalidRequest "Person not found")
   mapping <- QEDCMachineMapping.findById mappingId >>= fromMaybeM (InvalidRequest "EDC machine mapping not found")
   now <- getCurrentTime
+  let newTerminalId = fromMaybe mapping.terminalId req.paytmTid
+      isReactivating = req.isActive == Kernel.Prelude.Just True && not mapping.isActive
+  -- Mirror assign: reactivating a mapping must not leave two active mappings
+  -- for the same person or the same terminal.
+  when isReactivating $ do
+    QEDCMachineMappingExtra.deactivateExistingMapping mapping.personId mapping.merchantId mapping.merchantOperatingCityId
+    QEDCMachineMappingExtra.deactivateByTerminalId newTerminalId mapping.merchantId mapping.merchantOperatingCityId
   let updatedMapping =
         mapping
           { DEDCM.machineName = req.machineName <|> mapping.machineName,
@@ -120,7 +127,7 @@ putEdcMachineUpdate (mbRequestorId, _merchantId) mappingId req = do
             DEDCM.merchantChannelId = fromMaybe mapping.merchantChannelId req.channelId,
             DEDCM.clientId = fromMaybe mapping.clientId req.clientId,
             DEDCM.merchantKey = fromMaybe mapping.merchantKey req.merchantKey,
-            DEDCM.terminalId = fromMaybe mapping.terminalId req.paytmTid,
+            DEDCM.terminalId = newTerminalId,
             DEDCM.isActive = fromMaybe mapping.isActive req.isActive,
             DEDCM.updatedAt = now
           }

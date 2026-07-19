@@ -34,8 +34,11 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Yudhishthira.Types as LYT
 import Storage.Beam.Yudhishthira ()
+import Storage.ConfigPilot.Config.MerchantPushNotification (MerchantPushNotificationDimensions (..))
 import qualified Storage.Queries.MerchantPushNotification as Queries
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantPushNotification -> m ()
@@ -51,11 +54,17 @@ findAllByMerchantOpCityId id _mbConfigVersionMap =
 
 findMatchingMerchantPN :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> Maybe Notification.SubCategory -> Maybe DLanguage.Language -> Maybe [LYT.ConfigVersionMap] -> m (Maybe MerchantPushNotification)
 findMatchingMerchantPN merchantOperatingCityId messageKey tripCategory subCategory personLanguage _mbConfigVersionMap = do
-  merchantPNs <- findAllByMessageKeyAndTripCategory merchantOperatingCityId messageKey tripCategory
+  merchantPNs <-
+    getConfig
+      (MerchantPushNotificationDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, key = Just messageKey, tripCategory = tripCategory})
+      (Just $ findAllByMessageKeyAndTripCategory merchantOperatingCityId messageKey tripCategory)
   if null merchantPNs
     then do
-      pnsWithOutTripCategory <- findAllByMessageKeyAndTripCategory merchantOperatingCityId messageKey Nothing
-      return $ findMatchingNotification pnsWithOutTripCategory
+      pnsWithOutTripCategory <-
+        getConfig
+          (MerchantPushNotificationDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, key = Just messageKey, tripCategory = Nothing})
+          (Just $ findAllByMessageKeyAndTripCategory merchantOperatingCityId messageKey Nothing)
+      return $ findMatchingNotification (filter (isNothing . (.tripCategory)) pnsWithOutTripCategory)
     else return $ findMatchingNotification merchantPNs
   where
     findMatchingNotification pns =
@@ -98,6 +107,7 @@ clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text
 clearCache merchantOpCityId messageKey tripCategory = do
   Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantOpCityIdAndMessageKeyAndTripCategory merchantOpCityId messageKey tripCategory)
   Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantOpCityIdAllKey merchantOpCityId)
+  invalidateConfigInMem LYT.MerchantPushNotificationRider
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantPushNotification -> m ()
 updateByPrimaryKey cfg = do

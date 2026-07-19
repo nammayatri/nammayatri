@@ -197,7 +197,8 @@ data AppCfg = AppCfg
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
     enableLtsPoolDataForPooling :: Bool,
     rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
-    xyneWebhookSigningSecret :: Text
+    xyneWebhookSigningSecret :: Text,
+    xyneWebhookBearerToken :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -330,6 +331,7 @@ data AppEnv = AppEnv
     enableLtsPoolDataForPooling :: Bool,
     rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
     xyneWebhookSigningSecret :: Text,
+    xyneWebhookBearerToken :: Text,
     actorInfo :: Finance.ActorInfo
   }
   deriving (Generic)

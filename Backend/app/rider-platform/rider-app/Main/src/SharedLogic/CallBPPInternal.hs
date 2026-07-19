@@ -22,6 +22,7 @@ import qualified Data.HashMap.Strict as HM
 import Data.Text as T hiding (filter, map)
 import Data.Time.Calendar (Day)
 import Domain.Types.Common
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.FeedbackForm as DFF
 import Domain.Types.Merchant
 import qualified Domain.Types.RefereeLink as LibTypes
@@ -560,6 +561,62 @@ populateTipAmount ::
 populateTipAmount apiKey internalUrl bppRideId tipAmount = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (populateTipAmountClient bppRideId tipAmount (Just apiKey)) "PopulateTipAmount" populateTipAmountApi
+
+data RefundLedgerStatus = APPROVED | REFUNDED | FAILED
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
+
+-- | Per-component refund breakdown (BAP-split). 'component' is the FareComponent enum;
+--   Generic JSON encodes it as "RIDE_FARE"/"TOLL"/"PARKING". Field names byte-identical to BPP.
+data RefundLedgerComponent = RefundLedgerComponent
+  { component :: DFareBreakup.FareComponent,
+    fareAmount :: HighPrecMoney,
+    vatAmount :: HighPrecMoney
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+-- | Field names are byte-identical to the BPP RefundLedgerReq so the two
+--   independently-defined Generic instances agree on the JSON wire.
+data RefundLedgerReq = RefundLedgerReq
+  { refundRequestId :: Text,
+    refundsAmount :: HighPrecMoney,
+    deductFromDriver :: Maybe Bool,
+    refundRequestStatus :: RefundLedgerStatus,
+    refundComponents :: Maybe [RefundLedgerComponent],
+    rideFareComponentTotal :: Maybe HighPrecMoney
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+type RefundLedgerAPI =
+  "internal"
+    :> Capture "rideId" Text
+    :> "refundLedger"
+    :> Header "token" Text
+    :> ReqBody '[JSON] RefundLedgerReq
+    :> Post '[JSON] APISuccess
+
+refundLedgerClient :: Text -> Maybe Text -> RefundLedgerReq -> EulerClient APISuccess
+refundLedgerClient = client refundLedgerApi
+
+refundLedgerApi :: Proxy RefundLedgerAPI
+refundLedgerApi = Proxy
+
+-- | Best-effort (try-swallow): the BPP handler throws on failure, and on the APPROVED
+--   transition this fires before the Stripe refund, so a BPP outage must not abort the
+--   refund. Failures still log via the BPP_INTERNAL_API_ERROR counter.
+refundLedger ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  RefundLedgerReq ->
+  m ()
+refundLedger apiKey internalUrl bppRideId req = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  void $ try @_ @SomeException $ EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (refundLedgerClient bppRideId (Just apiKey) req) "RefundLedger" refundLedgerApi
 
 type GetDeliveryImageAPI =
   "internal"

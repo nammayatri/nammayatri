@@ -19,6 +19,7 @@ module Tools.Ticket
     updateTicket,
     updateTicketOnService,
     updateTicketStatus,
+    updateTicketCsat,
     addAndUpdateKaptureCustomer,
     kaptureEncryption,
     kapturePullTicket,
@@ -119,6 +120,12 @@ updateTicketOnService = callUpdateTicket
 -- runs as a secondary (e.g. primary=Zendesk) still gets the status sync.
 updateTicketStatus :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.UpdateTicketStatusReq -> m ()
 updateTicketStatus merchantId mocId = callServiceSpecific TI.updateTicketStatus merchantId mocId TicketTypes.XyneSpaces
+
+-- | CSAT-only update. Targets XyneSpaces directly since it is the only
+-- provider with a dedicated CSAT endpoint; a merchant whose XyneSpaces runs
+-- as a secondary (e.g. primary=Zendesk) still gets the CSAT sync.
+updateTicketCsat :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.UpdateTicketCsatReq -> m ()
+updateTicketCsat merchantId mocId = callServiceSpecific TI.updateTicketCsat merchantId mocId TicketTypes.XyneSpaces
 
 addAndUpdateKaptureCustomer :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.KaptureCustomerReq -> m Ticket.KaptureCustomerResp
 addAndUpdateKaptureCustomer = resolveAndCallTicketService (.issueTicketService) TI.addAndUpdateKaptureCustomer

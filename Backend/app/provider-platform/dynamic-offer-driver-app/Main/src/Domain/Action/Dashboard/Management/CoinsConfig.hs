@@ -22,7 +22,9 @@ import Kernel.Types.Error (GenericError (InvalidRequest))
 import qualified Kernel.Types.Id as ID
 import qualified Kernel.Types.TimeBound as TB
 import qualified Kernel.Utils.Common as UC
+import qualified Lib.ConfigPilot.Interface.Getter as LCP
 import qualified Lib.DriverCoins.Types as DCT
+import qualified Lib.Yudhishthira.Types.ConfigPilot as LYTCP
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.CoinsConfig as CQConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -123,8 +125,16 @@ postCoinsConfigCreate merchantShortId opCity req = do
 
 clearCache :: DTCC.CoinsConfig -> Environment.Flow ()
 clearCache coinsConfig = do
-  let clearCacheForVehicleCategory = CQConfig.clearCache coinsConfig.eventName coinsConfig.eventFunction (ID.Id coinsConfig.merchantOptCityId)
-  whenJust coinsConfig.vehicleCategory (\vc -> clearCacheForVehicleCategory vc coinsConfig.serviceTierType (fromMaybe DCT.DynamicOfferTrip coinsConfig.tripCategoryType))
+  let merchantOpCityId = ID.Id coinsConfig.merchantOptCityId
+      clearCacheForVehicleCategory = CQConfig.clearCache coinsConfig.eventName coinsConfig.eventFunction merchantOpCityId
+  case coinsConfig.vehicleCategory of
+    Just vc -> clearCacheForVehicleCategory vc coinsConfig.serviceTierType (fromMaybe DCT.DynamicOfferTrip coinsConfig.tripCategoryType)
+    -- Still clear city-wide ConfigPilot cache even if vehicleCategory is missing.
+    Nothing -> CQConfig.clearCityCache merchantOpCityId
+  -- Drop ConfigPilot in-mem / Redis bucket so EndRide does not keep stale timeBounds.
+  LCP.invalidateConfigInMem LYTCP.CoinsConfig
+  -- Invalidate driver incentiveConfig ETag so clients refetch after create/update.
+  CQConfig.clearDriverIncentiveConfigHash merchantOpCityId coinsConfig.vehicleCategory coinsConfig.eventFunction
 
 processingTranslations :: DTCC.CoinsConfig -> [Common.EventMessage] -> Environment.Flow ()
 processingTranslations coinsConfig eventMessageLs = do

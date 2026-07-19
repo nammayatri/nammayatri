@@ -93,7 +93,7 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
       indirectTaxTxns <- QIndirectTaxExtra.findByInvoiceNumber (Just invoice.invoiceNumber)
       let mbTaxTxn = Kernel.Prelude.listToMaybe indirectTaxTxns
 
-      mbPaymentMethod <- case invoice.paymentOrderId of
+      mbPaymentMethod <- case invoice.entityReferenceId of
         Just orderId -> do
           txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
           pure $ Kernel.Prelude.listToMaybe txns >>= (.paymentMethod)
@@ -195,7 +195,7 @@ getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLi
   taxTxns <- QIndirectTaxExtra.findByInvoiceNumber (Just inv.invoiceNumber)
   let mbTaxTxn = Kernel.Prelude.listToMaybe taxTxns
 
-  (mbPayType, mbBrand, mbLast4) <- case inv.paymentOrderId of
+  (mbPayType, mbBrand, mbLast4) <- case inv.entityReferenceId of
     Just orderId -> do
       txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
       let mbTxn = Kernel.Prelude.listToMaybe txns

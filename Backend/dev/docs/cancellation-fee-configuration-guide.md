@@ -2,7 +2,13 @@
 
 ## Overview
 
-When a ride is cancelled (by rider or driver), a cancellation fee + tax can be charged to the rider. The fee and tax amounts are fully configurable via dynamic logic. The system supports both online (card/Stripe) and cash payment modes.
+When a ride is cancelled (by rider or driver), a cancellation fee + tax can be charged to the rider. The fee and tax amounts are configurable via dynamic logic; eligibility (time/wait thresholds) is gated by NammaTags. The system supports both online (card/Stripe) and cash payment modes.
+
+> **Reference migration:** `dev/feature-migrations/0034-cancellation-fee-consolidated.sql` is the single, idempotent example that wires the full feature for one city (supersedes the older `0005`/`0011`/`0031` files). Use it as the template for enabling a new city.
+
+**Division of responsibility (important):**
+- **NammaTags gate eligibility** — the time/wait thresholds (driver waited ≥ 3 min for no-show; rider cancelled ≥ 3 min after booking) live *only* in the tag `rule_engine`.
+- **Dynamic logic sets amounts only** — no redundant threshold/reason re-checks; the driver-vs-rider amount is selected by `cancelledBy`.
 
 ## How It Works
 
@@ -25,11 +31,19 @@ invoice + ledger entries         BAP creates finance invoice + charges Stripe (c
 
 ## Configuration Layers
 
-### Layer 1: Master Switch (BPP)
+### Layer 1: Master Switch + BPP Fee Rules (BPP)
 
 ```sql
 UPDATE atlas_driver_offer_bpp.transporter_config
-SET can_add_cancellation_fee = true  -- false = no cancellation fee at all
+SET can_add_cancellation_fee = true,  -- false = no cancellation fee at all (single master switch)
+    -- Cancellation reason code(s) that qualify a DRIVER cancellation as a penalizable no-show.
+    -- Configurable; falls back to CUSTOMER_NO_SHOW when NULL. Keep in sync with the
+    -- CustomerNoShowCancellation NammaTag rule_engine (Layer 2), which compares the same reason.
+    valid_cancellation_penalty_reasons = '{CUSTOMER_NO_SHOW}',
+    -- Payment instruments exempt from the cancellation fee. For an exempt instrument the BPP
+    -- computes NO fee and sends none to the BAP (no ledger/invoice entries at all).
+    -- Values are PaymentInstrument names, e.g. Cash, UPI, NetBanking.
+    cancellation_fee_payment_method_exceptions = '{Cash}'
 WHERE merchant_operating_city_id = '<city_id>';
 ```
 
@@ -55,7 +69,7 @@ INSERT INTO atlas_driver_offer_bpp.namma_tag_v2 (
   '<city_id>',
   'CustomerCancellation',
   '{Valid,Invalid}',
-  '{"if":[{"==":[{"var":"cancellationReason.source"},"ByUser"]},{"if":[{">=":[{"-":[{"var":"currentTime"},{"if":[{"==":[{"var":"driverArrivalTime"},null]},{"var":"currentTime"},{"var":"driverArrivalTime"}]}]},5]},"Valid","Invalid"]},null]}',
+  '{"if":[{"==":[{"var":"cancellationReason.source"},"ByUser"]},{"if":[{">=":[{"-":[{"var":"currentTime"},{"var":"bookingCreatedTime"}]},180]},"Valid","Invalid"]},null]}',
   now(), now()
 ) ON CONFLICT (merchant_operating_city_id, name) DO UPDATE SET rule_engine = EXCLUDED.rule_engine, updated_at = now();
 
@@ -71,12 +85,12 @@ INSERT INTO atlas_driver_offer_bpp.namma_tag_v2 (
   category, description, tag_type, merchant_operating_city_id, name, tags, rule_engine, created_at, updated_at
 ) VALUES (
   'CustomerNoShowCancellationValidity',
-  'Driver no-show: charge if driver cancelled with CUSTOMER_NO_SHOW after waiting >= 5s',
+  'Driver no-show: charge if driver cancelled with CUSTOMER_NO_SHOW after waiting >= 3 min',
   'ApplicationTag',
   '<city_id>',
   'CustomerNoShowCancellation',
   '{Valid,Invalid}',
-  '{"if":[{"and":[{"==":[{"var":"cancellationReason.reasonCode"},"CUSTOMER_NO_SHOW"]},{"==":[{"var":"cancellationReason.source"},"ByDriver"]}]},{"if":[{">=":[{"-":[{"var":"currentTime"},{"if":[{"==":[{"var":"driverArrivalTime"},null]},{"var":"currentTime"},{"var":"driverArrivalTime"}]}]},5]},"Valid","Invalid"]},null]}',
+  '{"if":[{"and":[{"==":[{"var":"cancellationReason.reasonCode"},"CUSTOMER_NO_SHOW"]},{"==":[{"var":"cancellationReason.source"},"ByDriver"]}]},{"if":[{">=":[{"-":[{"var":"currentTime"},{"if":[{"==":[{"var":"driverArrivalTime"},null]},{"var":"currentTime"},{"var":"driverArrivalTime"}]}]},180]},"Valid","Invalid"]},null]}',
   now(), now()
 ) ON CONFLICT (merchant_operating_city_id, name) DO UPDATE SET rule_engine = EXCLUDED.rule_engine, updated_at = now();
 
@@ -175,65 +189,19 @@ Orders execute as a **pipeline** — each order can read and override values set
 {"cat":[{"var":""},{"cancellationChargesTax":0.72}]}
 ```
 
-**Order 2 — Override charge for driver no-show (100 EUR if arrived + waited):**
+Because the NammaTags already gate eligibility (reason, source, wait time), the dynamic logic does **not** re-check those conditions — it only picks the amount by `cancelledBy`. Order 0/1 set the rider-cancellation amount as the default; orders 2/3 override it for driver no-show.
+
+**Order 2 — Override charge for driver no-show (100 EUR):**
 ```json
 {"cat":[{"var":""},{"cancellationCharges":
-  {"if":[
-    {"and":[
-      {"==":[{"var":"cancellationReasonSelected"},"CUSTOMER_NO_SHOW"]},
-      {"==":[{"var":"cancelledBy"},"CancellationByDriver"]},
-      {"==":[{"var":"isArrivedAtPickup"},true]},
-      {">=":[{"var":"driverWaitingTime"},5]}
-    ]},
-    100,
-    {"if":[{"var":"cancellationCharges"},{"var":"cancellationCharges"},0]}
-  ]}
+  {"if":[{"==":[{"var":"cancelledBy"},"CancellationByDriver"]},100,{"var":"cancellationCharges"}]}
 }]}
 ```
 
 **Order 3 — Override tax for driver no-show (24 EUR):**
 ```json
 {"cat":[{"var":""},{"cancellationChargesTax":
-  {"if":[
-    {"and":[
-      {"==":[{"var":"cancellationReasonSelected"},"CUSTOMER_NO_SHOW"]},
-      {"==":[{"var":"cancelledBy"},"CancellationByDriver"]},
-      {"==":[{"var":"isArrivedAtPickup"},true]},
-      {">=":[{"var":"driverWaitingTime"},5]}
-    ]},
-    24,
-    {"if":[{"var":"cancellationChargesTax"},{"var":"cancellationChargesTax"},0]}
-  ]}
-}]}
-```
-
-**Order 4 — Rider cancellation: keep charge only if driver arrived + waited, else 0:**
-```json
-{"cat":[{"var":""},{"cancellationCharges":
-  {"if":[
-    {"!=":[{"var":"cancellationReasonSelected"},"CUSTOMER_NO_SHOW"]},
-    {"if":[
-      {"and":[{"==":[{"var":"isArrivedAtPickup"},true]},{">=":[{"var":"driverWaitingTime"},5]}]},
-      {"if":[{"var":"cancellationCharges"},{"var":"cancellationCharges"},0]},
-      0
-    ]},
-    {"var":"cancellationCharges"}
-  ]}
-}]}
-```
-
-**Order 5 — Rider cancellation: same for tax:**
-```json
-{"cat":[{"var":""},{"cancellationChargesTax":
-  {"if":[
-    {"!=":[{"var":"cancellationReasonSelected"},"CUSTOMER_NO_SHOW"]},
-    {"if":[
-      {"and":[{"==":[{"var":"isArrivedAtPickup"},true]},{">=":[{"var":"driverWaitingTime"},5]}]},
-      {"if":[{"var":"cancellationChargesTax"},{"var":"cancellationChargesTax"},0]},
-      0
-    ]},
-    {"var":"cancellationChargesTax"}
-  ]}
+  {"if":[{"==":[{"var":"cancelledBy"},"CancellationByDriver"]},24,{"var":"cancellationChargesTax"}]}
 }]}
 ```
 
@@ -242,16 +210,24 @@ Orders execute as a **pipeline** — each order can read and override values set
 Controls how cancellation fees are collected from the rider:
 
 ```sql
--- Which cancellation reasons trigger immediate Stripe charge (card payments)
+-- Immediate capture vs pending due, configured separately for driver- and rider-initiated fees.
+--   true  = capture the fee now (Stripe charge for card / mark DUE for cash)
+--   false = defer as a pending due (settled later / before the next ride)
+-- Defaults to true when unset (preserves prior behaviour).
 UPDATE atlas_app.rider_config
-SET valid_cancellation_reason_codes_for_immediate_charge = '{"CUSTOMER_NO_SHOW","OTHER","HIGH_FARE"}'
+SET immediate_capture_driver_cancellation_fee = true,   -- driver no-show fees
+    immediate_capture_rider_cancellation_fee = true      -- rider-cancellation fees
 WHERE merchant_operating_city_id = '<bap_city_id>';
 
--- Block rider's next booking until cancellation dues are paid
+-- Block rider's next booking until cancellation dues are paid (enables the active settlement path)
 UPDATE atlas_app.rider_config
 SET settle_cancellation_fee_before_next_ride = true
 WHERE merchant_operating_city_id = '<bap_city_id>';
 ```
+
+> **Deprecated:** `valid_cancellation_reason_codes_for_immediate_charge` is no longer read.
+> The immediate-vs-due decision now comes from the two `immediate_capture_*` flags above,
+> chosen by cancellation source (`ByUser` → rider flag, otherwise → driver flag).
 
 ### Layer 5: BPP Wallet + Invoice Config (for BPP-side finance entries)
 
@@ -273,23 +249,28 @@ WHERE merchant_operating_city_id = '<city_id>';
 
 ## Quick Reference: Enable for a New City
 
-1. **BPP transporter_config**: `can_add_cancellation_fee = true`, `driver_wallet_config`, `invoice_config`
+Follow `0034-cancellation-fee-consolidated.sql` as the template. The pieces:
+
+1. **BPP transporter_config**: `can_add_cancellation_fee = true`, `valid_cancellation_penalty_reasons`, `cancellation_fee_payment_method_exceptions`, `driver_wallet_config`, `invoice_config`, `tax_config`
 2. **BPP merchant**: `prepaid_subscription_and_wallet_enabled = true`
-3. **BPP namma_tag_v2**: Add `CustomerCancellation` and/or `CustomerNoShowCancellation` tags + triggers
-4. **BPP app_dynamic_logic_element**: Add fee rules (even orders) + tax rules (odd orders)
+3. **BPP namma_tag_v2**: Add `CustomerCancellation` and/or `CustomerNoShowCancellation` tags + `RideCancel` triggers (thresholds live here)
+4. **BPP app_dynamic_logic_element**: base amount (order 0/1) + driver no-show override (order 2/3), amounts only
 5. **BPP app_dynamic_logic_rollout**: Rollout at 100%
-6. **BAP rider_config**: `valid_cancellation_reason_codes_for_immediate_charge` + `settle_cancellation_fee_before_next_ride`
+6. **BAP rider_config**: `immediate_capture_driver_cancellation_fee`, `immediate_capture_rider_cancellation_fee`, `settle_cancellation_fee_before_next_ride`, `invoice_config`
 
 ## Disable for a City
 
 | What to disable | How |
 |-----------------|-----|
 | All cancellation fees | `can_add_cancellation_fee = false` |
+| Fee for a payment method (e.g. cash) | Add the instrument to `cancellation_fee_payment_method_exceptions` (e.g. `{Cash}`) |
 | Only rider-cancel fees | Delete `CustomerCancellation` tag or its trigger |
 | Only driver no-show fees | Delete `CustomerNoShowCancellation` tag or its trigger |
-| Immediate Stripe charge | Remove reason codes from `valid_cancellation_reason_codes_for_immediate_charge` |
+| Immediate driver no-show capture | `immediate_capture_driver_cancellation_fee = false` (fee becomes a pending due) |
+| Immediate rider-cancel capture | `immediate_capture_rider_cancellation_fee = false` (fee becomes a pending due) |
 | Next-ride blocking | `settle_cancellation_fee_before_next_ride = false` |
 | BPP finance entries | `driver_wallet_config.enableDriverWallet = false` |
+| Change the penalty reason | Set `valid_cancellation_penalty_reasons` + the matching `CustomerNoShowCancellation` tag rule |
 
 ## Where Data Lives
 

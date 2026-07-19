@@ -13,15 +13,29 @@
 -}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Storage.CachedQueries.CoinsConfig where
+module Storage.CachedQueries.CoinsConfig
+  ( findAllByMerchantOptCityId,
+    fetchFunctionsOnEventbasisInRideFlow,
+    fetchFunctionsOnEventbasis,
+    fetchConfigOnEventAndFunctionBasisInRideFlow,
+    fetchConfigOnEventAndFunctionBasis,
+    clearCache,
+    clearCityCache,
+    getDriverIncentiveConfigHash,
+    setDriverIncentiveConfigHash,
+    clearDriverIncentiveConfigHash,
+  )
+where
 
 import Data.Text (pack)
+import qualified Data.Text as T
 import Domain.Types.Coins.CoinsConfig
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.VehicleCategory as DTV
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Types as DCT
@@ -144,3 +158,50 @@ clearCache eventType eventFunction merchantOpCityId vehicleCategory mbServiceTie
       (cast merchantOpCityId)
       (LYT.DRIVER_CONFIG LYT.CoinsConfig)
       Nothing
+  -- ConfigPilot getConfig loads via findAllByMerchantOptCityId (city-wide key). Must clear
+  -- that too, otherwise EndRide keeps serving stale timeBounds after create/update.
+  clearCityCache merchantOpCityId
+
+-- | City-wide CoinsConfig cache used by ConfigPilot (and findAllByMerchantOptCityId).
+clearCityCache :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m ()
+clearCityCache merchantOpCityId =
+  DynamicLogic.clearConfigCacheWithPrefix
+    ("cachedQueries:Coins:MocId-" <> merchantOpCityId.getId)
+    (cast merchantOpCityId)
+    (LYT.DRIVER_CONFIG LYT.CoinsConfig)
+    Nothing
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- ETag Redis for GET /coins/incentiveConfig (same pattern as SpecialLocation list).
+-- Keyed by city + vehicleCategory + eventFunction because the payload is cohort-specific.
+
+driverIncentiveConfigHashRedisKey :: Text -> DTV.VehicleCategory -> Text -> Text
+driverIncentiveConfigHashRedisKey mocId vehicleCategory eventFunctionKey =
+  "DriverIncentiveCoins:Config:Hash:MocId:"
+    <> mocId
+    <> ":VehicleCategory:"
+    <> show vehicleCategory
+    <> ":EventFunction:"
+    <> eventFunctionKey
+
+getDriverIncentiveConfigHash :: (CacheFlow m r) => Text -> DTV.VehicleCategory -> Text -> m (Maybe Text)
+getDriverIncentiveConfigHash mocId vehicleCategory eventFunctionKey =
+  Hedis.safeGet (driverIncentiveConfigHashRedisKey mocId vehicleCategory eventFunctionKey)
+
+setDriverIncentiveConfigHash :: (CacheFlow m r) => Text -> DTV.VehicleCategory -> Text -> Text -> m ()
+setDriverIncentiveConfigHash mocId vehicleCategory eventFunctionKey eTag =
+  Hedis.set (driverIncentiveConfigHashRedisKey mocId vehicleCategory eventFunctionKey) eTag
+
+-- | Clear ETag for a specific cohort after CoinsConfig create/update.
+clearDriverIncentiveConfigHash :: (CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe DTV.VehicleCategory -> DCT.DriverCoinsFunctionType -> m ()
+clearDriverIncentiveConfigHash merchantOpCityId mbVehicleCategory eventFunction =
+  case mbVehicleCategory of
+    Just vc ->
+      void $
+        Hedis.del
+          ( driverIncentiveConfigHashRedisKey
+              merchantOpCityId.getId
+              vc
+              (T.pack (show eventFunction))
+          )
+    Nothing -> pure ()

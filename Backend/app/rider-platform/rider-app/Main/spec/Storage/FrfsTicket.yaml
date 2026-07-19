@@ -374,6 +374,7 @@ FRFSTicketBooking:
     id: Id FRFSTicketBooking
     searchId: Id FRFSSearch
     bppOrderId: Maybe Text
+    bppPaymentId: Maybe Text
     quoteId: Id FRFSQuote
     status: FRFSTicketBookingStatus|NoRelation
     riderId: Id Person
@@ -553,6 +554,10 @@ FRFSTicketBooking:
       kvFunction: updateWithKV
       params: [bppOrderId, updatedAt]
       where: id
+    updateBPPPaymentIdById:
+      kvFunction: updateWithKV
+      params: [bppPaymentId, updatedAt]
+      where: id
     updateIsFareChangedById:
       kvFunction: updateWithKV
       params: [isFareChanged, updatedAt]
@@ -598,9 +603,9 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [googleWalletJWTUrl]
       where: id
-    updateQuoteAndBppItemIdAndRouteStationsJson:
+    updateQuoteBppItemIdRouteStationsAndServiceTierById:
       kvFunction: updateOneWithKV
-      params: [quoteId, bppItemId, routeStationsJson]
+      params: [quoteId, bppItemId, routeStationsJson, serviceTierType]
       where: id
     updateFailureReasonById:
       kvFunction: updateOneWithKV

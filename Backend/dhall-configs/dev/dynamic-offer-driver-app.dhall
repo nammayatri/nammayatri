@@ -585,4 +585,5 @@ in  { esqDBCfg
     , enableLtsPoolDataForPooling = True
     , rideEventsPublisherCfg
     , xyneWebhookSigningSecret = "<XYNE_WEBHOOK_SIGNING_SECRET>"
+    , xyneWebhookBearerToken = "<XYNE_WEBHOOK_BEARER_TOKEN>"
     }

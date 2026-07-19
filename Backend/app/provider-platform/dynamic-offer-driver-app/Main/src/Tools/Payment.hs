@@ -97,6 +97,42 @@ runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName mR
         DMSC.PaymentService Payment.AAJuspay -> mRoutingId
         _ -> Nothing
 
+-- | Fetch the offer SKU productId configured on the merchant's payment service config (if any).
+fetchOfferSKUConfig ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  DMSC.ServiceName ->
+  m (Maybe Text)
+fetchOfferSKUConfig merchantOperatingCity serviceName = do
+  mbMerchantServiceConfig <-
+    getOneConfig
+      (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.getId, merchantId = Nothing, serviceName = Just serviceName})
+      (Just (maybeToList <$> CQMSC.findByServiceAndCity serviceName merchantOperatingCity))
+  pure $ case mbMerchantServiceConfig <&> (.serviceConfig) of
+    Just (DMSC.PaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
+    Just (DMSC.RentalPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
+    Just (DMSC.CautioPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
+    Just (DMSC.MembershipPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
+    Just (DMSC.AirportReachargeServiceConfig vsc) -> Payment.offerSKUConfig vsc
+    _ -> Nothing
+
+-- | Build a single-item payment basket keyed by the configured offer SKU productId.
+--   Quantity defaults to 1. Falls back to a dummy basket when the service name is
+--   unknown or no SKU productId is configured.
+mkOfferBasket ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Maybe DMSC.ServiceName ->
+  HighPrecMoney ->
+  m [Payment.Basket]
+mkOfferBasket merchantOperatingCity mbServiceName amount = do
+  mbProductId <- maybe (pure Nothing) (fetchOfferSKUConfig merchantOperatingCity) mbServiceName
+  pure $ maybe (dummyBasket amount) (\productId -> [Payment.Basket {Payment.id = productId, Payment.unitPrice = amount, Payment.quantity = 1}]) mbProductId
+
+-- | Dummy basket used when no offer SKU productId is configured.
+dummyBasket :: HighPrecMoney -> [Payment.Basket]
+dummyBasket amount = [Payment.Basket {Payment.id = "no_basket", Payment.unitPrice = amount, Payment.quantity = 1}]
+
 createConnectAccount ::
   ServiceFlow m r =>
   Id DMOC.MerchantOperatingCity ->

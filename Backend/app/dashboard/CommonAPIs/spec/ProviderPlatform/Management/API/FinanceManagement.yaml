@@ -170,6 +170,7 @@ apis:
         - from: UTCTime
         - to: UTCTime
         - sourceType: Text
+        - subscriptionId: Id SubscriptionPurchase
       auth: ApiAuthV2
       response:
         type: WalletLedgerRes
@@ -398,6 +399,7 @@ types:
     - sourceTotal: HighPrecMoney
     - targetTotal: HighPrecMoney
     - varianceAmount: HighPrecMoney
+    - disputeAmountTotal: HighPrecMoney
   ReconciliationEntry:
     - bookingId: Maybe Text
     - dcoId: Maybe Text
@@ -406,6 +408,7 @@ types:
     - expectedValue: Maybe HighPrecMoney
     - actualValue: Maybe HighPrecMoney
     - variance: Maybe HighPrecMoney
+    - disputeAmount: Maybe HighPrecMoney
     - reconStatus: Maybe Text
     - mismatchReason: Maybe Text
     - timestamp: Maybe UTCTime
@@ -416,7 +419,25 @@ types:
     - settlementDate: Maybe UTCTime
     - settlementMode: Maybe Text
     - transactionDate: Maybe UTCTime
+    - pgTransactionDate: Maybe UTCTime
     - rrn: Maybe Text
+    - utr: Maybe Text
+    - pgOrderId: Maybe Text
+    - pgTxnId: Maybe Text
+    - paymentOrderId: Maybe Text
+    - subscriptionAmountExclGst: Maybe HighPrecMoney
+    - gstOnSubscription: Maybe HighPrecMoney
+    - totalTransactionAmount: Maybe HighPrecMoney
+    - subscriptionPurchaseId: Maybe Text
+    - purchaseTimestamp: Maybe UTCTime
+    - purchaseStatus: Maybe Text
+    - planName: Maybe Text
+    - entitledAmount: Maybe HighPrecMoney
+    - consumedAmount: Maybe HighPrecMoney
+    - remainingAmount: Maybe HighPrecMoney
+    - transactionType: Maybe Text
+    - linkedEntityId: Maybe Text
+    - mismatchCategory: Maybe Text
 
   # ----- Payout list -----
   PayoutListRes:
@@ -526,12 +547,19 @@ types:
     - pgMerchantId: Maybe Text
 
   # ----- Wallet ledger (balance + ledger combined) -----
+  # normal mode (no subscriptionId): Liability wallet account — all entries on that account;
+  #   expiryEntries/creditEntries = Nothing.
+  # subscription mode (subscriptionId set): prepaid RideCredit account — RideSubscriptionDebit entries (ride <-> ledger join);
+  #   expiryEntries/creditEntries returned separately (not part of the join; mixing into one list would make limit/offset incorrect).
   WalletLedgerRes:
     - availableWalletBalance: Maybe HighPrecMoney
     - lockedWalletBalance: Maybe HighPrecMoney
     - lastWalletUpdatedAt: Maybe UTCTime
     - totalItems: Int
     - ledgerEntries: [WalletLedgerItem]
+    - expiryEntries: Maybe [WalletLedgerItem] # subscription filter only — ExpiryCreditTransfer entries
+    - creditEntries: Maybe [WalletLedgerItem] # subscription filter only — SubscriptionCredit entries
+    - subscriptionId: Maybe (Id SubscriptionPurchase) # echo of request filter; Just only in subscription mode
   WalletLedgerItem:
     - walletTxnId: Maybe Text
     - walletTxnDate: Maybe UTCTime

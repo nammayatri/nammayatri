@@ -30,6 +30,7 @@ import time
 from urllib.parse import unquote_plus
 
 from ._env import MOCK_SERVER_PORT
+from status_store import register_body_decoder
 
 
 # ── In-memory state ──
@@ -73,6 +74,12 @@ def _parse_form(body):
             k, v = pair.split("=", 1)
             params[unquote_plus(k)] = unquote_plus(v)
     return params
+
+
+# Register the form-decoder so the /mock/override middleware can extract fields
+# (e.g. body.payment_intent) from Stripe's form-urlencoded request bodies — the
+# default middleware only json.loads() the body. Mirrors cmrl.py / cris.py.
+register_body_decoder("stripe", _parse_form)
 
 
 def _stripe_error(error_type, code=None, message=None, http_status=400):
@@ -461,12 +468,30 @@ def handle(handler, path, body):
     # ── Refunds ──
     if resource == "refunds":
         if method == "POST" and len(parts) == 1:
+            # /mock/override on the create: {"status":"pending"} | {"status":"failed","failure_reason":...}
+            # | {"error":{...},"http_status":402} for the no-re_ create-failure. Default = succeeded.
+            override_status, extra = handler._get_override("stripe", params.get("payment_intent", ""))
+            if extra.get("error") or override_status == "error":
+                err = extra.get("error") or {"type": "card_error", "code": "card_declined", "message": "Your card was declined."}
+                return handler._json({"error": err}, extra.get("http_status", 402))
             resp, st = _mk_refund(params)
+            if override_status:
+                resp["status"] = override_status
+                if "failure_reason" in extra:
+                    resp["failure_reason"] = extra["failure_reason"]
             return handler._json(resp, st)
         if method == "GET" and len(parts) == 2:
+            # /mock/override on the poll: {"status":"succeeded"} | {"status":"failed","failure_reason":...}
+            override_status, extra = handler._get_override("stripe", parts[1])
             ref = refunds.get(parts[1])
             if not ref:
+                if override_status:
+                    return handler._json({"id": parts[1], "object": "refund", "status": override_status, **extra})
                 return handler._json({"error": {"message": f"No such refund: '{parts[1]}'"}}, 404)
+            if override_status:
+                ref["status"] = override_status
+                if "failure_reason" in extra:
+                    ref["failure_reason"] = extra["failure_reason"]
             return handler._json(ref)
         if method == "POST" and len(parts) == 3 and parts[2] == "cancel":
             ref = refunds.get(parts[1])

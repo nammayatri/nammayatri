@@ -1018,6 +1018,7 @@ TransporterConfig:
       individualNotLinked: Maybe TdsConfig
       businessTds: Maybe TdsConfig
       serviceVatPercentage: Maybe Double
+      commissionVatPercentage: Maybe Double
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     CommissionAggregationFrequency:
       enum: "DAILY, WEEKLY, MONTHLY"
@@ -1061,12 +1062,17 @@ TransporterConfig:
   fields:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    authPhoneNumberCountThreshold1: Maybe Int
+    authPhoneNumberCountWindow1: Maybe SlidingWindowOptions
+    authPhoneNumberCountThreshold2: Maybe Int
+    authPhoneNumberCountWindow2: Maybe SlidingWindowOptions
     pickupLocThreshold: Meters
     dropLocThreshold: Meters
     editLocTimeThreshold: Seconds
     editLocDriverPermissionNeeded: Bool
     rideTimeEstimatedThreshold: Seconds
     includeDriverCurrentlyOnRide: Bool
+    defaultRefundDeductFromDriver: Maybe Bool
     defaultPopupDelay: Seconds
     popupDelayToAddAsPenalty: Maybe Seconds
     fleetAlertThreshold: Maybe Seconds
@@ -1182,6 +1188,8 @@ TransporterConfig:
     driverDistanceToPickupThresholdOnCancel: Meters
     numOfCancellationsAllowed: Int
     canAddCancellationFee: Bool
+    cancellationFeePaymentMethodExceptions: "Maybe [PaymentInstrument]"
+    validCancellationPenaltyReasons: "Maybe [Text]"
     allowDefaultPlanAllocation: Bool
     arrivedStopThreshold: Maybe HighPrecMeters
     arrivedPickupThreshold: HighPrecMeters
@@ -1352,7 +1360,6 @@ TransporterConfig:
     isGstPanLinkCheckRequired: Maybe Bool
     invoiceConfig: Maybe InvoiceConfig
     enableManualDocumentStatusCheck: Maybe Bool
-    enableDocumentMetadata: Maybe Bool # When True, document metadata (DL number, Aadhaar number, PAN, address proof details) is computed and returned in status responses.
     enableCourtRecordCheck: Maybe Bool # Gates the Idfy Court Record Check (CRC) on driver-inspection approval. Enabled per-merchant (e.g. MSIL).
     sendMembershipIdInProfile: Maybe Bool
     stclConfig: Maybe StclConfig # STCL membership tunables. Any field left as Nothing falls back to defaults in Domain.Action.UI.StclMembership.
@@ -1653,6 +1660,8 @@ TransporterConfig:
 
   sqlType:
     exotelAppIdMapping: json
+    authPhoneNumberCountWindow1: json
+    authPhoneNumberCountWindow2: json
     pickupLocThreshold: bigint
     dropLocThreshold: bigint
     rideTimeEstimatedThreshold: bigint
@@ -1721,6 +1730,8 @@ TransporterConfig:
     allowFarePolicyUpdateBelowMinBaseFare: boolean
     communicationChannelCharLimits: json
     allowedPaymentInstrumentForPayout: "text[]"
+    cancellationFeePaymentMethodExceptions: "text[]"
+    validCancellationPenaltyReasons: "text[]"
     stclConfig: json
     defaultOnboardingAs: character varying(255)
 
@@ -2075,9 +2086,8 @@ MerchantPushNotification:
   configPilot:
     configType: MerchantPushNotification
     fetchQuery: findAllByMerchantOpCityId
-    fetchQueryArgs: "(Just [])"
     returnType: List
-    queryModule: Storage.CachedQueries.Merchant.MerchantPushNotification
+    queryModule: Storage.Queries.MerchantPushNotification
     filterDimensions:
       - key
       - tripCategory

@@ -72,6 +72,7 @@ postPenaltyCheck (mbPersonId, _merchantId, _merchantOpCityId) req = do
     let callAtemptByDriver = isJust mbCallStatus
         currentTime = floor $ utcTimeToPOSIXSeconds now
         rideCreatedTime = floor $ utcTimeToPOSIXSeconds ride.createdAt
+        bookingCreatedTime = floor $ utcTimeToPOSIXSeconds booking.createdAt
         driverArrivalTime = floor . utcTimeToPOSIXSeconds <$> (ride.driverArrivalTime)
     (mbDriverDistToPickup, _) <- CancelRideInternal.getDistanceToPickup booking (Just ride)
     let simulatedCancellationReason =
@@ -96,6 +97,7 @@ postPenaltyCheck (mbPersonId, _merchantId, _merchantOpCityId) req = do
               callAtemptByDriver = callAtemptByDriver,
               currentTime = currentTime,
               rideCreatedTime = rideCreatedTime,
+              bookingCreatedTime = bookingCreatedTime,
               driverArrivalTime = driverArrivalTime,
               merchantOperatingCityId = booking.merchantOperatingCityId
             }

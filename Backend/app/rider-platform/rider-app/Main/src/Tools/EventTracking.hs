@@ -16,6 +16,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
@@ -69,7 +70,7 @@ sendToProvider merchantId merchantOperatingCityId provider actionName req = do
             serviceName = Just (DMSC.EventTrackingService provider)
           }
       )
-      Nothing
+      (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.EventTrackingService provider)))
   case mbConfig of
     Nothing ->
       logDebug $ "EventTracking: provider " <> show provider <> " listed in usage config but no service config row found, skipping"
