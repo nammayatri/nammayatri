@@ -216,57 +216,91 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
   let runBody = do
         when (isNameCompareRequired transporterConfig verifyBy) $
           validateDocument merchantId merchantOpCityId person.id nameOnTheCard dateOfBirth Nothing DTO.DriverLicense DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
-        mbExistingLicense <- Query.findByDLNumber driverLicenseNumber
-        -- let mdriverLicense =
-        --       mbExistingLicense >>= \dl ->
-        --         if dl.verificationStatus == Documents.INVALID
-        --           then Nothing
-        --           else Just dl
-        case mbExistingLicense of
-          Just driverLicense -> do
-            logTagInfo "verifyDL" $ "found existing DL record | dlNumber=" <> maskText driverLicenseNumber <> " | id=" <> driverLicense.id.getId <> " | verificationStatus=" <> show driverLicense.verificationStatus
-            when (driverLicense.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $
-              throwError $ DocumentUnderManualReview "DL"
-            when (driverLicense.driverId /= personId) $
+        -- DRD: driver's current DL record (by personId)
+        -- DND: record owning the requested license number (by Lr) — queried lazily only when needed
+        mDrd <- Query.findByDriverId personId
+        let cleanupImages = Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
+        let proceedWith mDob = do
+              runDlFaceMatch
+              if documentVerificationConfig.doStrictVerifcation
+                then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
+                else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing mDob documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
+        let dobForNew = Just . T.pack . show . utctDay $ driverDateOfBirth
+        -- Handles DND that belongs to another driver: applies allowLicenseTransfer + fleet checks,
+        -- then routes by DND.status. Pass mDrdToDelete to also delete DRD when cleaning up.
+        let handleDndFromOtherDriver dnd mDrdToDelete = do
+              when (dnd.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $
+                throwError $ DocumentUnderManualReview "DL"
               if fromMaybe False documentVerificationConfig.allowLicenseTransfer
-                then do
-                  mDriverDL <- Query.findByDriverIdAndVerificationStatus personId Documents.VALID
-                  whenJust mDriverDL $ \_ -> throwImageError imageId1 DriverAlreadyLinked
+                then case dnd.verificationStatus of
+                  Documents.INVALID -> do
+                    Query.deleteByDriverId dnd.driverId
+                    whenJust mDrdToDelete $ \_ -> Query.deleteByDriverId personId
+                    proceedWith dobForNew
+                  Documents.VALID -> cleanupImages >> throwError DLAlreadyLinked
+                  _ -> throwError DLAlreadyInProcessing
                 else do
                   -- Fleet-aware duplicate check: single query for both drivers' fleet associations
-                  allAssocs <- QFDA.findAllByDriverIds [personId, driverLicense.driverId]
-                  let existingFleetIds = [assoc.fleetOwnerId | assoc <- allAssocs, assoc.driverId == driverLicense.driverId]
+                  allAssocs <- QFDA.findAllByDriverIds [personId, dnd.driverId]
+                  let existingFleetIds = [assoc.fleetOwnerId | assoc <- allAssocs, assoc.driverId == dnd.driverId]
                       targetFleetIds = [assoc.fleetOwnerId | assoc <- allAssocs, assoc.driverId == personId]
                       sharedFleets = filter (`elem` existingFleetIds) targetFleetIds
-                  Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
-                  unless (null sharedFleets) $ throwError DLAlreadyExistsInFleet
-                  when (driverLicense.verificationStatus == Documents.VALID && not (null existingFleetIds)) $
-                    throwError DLLinkedToAnotherFleet
-                  throwImageError imageId1 DLAlreadyLinked
-            if fromMaybe False documentVerificationConfig.allowLicenseTransfer
-              then pure ()
-              else unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
-            when (driverLicense.verificationStatus == Documents.VALID && not (fromMaybe False documentVerificationConfig.allowLicenseTransfer) && not (fromMaybe False transporterConfig.allowDlReupload)) $ do
-              Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
-              throwError $ DocumentAlreadyValidated "DL"
-            runDlFaceMatch
-            if documentVerificationConfig.doStrictVerifcation
+                  -- cleanupImages only on error paths; the INVALID path proceeds with verification and still needs the images
+                  unless (null sharedFleets) $ cleanupImages >> throwError DLAlreadyExistsInFleet
+                  when (dnd.verificationStatus == Documents.VALID && not (null existingFleetIds)) $
+                    cleanupImages >> throwError DLLinkedToAnotherFleet
+                  case dnd.verificationStatus of
+                    Documents.INVALID -> do
+                      Query.deleteByDriverId dnd.driverId
+                      whenJust mDrdToDelete $ \_ -> Query.deleteByDriverId personId
+                      proceedWith dobForNew
+                    Documents.VALID -> cleanupImages >> throwError DLAlreadyLinked
+                    _ -> cleanupImages >> throwError DLAlreadyInProcessing
+        case mDrd of
+          Just drd -> do
+            -- Compare DRD's stored hash directly with input hash — avoids an extra DB call
+            inputDlHash <- getDbHash normalizedDLNumber
+            let dlBelongsToDriver = drd.licenseNumber.hash == inputDlHash
+            if dlBelongsToDriver
               then do
-                when (driverLicense.verificationStatus == Documents.INVALID) $
-                  if transporterConfig.enableBotFlow == Just True
-                    then Query.updateVerificationStatus Documents.PENDING driverLicense.documentImageId1
-                    else throwError DLInvalid
-                verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
-              else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
+                -- DRD.L1 == Lr: same DL number, same driver — no findByDLNumber needed
+                when (drd.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $
+                  throwError $ DocumentUnderManualReview "DL"
+                unless (fromMaybe False documentVerificationConfig.allowLicenseTransfer) $
+                  unless (drd.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
+                case drd.verificationStatus of
+                  Documents.INVALID -> do
+                    -- Make Dr-Lr Pending (only under strict verification + bot flow)
+                    when documentVerificationConfig.doStrictVerifcation $ do
+                      when (transporterConfig.enableBotFlow /= Just True) $ throwError DLInvalid
+                    proceedWith Nothing
+                  Documents.VALID ->
+                    if fromMaybe False documentVerificationConfig.allowLicenseTransfer || fromMaybe False transporterConfig.allowDlReupload
+                      then proceedWith Nothing
+                      else cleanupImages >> throwError (DocumentAlreadyValidated "DL")
+                  -- Stale PENDING (verification webhook never arrived): re-kick verification
+                  -- instead of blocking the driver forever behind DLAlreadyInProcessing.
+                  Documents.PENDING
+                    | drd.updatedAt < addUTCTime (negate nominalDay) now -> proceedWith Nothing -- Should we store this config or fixed this just like we did
+                  _ -> throwError DLAlreadyInProcessing
+              else -- DRD.L1 != Lr: driver has a different DL — short-circuit where possible
+              case drd.verificationStatus of
+                Documents.VALID -> cleanupImages >> throwError DriverAlreadyLinked
+                Documents.INVALID -> do
+                  -- Only now call findByDLNumber (needed to check DND ownership/status)
+                  mDnd <- Query.findByDLNumber normalizedDLNumber
+                  case mDnd of
+                    Just dnd -> handleDndFromOtherDriver dnd (Just drd)
+                    Nothing -> do
+                      Query.deleteByDriverId personId
+                      proceedWith dobForNew
+                _ -> throwError DLDocumentInProcessing
           Nothing -> do
-            mDriverDL <- Query.findByDriverIdAndVerificationStatus personId Documents.VALID
-            when (isJust mDriverDL) $ do
-              Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
-              throwImageError imageId1 DriverAlreadyLinked
-            runDlFaceMatch
-            if documentVerificationConfig.doStrictVerifcation
-              then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
-              else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing (Just . T.pack . show . utctDay $ driverDateOfBirth) documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
+            -- No DRD — must call findByDLNumber to check if license is claimed elsewhere
+            mDnd <- Query.findByDLNumber normalizedDLNumber
+            case mDnd of
+              Just dnd -> handleDndFromOtherDriver dnd Nothing
+              Nothing -> proceedWith dobForNew
   if isNameCompareRequired transporterConfig verifyBy
     then Redis.withWaitOnLockRedisWithExpiry (makeDocumentVerificationLockKey personId.getId) 10 10 runBody
     else runBody
@@ -312,6 +346,15 @@ verifyDLFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerifi
 verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard mbVehicleCategory mbReqId mbTxnId = do
   now <- getCurrentTime
   encryptedDL <- encrypt dlNumber
+  -- Upsert a PENDING DL record immediately so the license is claimed before async verification completes.
+  -- Store it under the NORMALIZED DL hash so it matches the normalized comparison/lookup in verifyDL
+  -- (and the normalized final record in onVerifyDLHandler) — otherwise upsert keys on a different
+  -- licenseNumberHash and creates a duplicate row when the callback lands.
+  normalizedEncryptedDL <- encrypt (VC.normalizeDocumentNumber dlNumber)
+  dlId <- generateGUID
+  let farFutureExpiry = addUTCTime (nominalDay * 365 * 100) now
+  let pendingDL = (createDL person.merchantId documentVerificationConfig person.id Nothing Nothing Nothing dlId imageId1 imageId2 nameOnTheCard dateOfIssue mbVehicleCategory now normalizedEncryptedDL farFutureExpiry) {Domain.verificationStatus = Documents.PENDING}
+  Query.upsert pendingDL
   case mbReqId of
     Just reqId -> HVQuery.create =<< mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard reqId now Domain.Success encryptedDL mbTxnId
     Nothing -> do
@@ -426,7 +469,10 @@ onVerifyDLHandler :: Person.Person -> Maybe Text -> Maybe Text -> Maybe [Idfy.Co
 onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificationConfig imageId1 imageId2 nameOnTheCard dateOfIssue vehicleCategory = do
   now <- getCurrentTime
   id <- generateGUID
-  mEncryptedDL <- encrypt `mapM` dlNumber
+  -- Normalize before hashing/storing so this final record collides-and-updates the PENDING record
+  -- (stored under the normalized hash in verifyDLFlow) instead of creating a duplicate DL row, and
+  -- so it matches the normalized comparison/lookup in verifyDL.
+  mEncryptedDL <- encrypt `mapM` (VC.normalizeDocumentNumber <$> dlNumber)
   let mLicenseExpiry = convertTextToUTC dlExpiry
   let mDriverLicense = createDL person.merchantId documentVerificationConfig person.id covDetails name dob id imageId1 imageId2 nameOnTheCard dateOfIssue vehicleCategory now <$> mEncryptedDL <*> mLicenseExpiry
 
