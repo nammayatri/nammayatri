@@ -891,7 +891,7 @@ loadLoyaltyProgramMap merchantId merchantOperatingCityId = do
             serviceName = Just (DMSC.JuspayWalletService Payment.Juspay)
           }
       )
-      Nothing
+      (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.JuspayWalletService Payment.Juspay)))
   pure $ case mbCfg of
     Just cfg -> case cfg.serviceConfig of
       DMSC.JuspayWalletServiceConfig (Payment.JuspayConfig jcfg) ->

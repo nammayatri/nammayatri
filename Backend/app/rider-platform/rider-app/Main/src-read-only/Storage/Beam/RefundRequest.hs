@@ -3,6 +3,7 @@
 
 module Storage.Beam.RefundRequest where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Extra.RefundRequest
@@ -15,8 +16,10 @@ import qualified Kernel.Utils.Common
 import Tools.Beam.UtilsTH
 
 data RefundRequestT f = RefundRequestT
-  { code :: B.C f Domain.Types.Extra.RefundRequest.RefundRequestCode,
+  { approvedRefundedComponents :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    code :: B.C f Domain.Types.Extra.RefundRequest.RefundRequestCode,
     currency :: B.C f Kernel.Utils.Common.Currency,
+    deductFromDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     description :: B.C f Kernel.Prelude.Text,
     evidenceS3Path :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
@@ -29,6 +32,7 @@ data RefundRequestT f = RefundRequestT
     refundsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     refundsTries :: B.C f Kernel.Prelude.Int,
     requestedAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    requestedRefundComponents :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     responseDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     status :: B.C f Domain.Types.RefundRequest.RefundRequestStatus,
     transactionAmount :: B.C f Kernel.Types.Common.HighPrecMoney,

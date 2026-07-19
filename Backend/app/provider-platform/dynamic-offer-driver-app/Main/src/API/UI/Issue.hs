@@ -136,7 +136,8 @@ driverIssueHandle =
       findIssueConfig = \mocId issueIdentifier ->
         getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId.getId, identifier = show issueIdentifier}) (Just (CQIssueConfig.findByMerchantOpCityId mocId Common.DRIVER)),
       mbUpdateTicketOnService = Nothing,
-      mbUpdateTicketStatus = Just castUpdateTicketStatus
+      mbUpdateTicketStatus = Just castUpdateTicketStatus,
+      mbUpdateTicketCsat = Just castUpdateTicketCsat
     }
 
 -- | Fetch a MediaFile's bytes directly from S3 (returning the base64 payload
@@ -338,6 +339,9 @@ castUpdateTicket merchantId merchantOperatingCityId _additionalTicketIds = TT.up
 
 castUpdateTicketStatus :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketStatusReq -> Flow ()
 castUpdateTicketStatus merchantId merchantOperatingCityId = TT.updateTicketStatus (cast merchantId) (cast merchantOperatingCityId)
+
+castUpdateTicketCsat :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketCsatReq -> Flow ()
+castUpdateTicketCsat merchantId merchantOperatingCityId = TT.updateTicketCsat (cast merchantId) (cast merchantOperatingCityId)
 
 buildMerchantConfig :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Maybe (Id Common.Person) -> Flow Common.MerchantConfig
 buildMerchantConfig _merchantId merchantOpCityId _mbPersonId = do

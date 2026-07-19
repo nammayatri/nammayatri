@@ -62,7 +62,8 @@ data DOnInit = DOnInit
     messageId :: Text,
     bankAccNum :: Text,
     bankCode :: Text,
-    bppOrderId :: Maybe Text
+    bppOrderId :: Maybe Text,
+    bppPaymentId :: Maybe Text
   }
 
 validateRequest :: (EsqDBReplicaFlow m r, BeamFlow m r) => DOnInit -> m (Merchant.Merchant, FTBooking.FRFSTicketBooking, [DFRFSQuoteCategory.FRFSQuoteCategory])
@@ -117,6 +118,7 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
   void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) oldBooking.id
   frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = oldBooking.merchantOperatingCityId.getId}) (Just (CQFRFS.findByMerchantOperatingCityId oldBooking.merchantOperatingCityId (Just []))) >>= fromMaybeM (FRFSConfigNotFound oldBooking.merchantOperatingCityId.getId)
   whenJust onInitReq.bppOrderId (\bppOrderId -> void $ QFRFSTicketBooking.updateBPPOrderIdById (Just bppOrderId) oldBooking.id)
+  whenJust onInitReq.bppPaymentId (\bppPaymentId -> void $ QFRFSTicketBooking.updateBPPPaymentIdById (Just bppPaymentId) oldBooking.id)
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let booking = oldBooking {FTBooking.totalPrice = totalPrice, FTBooking.journeyOnInitDone = Just True}
   QFRFSTicketBooking.updateOnInitDone (Just True) booking.id

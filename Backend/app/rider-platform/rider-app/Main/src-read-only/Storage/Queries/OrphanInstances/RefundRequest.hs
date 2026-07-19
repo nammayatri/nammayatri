@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.RefundRequest where
 
+import qualified Data.Aeson
 import qualified Domain.Types.RefundRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -10,6 +11,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.RefundRequest as Beam
 
 instance FromTType' Beam.RefundRequest Domain.Types.RefundRequest.RefundRequest where
@@ -17,8 +19,10 @@ instance FromTType' Beam.RefundRequest Domain.Types.RefundRequest.RefundRequest 
     pure $
       Just
         Domain.Types.RefundRequest.RefundRequest
-          { code = code,
+          { approvedRefundedComponents = approvedRefundedComponents >>= Kernel.Utils.JSON.valueToMaybe,
+            code = code,
             currency = currency,
+            deductFromDriver = deductFromDriver,
             description = description,
             evidenceS3Path = evidenceS3Path,
             id = Kernel.Types.Id.Id id,
@@ -31,6 +35,7 @@ instance FromTType' Beam.RefundRequest Domain.Types.RefundRequest.RefundRequest 
             refundsId = Kernel.Types.Id.Id <$> refundsId,
             refundsTries = refundsTries,
             requestedAmount = requestedAmount,
+            requestedRefundComponents = requestedRefundComponents >>= Kernel.Utils.JSON.valueToMaybe,
             responseDescription = responseDescription,
             status = status,
             transactionAmount = transactionAmount,
@@ -42,8 +47,10 @@ instance FromTType' Beam.RefundRequest Domain.Types.RefundRequest.RefundRequest 
 instance ToTType' Beam.RefundRequest Domain.Types.RefundRequest.RefundRequest where
   toTType' (Domain.Types.RefundRequest.RefundRequest {..}) = do
     Beam.RefundRequestT
-      { Beam.code = code,
+      { Beam.approvedRefundedComponents = approvedRefundedComponents >>= Just . Data.Aeson.toJSON,
+        Beam.code = code,
         Beam.currency = currency,
+        Beam.deductFromDriver = deductFromDriver,
         Beam.description = description,
         Beam.evidenceS3Path = evidenceS3Path,
         Beam.id = Kernel.Types.Id.getId id,
@@ -56,6 +63,7 @@ instance ToTType' Beam.RefundRequest Domain.Types.RefundRequest.RefundRequest wh
         Beam.refundsId = Kernel.Types.Id.getId <$> refundsId,
         Beam.refundsTries = refundsTries,
         Beam.requestedAmount = requestedAmount,
+        Beam.requestedRefundComponents = requestedRefundComponents >>= Just . Data.Aeson.toJSON,
         Beam.responseDescription = responseDescription,
         Beam.status = status,
         Beam.transactionAmount = transactionAmount,

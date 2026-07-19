@@ -38,7 +38,8 @@ data IssueCategoryT f = IssueCategoryT
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     enableKapture :: B.C f (Maybe Bool),
-    showInDefault :: B.C f (Maybe Bool)
+    showInDefault :: B.C f (Maybe Bool),
+    xyneChannelId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

@@ -142,7 +142,7 @@ instance Default DriverPoolConfig where
         onRideBatchSplitConfig = [], -- Define default value
         onRideRadiusConfig = [], -- Define default value
         radiusShrinkValueForDriversOnRide = Common.Meters 200,
-        radiusStepSize = Common.Meters 50,
+        radiusStepSize = Nothing,
         scheduleTryTimes = [1, 2, 3],
         singleBatchProcessTime = Common.Seconds 120,
         thresholdToIgnoreActualDistanceThreshold = Nothing,

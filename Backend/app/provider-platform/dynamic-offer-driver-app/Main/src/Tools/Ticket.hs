@@ -16,6 +16,7 @@ module Tools.Ticket
   ( createTicket,
     updateTicket,
     updateTicketStatus,
+    updateTicketCsat,
     addAndUpdateKaptureCustomer,
     kaptureEncryption,
     kapturePullTicket,
@@ -48,6 +49,9 @@ updateTicket = runWithServiceConfig Ticket.updateTicket
 
 updateTicketStatus :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketStatusReq -> m ()
 updateTicketStatus = runWithServiceConfig Ticket.updateTicketStatus
+
+updateTicketCsat :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketCsatReq -> m ()
+updateTicketCsat = runWithServiceConfig Ticket.updateTicketCsat
 
 addAndUpdateKaptureCustomer :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Id MerchantOperatingCity -> TIT.KaptureCustomerReq -> m TIT.KaptureCustomerResp
 addAndUpdateKaptureCustomer = runWithServiceConfig Ticket.addAndUpdateKaptureCustomer

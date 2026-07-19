@@ -153,6 +153,7 @@ import qualified Storage.Queries.CancellationReason as SQCR
 import qualified Storage.Queries.HotSpotConfig as SQHSC
 import qualified Storage.Queries.IntegratedBPPConfig as SQIBC
 import qualified Storage.Queries.MerchantPaymentMethod as SQMPM
+import qualified Storage.Queries.MerchantServiceConfig as SQMSC
 import qualified Storage.Queries.PassCategory as SQPC
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Translations as SQTL
@@ -209,6 +210,7 @@ instance Default FRT.InvoiceContext where
   def =
     FRT.InvoiceContext
       { invoiceNumber = "",
+        referenceInvoiceNumber = Nothing,
         issuedAt = UTCTime (fromGregorian 1970 1 1) 0,
         dueAt = Nothing,
         invoiceType = DTI.Ride,
@@ -446,7 +448,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   when resp.isRuleUpdated $ case req.domain of
     LYTU.RIDER_CONFIG cfgType -> do
       TDL.deleteConfigHashKey (cast merchantOpCityId) req.domain
-      invalidateConfigInMem cfgType
+      invalidateConfigInMem (TC.toCacheConfigType cfgType)
       logDebug $ "CP Log: Cleared Cache for " <> show cfgType
     _ -> pure ()
   pure resp
@@ -529,7 +531,7 @@ postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq 
   forM_ rolloutReq $ \rolloutObj -> case rolloutObj.domain of
     LYTU.RIDER_CONFIG cfgType -> do
       TDL.deleteConfigHashKey (cast merchantOperatingCity.id) rolloutObj.domain
-      invalidateConfigInMem cfgType
+      invalidateConfigInMem (TC.toCacheConfigType cfgType)
       logDebug $ "CP Log: Cleared Cache for " <> show cfgType
     _ -> pure ()
   pure result
@@ -815,7 +817,7 @@ postNammaTagConfigPilotActionChange _merchantShortId _opCity req = do
   case domain of
     LYTU.RIDER_CONFIG cfgType -> do
       TDL.deleteConfigHashKey (cast merchantOpCityId) domain
-      invalidateConfigInMem cfgType
+      invalidateConfigInMem (TC.toCacheConfigType cfgType)
       logDebug $ "CP Log: Cleared Cache for " <> show cfgType
     _ -> pure ()
   pure result
@@ -878,13 +880,13 @@ postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity req = do
       cfg <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId}) (Just (SQMerchantSUC.findByMerchantOperatingCityId (Id mocId)))
       pure LYTU.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
     LYTU.MerchantServiceConfig -> do
-      cfgs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = dimLookup "serviceName" dims}) Nothing
+      cfgs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = dimLookup "serviceName" dims}) (Just (SQMSC.findAllByMerchantOperatingCityId (Id mocId)))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.BecknConfig -> do
       cfgs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, domain = dimLookup "domain" dims, vehicleCategory = dimLookup "vehicleCategory" dims}) (Just (SQBC.findByMerchantId (Just merchantOperatingCity.merchantId)))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.MerchantPushNotificationRider -> do
-      cfgs <- getConfig (MerchantPushNotificationDimensions {merchantOperatingCityId = mocId}) (Just (SQMerchantPN.findAllByMerchantOpCityId (Id mocId) (Just [])))
+      cfgs <- getConfig (MerchantPushNotificationDimensions {merchantOperatingCityId = mocId, key = dimLookup "key" dims, tripCategory = dimLookup "tripCategory" dims}) (Just (SQMerchantPN.findAllByMerchantOpCityId (Id mocId) (Just [])))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.ExophoneRider -> do
       cfgs <- getConfig (ExophoneDimensions {merchantOperatingCityId = mocId, phoneNumber = Nothing, callService = dimLookup "callService" dims}) (Just (SQExophone.findAllByMerchantOperatingCityId (Id mocId)))
@@ -1035,11 +1037,11 @@ postNammaTagConfigPilotCreateRow merchantShortId opCity req = do
     LYTU.Translation -> do
       cfg :: DTL.Translations <- parseConfigData req.configData
       SQTL.create cfg
-      invalidateConfigInMem LYTU.Translation
+      invalidateConfigInMem LYTU.TranslationRider
     LYTU.IssueConfig -> do
       cfg :: DIC.IssueConfig <- parseConfigData req.configData
       SQIC.create cfg
-      invalidateConfigInMem LYTU.IssueConfig
+      invalidateConfigInMem LYTU.IssueConfigRider
     LYTU.PassCategory -> do
       cfg :: DPC.PassCategory <- parseConfigData req.configData
       SQPC.create cfg

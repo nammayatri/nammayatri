@@ -277,3 +277,17 @@ getTSServiceUrl :: (CoreMetrics m, MonadFlow m, CPT.HasTSServiceConfig m r) => m
 getTSServiceUrl = do
   tsServiceConfig <- asks (.tsServiceConfig)
   pure tsServiceConfig.url
+
+-- | Map a LogicDomain's generic inner ConfigType to the driver-specific config-pilot cache
+-- ConfigType (i.e. what 'getConfigType' returns for that config's dimensions). Identity for
+-- configs whose cache type is already un-suffixed. Used at the dynamic invalidation sites in
+-- Domain.Action.Dashboard.Management.NammaTag, where only the generic runtime ConfigType is
+-- available; passing the generic value straight to invalidateConfigInMem misses the suffixed
+-- Redis bucket.
+toCacheConfigType :: LYT.ConfigType -> LYT.ConfigType
+toCacheConfigType cfgType = case cfgType of
+  LYT.Translation -> LYT.TranslationDriver
+  LYT.IssueConfig -> LYT.IssueConfigDriver
+  LYT.MerchantServiceUsageConfig -> LYT.MerchantServiceUsageConfigDriver
+  LYT.MerchantServiceConfig -> LYT.MerchantServiceConfigDriver
+  other -> other

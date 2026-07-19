@@ -13,7 +13,9 @@ import qualified Kernel.External.Insurance.Interface.Types as Insurance
 import Kernel.Prelude
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.InsuranceConfig as CQInsuranceConfig
+import Storage.ConfigPilot.Config.InsuranceConfig (InsuranceConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Insurance as QInsurance
 import qualified Storage.Queries.Person as QPerson
@@ -30,7 +32,22 @@ createInsurance ride = do
     let personName = (fromMaybe "" person.firstName) <> " " <> (fromMaybe "" person.lastName)
     personPhone <- mapM decrypt person.mobileNumber >>= fromMaybeM (InternalError "Person phone not found")
     let vehicleCategory = DV.castServiceTierToVehicleCategory booking.vehicleServiceTierType
-    insuranceConfig <- (maybeM (pure Nothing) (\tp -> CQInsuranceConfig.getInsuranceConfig booking.merchantId booking.merchantOperatingCityId tp vehicleCategory) $ pure booking.tripCategory) >>= fromMaybeM (InternalError "Insurance config not found")
+    insuranceConfig <-
+      ( maybeM
+          (pure Nothing)
+          ( \tp ->
+              getConfig
+                InsuranceConfigDimensions
+                  { merchantOperatingCityId = booking.merchantOperatingCityId.getId,
+                    merchantId = booking.merchantId.getId,
+                    tripCategory = tp,
+                    vehicleCategory = vehicleCategory
+                  }
+                (Just (CQInsuranceConfig.getInsuranceConfig booking.merchantId booking.merchantOperatingCityId tp vehicleCategory))
+          )
+          $ pure booking.tripCategory
+        )
+        >>= fromMaybeM (InternalError "Insurance config not found")
     now <- getCurrentTime
     let startTime = fromMaybe now ride.rideStartTime
         endTime = addHours (fromIntegral insuranceConfig.hours) startTime

@@ -62,6 +62,7 @@ import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CFQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverRCAssociation as QDRCA
 import qualified Storage.Queries.FleetRCAssociationExtra as FRCA
@@ -241,7 +242,7 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
         if person.role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS]
           then do
             --------------- Image validation for fleet (different config table than docConfigs)
-            fleetDocConfigs <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing
+            fleetDocConfigs <- listToMaybe <$> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just imageType, role = Nothing}) (Just (maybeToList <$> CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing))
             return
               ( maybe True (.isImageValidationRequired) fleetDocConfigs,
                 fleetDocConfigs >>= (.markImageValidOnValidationSkip)

@@ -239,6 +239,15 @@ apis:
         type: CommonDocumentCreateReq
       response:
         type: CommonDocumentCreateRes
+  - POST: # DocumentRegisterAPI
+      endpoint: /{driverId}/document/register
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: DocumentRegisterReq
+      response:
+        type: APISuccess
   - POST: #UnlinkDocumentAPI
       endpoint: /{personId}/unlink/document/{documentType}
       auth: ApiAuthV2
@@ -442,6 +451,25 @@ types:
     - engineNumber: Maybe Text
     - chassisNumber: Maybe Text
     - derive: "'HideSecrets"
+  RegisterPanReq:
+    - panNumber: Text
+    - imageId1: Id Image
+    - imageId2: Maybe (Id Image)
+    - consent: Bool
+    - nameOnCard: Maybe Text
+    - dateOfBirth: Maybe UTCTime
+    - consentTimestamp: Maybe UTCTime
+    - validationStatus: Maybe ValidationStatus
+    - transactionId: Maybe Text
+    - nameOnGovtDB: Maybe Text
+    - docType: Maybe PanType
+    - derive: "'HideSecrets"
+  DocumentRegisterMetadata:
+    - enum: "DLData RegisterDLReq, RCData RegisterRCReq, AadhaarData AadhaarCardReq, PanData RegisterPanReq, CommonData CommonDocumentCreateReq"
+    - derive: "'HideSecrets"
+  DocumentRegisterReq:
+    - metadata: DocumentRegisterMetadata
+    - derive: "'HideSecrets"
   GenerateAadhaarOtpReq:
     - aadhaarNumber: Text
     - consent: Text
@@ -640,9 +668,9 @@ types:
     derive: "HttpInstance"
   LocalResidenceProofApproveDetails:
     - documentImageId: Id Image
-    - state: Maybe IndianState
-    - proofDocumentType: Maybe AddressDocumentType
-    - address: Maybe Text
+    - state: IndianState
+    - proofDocumentType: AddressDocumentType
+    - address: Text
   ApproveDetails:
     - enum: "RC RCApproveDetails, DL DLApproveDetails, UploadProfile (Id Image), SSNApprove Text, ProfilePhoto (Id Image), VehiclePermit VPermitApproveDetails, VehiclePUC VPUCApproveDetails, VehicleInsurance VInsuranceApproveDetails, VehicleFitnessCertificate FitnessApproveDetails, VehicleInspectionForm VInspectionApproveDetails, Pan PanApproveDetails, NOC NOCApproveDetails, BusinessLicenseImg BusinessLicenseApproveDetails, CommonDocument CommonDocumentApproveDetails, Aadhaar AadhaarApproveDetails, VehicleFrontImg (Id Image), VehicleBackImg (Id Image), VehicleRightImg (Id Image), VehicleLeftImg (Id Image), VehicleFrontInteriorImg (Id Image), VehicleBackInteriorImg (Id Image), OdometerImg (Id Image), LocalResidenceProofApprove LocalResidenceProofApproveDetails, PoliceVerificationCertificateImg (Id Image), UDYAMApprove UDYAMApproveDetails, LDCApprove LDCApproveDetails, GSTApprove GSTApproveDetails, DriverVehicleNOCImg (Id Image), TANApprove TANApproveDetails"
   GSTApproveDetails:

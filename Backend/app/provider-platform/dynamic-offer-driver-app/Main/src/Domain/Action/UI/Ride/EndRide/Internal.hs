@@ -74,7 +74,6 @@ import Domain.Types.TransporterConfig hiding (InvoiceConfig)
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Variant
 import qualified Domain.Types.VendorFee as DVF
-import qualified Domain.Types.VendorSplitDetails as DVSD
 import qualified Environment
 import EulerHS.Prelude hiding (elem, foldr, id, length, map, mapM_, null)
 import GHC.Float (double2Int)
@@ -328,8 +327,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
     createDriverWalletTransaction ride booking newFareParams driverInfo thresholdConfig mbPerson
 
   -- 3. Airport entry fee deduction (two ledger entries: GST then airport portion)
-  when (fromMaybe False thresholdConfig.airportEntryFeeEnabled) $
-    AirportEntryFee.deductAirportEntryFeeAtEndRide ride booking
+  AirportEntryFee.deductAirportEntryFeeAtEndRide (fromMaybe False thresholdConfig.airportEntryFeeEnabled) ride booking
   where
     processEndRidePrepaidSubscription fare mbVC = do
       case ride.fleetOwnerId of
@@ -456,6 +454,8 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       parkingAmount = fromMaybe 0 fareParams.parkingCharge
       parkingVatAmount = fromMaybe 0 fareParams.parkingChargeTax
       commissionAmount = fromMaybe 0 (ride.commission <|> booking.commission)
+      -- Commission is stored ALV-inclusive; split only at emission (pct unset ⇒ vat 0, behaviour unchanged).
+      (commissionBaseAmount, commissionVatAmount) = splitGrossByVatPct transporterConfig.taxConfig.commissionVatPercentage commissionAmount
       mbProjectedBreakup = FC.projectFareParamsBreakup fareParams
       rawBaseFare = case mbProjectedBreakup of
         Just b -> b.discountApplicableRideFareTaxExclusive + b.nonDiscountApplicableRideFareTaxExclusive
@@ -641,7 +641,8 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               showVatInput = isVat && maybe False (fromMaybe False . (.showVatInputLineItem)) transporterConfig.invoiceConfig
               commonLines =
                 [ mkAdjustment "Tip" Tip tipAmount,
-                  if issuedToType == CUSTOMER then Nothing else mkAdjustment "Platform Commission" PlatformCommission (negate commissionAmount),
+                  if issuedToType == CUSTOMER then Nothing else mkAdjustment "Platform Commission" PlatformCommission (negate commissionBaseAmount),
+                  if issuedToType == CUSTOMER then Nothing else mkAdjustment "Commission VAT" PlatformCommissionTax (negate commissionVatAmount),
                   if showVatInput then mkStandaloneFare "VAT Input" VatInput serviceVatAmount else Nothing
                 ]
            in catMaybes (rideAndTollLines <> commonLines)
@@ -664,7 +665,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               issuedToAddress = booking.fromLocation.address.fullAddress,
               lineItems = mkRideLineItems False CUSTOMER,
               gstBreakdown = rideGstBreakdown,
-              referenceId = Nothing,
+              referenceId = Just booking.id.getId,
               isVat = isVat,
               issuedToTaxNo = Nothing,
               issuedByTaxNo = Nothing,
@@ -688,7 +689,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               issuedToAddress = Nothing,
               lineItems = mkRideLineItems driverClubVatInclusive (if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER),
               gstBreakdown = rideGstBreakdown,
-              referenceId = Nothing,
+              referenceId = Just booking.id.getId,
               isVat = isVat,
               issuedToTaxNo = Nothing,
               issuedByTaxNo = Nothing,
@@ -772,6 +773,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
     let commissionAlreadyCollectedAtBooth = booking.fareSettlementType == Just CommissionOnly
     when (commissionAmount > 0) $ do
       let commissionRef = if isOnline then walletReferenceCommissionOnline else walletReferenceCommissionCash
+          commissionVatRef = if isOnline then walletReferenceCommissionVATOnline else walletReferenceCommissionVATCash
           onlineCommissionPaidOutDirectly = isOnline && fromMaybe False transporterConfig.driverWalletConfig.onlineCommissionPaidOutDirectly
           shouldReverseCommissionWalletDebit = onlineCommissionPaidOutDirectly || commissionAlreadyCollectedAtBooth
           commissionInvoiceConfig =
@@ -781,10 +783,13 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 issuedToId = driverOrFleetPersonId.getId,
                 issuedToName = mbDriver <&> (.firstName),
                 issuedToAddress = Nothing,
-                referenceId = Nothing,
+                referenceId = Just booking.id.getId,
                 lineItems =
                   catMaybes
-                    [ Just InvoiceLineItem {description = "Platform Commission", descriptionType = Just PlatformCommission, quantity = 1, unitPrice = commissionAmount, lineTotal = commissionAmount, isExternalCharge = False, groupId = Just "g-commission", itemType = Just Fare}
+                    [ Just InvoiceLineItem {description = "Platform Commission", descriptionType = Just PlatformCommission, quantity = 1, unitPrice = commissionBaseAmount, lineTotal = commissionBaseAmount, isExternalCharge = False, groupId = Just "g-commission", itemType = Just Fare},
+                      if commissionVatAmount > 0
+                        then Just InvoiceLineItem {description = "Commission VAT", descriptionType = Just PlatformCommissionTax, quantity = 1, unitPrice = commissionVatAmount, lineTotal = commissionVatAmount, isExternalCharge = False, groupId = Just "g-commission", itemType = Just Tax}
+                        else Nothing
                     ],
                 gstBreakdown = Nothing,
                 isVat = isVat,
@@ -795,9 +800,14 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 periodEnd = Nothing
               }
       commissionResult <- runFinance ctx $ do
-        void $ transfer OwnerLiability SellerRevenue commissionAmount commissionRef
-        when shouldReverseCommissionWalletDebit $
-          void $ transfer SellerRevenue OwnerLiability commissionAmount walletReferenceDeductedAtPaymentByPlatform
+        void $ transfer OwnerLiability SellerRevenue commissionBaseAmount commissionRef
+        when (commissionVatAmount > 0) $
+          void $ transfer OwnerLiability SellerRevenue commissionVatAmount commissionVatRef
+        -- Reversal mirrors every posted leg; shared refType, so the wallet still shows one summed row.
+        when shouldReverseCommissionWalletDebit $ do
+          void $ transfer SellerRevenue OwnerLiability commissionBaseAmount walletReferenceDeductedAtPaymentByPlatform
+          when (commissionVatAmount > 0) $
+            void $ transfer SellerRevenue OwnerLiability commissionVatAmount walletReferenceDeductedAtPaymentByPlatform
         invoice commissionInvoiceConfig
       case commissionResult of
         Left err -> fromEitherM (\e -> InternalError ("Failed to create commission invoice: " <> show e)) (Left err)
@@ -1041,10 +1051,9 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
                         else baseAreaDetails
                 Nothing -> DL.filter (\detail -> detail.area == Default) allVendorSplitDetailsExcludingDailyPlan
           unless (null vendorSplitDetails) $ do
-            let vendorFeeBase = platformFee + cgst + sgst
-                vendorData = DL.map (\vendor -> (vendor.vendorId, vendor.splitType, toRational vendor.splitValue, vendor.maxVendorFeeAmount)) vendorSplitDetails
+            let vendorData = DL.map (\vendor -> (vendor.vendorId, toRational vendor.splitValue, vendor.maxVendorFeeAmount)) vendorSplitDetails
                 -- Pass vendor fee along with its maxVendorFeeAmount limit for cumulative validation
-                vendorFeesWithLimit = DL.map (\(vendorId, splitType, amount, maxLimit) -> (mkVendorFee (maybe driverFee.id (.id) lastDriverFee) now vendorFeeBase (vendorId, splitType, amount, maxLimit), maxLimit)) vendorData
+                vendorFeesWithLimit = DL.map (\(vendorId, amount, maxLimit) -> (mkVendorFee (maybe driverFee.id (.id) lastDriverFee) now (vendorId, amount, maxLimit), maxLimit)) vendorData
             unless (null vendorFeesWithLimit) $ do
               case lastDriverFee of
                 Just ldFee | now >= ldFee.startTime && now < ldFee.endTime -> QVF.updateManyVendorFeeWithMaxLimit merchantOpCityId vendorFeesWithLimit
@@ -1053,11 +1062,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
         plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing currentVehicleCategory
         fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides serviceName
         scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now
-    mkVendorFee driverFeeId now vendorFeeBase (vendorId, splitType, splitValue, _) =
-      let amount = case splitType of
-            DVSD.FIXED -> HighPrecMoney splitValue
-            DVSD.PERCENTAGE -> vendorFeeBase * HighPrecMoney (splitValue / 100)
-       in DVF.VendorFee {amount = amount, driverFeeId = driverFeeId, vendorId = vendorId, createdAt = now, updatedAt = now}
+    mkVendorFee driverFeeId now (vendorId, amount, _) = DVF.VendorFee {amount = HighPrecMoney amount, driverFeeId = driverFeeId, vendorId = vendorId, createdAt = now, updatedAt = now}
     isEligibleForCharge transporterConfig isOnFreeTrial isSpecialZoneCharge = do
       let notOnFreeTrial = not isOnFreeTrial
       if isSpecialZoneCharge

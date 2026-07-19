@@ -13,6 +13,7 @@ import qualified Domain.Types.DriverPanCard
 import qualified Domain.Types.Ride
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
+import qualified Kernel.External.Verification.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
@@ -42,6 +43,10 @@ data ActionType
   = BLOCK
   | UNBLOCK
   deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CourtRecordResult = CourtRecordResult {result :: Kernel.Prelude.Maybe Kernel.External.Verification.Types.CRCVerificationResponse, errorMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DriverAssociationInfo = DriverAssociationInfo
@@ -92,6 +97,7 @@ data DriverInfoRes = DriverInfoRes
     enabled :: Kernel.Prelude.Bool,
     blocked :: Kernel.Prelude.Bool,
     blockedReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    blockLiftTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     verified :: Kernel.Prelude.Bool,
     subscribed :: Kernel.Prelude.Bool,
     canDowngradeToSedan :: Kernel.Prelude.Bool,
@@ -153,7 +159,8 @@ data DriverInfoRes = DriverInfoRes
     bankVerificationStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     upiId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    docsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus
+    docsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus,
+    courtRecord :: Kernel.Prelude.Maybe CourtRecordResult
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
