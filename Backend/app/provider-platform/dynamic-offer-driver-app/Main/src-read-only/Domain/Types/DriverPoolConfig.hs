@@ -47,7 +47,7 @@ data DriverPoolConfig = DriverPoolConfig
     onRideBatchSplitConfig :: [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config.BatchSplitByPickupDistanceOnRide],
     onRideRadiusConfig :: [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config.OnRideRadiusConfig],
     radiusShrinkValueForDriversOnRide :: Kernel.Types.Common.Meters,
-    radiusStepSize :: Kernel.Types.Common.Meters,
+    radiusStepSize :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     scheduleTryTimes :: [Kernel.Prelude.Int],
     selfRequestIfRiderIsDriver :: Kernel.Prelude.Bool,
     singleBatchProcessTime :: Kernel.Types.Common.Seconds,
@@ -59,4 +59,4 @@ data DriverPoolConfig = DriverPoolConfig
     useOneToOneOsrmMapping :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType
   }
-  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), Eq)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)

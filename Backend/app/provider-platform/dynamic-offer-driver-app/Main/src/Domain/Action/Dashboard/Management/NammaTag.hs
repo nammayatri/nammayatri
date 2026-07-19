@@ -187,6 +187,7 @@ $(YTH.generateGenericDefault ''DCC.CoinsConfig)
 
 $(genToSchema ''DTP.PayoutConfig)
 $(genToSchema ''DTRN.RideRelatedNotificationConfig)
+$(genToSchema ''DTT.TransporterConfig)
 $(genToSchema ''DTPN.MerchantPushNotification)
 $(genToSchema ''DTD.DriverPoolConfig)
 $(genToSchema ''DMSUC.MerchantServiceUsageConfig)
@@ -210,6 +211,7 @@ instance Default FRT.InvoiceContext where
   def =
     FRT.InvoiceContext
       { invoiceNumber = "",
+        referenceInvoiceNumber = Nothing,
         issuedAt = UTCTime (fromGregorian 1970 1 1) 0,
         dueAt = Nothing,
         invoiceType = DTI.Ride,
@@ -437,11 +439,11 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let configWrap = LYT.Config defaultConfig Nothing 1
       logicData :: (LYT.Config DTPN.MerchantPushNotification) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DTPN.MerchantPushNotification)) transporterConfig.referralLinkPassword req logicData
-    -- LYT.DRIVER_CONFIG LYT.TransporterConfig -> do
-    --   def <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTT.TransporterConfig)) >>= fromMaybeM (InvalidRequest "Transporter config not found")
-    --   let configWrap = LYT.Config def Nothing 1
-    --   logicData :: (LYT.Config DTT.TransporterConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-    --   YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DTT.TransporterConfig) transporterConfig.referralLinkPassword req logicData
+    LYT.DRIVER_CONFIG LYT.TransporterConfig -> do
+      defaultConfig <- (pure $ Prelude.listToMaybe $ YTH.genDef (Proxy @DTT.TransporterConfig)) >>= fromMaybeM (InvalidRequest "Transporter config not found")
+      let configWrap = LYT.Config defaultConfig Nothing 1
+      logicData :: (LYT.Config DTT.TransporterConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DTT.TransporterConfig)) transporterConfig.referralLinkPassword req logicData
     LYT.INVOICE_TEMPLATE _scope -> do
       logicData :: FRT.InvoiceContext <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy A.Value) transporterConfig.referralLinkPassword req logicData
@@ -495,7 +497,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   when resp.isRuleUpdated $ case req.domain of
     LYT.DRIVER_CONFIG cfgType -> do
       TDL.deleteConfigHashKey (cast merchantOpCityId) req.domain
-      invalidateConfigInMem cfgType
+      invalidateConfigInMem (TC.toCacheConfigType cfgType)
       logDebug $ "CP Log: Cleared Cache for " <> show cfgType
     _ -> pure ()
   pure resp
@@ -580,7 +582,7 @@ postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq 
   forM_ rolloutReq $ \rolloutObj -> case rolloutObj.domain of
     LYT.DRIVER_CONFIG cfgType -> do
       TDL.deleteConfigHashKey (cast merchantOpCityId) rolloutObj.domain
-      invalidateConfigInMem cfgType
+      invalidateConfigInMem (TC.toCacheConfigType cfgType)
       logDebug $ "CP Log: Cleared Cache for " <> show cfgType
     _ -> pure ()
   pure result
@@ -774,6 +776,13 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
           { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
             LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DCC.CoinsConfig))
           }
+    LYT.DRIVER_CONFIG LYT.TransporterConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "TransporterConfig default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTT.TransporterConfig))
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
+            LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DTT.TransporterConfig))
+          }
     _ -> throwError $ InvalidRequest "Domain schema not available"
 
 getNammaTagQueryAll :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.Chakra -> Environment.Flow LYT.ChakraQueryResp
@@ -871,7 +880,7 @@ postNammaTagConfigPilotActionChange _merchantShortId _opCity req = do
   case domain of
     LYT.DRIVER_CONFIG cfgType -> do
       TDL.deleteConfigHashKey (cast merchantOpCityId) domain
-      invalidateConfigInMem cfgType
+      invalidateConfigInMem (TC.toCacheConfigType cfgType)
       logDebug $ "CP Log: Cleared Cache for " <> show cfgType
     _ -> pure ()
   pure result

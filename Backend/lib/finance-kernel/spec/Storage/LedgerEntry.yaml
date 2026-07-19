@@ -26,6 +26,12 @@ LedgerEntry:
       enum: "UNSETTLED,PROCESSING,PAID_OUT"
       derive: "HttpInstance"
 
+    # Sub-domain entity an entry belongs to, when referenceId (the ride) is not selective
+    # enough on its own — e.g. the legs of one refund request among the ride's many.
+    EntityReferenceType:
+      enum: "RefundRequest"
+      derive: "HttpInstance"
+
   # NOTE: Mask sensitive values in ledgerEntryToAuditValue (Ledger.Service)
   fields:
     id: Id LedgerEntry
@@ -39,6 +45,8 @@ LedgerEntry:
     status: EntryStatus
     referenceType: Text
     referenceId: Text
+    entityReferenceId: Maybe Text
+    entityReferenceType: Maybe EntityReferenceType
     reversalOf: Maybe (Id LedgerEntry)
     voidReason: Maybe Text
     settledAt: Maybe UTCTime
@@ -67,6 +75,7 @@ LedgerEntry:
     toAccountId: SecondaryKey
     concernedIndividualId: "!SecondaryKey"
     referenceId: "!SecondaryKey"
+    entityReferenceId: SecondaryKey
     ownerId: "!SecondaryKey"
     settlementId: "!SecondaryKey"
 
@@ -79,6 +88,11 @@ LedgerEntry:
       kvFunction: findAllWithKV
       where:
         and: [referenceType, referenceId]
+
+    findByEntityReference:
+      kvFunction: findAllWithKV
+      where:
+        and: [entityReferenceType, entityReferenceId]
 
     findByReferenceAndToAccount:
       kvFunction: findAllWithKV

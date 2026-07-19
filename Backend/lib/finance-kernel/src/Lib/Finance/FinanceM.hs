@@ -107,6 +107,10 @@ data FinanceCtx = FinanceCtx
     counterpartyId :: Text,
     concernedIndividualId :: Maybe Text,
     referenceId :: Text,
+    -- | Sub-domain entity every entry posted under this context belongs to (e.g. a refund
+    --   request); Nothing when there is none.
+    entityReferenceId :: Maybe Text,
+    entityReferenceType :: Maybe LE.EntityReferenceType,
     -- Invoice fields (pre-resolved by caller)
     merchantName :: Maybe Text,
     merchantShortId :: Maybe Text,
@@ -180,6 +184,7 @@ data AccountRole
   | SellerLiability
   | SellerRideCredit
   | SellerRevenue
+  | SellerExpense
   | GovtDirectAsset
   | GovtDirectExpense
   | ParkingFeeRecipient
@@ -414,6 +419,16 @@ roleToInput ctx = \case
         merchantId = ctx.merchantId,
         merchantOperatingCityId = ctx.merchantOpCityId
       }
+  SellerExpense ->
+    AccountInput
+      { accountType = Expense,
+        counterpartyType = Just SELLER,
+        counterpartyId = Just ctx.merchantId,
+        subLedger = Nothing,
+        currency = ctx.currency,
+        merchantId = ctx.merchantId,
+        merchantOperatingCityId = ctx.merchantOpCityId
+      }
   GovtDirectAsset ->
     AccountInput
       { accountType = Asset,
@@ -528,6 +543,8 @@ transfer fromRole toRole amount refType = do
                 status = LE.SETTLED,
                 referenceType = refType,
                 referenceId = ctx.referenceId,
+                entityReferenceId = ctx.entityReferenceId,
+                entityReferenceType = ctx.entityReferenceType,
                 metadata = Nothing,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
@@ -562,6 +579,8 @@ transferWithoutAttribution fromRole toRole amount refType = do
                 status = LE.SETTLED,
                 referenceType = refType,
                 referenceId = ctx.referenceId,
+                entityReferenceId = ctx.entityReferenceId,
+                entityReferenceType = ctx.entityReferenceType,
                 metadata = Nothing,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
@@ -597,6 +616,8 @@ transfer_ fromRole toRole amount refType = do
               status = LE.SETTLED,
               referenceType = refType,
               referenceId = ctx.referenceId,
+              entityReferenceId = ctx.entityReferenceId,
+              entityReferenceType = ctx.entityReferenceType,
               metadata = Nothing,
               merchantId = ctx.merchantId,
               merchantOperatingCityId = ctx.merchantOpCityId,
@@ -634,6 +655,8 @@ transferPending fromRole toRole amount refType = do
                 status = LE.PENDING,
                 referenceType = refType,
                 referenceId = ctx.referenceId,
+                entityReferenceId = ctx.entityReferenceId,
+                entityReferenceType = ctx.entityReferenceType,
                 metadata = Nothing,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
@@ -670,6 +693,8 @@ transferAllowZero fromRole toRole amount refType = do
                 status = LE.SETTLED,
                 referenceType = refType,
                 referenceId = ctx.referenceId,
+                entityReferenceId = ctx.entityReferenceId,
+                entityReferenceType = ctx.entityReferenceType,
                 metadata = Nothing,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
@@ -721,7 +746,8 @@ invoiceInner ctx config = do
   let invoiceInput =
         InvoiceInput
           { invoiceType = config.invoiceType,
-            paymentOrderId = Nothing,
+            entityReferenceId = Nothing,
+            referenceInvoiceNumber = Nothing,
             issuedToType = config.issuedToType,
             issuedToId = config.issuedToId,
             issuedToName = config.issuedToName,

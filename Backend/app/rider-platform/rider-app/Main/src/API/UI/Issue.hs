@@ -67,6 +67,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQPerson
 import Storage.ConfigPilot.Config.IssueConfig (IssueConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingExtra as QBE
@@ -137,7 +138,8 @@ customerIssueHandle =
       findIssueConfig = \mocId issueIdentifier ->
         getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId.getId, identifier = show issueIdentifier}) (Just (CQIssueConfig.findByMerchantOpCityId mocId Common.CUSTOMER)),
       mbUpdateTicketOnService = Just castUpdateTicketOnService,
-      mbUpdateTicketStatus = Just castUpdateTicketStatus
+      mbUpdateTicketStatus = Just castUpdateTicketStatus,
+      mbUpdateTicketCsat = Just castUpdateTicketCsat
     }
 
 -- | Fetch a MediaFile's bytes directly from S3 (returning the base64 payload
@@ -160,7 +162,7 @@ fetchMediaBase64FromS3 mf = case mf.s3FilePath of
 -- is running alongside another provider as a secondary.
 isXyneTicketService :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Flow Bool
 isXyneTicketService _merchantId mocId = do
-  mbUsage <- CQMSUC.findByMerchantOperatingCityId (cast mocId)
+  mbUsage <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId (cast mocId)))
   pure $ maybe False xyneInUse mbUsage
   where
     xyneInUse c =
@@ -426,6 +428,9 @@ castUpdateTicketOnService merchantId merchantOperatingCityId = TT.updateTicketOn
 
 castUpdateTicketStatus :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketStatusReq -> Flow ()
 castUpdateTicketStatus merchantId merchantOperatingCityId = TT.updateTicketStatus (cast merchantId) (cast merchantOperatingCityId)
+
+castUpdateTicketCsat :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketCsatReq -> Flow ()
+castUpdateTicketCsat merchantId merchantOperatingCityId = TT.updateTicketCsat (cast merchantId) (cast merchantOperatingCityId)
 
 castKaptureGetTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.GetTicketReq -> Flow [TIT.GetTicketResp]
 castKaptureGetTicket merchantId merchantOperatingCityId = TT.kaptureGetTicket (cast merchantId) (cast merchantOperatingCityId)

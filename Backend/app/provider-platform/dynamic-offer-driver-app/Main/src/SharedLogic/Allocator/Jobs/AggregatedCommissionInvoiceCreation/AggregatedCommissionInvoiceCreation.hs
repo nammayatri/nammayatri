@@ -16,6 +16,7 @@ module SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.Aggregated
   )
 where
 
+import qualified Data.Aeson as A
 import qualified Data.Map.Strict as M
 import Data.Time.Calendar (Day, addDays, fromGregorian, gregorianMonthLength, toGregorian)
 import Data.Time.Calendar.WeekDate (toWeekDate)
@@ -213,7 +214,8 @@ emitInvoice merchant sellerName sellerAddress currency mocId info recipientId re
           input =
             InvoiceI.InvoiceInput
               { invoiceType = BeckInvoice.AggregatedCommission,
-                paymentOrderId = Nothing,
+                entityReferenceId = Nothing,
+                referenceInvoiceNumber = Nothing,
                 issuedToType = recipientType,
                 issuedToId = recipientId,
                 issuedToName = info.riName,
@@ -235,7 +237,7 @@ emitInvoice merchant sellerName sellerAddress currency mocId info recipientId re
                 counterpartyId = recipientId,
                 tdsRateReason = Nothing,
                 tanOfDeductee = Nothing,
-                lineItems = map mkLineItem commissions,
+                lineItems = concatMap flattenInvoice commissions,
                 gstBreakdown = Nothing, -- per-line VAT already booked on underlying Commission rows
                 currency = currency,
                 dueAt = Nothing,
@@ -254,20 +256,38 @@ emitInvoice merchant sellerName sellerAddress currency mocId info recipientId re
         Left err -> throwError $ InternalError $ "AggCom: createInvoice failed for " <> show recipientType <> " " <> recipientId <> " [" <> show pStart <> ", " <> show pEnd <> "]: " <> show err
         Right inv -> logInfo $ "AggCom: " <> inv.invoiceNumber <> " for " <> show recipientType <> " " <> recipientId <> " [" <> show pStart <> ", " <> show pEnd <> "]"
 
--- | Per-ride line item persisted to the DB for audit. The PDF for
--- AggregatedCommission renders one consolidated row (see PdfService), summing these all.
-mkLineItem :: FInvoice.Invoice -> InvoiceI.InvoiceLineItem
-mkLineItem inv =
-  InvoiceI.InvoiceLineItem
-    { description = "Platform commission - " <> fromMaybe inv.invoiceNumber inv.referenceId,
-      descriptionType = Nothing,
-      quantity = 1,
-      unitPrice = inv.totalAmount,
-      lineTotal = inv.totalAmount,
-      isExternalCharge = False,
-      groupId = Just "g-commission",
-      itemType = Just InvoiceI.Fare
-    }
+-- | Re-emit every line item of an underlying Commission invoice as-is — the agg_comm JL sums
+-- per descriptionType tag, and a summary-line-per-invoice would collapse base+VAT and
+-- commission-vs-cancellation rows. Unparseable line_items ⇒ one untyped line with the invoice total.
+flattenInvoice :: FInvoice.Invoice -> [InvoiceI.InvoiceLineItem]
+flattenInvoice inv =
+  case (A.fromJSON inv.lineItems :: A.Result [InvoiceI.InvoiceLineItem]) of
+    A.Success items | not (null items) -> map withRefSuffix items
+    _ ->
+      [ InvoiceI.InvoiceLineItem
+          { description = "Platform commission" <> refSuffix,
+            descriptionType = Nothing,
+            quantity = 1,
+            unitPrice = inv.totalAmount,
+            lineTotal = inv.totalAmount,
+            isExternalCharge = False,
+            groupId = Just "g-commission",
+            itemType = Just InvoiceI.Fare
+          }
+      ]
+  where
+    refSuffix = " - " <> fromMaybe inv.invoiceNumber inv.referenceId
+    withRefSuffix li =
+      InvoiceI.InvoiceLineItem
+        { description = li.description <> refSuffix,
+          descriptionType = li.descriptionType,
+          quantity = li.quantity,
+          unitPrice = li.unitPrice,
+          lineTotal = li.lineTotal,
+          isExternalCharge = li.isExternalCharge,
+          groupId = li.groupId,
+          itemType = li.itemType
+        }
 
 -- | Page through Commission rows for [from, to] in chunks of @batchSize@.
 -- Terminates on empty page (codebase null-termination convention).

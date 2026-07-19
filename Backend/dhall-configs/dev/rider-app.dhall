@@ -540,4 +540,5 @@ in  { esqDBCfg
       }
     , bapHostRedirectMap = [] : List { mapKey : Text, mapValue : Optional Text }
     , xyneWebhookSigningSecret = "<XYNE_WEBHOOK_SIGNING_SECRET>"
+    , xyneWebhookBearerToken = "<XYNE_WEBHOOK_BEARER_TOKEN>"
     }

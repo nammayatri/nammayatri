@@ -8,15 +8,20 @@ import qualified Lib.Finance.Storage.Beam.ReconciliationSummary as Beam
 import Lib.Finance.Storage.Queries.ReconciliationSummary ()
 import qualified Sequelize as Se
 
-findByDateRangeAndType ::
+findLatestByDateRangeAndType ::
   (BeamFlow m r) =>
   Maybe UTCTime ->
   Maybe UTCTime ->
   Domain.ReconciliationType ->
-  m [Domain.ReconciliationSummary]
-findByDateRangeAndType mbFromDate mbToDate reconciliationType =
-  findAllWithKV $
-    [ Se.Is Beam.reconciliationType $ Se.Eq reconciliationType
-    ]
-      <> maybe [] (\from -> [Se.Is Beam.reconciliationDate $ Se.GreaterThanOrEq from]) mbFromDate
-      <> maybe [] (\to -> [Se.Is Beam.reconciliationDate $ Se.LessThanOrEq to]) mbToDate
+  m (Maybe Domain.ReconciliationSummary)
+findLatestByDateRangeAndType mbFromDate mbToDate reconciliationType =
+  findAllWithOptionsKV
+    ( [ Se.Is Beam.reconciliationType $ Se.Eq reconciliationType
+      ]
+        <> maybe [] (\from -> [Se.Is Beam.reconciliationDate $ Se.GreaterThanOrEq from]) mbFromDate
+        <> maybe [] (\to -> [Se.Is Beam.reconciliationDate $ Se.LessThanOrEq to]) mbToDate
+    )
+    (Se.Desc Beam.createdAt)
+    (Just 1)
+    Nothing
+    <&> listToMaybe

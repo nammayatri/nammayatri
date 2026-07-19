@@ -424,3 +424,34 @@ getFrfsTripManifest apiKey internalUrl tripId routeId = do
   logInfo $ "CallBAPInternal: Getting FRFS trip manifest for tripId: " <> tripId <> ", routeId: " <> routeId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsTripManifestClient tripId routeId (Just apiKey)) "GetFrfsTripManifest" frfsTripManifestAPI
+
+-- POST /internal/frfs/trip/{tripId}/notifyTripStarted - Notify confirmed passengers that the bus trip has started
+type FrfsNotifyTripStartedAPI =
+  "internal"
+    :> "frfs"
+    :> "trip"
+    :> Capture "tripId" Text
+    :> "notifyTripStarted"
+    :> Header "token" Text
+    :> Post '[JSON] APISuccess
+
+frfsNotifyTripStartedClient :: Text -> Maybe Text -> EulerClient APISuccess
+frfsNotifyTripStartedClient = client (Proxy @FrfsNotifyTripStartedAPI)
+
+frfsNotifyTripStartedAPI :: Proxy FrfsNotifyTripStartedAPI
+frfsNotifyTripStartedAPI = Proxy
+
+notifyFrfsTripStarted ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  m APISuccess
+notifyFrfsTripStarted apiKey internalUrl tripId = do
+  logInfo $ "CallBAPInternal: Notifying FRFS trip started for tripId: " <> tripId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsNotifyTripStartedClient tripId (Just apiKey)) "NotifyFrfsTripStarted" frfsNotifyTripStartedAPI

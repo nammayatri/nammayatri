@@ -33,7 +33,7 @@ instance ConfigDimensions RideRelatedNotificationConfigDimensions where
   getConfigList a =
     LCP.resolveConfigList
       a
-      (LYT.RIDER_CONFIG RideRelatedNotificationConfig)
+      (LYT.RIDER_CONFIG RideRelatedNotificationConfigRider)
       (Id a.merchantOperatingCityId)
       (SQ.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId) (Just []))
       [ LCP.DimMatcher (.timeDiffEvent) (Just . (.timeDiffEvent)) (==)

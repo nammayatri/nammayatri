@@ -96,7 +96,7 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
       let items = parseLineItems inv.lineItems
       taxTxns <- QIndirectTaxExtra.findByInvoiceNumber (Just inv.invoiceNumber)
       let mbTaxTxn = Kernel.Prelude.listToMaybe taxTxns
-      (mbPayType, mbBrand, mbLast4) <- case inv.paymentOrderId of
+      (mbPayType, mbBrand, mbLast4) <- case inv.entityReferenceId of
         Just orderId -> do
           txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
           let mbTxn = Kernel.Prelude.listToMaybe txns
@@ -151,4 +151,4 @@ fetchInvoicesByRideId rideId personId mbInvoiceType = do
   booking <- QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   unless (booking.riderId == personId) $
     throwError $ InvalidRequest "Ride does not belong to this rider"
-  QInvoiceExtra.findByReferenceIdWithOptions rideId mbInvoiceType [Draft, Issued, Paid] (Just 1) (Just 0)
+  QInvoiceExtra.findByReferenceIdWithOptions rideId mbInvoiceType Nothing [Draft, Issued, Paid] (Just 1) (Just 0)

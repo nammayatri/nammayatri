@@ -283,7 +283,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       (mbVehicleDocs, allVehicleDocsVerified) <-
         if enableBotFlow
           then do
-            (vehicleDocItem, allDocumentVerificationConfigs) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOpCity transporterConfig language registrationNo Nothing
+            (vehicleDocItem, allDocumentVerificationConfigs) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOpCity transporterConfig language registrationNo Nothing False
             let vehicleCategory = fromMaybe vehicleDocItem.userSelectedVehicleCategory vehicleDocItem.verifiedVehicleCategory
             -- Vehicle docs: no fleet-driver/individual applicableTo split → Nothing, [].
             -- Throws (naming the offending docs) if any InspectionHub dependency doc isn't VALID.
@@ -495,7 +495,9 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
       (drvOpAsn, person, driverMode) <- MaybeT $ listToMaybe <$> QDOA.findAllByOperatorIdWithLimitOffsetSearch requestorId mbIsActive mbLimit mbOffset mbSearchString (Just driverId) mbMode
       pure (drvOpAsn, person, vehicleModel, registrationNo, isRcActive, driverMode)
 
-  listItem <- mapM (buildDriverInfo now mbIncludeDocuments) driverOperatorInfoList
+  driverInfoList <- QDI.findAllByDriverIds (map (\(drvOpAsn, _, _, _, _, _) -> drvOpAsn.driverId.getId) driverOperatorInfoList)
+  let driverInfoMap = HashMap.fromList [(driverInfo.driverId.getId, driverInfo) | driverInfo <- driverInfoList]
+  listItem <- mapM (buildDriverInfo now mbIncludeDocuments driverInfoMap) driverOperatorInfoList
   let count = length listItem
   let summary = Common.Summary {totalCount = 10000, count}
   pure API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp {..}
@@ -529,7 +531,7 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
           assoc <- MaybeT $ QDRC.findLatestLinkedByRCId rc.id now
           pure (rc.vehicleModel, rc.unencryptedCertificateNumber, assoc.isRcActive, assoc.driverId)
 
-    buildDriverInfo now mbIncDocs (drvOpAsn, person, vehicleModel, registrationNo, isRcActive, driverMode) = do
+    buildDriverInfo now mbIncDocs driverInfoMap (drvOpAsn, person, vehicleModel, registrationNo, isRcActive, driverMode) = do
       decryptedMobileNumber <-
         mapM decrypt person.mobileNumber
           >>= fromMaybeM
@@ -550,11 +552,13 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
           then do
             let entity = IQuery.PersonEntity person
             entityImages <- IQuery.findAllByEntityId transporterConfig entity
-            let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
+            let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now, enableDocumentMetadata = False}
             let shouldActivateRc = False
                 skipMessages = False -- Need translations for API response
             Just . castStatusRes <$> SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
           else pure Nothing
+
+      driverInfo <- HashMap.lookup drvOpAsn.driverId.getId driverInfoMap & fromMaybeM DriverInfoNotFound
 
       pure $
         API.Types.ProviderPlatform.Operator.Driver.DriverInfo
@@ -569,6 +573,9 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
             vehicle = vehicleModel,
             vehicleNo = registrationNo,
             isRcActive = isRcActive,
+            verified = Just driverInfo.verified,
+            approved = driverInfo.approved,
+            enabled = Just driverInfo.enabled,
             documents = statusRes
           }
 

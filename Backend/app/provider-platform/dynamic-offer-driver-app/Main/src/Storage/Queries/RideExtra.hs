@@ -48,6 +48,9 @@ import Kernel.Types.Id
 import Kernel.Types.SlidingWindowCounters (PeriodType (Days), SlidingWindowOptions (SlidingWindowOptions))
 import Kernel.Utils.Common hiding (Days)
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
+import qualified Lib.Finance.Domain.Types.Account as FinanceAccount
+import qualified Lib.Finance.Domain.Types.LedgerEntry as FinanceLedgerEntry
+import Lib.Finance.Storage.Queries.LedgerEntry ()
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
@@ -56,6 +59,7 @@ import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverInformation as BeamDI
+import Storage.Beam.Finance ()
 import qualified Storage.Beam.FleetOwnerInformation as BeamFOI
 import qualified Storage.Beam.Payment ()
 import qualified Storage.Beam.Person as BeamP
@@ -1202,6 +1206,67 @@ findAllBySubscriptionPurchaseId ::
   m [Ride]
 findAllBySubscriptionPurchaseId (Id subPurchaseId) = do
   findAllWithKV [Se.Is BeamR.subscriptionPurchaseIds $ Se.Eq (Just [subPurchaseId])]
+
+-- | Fetch RideSubscriptionDebit ledger entries for a subscription purchase via ride <-> ledger join.
+-- Intended to avoid per-ride getEntriesByReference calls in subscription wallet ledger flows.
+findSubscriptionRideDebitLedgerEntriesByJoin ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Id DSP.SubscriptionPurchase ->
+  Id FinanceAccount.Account ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Text ->
+  Maybe Text ->
+  Int ->
+  Int ->
+  m [FinanceLedgerEntry.LedgerEntry]
+findSubscriptionRideDebitLedgerEntriesByJoin rideDebitReferenceType (Id subPurchaseId) accountId mbFrom mbTo mbSourceType mbConcernedIndividualId limit offset = do
+  let accountIdText = getId accountId
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ (fromIntegral limit) $
+            B.offset_ (fromIntegral offset) $
+              B.orderBy_ (\(_, ledgerEntry) -> B.desc_ ledgerEntry.timestamp) $
+                B.filter_'
+                  ( \(ride, ledgerEntry) ->
+                      -- Contains check: ride may link to multiple subscriptions on FIFO boundary.
+                      B.sqlBool_
+                        ( (B.customExpr_ (\sid rideSubPurchaseIds -> sid <> " = ANY (COALESCE(" <> rideSubPurchaseIds <> ", ARRAY[]::text[]))") :: B.QExpr Postgres s Text -> B.QExpr Postgres s (Maybe [Text]) -> B.QExpr Postgres s Bool)
+                            (B.val_ subPurchaseId)
+                            ride.subscriptionPurchaseIds
+                        )
+                        B.&&?. B.sqlBool_
+                          ( ledgerEntry.fromAccountId B.==. B.val_ accountIdText
+                              B.||. ledgerEntry.toAccountId B.==. B.val_ accountIdText
+                          )
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\from -> B.sqlBool_ $ ledgerEntry.timestamp B.>=. B.val_ from) mbFrom
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\to -> B.sqlBool_ $ ledgerEntry.timestamp B.<=. B.val_ to) mbTo
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\sourceType -> B.sqlBool_ $ ledgerEntry.referenceType B.==. B.val_ sourceType) mbSourceType
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\cid -> B.sqlBool_ $ ledgerEntry.concernedIndividualId B.==. B.val_ (Just cid)) mbConcernedIndividualId
+                  )
+                  do
+                    ride' <- B.all_ (BeamCommon.ride BeamCommon.atlasDB)
+                    ledgerEntry' <-
+                      B.join_
+                        (BeamCommon.financeLedgerEntry BeamCommon.atlasDB)
+                        ( \ledgerEntry'' ->
+                            ledgerEntry''.referenceType B.==. B.val_ rideDebitReferenceType
+                              B.&&. ledgerEntry''.referenceId B.==. ride'.bookingId
+                        )
+                    pure (ride', ledgerEntry')
+  case res of
+    Right rows -> catMaybes <$> mapM (fromTType' . snd) rows
+    Left err -> do
+      logError $
+        "findSubscriptionRideDebitLedgerEntriesByJoin failed for subscriptionId="
+          <> subPurchaseId
+          <> " error="
+          <> show err
+      pure []
 
 findFirstUpcomingOrActiveByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person] -> m (Maybe Ride)
 findFirstUpcomingOrActiveByDriverIds [] = pure Nothing

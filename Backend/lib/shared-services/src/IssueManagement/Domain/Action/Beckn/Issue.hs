@@ -232,7 +232,7 @@ closeBecknIssue ValidatedDIssue {..} now iHandle = do
   QIGM.updateByPrimaryKey updatedIssue
   issueReport <- QIR.findByBecknIssueId issueId >>= fromMaybeM (InvalidRequest "Issue Report not found")
   QIR.updateStatusAssignee issueReport.id (Just Common.CLOSED) issueReport.assignee
-  void $ Common.updateTicketStatus issueReport TIT.Closed (cast merchant.id) (cast merchantOperatingCity.id) iHandle "Closed by person"
+  void $ Common.updateTicketStatus issueReport TIT.Closed (cast merchant.id) (cast merchantOperatingCity.id) iHandle CUSTOMER "Closed by person"
   pure $
     IssueRes
       { issueId = issueId,

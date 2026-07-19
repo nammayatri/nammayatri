@@ -38,6 +38,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.SapJournalEntry as SJE
 import Lib.Finance.SapJournalEntry.Interface (SapJournalEntryInput (..))
@@ -51,6 +52,7 @@ import SharedLogic.Allocator (AllocatorJobType (..), SAPPGSettlementDispatchJobD
 import SharedLogic.Allocator.Jobs.Settlement.SubscriptionTotals (SubscriptionTotals (..), fetchPGSettlementTotals, fetchSubscriptionTotals)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Tools.Error
 
 lockTTLSeconds :: Int
@@ -246,7 +248,10 @@ getSAPConfig ::
   Id DMOC.MerchantOperatingCity ->
   m (Maybe SAPConfig.SAPServiceConfig)
 getSAPConfig mocid = do
-  mbConfig <- CQMSC.findByServiceAndCity (DMSC.SAPService DMSC.Journal) mocid
+  mbConfig <-
+    getOneConfig
+      (MerchantServiceConfigDimensions {merchantOperatingCityId = mocid.getId, merchantId = Nothing, serviceName = Just (DMSC.SAPService DMSC.Journal)})
+      (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.SAPService DMSC.Journal) mocid))
   pure $ case mbConfig of
     Just cfg -> case cfg.serviceConfig of
       DMSC.SAPServiceConfig sapCfg -> Just sapCfg

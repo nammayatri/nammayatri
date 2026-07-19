@@ -254,6 +254,7 @@ data CancelRideTagData = CancelRideTagData
     callAtemptByDriver :: Bool,
     currentTime :: Int,
     rideCreatedTime :: Int,
+    bookingCreatedTime :: Int,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     driverArrivalTime :: Maybe Int
   }

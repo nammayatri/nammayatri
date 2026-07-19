@@ -12,7 +12,8 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Tools.Beam.UtilsTH
 
 data Refunds = Refunds
-  { arn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { actualRefundedAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    arn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     completedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     createdAt :: Kernel.Prelude.UTCTime,
     errorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

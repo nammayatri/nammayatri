@@ -17,7 +17,7 @@ upsert a@DriverUdyam {..} =
   findOneWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)] >>= \case
     Just _ ->
       updateOneWithKV
-        [ Se.Set Beam.documentImageId (Kernel.Types.Id.getId <$> documentImageId),
+        [ Se.Set Beam.documentImageId (Kernel.Types.Id.getId documentImageId),
           Se.Set Beam.udyamNumberEncrypted (udyamNumber & unEncrypted . encrypted),
           Se.Set Beam.udyamNumberHash (udyamNumber & hash),
           Se.Set Beam.verificationStatus verificationStatus,

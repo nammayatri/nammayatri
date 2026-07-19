@@ -1,0 +1,25 @@
+@driver-offer-bpp-host = http://localhost:8016
+
+@merchantShortId = BRIDGE_FINLAND_PARTNER
+@city = Helsinki
+@serviceName = %22PREPAID_SUBSCRIPTION%22
+
+###
+
+# @name stripePayoutWebhook
+# Stripe Connect payout webhook (payout.paid).
+# PREPAID_SUBSCRIPTION + Helsinki -> RidePayout_Stripe config.
+# serviceName is parsed as JSON (mkHttpInstancesForEnum), so use quoted value: "PREPAID_SUBSCRIPTION"
+# Success: {"message":{"ack":{"status":"ACK"}}}
+#
+# Stripe-Signature: set webhookEndpointSecret in RidePayout_Stripe config_json,
+# then sign the raw body (must stay single-line):
+#   TS=$(date +%s)
+#   BODY='{"id":"evt_test_payout_paid_001",...}'  # exact body below
+#   SIG=$(printf '%s.%s' "$TS" "$BODY" | openssl dgst -sha256 -hmac "$WHSEC" | awk '{print $2}')
+#
+POST {{driver-offer-bpp-host}}/{{merchantShortId}}/service/stripe/payout?city={{city}}&serviceName={{serviceName}}
+Stripe-Signature: t=1,v1=0000000000000000000000000000000000000000000000000000000000000000
+Content-Type: application/json
+
+{"id":"evt_test_payout_paid_001","object":"event","api_version":"2024-04-10","created":1752662400,"data":{"object":{"object":"payout","id":"po_test_001","amount":1000,"currency":"eur","status":"paid","type":"card","method":"standard","created":1752662400,"metadata":{"order_id":"test-payout-order-001"}}},"livemode":false,"pending_webhooks":1,"request":{"id":null,"idempotency_key":null},"type":"payout.paid"}
