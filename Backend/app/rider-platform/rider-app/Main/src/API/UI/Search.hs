@@ -408,6 +408,10 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
         case req' of
           DSearch.PTSearch DSearch.PublicTransportSearchReq {..} -> userPreferredServiceTier
           _ -> Nothing
+      mbOriginStopIntegratedBppConfigId =
+        case req' of
+          DSearch.PTSearch DSearch.PublicTransportSearchReq {originStopIntegratedBppConfigId} -> originStopIntegratedBppConfigId
+          _ -> Nothing
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   let vehicleCategory = fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory
   let currentLocation = fmap latLongToLocationV2 req.currentLocation
@@ -448,8 +452,12 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
       else do
         let sortingType = fromMaybe DMP.FASTEST userPreferences.journeyOptionsSortingType
         destination <- extractDest searchRequest.toLocation
+        mbOriginIBC <-
+          case mbOriginStopIntegratedBppConfigId of
+            Just _ -> SIBC.findMaybeIntegratedBPPConfig mbOriginStopIntegratedBppConfigId merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType)
+            Nothing -> pure mbIntegratedBPPConfig
         -- Get stop information if integrated BPP config is available
-        fromStopInfo <- case (mbIntegratedBPPConfig, searchRequest.originStopCode) of
+        fromStopInfo <- case (mbOriginIBC, searchRequest.originStopCode) of
           (Just integratedBPPConfig, Just originStopCode) ->
             OTPRest.getStationByGtfsIdAndStopCode originStopCode integratedBPPConfig
           _ ->

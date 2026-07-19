@@ -1,0 +1,94 @@
+imports:
+  Id: Kernel.Types.Id
+  CoinsConfig: Domain.Types.Coins.CoinsConfig
+  DriverCoinsFunctionType: Lib.DriverCoins.Types
+  TripCategoryType: Lib.DriverCoins.Types
+  VehicleCategory: Domain.Types.VehicleCategory
+  ServiceTierType: Domain.Types.Common
+  TimeBound: Kernel.Types.TimeBound
+  Text: Data.Text
+
+module: DriverIncentiveCoins
+
+# -----------------------------------------------------------------------------
+# GET /coins/incentiveConfig  (cacheable config — use with ETag / If-None-Match)
+# Returns the active DriverIncentiveCohortRidesCompleted coin config for the
+# logged-in driver. Does NOT include Redis ride counts.
+#
+# ETag (same pattern as specialLocation.yaml / PR #14857):
+# - Client sends Header If-None-Match with previously received ETag.
+# - Response includes Header ETag (quoted SHA-256 of payload).
+# - If client ETag matches cached Redis hash → HTTP 304 (Not Modified).
+# - Redis hash MUST be cleared on CoinsConfig create/update (dashboard).
+#
+# Handler logic (after generator):
+# 1. Load person (driver tags) + current vehicle category.
+# 2. Parse Incentive tag only: "Incentive#<value>".
+#    If value has multiple functions joined by "&", use the first segment only.
+#    Example: Incentive#DriverIncentiveCohortRidesCompleted 1&... → first only.
+# 3. Query active EndRide coin configs for city + merchant + vehicleCategory
+#    + that eventFunction.
+# 4. Prefer real timeBounds row if any exist for that eventFunction
+#    (even outside active peak — keep bounded config visible).
+#    Only if no bounded config exists → fall back to unbounded / null.
+# 5. ridesThreshold = N from DriverIncentiveCohortRidesCompleted N.
+# 6. Response is a list: [] if none, or [matchingConfig] (at most one).
+# 7. ETag: compare If-None-Match vs Redis hash; on miss compute hash of
+#    response, store in Redis, return with ETag header.
+#
+# -----------------------------------------------------------------------------
+# GET /coins/incentiveRideCount  (volatile — call whenever UI needs progress)
+# Returns Redis valid-ride counts for milestone UI for the selected config.
+#
+# Handler logic (after generator):
+# 1–4. Same tag parse + config selection as incentiveConfig (to know window).
+# 5. Read Redis ride counts:
+#    - dayValidRideCount  ← DriverValidRideCount:DriverId:<id>
+#    - timeBoundValidRideCount ← :Window:TimeBound:<day>:<start>-<end>
+#      when selected config has a matching peak for "now"; Nothing if
+#      unbounded or outside peak.
+# 6. progressValidRideCount:
+#      timebound config + active peak → timeBoundValidRideCount (or 0)
+#      else → dayValidRideCount
+# 7. If no matching config → all counts 0 / Nothing as appropriate.
+
+types:
+  DriverIncentiveCoinConfigItem:
+    id: Id CoinsConfig
+    eventFunction: DriverCoinsFunctionType
+    eventName: Text
+    coins: Int
+    expirationAt: Maybe Int
+    active: Bool
+    vehicleCategory: Maybe VehicleCategory
+    tripCategoryType: Maybe TripCategoryType
+    serviceTierType: Maybe ServiceTierType
+    timeBounds: Maybe TimeBound
+    # From DriverIncentiveCohortRidesCompleted N → N (frontend milestone target)
+    ridesThreshold: Int
+
+  DriverIncentiveRideCountRes:
+    # Redis: DriverValidRideCount:DriverId:<id> (day / unbounded path)
+    dayValidRideCount: Int
+    # Redis: ...:Window:TimeBound:<weekday>:<start>-<end> for this config's
+    # active peak at request time; Nothing if unbounded or outside peak
+    timeBoundValidRideCount: Maybe Int
+    # Count that applies to the selected config (use for milestone progress)
+    progressValidRideCount: Int
+
+apis:
+  - GET:
+      endpoint: /coins/incentiveConfig
+      auth: TokenAuth PROVIDER_TYPE
+      headers:
+        If-None-Match: Text
+      response:
+        type: "[DriverIncentiveCoinConfigItem]"
+      responseHeaders:
+        - ETag: Text
+
+  - GET:
+      endpoint: /coins/incentiveRideCount
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: DriverIncentiveRideCountRes

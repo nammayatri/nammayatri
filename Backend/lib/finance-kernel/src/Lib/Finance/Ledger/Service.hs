@@ -30,9 +30,11 @@ module Lib.Finance.Ledger.Service
     -- * Query by ID/reference
     getEntry,
     getEntriesByReference,
+    getEntriesByEntityReference,
     getEntriesByReferenceAndToAccount,
     getEntriesByReferenceAndFromAccount,
     getEntriesByAccount,
+    getLatestEntryByAccount,
     getEntriesBetween,
 
     -- * Query by account (the main way domain queries)
@@ -200,6 +202,8 @@ createEntry input = do
             status = input.status,
             referenceType = input.referenceType,
             referenceId = input.referenceId,
+            entityReferenceId = input.entityReferenceId,
+            entityReferenceType = input.entityReferenceType,
             reversalOf = Nothing,
             voidReason = Nothing,
             settledAt = Nothing,
@@ -268,6 +272,8 @@ createEntryWithBalanceUpdate input = do
                 status = input.status,
                 referenceType = input.referenceType,
                 referenceId = input.referenceId,
+                entityReferenceId = input.entityReferenceId,
+                entityReferenceType = input.entityReferenceType,
                 reversalOf = Nothing,
                 voidReason = Nothing,
                 settledAt = Nothing,
@@ -325,6 +331,8 @@ createReversal originalId reason = do
                 status = SETTLED, -- Reversals are immediately settled
                 referenceType = original.referenceType,
                 referenceId = original.referenceId,
+                entityReferenceId = original.entityReferenceId,
+                entityReferenceType = original.entityReferenceType,
                 reversalOf = Just originalId,
                 voidReason = Nothing,
                 settledAt = Just now,
@@ -497,6 +505,16 @@ getEntriesByReference ::
   m [LedgerEntry]
 getEntriesByReference = QLedger.findByReference
 
+-- | Every entry for a sub-domain entity (e.g. one refund request), reversals included —
+--   a reversal inherits the entity reference of the entry it reverses.
+getEntriesByEntityReference ::
+  (BeamFlow.BeamFlow m r) =>
+  EntityReferenceType ->
+  Text -> -- Entity reference ID (e.g. refundRequestId)
+  m [LedgerEntry]
+getEntriesByEntityReference entityRefType entityRefId =
+  QLedger.findByEntityReference (Just entityRefType) (Just entityRefId)
+
 -- | Entries for (refType, refId) where toAccountId matches — i.e. credits
 -- landing in the given account. Use for earn-side lookups.
 getEntriesByReferenceAndToAccount ::
@@ -526,6 +544,13 @@ getEntriesByAccount accountId = do
   fromEntries <- QLedger.findByFromAccount accountId
   toEntries <- QLedger.findByToAccount accountId
   pure $ fromEntries <> toEntries
+
+-- | Latest ledger entry for an account (by createdAt)
+getLatestEntryByAccount ::
+  (BeamFlow.BeamFlow m r) =>
+  Id Account ->
+  m (Maybe LedgerEntry)
+getLatestEntryByAccount = QLedgerExtra.findLatestByAccount
 
 -- | Get entries for an account within a time range
 getEntriesBetween ::

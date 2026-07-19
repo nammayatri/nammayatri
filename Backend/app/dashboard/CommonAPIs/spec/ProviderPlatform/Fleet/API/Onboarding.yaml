@@ -6,6 +6,7 @@ imports:
   PanType: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
   AddressDocumentType: Dashboard.Common.Driver
   IndianState: Kernel.Types.Beckn.Context
+  Day: Data.Time
   BaseUrl: Kernel.Prelude
   VehicleCategory: Domain.Types.VehicleCategory # check this
   Driver: Dashboard.Common
@@ -46,6 +47,7 @@ apis:
         - providePrefillDetails: Bool
         - onlyMandatoryDocs: Bool
         - docsVerificationStatus: DocsVerificationStatus
+        - enableDocumentMetadata: Bool
       response:
         type: StatusRes
       helperApi:
@@ -61,6 +63,7 @@ apis:
               - providePrefillDetails: Bool
               - onlyMandatoryDocs: Bool
               - docsVerificationStatus: DocsVerificationStatus
+              - enableDocumentMetadata: Bool
             response:
               type: StatusRes
   # Vehicle-only RC verify-status. Resolves the RC from registrationNo/rcId. Dashboard callers are already
@@ -72,6 +75,7 @@ apis:
       query:
         - registrationNo: Text
         - rcId: Text
+        - enableDocumentMetadata: Bool
       response:
         type: RcVerifyStatusResp
   - POST:
@@ -103,6 +107,7 @@ apis:
       query:
         - rcNo: Text
         - rcId: Text
+        - enableDocumentMetadata: Bool
       response:
         type: VehicleDocumentStatusRes
 
@@ -201,7 +206,7 @@ types:
     expiryDate: Maybe UTCTime
     metadata: Maybe DocumentMetadata
   DocumentMetadata:
-    enum: "DLMetadata DLDocumentMetadata | AadhaarMetadata AadhaarDocumentMetadata | PanMetadata PanDocumentMetadata | LocalAddressProofMetadata LocalAddressProofDocumentMetadata | GSTMetadata GSTDocumentMetadata | RCMetadata RCDocumentMetadata | VehiclePUCMetadata VehiclePUCDocumentMetadata | VehicleFitnessMetadata VehicleFitnessCertificateDocumentMetadata | VehicleInsuranceMetadata VehicleInsuranceDocumentMetadata | VehiclePermitMetadata VehiclePermitDocumentMetadata | UDYAMMetadata UDYAMDocumentMetadata | TANMetadata TANDocumentMetadata | LDCMetadata LDCDocumentMetadata"
+    enum: "DLMetadata DLDocumentMetadata | AadhaarMetadata AadhaarDocumentMetadata | PanMetadata PanDocumentMetadata | LocalAddressProofMetadata LocalAddressProofDocumentMetadata | GSTMetadata GSTDocumentMetadata | RCMetadata RCDocumentMetadata | VehiclePUCMetadata VehiclePUCDocumentMetadata | VehicleFitnessMetadata VehicleFitnessCertificateDocumentMetadata | VehicleInsuranceMetadata VehicleInsuranceDocumentMetadata | VehiclePermitMetadata VehiclePermitDocumentMetadata | UDYAMMetadata UDYAMDocumentMetadata | TANMetadata TANDocumentMetadata | LDCMetadata LDCDocumentMetadata | NomineeDetailsMetadata NomineeDetailsDocumentMetadata | BankingDetailsMetadata BankingDetailsDocumentMetadata"
   UDYAMDocumentMetadata:
     udyamNumber: Maybe Text
     tdsRate: Maybe Double
@@ -228,6 +233,15 @@ types:
     state: Maybe IndianState
     proofDocumentType: Maybe AddressDocumentType
     address: Maybe Text
+  NomineeDetailsDocumentMetadata:
+    nomineeName: Maybe Text
+    nomineeDob: Maybe Day
+    nomineeRelationship: Maybe Text
+  BankingDetailsDocumentMetadata:
+    accountNumber: Maybe Text
+    ifscCode: Maybe Text
+    nameAtBank: Maybe Text
+    upiId: Maybe Text
   GSTDocumentMetadata:
     gstNumber: Text
   RCDocumentMetadata:

@@ -9,13 +9,14 @@ module Lib.ConfigPilot.Interface.Getter
   )
 where
 
+import Data.List (sort)
 import Kernel.Beam.Functions (runInMasterDbAndRedis)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
 import Kernel.Utils.Logging (logDebug)
-import Lib.ConfigPilot.Config.GetterInternal (PersonIdKey (..), TxnIdKey (..), configPilotInMemKey, getConfigImpl, invalidateConfigInMem)
+import Lib.ConfigPilot.Config.GetterInternal (PersonIdKey (..), TxnIdKey (..), configPilotInMemKey, getConfigImpl, invalidateConfigInMem, selectActiveElementVersions)
 import Lib.ConfigPilot.Interface.Types (ConfigDimensions (..))
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Yudhishthira.Types as LYT
@@ -68,23 +69,22 @@ resolveConfigList ::
   Maybe [DimMatcher dims cfg] ->
   m [cfg]
 resolveConfigList dims logicDomain mocId fetch matchers fallback = do
-  logDebug $ "CP Log: [READ] domain=" <> show logicDomain <> " dims=" <> dimensionsCacheKey dims
-  -- Two-layer cache: per-pod in-mem (L1) wraps a cross-pod Redis hash (L2).
-  -- L2 hash prefix mirrors 'configPilotInMemKey' ("ConfigPilot:<configType>");
-  -- the dimensions form the hash field and 'withRedisCache' appends the cached
-  -- type name. L2 currently relies on its TTL; explicit invalidation is TODO.
-  IM.withInMemCache cacheKey 3600 $
-    Hedis.withRedisCache redisHashPrefix [dimensionsCacheKey dims] 1800 $ do
-      logDebug $ "CP Log: [FILL] domain=" <> show logicDomain <> " dims=" <> dimensionsCacheKey dims
+  versions <- selectActiveElementVersions logicDomain mocId
+  let versionKey = show (sort versions)
+  let l1Key = configPilotInMemKey dims <> [versionKey]
+  logDebug $ "CP Log: [READ] domain=" <> show logicDomain <> " dims=" <> dimensionsCacheKey dims <> " selectedVersions=" <> versionKey <> " l1Key=" <> show l1Key <> " l2Field=" <> (dimensionsCacheKey dims <> ":v:" <> versionKey)
+
+  IM.withInMemCache l1Key 3600 $
+    Hedis.withRedisCache redisHashPrefix [dimensionsCacheKey dims <> ":v:" <> versionKey] 7200 $ do
+      logDebug $ "CP Log: [FILL] domain=" <> show logicDomain <> " dims=" <> dimensionsCacheKey dims <> " versions=" <> versionKey
       cfgs <- runInMasterDbAndRedis fetch
       let applyMatchers ms = filter (\c -> all (matchesDim dims c) ms) cfgs
       let filtered = case (applyMatchers matchers, fallback) of
             ([], Just fb) -> applyMatchers fb
             (results, _) -> results
       let wrappers = map (\c -> LYT.Config {config = c, extraDimensions = Nothing, identifier = 0}) filtered
-      mapM (\w -> getConfigImpl dims w logicDomain mocId) wrappers
+      mapM (\w -> getConfigImpl versions w logicDomain mocId) wrappers
   where
-    cacheKey = configPilotInMemKey dims
     redisHashPrefix = "ConfigPilot:" <> show (getConfigType dims)
     matchesDim dims' c (DimMatcher getDimVal getCfgVal eqFn) =
       maybe True (\dv -> maybe False (eqFn dv) (getCfgVal c)) (getDimVal dims')

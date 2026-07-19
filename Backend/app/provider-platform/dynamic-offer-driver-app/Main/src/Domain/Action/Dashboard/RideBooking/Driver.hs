@@ -100,6 +100,7 @@ import qualified Storage.Queries.DriverBlockTransactions as QDBT
 import Storage.Queries.DriverFee (findPendingFeesByDriverIdAndServiceName)
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverGstinExtra as QDGExtra
+import qualified Storage.Queries.DriverIdentityInfo as QDII
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
@@ -517,6 +518,8 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
   let bankIfsc' = mbBankAccount >>= (.ifscCode)
   let bankVerificationStatus' = mbBankAccount <&> (\ba -> if ba.detailsSubmitted then "VERIFIED" else "PENDING")
   let fleetOwnerId' = (.fleetOwnerId) <$> mbActiveFda
+  mbIdentityInfo <- B.runInReplica $ QDII.findByDriverId person.id
+  let courtRecord' = (mbIdentityInfo >>= (.courtRecord)) <&> \cr -> Common.CourtRecordResult {result = cr.result, errorMessage = cr.errorMessage}
   tdsApplicableFlag' <- case mbActiveFda of
     Just fda -> do
       mbFleetInfo <- QFOI.findByPrimaryKey (Id fda.fleetOwnerId)
@@ -536,6 +539,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         enabled = info.enabled,
         blocked = info.blocked,
         blockedReason = info.blockedReason,
+        blockLiftTime = info.blockExpiryTime,
         verified = info.verified,
         subscribed = info.subscribed,
         onboardingDate = info.lastEnabledOn,
@@ -599,7 +603,8 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         bankVerificationStatus = bankVerificationStatus',
         upiId = driverInfo.payoutVpa,
         fleetOwnerId = fleetOwnerId',
-        docsVerificationStatus = castDriverDocsVerificationStatus <$> info.docsVerificationStatus
+        docsVerificationStatus = castDriverDocsVerificationStatus <$> info.docsVerificationStatus,
+        courtRecord = courtRecord'
       }
   where
     buildDriverAssociationInfoFromPerson :: DP.Person -> Maybe DFOI.FleetOwnerInformation -> m Common.DriverAssociationInfo

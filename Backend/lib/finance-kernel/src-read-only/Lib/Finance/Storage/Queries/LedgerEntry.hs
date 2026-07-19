@@ -24,6 +24,17 @@ create = createWithKV
 createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry] -> m ())
 createMany = traverse_ create
 
+findByEntityReference ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntityReferenceType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]))
+findByEntityReference entityReferenceType entityReferenceId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.entityReferenceType $ Se.Eq entityReferenceType,
+          Se.Is Beam.entityReferenceId $ Se.Eq entityReferenceId
+        ]
+    ]
+
 findByFromAccount :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> m ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]))
 findByFromAccount fromAccountId = do findAllWithKV [Se.Is Beam.fromAccountId $ Se.Eq (Kernel.Types.Id.getId fromAccountId)]
 
@@ -132,6 +143,8 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry {..}) = do
       Se.Set Beam.createdBy createdBy,
       Se.Set Beam.createdById createdById,
       Se.Set Beam.currency currency,
+      Se.Set Beam.entityReferenceId entityReferenceId,
+      Se.Set Beam.entityReferenceType entityReferenceType,
       Se.Set Beam.entryType entryType,
       Se.Set Beam.fromAccountId (Kernel.Types.Id.getId fromAccountId),
       Se.Set Beam.fromEndingBalance fromEndingBalance,
@@ -170,6 +183,8 @@ instance FromTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.Ledger
             createdBy = createdBy,
             createdById = createdById,
             currency = currency,
+            entityReferenceId = entityReferenceId,
+            entityReferenceType = entityReferenceType,
             entryType = entryType,
             fromAccountId = Kernel.Types.Id.Id fromAccountId,
             fromEndingBalance = fromEndingBalance,
@@ -206,6 +221,8 @@ instance ToTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.LedgerEn
         Beam.createdBy = createdBy,
         Beam.createdById = createdById,
         Beam.currency = currency,
+        Beam.entityReferenceId = entityReferenceId,
+        Beam.entityReferenceType = entityReferenceType,
         Beam.entryType = entryType,
         Beam.fromAccountId = Kernel.Types.Id.getId fromAccountId,
         Beam.fromEndingBalance = fromEndingBalance,

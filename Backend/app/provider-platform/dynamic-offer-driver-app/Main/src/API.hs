@@ -40,6 +40,7 @@ import qualified Kernel.External.Payout.Stripe.Webhook as Stripe
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import Kernel.Types.Servant (RawByteString (..))
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.BasicAuth ()
 import Kernel.Utils.Servant.HTML
@@ -263,7 +264,7 @@ stripePayoutWebhookHandler ::
   Maybe Context.City ->
   Maybe Plan.ServiceNames ->
   Maybe Text ->
-  Stripe.RawByteString ->
+  RawByteString ->
   FlowHandler AckResponse
 stripePayoutWebhookHandler merchantShortId mbOpCity mbServiceName mbSigHeader =
   withFlowHandlerAPI . Payout.stripePayoutWebhookHandler merchantShortId mbOpCity mbServiceName mbSigHeader
@@ -273,7 +274,7 @@ stripeTestPayoutWebhookHandler ::
   Maybe Context.City ->
   Maybe Plan.ServiceNames ->
   Maybe Text ->
-  Stripe.RawByteString ->
+  RawByteString ->
   FlowHandler AckResponse
 stripeTestPayoutWebhookHandler merchantShortId mbOpCity mbServiceName mbSigHeader =
   withFlowHandlerAPI . Payout.stripeTestPayoutWebhookHandler merchantShortId mbOpCity mbServiceName mbSigHeader

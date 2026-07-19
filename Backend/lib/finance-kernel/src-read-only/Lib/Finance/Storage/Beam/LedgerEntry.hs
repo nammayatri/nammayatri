@@ -20,6 +20,8 @@ data LedgerEntryT f = LedgerEntryT
     createdBy :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType)),
     createdById :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     currency :: (B.C f Kernel.Types.Common.Currency),
+    entityReferenceId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    entityReferenceType :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntityReferenceType)),
     entryType :: (B.C f Lib.Finance.Domain.Types.LedgerEntry.EntryType),
     fromAccountId :: (B.C f Kernel.Prelude.Text),
     fromEndingBalance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
@@ -54,6 +56,6 @@ instance B.Table LedgerEntryT where
 
 type LedgerEntry = LedgerEntryT Identity
 
-$(enableKVPG (''LedgerEntryT) [('id)] [[('concernedIndividualId)], [('fromAccountId)], [('referenceId)], [('settlementId)], [('toAccountId)]])
+$(enableKVPG (''LedgerEntryT) [('id)] [[('concernedIndividualId)], [('entityReferenceId)], [('fromAccountId)], [('referenceId)], [('settlementId)], [('toAccountId)]])
 
 $(mkTableInstancesGenericSchema (''LedgerEntryT) "finance_ledger_entry")

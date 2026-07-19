@@ -16,7 +16,7 @@ import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id (Id)
 import Lib.Finance.Domain.Types.Account (Account)
-import Lib.Finance.Domain.Types.LedgerEntry (EntryStatus, EntryType, SettlementStatus)
+import Lib.Finance.Domain.Types.LedgerEntry (EntityReferenceType, EntryStatus, EntryType, SettlementStatus)
 
 -- | Input for creating a ledger entry
 data LedgerEntryInput = LedgerEntryInput
@@ -29,6 +29,9 @@ data LedgerEntryInput = LedgerEntryInput
     status :: EntryStatus,
     referenceType :: Text,
     referenceId :: Text,
+    -- | Sub-domain entity this entry belongs to (e.g. a refund request); Nothing when there is none.
+    entityReferenceId :: Maybe Text,
+    entityReferenceType :: Maybe EntityReferenceType,
     metadata :: Maybe Value,
     merchantId :: Text,
     merchantOperatingCityId :: Text,

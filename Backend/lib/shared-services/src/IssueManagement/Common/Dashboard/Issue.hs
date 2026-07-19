@@ -238,7 +238,8 @@ data CreateIssueCategoryReq = CreateIssueCategoryReq
     label :: Maybe Text,
     igmCategory :: Maybe Text,
     enableKapture :: Maybe Bool,
-    showInDefault :: Maybe Bool
+    showInDefault :: Maybe Bool,
+    xyneChannelId :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

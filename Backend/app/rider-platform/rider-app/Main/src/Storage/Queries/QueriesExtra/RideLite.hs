@@ -54,7 +54,8 @@ data RideLite = RideLite
     isSafetyPlus :: Kernel.Prelude.Bool,
     bppRideId :: Kernel.Types.Id.Id Domain.Types.Ride.BPPRide,
     driverAccountId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.AccountId,
-    driverArrivalStatus :: Kernel.Prelude.Maybe Domain.Types.Ride.DriverArrivalStatus
+    driverArrivalStatus :: Kernel.Prelude.Maybe Domain.Types.Ride.DriverArrivalStatus,
+    tipAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -75,5 +76,9 @@ instance FromTType' RideLiteTable RideLite where
             showDriversPreviousRideDropLoc = Kernel.Prelude.fromMaybe False showDriversPreviousRideDropLoc,
             isSafetyPlus = Kernel.Prelude.fromMaybe False isSafetyPlus,
             bppRideId = Kernel.Types.Id.Id bppRideId,
+            -- the rider can add / change / remove a tip while the ride is running, so the polling
+            -- endpoint has to be able to read it back. Built the same way as the full Ride's
+            -- fromTType' (Storage/Queries/OrphanInstances/Ride.hs) so the two never disagree.
+            tipAmount = Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) tipAmount,
             ..
           }

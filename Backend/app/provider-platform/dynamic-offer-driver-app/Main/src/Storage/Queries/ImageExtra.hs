@@ -259,7 +259,10 @@ data EntityImagesInfo = EntityImagesInfo
     merchantOperatingCity :: DMOC.MerchantOperatingCity,
     entityImages :: [DImage.Image],
     transporterConfig :: DTC.TransporterConfig,
-    now :: UTCTime
+    now :: UTCTime,
+    -- When True, document metadata (DL number, Aadhaar number, PAN, address proof details) is computed
+    -- and returned in status responses. Driven by the caller's query param, not merchant config.
+    enableDocumentMetadata :: Bool
   }
 
 getPersonEntityId :: EntityImagesInfo -> Maybe (Id Person)

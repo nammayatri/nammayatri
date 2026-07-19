@@ -37,7 +37,7 @@ instance ConfigDimensions PayoutConfigDimensions where
   getConfigList a =
     LCP.resolveConfigList
       a
-      (LYT.RIDER_CONFIG PayoutConfig)
+      (LYT.RIDER_CONFIG PayoutConfigRider)
       (Id a.merchantOperatingCityId)
       (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId) (Just []))
       [ LCP.DimMatcher (.vehicleCategory) (.vehicleCategory) (==),

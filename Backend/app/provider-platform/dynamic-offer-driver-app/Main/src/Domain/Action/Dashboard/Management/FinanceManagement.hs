@@ -16,6 +16,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement as API
 import qualified Dashboard.Common
+import qualified Dashboard.Common as Common
 import Data.List (nub, partition)
 import qualified Data.Text as T
 import Data.Time (addUTCTime)
@@ -75,6 +76,7 @@ import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QSchedulerJob
 import SharedLogic.Allocator (AllocatorJobType (..), ReconciliationJobData (..))
+import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
 import qualified SharedLogic.Finance.Wallet as WalletService
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
@@ -104,6 +106,34 @@ mkPageLimit = min maxPageLimit . max 0 . fromMaybe defaultPageLimit
 
 mkPageOffset :: Maybe Int -> Int
 mkPageOffset = max 0 . fromMaybe 0
+
+subscriptionPurchaseIdFromReconEntry :: ReconciliationEntry.ReconciliationEntry -> Maybe Text
+subscriptionPurchaseIdFromReconEntry entry = entry.bookingId <|> entry.sourceId
+
+pgPaymentVsSubscriptionMismatchCategory :: ReconciliationEntry.ReconciliationEntry -> Maybe Text
+pgPaymentVsSubscriptionMismatchCategory entry = case entry.reconStatus of
+  ReconciliationEntry.MATCHED -> Just "Matched"
+  ReconciliationEntry.MISSING_IN_TARGET -> Just "Missing in Pg Payment Settlement Report" -- not used
+  ReconciliationEntry.MISSING_IN_SOURCE -> Just "Missing in Subscription Purchase" -- not used
+  ReconciliationEntry.HIGHER_IN_TARGET -> Just "Overpaid"
+  ReconciliationEntry.LOWER_IN_TARGET -> Just "Underpaid"
+
+purchaseVsTxnMismatchCategory :: ReconciliationEntry.ReconciliationEntry -> Maybe Text
+purchaseVsTxnMismatchCategory entry = case entry.reconStatus of
+  ReconciliationEntry.MATCHED -> Just "Matched"
+  ReconciliationEntry.MISSING_IN_TARGET -> Just "Missing in Subscription Transactions"
+  ReconciliationEntry.MISSING_IN_SOURCE -> Just "Missing in Subscription Purchase"
+  ReconciliationEntry.HIGHER_IN_TARGET -> Just "Over-consumption"
+  ReconciliationEntry.LOWER_IN_TARGET -> Just "Partial consumption"
+
+reconEntryMismatchCategory ::
+  ReconSummary.ReconciliationType ->
+  ReconciliationEntry.ReconciliationEntry ->
+  Maybe Text
+reconEntryMismatchCategory reconType entry = case reconType of
+  ReconSummary.PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION -> pgPaymentVsSubscriptionMismatchCategory entry
+  ReconSummary.SUBSCRIPTION_PURCHASE_VS_SUBSCRIPTION_TRANSACTION -> purchaseVsTxnMismatchCategory entry
+  _ -> Nothing
 
 -- | Get subscription purchase list with filters
 getFinanceManagementSubscriptionPurchaseList ::
@@ -419,10 +449,12 @@ fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceI
         let mbIssuedToId =
               case mbInvoiceType of
                 Just Ride -> Nothing
+                Just Refund -> Nothing
                 _ -> mbFleetOwnerOrDriverId
             mbSupplierId =
               case mbInvoiceType of
                 Just Ride -> mbFleetOwnerOrDriverId
+                Just Refund -> mbFleetOwnerOrDriverId
                 _ -> Nothing
         QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
           merchantOpCityId.getId
@@ -515,7 +547,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
       let (rideIds, subscriptionIds) = foldr extractIds ([], []) (catMaybes ledgerEntries)
 
       -- Get payment method from payment_transaction via invoice.paymentOrderId
-      mbPaymentMethod <- case invoice.paymentOrderId of
+      mbPaymentMethod <- case invoice.entityReferenceId of
         Just orderId -> do
           txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
           pure $ listToMaybe txns >>= (.paymentMethod)
@@ -665,10 +697,9 @@ getFinanceManagementFinanceReconciliation merchantShortId opCity mbFromDate mbLi
       adjustedFromDate = addUTCTime (- istOffset) <$> mbFromDate
       adjustedToDate = addUTCTime (- istOffset) <$> mbToDate
 
-  summaries <- QReconSummaryExtra.findByDateRangeAndType adjustedFromDate adjustedToDate reconciliationType
+  latestSummary <- QReconSummaryExtra.findLatestByDateRangeAndType adjustedFromDate adjustedToDate reconciliationType
 
-  let latestSummary = listToMaybe summaries
-      summaryRes = maybe defaultSummary toSummary latestSummary
+  let summaryRes = maybe defaultSummary toSummary latestSummary
 
   entries <- case latestSummary of
     Just summary -> QReconEntryExtra.findBySummaryIdWithPagination summary.id limit offset
@@ -683,7 +714,16 @@ getFinanceManagementFinanceReconciliation merchantShortId opCity mbFromDate mbLi
       }
   where
     defaultSummary :: API.ReconciliationSummary
-    defaultSummary = API.ReconciliationSummary 0 0 "0%" 0 0 0
+    defaultSummary =
+      API.ReconciliationSummary
+        { totalDiscrepancies = 0,
+          matchedRecords = 0,
+          matchRate = "0%",
+          sourceTotal = 0,
+          targetTotal = 0,
+          varianceAmount = 0,
+          disputeAmountTotal = 0
+        }
 
     toSummary :: ReconSummary.ReconciliationSummary -> API.ReconciliationSummary
     toSummary s =
@@ -693,31 +733,66 @@ getFinanceManagementFinanceReconciliation merchantShortId opCity mbFromDate mbLi
           matchRate = s.matchRate,
           sourceTotal = s.sourceTotal,
           targetTotal = s.targetTotal,
-          varianceAmount = s.varianceAmount
+          varianceAmount = s.varianceAmount,
+          disputeAmountTotal = fromMaybe 0.0 s.disputeAmountTotal
         }
 
     toReconEntry :: ReconciliationEntry.ReconciliationEntry -> API.ReconciliationEntry
     toReconEntry entry =
-      API.ReconciliationEntry
-        { bookingId = entry.bookingId,
-          dcoId = entry.dcoId,
-          status = show <$> entry.status,
-          mode = show <$> entry.mode,
-          expectedValue = Just entry.expectedDsrValue,
-          actualValue = Just entry.actualLedgerValue,
-          variance = Just entry.variance,
-          reconStatus = Just (show entry.reconStatus),
-          mismatchReason = entry.mismatchReason,
-          timestamp = Just entry.timestamp,
-          financeComponent = show <$> entry.financeComponent,
-          sourceId = entry.sourceId,
-          targetId = entry.targetId,
-          settlementId = entry.settlementId,
-          settlementDate = entry.settlementDate,
-          settlementMode = entry.settlementMode,
-          transactionDate = entry.transactionDate,
-          rrn = entry.rrn
-        }
+      let baseEntry =
+            API.ReconciliationEntry
+              { bookingId = entry.bookingId,
+                dcoId = entry.dcoId,
+                status = show <$> entry.status,
+                mode = show <$> entry.mode,
+                expectedValue = Just entry.expectedDsrValue,
+                actualValue = Just entry.actualLedgerValue,
+                variance = Just entry.variance,
+                disputeAmount = Just (abs entry.variance),
+                reconStatus = Just (show entry.reconStatus),
+                mismatchReason = entry.mismatchReason,
+                timestamp = Just entry.timestamp,
+                financeComponent = show <$> entry.financeComponent,
+                sourceId = entry.sourceId,
+                targetId = entry.targetId,
+                settlementId = entry.settlementId,
+                settlementDate = entry.settlementDate,
+                settlementMode = entry.settlementMode,
+                transactionDate = entry.transactionDate,
+                pgTransactionDate = entry.pgTransactionDate,
+                rrn = entry.rrn,
+                utr = entry.utr,
+                pgOrderId = entry.pgOrderId,
+                pgTxnId = entry.pgTxnId,
+                paymentOrderId = entry.paymentOrderId,
+                subscriptionAmountExclGst = entry.subscriptionAmountExclGst,
+                gstOnSubscription = entry.gstOnSubscription,
+                totalTransactionAmount = entry.totalTransactionAmount,
+                subscriptionPurchaseId = Nothing,
+                purchaseTimestamp = Nothing,
+                purchaseStatus = Nothing,
+                planName = Nothing,
+                entitledAmount = Nothing,
+                consumedAmount = Nothing,
+                remainingAmount = Nothing,
+                transactionType = Nothing,
+                linkedEntityId = Nothing,
+                mismatchCategory = reconEntryMismatchCategory reconciliationType entry
+              }
+       in case reconciliationType of
+            ReconSummary.SUBSCRIPTION_PURCHASE_VS_SUBSCRIPTION_TRANSACTION ->
+              let mSubId = subscriptionPurchaseIdFromReconEntry entry
+               in baseEntry
+                    { API.subscriptionPurchaseId = mSubId,
+                      API.purchaseTimestamp = entry.transactionDate,
+                      API.purchaseStatus = entry.purchaseStatus,
+                      API.planName = entry.planName,
+                      API.entitledAmount = Just entry.expectedDsrValue,
+                      API.consumedAmount = Just $ entry.actualLedgerValue - fromMaybe 0 entry.remainingSubscriptionBalance,
+                      API.remainingAmount = entry.remainingSubscriptionBalance,
+                      API.linkedEntityId = mSubId
+                    }
+            _ -> baseEntry
 
 -- | Trigger a reconciliation job on-demand
 postFinanceManagementReconciliationTrigger ::
@@ -735,6 +810,7 @@ postFinanceManagementReconciliationTrigger merchantShortId opCity req = do
     "DSR_VS_LEDGER" -> pure ()
     "DSR_VS_SUBSCRIPTION" -> pure ()
     "DSSR_VS_SUBSCRIPTION" -> pure ()
+    "SUBSCRIPTION_PURCHASE_VS_SUBSCRIPTION_TRANSACTION" -> pure ()
     "PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION" -> pure ()
     "PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST" -> pure ()
     _ -> throwError $ InvalidRequest $ "Invalid reconciliation type: " <> reconciliationType
@@ -1258,6 +1334,62 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
     mkFullName :: DP.Person -> Text
     mkFullName person = T.intercalate " " $ catMaybes [Just person.firstName, person.middleName, person.lastName]
 
+mkEmptyWalletLedgerRes :: Maybe (Id Common.SubscriptionPurchase) -> API.WalletLedgerRes
+mkEmptyWalletLedgerRes mbSubscriptionId =
+  API.WalletLedgerRes
+    { availableWalletBalance = Nothing,
+      lockedWalletBalance = Nothing,
+      lastWalletUpdatedAt = Nothing,
+      totalItems = 0,
+      ledgerEntries = [],
+      expiryEntries = Nothing,
+      creditEntries = Nothing,
+      subscriptionId = mbSubscriptionId
+    }
+
+buildWalletLedgerItem :: Id Account.Account -> LedgerEntry.LedgerEntry -> API.WalletLedgerItem
+buildWalletLedgerItem walletAccountId entry =
+  let isCredit = entry.toAccountId == walletAccountId
+      creditAmount = if isCredit then Just entry.amount else Just 0
+      debitAmount = if not isCredit then Just entry.amount else Just 0
+      openingBalance = if isCredit then entry.toStartingBalance else entry.fromStartingBalance
+      closingBalance = if isCredit then entry.toEndingBalance else entry.fromEndingBalance
+   in API.WalletLedgerItem
+        { walletTxnId = Just entry.id.getId,
+          walletTxnDate = Just entry.createdAt,
+          sourceType = Just entry.referenceType,
+          sourceReferenceId = Just entry.referenceId,
+          creditAmount = creditAmount,
+          debitAmount = debitAmount,
+          openingBalance = openingBalance,
+          closingBalance = closingBalance
+        }
+
+paginateWalletLedgerEntries :: Int -> Int -> [a] -> [a]
+paginateWalletLedgerEntries limit offset = take limit . drop offset
+
+mkWalletLedgerRes ::
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  Maybe UTCTime ->
+  [API.WalletLedgerItem] ->
+  Maybe [API.WalletLedgerItem] ->
+  Maybe [API.WalletLedgerItem] ->
+  Maybe (Id Common.SubscriptionPurchase) ->
+  API.WalletLedgerRes
+mkWalletLedgerRes availableWalletBalance lockedWalletBalance lastWalletUpdatedAt ledgerEntries mbExpiryEntries mbCreditEntries mbSubscriptionId = do
+  let totalItems = length ledgerEntries + maybe 0 length mbExpiryEntries + maybe 0 length mbCreditEntries
+  API.WalletLedgerRes
+    { availableWalletBalance,
+      lockedWalletBalance,
+      lastWalletUpdatedAt,
+      totalItems,
+      ledgerEntries,
+      expiryEntries = mbExpiryEntries,
+      creditEntries = mbCreditEntries,
+      subscriptionId = mbSubscriptionId
+    }
+
 -- | Get wallet ledger with filters.
 -- API/spec order is: limit, offset, driverId, fleetOperatorId, from, to, sourceType.
 getFinanceManagementFinanceWalletLedger ::
@@ -1271,9 +1403,12 @@ getFinanceManagementFinanceWalletLedger ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   Maybe Text ->
+  Maybe (Id Common.SubscriptionPurchase) ->
   Flow API.WalletLedgerRes
-getFinanceManagementFinanceWalletLedger merchantShortId opCity mbLimit mbOffset mbDriverId mbFleetOperatorId mbConcernedIndividualId mbFrom mbTo mbSourceType =
+getFinanceManagementFinanceWalletLedger merchantShortId opCity mbLimit mbOffset mbDriverId mbFleetOperatorId mbConcernedIndividualId mbFrom mbTo mbSourceType Nothing =
   getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mbFleetOperatorId mbConcernedIndividualId mbFrom mbLimit mbOffset mbSourceType mbTo
+getFinanceManagementFinanceWalletLedger merchantShortId opCity mbLimit mbOffset mbDriverId mbFleetOperatorId mbConcernedIndividualId mbFrom mbTo mbSourceType (Just subscriptionId) =
+  getFinanceManagementSubscriptionWalletLedgerImpl merchantShortId opCity mbDriverId mbFleetOperatorId mbConcernedIndividualId mbFrom mbLimit mbOffset mbSourceType mbTo subscriptionId
 
 getFinanceManagementFinanceWalletLedgerImpl ::
   ShortId DM.Merchant ->
@@ -1317,28 +1452,12 @@ getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mb
     $ throwError $ InvalidRequest "driverId and concernedIndividualId must be same when used with fleetOperatorId"
 
   case mbOwnerInfo of
-    Nothing ->
-      pure $
-        API.WalletLedgerRes
-          { availableWalletBalance = Nothing,
-            lockedWalletBalance = Nothing,
-            lastWalletUpdatedAt = Nothing,
-            totalItems = 0,
-            ledgerEntries = []
-          }
+    Nothing -> pure $ mkEmptyWalletLedgerRes Nothing
     Just (counterpartyType, ownerId) -> do
       mbAccount <- WalletService.getWalletAccountByOwner counterpartyType ownerId
 
       case mbAccount of
-        Nothing ->
-          pure $
-            API.WalletLedgerRes
-              { availableWalletBalance = Nothing,
-                lockedWalletBalance = Nothing,
-                lastWalletUpdatedAt = Nothing,
-                totalItems = 0,
-                ledgerEntries = []
-              }
+        Nothing -> pure $ mkEmptyWalletLedgerRes Nothing
         Just account -> do
           let availableBalance = account.balance
 
@@ -1347,47 +1466,106 @@ getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mb
           lockedBalance <- WalletService.getNonRedeemableBalance account.id timeDiff cutOffDays =<< getCurrentTime
 
           -- Get last wallet update time from latest ledger entry
-          allEntries <- LedgerService.getEntriesByAccount account.id
-          let lastUpdated = listToMaybe $ sortOn (Down . (.createdAt)) allEntries <&> (.createdAt)
+          mbLatestEntry <- LedgerService.getLatestEntryByAccount account.id
+          let lastUpdated = mbLatestEntry <&> (.createdAt)
 
           -- Query ledger entries with filters
           let mbReferenceTypes = (\st -> [st]) <$> mbSourceType
           filteredEntries <- LedgerService.findByAccountWithFiltersAndConcernedIndividual account.id mbFrom mbTo Nothing Nothing Nothing mbReferenceTypes mbConcernedIndividualIdFilter
 
-          -- Apply pagination
-          let paginatedEntries = take limit $ drop offset filteredEntries
-
-          -- Map entries to response items
-          ledgerItems <- mapM (buildLedgerItem account.id) paginatedEntries
+          let ledgerItems =
+                map (buildWalletLedgerItem account.id) $
+                  paginateWalletLedgerEntries limit offset filteredEntries
 
           pure $
-            API.WalletLedgerRes
-              { availableWalletBalance = Just availableBalance,
-                lockedWalletBalance = Just lockedBalance,
-                lastWalletUpdatedAt = lastUpdated,
-                totalItems = length ledgerItems,
-                ledgerEntries = ledgerItems
-              }
-  where
-    buildLedgerItem :: Id Account.Account -> LedgerEntry.LedgerEntry -> Flow API.WalletLedgerItem
-    buildLedgerItem walletAccountId entry = do
-      let isCredit = entry.toAccountId == walletAccountId
-          creditAmount = if isCredit then Just entry.amount else Just 0
-          debitAmount = if not isCredit then Just entry.amount else Just 0
-          openingBalance = if isCredit then entry.toStartingBalance else entry.fromStartingBalance
-          closingBalance = if isCredit then entry.toEndingBalance else entry.fromEndingBalance
+            mkWalletLedgerRes
+              (Just availableBalance)
+              (Just lockedBalance)
+              lastUpdated
+              ledgerItems
+              Nothing
+              Nothing
+              Nothing
+
+getFinanceManagementSubscriptionWalletLedgerImpl ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Id Common.SubscriptionPurchase ->
+  Flow API.WalletLedgerRes
+getFinanceManagementSubscriptionWalletLedgerImpl merchantShortId opCity mbDriverId mbFleetOperatorId mbConcernedIndividualId mbFrom mbLimit mbOffset mbSourceType mbTo subscriptionId = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  let limit = mkPageLimit mbLimit
+      offset = mkPageOffset mbOffset
+
+  subscription <- QSubscriptionPurchase.findByPrimaryKey (cast subscriptionId) >>= fromMaybeM (InvalidRequest "Subscription not found")
+  when (subscription.merchantOperatingCityId /= merchantOpCityId) $
+    throwError $ InvalidRequest "Subscription does not belong to this merchant operating city"
+  when (isJust mbDriverId && subscription.ownerType == DSP.DRIVER && mbDriverId /= Just subscription.ownerId) $
+    throwError $ InvalidRequest "driverId does not match subscription owner"
+  when (isJust mbFleetOperatorId && subscription.ownerType == DSP.FLEET_OWNER && mbFleetOperatorId /= Just subscription.ownerId) $
+    throwError $ InvalidRequest "fleetOperatorId does not match subscription owner"
+
+  let counterpartyType = case subscription.ownerType of
+        DSP.DRIVER -> FinancePrepaid.counterpartyDriver
+        DSP.FLEET_OWNER -> FinancePrepaid.counterpartyFleetOwner
+  prepaidScope <- FinancePrepaid.resolvePrepaidScope merchantOpCityId subscription.vehicleCategory
+  mbAccount <- FinancePrepaid.getPrepaidAccountByOwner counterpartyType subscription.ownerId prepaidScope
+
+  case mbAccount of
+    Nothing -> pure $ mkEmptyWalletLedgerRes (Just subscriptionId)
+    Just account -> do
+      rideDebitEntries <-
+        QRide.findSubscriptionRideDebitLedgerEntriesByJoin
+          FinancePrepaid.prepaidRideDebitReferenceType
+          subscription.id
+          account.id
+          mbFrom
+          mbTo
+          mbSourceType
+          mbConcernedIndividualId
+          limit
+          offset
+      expiryLedgerEntries <- LedgerService.getEntriesByReference FinancePrepaid.expiryCreditTransferReferenceType subscription.id.getId
+      creditLedgerEntries <- LedgerService.getEntriesByReference FinancePrepaid.subscriptionCreditReferenceType subscription.id.getId
+      let matchesLedgerFilters entry =
+            and
+              [ entry.fromAccountId == account.id || entry.toAccountId == account.id,
+                maybe True (entry.timestamp >=) mbFrom,
+                maybe True (entry.timestamp <=) mbTo,
+                maybe True (\sourceType -> entry.referenceType == sourceType) mbSourceType,
+                maybe True (\cid -> entry.concernedIndividualId == Just cid) mbConcernedIndividualId
+              ]
+          expiryFiltered = sortOn (Down . (.timestamp)) $ filter matchesLedgerFilters expiryLedgerEntries
+          creditFiltered = sortOn (Down . (.timestamp)) $ filter matchesLedgerFilters creditLedgerEntries
+
+      -- Get last wallet update time from latest ledger entry
+      mbLatestEntry <- LedgerService.getLatestEntryByAccount account.id
+      let lastUpdated = mbLatestEntry <&> (.createdAt)
+
+      lockedBalance <- FinancePrepaid.getPrepaidPendingHoldByOwner counterpartyType subscription.ownerId prepaidScope
+      let ledgerItems = map (buildWalletLedgerItem account.id) rideDebitEntries
+          expiryItems = Just $ map (buildWalletLedgerItem account.id) expiryFiltered
+          creditItems = Just $ map (buildWalletLedgerItem account.id) creditFiltered
 
       pure $
-        API.WalletLedgerItem
-          { walletTxnId = Just entry.id.getId,
-            walletTxnDate = Just entry.createdAt,
-            sourceType = Just entry.referenceType,
-            sourceReferenceId = Just entry.referenceId,
-            creditAmount = creditAmount,
-            debitAmount = debitAmount,
-            openingBalance = openingBalance,
-            closingBalance = closingBalance
-          }
+        mkWalletLedgerRes
+          (Just account.balance)
+          (Just lockedBalance)
+          lastUpdated
+          ledgerItems
+          expiryItems
+          creditItems
+          (Just subscriptionId)
 
 getFinanceManagementFinanceInvoicePdf ::
   ShortId DM.Merchant ->
@@ -1440,7 +1618,7 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
       let items = parseLineItems inv.lineItems
       taxTxns <- QIndirectTax.findByInvoiceNumber (Just inv.invoiceNumber)
       let mbTaxTxn = Kernel.Prelude.listToMaybe taxTxns
-      (mbPayType, mbBrand, mbLast4) <- case inv.paymentOrderId of
+      (mbPayType, mbBrand, mbLast4) <- case inv.entityReferenceId of
         Just orderId -> do
           txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
           let mbTxn = Kernel.Prelude.listToMaybe txns

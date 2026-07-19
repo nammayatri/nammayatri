@@ -71,6 +71,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQ
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
+import Storage.ConfigPilot.Config.InsuranceConfig (InsuranceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantPaymentMethod (MerchantPaymentMethodDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRideB
@@ -555,7 +556,20 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
 
     isBookingInsured :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m (Bool, Maybe Text, Maybe Text)
     isBookingInsured = do
-      insuranceConfig <- maybeM (pure Nothing) (\tp -> CQInsuranceConfig.getInsuranceConfig searchRequest.merchantId searchRequest.merchantOperatingCityId tp (DV.castServiceTierToVehicleCategory quote.vehicleServiceTierType)) (pure quote.tripCategory)
+      insuranceConfig <-
+        maybeM
+          (pure Nothing)
+          ( \tp ->
+              getConfig
+                InsuranceConfigDimensions
+                  { merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId,
+                    merchantId = searchRequest.merchantId.getId,
+                    tripCategory = tp,
+                    vehicleCategory = DV.castServiceTierToVehicleCategory quote.vehicleServiceTierType
+                  }
+                (Just (CQInsuranceConfig.getInsuranceConfig searchRequest.merchantId searchRequest.merchantOperatingCityId tp (DV.castServiceTierToVehicleCategory quote.vehicleServiceTierType)))
+          )
+          (pure quote.tripCategory)
       pure $
         maybe
           (False, Nothing, Nothing)

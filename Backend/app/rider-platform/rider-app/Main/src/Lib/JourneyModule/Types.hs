@@ -391,7 +391,8 @@ data MetroLegExtraInfo = MetroLegExtraInfo
     refund :: Maybe LegRefundInfo,
     refunds :: [LegRefundInfo],
     categories :: [FRFSTicketServiceAPI.CategoryInfoResponse],
-    categoryBookingDetails :: Maybe [CategoryBookingDetails] -- TODO :: To be deprecated once UI starts consuming `categories` instead as this is redundant data.
+    categoryBookingDetails :: Maybe [CategoryBookingDetails], -- TODO :: To be deprecated once UI starts consuming `categories` instead as this is redundant data.
+    qrEncoding :: Maybe DIBC.QREncoding
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -936,6 +937,9 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
       let refundBloc = listToMaybe refunds'
       let adultTicketQuantity = find (\priceItem -> priceItem.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)
           childTicketQuantity = find (\priceItem -> priceItem.categoryType == CHILD) fareParameters.priceItems <&> (.quantity)
+      let qrEncoding = case integratedBPPConfig.providerConfig of
+            DIBC.ONDC ondcConfig -> ondcConfig.qrEncoding
+            _ -> Nothing
       case booking.vehicleType of
         Spec.METRO -> do
           return $
@@ -953,7 +957,8 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   refund = refundBloc,
                   refunds = refunds',
                   categories = categories,
-                  categoryBookingDetails = Just categoryBookingDetails
+                  categoryBookingDetails = Just categoryBookingDetails,
+                  qrEncoding = qrEncoding
                 }
         Spec.BUS -> do
           journeyLegDetail <- listToMaybe journeyLegInfo' & fromMaybeM (InternalError "Journey Leg Detail not found")
@@ -1269,7 +1274,8 @@ mkStandaloneFrfsMinimalLegInfo frfsSearch mbFare = do
                 refund = Nothing,
                 refunds = [],
                 categories = [],
-                categoryBookingDetails = Nothing
+                categoryBookingDetails = Nothing,
+                qrEncoding = Nothing
               }
         Spec.SUBWAY ->
           Subway
@@ -1467,7 +1473,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
                   refund = Nothing,
                   refunds = [],
                   categories = categories,
-                  categoryBookingDetails = Nothing
+                  categoryBookingDetails = Nothing,
+                  qrEncoding = Nothing
                 }
         Spec.BUS -> do
           journeyLegDetail <- listToMaybe journeyLegInfo' & fromMaybeM (InternalError "Journey Leg Detail not found")

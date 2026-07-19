@@ -20,6 +20,7 @@ data InvoiceT f = InvoiceT
     createdById :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     currency :: (B.C f Kernel.Types.Common.Currency),
     dueAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+    entityReferenceId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     id :: (B.C f Kernel.Prelude.Text),
     invoiceNumber :: (B.C f Kernel.Prelude.Text),
     invoiceType :: (B.C f Domain.Types.Invoice.InvoiceType),
@@ -38,10 +39,10 @@ data InvoiceT f = InvoiceT
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     paymentMode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    paymentOrderId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     periodEnd :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     periodStart :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     referenceId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    referenceInvoiceNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     signedQRCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     status :: (B.C f Lib.Finance.Domain.Types.Invoice.InvoiceStatus),
     subtotal :: (B.C f Kernel.Types.Common.HighPrecMoney),
@@ -64,6 +65,6 @@ instance B.Table InvoiceT where
 
 type Invoice = InvoiceT Identity
 
-$(enableKVPG (''InvoiceT) [('id)] [[('invoiceNumber)], [('issuedToId)], [('paymentOrderId)], [('referenceId)], [('supplierId)]])
+$(enableKVPG (''InvoiceT) [('id)] [[('entityReferenceId)], [('invoiceNumber)], [('issuedToId)], [('referenceId)], [('supplierId)]])
 
 $(mkTableInstancesGenericSchema (''InvoiceT) "finance_invoice")

@@ -7,6 +7,8 @@ imports:
   Person: Domain.Types.Person
   RefundRequestCode: Domain.Types.Extra.RefundRequest
   Currency: Kernel.Utils.Common
+  FareComponent: Domain.Types.FareBreakup
+  Value: Data.Aeson
 
 RefundRequest:
   tableName: refund_request
@@ -19,6 +21,8 @@ RefundRequest:
     refundPurpose: RefundPurpose
     personId: Id Person
     requestedAmount: Maybe HighPrecMoney
+    requestedRefundComponents: "Maybe [RefundComponentAmount]"
+    approvedRefundedComponents: "Maybe [RefundComponentAmount]"
     status: RefundRequestStatus
     code: RefundRequestCode
     description: Text
@@ -27,6 +31,7 @@ RefundRequest:
     refundsId: Maybe (Id Refunds)
     refundsAmount: Maybe HighPrecMoney
     refundsTries: Int
+    deductFromDriver: Maybe Bool
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     evidenceS3Path: Maybe Text # TODO image size validation
@@ -41,10 +46,32 @@ RefundRequest:
       derive: "HttpInstance"
     RefundPurpose:
       enum: "RIDE_FARE, CANCELLATION_FEE"
+    RefundComponentAmount:
+      derive: "Eq"
+      component: FareComponent
+      amount: HighPrecMoney
 
+  beamType:
+    requestedRefundComponents: Maybe Value
+    approvedRefundedComponents: Maybe Value
+  toTType:
+    requestedRefundComponents: requestedRefundComponents >>= Just . Data.Aeson.toJSON|E
+    approvedRefundedComponents: approvedRefundedComponents >>= Just . Data.Aeson.toJSON|E
+  fromTType:
+    requestedRefundComponents: requestedRefundComponents >>= Kernel.Utils.JSON.valueToMaybe|E
+    approvedRefundedComponents: approvedRefundedComponents >>= Kernel.Utils.JSON.valueToMaybe|E
+  sqlType:
+    requestedRefundComponents: "json"
+    approvedRefundedComponents: "json"
   queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
     findByOrderId:
       kvFunction: findOneWithKV
+      where: orderId
+    findAllByOrderId:
+      kvFunction: findAllWithKV
       where: orderId
     findByRefundsId:
       kvFunction: findOneWithKV
@@ -56,6 +83,8 @@ RefundRequest:
        - responseDescription
        - refundsAmount
        - refundsTries
+       - deductFromDriver
+       - approvedRefundedComponents
       where: id
     updateRefundIdAndStatus:
       kvFunction: updateOneWithKV
@@ -77,3 +106,4 @@ RefundRequest:
   extraOperations:
     - EXTRA_QUERY_FILE
     - EXTRA_DOMAIN_TYPE_FILE
+    - GENERATE_INDEXES

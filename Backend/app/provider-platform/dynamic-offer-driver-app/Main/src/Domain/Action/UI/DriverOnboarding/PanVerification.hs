@@ -522,7 +522,9 @@ verifyPanAadhaarLinkageIfAadhaarExists person merchantOpCityId mdriverPanCard = 
 materializeTdsRateFor :: Person.Person -> Flow ()
 materializeTdsRateFor person = do
   transporterConfig <-
-    SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id)))
+    getOneConfig
+      (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+      (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id)))))
       >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   -- No-op unless PAN-Aadhaar-link TDS is enabled for the merchant; otherwise
   -- leave tds_rate alone so other merchants' rate resolution is unchanged.
