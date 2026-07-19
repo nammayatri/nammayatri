@@ -19,10 +19,15 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.City
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.SlidingWindowCounters
 import Tools.Beam.UtilsTH
 
 data TransporterConfigT f = TransporterConfigT
   { aaEnabledClientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    authPhoneNumberCountThreshold1 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    authPhoneNumberCountThreshold2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    authPhoneNumberCountWindow1 :: B.C f (Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions),
+    authPhoneNumberCountWindow2 :: B.C f (Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions),
     aadhaarImageResizeConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     aadhaarVerificationRequired :: B.C f Kernel.Prelude.Bool,
     acStatusCheckGap :: B.C f Kernel.Prelude.Int,
@@ -78,6 +83,7 @@ data TransporterConfigT f = TransporterConfigT
     cancellationFeeCycle :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     cancellationFeeDisputeLimit :: B.C f Kernel.Prelude.Int,
     cancellationFeeDisputeWindow :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    cancellationFeePaymentMethodExceptions :: B.C f (Kernel.Prelude.Maybe [Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument]),
     cancellationFeeVendor :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cancellationRateCalculationThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cancellationRateSlabConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
@@ -105,6 +111,7 @@ data TransporterConfigT f = TransporterConfigT
     deactivateRCOnUnlink :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     defaultOnboardingAs :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.OnboardingAs),
     defaultPopupDelay :: B.C f Kernel.Types.Common.Seconds,
+    defaultRefundDeductFromDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     deleteDriverBankAccountWhenLinkToFleet :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     demandHotspotsConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     digilockerEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -156,7 +163,6 @@ data TransporterConfigT f = TransporterConfigT
     enableCourtRecordCheck :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableDashboardSms :: B.C f Kernel.Prelude.Bool,
     enableDirectWalletIncentives :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    enableDocumentMetadata :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableExistingVehicleInBulkUpload :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableFaceVerification :: B.C f Kernel.Prelude.Bool,
     enableFareCalculatorV2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -316,6 +322,7 @@ data TransporterConfigT f = TransporterConfigT
     useOfferListCache :: B.C f Kernel.Prelude.Bool,
     useSilentFCMForForwardBatch :: B.C f Kernel.Prelude.Bool,
     useWithSnapToRoadFallback :: B.C f Kernel.Prelude.Bool,
+    validCancellationPenaltyReasons :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     validNameComparePercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     variantsToEnableForSubscription :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],
     vehicleCategoryExcludedFromVerification :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),

@@ -37,6 +37,7 @@ import Text.Printf (printf)
 
 data InvoiceContext = InvoiceContext
   { invoiceNumber :: Text,
+    referenceInvoiceNumber :: Maybe Text,
     issuedAt :: UTCTime,
     dueAt :: Maybe UTCTime,
     invoiceType :: InvoiceType,
@@ -203,6 +204,7 @@ buildInvoiceContext :: BuildInvoiceContextInput -> InvoiceContext
 buildInvoiceContext BuildInvoiceContextInput {..} =
   InvoiceContext
     { invoiceNumber = invoice.invoiceNumber,
+      referenceInvoiceNumber = invoice.referenceInvoiceNumber,
       issuedAt = invoice.issuedAt,
       dueAt = invoice.dueAt,
       invoiceType = invoice.invoiceType,

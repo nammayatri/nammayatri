@@ -25,7 +25,8 @@ data IssueCategory = IssueCategory
     updatedAt :: UTCTime,
     igmCategory :: Maybe Text,
     enableKapture :: Maybe Bool,
-    showInDefault :: Maybe Bool
+    showInDefault :: Maybe Bool,
+    xyneChannelId :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq)
 

@@ -977,9 +977,18 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN override_operat
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_document_metadata boolean ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_pull_pending_doc_verification boolean ;
+
+-- phone-number auth sliding-window rate limit (two independent windows) --
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_phone_number_count_threshold1 integer;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_phone_number_count_window1 json;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_phone_number_count_threshold2 integer;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_phone_number_count_window2 json;
+
 
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_pull_pending_doc_verification boolean ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN valid_cancellation_penalty_reasons text[] ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_fee_payment_method_exceptions text[] ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN default_refund_deduct_from_driver boolean ;

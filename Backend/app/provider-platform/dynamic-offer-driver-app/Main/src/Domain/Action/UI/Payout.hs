@@ -45,7 +45,6 @@ import Kernel.Beam.Functions as B (runInReplica)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Payment.Stripe.Types.Common as PaymentStripe
-import Kernel.External.Payment.Stripe.Webhook (RawByteString (..))
 import qualified Kernel.External.Payout.Interface as Juspay
 import qualified Kernel.External.Payout.Interface.Events.Types as PayoutEvents
 import qualified Kernel.External.Payout.Interface.Juspay as Juspay
@@ -59,6 +58,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
+import Kernel.Types.Servant (RawByteString (..))
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance

@@ -37,7 +37,7 @@ instance ConfigDimensions ExophoneDimensions where
           Nothing -> SQ.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId)
      in LCP.resolveConfigList
           a
-          (LYT.RIDER_CONFIG Exophone)
+          (LYT.RIDER_CONFIG ExophoneRider)
           (Id a.merchantOperatingCityId)
           fetch
           [ LCP.DimMatcher (.callService) (Just . (.callService)) (==)

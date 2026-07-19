@@ -64,3 +64,10 @@ ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN updated_by_id text ;
 ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN updated_by text ;
 ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN created_by_id text ;
 ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN created_by text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN entity_reference_type text ;
+ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN entity_reference_id text ;
+CREATE INDEX CONCURRENTLY finance_ledger_entry_idx_entity_reference_id ON atlas_app.finance_ledger_entry USING btree (entity_reference_id);

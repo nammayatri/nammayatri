@@ -22,3 +22,9 @@ ALTER TABLE atlas_app.merchant_config ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.merchant_config ADD COLUMN fraud_auth_count_window json  default '{"period":20, "periodType":"Minutes"}';
 ALTER TABLE atlas_app.merchant_config ADD COLUMN fraud_auth_count_threshold integer  default 8;
+
+-- phone-number auth sliding-window rate limit (two independent windows) --
+ALTER TABLE atlas_app.merchant_config ADD COLUMN auth_phone_number_count_threshold1 integer;
+ALTER TABLE atlas_app.merchant_config ADD COLUMN auth_phone_number_count_window1 json;
+ALTER TABLE atlas_app.merchant_config ADD COLUMN auth_phone_number_count_threshold2 integer;
+ALTER TABLE atlas_app.merchant_config ADD COLUMN auth_phone_number_count_window2 json;

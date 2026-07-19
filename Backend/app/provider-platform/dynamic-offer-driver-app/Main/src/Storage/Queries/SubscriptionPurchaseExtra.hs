@@ -236,6 +236,24 @@ findAllByMerchantOpCityIdWithFilters merchantOpCityId mbServiceName mbStatus mbF
     maxLimit = 20
     defaultLimit = 10
 
+-- | Paid subscription purchases (ACTIVE / EXPIRED / EXHAUSTED) whose purchaseTimestamp falls in the date range.
+findPurchasedByDateRange ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  m [SubscriptionPurchase]
+findPurchasedByDateRange merchantOpCityId startTime endTime =
+  sortBy (comparing (.purchaseTimestamp))
+    <$> findAllWithKV
+      [ Se.And
+          [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId,
+            Se.Is Beam.status $ Se.In [ACTIVE, EXPIRED, EXHAUSTED],
+            Se.Is Beam.purchaseTimestamp $ Se.GreaterThanOrEq startTime,
+            Se.Is Beam.purchaseTimestamp $ Se.LessThanOrEq endTime
+          ]
+      ]
+
 -- | Find ACTIVE subscription purchases for a merchant operating city whose purchaseTimestamp falls in the date range
 findActiveByDateRange ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

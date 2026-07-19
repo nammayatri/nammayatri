@@ -16,7 +16,7 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data DriverUdyamE e = DriverUdyam
-  { documentImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
+  { documentImageId :: Kernel.Types.Id.Id Domain.Types.Image.Image,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     enterpriseName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     enterpriseType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

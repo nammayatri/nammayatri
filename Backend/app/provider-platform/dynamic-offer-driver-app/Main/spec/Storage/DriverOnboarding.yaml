@@ -1173,7 +1173,7 @@ DriverUdyam :
   fields:
     id: Id DriverUdyam
     driverId: Id Person
-    documentImageId: Maybe (Id Image)
+    documentImageId: Id Image
     udyamNumber: EncryptedHashedField e Text
     enterpriseType: Maybe Text
     enterpriseName : Maybe Text
@@ -1385,6 +1385,14 @@ AadhaarCard:
       kvFunction: updateWithKV
       params: [verificationStatus, rejectReason]
       where: driverId
+    updateVerificationStatusByFrontImageId:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus]
+      where: aadhaarFrontImageId
+    updateVerificationStatusAndRejectReasonByFrontImageId:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus, rejectReason]
+      where: aadhaarFrontImageId
     deleteByPersonId:
       kvFunction: deleteWithKV
       where: driverId

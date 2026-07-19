@@ -86,10 +86,10 @@ invoiceToAuditValue = Aeson.toJSON . toTType' @BeamInvoice.Invoice . hideInvoice
         }
 
 indirectTaxToAuditValue :: IndirectTaxTransaction -> Aeson.Value
-indirectTaxToAuditValue = Aeson.toJSON . toTType' @BeamIndirectTax.IndirectTaxTransaction . hideIndirectTaxTransactionSensiveFields
+indirectTaxToAuditValue = Aeson.toJSON . toTType' @BeamIndirectTax.IndirectTaxTransaction . hideIndirectTaxTransactionSensitiveFields
   where
-    hideIndirectTaxTransactionSensiveFields :: IndirectTaxTransaction -> IndirectTaxTransaction
-    hideIndirectTaxTransactionSensiveFields IndirectTaxTransaction {..} =
+    hideIndirectTaxTransactionSensitiveFields :: IndirectTaxTransaction -> IndirectTaxTransaction
+    hideIndirectTaxTransactionSensitiveFields IndirectTaxTransaction {..} =
       IndirectTaxTransaction
         { gstinOfParty = SD.maskTaxNo <$> gstinOfParty,
           issuedToTaxNo = SD.maskTaxNo <$> issuedToTaxNo,
@@ -249,7 +249,7 @@ createInvoice input entryIds = do
           { id = Id invoiceId,
             invoiceNumber = invoiceNum,
             invoiceType = input.invoiceType,
-            paymentOrderId = input.paymentOrderId,
+            entityReferenceId = input.entityReferenceId,
             issuedToType = input.issuedToType,
             issuedToId = input.issuedToId,
             issuedToName = input.issuedToName,
@@ -265,6 +265,7 @@ createInvoice input entryIds = do
             supplierId = input.supplierId,
             merchantGstin = input.merchantGstin,
             referenceId = input.referenceId,
+            referenceInvoiceNumber = input.referenceInvoiceNumber,
             lineItems = lineItemsJson,
             subtotal = subtotal,
             taxBreakdown = Nothing,
@@ -542,6 +543,7 @@ invoiceTypeToTransactionType invoiceType = case invoiceType of
   RideCancellation -> Cancellation
   Commission -> BuyerCommission
   AggregatedCommission -> BuyerCommission
+  Refund -> CreditNote
 
 -- | Map invoiceType to DirectTax TransactionType (Direct Tax / TDS)
 invoiceTypeToDirectTransactionType :: InvoiceType -> DirectTax.TransactionType
@@ -551,6 +553,7 @@ invoiceTypeToDirectTransactionType invoiceType = case invoiceType of
   RideCancellation -> DirectTax.Cancellation
   Commission -> DirectTax.BuyerCommission
   AggregatedCommission -> DirectTax.BuyerCommission
+  Refund -> DirectTax.RideFare
 
 -- | SAC code mapping per transaction type
 sacCodeForTransactionType :: TransactionType -> Text
@@ -572,6 +575,7 @@ invoiceTypeToPurpose = \case
   RideCancellation -> purposeCancellation
   Commission -> purposeCommission
   AggregatedCommission -> purposeAggregatedCommission
+  Refund -> purposeRefund
 
 -- | Map DirectTax TransactionType to TDS section
 transactionTypeToTdsSection :: DirectTax.TransactionType -> Maybe Text

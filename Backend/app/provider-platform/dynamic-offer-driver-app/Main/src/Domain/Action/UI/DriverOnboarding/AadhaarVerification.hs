@@ -49,12 +49,13 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (ActorType (UNKNOWN))
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Driver.DriverImage as CQDI
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AadhaarOtpReq as QueryAR
@@ -437,7 +438,7 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
                 )
                 person.id
               throwError $ DocumentAlreadyValidated "Aadhaar"
-        aadhaarDocConfig <- listToMaybe <$> CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.AadhaarCard Nothing
+        aadhaarDocConfig <- listToMaybe <$> getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just ODC.AadhaarCard, vehicleCategory = Nothing}) (Just (CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.AadhaarCard Nothing))
         faceMatchOutcome <- maybe (pure FMSkip) (\cfg -> runDocFaceMatch person cfg (Id req.aadhaarFrontImageId) (Just image1) req.aadhaarNumber) aadhaarDocConfig
         when (faceMatchOutcome == FMFail) $ throwError FaceMatchFailed
         resp <- Verification.extractAadhaarImage person.merchantId merchantOpCityId extractReq

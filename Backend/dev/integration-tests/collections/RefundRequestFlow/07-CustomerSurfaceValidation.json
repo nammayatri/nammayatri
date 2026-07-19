@@ -1,0 +1,1381 @@
+{
+  "info": {
+    "name": "07-CustomerSurfaceValidation",
+    "description": "Customer-facing refund API contracts only (fareBreakup menu + its dashboard-route parity twin, refundRequest create guards, refund list, evidence upload) — asserts routes/status/response shapes and validation, with no money/ledger/invoice assertions.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "var envType = pm.environment.get('envType'); var msu = pm.environment.get('mockServerUrl') || ''; var url = pm.request.url.toString();",
+          "if (envType && envType !== 'Local' && msu && url.indexOf(msu) > -1) { if (pm.execution && typeof pm.execution.skipRequest === 'function') pm.execution.skipRequest(); }",
+          "",
+          "// Dynamic refund amounts derived from the real ride's charged amount T (self-captured in THIS run's gate).",
+          "// rf1 = 0.5*cap (primary), rf2 = 0.25*cap (secondary partial), rf3 = 0.5*cap. Sized off the REAL RIDE_FARE",
+          "// component cap (rideFareCap, captured from fare_breakup_info) — NOT off T — so rf1 never spuriously trips",
+          "// the per-component cap on a ride with fees/toll/parking. Falls back to T until the gate sets rideFareCap.",
+          "var _cap = Number(pm.environment.get('rideFareCap'));",
+          "var _base = (_cap > 0) ? _cap : Number(pm.environment.get('txn_amount'));",
+          "function _r2(x) { return Math.round(x * 100) / 100; }",
+          "if (_base > 0) {",
+          "    pm.environment.set('rf1', String(_r2(_base * 0.5)));",
+          "    pm.environment.set('rf2', String(_r2(_base * 0.25)));",
+          "    pm.environment.set('rf3', String(_r2(_base * 0.5)));",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Rider Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_authId', d.authId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_rider_number}}\", \"mobileCountryCode\": \"+358\", \"merchantId\": \"{{bap_short_id}}\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Rider OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_token', d.token);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth",
+            "{{rider_authId}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-rider\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Gate: latest COMPLETED booking for fixed rider (run 00 first)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _gate(code, d) {",
+              "  pm.test('Status 200', function () { pm.expect(code).to.eql(200); });",
+              "  var list = (d && d.list) || [];",
+              "  var completed = list.filter(function (b) { return b.status === 'COMPLETED'; });",
+              "  var b = completed.length ? completed[0] : (list.length ? list[0] : null);",
+              "  pm.test('Run 00 first — fixed rider has a completed booking', function () {",
+              "    pm.expect(b != null, 'no completed booking for the fixed rider; run 00 (FixtureStripeRide) first').to.eql(true);",
+              "  });",
+              "  if (b) { pm.environment.set('customer_bookingId', b.id); console.log('Gate: booking ' + b.id + ' status ' + b.status); }",
+              "}",
+              "var d = {}; try { d = pm.response.json(); } catch(e) {}",
+              "if (pm.response.code === 200) { _gate(200, d); }",
+              "else {",
+              "  // the list handler can 500 transiently on an unrelated async notification fork — retry once before failing",
+              "  var _t = Date.now(); while (Date.now() - _t < 2000) {}",
+              "  var _gu = (pm.environment.get('baseUrl_app')||'').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1') + '/rideBooking/list?limit=5&onlyActive=false&offset=0';",
+              "  pm.sendRequest({url: _gu, method: 'GET', header: {token: pm.environment.get('rider_token')}}, function (err, res) {",
+              "    var d2 = {}; try { d2 = res.json(); } catch(e) {}",
+              "    _gate(res ? res.code : 0, d2);",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=5&onlyActive=false&offset=0",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "5"
+            },
+            {
+              "key": "onlyActive",
+              "value": "false"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Capture BAP ride id (SQL — poll until drained)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'ride',select:['id','booking_id','bpp_ride_id','status'],where_clause:[{column_name:'booking_id',val:pm.environment.get('customer_bookingId'),op:'='}],limit:1}); }",
+              "function _finish(rows){",
+              "  if(!rows.length){ pm.test('BAP ride row drained (run 00 first)', function(){ pm.expect(0,'no ride for booking; run 00').to.be.above(0); }); return; }",
+              "  var r=rows[0];",
+              "  pm.environment.set('rideId', r.id);",
+              "  pm.environment.set('bppRideId', r.bpp_ride_id);",
+              "  pm.environment.set('driver_ride_id', r.bpp_ride_id);",
+              "  pm.test('BAP ride row drained', function(){ pm.expect(r.id).to.be.a('string').and.not.empty; });",
+              "  // NOTE: r.id is the RIDE id. orderId is a SEPARATE payment_order GUID, captured next via domain_entity_id.",
+              "  console.log('Gate: BAP rideId='+r.id+' bppRideId='+r.bpp_ride_id+' status='+r.status);",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{ mode:'raw', raw:_sqlBody() } }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(rows.length){ _finish(rows); } else if(n>0){ setTimeout(function(){ _poll(n-1); }, 3000); } else { _finish([]); } }); }",
+              "var _d={}; try{ _d=pm.response.json(); }catch(e){} var _r0=(_d&&_d.rows)||[];",
+              "if(_r0.length){ _finish(_r0); } else { _poll(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"ride\", \"select\": [\"id\", \"booking_id\", \"bpp_ride_id\", \"status\"], \"where_clause\": [{\"column_name\": \"booking_id\", \"val\": \"{{customer_bookingId}}\", \"op\": \"=\"}], \"limit\": 1}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Capture payment order short id + intent (SQL — poll until drained)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'payment_order',select:['id','short_id','payment_service_order_id','status'],where_clause:[{column_name:'domain_entity_id',val:pm.environment.get('rideId'),op:'='}],limit:1}); }",
+              "function _finish(rows){",
+              "  if(!rows.length){ pm.test('payment_order row present', function(){ pm.expect(0,'no payment_order for ride').to.be.above(0); }); return; }",
+              "  var o=rows[0];",
+              "  pm.environment.set('orderId', o.id);",
+              "  pm.environment.set('orderShortId', o.short_id);",
+              "  pm.environment.set('paymentIntentId', o.payment_service_order_id);",
+              "  pm.test('payment_order row present (orderId != rideId)', function(){ pm.expect(o.id).to.be.a('string').and.not.empty; pm.expect(o.id, 'orderId must be a real GUID, not the rideId').to.not.eql(pm.environment.get('rideId')); });",
+              "  pm.test('order has a Stripe payment intent (pi_)', function(){ pm.expect(/^pi_/.test(String(o.payment_service_order_id))).to.eql(true); });",
+              "  console.log('Gate: orderId='+o.id+' shortId='+o.short_id+' intent='+o.payment_service_order_id);",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{ mode:'raw', raw:_sqlBody() } }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(rows.length){ _finish(rows); } else if(n>0){ setTimeout(function(){ _poll(n-1); }, 3000); } else { _finish([]); } }); }",
+              "var _d={}; try{ _d=pm.response.json(); }catch(e){} var _r0=(_d&&_d.rows)||[];",
+              "if(_r0.length){ _finish(_r0); } else { _poll(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"payment_order\", \"select\": [\"id\", \"short_id\", \"payment_service_order_id\", \"status\"], \"where_clause\": [{\"column_name\": \"domain_entity_id\", \"val\": \"{{rideId}}\", \"op\": \"=\"}], \"limit\": 1}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Capture CHARGED transaction amount T (SQL — poll until captured)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'payment_transaction',select:['id','amount','currency','status','created_at'],where_clause:[{column_name:'order_id',val:pm.environment.get('orderId'),op:'='},{column_name:'status',val:'CHARGED',op:'='}],limit:5}); }",
+              "function _finish(rows){",
+              "  if(!rows.length){ pm.test('a CHARGED payment_transaction exists (refund cap source)', function(){ pm.expect(0,'no CHARGED txn after polling (charge settles after End Ride)').to.be.above(0); }); return; }",
+              "  rows.sort(function(a,b){ return String(a.created_at).localeCompare(String(b.created_at)); });",
+              "  var t=rows[0];",
+              "  pm.environment.set('txn_amount', String(t.amount));",
+              "  pm.environment.set('txn_currency', t.currency);",
+              "  pm.environment.set('currency', t.currency);",
+              "  pm.test('a CHARGED payment_transaction exists (refund cap source)', function(){ pm.expect(rows.length).to.be.above(0); });",
+              "  pm.test('T > 0', function(){ pm.expect(Number(t.amount)).to.be.above(0); });",
+              "  console.log('Gate: T(txn_amount)='+t.amount+' '+t.currency);",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{ mode:'raw', raw:_sqlBody() } }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(rows.length){ _finish(rows); } else if(n>0){ setTimeout(function(){ _poll(n-1); }, 3000); } else { _finish([]); } }); }",
+              "var _d={}; try{ _d=pm.response.json(); }catch(e){} var _r0=(_d&&_d.rows)||[];",
+              "if(_r0.length){ _finish(_r0); } else { _poll(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"payment_transaction\", \"select\": [\"id\", \"amount\", \"currency\", \"status\", \"created_at\"], \"where_clause\": [{\"column_name\": \"order_id\", \"val\": \"{{orderId}}\", \"op\": \"=\"}, {\"column_name\": \"status\", \"val\": \"CHARGED\", \"op\": \"=\"}], \"limit\": 5}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Capture BPP booking id + commission (SQL — poll until drained)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'ride',select:['id','booking_id','commission','currency','status'],where_clause:[{column_name:'id',val:pm.environment.get('driver_ride_id'),op:'='}],limit:1}); }",
+              "function _finish(rows){",
+              "  if(!rows.length){ pm.test('BPP ride row drained', function(){ pm.expect(0,'no BPP ride for id; KV not drained').to.be.above(0); }); return; }",
+              "  var r=rows[0];",
+              "  pm.environment.set('bppBookingId', r.booking_id);",
+              "  pm.environment.set('bpp_commission', String(r.commission==null?0:r.commission));",
+              "  pm.environment.set('bpp_currency', r.currency);",
+              "  pm.test('BPP ride row drained', function(){ pm.expect(r.booking_id).to.be.a('string').and.not.empty; });",
+              "  console.log('Gate: bppBookingId='+r.booking_id+' commission='+(r.commission==null?0:r.commission));",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{ mode:'raw', raw:_sqlBody() } }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(rows.length){ _finish(rows); } else if(n>0){ setTimeout(function(){ _poll(n-1); }, 3000); } else { _finish([]); } }); }",
+              "var _d={}; try{ _d=pm.response.json(); }catch(e){} var _r0=(_d&&_d.rows)||[];",
+              "if(_r0.length){ _finish(_r0); } else { _poll(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"ride\", \"select\": [\"id\", \"booking_id\", \"commission\", \"currency\", \"status\"], \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{driver_ride_id}}\", \"op\": \"=\"}], \"limit\": 1}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Wait for BAP fare invoice drained (refund-invoice source)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_invoice',select:['id','invoice_number','invoice_type','status','total_amount'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}],limit:5}); }",
+              "function _finish(rows){",
+              "  if(!rows.length){ pm.test('BAP fare invoice drained (refund-invoice source)', function(){ pm.expect(0,'fare invoice not drained for ride').to.be.above(0); }); return; }",
+              "  pm.test('BAP fare invoice drained (refund-invoice source)', function(){ pm.expect(rows.length).to.be.above(0); });",
+              "  var _ride = rows.filter(function(r){ return r.invoice_type === 'Ride' && r.status === 'Paid'; });",
+              "  var _src = _ride.length ? _ride[0] : rows[0];",
+              "  if (_src && _src.invoice_number) { pm.environment.set('rideInvoiceNumber', _src.invoice_number); }",
+              "  console.log('Gate: BAP fare invoice present ('+rows.length+') rideInvoiceNumber='+(_src&&_src.invoice_number));",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{ mode:'raw', raw:_sqlBody() } }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(rows.length){ _finish(rows); } else if(n>0){ setTimeout(function(){ _poll(n-1); }, 3000); } else { _finish([]); } }); }",
+              "var _d={}; try{ _d=pm.response.json(); }catch(e){} var _r0=(_d&&_d.rows)||[];",
+              "if(_r0.length){ _finish(_r0); } else { _poll(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"finance_invoice\", \"select\": [\"id\", \"invoice_number\", \"invoice_type\", \"status\", \"total_amount\"], \"where_clause\": [{\"column_name\": \"reference_id\", \"val\": \"{{rideId}}\", \"op\": \"=\"}], \"limit\": 5}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Capture RIDE_FARE component cap (SQL fare_breakup_info — refund cap source)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'fare_breakup_info',select:['fare_breakups'],where_clause:[{column_name:'entity_id',val:pm.environment.get('rideId'),op:'='},{column_name:'entity_type',val:'RIDE',op:'='}],limit:1}); }",
+              "// RIDE_FARE cap = sum of these tags (= li.rideFare + li.gstAmount, RidePayment.hs:841). TOLL/PARKING analogous (same pattern for tollCap/parkingCap).",
+              "var _RF = ['RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE','RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE','RIDE_FARE_DISCOUNT_APPLICABLE_TAX','RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX'];",
+              "var _TOLL = ['TOLL_FARE_TAX_EXCLUSIVE','TOLL_FARE_TAX'];",
+              "var _PARK = ['PARKING_CHARGE_TAX_EXCLUSIVE','PARKING_CHARGE_TAX'];",
+              "function _sum(arr, tags){ return (arr||[]).filter(function(b){ return tags.indexOf(b.description) >= 0; }).reduce(function(a,b){ return a + Number(b.amount||0); }, 0); }",
+              "function _finish(rows){",
+              "  var bk = [];",
+              "  if (rows && rows.length) { try { bk = JSON.parse(rows[0].fare_breakups || '[]'); } catch(e) { bk = []; } }",
+              "  var rfCap = Math.round(_sum(bk, _RF) * 100) / 100;",
+              "  var tollCap = Math.round(_sum(bk, _TOLL) * 100) / 100;",
+              "  var parkCap = Math.round(_sum(bk, _PARK) * 100) / 100;",
+              "  if (rfCap > 0) { pm.environment.set('rideFareCap', String(rfCap)); }",
+              "  pm.environment.set('tollCap', String(tollCap));",
+              "  pm.environment.set('parkingCap', String(parkCap));",
+              "  console.log('Gate: rideFareCap='+rfCap+' tollCap='+tollCap+' parkingCap='+parkCap+' (from fare_breakup_info; refund amounts fall back to T if rideFareCap=0)');",
+              "  pm.test('RIDE_FARE component cap captured from fare_breakup_info', function(){ pm.expect(rfCap, 'zero RIDE_FARE cap — stale fixture, re-run 00').to.be.above(0); });",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{ mode:'raw', raw:_sqlBody() } }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(rows.length){ _finish(rows); } else if(n>0){ setTimeout(function(){ _poll(n-1); }, 3000); } else { _finish([]); } }); }",
+              "var _d={}; try{ _d=pm.response.json(); }catch(e){} var _r0=(_d&&_d.rows)||[];",
+              "if(_r0.length){ _finish(_r0); } else { _poll(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"fare_breakup_info\", \"select\": [\"fare_breakups\"], \"where_clause\": [{\"column_name\": \"entity_id\", \"val\": \"{{rideId}}\", \"op\": \"=\"}, {\"column_name\": \"entity_type\", \"val\": \"RIDE\", \"op\": \"=\"}], \"limit\": 1}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Finalize refund env (riderToken alias + sanity gate)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// 01-05 raise refunds as the customer via {{riderToken}}",
+              "pm.environment.set('riderToken', pm.environment.get('rider_token'));",
+              "var T = Number(pm.environment.get('txn_amount'));",
+              "pm.test('sanity: T captured and positive', function () { pm.expect(T).to.be.above(0); });",
+              "pm.test('sanity: all refund ids captured', function () {",
+              "    ['rideId','orderId','orderShortId','paymentIntentId','bppBookingId'].forEach(function (k) {",
+              "        pm.expect(pm.environment.get(k), k).to.be.a('string').and.not.empty;",
+              "    });",
+              "});",
+              "console.log('Refund env ready. T =', T, pm.environment.get('txn_currency'), '| commission =', pm.environment.get('bpp_commission'));",
+              "",
+              "// Refund amounts sized off the REAL RIDE_FARE component cap (rideFareCap from fare_breakup_info),",
+              "// falling back to T if the cap was not captured. rf1=0.5*cap, rf2=0.25*cap, rf3=0.5*cap.",
+              "var _capF = Number(pm.environment.get('rideFareCap'));",
+              "var _baseF = (_capF > 0) ? _capF : Number(pm.environment.get('txn_amount'));",
+              "function _r2rf(x){ return Math.round(x*100)/100; }",
+              "if (_baseF > 0) {",
+              "  pm.environment.set('rf1', String(_r2rf(_baseF*0.5)));",
+              "  pm.environment.set('rf2', String(_r2rf(_baseF*0.25)));",
+              "  pm.environment.set('rf3', String(_r2rf(_baseF*0.5)));",
+              "  console.log('Refund amounts: rf1='+_r2rf(_baseF*0.5)+' rf2='+_r2rf(_baseF*0.25)+' rf3='+_r2rf(_baseF*0.5)+' (rideFareCap='+_capF+', T='+pm.environment.get('txn_amount')+')');",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{mockServerUrl}}/health",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Reset refund state for the ride (clean start)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// SYNCHRONOUS single clear — the runner waits for THIS request, so no async re-fire can wipe a later-created refund_request.",
+              "pm.test('refund state reset (synchronous clean start)', function(){ pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/refunds/clear",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "refunds",
+            "clear"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"rideId\":\"{{rideId}}\",\"orderId\":\"{{orderId}}\",\"orderShortId\":\"{{orderShortId}}\",\"bppBookingId\":\"{{bppBookingId}}\",\"scope\":\"refundsOnly\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Clear mock overrides (avoid leaked async state from an interrupted prior run)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('mock overrides cleared (clean slate)', function(){ pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201,204]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/override",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "override"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Switch City for BAP (Rider Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.authToken) { pm.environment.set('bap_dashboard_token', d.authToken); }",
+              "pm.test('BAP dashboard switch OK', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\":\"{{bap_short_id}}\",\"city\":\"{{dashboard_city}}\"}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Fare Breakup Menu Contract",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch(e) {}",
+              "pm.environment.set('rf7_customer_farebreakup', pm.response.text()); // consumed + unset by the dashboard parity step",
+              "pm.test('Fare Breakup Returns 200', function () { pm.response.to.have.status(200); });",
+              "var comps = d.components;",
+              "if (comps == null) {",
+              "  console.log('components=null (legacy ride, no structured breakup) — tolerated. totalAmount=' + JSON.stringify(d.totalAmount));",
+              "  pm.test('Legacy Branch: TotalAmount Still Present', function () { pm.expect(d.totalAmount, 'totalAmount must always be present').to.have.property('amount'); });",
+              "} else {",
+              "  pm.test('Components Is A Non-Empty List', function () { pm.expect(comps, 'fixture ride should expose components').to.be.an('array').that.is.not.empty; });",
+              "  var allowed = ['RIDE_FARE','TOLL','PARKING'];",
+              "  var sum = 0;",
+              "  pm.test('Each Component Has Shape And Allowed Name', function () {",
+              "    comps.forEach(function (c) {",
+              "      pm.expect(allowed, 'component must be RIDE_FARE/TOLL/PARKING, got ' + c.component).to.include(c.component);",
+              "      ['exclTax','tax','total'].forEach(function (k) { pm.expect(c[k], c.component + '.' + k + ' must be a PriceAPIEntity').to.have.property('amount'); });",
+              "      pm.expect(Number(c.total.amount), c.component + '.total must be > 0').to.be.above(0);",
+              "      sum += Number(c.total.amount);",
+              "    });",
+              "  });",
+              "  pm.test('TotalAmount Equals Sum Of Component Totals', function () {",
+              "    pm.expect(d.totalAmount, 'totalAmount must be a PriceAPIEntity').to.have.property('amount');",
+              "    pm.expect(Number(d.totalAmount.amount)).to.be.closeTo(sum, 0.02);",
+              "  });",
+              "  console.log('fareBreakup: ' + comps.map(function(c){return c.component+'='+c.total.amount;}).join(', ') + ' | totalAmount=' + d.totalAmount.amount);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{riderToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/{{rideId}}/fareBreakup",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "{{rideId}}",
+            "fareBreakup"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Fare Breakup Dashboard Parity (support-agent route)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch(e) {}",
+              "pm.test('Dashboard Fare Breakup Returns 200', function () { pm.expect(pm.response.code, pm.response.text()).to.eql(200); });",
+              "// The whole contract of the dashboard endpoint: same shared core as the customer API,",
+              "// so the support agent must see EXACTLY the numbers the rider app shows.",
+              "// Hand-rolled deep-equal: the dashboard shim's eql/equal are strict (===), no .deep chain.",
+              "function deepEq(a, b) {",
+              "  if (a === b) return true;",
+              "  if (typeof a !== typeof b || a === null || b === null) return false;",
+              "  if (typeof a !== 'object') return false;",
+              "  if (Array.isArray(a) !== Array.isArray(b)) return false;",
+              "  var ka = Object.keys(a).sort(), kb = Object.keys(b).sort();",
+              "  if (ka.length !== kb.length) return false;",
+              "  for (var i = 0; i < ka.length; i++) { if (ka[i] !== kb[i] || !deepEq(a[ka[i]], b[kb[i]])) return false; }",
+              "  return true;",
+              "}",
+              "var customerRaw = pm.environment.get('rf7_customer_farebreakup');",
+              "pm.test('Dashboard Response Deep-Equals Customer Response', function () {",
+              "  pm.expect(!!customerRaw, 'customer fareBreakup step must run first in this session (saves its body)').to.eql(true);",
+              "  pm.expect(deepEq(d, JSON.parse(customerRaw)), 'dashboard body must equal customer body — dashboard=' + JSON.stringify(d) + ' customer=' + customerRaw).to.eql(true);",
+              "});",
+              "console.log('dashboard fareBreakup parity OK | totalAmount=' + JSON.stringify((d || {}).totalAmount));",
+              "pm.environment.set('rf7_customer_farebreakup', ''); // shim has no unset; blank it"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/{{rideId}}/fareBreakup",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{dashboard_city}}",
+            "payment",
+            "{{rideId}}",
+            "fareBreakup"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Guard: Empty Components 400",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "console.log('empty-components create -> ' + pm.response.code + ' ' + pm.response.text());",
+              "pm.test('Empty refundComponents Rejected 400 (refundComponents must be non-empty)', function () {",
+              "  pm.expect(pm.response.code, pm.response.text()).to.eql(400);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{riderToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"refundComponents\":[],\"code\":\"CUSTOMER_REQUEST\",\"description\":\"empty test\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "{{rideId}}",
+            "refundRequest",
+            "create"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Second Rider Auth (non-owner)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('second_rider_authId', d.authId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"0400000778\", \"mobileCountryCode\": \"+358\", \"merchantId\": \"{{bap_short_id}}\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Second Rider OTP (non-owner)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('second_rider_token', d.token);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/auth/{{second_rider_authId}}/verify",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth",
+            "{{second_rider_authId}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-rider\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Guard: Non-Owner (other rider) Rejected 400",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "console.log('other-rider create -> ' + pm.response.code + ' ' + pm.response.text());",
+              "pm.test('Non-Owner (other rider) Rejected 400 mentioning owner', function () {",
+              "  pm.expect(pm.response.code, pm.response.text()).to.eql(400);",
+              "  pm.expect(/owner/i.test(pm.response.text()), 'error should say the ride does not belong to this rider').to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{second_rider_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"refundComponents\":[{\"component\":\"RIDE_FARE\",\"amount\":{\"amount\":{{rf2}},\"currency\":\"{{currency}}\"}}],\"code\":\"CUSTOMER_REQUEST\",\"description\":\"owner guard test\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "{{rideId}}",
+            "refundRequest",
+            "create"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Raise Valid Refund For List",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "console.log('raise(list test) -> ' + pm.response.code + ' ' + pm.response.text());",
+              "pm.test('Valid Refund Raise Accepted (200/201)', function () {",
+              "  if (pm.response.code === 400 && /refundable cap/i.test(pm.response.text())) {",
+              "    pm.expect(false, 'rf2 exceeded the RIDE_FARE component cap — reduce the T-fraction. Body: ' + pm.response.text()).to.be.true;",
+              "  }",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{riderToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"refundComponents\":[{\"component\":\"RIDE_FARE\",\"amount\":{\"amount\":{{rf2}},\"currency\":\"{{currency}}\"}}],\"code\":\"CUSTOMER_REQUEST\",\"description\":\"list test\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "{{rideId}}",
+            "refundRequest",
+            "create"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Second Create While One In Process Blocked 400",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "console.log('second create while one open -> ' + pm.response.code + ' ' + pm.response.text());",
+              "pm.test('Second Create Blocked While A Request Is In Process (single-OPEN policy)', function () {",
+              "  pm.expect(pm.response.code, pm.response.text()).to.eql(400);",
+              "});",
+              "pm.test('Error Says A Request Is Already In Process (UI toast text source)', function () {",
+              "  pm.expect(/already in process/i.test(pm.response.text()), 'expected the already-in-process message, got: ' + pm.response.text()).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{riderToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"refundComponents\":[{\"component\":\"RIDE_FARE\",\"amount\":{\"amount\":{{rf2}},\"currency\":\"{{currency}}\"}}],\"code\":\"CUSTOMER_REQUEST\",\"description\":\"second open\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "{{rideId}}",
+            "refundRequest",
+            "create"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Customer Refund List Contract",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch(e) {}",
+              "pm.test('Refund List Returns 200', function () { pm.response.to.have.status(200); });",
+              "var list = d.refundRequests;",
+              "pm.test('Response Wraps A refundRequests List', function () {",
+              "  pm.expect(list, 'RefundRequestListResp.refundRequests must be an array').to.be.an('array').that.is.not.empty;",
+              "});",
+              "console.log('list (newest first): ' + (list||[]).map(function(r){return r.description+'/'+r.status+'/'+(r.requestedAmount&&r.requestedAmount.amount);}).join(' | '));",
+              "pm.test('Exactly One OPEN Request (single-OPEN policy: the blocked second create left no row)', function () {",
+              "  var open = (list||[]).filter(function(r){ return r.status === 'OPEN'; });",
+              "  pm.expect(open.length, 'the blocked create must not have persisted a row').to.eql(1);",
+              "});",
+              "pm.test('Item Echoes Requested Code / Amount / Status', function () {",
+              "  var raised = (list||[]).filter(function(r){ return r.description === 'list test'; })[0];",
+              "  pm.expect(raised, 'the just-raised \"list test\" request must be in the list').to.not.be.undefined;",
+              "  pm.expect(raised.code, 'code echoes the request').to.eql('CUSTOMER_REQUEST');",
+              "  pm.expect(raised.status).to.eql('OPEN');",
+              "  pm.expect(raised.requestedAmount, 'requestedAmount = sum of requested components').to.have.property('amount');",
+              "  pm.expect(Number(raised.requestedAmount.amount)).to.be.closeTo(Number(pm.environment.get('rf2')), 0.02);",
+              "  pm.expect(raised.transactionAmount, 'transactionAmount = full charged txn').to.have.property('amount');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{riderToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "{{rideId}}",
+            "refundRequest"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Close the listed request — only one open request at a time (frees the order for the evidence tests)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Find the OPEN request left by the accept-test (KV->PG drain may lag) and stash its id;",
+              "// the main request rejects it via the dashboard so the order frees up (one open request at a time).",
+              "pm.environment.set('closeRequestId', '');",
+              "function _deT(v){ return (v||'').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "var _mock = _deT(pm.environment.get('mockServerUrl'));",
+              "var _sel = {url:_mock+'/mock/sql/select',method:'POST',header:{'Content-Type':'application/json'},body:{mode:'raw',raw:JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'refund_request',select:['id','status'],where_clause:[{column_name:'order_id',val:pm.environment.get('orderId'),op:'='},{column_name:'status',val:'OPEN',op:'='}]})}};",
+              "function _poll(k){",
+              "  pm.sendRequest(_sel, function(err,res){",
+              "    var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){}",
+              "    if(rows.length){ pm.environment.set('closeRequestId', rows[0].id); console.log('closing OPEN request ' + rows[0].id); }",
+              "    else if(k>0){ setTimeout(function(){ _poll(k-1); }, 1500); }",
+              "    else { console.log('no OPEN request drained for order ' + pm.environment.get('orderId')); }",
+              "  });",
+              "}",
+              "_poll(10);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d={}; try{ d=pm.response.json(); }catch(e){}",
+              "pm.test('Request closed — order freed for the next request (only one open at a time)', function(){",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+              "  pm.expect(d.status).to.eql('REJECTED');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"approve\":false,\"responseDescription\":\"closing test request - only one open request at a time\"}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{closeRequestId}}/respond",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{dashboard_city}}",
+            "payment",
+            "refundRequest",
+            "{{closeRequestId}}",
+            "respond"
+          ]
+        },
+        "description": "The raised request served the block-test and the list contract; close it so the evidence create isn't blocked."
+      },
+      "response": []
+    },
+    {
+      "name": "Reset Refund State Before Evidence Tests",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Refund State Cleared (refundsOnly)', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"rideId\":\"{{rideId}}\",\"orderId\":\"{{orderId}}\",\"orderShortId\":\"{{orderShortId}}\",\"bppBookingId\":\"{{bppBookingId}}\",\"scope\":\"refundsOnly\"}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/refunds/clear",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "refunds",
+            "clear"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Evidence Rejected (unsupported type)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "console.log('evidence(application/zip) -> ' + pm.response.code + ' ' + pm.response.text());",
+              "pm.test('Unsupported Content Type Rejected (400/415)', function () {",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([400,415]);",
+              "});",
+              "pm.test('Rejection Is FILE_FORMAT_NOT_SUPPORTED', function () {",
+              "  pm.expect(/FILE_FORMAT_NOT_SUPPORTED|not supported/i.test(pm.response.text()), 'expected the content-type guard; body: ' + pm.response.text()).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{riderToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"refundComponents\":[{\"component\":\"RIDE_FARE\",\"amount\":{\"amount\":{{rf2}},\"currency\":\"{{currency}}\"}}],\"code\":\"CUSTOMER_REQUEST\",\"description\":\"evidence bad\",\"evidence\":\"iVBORw0KGgo=\",\"fileType\":\"Image\",\"reqContentType\":\"application/zip\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "{{rideId}}",
+            "refundRequest",
+            "create"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Evidence Upload Accepted (image/png)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "console.log('evidence(image/png) -> ' + pm.response.code + ' ' + pm.response.text());",
+              "pm.test('Evidence (image/png) Accepted (200/201)', function () {",
+              "  if (pm.response.code === 400 && /refundable cap/i.test(pm.response.text())) {",
+              "    pm.expect(false, 'rf2 exceeded the RIDE_FARE component cap; body: ' + pm.response.text()).to.be.true;",
+              "  }",
+              "  // validateContentType passes for Image+image/png; the S3 put is forked, so create returns Success regardless of S3 wiring.",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{riderToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"refundComponents\":[{\"component\":\"RIDE_FARE\",\"amount\":{\"amount\":{{rf2}},\"currency\":\"{{currency}}\"}}],\"code\":\"CUSTOMER_REQUEST\",\"description\":\"evidence ok\",\"evidence\":\"iVBORw0KGgo=\",\"fileType\":\"Image\",\"reqContentType\":\"image/png\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "{{rideId}}",
+            "refundRequest",
+            "create"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Reset Refund State Final Cleanup",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Refund State Cleared Final (refundsOnly)', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"rideId\":\"{{rideId}}\",\"orderId\":\"{{orderId}}\",\"orderShortId\":\"{{orderShortId}}\",\"bppBookingId\":\"{{bppBookingId}}\",\"scope\":\"refundsOnly\"}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/refunds/clear",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "refunds",
+            "clear"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

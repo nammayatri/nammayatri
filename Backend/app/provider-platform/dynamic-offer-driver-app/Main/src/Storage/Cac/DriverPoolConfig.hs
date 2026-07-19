@@ -39,6 +39,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, getLocalCurrentTime, utcTimeToDiffTime)
 import Kernel.Utils.Error
 import Kernel.Utils.Logging
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Types as LYT
@@ -48,6 +49,7 @@ import qualified Storage.Beam.DriverPoolConfig as SBMDPC
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.DriverPoolConfig ()
 import Utils.Common.CacUtils as CCU
 
@@ -59,7 +61,7 @@ getSearchDriverPoolConfig ::
   DSR.SearchRequest ->
   m (Maybe DriverPoolConfig)
 getSearchDriverPoolConfig merchantOpCityId mbDist area sreq = do
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let currTimeOfDay = round (realToFrac (utcTimeToDiffTime localTime) :: Double)
       currentDay = utctDay localTime
@@ -96,7 +98,7 @@ getDriverPoolConfigFromCAC merchantOpCityId st tc dist area stickyKey currTimeOf
   bool
     (pure Nothing)
     (pure config)
-    ( (merchantOperatingCityId <$> config) == Just merchantOpCityId && (vehicleVariant <$> config) == Just st
+    ( ((.merchantOperatingCityId) <$> config) == Just merchantOpCityId && (vehicleVariant <$> config) == Just st
         && (Domain.Types.DriverPoolConfig.tripCategory <$> config) == Just (Text.pack tc)
         && (Domain.Types.DriverPoolConfig.area <$> config) == Just area
     )
@@ -175,7 +177,7 @@ getDriverPoolConfig ::
   DSR.SearchRequest ->
   m DriverPoolConfig
 getDriverPoolConfig merchantOpCityId serviceTier tripCategory area tripDistance searchRepeatType searchRepeatCounter srId sreq = do
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let currTimeOfDay = round (realToFrac (utcTimeToDiffTime localTime) :: Double)
       currentDay = utctDay localTime

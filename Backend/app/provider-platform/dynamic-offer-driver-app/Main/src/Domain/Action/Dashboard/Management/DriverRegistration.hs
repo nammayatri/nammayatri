@@ -27,6 +27,7 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     postDriverRegistrationRegisterAadhaar,
     postDriverRegistrationUnlinkDocument,
     mapDocumentType,
+    convertValidationStatus,
     sendDocumentRejectionNotification,
     getDriverRegistrationVerificationStatus,
     postDriverRegistrationTriggerReminder,
@@ -38,6 +39,8 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     postDriverRegistrationDeleteBankAccount,
     getDriverRegistrationDocumentsCommonList,
     getDriverRegistrationCommonDocumentsList,
+    postDriverRegistrationDocumentRegister,
+    postDriverRegistrationDocumentRegisterWithVerifiedBy,
   )
 where
 
@@ -51,6 +54,7 @@ import qualified Data.Aeson.KeyMap as DAKM
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.HashMap.Strict as HM
 import Data.List (nub, (\\))
+import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (utctDay)
@@ -122,6 +126,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import SharedLogic.Analytics as Analytics
+import qualified SharedLogic.Association.Change as AC
 import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -486,6 +491,26 @@ getDriverRegistrationGetDocument merchantShortId _ imageId = do
       UNAUTHORIZED -> Common.UNAUTHORIZED
       PULL_REQUIRED -> Common.PENDING
 
+domainTableDocumentTypes :: Set.Set DVC.DocumentType
+domainTableDocumentTypes =
+  Set.fromList
+    [ DVC.DriverLicense,
+      DVC.VehicleRegistrationCertificate,
+      DVC.AadhaarCard,
+      DVC.PanCard,
+      DVC.VehiclePUC,
+      DVC.VehiclePermit,
+      DVC.VehicleInsurance,
+      DVC.VehicleFitnessCertificate,
+      DVC.VehicleNOC,
+      DVC.DriverVehicleNOC,
+      DVC.BusinessLicense,
+      DVC.SocialSecurityNumber,
+      DVC.BackgroundVerification,
+      DVC.GSTCertificate,
+      DVC.UDYAMCertificate
+    ]
+
 mapDocumentType :: Common.DocumentType -> DVC.DocumentType
 mapDocumentType Common.DriverLicense = DVC.DriverLicense
 mapDocumentType Common.BankAccount = DVC.BankingDetails
@@ -616,6 +641,8 @@ postDriverRegistrationDocumentsCommon ::
 postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.CommonDocumentCreateReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  when (mapDocumentType documentType `Set.member` domainTableDocumentTypes) $
+    throwError $ InvalidRequest $ "Document type " <> show documentType <> " cannot be registered as a common document. Please use the corresponding metadata variant."
   let driverPersonId = cast @Common.Driver @DP.Person driverId
   void $ QPerson.findById driverPersonId >>= fromMaybeM (PersonNotFound driverPersonId.getId)
   whenJust imageId $ \imgId -> do
@@ -774,6 +801,7 @@ applyDriverDocInvalidation transporterConfig personId blocksEnabled blocksVerifi
     (False, True) -> QDriverInfo.updateVerifiedAndApprovedState (cast personId) False (Just False)
     (False, False) -> pure ()
 
+-- DEPRECATED: Use postDriverRegistrationDocumentRegister with DLData metadata instead.
 postDriverRegistrationRegisterDl :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RegisterDLReq -> Flow APISuccess
 postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.RegisterDLReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
@@ -800,6 +828,14 @@ postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.Registe
         ..
       }
 
+convertValidationStatus :: Common.ValidationStatus -> API.Types.UI.DriverOnboardingV2.ValidationStatus
+convertValidationStatus = \case
+  Common.APPROVED -> API.Types.UI.DriverOnboardingV2.APPROVED
+  Common.DECLINED -> API.Types.UI.DriverOnboardingV2.DECLINED
+  Common.AUTO_APPROVED -> API.Types.UI.DriverOnboardingV2.AUTO_APPROVED
+  Common.AUTO_DECLINED -> API.Types.UI.DriverOnboardingV2.AUTO_DECLINED
+  Common.NEEDS_REVIEW -> API.Types.UI.DriverOnboardingV2.NEEDS_REVIEW
+
 castVehicleDetails :: Common.DriverVehicleDetails -> DriverVehicleDetails
 castVehicleDetails Common.DriverVehicleDetails {..} =
   DriverVehicleDetails
@@ -811,6 +847,7 @@ castVehicleDetails Common.DriverVehicleDetails {..} =
       vehicleModelYear = vehicleModelYear
     }
 
+-- DEPRECATED: Use postDriverRegistrationDocumentRegister with RCData metadata instead.
 postDriverRegistrationRegisterRc :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RegisterRCReq -> Flow APISuccess
 postDriverRegistrationRegisterRc merchantShortId opCity driverId_ req@Common.RegisterRCReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
@@ -841,6 +878,107 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ req@Common.Reg
     False
     (bool Nothing (Just (cast driverId_)) (isJust isFleetOwner))
 
+postDriverRegistrationDocumentRegister :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.DocumentRegisterReq -> Flow APISuccess
+postDriverRegistrationDocumentRegister = postDriverRegistrationDocumentRegisterWithVerifiedBy DPan.DASHBOARD
+
+postDriverRegistrationDocumentRegisterWithVerifiedBy :: DPan.VerifiedBy -> ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.DocumentRegisterReq -> Flow APISuccess
+postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantShortId opCity driverId_ Common.DocumentRegisterReq {..} = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  case metadata of
+    Common.DLData dlReq -> registerDL merchant merchantOpCityId dlReq
+    Common.RCData rcReq -> registerRC merchant merchantOpCityId rcReq
+    Common.AadhaarData aadhaarReq -> registerAadhaar merchant merchantOpCityId aadhaarReq
+    Common.PanData panReq -> registerPan merchant merchantOpCityId panReq
+    Common.CommonData commonReq -> do
+      _ <- postDriverRegistrationDocumentsCommon merchantShortId opCity driverId_ commonReq
+      return Success
+  where
+    registerDL merchant merchantOpCityId Common.RegisterDLReq {..} = do
+      let verifyBy = case defaultVerifyBy of
+            DPan.FRONTEND_SDK -> DPan.FRONTEND_SDK
+            _ -> case accessType of
+              Just accessTypeValue -> case accessTypeValue of
+                Common.DASHBOARD_ADMIN -> DPan.DASHBOARD_ADMIN
+                Common.DASHBOARD_USER -> DPan.DASHBOARD_USER
+                _ -> DPan.DASHBOARD
+              Nothing -> defaultVerifyBy
+      verifyDL
+        verifyBy
+        (Just merchant)
+        (cast driverId_, cast merchant.id, merchantOpCityId)
+        DriverDLReq
+          { imageId1 = cast imageId1,
+            imageId2 = fmap cast imageId2,
+            vehicleCategory = vehicleCategory,
+            nameOnCardFromSdk = Nothing,
+            requestId = Nothing,
+            sdkTransactionId = Nothing,
+            nameOnCard = Nothing,
+            isDLImageValidated = Nothing,
+            ..
+          }
+
+    registerRC merchant merchantOpCityId req@Common.RegisterRCReq {..} = do
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      isFleetOwner <- QFOI.findByPrimaryKey (cast driverId_)
+      let isDashboard = defaultVerifyBy /= DPan.FRONTEND_SDK
+          (vehicleDetailsToPass, vehicleCategoryToPass, vehicleClassToPass) =
+            if transporterConfig.allowDashboardToPassVehicleDetails == Just True
+              then (castVehicleDetails <$> req.vehicleDetails, req.vehicleCategory, req.vehicleClass)
+              else (Nothing, Nothing, Nothing)
+      verifyRC
+        isDashboard
+        (Just merchant)
+        (cast driverId_, cast merchant.id, merchantOpCityId)
+        ( DriverRCReq
+            { imageId = cast imageId,
+              imageId2 = cast <$> imageId2,
+              udinNumber = udinNumber,
+              vehicleCategory = vehicleCategoryToPass,
+              vehicleClass = vehicleClassToPass,
+              vehicleDetails = vehicleDetailsToPass,
+              isRCImageValidated = Nothing,
+              engineNumber = req.engineNumber,
+              chassisNumber = req.chassisNumber,
+              ..
+            }
+        )
+        False
+        (bool Nothing (Just (cast driverId_)) (isJust isFleetOwner))
+
+    registerAadhaar merchant merchantOpCityId req =
+      DOV.postDriverRegisterAadhaarCard
+        (Just (cast driverId_), merchant.id, merchantOpCityId)
+        (castAadhaarReq req)
+      where
+        castAadhaarReq Common.AadhaarCardReq {..} =
+          API.Types.UI.DriverOnboardingV2.AadhaarCardReq
+            { aadhaarBackImageId = cast <$> aadhaarBackImageId,
+              aadhaarFrontImageId = cast <$> aadhaarFrontImageId,
+              validationStatus = convertValidationStatus validationStatus,
+              ..
+            }
+
+    registerPan merchant merchantOpCityId req =
+      DOV.postDriverRegisterPancard
+        (Just (cast driverId_), merchant.id, merchantOpCityId)
+        (castPanReq req)
+      where
+        castPanReq Common.RegisterPanReq {..} =
+          API.Types.UI.DriverOnboardingV2.DriverPanReq
+            { imageId1 = cast imageId1,
+              imageId2 = cast <$> imageId2,
+              validationStatus = fmap convertValidationStatus validationStatus,
+              docType = fmap convertPanType docType,
+              verifiedBy = Just defaultVerifyBy,
+              ..
+            }
+        convertPanType = \case
+          Common.INDIVIDUAL -> DPan.INDIVIDUAL
+          Common.BUSINESS -> DPan.BUSINESS
+
+-- DEPRECATED: Use postDriverRegistrationDocumentRegister with AadhaarData metadata instead.
 postDriverRegistrationRegisterAadhaar :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.AadhaarCardReq -> Flow APISuccess
 postDriverRegistrationRegisterAadhaar merchantShortId opCity driverId req = do
   merchant <- findMerchantByShortId merchantShortId
@@ -848,12 +986,6 @@ postDriverRegistrationRegisterAadhaar merchantShortId opCity driverId req = do
   DOV.postDriverRegisterAadhaarCard (Just (cast driverId), merchant.id, merchantOpCityId) (castAadharReq req)
   where
     castAadharReq Common.AadhaarCardReq {..} = API.Types.UI.DriverOnboardingV2.AadhaarCardReq {aadhaarBackImageId = cast <$> aadhaarBackImageId, aadhaarFrontImageId = cast <$> aadhaarFrontImageId, validationStatus = convertValidationStatus validationStatus, ..}
-    convertValidationStatus status = case status of
-      Common.APPROVED -> API.Types.UI.DriverOnboardingV2.APPROVED
-      Common.DECLINED -> API.Types.UI.DriverOnboardingV2.DECLINED
-      Common.AUTO_APPROVED -> API.Types.UI.DriverOnboardingV2.AUTO_APPROVED
-      Common.AUTO_DECLINED -> API.Types.UI.DriverOnboardingV2.AUTO_DECLINED
-      Common.NEEDS_REVIEW -> API.Types.UI.DriverOnboardingV2.NEEDS_REVIEW
 
 --make a separate function casting the driverVehiclereq
 
@@ -895,7 +1027,7 @@ getDriverRegistrationDocumentsInfo :: ShortId DM.Merchant -> Context.City -> Id 
 getDriverRegistrationDocumentsInfo merchantShortId opCity driverId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  statusRes <- DStatus.statusHandler (Id driverId.getId, merchant.id, merchantOpCity.id) Nothing Nothing Nothing Nothing Nothing Nothing
+  statusRes <- DStatus.statusHandler (Id driverId.getId, merchant.id, merchantOpCity.id) Nothing Nothing Nothing Nothing Nothing Nothing Nothing
   pure $ castToManagementStatusRes statusRes
 
 castToManagementStatusRes :: DStatus.StatusRes -> Common.StatusRes
@@ -1907,7 +2039,7 @@ approveAndUpdateUdyamDocument req merchantId merchantOpCityId = do
   let imageId = Id req.documentImageId.getId
   udyamImage <- findApproveImage imageId
   let driverId = udyamImage.personId
-  mbUdyamByImage <- QUdyam.findByImageId (Just imageId)
+  mbUdyamByImage <- QUdyam.findByImageId imageId
   -- Fallback for re-upload-after-reject: the UDYAM row's documentImageId still points at the
   -- prior (rejected) image. Look up by udyam number hash to recover the existing row.
   mbUdyamResolved <- case mbUdyamByImage of
@@ -1926,7 +2058,7 @@ approveAndUpdateUdyamDocument req merchantId merchantOpCityId = do
       encryptedUam <- encrypt uamNumber
       let updatedUdyam =
             udyam
-              { DUdyam.documentImageId = Just imageId,
+              { DUdyam.documentImageId = imageId,
                 DUdyam.udyamNumber = encryptedUam,
                 DUdyam.verificationStatus = VALID,
                 DUdyam.rejectReason = Nothing,
@@ -1947,7 +2079,7 @@ approveAndUpdateUdyamDocument req merchantId merchantOpCityId = do
             DUdyam.DriverUdyam
               { id = udyamId,
                 driverId = driverId,
-                documentImageId = Just imageId,
+                documentImageId = imageId,
                 udyamNumber = encryptedUam,
                 verificationStatus = VALID,
                 verifiedBy = Nothing,
@@ -2107,6 +2239,9 @@ updateFleetOwnerInfoOnDocApproval person updateAction =
 
 approveAndUpdateLocalResidenceProof :: Common.LocalResidenceProofApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateLocalResidenceProof req merchantId merchantOperatingCityId = do
+  let address = req.address
+      addressState = req.state
+      proofDocumentType = req.proofDocumentType
   let imageId = Id req.documentImageId.getId
   image <- findApproveImage imageId
   QImage.updateVerificationStatusByIdAndType VALID imageId DVC.LocalResidenceProof
@@ -2114,26 +2249,26 @@ approveAndUpdateLocalResidenceProof req merchantId merchantOperatingCityId = do
   person <- QPerson.findById image.personId >>= fromMaybeM (PersonNotFound image.personId.getId)
   if DCommon.checkFleetOwnerRole person.role
     then do
-      fleetInfo <- QFOI.findByPrimaryKey image.personId >>= fromMaybeM (FleetOwnerNotFound image.personId.getId)
+      void $ QFOI.findByPrimaryKey image.personId >>= fromMaybeM (FleetOwnerNotFound image.personId.getId)
       QFOI.updateLocalAddressDetails
-        (req.address <|> fleetInfo.address)
-        (req.state <|> fleetInfo.addressState)
-        ((DDriver.castFromCommon <$> req.proofDocumentType) <|> fleetInfo.addressDocumentType)
+        (Just address)
+        (Just addressState)
+        (Just (DDriver.castFromCommon proofDocumentType))
         image.personId
     else do
       mbInfo <- QDII.findByPrimaryKey image.personId
       case mbInfo of
         Just info ->
-          QDII.updateByPrimaryKey info {DII.addressState = req.state <|> info.addressState, DII.addressDocumentType = (DDriver.castFromCommon <$> req.proofDocumentType) <|> info.addressDocumentType, DII.address = req.address <|> info.address, DII.updatedAt = now}
+          QDII.updateByPrimaryKey info {DII.addressState = Just addressState, DII.addressDocumentType = Just (DDriver.castFromCommon proofDocumentType), DII.address = Just address, DII.updatedAt = now}
         Nothing ->
           QDII.create
             DII.DriverIdentityInfo
               { DII.driverId = image.personId,
                 DII.merchantId = merchantId,
                 DII.merchantOperatingCityId = merchantOperatingCityId,
-                DII.addressState = req.state,
-                DII.addressDocumentType = DDriver.castFromCommon <$> req.proofDocumentType,
-                DII.address = req.address,
+                DII.addressState = Just addressState,
+                DII.addressDocumentType = Just (DDriver.castFromCommon proofDocumentType),
+                DII.address = Just address,
                 DII.courtRecord = Nothing,
                 DII.nomineeDob = Nothing,
                 DII.nomineeName = Nothing,
@@ -2262,7 +2397,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
             else QDII.updateLocalAddressDetails Nothing Nothing Nothing image.personId
         DVC.UDYAMCertificate -> do
           rejectImage imageId
-          mbUdyam <- QUdyam.findByImageId (Just imageId)
+          mbUdyam <- QUdyam.findByImageId imageId
           whenJust mbUdyam $ \udyam ->
             QUdyam.updateVerificationStatusAndRejectReason INVALID (Just reason) udyam.id
         docType
@@ -2487,10 +2622,13 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
     Common.Reject rejectReq -> do
       mbPersonIdRaw <- getRejectTargetPersonId rejectReq
       whenJust mbPersonIdRaw $ \personId -> do
-        mbDriverInfo <- QDriverInfo.findById personId
-        whenJust mbDriverInfo $ \driverInfo ->
-          when driverInfo.onRide $
-            throwError (InvalidRequest "Cannot reject document for a driver who is currently on a ride")
+        mbDocType <- getRejectTargetDocumentType rejectReq
+        isMandatoryDoc <- case mbDocType of
+          Just docType -> do
+            docConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType, vehicleCategory = Nothing}) (Just (CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId docType Nothing))
+            pure $ Kernel.Prelude.any (\config -> fromMaybe config.isMandatory config.isMandatoryForEnabling) docConfigs
+          Nothing -> pure False
+        when isMandatoryDoc $ AC.guardNoLiveRideByDriver personId
       handleRejectRequest rejectReq merchant.id merchantOpCityId
       mbRcId <- getRejectTargetRcId rejectReq
       processPostUpdate mbPersonIdRaw mbRcId
@@ -2572,6 +2710,18 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
           mbImage <- QImage.findById (Id imgId.getId)
           pure $ (.personId) <$> mbImage
       _ -> pure Nothing
+
+    -- Document type of the rejected doc, used to gate the onRide guard to mandatory docs only.
+    getRejectTargetDocumentType :: Common.RejectDetails -> Flow (Maybe DVC.DocumentType)
+    getRejectTargetDocumentType = \case
+      Common.ImageDocuments imgReq -> do
+        mbImage <- QImage.findById (Id imgReq.documentImageId.getId)
+        pure $ (.imageType) <$> mbImage
+      Common.CommonDocumentReject req -> do
+        mbDoc <- QCommonDriverOnboardingDocuments.findById (Id req.documentId.getId)
+        pure $ (.documentType) <$> mbDoc
+      Common.SSNReject _ -> pure (Just DVC.SocialSecurityNumber)
+      Common.InspectionHubReject _ -> pure (Just DVC.InspectionHub)
 
     getRejectTargetPersonId :: Common.RejectDetails -> Flow (Maybe (Id DP.Person))
     getRejectTargetPersonId = \case
