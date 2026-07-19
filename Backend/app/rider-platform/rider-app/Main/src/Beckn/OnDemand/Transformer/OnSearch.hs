@@ -82,6 +82,7 @@ tfQuotesInfo provider fulfillments validTill item = do
       specialLocationSupportNumber_ = Beckn.OnDemand.Utils.OnSearch.getspecialLocationSupportNumber item
       fareSettlementType_ = Beckn.OnDemand.Utils.OnSearch.getFareSettlementType item
       area_ = Beckn.OnDemand.Utils.OnSearch.getPickupArea item
+      navigationInstruction_ = Beckn.OnDemand.Utils.OnSearch.getPickupNavigationInstruction item
   (vehicleVariant_, vehicleCapacity_, vehicleLuggageCapacity_) <- Beckn.OnDemand.Utils.OnSearch.getVehicleVariant provider item
   vehicleServiceTierAirConditioned_ <- Beckn.OnDemand.Utils.OnSearch.getVehicleServiceTierAirConditioned provider item
   isAirConditioned_ <- Beckn.OnDemand.Utils.OnSearch.getIsAirConditioned provider item
@@ -151,7 +152,8 @@ tfQuotesInfo provider fulfillments validTill item = do
               smartTipSuggestion,
               qar = qar_,
               smartTipReason,
-              area = area_
+              area = area_,
+              navigationInstruction = navigationInstruction_
             }
     QuoteBased _ -> do
       quoteBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildQuoteBreakupList item currency
@@ -198,7 +200,8 @@ tfQuotesInfo provider fulfillments validTill item = do
               tripCategory = tripCategory,
               vehicleCategory,
               vehicleIconUrl = vehicleIconUrl,
-              area = area_
+              area = area_,
+              navigationInstruction = navigationInstruction_
             }
 
 getCurrency :: Kernel.Types.App.MonadFlow m => BecknV2.OnDemand.Types.Item -> m Currency
