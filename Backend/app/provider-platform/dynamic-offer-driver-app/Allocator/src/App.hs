@@ -63,6 +63,8 @@ import SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout (sendDriverReferra
 import SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout (sendScheduledBatchPayout)
 import SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout (sendSpecialZonePayout)
 import SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation (runReconciliationJob)
+import SharedLogic.Allocator.Jobs.Reconciliation.ReconciliationScheduler (runReconciliationSchedulerJob)
+import SharedLogic.Allocator.Jobs.Reconciliation.ReconciliationSweep (runReconciliationSweepJob)
 import SharedLogic.Allocator.Jobs.Reminder.ProcessReminder (processReminder)
 import SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyBAP (checkExotelCallStatusAndNotifyBAP)
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate (sendScheduledRideAssignedOnUpdate)
@@ -171,6 +173,8 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env expireSubscriptionPurchase
           & putJobHandlerInListWrapper flowRt env sendScheduledBatchPayout
           & putJobHandlerInListWrapper flowRt env runReconciliationJob
+          & putJobHandlerInListWrapper flowRt env runReconciliationSchedulerJob
+          & putJobHandlerInListWrapper flowRt env runReconciliationSweepJob
           & putJobHandlerInListWrapper flowRt env runSettlementReportIngestionJob
           & putJobHandlerInListWrapper flowRt env runSAPSubscriptionPurchaseDispatchJob
           & putJobHandlerInListWrapper flowRt env runSAPPGSettlementDispatchJob

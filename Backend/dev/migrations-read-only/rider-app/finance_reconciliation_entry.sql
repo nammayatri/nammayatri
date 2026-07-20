@@ -1,63 +1,39 @@
 CREATE TABLE atlas_app.finance_reconciliation_entry ();
 
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN actual_ledger_value double precision NOT NULL;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN booking_id text NOT NULL;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN actual_amount double precision NOT NULL;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN close_reason text ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN component text ;
 ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN dco_id text NOT NULL;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN expected_dsr_value double precision NOT NULL;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN finance_component text ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN domain text NOT NULL;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN entity_id text ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN entity_meta text ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN entry_key text NOT NULL;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN expected_amount double precision NOT NULL;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN first_seen_at timestamp with time zone NOT NULL;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN group_source_total double precision ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN group_target_amount double precision ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN group_target_key text ;
 ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN merchant_id text ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN merchant_operating_city_id text ;
 ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN mismatch_reason text ;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN mode text ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN open boolean NOT NULL;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN party_id text ;
 ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN recon_status text NOT NULL;
 ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN reconciliation_date timestamp with time zone NOT NULL;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN reconciliation_type text NOT NULL;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN source_details text ;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN status text NOT NULL;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN summary_id character varying(36) NOT NULL;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN target_details text ;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN timestamp timestamp with time zone NOT NULL;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN variance double precision NOT NULL;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN merchant_id character varying(36) ;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD PRIMARY KEY ( id);
-
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.finance_reconciliation_entry ALTER COLUMN merchant_id TYPE text;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN merchant_operating_city_id text ;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.finance_reconciliation_entry ALTER COLUMN status SET DEFAULT 'COMPLETED';
-ALTER TABLE atlas_app.finance_reconciliation_entry ALTER COLUMN status DROP NOT NULL;
-ALTER TABLE atlas_app.finance_reconciliation_entry ALTER COLUMN mode SET DEFAULT 'ONLINE';
-ALTER TABLE atlas_app.finance_reconciliation_entry ALTER COLUMN dco_id SET DEFAULT '';
-ALTER TABLE atlas_app.finance_reconciliation_entry ALTER COLUMN dco_id DROP NOT NULL;
-ALTER TABLE atlas_app.finance_reconciliation_entry ALTER COLUMN booking_id SET DEFAULT '';
-ALTER TABLE atlas_app.finance_reconciliation_entry ALTER COLUMN booking_id DROP NOT NULL;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN transaction_date timestamp with time zone ;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN target_id text ;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN source_id text ;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN settlement_mode text ;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN settlement_id text ;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN settlement_date timestamp with time zone ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN resolved_at timestamp with time zone ;
 ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN rrn text ;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN utr text ;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN total_transaction_amount double precision ;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN subscription_amount_excl_gst double precision ;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN pg_txn_id text ;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN pg_transaction_date timestamp with time zone ;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN pg_order_id text ;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN payment_order_id text ;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN gst_on_subscription double precision ;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN purchase_status text ;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN plan_name text ;
-ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN remaining_subscription_balance double precision ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN settlement_date timestamp with time zone ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN settlement_id text ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN settlement_mode text ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN source text NOT NULL;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN source_lifecycle text NOT NULL;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN source_record_id text ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN summary_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN target text NOT NULL;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN target_record_id text ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN timestamp timestamp with time zone NOT NULL;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN transaction_date timestamp with time zone ;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD COLUMN variance double precision NOT NULL;
+ALTER TABLE atlas_app.finance_reconciliation_entry ADD PRIMARY KEY ( id);

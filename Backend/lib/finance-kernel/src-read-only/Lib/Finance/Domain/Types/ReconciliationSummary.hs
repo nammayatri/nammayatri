@@ -7,12 +7,13 @@ import Data.Aeson
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
-import Kernel.Utils.TH
+import qualified Lib.Finance.Reconciliation.Types
 import qualified Tools.Beam.UtilsTH
 
 data ReconciliationSummary = ReconciliationSummary
   { createdAt :: Kernel.Prelude.UTCTime,
-    disputeAmountTotal :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    disputeAmountTotal :: Kernel.Types.Common.HighPrecMoney,
+    domain :: Lib.Finance.Reconciliation.Types.Domain,
     errorMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary,
     matchRate :: Kernel.Prelude.Text,
@@ -20,11 +21,13 @@ data ReconciliationSummary = ReconciliationSummary
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Text,
     reconciliationDate :: Kernel.Prelude.UTCTime,
-    reconciliationType :: Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationType,
+    source :: Lib.Finance.Reconciliation.Types.DataSource,
     sourceTotal :: Kernel.Types.Common.HighPrecMoney,
     status :: Lib.Finance.Domain.Types.ReconciliationSummary.JobStatus,
+    target :: Lib.Finance.Reconciliation.Types.DataSource,
     targetTotal :: Kernel.Types.Common.HighPrecMoney,
     totalDiscrepancies :: Kernel.Prelude.Int,
+    totalRecords :: Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,
     varianceAmount :: Kernel.Types.Common.HighPrecMoney
   }
@@ -32,21 +35,4 @@ data ReconciliationSummary = ReconciliationSummary
 
 data JobStatus = COMPLETED | FAILED | IN_PROGRESS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data ReconciliationStatus = MATCHED | HIGHER_IN_TARGET | LOWER_IN_TARGET | MISSING_IN_TARGET | MISSING_IN_SOURCE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-
-data ReconciliationType
-  = DSR_VS_LEDGER
-  | DSR_VS_SUBSCRIPTION
-  | DSSR_VS_SUBSCRIPTION
-  | SUBSCRIPTION_PURCHASE_VS_SUBSCRIPTION_TRANSACTION
-  | PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION
-  | PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''JobStatus))
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationStatus))
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationType))
-
-$(mkHttpInstancesForEnum (''ReconciliationType))

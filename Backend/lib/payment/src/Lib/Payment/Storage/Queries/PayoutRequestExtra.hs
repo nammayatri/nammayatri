@@ -33,3 +33,10 @@ findByBeneficiaryWithFilters beneficiaryId mbFrom mbTo statuses limit offset = d
     (Se.Desc Beam.createdAt)
     limit
     offset
+
+-- | Bulk shape used by the reconciliation framework: fetch every
+--   payout_request whose id is in the given set. Replaces per-id
+--   findById loops in the recipe fetchers.
+findByIds :: BeamFlow m r => [Text] -> m [PayoutRequest]
+findByIds [] = pure []
+findByIds prIds = findAllWithKV [Se.Is Beam.id $ Se.In prIds]

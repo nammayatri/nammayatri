@@ -254,6 +254,46 @@ findPurchasedByDateRange merchantOpCityId startTime endTime =
           ]
       ]
 
+-- | Every subscription purchase in the date range regardless of status.
+--   The reconciliation runner needs to see PENDING and FAILED rows too, so
+--   they can be classified as AWAITING_SETTLEMENT / MATCHED-zero rather
+--   than silently dropped by a status filter.
+findAllStatusByDateRange ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  m [SubscriptionPurchase]
+findAllStatusByDateRange merchantOpCityId startTime endTime =
+  sortBy (comparing (.purchaseTimestamp))
+    <$> findAllWithKV
+      [ Se.And
+          [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId,
+            Se.Is Beam.purchaseTimestamp $ Se.GreaterThanOrEq startTime,
+            Se.Is Beam.purchaseTimestamp $ Se.LessThanOrEq endTime
+          ]
+      ]
+
+-- | Every ACTIVE subscription in a merchant operating city for the given
+--   service name. Used by the consumption recon
+--   ('PrepaidSubscriptionPurchaseVsTransaction') as the source list — the
+--   whole ACTIVE population is re-reconciled each chunk regardless of
+--   whether any given sub had ledger activity, so a sub that silently
+--   stops transacting can still be caught.
+findAllActiveInMerchantOpCityAndServiceName ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  ServiceNames ->
+  m [SubscriptionPurchase]
+findAllActiveInMerchantOpCityAndServiceName merchantOpCityId serviceName =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId,
+          Se.Is Beam.status $ Se.Eq ACTIVE,
+          Se.Is Beam.serviceName $ Se.Eq serviceName
+        ]
+    ]
+
 -- | Find ACTIVE subscription purchases for a merchant operating city whose purchaseTimestamp falls in the date range
 findActiveByDateRange ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -387,3 +427,10 @@ findSubscriptionTotalsByDateRange merchantOpCityId startTime endTime = do
     Left err -> do
       L.logError ("findSubscriptionTotalsByDateRange" :: Text) $ "failed for mocId=" <> merchantOpCityId.getId <> " error=" <> show err
       pure (Nothing, Nothing, Nothing, Nothing, Nothing, 0)
+
+-- | Bulk shape used by the reconciliation framework: fetch every
+--   subscription_purchase whose id is in the given set. Replaces per-id
+--   findByPrimaryKey loops in the recipe fetchers.
+findByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [SubscriptionPurchase]
+findByIds [] = pure []
+findByIds subIds = findAllWithKV [Se.Is Beam.id $ Se.In subIds]

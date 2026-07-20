@@ -87,8 +87,6 @@ toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId refer
         orderType = orderType,
         isValidSubscriptionPurchase = isValidSubscriptionPurchase,
         subscriptionPurchaseId = mbSubscriptionPurchaseId,
-        reconStatus = Dom.PENDING,
-        reconMessage = Nothing,
         rawData = report.rawData,
         createdBy = Just actorInfo.actorType,
         createdById = actorInfo.actorId,

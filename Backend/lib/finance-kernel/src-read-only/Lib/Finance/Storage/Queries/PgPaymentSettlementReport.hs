@@ -7,11 +7,9 @@ module Lib.Finance.Storage.Queries.PgPaymentSettlementReport (module Lib.Finance
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport
 import qualified Lib.Finance.Storage.Beam.BeamFlow
 import qualified Lib.Finance.Storage.Beam.PgPaymentSettlementReport as Beam
@@ -28,20 +26,6 @@ findById ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Kernel.Types.Id.Id Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPaymentSettlementReport -> m (Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPaymentSettlementReport))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
-updateReconStatus ::
-  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Finance.Domain.Types.PgPaymentSettlementReport.ReconStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPaymentSettlementReport -> m ())
-updateReconStatus reconStatus reconMessage updatedBy updatedById id = do
-  _now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set Beam.reconStatus reconStatus,
-      Se.Set Beam.reconMessage reconMessage,
-      Se.Set Beam.updatedBy updatedBy,
-      Se.Set Beam.updatedById updatedById,
-      Se.Set Beam.updatedAt _now
-    ]
-    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
@@ -77,8 +61,6 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPayment
       Se.Set Beam.pgBaseFee pgBaseFee,
       Se.Set Beam.pgTax pgTax,
       Se.Set Beam.rawData rawData,
-      Se.Set Beam.reconMessage reconMessage,
-      Se.Set Beam.reconStatus reconStatus,
       Se.Set Beam.referenceId referenceId,
       Se.Set Beam.referenceType referenceType,
       Se.Set Beam.refundAmount refundAmount,
