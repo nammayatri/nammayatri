@@ -84,6 +84,7 @@ data BookingT f = BookingT
     issuedByAddress :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     issuedById :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     issuedByName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    locationNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     multimodalSearchRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

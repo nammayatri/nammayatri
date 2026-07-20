@@ -1,13 +1,21 @@
-module Storage.Queries.BookingExtra where
+module Storage.Queries.BookingExtra
+  ( module Storage.Queries.BookingExtra,
+    BookingLiteRow (..),
+    RideLiteRow (..),
+  )
+where
 
 import Control.Applicative
+import qualified Data.List as DList
 import Data.List.Extra (notNull)
 import qualified Database.Beam as B
 import Domain.Types
 import Domain.Types.Booking as Domain
 import qualified Domain.Types.Booking as DRB
+import Domain.Types.BookingLite (BookingLiteRow (..), RideLiteRow (..))
 import qualified Domain.Types.BookingLocation as DBBL
 import Domain.Types.BookingStatus as Domain
+import qualified Domain.Types.BookingStatus as DBS
 import qualified Domain.Types.BookingStatus as DRB
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.Location as DL
@@ -15,6 +23,7 @@ import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
+import qualified Domain.Types.Person as DP
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (forM_, whenNothingM_)
 import Kernel.Beam.Functions
@@ -28,6 +37,8 @@ import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
+import qualified Storage.Beam.Location as BeamL
+import qualified Storage.Beam.Ride as BeamR
 import qualified Storage.Queries.BookingLocation as QBBL
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.DriverOffer ()
@@ -553,3 +564,127 @@ updateEstimatedFare bookingId newFare = do
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+-- | Lightweight *Lite read-model queries for the "My Rides" list (rideBooking/listV3):
+-- raw Beam column projections that never construct the domain Booking/Ride, avoiding
+-- the per-row location subqueries (the "10 rides = ~40-60 location queries" problem).
+-- Row types (BookingLiteRow, RideLiteRow) live in Domain.Types.BookingLite and are
+-- re-exported from here. Query budget per page ~5 (2 projections + 3 batched INs).
+
+-- | Booking projection: same WHERE/ORDER/LIMIT as findAllByRiderIdAndRide, but
+-- returns column tuples (Beam tuples cap at 8 → nested) and skips FromTType'.
+findAllLiteByRiderId ::
+  (MonadFlow m) =>
+  Id DP.Person ->
+  Maybe Integer ->
+  Maybe Integer ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  [DBS.BookingStatus] ->
+  m [BookingLiteRow]
+findAllLiteByRiderId personId mbLimit mbOffset mbFrom mbTo statusList = do
+  dbConf <- getReplicaBeamConfig
+  let limit' = fromMaybe 10 mbLimit
+      offset' = fromMaybe 0 mbOffset
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ limit' $
+            B.offset_ offset' $
+              B.orderBy_ (\(_, (_, _, st, _, _, _, _, _)) -> B.desc_ st) $ do
+                b <-
+                  B.filter_'
+                    ( \b ->
+                        (BeamB.riderId b B.==?. B.val_ (getId personId))
+                          B.&&?. maybe (B.sqlBool_ (B.val_ True)) (\fd -> B.sqlBool_ (BeamB.createdAt b B.>=. B.val_ fd)) mbFrom
+                          B.&&?. maybe (B.sqlBool_ (B.val_ True)) (\td -> B.sqlBool_ (BeamB.createdAt b B.<=. B.val_ td)) mbTo
+                          B.&&?. (if null statusList then B.sqlBool_ (B.val_ True) else B.sqlBool_ (BeamB.status b `B.in_` (B.val_ <$> statusList)))
+                    )
+                    (B.all_ (BeamCommon.booking BeamCommon.atlasDB))
+                pure
+                  ( ( BeamB.id b,
+                      BeamB.status b,
+                      BeamB.serviceTierName b,
+                      BeamB.vehicleVariant b,
+                      BeamB.vehicleIconUrl b,
+                      BeamB.isAirConditioned b,
+                      BeamB.tripCategory b
+                    ),
+                    ( BeamB.createdAt b,
+                      BeamB.isScheduled b,
+                      BeamB.startTime b,
+                      BeamB.billingCategory b,
+                      BeamB.estimatedFare b,
+                      BeamB.fromLocationId b,
+                      BeamB.toLocationId b,
+                      BeamB.locationNames b
+                    )
+                  )
+  pure $ either (const []) (map toBookingLiteRow) res
+  where
+    toBookingLiteRow ((bId, st, tierName, vVariant, iconUrl, isAc, tripCat), (crAt, isSched, startT, billCat, estFare, fromLocId, toLocId, locNames)) =
+      BookingLiteRow
+        { bookingId = Id bId,
+          status = st,
+          startTime = startT,
+          createdAt = crAt,
+          isScheduled = isSched,
+          serviceTierName = tierName,
+          vehicleServiceTierType = vVariant,
+          vehicleIconUrl = iconUrl,
+          isAirConditioned = isAc,
+          tripCategory = tripCat,
+          billingCategory = billCat,
+          estimatedFare = estFare,
+          fromLocationId = fromLocId,
+          toLocationId = toLocId,
+          locationNames = locNames
+        }
+
+-- | Ride projection for a page of bookings (one query, no ride location decode).
+findLiteRidesByBookingIds :: (MonadFlow m) => [Id Booking] -> m [RideLiteRow]
+findLiteRidesByBookingIds [] = pure []
+findLiteRidesByBookingIds bookingIds = do
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $ do
+          r <-
+            B.filter_'
+              (\r -> B.sqlBool_ (BeamR.bookingId r `B.in_` (B.val_ <$> (getId <$> bookingIds))))
+              (B.all_ (BeamCommon.ride BeamCommon.atlasDB))
+          pure (BeamR.id r, BeamR.bookingId r, BeamR.totalFare r, BeamR.cancellationChargesOnCancel r, BeamR.cancellationFeeStatus r)
+  pure $ either (const []) (map toRideLiteRow) res
+  where
+    toRideLiteRow (rId, bId, tFare, cancCharge, cancFeeStatus) =
+      RideLiteRow
+        { rideId = Id rId,
+          bookingId = Id bId,
+          totalFare = tFare,
+          cancellationChargesOnCancel = cancCharge,
+          cancellationFeeStatus = cancFeeStatus
+        }
+
+-- | Batched from/to display names for a page in a SINGLE query: gather the
+-- from/to location ids the booking rows already carry and fetch those locations
+-- with one `location IN (...)`. Returns bookingId -> (fromName, mbToName).
+-- fromName is never empty (the app drops rows with an empty `from`); falls back
+-- to city/address inside mkLocationName.
+resolveLocationNames ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  [BookingLiteRow] ->
+  m [(Id Booking, (Text, Maybe Text))]
+resolveLocationNames [] = pure []
+resolveLocationNames rows = do
+  let locIds = DList.nub $ mapMaybe (.fromLocationId) rows <> mapMaybe (.toLocationId) rows
+  locations <- findAllWithKV [Se.Is BeamL.id $ Se.In locIds]
+  let nameByLocId mbId = do
+        lid <- mbId
+        loc <- DList.find (\l -> getId l.id == lid) locations
+        pure (SLM.mkLocationName loc)
+  pure $
+    map
+      (\row -> (row.bookingId, (fromMaybe "" (nameByLocId row.fromLocationId), nameByLocId row.toLocationId)))
+      rows

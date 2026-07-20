@@ -73,6 +73,21 @@ type API =
              :> QueryParams "passTypes" Domain.Types.PassType.PassEnum
              :> QueryParam "dontNeedFareBreakup" Bool
              :> Get '[JSON] DBooking.BookingListResV2
+           :<|> "listV3"
+             :> TokenAuth
+             :> QueryParam "limit" Integer
+             :> QueryParam "offset" Integer
+             :> QueryParam "bookingOffset" Integer
+             :> QueryParam "journeyOffset" Integer
+             :> QueryParam "passOffset" Integer
+             :> QueryParam "fromDate" Integer
+             :> QueryParam "toDate" Integer
+             :> QueryParams "billingCategory" SLT.BillingCategory
+             :> QueryParams "rideType" SLT.RideType
+             :> QueryParams "rideStatus" SRB.BookingStatus
+             :> QueryParams "journeyStatus" DJ.JourneyStatus
+             :> QueryParam "isPaymentSuccess" Bool
+             :> Get '[JSON] DBooking.BookingListResV3
            :<|> "favourites"
              :> "list"
              :> TokenAuth
@@ -121,6 +136,7 @@ handler =
     :<|> bookingStatusPolling
     :<|> bookingList
     :<|> bookingListV2
+    :<|> bookingListV3
     :<|> favouriteBookingList
     :<|> addStop
     :<|> editStop
@@ -152,6 +168,9 @@ bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbStatus mbClie
 
 bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SLT.BillingCategory] -> [SLT.RideType] -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Maybe Bool -> Maybe BookingRequestType -> Maybe Bool -> [Domain.Types.PassType.PassEnum] -> Maybe Bool -> FlowHandler DBooking.BookingListResV2
 bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate mbToDate billingCategoryList rideTypeList bookingStatusList journeyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable passTypes mbDontNeedFareBreakup = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate mbToDate billingCategoryList rideTypeList bookingStatusList journeyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable (Just passTypes) mbDontNeedFareBreakup
+
+bookingListV3 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SLT.BillingCategory] -> [SLT.RideType] -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Maybe Bool -> FlowHandler DBooking.BookingListResV3
+bookingListV3 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate mbToDate billingCategoryList rideTypeList bookingStatusList journeyStatusList mbIsPaymentSuccess = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.bookingListV3 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate mbToDate billingCategoryList rideTypeList bookingStatusList journeyStatusList mbIsPaymentSuccess
 
 favouriteBookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> DBooking.DriverNo -> FlowHandler DBooking.FavouriteBookingListRes
 favouriteBookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbStatus mbClientId driverNo = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.favouriteBookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbStatus mbClientId driverNo
