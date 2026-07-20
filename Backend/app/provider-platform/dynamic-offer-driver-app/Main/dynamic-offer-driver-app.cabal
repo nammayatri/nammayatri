@@ -589,6 +589,7 @@ library
       SharedLogic.FarePolicy
       SharedLogic.FareProduct
       SharedLogic.Finance.EInvoice
+      SharedLogic.Finance.GstBreakdown
       SharedLogic.Finance.InvoiceRegeneration
       SharedLogic.Finance.PostActions
       SharedLogic.Finance.Prepaid
