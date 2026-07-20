@@ -50,6 +50,15 @@ getAllGatesCached =
 gatesAtSpecialLocation :: (BeamFlow m r) => Id SL.SpecialLocation -> m [(D.GateInfo, [[[LatLong]]])]
 gatesAtSpecialLocation slId = filter (\(g, _) -> g.specialLocationId == slId) <$> getAllGatesCached
 
+-- | Gates at a special location with parsed polygons, using point-level caching
+--   at the special-location level. Uses key "GateInfo:SpecialLocation:slId" (1h TTL),
+--   invalidated by the "GateInfo:" prefix refresh in clearSpecialZoneInMemCache.
+getGatesBySpecialLocationIdCached :: (BeamFlow m r) => Id SL.SpecialLocation -> m [(D.GateInfo, [[[LatLong]]])]
+getGatesBySpecialLocationIdCached slId =
+  IM.withInMemCache ["GateInfo:SpecialLocation:" <> getId slId] 3600 $ do
+    gates <- findAllWithKV [Se.Is Beam.specialLocationId $ Se.Eq (getId slId)]
+    pure $ map (\g -> (g, maybe [] (fromMaybe [] . parseGatePolygons) g.geomGeoJson)) gates
+
 -- | All gates of a special location, paired with their GeoJSON polygon text. Kept
 --   tuple-shaped for backward compatibility with callers that used the old PostGIS
 --   @ST_AsGeoJSON@ projection. Served from the in-memory cache.
