@@ -94,6 +94,7 @@ Quote:
     specialLocationName : Maybe Text
     specialLocationSupportNumber : Maybe Text
     area : Maybe Text
+    navigationInstruction : Maybe Text
     clientBundleVersion : Maybe Version
     clientSdkVersion : Maybe Version
     clientConfigVersion : Maybe Version
