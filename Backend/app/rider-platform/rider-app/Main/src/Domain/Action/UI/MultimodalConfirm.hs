@@ -2869,7 +2869,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
         mapConcurrently
           ( \ticketPayload -> do
               qrData <- DirectExternalBPP.generateQR integratedBPPConfig ticketPayload
-              QFRFSTicket.udpateQrDataAndValidTill qrData ticketPayload.expiryIST ticketBookingId ticketPayload.ticketNumber
+              QFRFSTicket.udpateQrDataAndValidTill qrData (addUTCTime (-19800) ticketPayload.expiryIST) ticketBookingId ticketPayload.ticketNumber
               pure qrData
           )
           updatedTickets
