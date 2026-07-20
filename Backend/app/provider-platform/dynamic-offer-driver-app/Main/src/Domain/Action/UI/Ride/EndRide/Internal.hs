@@ -112,6 +112,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
+import SharedLogic.Finance.GstBreakdown
 import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.Wallet
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
@@ -119,7 +120,6 @@ import qualified SharedLogic.RideEvents.Publisher as RideEventsPublisher
 import Storage.Beam.Toll ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
@@ -571,7 +571,13 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                  in HighPrecMoney (baseForServiceVat.getHighPrecMoney * (toRational pct / 100))
             _ -> HighPrecMoney 0.0
 
-    merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
+    rideGstBreakdown <-
+      computeGstBreakdownForRideOwner
+        transporterConfig.taxConfig.rideGst
+        booking.fromLocation
+        ride.fleetOwnerId
+        ride.driverId
+        (taxAmount + absorbedVat)
     ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig isOnline
     let tollWithVat = tollAmount + tollVatAmount
     let parkingWithVat = parkingAmount + parkingVatAmount
@@ -654,14 +660,6 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                   if showVatInput then mkStandaloneFare "VAT Input" VatInput serviceVatAmount else Nothing
                 ]
            in catMaybes (rideAndTollLines <> commonLines)
-        rideGstBreakdown =
-          computeGstBreakdownByPlace
-            transporterConfig.taxConfig.rideGst
-            (Just $ show merchantOperatingCity.state)
-            booking.fromLocation.address.state
-            (Just $ show merchantOperatingCity.city)
-            booking.fromLocation.address.city
-            (taxAmount + absorbedVat)
         -- CUSTOMER invoice: never club VAT into the ride/toll/parking lines —
         -- riders get the itemised view regardless of transporter config.
         customerInvoiceConfig =

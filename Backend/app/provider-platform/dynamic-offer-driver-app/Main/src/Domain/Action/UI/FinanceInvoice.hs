@@ -23,7 +23,7 @@ import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtra
-import Lib.Finance.Utils.GstRates (mkComponentRateFromTxn)
+import Lib.Finance.Utils.GstBreakdown (mkComponentRateFromTxn)
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import Storage.Beam.Payment ()
