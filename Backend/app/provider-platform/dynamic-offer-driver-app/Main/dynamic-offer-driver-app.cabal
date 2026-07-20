@@ -313,6 +313,7 @@ library
       Domain.Action.UI.Faq
       Domain.Action.UI.FareCalculator
       Domain.Action.UI.FeedbackForm
+      Domain.Action.UI.File
       Domain.Action.UI.FinanceInvoice
       Domain.Action.UI.FleetDriverAssociation
       Domain.Action.UI.FleetOwnerList
@@ -1043,6 +1044,7 @@ library
       API.Action.UI.EditBooking
       API.Action.UI.Faq
       API.Action.UI.FareCalculator
+      API.Action.UI.File
       API.Action.UI.FinanceInvoice
       API.Action.UI.FleetOwnerList
       API.Action.UI.FRFSFleetOperator
