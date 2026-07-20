@@ -124,3 +124,8 @@ ALTER TABLE atlas_app.quote ADD COLUMN quote_breakup_list_json json ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.quote ADD COLUMN area text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.quote ADD COLUMN navigation_instruction text ;

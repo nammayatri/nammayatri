@@ -107,7 +107,8 @@ data Pricing = Pricing
     businessDiscount :: Maybe HighPrecMoney,
     personalDiscount :: Maybe HighPrecMoney,
     qar :: Maybe Double,
-    area :: Maybe Text
+    area :: Maybe Text,
+    navigationInstruction :: Maybe Text
   }
 
 data RateCardBreakupItem = RateCardBreakupItem
@@ -997,6 +998,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       businessDiscount = fareParams.businessDiscount,
       personalDiscount = fareParams.personalDiscount,
       area = Nothing,
+      navigationInstruction = Nothing,
       ..
     }
 
@@ -1008,8 +1010,9 @@ mkGeneralInfoTagGroup pricing isValueAddNP =
           Tags.SPECIAL_LOCATION_NAME Tags.~=? pricing.specialLocationName,
           Tags.SPECIAL_LOCATION_SUPPORT_NUMBER Tags.~=? pricing.specialLocationSupportNumber,
           Tags.PICKUP_AREA Tags.~=? pricing.area,
-          Tags.BUSINESS_DISCOUNT Tags.~=? (guardVNP (show <$> pricing.businessDiscount)),
-          Tags.PERSONAL_DISCOUNT Tags.~=? (guardVNP (show <$> pricing.personalDiscount)),
+          Tags.PICKUP_NAVIGATION_INSTRUCTION Tags.~=? pricing.navigationInstruction,
+          Tags.BUSINESS_DISCOUNT Tags.~=? guardVNP (show <$> pricing.businessDiscount),
+          Tags.PERSONAL_DISCOUNT Tags.~=? guardVNP (show <$> pricing.personalDiscount),
           Tags.DISTANCE_TO_NEAREST_DRIVER_METER Tags.~=? (show . double2Int . realToFrac <$> pricing.distanceToNearestDriver),
           Tags.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE Tags.~=? (guardVNP (show <$> pricing.isCustomerPrefferedSearchRoute)),
           Tags.IS_BLOCKED_SEARCH_ROUTE Tags.~=? (guardVNP (show <$> pricing.isBlockedRoute)),

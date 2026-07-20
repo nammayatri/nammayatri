@@ -63,6 +63,7 @@ Estimate:
       tollNames: Maybe [Text]
       tollIds: Maybe [Text]
       area: Maybe Text
+      navigationInstruction: Maybe Text
       eligibleForUpgrade: Bool
       createdAt: UTCTime
       updatedAt: UTCTime

@@ -77,7 +77,8 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType, Device, Version)
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
-import Lib.Queries.GateInfo (findGateInfoByLatLongWithinRadius)
+import Lib.Queries.GateInfo (findGateInfoByLatLongWithinRadius, getGatesBySpecialLocationIdCached)
+import qualified Lib.Types.GateInfoExtra as GExtra
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import Lib.Yudhishthira.Types
@@ -361,8 +362,9 @@ handler ValidatedDSearchReq {..} sReq = do
       else return (Nothing, farePolicies)
   -- This is to filter the fare policies based on the driverId, if passed during search
   -- (driverPool, selectedFarePolicies) <- maybe (pure (driverPool', selectedFarePolicies')) (filterFPsForDriverId (driverPool', selectedFarePolicies')) searchReq.driverIdForSearch
-  let buildEstimateHelper = buildEstimate merchantId' merchantOpCityId cityCurrency cityDistanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance spcllocationTag specialLocName mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute (length stops) searchReq.estimatedDuration transporterConfig
-  let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId' possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration spcllocationTag mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute transporterConfig
+  navGateMap <- buildNavGateMap (SL.pickupSpecialZoneIdFromArea allFarePoliciesProduct.area)
+  let buildEstimateHelper = buildEstimate merchantId' merchantOpCityId cityCurrency cityDistanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance spcllocationTag specialLocName mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute (length stops) searchReq.estimatedDuration transporterConfig navGateMap
+  let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId' possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration spcllocationTag mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute transporterConfig navGateMap
   logInfo $ "DEBUG: allFarePoliciesProduct area=" <> show allFarePoliciesProduct.area <> " farePoliciesCount=" <> show (length farePolicies) <> " selectedFarePoliciesCount=" <> show (length selectedFarePolicies) <> " tripCategories=" <> show possibleTripOption.tripCategories
   logInfo $ "DEBUG: selectedFarePolicies tripCategories=" <> show (map (\fp -> (fp.tripCategory, fp.vehicleServiceTier)) selectedFarePolicies)
   (estimates', quotes) <- foldrM (\fp acc -> processPolicy buildEstimateHelper buildQuoteHelper fp configVersionMap acc mbAreaForVST) ([], []) selectedFarePolicies
@@ -669,6 +671,22 @@ buildSearchRequest DSearchReq {..} bapCity mbPickupGateId mbSpecialZoneGateId mb
         ..
       }
 
+-- | Pickup special-location gates keyed by gate id, fetched once per search (empty if no pickup zone).
+buildNavGateMap ::
+  (EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) =>
+  Maybe Text ->
+  m (M.Map Text GExtra.GateInfo)
+buildNavGateMap Nothing = pure M.empty
+buildNavGateMap (Just slId) = do
+  gates <- getGatesBySpecialLocationIdCached (Id slId)
+  pure $ M.fromList $ map (\(g, _) -> (g.id.getId, g)) gates
+
+-- | Per-tripCategory pickup-gate navigation instruction, resolved purely from the gate map.
+resolveGateNavigationInstruction :: M.Map Text GExtra.GateInfo -> Maybe SL.Area -> Text -> Maybe Text
+resolveGateNavigationInstruction gateMap mbArea tripCategoryKey = do
+  gateId <- mbArea >>= SL.pickupGateIdFromArea
+  gate <- M.lookup gateId gateMap
+  GExtra.navigationInstructionFor gate tripCategoryKey
 buildQuote ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -691,11 +709,12 @@ buildQuote ::
   Maybe Bool ->
   Maybe Bool ->
   DTMT.TransporterConfig ->
+  M.Map Text GExtra.GateInfo ->
   Bool ->
   DVST.VehicleServiceTier ->
   DFP.FullFarePolicy ->
   m DQuote.Quote
-buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled returnTime roundTrip mbDistance mbDuration specialLocationTag tollCharges tollNames _tollIds isCustomerPrefferedSearchRoute isBlockedRoute transporterConfig nightShiftOverlapChecking vehicleServiceTierItem fullFarePolicy = do
+buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled returnTime roundTrip mbDistance mbDuration specialLocationTag tollCharges tollNames _tollIds isCustomerPrefferedSearchRoute isBlockedRoute transporterConfig navGateMap nightShiftOverlapChecking vehicleServiceTierItem fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance
   fareParams <-
     FC.calculateFareParameters
@@ -740,6 +759,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
   let validTill = searchRequestExpirationSeconds `addUTCTime` now
       estimatedFinishTime = (\duration -> fromIntegral duration `addUTCTime` now) <$> mbDuration
       isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
+      navigationInstruction = resolveGateNavigationInstruction navGateMap fullFarePolicy.mbArea (show fullFarePolicy.tripCategory)
   pure
     DQuote.Quote
       { id = quoteId,
@@ -782,11 +802,12 @@ buildEstimate ::
   Int ->
   Maybe Seconds ->
   DTMT.TransporterConfig ->
+  M.Map Text GExtra.GateInfo ->
   Bool ->
   DVST.VehicleServiceTier ->
   DFP.FullFarePolicy ->
   m DEst.Estimate
-buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchReq startTime isScheduled returnTime roundTrip mbDistance specialLocationTag mbSpecialLocName tollCharges tollNames tollIds isCustomerPrefferedSearchRoute isBlockedRoute noOfStops mbEstimatedDuration transporterConfig nightShiftOverlapChecking vehicleServiceTierItem fullFarePolicy = do
+buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchReq startTime isScheduled returnTime roundTrip mbDistance specialLocationTag mbSpecialLocName tollCharges tollNames tollIds isCustomerPrefferedSearchRoute isBlockedRoute noOfStops mbEstimatedDuration transporterConfig navGateMap nightShiftOverlapChecking vehicleServiceTierItem fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance -- TODO: Fix Later
       isAmbulanceEstimate = isAmbulanceTrip fullFarePolicy.tripCategory
   (minFareParams, maxFareParams) <- do
@@ -843,6 +864,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
       minFare = fareSum minFareParams (Just []) + maybe 0.0 (.minFee) mbDriverExtraFeeBounds
       maxFare = fareSum maxFareParams (Just []) + maybe 0.0 (.maxFee) mbDriverExtraFeeBounds + pickupChargesMaxx
   let isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
+      navigationInstruction = resolveGateNavigationInstruction navGateMap fullFarePolicy.mbArea (show fullFarePolicy.tripCategory)
   pure
     DEst.Estimate
       { id = estimateId,
@@ -1146,5 +1168,6 @@ transformReserveRideEsttoEst DBppEstimate.BppEstimate {..} = do
     DEst.Estimate
       { commissionCharges = Nothing,
         area = Nothing,
+        navigationInstruction = Nothing,
         ..
       }
