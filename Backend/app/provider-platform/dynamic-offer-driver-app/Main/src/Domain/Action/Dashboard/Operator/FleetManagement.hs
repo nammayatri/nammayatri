@@ -96,7 +96,7 @@ getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled 
           skipMessages = False -- Need translations for API response
       statusRes <-
         castStatusRes
-          <$> SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc Nothing skipMessages
+          <$> SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True) shouldActivateRc Nothing skipMessages
       pure $
         Common.FleetInfo
           { id = ID.cast fleetOwnerPersonId,

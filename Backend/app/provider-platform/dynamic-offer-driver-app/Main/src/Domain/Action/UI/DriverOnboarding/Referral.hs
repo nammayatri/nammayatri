@@ -22,7 +22,6 @@ import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Types.DailyStats as DDS
-import qualified Domain.Types.DriverOperatorAssociation as DDOA
 import qualified Domain.Types.DriverReferral as DR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -49,6 +48,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
+import qualified Storage.Queries.DriverOperatorAssociationExtra as QDOAExtra
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
@@ -142,9 +142,7 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
           DriverInformation.updateReferredByOperatorId (Just dr.driverId.getId) personId
           mbExistingInactiveAssoc <- B.runInReplica $ QDOA.findByDriverIdAndOperatorId personId dr.driverId False
           case mbExistingInactiveAssoc of
-            Just existingAssoc -> do
-              now <- getCurrentTime
-              QDOA.updateByPrimaryKey existingAssoc {DDOA.isActive = True, DDOA.associatedOn = Just now, DDOA.updatedAt = now}
+            Just existingAssoc -> QDOAExtra.reactivateById existingAssoc.id
             Nothing -> do
               driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId DomainRC.defaultAssociationEnd True
               void $ QDOA.create driverOperatorAssData

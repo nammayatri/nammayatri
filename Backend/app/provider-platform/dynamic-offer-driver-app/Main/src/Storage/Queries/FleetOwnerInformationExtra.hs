@@ -456,3 +456,17 @@ updateBusinessLicenseNumberById businessLicenseNumber fleetOwnerPersonId = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
+-- | Set only docsVerificationStatus. Callers read the row to decide whether the status changed, so a
+--   full-row updateByPrimaryKey would write every other column back from that possibly-stale read
+--   (replica lag, or a concurrent write to verified/approved) and silently revert it.
+updateDocsVerificationStatus ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Maybe DDVS.DocsVerificationStatus ->
+  Kernel.Types.Id.Id DP.Person ->
+  m ()
+updateDocsVerificationStatus docsVerificationStatus fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.docsVerificationStatus docsVerificationStatus, Se.Set Beam.updatedAt _now]
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]

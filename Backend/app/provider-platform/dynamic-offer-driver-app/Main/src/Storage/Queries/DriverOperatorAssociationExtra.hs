@@ -249,3 +249,13 @@ endById rowId = do
   updateWithKV
     [Se.Set BeamDOA.isActive False, Se.Set BeamDOA.associatedTill (Just now), Se.Set BeamDOA.updatedAt now]
     [Se.Is BeamDOA.id $ Se.Eq rowId.getId]
+
+-- | Re-activate a previously ended association (the inverse of 'endById'). Sets only the three columns
+--   it owns: the caller finds the row on the read replica, so writing the whole row back would carry
+--   replica-stale values for every other column over the master's.
+reactivateById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverOperatorAssociation -> m ()
+reactivateById rowId = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set BeamDOA.isActive True, Se.Set BeamDOA.associatedOn (Just now), Se.Set BeamDOA.updatedAt now]
+    [Se.Is BeamDOA.id $ Se.Eq rowId.getId]

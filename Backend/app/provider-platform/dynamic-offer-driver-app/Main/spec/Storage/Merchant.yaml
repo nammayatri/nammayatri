@@ -1274,6 +1274,11 @@ TransporterConfig:
     dontAutoEnableDriver: Maybe Bool
     enableBotFlow: Maybe Bool # Just True ⇒ statusHandler computes verified (isMandatory docs) + enabled (isMandatoryForEnabling docs AND BOT-set approved). NULL ⇒ legacy flow.
     enablePullPendingDocVerification: Maybe Bool # Just True ⇒ status renders re-pull stuck doc verifications via getTask (SyncVerificationStatus). NULL ⇒ off.
+    docPullWebhookGraceSec: Int # Tunes enablePullPendingDocVerification. Webhook head start: rows younger than this are left for the webhook to resolve. Column nullable, NULL ⇒ 120 (2 min), so no backfill needed.
+    docPullDedupeWindowSec: Int # Per-requestId getTask dedupe window, shared by every pull path (reconcilePending + the sync DL backstop), so both read this same field. Column nullable, NULL ⇒ 30.
+    docPullMaxAttempts: Integer # Fixed-window cap on getTask pulls per requestId per docPullAttemptWindowSec; on hitting it pulls pause until the window expires, never permanently. Column nullable, NULL ⇒ 10.
+    docPullAttemptWindowSec: Int # Window the docPullMaxAttempts cap is counted over. Column nullable, NULL ⇒ 7200 (2 hours).
+    docPullThrottleWindowSec: Int # TTL of the per-doc pull throttle, claimed before any lookup. Keep below docPullWebhookGraceSec, else a row still in its grace window burns a throttle slot and heals one window late. Column nullable, NULL ⇒ 120.
     reminderSystemEnabled: Maybe Bool
     allowedReferralEntities: "[Role]"
     enableOverchargingBlocker: Bool
@@ -1442,6 +1447,11 @@ TransporterConfig:
     sameRiderDriverRideCountThreshold: Maybe Int
     communicationChannelCharLimits: Maybe Value
     stclConfig: Maybe Value
+    docPullWebhookGraceSec: Maybe Int
+    docPullDedupeWindowSec: Maybe Int
+    docPullMaxAttempts: Maybe Integer
+    docPullAttemptWindowSec: Maybe Int
+    docPullThrottleWindowSec: Maybe Int
 
   beamFields:
     fcmConfig:
@@ -1509,6 +1519,11 @@ TransporterConfig:
     driverDrivenSearchReqExpiry: Kernel.Utils.Common.nominalDiffTimeToSeconds <$>
       driverDrivenSearchReqExpiry|E
     disableListScheduledBookingAPI: Just disableListScheduledBookingAPI|E
+    docPullWebhookGraceSec: Just docPullWebhookGraceSec|E
+    docPullDedupeWindowSec: Just docPullDedupeWindowSec|E
+    docPullMaxAttempts: Just docPullMaxAttempts|E
+    docPullAttemptWindowSec: Just docPullAttemptWindowSec|E
+    docPullThrottleWindowSec: Just docPullThrottleWindowSec|E
     enableOverchargingBlocker: Just enableOverchargingBlocker|E
     normalRideBulkLocUpdateBatchSize: Just normalRideBulkLocUpdateBatchSize|E
     meterRideBulkLocUpdateBatchSize: Just meterRideBulkLocUpdateBatchSize|E
@@ -1612,6 +1627,11 @@ TransporterConfig:
     driverDrivenSearchReqExpiry: Kernel.Utils.Common.secondsToNominalDiffTime <$>
       driverDrivenSearchReqExpiry|E
     disableListScheduledBookingAPI: fromMaybe False disableListScheduledBookingAPI|E
+    docPullWebhookGraceSec: fromMaybe 120 docPullWebhookGraceSec|E
+    docPullDedupeWindowSec: fromMaybe 30 docPullDedupeWindowSec|E
+    docPullMaxAttempts: fromMaybe 10 docPullMaxAttempts|E
+    docPullAttemptWindowSec: fromMaybe 7200 docPullAttemptWindowSec|E
+    docPullThrottleWindowSec: fromMaybe 120 docPullThrottleWindowSec|E
     enableOverchargingBlocker: fromMaybe False enableOverchargingBlocker|E
     normalRideBulkLocUpdateBatchSize: fromMaybe 98 normalRideBulkLocUpdateBatchSize|E
     meterRideBulkLocUpdateBatchSize: fromMaybe 4 meterRideBulkLocUpdateBatchSize|E

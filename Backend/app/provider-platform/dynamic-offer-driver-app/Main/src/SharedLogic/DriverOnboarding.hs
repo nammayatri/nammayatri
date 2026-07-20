@@ -728,30 +728,22 @@ makeHVVerificationReqRecord DHV.HyperVergeVerification {..} =
     }
 
 -- | Dedupe key for getTask pulls, per verification requestId — every pull path shares it, so a row is
---   pulled at most once per 'getTaskPullWindow'.
+--   pulled at most once per @docPullDedupeWindowSec@. Both pull paths (reconcilePending and the sync
+--   DL backstop) must read that field from the same city's config, or the shared dedupe desyncs.
 getTaskPullKey :: Text -> Text
 getTaskPullKey requestId = "verifyPull:req:" <> requestId
 
-getTaskPullWindow :: NominalDiffTime
-getTaskPullWindow = 30
-
--- | Fixed-window cap: at most 'getTaskAttemptLimit' getTask pulls per requestId per
---   'getTaskAttemptWindow'; on hitting it, pulls pause until the window expires — never a permanent
---   stop. 10 covers ~5 min of the sync DL backstop's tightest (30s-deduped) polling.
-allowGetTaskAttempt :: (CacheFlow m r) => Text -> m Bool
-allowGetTaskAttempt requestId = do
+-- | Fixed-window cap: at most @attemptLimit@ getTask pulls per requestId per @attemptWindow@ seconds;
+--   on hitting it, pulls pause until the window expires — never a permanent stop. Callers pass both
+--   from TransporterConfig (docPullMaxAttempts / docPullAttemptWindowSec).
+allowGetTaskAttempt :: (CacheFlow m r) => Integer -> Int -> Text -> m Bool
+allowGetTaskAttempt attemptLimit attemptWindow requestId = do
   let key = "verifyPull:attempts:" <> requestId
   -- SET NX EX before INCR: the TTL is established atomically with key creation, so a crash between
   -- the two calls can never leave a counter without expiry (= this requestId blocked forever).
-  void $ Redis.setNxExpire key getTaskAttemptWindow (0 :: Int)
+  void $ Redis.setNxExpire key attemptWindow (0 :: Int)
   attempts <- Redis.incr key
-  pure (attempts <= getTaskAttemptLimit)
-
-getTaskAttemptLimit :: Integer
-getTaskAttemptLimit = 10
-
-getTaskAttemptWindow :: Int
-getTaskAttemptWindow = 7200 -- 2 hours
+  pure (attempts <= attemptLimit)
 
 toMaybe :: [a] -> Kernel.Prelude.Maybe [a]
 toMaybe [] = Kernel.Prelude.Nothing

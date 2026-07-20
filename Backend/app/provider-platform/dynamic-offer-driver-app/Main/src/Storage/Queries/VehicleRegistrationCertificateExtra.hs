@@ -185,6 +185,20 @@ findByCertificateNumberHash certificateHash = do
   findOneWithKV
     [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certificateHash]
 
+-- | Set only docsVerificationStatus, by RC id. Callers read the row to decide whether the status
+--   changed, so a full-row updateByPrimaryKey would write every other column back from that
+--   possibly-stale read (replica lag, or a concurrent write) and silently revert it.
+updateDocsVerificationStatusById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe DDVS.DocsVerificationStatus -> Id VehicleRegistrationCertificate -> m ())
+updateDocsVerificationStatusById docsVerificationStatus (Id vehicleRegistrationCertificateId) = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamVRC.docsVerificationStatus docsVerificationStatus,
+      Se.Set BeamVRC.updatedAt now
+    ]
+    [Se.Is BeamVRC.id (Se.Eq vehicleRegistrationCertificateId)]
+
 updateDocsVerificationStatusByCertificateNumberHash ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Maybe DDVS.DocsVerificationStatus -> DbHash -> m ())

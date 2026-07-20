@@ -47,6 +47,7 @@ import Control.Applicative ((<|>))
 import Control.Monad.Extra (anyM)
 import Data.Either (fromRight)
 import Data.List (nub)
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DDL
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
@@ -57,6 +58,7 @@ import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.DriverIdentityInfo as DII
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLicense as DL
 import Domain.Types.Extra.IdfyVerification (docTypeToText)
@@ -114,6 +116,7 @@ import qualified Storage.Queries.DriverUdyam as QUDYAM
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOperatorAssociationExtra as QFOA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
+import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIExtra
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as IQuery
@@ -121,6 +124,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RideExtra as QRideExtra
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
+import qualified Storage.Queries.VehicleRegistrationCertificateExtra as RCQueryExtra
 import qualified Tools.BackgroundVerification as BackgroundVerification
 import Tools.Error (DocumentVerificationConfigError (..))
 import qualified Tools.Plasma as TPlasma
@@ -396,7 +400,9 @@ fetchDriverDocStatusesForPerson person merchantOperatingCity transporterConfig l
         vehicleDocumentsUnverified <&> \vehicleDoc -> do
           fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory
       possibleVehicleCategories = if null possibleVehicleCategoriesRaw then [DVC.CAR] else possibleVehicleCategoriesRaw
-  driverDocuments <- fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleCategories person language useHVSdkForDL onlyMandatoryDocs skipMessages
+  -- No getDLAndStatus on this path, so there is no prefetched DL to reuse.
+  personCtx <- buildPersonDocContext person.role person.id
+  driverDocuments <- fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleCategories person language useHVSdkForDL Nothing Nothing personCtx onlyMandatoryDocs skipMessages
   let vehicleCategory = case vehicleDocumentsUnverified of
         (doc : _) -> fromMaybe doc.userSelectedVehicleCategory doc.verifiedVehicleCategory
         [] -> DVC.CAR
@@ -493,11 +499,11 @@ markDocsVerificationStatusRejectedForPerson personId = do
     then do
       fleetOwnerInfo <- QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
       when (fleetOwnerInfo.docsVerificationStatus /= targetStatus) $
-        QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.docsVerificationStatus = targetStatus}
+        QFOIExtra.updateDocsVerificationStatus targetStatus personId
     else do
       driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
       when (driverInfo.docsVerificationStatus /= targetStatus) $
-        DIQuery.updateByPrimaryKey driverInfo {DI.docsVerificationStatus = targetStatus}
+        DIQueryExtra.updateDocsVerificationStatus targetStatus (cast personId)
 
 markDocsVerificationStatusRejectedForRC ::
   ( EsqDBFlow m r,
@@ -510,7 +516,7 @@ markDocsVerificationStatusRejectedForRC rcId = do
   rc <- RCQuery.findById rcId >>= fromMaybeM (InternalError $ "RC not found by id: " <> rcId.getId)
   let targetStatus = Just DDVS.ADMIN_REJECTED
   when (rc.docsVerificationStatus /= targetStatus) $
-    RCQuery.updateByPrimaryKey rc {RC.docsVerificationStatus = targetStatus}
+    RCQueryExtra.updateDocsVerificationStatusById targetStatus rcId
 
 refreshDocsVerificationStatusesWithStatus ::
   Maybe DP.Person ->
@@ -522,7 +528,7 @@ refreshDocsVerificationStatusesWithStatus mbPerson mbTransporterConfig personId 
   let onlyMandatoryDocs = Just True
       shouldActivateRc = False
       skipMessages = True
-  statusHandler' statusPerson statusEntityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
+  statusHandler' statusPerson statusEntityImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
 
 loadPersonStatusContext ::
   Maybe DP.Person ->
@@ -576,12 +582,13 @@ statusHandler' ::
   Maybe Bool ->
   Maybe DVC.VehicleCategory ->
   Maybe DL.DriverLicense ->
+  Maybe DAadhaarCard.AadhaarCard ->
   Maybe Bool ->
   Bool ->
   Maybe Bool ->
   Bool ->
   Flow StatusRes'
-statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs skipMessages = do
+statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL mbAadhaar useHVSdkForDL shouldActivateRc onlyMandatoryDocs skipMessages = do
   let merchantId = entityImagesInfo.merchantOperatingCity.merchantId
       merchantOperatingCity = entityImagesInfo.merchantOperatingCity
       merchantOpCityId = merchantOperatingCity.id
@@ -607,7 +614,9 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
       -- If no vehicle categories found, use CAR as fallback (same as fallback used later in vehicleCategory)
       possibleVehicleCategories = if null possibleVehicleCategoriesRaw then [DVC.CAR] else possibleVehicleCategoriesRaw
 
-  driverDocuments <- fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleCategories person language useHVSdkForDL onlyMandatoryDocs skipMessages
+  -- Read the person-keyed rows once per request: shared by the doc loop below and the recompute step.
+  personCtx <- buildPersonDocContext person.role personId
+  driverDocuments <- fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleCategories person language useHVSdkForDL mDL mbAadhaar personCtx onlyMandatoryDocs skipMessages
 
   let enableBotFlow = transporterConfig.enableBotFlow == Just True
 
@@ -618,9 +627,9 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
         -- independent of separateDriverVehicleEnablement. The BOT sets `approved`; statusHandler derives the rest.
         let vehicleCategory = fromMaybe DVC.CAR $ onboardingVehicleCategory <|> listToMaybe possibleVehicleCategories
         when (SDO.isFleetRole person.role) $
-          void $ recomputeFleetVerifiedAndEnabled person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
+          void $ recomputeFleetVerifiedAndEnabled person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory personCtx.fleetOwnerInfo
         when (person.role == DP.DRIVER) $
-          void $ recomputeDriverVerifiedAndEnabled merchantOpCityId merchantId person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory (mDL >>= (.driverName)) onboardingVehicleCategory transporterConfig Nothing
+          void $ recomputeDriverVerifiedAndEnabled merchantOpCityId merchantId person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory (mDL >>= (.driverName)) onboardingVehicleCategory transporterConfig Nothing personCtx.driverInfo
         -- Vehicle status list (+ vehicle `verified` write, handled inside getVehicleDocuments under enableBotFlow)
         getVehicleDocuments driverDocConfigs person.role vehicleDocumentsUnverified transporterConfig.requiresOnboardingInspection transporterConfig.vehicleCategoryExcludedFromVerification True driverDocuments merchantOpCityId
       else -- Legacy enablement (unchanged): conditional on separateDriverVehicleEnablement.
@@ -701,7 +710,7 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
           if transporterConfig.separateDriverVehicleEnablement == Just True && person.role == DP.DRIVER
             then []
             else vehicleDocsForPersist
-    persistDocsVerificationStatuses person driverDocsForPersist vehicleDocsForPersist'
+    persistDocsVerificationStatuses person driverDocsForPersist vehicleDocsForPersist' personCtx
 
   enabled <-
     if SDO.isFleetRole person.role
@@ -817,6 +826,13 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
             permitExpiry = rc.permitExpiry
           }
 
+-- | @personCtx@ is built by the caller ('buildPersonDocContext') so the person-keyed rows are read once
+--   per request and shared with the recompute step, not just this loop.
+--   @mbPrefetchedDL@ is 'getDLAndStatus'' already-resolved DL, when the caller ran it (statusHandler'
+--   does; the dashboard entry point doesn't and passes Nothing). Reusing it skips a second
+--   read + getTask pull of the row that call already resolved.
+--   @mbPrefetchedAadhaar@ is 'getAadhaarStatus'' row, on the same terms: the driver /status endpoint
+--   runs it for its own response field, so the AadhaarCard arm below need not re-read it.
 fetchDriverDocuments ::
   IQuery.EntityImagesInfo ->
   DocVerificationConfigs ->
@@ -824,10 +840,13 @@ fetchDriverDocuments ::
   DP.Person ->
   Language ->
   Maybe Bool ->
+  Maybe DL.DriverLicense ->
+  Maybe DAadhaarCard.AadhaarCard ->
+  PersonDocContext ->
   Maybe Bool ->
   Bool ->
   Flow [DocumentStatusItem]
-fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleCategories person language useHVSdkForDL onlyMandatoryDocs skipMessages = do
+fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleCategories person language useHVSdkForDL mbPrefetchedDL mbPrefetchedAadhaar personCtx onlyMandatoryDocs skipMessages = do
   let role = person.role
       merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
       driverId = person.id
@@ -843,13 +862,13 @@ fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleC
         responseCode = mbDocStatus >>= (.responseCode)
         mbDocVerificationStatus = mbDocStatus >>= (mapDigilockerToResponseStatus . (.status))
 
-    (mbProcessedStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2, mbMetadata) <- getProcessedDriverDocuments person.role person.id entityImagesInfo docType useHVSdkForDL enableMetadata
+    (mbProcessedStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2, mbMetadata) <- getProcessedDriverDocuments person.role person.id entityImagesInfo docType useHVSdkForDL enableMetadata personCtx mbPrefetchedDL mbPrefetchedAadhaar
     (status, mbReason, mbUrl, mbExpiryFinal, mbS3PathFinal, mbImageIdFinal, mbImageId2Final) <- case mbProcessedStatus of
       Just VALID -> pure (VALID, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2)
       Just s -> pure (s, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2)
       Nothing -> case mbDocVerificationStatus of
         Just docStatus -> pure (docStatus, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
-        Nothing -> getInProgressDriverDocuments person.role driverId entityImagesInfo docType possibleVehicleCategories allDocVerificationConfigs
+        Nothing -> getInProgressDriverDocuments person.role driverId entityImagesInfo docType possibleVehicleCategories allDocVerificationConfigs personCtx
 
     mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
     let finalMessage = mbReason <|> (if isDigiLockerEnabled then responseCode else Nothing) <|> mbMessage
@@ -1003,9 +1022,13 @@ recomputeDriverVerifiedAndEnabled ::
   Maybe DVC.VehicleCategory ->
   DTC.TransporterConfig ->
   Maybe Bool ->
+  Maybe DI.DriverInformation ->
   Flow Bool
-recomputeDriverVerifiedAndEnabled merchantOpCityId merchantId person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory driverName onboardingVehicleCategory transporterConfig mbIsFleetDriver = do
-  driverInfo <- DIQuery.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
+recomputeDriverVerifiedAndEnabled merchantOpCityId merchantId person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory driverName onboardingVehicleCategory transporterConfig mbIsFleetDriver mbPrefetchedDriverInfo = do
+  -- Reuse the caller's row when it has one (statusHandler' reads it once per request via
+  -- buildPersonDocContext; nothing between that read and here writes verified/approved/enabled).
+  -- Callers without a context (botApproveAndReconcile) pass Nothing and read here.
+  driverInfo <- maybe (DIQuery.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)) pure mbPrefetchedDriverInfo
   isFleetDriver <- maybe (hasActiveFleetAssociation person.id) pure mbIsFleetDriver
   -- A fleet driver (active fleet association) skips INDIVIDUAL-only docs like OperatorPartnerCode, via applicableTo.
   let allMandatoryDocsValid = checkAllDriverDocsValid' ForVerified (Just isFleetDriver) allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
@@ -1038,9 +1061,11 @@ recomputeFleetVerifiedAndEnabled ::
   [DocumentStatusItem] ->
   DVC.VehicleCategory ->
   Maybe Bool ->
+  Maybe DFOI.FleetOwnerInformation ->
   Flow Bool
-recomputeFleetVerifiedAndEnabled person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory = do
-  fleetOwnerInfo <- QFOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
+recomputeFleetVerifiedAndEnabled person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory mbPrefetchedFleetOwnerInfo = do
+  -- Reuse the caller's row when it has one (see recomputeDriverVerifiedAndEnabled); Nothing reads here.
+  fleetOwnerInfo <- maybe (QFOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)) pure mbPrefetchedFleetOwnerInfo
   let allFleetMandatoryDocsValid = checkAllDriverDocsValidForVerified allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
       allFleetEnablingDocsValid = checkAllDriverDocsValidForEnabling allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
   when (allFleetMandatoryDocsValid /= fleetOwnerInfo.verified) $
@@ -1081,8 +1106,8 @@ botApproveAndReconcile merchantOperatingCity person transporterConfig = do
   fork "botApproveAndReconcile: recompute verified/enabled" $ do
     let docs' = map forceBotApprovalValid driverDocuments
     if SDO.isFleetRole person.role
-      then void $ recomputeFleetVerifiedAndEnabled person allDocVerificationConfigs docs' vehicleCategory Nothing
-      else void $ recomputeDriverVerifiedAndEnabled merchantOperatingCity.id merchantOperatingCity.merchantId person allDocVerificationConfigs docs' vehicleCategory Nothing Nothing Nothing transporterConfig (Just isFleetDriver)
+      then void $ recomputeFleetVerifiedAndEnabled person allDocVerificationConfigs docs' vehicleCategory Nothing Nothing
+      else void $ recomputeDriverVerifiedAndEnabled merchantOperatingCity.id merchantOperatingCity.merchantId person allDocVerificationConfigs docs' vehicleCategory Nothing Nothing Nothing transporterConfig (Just isFleetDriver) Nothing
   where
     forceBotApprovalValid :: DocumentStatusItem -> DocumentStatusItem
     forceBotApprovalValid d
@@ -1171,18 +1196,22 @@ sendEnablementSms merchantOpCityId personId transporterConfig merchantId =
           MessageBuilder.BuildOnboardingMessageReq {}
       Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId messageType) >>= Sms.checkSmsResult
 
+-- | @personCtx@ supplies the person row: it is read only to log the old status and to skip a no-op
+--   write, never as the write payload (the updates below set docsVerificationStatus alone), and nothing
+--   in this request writes that column between the caller's read and here.
 persistDocsVerificationStatuses ::
   DP.Person ->
   [DocumentStatusItem] ->
   [VehicleDocumentItem] ->
+  PersonDocContext ->
   Flow ()
-persistDocsVerificationStatuses person driverDocuments vehicleDocuments = do
+persistDocsVerificationStatuses person driverDocuments vehicleDocuments personCtx = do
   let mandatoryDriverDocuments = driverDocuments
       mandatoryVehicleDocuments = vehicleDocuments
 
   if SDO.isFleetRole person.role
     then do
-      fleetOwnerInfo <- QFOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
+      fleetOwnerInfo <- personCtx.fleetOwnerInfo & fromMaybeM (PersonNotFound person.id.getId)
       let newStatus = Just $ computeAdminDocsVerificationStatus mandatoryDriverDocuments
           docSummary =
             T.intercalate
@@ -1198,10 +1227,10 @@ persistDocsVerificationStatuses person driverDocuments vehicleDocuments = do
           <> ", mandatoryDocs="
           <> docSummary
       when (fleetOwnerInfo.docsVerificationStatus /= newStatus) $
-        QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.docsVerificationStatus = newStatus}
+        QFOIExtra.updateDocsVerificationStatus newStatus person.id
       persistVehicleDocsVerificationStatuses person.id mandatoryVehicleDocuments "fleet"
     else do
-      driverInfo <- DIQuery.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
+      driverInfo <- personCtx.driverInfo & fromMaybeM (PersonNotFound person.id.getId)
       let newDriverStatus = Just $ computeAdminDocsVerificationStatus mandatoryDriverDocuments
           driverDocSummary =
             T.intercalate
@@ -1217,7 +1246,7 @@ persistDocsVerificationStatuses person driverDocuments vehicleDocuments = do
           <> ", mandatoryDriverDocs="
           <> driverDocSummary
       when (driverInfo.docsVerificationStatus /= newDriverStatus) $
-        DIQuery.updateByPrimaryKey driverInfo {DI.docsVerificationStatus = newDriverStatus}
+        DIQueryExtra.updateDocsVerificationStatus newDriverStatus (cast person.id)
       persistVehicleDocsVerificationStatuses person.id mandatoryVehicleDocuments "driver"
 
 persistVehicleDocsVerificationStatuses :: Id DP.Person -> [VehicleDocumentItem] -> Text -> Flow ()
@@ -1302,8 +1331,48 @@ checkIfDocumentValid' mode mbIsFleetDriver (Right driverConfigs) _role docType c
            )
     Nothing -> True
 
-getProcessedDriverDocuments :: DP.Role -> Id DP.Person -> IQuery.EntityImagesInfo -> DVC.DocumentType -> Maybe Bool -> Bool -> Flow (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe Text, Maybe DocumentMetadata)
-getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL enableMetadata = do
+-- | Person-keyed rows that several docType arms of 'getProcessedDriverDocuments' each used to fetch
+--   for themselves. The arms run inside a per-docType loop, so the same row was read 3-7 times per
+--   render; read it once in 'fetchDriverDocuments' and thread it in instead.
+--   Fields stay 'Maybe' so each arm keeps its own missing-row behaviour (some tolerate Nothing,
+--   'FleetRegistration' throws PersonNotFound), and only the role-relevant rows are read.
+data PersonDocContext = PersonDocContext
+  { driverInfo :: Maybe DI.DriverInformation,
+    fleetOwnerInfo :: Maybe DFOI.FleetOwnerInformation,
+    identityInfo :: Maybe DII.DriverIdentityInfo
+  }
+
+emptyPersonDocContext :: PersonDocContext
+emptyPersonDocContext = PersonDocContext {driverInfo = Nothing, fleetOwnerInfo = Nothing, identityInfo = Nothing}
+
+-- | The BOT-owned @approved@ flag for the role's entity, taken from the pre-fetched rows.
+personApprovedFlag :: DP.Role -> PersonDocContext -> Maybe Bool
+personApprovedFlag role personCtx
+  | SDO.isFleetRole role = personCtx.fleetOwnerInfo >>= (.approved)
+  | otherwise = personCtx.driverInfo >>= (.approved)
+
+-- | The @enabled@ flag for the role's entity, taken from the pre-fetched rows. Only meaningful for fleet,
+--   where BotApproval VALID requires both @approved@ and @enabled@; Nothing otherwise.
+personEnabledFlag :: DP.Role -> PersonDocContext -> Maybe Bool
+personEnabledFlag role personCtx
+  | SDO.isFleetRole role = personCtx.fleetOwnerInfo <&> (.enabled)
+  | otherwise = personCtx.driverInfo <&> (.enabled)
+
+-- | Fetch the person-keyed rows once, reading only what the role can actually use:
+--   fleet roles never touch driver_information / driver_identity_info, and vice versa.
+buildPersonDocContext :: DP.Role -> Id DP.Person -> Flow PersonDocContext
+buildPersonDocContext role personId =
+  if SDO.isFleetRole role
+    then do
+      mbFleetOwnerInfo <- QFOI.findByPrimaryKey personId
+      pure emptyPersonDocContext {fleetOwnerInfo = mbFleetOwnerInfo}
+    else do
+      mbDriverInfo <- DIQuery.findById (cast personId)
+      mbIdentityInfo <- QDII.findByDriverId personId
+      pure emptyPersonDocContext {driverInfo = mbDriverInfo, identityInfo = mbIdentityInfo}
+
+getProcessedDriverDocuments :: DP.Role -> Id DP.Person -> IQuery.EntityImagesInfo -> DVC.DocumentType -> Maybe Bool -> Bool -> PersonDocContext -> Maybe DL.DriverLicense -> Maybe DAadhaarCard.AadhaarCard -> Flow (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe Text, Maybe DocumentMetadata)
+getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL enableMetadata personCtx mbPrefetchedDL mbPrefetchedAadhaar = do
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
       (mbS3Path, mbImageId) = getImageMetaFromLatestImage entityImagesInfo docType
       lookupImage imgId =
@@ -1328,10 +1397,13 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
           else pure Nothing
   case docType of
     DVC.DriverLicense -> do
-      mbDL <- DLQuery.findByDriverId driverId -- add failure reason in dl and rc
+      -- getDLAndStatus already resolved this row for the request (read -> getTask pull -> re-read), so
+      -- reuse it. Nothing is ambiguous (no DL at all vs. caller never ran getDLAndStatus), so fall back
+      -- to the read and let the pull branch below decide — unchanged behaviour for that case.
+      mbDL <- maybe (DLQuery.findByDriverId driverId) (pure . Just) mbPrefetchedDL -- add failure reason in dl and rc
       if isNothing mbDL && (useHVSdkForDL == Just True)
         then do
-          void $ withTryCatch "callGetDLGetStatus:getProcessedDriverDocuments" $ callGetDLGetStatus driverId merchantOpCityId
+          void $ withTryCatch "callGetDLGetStatus:getProcessedDriverDocuments" $ callGetDLGetStatus driverId merchantOpCityId entityImagesInfo.transporterConfig
           mbDL' <- DLQuery.findByDriverId driverId
           -- Expiry from DL table's licenseExpiry field (not from Image table)
           let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId1)) mbDL'
@@ -1346,7 +1418,10 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
           mbDlMetadata <- mkDLMetadata mbDL
           return (mapStatus <$> (mbDL <&> (.verificationStatus)), reason, Nothing, mbDL <&> (.licenseExpiry), s3, iid, iid2, mbDlMetadata)
     DVC.AadhaarCard -> do
-      mbAadhaarCard <- QAadhaarCard.findByPrimaryKey driverId
+      -- getAadhaarStatus already read this row for the caller's own response field, so reuse it.
+      -- Nothing is ambiguous (no card vs. caller never ran it), so fall back to the read -- unchanged
+      -- behaviour for callers that don't prefetch. Nothing writes aadhaar_card in between.
+      mbAadhaarCard <- maybe (QAadhaarCard.findByPrimaryKey driverId) (pure . Just) mbPrefetchedAadhaar
       let (s3, iid) = maybe (mbS3Path, mbImageId) lookupImage (mbAadhaarCard >>= (.aadhaarFrontImageId))
           iid2 = mbAadhaarCard >>= (.aadhaarBackImageId) <&> (.getId)
           reason = if (mbAadhaarCard <&> (.verificationStatus)) == Just Documents.INVALID then ((mbAadhaarCard >>= (.rejectReason)) >>= nonEmptyReason) <|> ((mbAadhaarCard >>= (.aadhaarFrontImageId)) >>= lookupImageFailReason) else Nothing
@@ -1408,13 +1483,10 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
       -- Fleet owners store the local address triplet in fleet_owner_information; drivers in driver_identity_info.
       mbAddressFields <-
         if SDO.isFleetRole role
-          then do
-            mbFleetInfo <- QFOI.findByPrimaryKey driverId
-            pure $ mbFleetInfo <&> \info -> (info.address, info.addressState, info.addressDocumentType)
+          then pure $ personCtx.fleetOwnerInfo <&> \info -> (info.address, info.addressState, info.addressDocumentType)
           else do
-            mbIdentityInfo <- QDII.findByDriverId driverId
-            driverInfo <- DIQuery.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-            let idInfo = DIInfo.getIdentityInfo mbIdentityInfo driverInfo
+            driverInfo <- personCtx.driverInfo & fromMaybeM (PersonNotFound driverId.getId)
+            let idInfo = DIInfo.getIdentityInfo personCtx.identityInfo driverInfo
             pure $ Just (idInfo.address, idInfo.addressState, idInfo.addressDocumentType)
       let hasAddressDetails =
             maybe False (\(address, addressState, addressDocumentType) -> isJust address && isJust addressDocumentType && isJust addressState) mbAddressFields
@@ -1440,7 +1512,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
       status <- getOperatorPartnerCodeStatus role driverId
       return (status, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
     DVC.BotApproval -> do
-      status <- getBotApprovalStatusForPerson role driverId
+      status <- getBotApprovalStatusForPersonWithApproved role (personApprovedFlag role personCtx) (personEnabledFlag role personCtx)
       return (status, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
     DVC.UDYAMCertificate -> do
       mbUdyam <- QUDYAM.findByDriverId driverId
@@ -1450,8 +1522,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
             if enableMetadata
               then do
                 udyamNumberDec <- decrypt udyam.udyamNumber
-                mbFoi <- QFOI.findByPrimaryKey driverId
-                pure $ Just $ UDYAMMetadata UDYAMDocumentMetadata {udyamNumber = Just udyamNumberDec, tdsRate = mbFoi >>= (.tdsRate)}
+                pure $ Just $ UDYAMMetadata UDYAMDocumentMetadata {udyamNumber = Just udyamNumberDec, tdsRate = personCtx.fleetOwnerInfo >>= (.tdsRate)}
               else pure Nothing
           return (Just $ mapStatus udyam.verificationStatus, udyam.rejectReason, Nothing, Nothing, mbS3Path, mbImageId, Nothing, mbUdyamMetadata)
         Nothing -> do
@@ -1462,12 +1533,10 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.TANCertificate
       case mbDoc of
         Just doc -> do
-          mbTanMetadata <-
-            if enableMetadata
-              then do
-                mbFoi <- QFOI.findByPrimaryKey driverId
-                pure $ Just $ TANMetadata TANDocumentMetadata {documentId = doc.id.getId, tdsRate = mbFoi >>= (.tdsRate)}
-              else pure Nothing
+          let mbTanMetadata =
+                if enableMetadata
+                  then Just $ TANMetadata TANDocumentMetadata {documentId = doc.id.getId, tdsRate = personCtx.fleetOwnerInfo >>= (.tdsRate)}
+                  else Nothing
           let (s3, iid) = maybe (mbS3Path, mbImageId) lookupImage doc.documentImageId
           return (Just (mapStatus doc.verificationStatus), doc.rejectReason <|> reason, url, Nothing, s3, iid, Nothing, mbTanMetadata)
         Nothing -> return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
@@ -1476,12 +1545,10 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.LDCCertificate
       case mbDoc of
         Just doc -> do
-          mbLdcMetadata <-
-            if enableMetadata
-              then do
-                mbFoi <- QFOI.findByPrimaryKey driverId
-                pure $ Just $ LDCMetadata LDCDocumentMetadata {documentId = doc.id.getId, tdsRate = mbFoi >>= (.tdsRate)}
-              else pure Nothing
+          let mbLdcMetadata =
+                if enableMetadata
+                  then Just $ LDCMetadata LDCDocumentMetadata {documentId = doc.id.getId, tdsRate = personCtx.fleetOwnerInfo >>= (.tdsRate)}
+                  else Nothing
           let (s3, iid) = maybe (mbS3Path, mbImageId) lookupImage doc.documentImageId
           return (Just (mapStatus doc.verificationStatus), doc.rejectReason <|> reason, url, Nothing, s3, iid, Nothing, mbLdcMetadata)
         Nothing -> return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
@@ -1494,40 +1561,39 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
     DVC.FinnishIDResidencePermit -> commonDocStatus DVC.FinnishIDResidencePermit
     DVC.TaxiDriverPermit -> commonDocStatus DVC.TaxiDriverPermit
     DVC.NomineeDetails -> do
-      mbIdentityInfo <- QDII.findByDriverId driverId
-      let hasNominee = maybe False (\info -> isJust info.nomineeName && isJust info.nomineeRelationship && isJust info.nomineeDob) mbIdentityInfo
+      -- Row from personCtx (read once per render); main's metadata rendering kept on top.
+      let hasNominee = maybe False (\info -> isJust info.nomineeName && isJust info.nomineeRelationship && isJust info.nomineeDob) personCtx.identityInfo
           mbNomineeMetadata =
             if enableMetadata
               then
-                mbIdentityInfo <&> \info ->
+                personCtx.identityInfo <&> \info ->
                   NomineeDetailsMetadata NomineeDetailsDocumentMetadata {nomineeName = info.nomineeName, nomineeDob = info.nomineeDob, nomineeRelationship = info.nomineeRelationship}
               else Nothing
       return (if hasNominee then Just VALID else Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, mbNomineeMetadata)
     DVC.FleetRegistration -> do
       mbRegisteredAt <-
         if SDO.isFleetRole role
-          then (.registeredAt) <$> (QFOI.findByPrimaryKey driverId >>= fromMaybeM (PersonNotFound driverId.getId))
+          then (.registeredAt) <$> (personCtx.fleetOwnerInfo & fromMaybeM (PersonNotFound driverId.getId))
           else pure Nothing
       return (VALID <$ mbRegisteredAt, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
     DVC.BankingDetails -> do
+      -- Rows from personCtx (read once per render); main's metadata rendering kept on top.
       if SDO.isFleetRole role
         then do
-          mbFleetInfo <- QFOI.findByPrimaryKey driverId
-          let hasBankingDetails = maybe False (isJust . (.payoutVpa)) mbFleetInfo
+          let hasBankingDetails = maybe False (isJust . (.payoutVpa)) personCtx.fleetOwnerInfo
               mbBankingMetadata =
                 if enableMetadata
                   then
-                    mbFleetInfo <&> \fi ->
+                    personCtx.fleetOwnerInfo <&> \fi ->
                       BankingDetailsMetadata BankingDetailsDocumentMetadata {accountNumber = fi.payoutVpaBankAccount, ifscCode = Nothing, nameAtBank = Nothing, upiId = fi.payoutVpa}
                   else Nothing
           return (if hasBankingDetails then Just VALID else Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, mbBankingMetadata)
         else do
-          mbDriverInfo <- DIQuery.findById (cast driverId)
-          let hasBankingDetails = maybe False (\di -> isJust di.driverBankAccountDetails || isJust di.payerVpa) mbDriverInfo
+          let hasBankingDetails = maybe False (\di -> isJust di.driverBankAccountDetails || isJust di.payerVpa) personCtx.driverInfo
               mbBankingMetadata =
                 if enableMetadata
                   then
-                    mbDriverInfo <&> \di ->
+                    personCtx.driverInfo <&> \di ->
                       BankingDetailsMetadata
                         BankingDetailsDocumentMetadata
                           { accountNumber = di.driverBankAccountDetails >>= (.accountNumber),
@@ -1539,16 +1605,17 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
           return (if hasBankingDetails then Just VALID else Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, mbBankingMetadata)
     _ -> commonDocStatus docType
 
-callGetDLGetStatus :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()
-callGetDLGetStatus driverId merchantOpCityId = do
+callGetDLGetStatus :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> DTC.TransporterConfig -> Flow ()
+callGetDLGetStatus driverId merchantOpCityId transporterConfig = do
   latestReq <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing driverId DVC.DriverLicense
   whenJust latestReq $ \verificationReq -> do
     when (verificationReq.status == "pending" || verificationReq.status == "source_down_retrying") $ do
       -- statusHandler reaches this twice per render (getDLAndStatus + getProcessedDriverDocuments) and the
-      -- app polls status: dedupe to one getTask per requestId per window (key shared with reconcilePending).
-      firstPullInWindow <- Hedis.setNxExpire (SDO.getTaskPullKey verificationReq.requestId) (round SDO.getTaskPullWindow) ()
+      -- app polls status: dedupe to one getTask per requestId per window (key shared with reconcilePending,
+      -- so both paths must read docPullDedupeWindowSec from the same city's config).
+      firstPullInWindow <- Hedis.setNxExpire (SDO.getTaskPullKey verificationReq.requestId) transporterConfig.docPullDedupeWindowSec ()
       when firstPullInWindow $ do
-        allowed <- SDO.allowGetTaskAttempt verificationReq.requestId
+        allowed <- SDO.allowGetTaskAttempt transporterConfig.docPullMaxAttempts transporterConfig.docPullAttemptWindowSec verificationReq.requestId
         when allowed $ do
           rsp <- Verification.getTask merchantOpCityId KEV.HyperVergeRCDL (KEV.GetTaskReq (Just "checkDL") verificationReq.requestId) HVQuery.updateResponse
           case rsp of
@@ -1642,8 +1709,9 @@ getInProgressDriverDocuments ::
   DDVC.DocumentType ->
   [DVC.VehicleCategory] ->
   DocVerificationConfigs ->
+  PersonDocContext ->
   Flow (ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe Text)
-getInProgressDriverDocuments role driverId entityImagesInfo docType possibleVehicleCategories allDocVerificationConfigs = do
+getInProgressDriverDocuments role driverId entityImagesInfo docType possibleVehicleCategories allDocVerificationConfigs personCtx = do
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
       merchantId = entityImagesInfo.merchantOperatingCity.merchantId
       (mbS3Path, mbImageId) = getImageMetaFromLatestImage entityImagesInfo docType
@@ -1682,7 +1750,7 @@ getInProgressDriverDocuments role driverId entityImagesInfo docType possibleVehi
       mbStatus <- getOperatorPartnerCodeStatus role driverId
       return (fromMaybe NO_DOC_AVAILABLE mbStatus, Nothing, Nothing)
     DDVC.BotApproval -> do
-      mbStatus <- getBotApprovalStatusForPerson role driverId
+      mbStatus <- getBotApprovalStatusForPersonWithApproved role (personApprovedFlag role personCtx) (personEnabledFlag role personCtx)
       return (fromMaybe NO_DOC_AVAILABLE mbStatus, Nothing, Nothing)
     DDVC.BusinessLicense -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.BusinessLicense onlyImageLookup filteredDocVerificationConfigs
     DDVC.TaxiTransportLicense -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.TaxiTransportLicense onlyImageLookup filteredDocVerificationConfigs
@@ -1745,7 +1813,7 @@ getDLAndStatus driverId entityImagesInfo language useHVSdkForDL = do
       Nothing -> do
         if useHVSdkForDL == Just True
           then do
-            void $ withTryCatch "callGetDLGetStatus:getDLAndStatus" $ callGetDLGetStatus driverId merchantOpCityId
+            void $ withTryCatch "callGetDLGetStatus:getDLAndStatus" $ callGetDLGetStatus driverId merchantOpCityId entityImagesInfo.transporterConfig
             DLQuery.findByDriverId driverId
           else return Nothing
   (status, message) <-
@@ -1767,8 +1835,12 @@ getRCAndStatus driverId entityImagesInfo language = do
       (status, message) <- checkIfInVerification driverId entityImagesInfo DVC.VehicleRegistrationCertificate language
       return (status, Nothing, message)
     else do
-      mVehicleRCs <- RCQuery.findById `mapM` ((.rcId) <$> associations)
-      let vehicleRCs = catMaybes mVehicleRCs
+      -- One batched read for every linked RC, then reindexed through `associations`: `listToMaybe
+      -- vehicleRCs` below picks the fallback RC, so association order is load-bearing and the query's
+      -- result order is not it. A missing RC stays absent, as with the previous per-assoc findById.
+      rcs <- RCQueryExtra.findAllById ((.rcId) <$> associations)
+      let rcById = Map.fromList $ map (\rc -> (rc.id, rc)) rcs
+      let vehicleRCs = mapMaybe (\assoc -> Map.lookup assoc.rcId rcById) associations
       let mValidVehicleRC = find (\rc -> rc.verificationStatus == Documents.VALID) vehicleRCs
       case mValidVehicleRC of
         Just validVehicleRC -> do
@@ -1821,15 +1893,9 @@ verificationStatusWithMessage onboardingTryLimit imagesNum mbVerificationReqReco
   case mbVerificationReqRecord of
     Just req -> do
       mbRC <- case docType of
-        DVC.VehicleRegistrationCertificate -> do
-          registrationNoEither <- withTryCatch "decryptDocumentNumber:verificationStatusWithMessage" (decrypt req.documentNumber)
-          case registrationNoEither of
-            Left err -> do
-              logError $ "Error while decrypting document number: " <> (req.documentNumber & unEncrypted . encrypted) <> " with err: " <> show err
-              pure Nothing
-            Right registrationNo -> do
-              rcNoEnc <- encrypt registrationNo
-              RCQuery.findByCertificateNumberHash (rcNoEnc & hash)
+        -- documentNumber already carries hash(plaintext) -- EncryptedHashed sets it at construction --
+        -- which is what decrypting and re-encrypting recovered, minus the two passetto calls.
+        DVC.VehicleRegistrationCertificate -> RCQuery.findByCertificateNumberHash (req.documentNumber & hash)
         _ -> pure Nothing
 
       if req.status == "pending" || req.status == "source_down_retrying"

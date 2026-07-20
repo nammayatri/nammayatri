@@ -3,6 +3,7 @@ module Storage.Queries.DriverInformationExtra where
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
 import qualified Domain.Types.Common as Common
+import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverFlowStatus as DFS
 import Domain.Types.DriverInformation as DriverInfo
@@ -467,6 +468,18 @@ updateApproved approved driverId = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamDI.approved approved,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+
+-- | Set only docsVerificationStatus. Callers read the row to decide whether the status changed, so a
+--   full-row updateByPrimaryKey would write every other column back from that possibly-stale read
+--   (replica lag, or a concurrent write to verified/approved) and silently revert it.
+updateDocsVerificationStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DDVS.DocsVerificationStatus -> Id Person.Driver -> m ()
+updateDocsVerificationStatus docsVerificationStatus driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.docsVerificationStatus docsVerificationStatus,
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
