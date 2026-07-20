@@ -24,11 +24,27 @@ export interface RemoteSessionResponse {
 export interface RegistryResponse {
   devName?: string;
   caddyPort?: number;
+  contextApiPort?: number | null;
   dir?: string;
   error?: string;
 }
 
 export type RemoteSessionKind = 'deploy' | 'start' | 'clear-data' | 'cabal-clean';
+
+export interface DevboxAssignment {
+  id?: string;
+  machine?: string;
+  host?: string;
+  sshUser?: string;
+  port?: number;
+  remoteDir?: string;
+  copyMode?: 'rsync' | 'skip';
+  resources?: { cpu?: string; ram?: string; storage?: string };
+  usage?: { cpu?: string; ram?: string; storage?: string };
+  created?: boolean;
+  repinned?: boolean;
+  error?: string;
+}
 
 export interface RemoteStatus {
   id?: string;
@@ -87,6 +103,9 @@ export const remoteSyncCaddyPort = (t: RemoteTarget): Promise<RegistryResponse> 
 
 export const remoteCabalClean = (t: RemoteTarget): Promise<RemoteSessionResponse> =>
   json('/api/remote/cabal-clean', t);
+
+export const resolveDevbox = (forceNew = false): Promise<DevboxAssignment> =>
+  json(`/api/devbox/resolve${forceNew ? '?new=1' : ''}`);
 
 export interface MachineInfo {
   name: string;

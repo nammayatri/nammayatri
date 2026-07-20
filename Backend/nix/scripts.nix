@@ -61,7 +61,7 @@ _:
 
         run-cabal-build-devbox = {
           category = "Backend";
-          description = "Deploy the local repo to a dev-box worker and run cache-restore + cabal build all remotely, streaming output to this terminal.";
+          description = "Auto-assign a dev-box worker and run cache-restore + cabal build all remotely, streaming output here. Flags: --reassign (pick a fresh box), --clean/--no-clean (skip the cabal-clean prompt).";
           cdToProjectRoot = false;
           exec = ''
             export PATH="${lib.makeBinPath (with pkgs; [ curl jq rsync openssh git coreutils ])}:$PATH"
@@ -69,58 +69,86 @@ _:
 
             REPO_ROOT=$(git -C "''${FLAKE_ROOT}" rev-parse --show-toplevel)
             BASE_API="''${BASE_API:-http://34.100.155.111:8787}"
+            # Same pin file the test dashboard's local-api writes — so , run-cabal-build-devbox
+            # and the dashboard's Deploy/Start land on the SAME machine + /tmp/<id>/nammayatri.
+            ID_FILE="$REPO_ROOT/.devbox-id.json"
 
-            # ── (i) developer name → remote dir /tmp/<devName>/nammayatri ──
-            printf 'Enter developer name: ' >&2
-            read -r DEV_NAME
-            if ! [[ "$DEV_NAME" =~ ^[a-zA-Z0-9_-]+$ ]]; then
-              echo "unsafe developer name: $DEV_NAME" >&2; exit 1
-            fi
-            REMOTE_DIR="/tmp/''${DEV_NAME}/nammayatri"
+            # ── flags ──
+            REASSIGN=0; CLEAN_ARG=""
+            for a in "$@"; do
+              case "$a" in
+                --reassign) REASSIGN=1 ;;
+                --clean)    CLEAN_ARG=1 ;;
+                --no-clean) CLEAN_ARG=0 ;;
+              esac
+            done
 
             # ── cabal clean? wipe dist-newstyle so cache-restore pulls a fresh
             #    CI cache; default No = build on the existing dist-newstyle. ──
-            printf 'Run cabal clean first (wipe dist-newstyle for a fresh cache-restore)? [y/N]: ' >&2
-            read -r DO_CLEAN
-            CLEAN=0
-            case "$DO_CLEAN" in [yY]|[yY][eE][sS]) CLEAN=1 ;; esac
-
-            # ── (ii) list dev-box workers from the base-station API ──
-            mapfile -t BOXES < <(
-              curl -fsS --max-time 5 "$BASE_API/api/status" \
-              | jq -r '.workers[] | select(.type=="dev-box") | [(.name // ""), (.localIp // ""), (.awsIp // ""), (.username // "")] | join("|")'
-            )
-            if [ "''${#BOXES[@]}" -eq 0 ]; then
-              echo "No dev-box machines found at $BASE_API/api/status" >&2; exit 1
-            fi
-
-            # ── select: auto if exactly one, else interactive ──
-            if [ "''${#BOXES[@]}" -eq 1 ]; then
-              SEL="''${BOXES[0]}"
+            if [ -n "$CLEAN_ARG" ]; then
+              CLEAN="$CLEAN_ARG"
             else
-              echo "Available dev-box machines:" >&2
-              i=1
-              for row in "''${BOXES[@]}"; do
-                IFS='|' read -r n lip aip un <<<"$row"
-                printf '  %d) %-28s  %s  (user=%s)\n' "$i" "$n" "''${lip:-$aip}" "$un" >&2
-                i=$((i+1))
-              done
-              SEL=""
-              while [ -z "$SEL" ]; do
-                printf 'Select a machine [1-%d]: ' "''${#BOXES[@]}" >&2
-                read -r c
-                if [[ "$c" =~ ^[0-9]+$ ]] && [ "$c" -ge 1 ] && [ "$c" -le "''${#BOXES[@]}" ]; then
-                  SEL="''${BOXES[$((c-1))]}"
-                else
-                  echo "Invalid selection." >&2
-                fi
-              done
+              printf 'Run cabal clean first (wipe dist-newstyle for a fresh cache-restore)? [y/N]: ' >&2
+              read -r DO_CLEAN
+              CLEAN=0
+              case "$DO_CLEAN" in [yY]|[yY][eE][sS]) CLEAN=1 ;; esac
             fi
-            IFS='|' read -r NAME LOCAL_IP AWS_IP RUSER <<<"$SEL"
+
+            # ── auto-assign dev-box: reuse the machine pinned in .devbox-id.json,
+            #    else auto-pick the registered dev-box with the LOWEST RAM usage.
+            #    The developer id is derived from $USER + machine (no prompt).
+            #    --reassign, or a pinned machine that has left the fleet, forces a
+            #    fresh pick (and a new id). Machine is pinned by NAME; its IP is
+            #    re-resolved live every run, so DHCP changes don't break it. ──
+            PIN_MACHINE=""
+            if [ "$REASSIGN" -eq 0 ] && [ -f "$ID_FILE" ]; then
+              PIN_MACHINE=$(jq -r '.machine // ""' "$ID_FILE" 2>/dev/null || true)
+            fi
+
+            STATUS=$(curl -fsS --max-time 5 "$BASE_API/api/status") \
+              || { echo "base station API unreachable at $BASE_API" >&2; exit 1; }
+            SELROW=$(printf '%s' "$STATUS" | jq -r --arg pin "$PIN_MACHINE" '
+              [ .workers[]
+                | select(.type=="dev-box")
+                | { name:(.name//""), lip:(.localIp//""), aip:(.awsIp//""), user:(.username//""),
+                    pct:( (.usage.ram // "") as $r
+                          | if ($r|test("[0-9.]+%"))
+                            then ($r|capture("(?<p>[0-9.]+)%").p|tonumber) else 100 end ) } ]
+              | ( map(select(.name==$pin)) | .[0] ) as $pinned
+              | ( $pinned // (sort_by(.pct) | .[0]) ) as $sel
+              | if $sel==null then empty
+                else [ $sel.name, $sel.lip, $sel.aip, $sel.user,
+                       (if $pinned then "pin" else "auto" end) ] | join("|") end
+            ')
+            if [ -z "$SELROW" ]; then
+              echo "No dev-box machines registered at $BASE_API/api/status" >&2; exit 1
+            fi
+            IFS='|' read -r NAME LOCAL_IP AWS_IP RUSER PICKMODE <<<"$SELROW"
             HOST="''${LOCAL_IP:-$AWS_IP}"
             PORT=22
             if [ -z "$HOST" ]; then echo "dev-box '$NAME' has no reachable IP" >&2; exit 1; fi
-            echo "Selected dev-box: $NAME  host=$HOST  user=$RUSER  port=$PORT" >&2
+
+            # ── developer id: reuse the pinned id, else mint <user>-<machine>-<rand6> ──
+            DEV_ID=""
+            if [ "$PICKMODE" = "pin" ] && [ -f "$ID_FILE" ]; then
+              DEV_ID=$(jq -r '.id // ""' "$ID_FILE" 2>/dev/null || true)
+            fi
+            if [ -z "''${DEV_ID:-}" ]; then
+              LOCAL_USER=$(printf '%s' "''${USER:-dev}" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9')
+              [ -z "$LOCAL_USER" ] && LOCAL_USER=dev
+              MSLUG=$(printf '%s' "$NAME" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | tr -s '-')
+              MSLUG="''${MSLUG#-}"; MSLUG="''${MSLUG%-}"; MSLUG="''${MSLUG:0:24}"
+              RAND=$(head -c3 /dev/urandom | od -An -tx1 | tr -d ' \n')
+              DEV_ID="$LOCAL_USER-$MSLUG-$RAND"
+              jq -n --arg id "$DEV_ID" --arg m "$NAME" --arg su "$RUSER" \
+                    --arg lu "$LOCAL_USER" --arg ca "$(date +%Y-%m-%dT%H:%M:%S)" \
+                '{id:$id, machine:$m, sshUser:$su, localUser:$lu, createdAt:$ca}' > "$ID_FILE"
+              echo "Auto-assigned dev-box: $NAME (lowest RAM usage) → id $DEV_ID [pinned in .devbox-id.json]" >&2
+            else
+              echo "Using pinned dev-box: $NAME → id $DEV_ID [.devbox-id.json]" >&2
+            fi
+            REMOTE_DIR="/tmp/$DEV_ID/nammayatri"
+            echo "Target: $RUSER@$HOST:$REMOTE_DIR  port=$PORT" >&2
 
             # ── ssh key discovery; generate a key if the user has none ──
             SSH_KEY=""
@@ -134,7 +162,7 @@ _:
               if [ -z "$SSH_KEY" ]; then
                 echo "No SSH key found in ~/.ssh — generating an ed25519 key pair ..." >&2
                 mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
-                ssh-keygen -t ed25519 -N "" -f "$HOME/.ssh/id_ed25519" -C "$DEV_NAME@devbox" >&2
+                ssh-keygen -t ed25519 -N "" -f "$HOME/.ssh/id_ed25519" -C "$DEV_ID@devbox" >&2
                 SSH_KEY="$HOME/.ssh/id_ed25519"
                 SSH_OPTS+=(-i "$SSH_KEY")
               fi

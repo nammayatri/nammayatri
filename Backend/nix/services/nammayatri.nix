@@ -472,6 +472,7 @@ in
                 PRODUCER_TYPE = "Rider";
                 GET_MY_SCHEMA = "atlas_app";
                 METRICS_PORT = toString ports.rider-producer-metrics;
+                PRODUCER_HEALTHCHECK_PORT = toString ports.rider-producer-healthcheck;
               };
               depends_on = {
                 "nammayatri-init".condition = "process_completed_successfully";
@@ -1593,7 +1594,10 @@ in
             };
 
             producer-exe = {
-              environment.METRICS_PORT = toString ports.producer-metrics;
+              environment = {
+                METRICS_PORT = toString ports.producer-metrics;
+                PRODUCER_HEALTHCHECK_PORT = toString ports.producer-healthcheck;
+              };
             };
           }
         ];
