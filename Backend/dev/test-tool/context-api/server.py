@@ -1643,7 +1643,7 @@ def run_startup_local_testing_data():
 
 DB_CONFIG = {
     "host": os.environ.get("DB_HOST", "localhost"),
-    "port": int(os.environ.get("DB_PORT", "5434")),
+    "port": int(os.environ["DB_PORT"]) if os.environ.get("DB_PORT") else _svc_port("db-primary", 5434),
     "dbname": os.environ.get("DB_NAME", "atlas_dev"),
     "user": os.environ.get("DB_USER", os.environ.get("USER", "atlas")),
     "password": os.environ.get("DB_PASS", ""),
