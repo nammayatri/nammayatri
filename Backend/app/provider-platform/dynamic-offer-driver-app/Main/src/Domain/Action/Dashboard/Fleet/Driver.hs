@@ -2654,7 +2654,8 @@ getFleetOrOperatorInfo person = do
             docsVerificationStatus = Nothing,
             address = Nothing,
             addressState = Nothing,
-            addressDocumentType = Nothing
+            addressDocumentType = Nothing,
+            approved = Just True
           }
     Just fleetOwnerInfo -> do
       fleetConfig <- QFC.findByPrimaryKey personId
