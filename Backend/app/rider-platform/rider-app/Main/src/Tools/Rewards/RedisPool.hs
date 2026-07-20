@@ -49,7 +49,7 @@ claimFromPool ::
   Id DRCmp.RewardCampaign ->
   Id DRC.RewardCohort ->
   m (Maybe Text)
-claimFromPool cId coId = Hedis.withCrossAppRedis $ do
+claimFromPool cId coId = Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ do
   mbCode <- Hedis.rPop (poolKey cId coId)
   case mbCode of
     Nothing -> pure Nothing
@@ -66,7 +66,7 @@ removeFromInflight ::
   Text ->
   m ()
 removeFromInflight cId coId code =
-  Hedis.withCrossAppRedis $ void $ Hedis.zRem (inflightKey cId coId) [code]
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ void $ Hedis.zRem (inflightKey cId coId) [code]
 
 pushBackToPool ::
   (Hedis.HedisFlow m env) =>
@@ -75,7 +75,7 @@ pushBackToPool ::
   Text ->
   m ()
 pushBackToPool cId coId code =
-  Hedis.withCrossAppRedis $ void $ Hedis.lPush (poolKey cId coId) (NE.singleton code)
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ void $ Hedis.lPush (poolKey cId coId) (NE.singleton code)
 
 staleInflightCodes ::
   (Hedis.HedisFlow m env, MonadTime m) =>
@@ -83,7 +83,7 @@ staleInflightCodes ::
   Id DRC.RewardCohort ->
   Int ->
   m [Text]
-staleInflightCodes cId coId maxAgeSeconds = Hedis.withCrossAppRedis $ do
+staleInflightCodes cId coId maxAgeSeconds = Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ do
   now <- getCurrentTime
   let cutoff = realToFrac (utcTimeToPOSIXSeconds now) - fromIntegral maxAgeSeconds :: Double
   codes <- Hedis.zRangeByScore (inflightKey cId coId) 0 cutoff
@@ -95,7 +95,7 @@ poolSize ::
   Id DRC.RewardCohort ->
   m Integer
 poolSize cId coId =
-  Hedis.withCrossAppRedis $ Hedis.lLen (poolKey cId coId)
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.lLen (poolKey cId coId)
 
 bulkSeedPool ::
   (Hedis.HedisFlow m env) =>
@@ -104,7 +104,7 @@ bulkSeedPool ::
   [Text] ->
   m ()
 bulkSeedPool cId coId codes =
-  Hedis.withCrossAppRedis $
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $
     case NE.nonEmpty codes of
       Nothing -> pure ()
       Just ne -> void $ Hedis.lPush (poolKey cId coId) ne
