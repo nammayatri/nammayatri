@@ -662,6 +662,7 @@ MerchantServiceUsageConfig:
     llmChatCompletion: LLMChatCompletionService
     totoVerificationPriorityList: "Maybe [VerificationService]"
     challanProvidersPriorityList: "Maybe [ChallanSearchService]"
+    imageExtractionProvidersPriorityList: "Maybe [VerificationService]"
 
   beamType:
     llmChatCompletion: Maybe LLMChatCompletionService
@@ -723,6 +724,7 @@ MerchantServiceUsageConfig:
     sendSearchRequestToDriver: "text[]"
     verificationProvidersPriorityList: "text[]"
     categoryBasedVerificationPriorityList: jsonb
+    imageExtractionProvidersPriorityList: "text[]"
     driverBackgroundVerificationService: character varying(30)
     serviceName: VARCHAR(50)
     rectifyDistantPointsFailure: text
