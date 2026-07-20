@@ -787,7 +787,7 @@ mkFleetOwnerDocumentVerificationConfigAPIEntity language Domain.Types.FleetOwner
         isMandatoryForEnabling = fromMaybe isMandatory isMandatoryForEnabling,
         documentFields = Nothing,
         documentFlowGrouping = castDocumentFlowGrouping DVC.STANDARD,
-        documentOnboardingStage = Nothing,
+        documentOnboardingStage = castDocumentOnboardingStage <$> documentOnboardingStage,
         isReminderSupported = Nothing,
         isApprovalSupported = Nothing,
         rolesAllowedToUploadDocument = fmap (mapMaybe castPersonRoleToDashboardAccessType) rolesAllowedToUploadDocument,
