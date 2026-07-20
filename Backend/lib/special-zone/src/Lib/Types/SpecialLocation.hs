@@ -211,3 +211,9 @@ pickupGateIdFromArea :: Area -> Maybe Text
 pickupGateIdFromArea (Pickup _ mbGateId) = mbGateId
 pickupGateIdFromArea (PickupDrop _ _ mbGateId) = mbGateId
 pickupGateIdFromArea _ = Nothing
+
+pickupSpecialZoneIdFromArea :: Area -> Maybe Text
+pickupSpecialZoneIdFromArea (Pickup slId _) = Just slId.getId
+pickupSpecialZoneIdFromArea (Drop _) = Nothing
+pickupSpecialZoneIdFromArea (PickupDrop slId _ _) = Just slId.getId
+pickupSpecialZoneIdFromArea Default = Nothing
