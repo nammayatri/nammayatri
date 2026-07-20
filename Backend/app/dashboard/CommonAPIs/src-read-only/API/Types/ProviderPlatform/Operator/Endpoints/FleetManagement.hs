@@ -21,6 +21,7 @@ import Servant.Client
 data FleetInfo = FleetInfo
   { id :: Kernel.Types.Id.Id Dashboard.Common.Person,
     name :: Kernel.Prelude.Text,
+    fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     enabled :: Kernel.Prelude.Bool,
     isActive :: Kernel.Prelude.Bool,
     fleetType :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetType,
