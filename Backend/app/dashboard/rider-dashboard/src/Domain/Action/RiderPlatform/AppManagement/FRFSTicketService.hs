@@ -11,6 +11,8 @@ module Domain.Action.RiderPlatform.AppManagement.FRFSTicketService
     getFRFSTicketServiceCustomerFrfsSearchQuote,
     postFRFSTicketServiceCustomerFrfsQuoteV2Confirm,
     getFRFSTicketServiceCustomerFrfsBookingStatus,
+    getFRFSTicketServiceCustomerFrfsBookingPaymentAttempts,
+    getFRFSTicketServiceCustomerFrfsPaymentAttempts,
     getFRFSTicketServiceCustomerFrfsRouteSeatLayout,
     getFRFSTicketServiceCustomerFrfsTripRouteSeats,
     postFRFSTicketServiceCustomerFrfsRouteServiceability,
@@ -118,3 +120,13 @@ postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation :: (Kernel.Types.
 postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation merchantShortId opCity apiTokenInfo customerId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.fRFSTicketServiceDSL.postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation) customerId req
+
+getFRFSTicketServiceCustomerFrfsBookingPaymentAttempts :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSBookingPaymentAttemptsAPIRes)
+getFRFSTicketServiceCustomerFrfsBookingPaymentAttempts merchantShortId opCity apiTokenInfo customerId bookingId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.fRFSTicketServiceDSL.getFRFSTicketServiceCustomerFrfsBookingPaymentAttempts) customerId bookingId
+
+getFRFSTicketServiceCustomerFrfsPaymentAttempts :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSPaymentAttemptsListAPIRes)
+getFRFSTicketServiceCustomerFrfsPaymentAttempts merchantShortId opCity apiTokenInfo customerId limit offset = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.fRFSTicketServiceDSL.getFRFSTicketServiceCustomerFrfsPaymentAttempts) customerId limit offset
