@@ -745,6 +745,7 @@ cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg = do
             validTill = booking.validTill,
             vehicleType = booking.vehicleType,
             integratedBppConfigId = booking.integratedBppConfigId,
+            bppOrderId = booking.bppOrderId,
             isSpotBooking = booking.isSpotBooking
           }
   (regToken, _) <- getRegToken booking.riderId partnerOrg.orgId regPOCfg booking.merchantId True

@@ -181,6 +181,7 @@ types:
     isFareChanged: Maybe Bool
     googleWalletJWTUrl: Maybe Text
     integratedBppConfigId: Id IntegratedBPPConfig
+    bppOrderId: Maybe Text
     isSpotBooking: Maybe Bool
     derive: "Show"
 

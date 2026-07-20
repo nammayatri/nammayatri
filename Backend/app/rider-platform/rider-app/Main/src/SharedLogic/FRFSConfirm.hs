@@ -541,6 +541,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
           isFareChanged = booking.isFareChanged,
           googleWalletJWTUrl = booking.googleWalletJWTUrl,
           integratedBppConfigId = booking.integratedBppConfigId,
+          bppOrderId = booking.bppOrderId,
           isSpotBooking = booking.isSpotBooking,
           ..
         }
