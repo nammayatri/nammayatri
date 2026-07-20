@@ -70,4 +70,8 @@ instance IsHTTPError S3Error where
     S3TooManyRequests -> "S3_TOO_MANY_REQUESTS"
     S3ServerError -> "S3_SERVER_ERROR"
 
+  toHttpCode = \case
+    S3NotFound -> E404
+    _ -> E500
+
 instance IsAPIError S3Error
