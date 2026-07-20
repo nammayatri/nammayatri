@@ -89,6 +89,7 @@ import qualified SharedLogic.CancellationSignals as CancellationSignals
 import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.Finance.GstBreakdown
 import SharedLogic.Finance.Wallet
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.MetricsLabels as SML
@@ -98,7 +99,6 @@ import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified SharedLogic.UserCancellationDues as UserCancellationDues
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -658,7 +658,6 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
   case riderId of
     Nothing -> logError "createCancellationLedgerEntries: riderId not present in booking"
     Just rid -> do
-      merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
       let driverOrFleetPersonId = fromMaybe ride.driverId ride.fleetOwnerId
       mbPanCard <- QPanCard.findByDriverId driverOrFleetPersonId
       driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
@@ -709,6 +708,13 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
                 DMPM.Cash -> pure False
                 _ -> pure True
       ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
+      rideGstBreakdown <-
+        computeGstBreakdownForRideOwner
+          rideGst
+          booking.fromLocation
+          ride.fleetOwnerId
+          ride.driverId
+          gstOnCancellation
       result <- runFinance ctx $ do
         mapM_
           ( \(amt, ref, dest) -> do
@@ -726,14 +732,7 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
               issuedToId = rid.getId,
               issuedToName = booking.riderName,
               issuedToAddress = booking.fromLocation.address.fullAddress,
-              gstBreakdown =
-                computeGstBreakdownByPlace
-                  rideGst
-                  (Just $ show merchantOperatingCity.state)
-                  booking.fromLocation.address.state
-                  (Just $ show merchantOperatingCity.city)
-                  booking.fromLocation.address.city
-                  gstOnCancellation,
+              gstBreakdown = rideGstBreakdown,
               lineItems =
                 let clubVatInclusive = maybe False (.driverInvoiceLineItemsVatInclusive) transporterConfig.invoiceConfig
                     inclusiveCancellation = baseCancellation + gstOnCancellation
