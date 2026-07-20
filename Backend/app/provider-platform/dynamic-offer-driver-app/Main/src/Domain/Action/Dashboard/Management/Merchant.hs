@@ -1262,6 +1262,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         onlyImageVerificationStatusLookupRequired = Nothing,
         faceMatchSourceDoc = Nothing,
         markImageValidOnValidationSkip = Nothing,
+        documentOnboardingStage = Nothing,
         ..
       }
   where
