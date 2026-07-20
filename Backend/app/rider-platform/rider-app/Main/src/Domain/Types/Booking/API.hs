@@ -75,6 +75,7 @@ import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
@@ -568,7 +569,11 @@ buildBookingAPIEntity booking personId dontNeedFareBreakup = do
     if booking.status == CANCELLED
       then QBCR.findByRideBookingId booking.id
       else return Nothing
-  refunds <- maybe (pure []) (getRideRefunds . (.id)) mbRide
+  -- Surface refunds only when the city has payment refunds enabled; otherwise the feature is off, so
+  -- return none. Same flag RidePayment guards refund initiation with (enablePaymentRefunds).
+  mbRiderConfig <- CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId
+  let refundsEnabled = fromMaybe False (mbRiderConfig >>= (.enablePaymentRefunds))
+  refunds <- if refundsEnabled then maybe (pure []) (getRideRefunds . (.id)) mbRide else pure []
   makeBookingAPIEntity personId booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon (makeCancellationReasonAPIEntity <$> mbCancellationReason) refunds
 
 makeRideRefundInfo :: DRefunds.Refunds -> RideRefundInfo
