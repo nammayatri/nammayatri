@@ -556,6 +556,7 @@ in  { esqDBCfg
     , blackListedJobs = [] : List Text
     , emailServiceConfig
     , ttenTokenCacheExpiry = +86390
+    , imageExtractionTimeoutSec = +20
     , masterCloudProxyConfig =
       { masterUrl = None Text, masterSecret = Some "123" }
     , enableLtsPoolDataForPooling = True
