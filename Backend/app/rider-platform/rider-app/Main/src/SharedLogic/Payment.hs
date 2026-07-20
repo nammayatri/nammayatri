@@ -1021,10 +1021,8 @@ chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType p
         case result of
           Right () -> do
             logInfo $ "Settled " <> show (length entryIds) <> " ledger entries for ride: " <> rideId.getId <> " reason: " <> settledReason
+            -- markRideInvoicePaid now closes both the Ride and (if any) RideCancellation invoice.
             RidePaymentFinance.markRideInvoicePaid rideId.getId
-            -- Whatever the cancellation fee was collected on -- its own intent, a dues payment, or a
-            -- later ride's fare -- its entries settle here, so close its invoice with them.
-            RidePaymentFinance.markCancellationFeeInvoicePaidForRide rideId.getId
           Left err -> logError $ "Failed to settle ledger entries for ride " <> rideId.getId <> ": " <> show err
       else do
         -- Mark entries as DUE on failed capture so getDueAmount picks them up

@@ -240,8 +240,6 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
               customerExtraFee = Nothing,
               nightShiftCharge = Nothing,
               customerCancellationDues = searchReq.customerCancellationDues,
-              -- display estimate only; the real quote (respondQuote) derives the split
-              customerCancellationDuesTax = Nothing,
               nightShiftOverlapChecking = DTC.isFixedNightCharge tripQuoteDetail.tripCategory,
               timeDiffFromUtc = Just transporterConfig.timeDiffFromUtc,
               tollCharges = Nothing,

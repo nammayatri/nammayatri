@@ -1014,7 +1014,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         settleResult <- RidePaymentFinance.settleRidePaymentLedger cashLedgerCtx settleableIds RidePaymentFinance.settledReasonRidePayment
         case settleResult of
           Right () -> do
-            RidePaymentFinance.markCancellationFeeInvoicePaidForRide ride.id.getId
+            RidePaymentFinance.markRideInvoicePaid ride.id.getId
             logInfo $ "Cash ride BAP ledger settled for ride: " <> ride.id.getId <> " invoiceId=" <> show upsertRes.invoiceId
           Left err -> logError $ "Cash ride settle failed: " <> show err
     else do

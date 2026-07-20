@@ -23,7 +23,6 @@ module Domain.Action.Beckn.Search
     handler,
     validateRequest,
     buildEstimate,
-    getCarriedDuesTax,
     getIsInterCity,
     searchTxnDedupKey,
   )
@@ -56,7 +55,6 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RefereeLink as DRL
 import Domain.Types.RideRoute
-import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.RiderPreferredOption as DRPO
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.ServiceTierType as STT
@@ -119,7 +117,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantState as CQMS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
-import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.FareParameters as QFP
@@ -717,18 +714,6 @@ resolveGateNavigationInstruction gateMap mbArea tripCategoryKey = do
   gate <- M.lookup gateId gateMap
   GExtra.navigationInstructionFor gate tripCategoryKey
 
--- | VAT portion of the dues about to be carried into this quote's fare:
---   read the PENDING dues rows, let 'FC.allocateCarriedDuesTax' split
---   the gross. Skips the read when nothing is carried (the common case).
-getCarriedDuesTax :: (CacheFlow m r, EsqDBFlow m r) => Maybe (Id DRD.RiderDetails) -> Maybe HighPrecMoney -> m (Maybe HighPrecMoney)
-getCarriedDuesTax mbRiderId mbGrossDues = case (mbRiderId, mbGrossDues) of
-  (Just riderId, Just gross) | gross > 0 -> do
-    rows <- QCDD.findAllPendingByRiderId riderId
-    let feeSum = sum [fromMaybe 0 r.cancellationFee | r <- rows]
-        taxSum = sum [fromMaybe 0 r.cancellationFeeTax | r <- rows]
-    pure $ FC.allocateCarriedDuesTax gross (feeSum, taxSum)
-  _ -> pure Nothing
-
 buildQuote ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -757,7 +742,6 @@ buildQuote ::
 buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled returnTime roundTrip mbDistance mbDuration specialLocationTag mbTollInfo isCustomerPrefferedSearchRoute isBlockedRoute transporterConfig navGateMap nightShiftOverlapChecking vehicleServiceTierItem fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance
       (vehicleTollCharges, vehicleTollNames, _) = tollDetailsForVehicleServiceTier mbTollInfo fullFarePolicy.vehicleServiceTier
-  customerCancellationDuesTax <- getCarriedDuesTax searchRequest.riderId searchRequest.customerCancellationDues
   fareParams <-
     FC.calculateFareParameters
       CalculateFareParametersParams
@@ -776,7 +760,6 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
           nightShiftCharge = Nothing,
           estimatedCongestionCharge = Nothing,
           customerCancellationDues = searchRequest.customerCancellationDues,
-          customerCancellationDuesTax,
           nightShiftOverlapChecking = nightShiftOverlapChecking,
           estimatedDistance = searchRequest.estimatedDistance,
           estimatedRideDuration = searchRequest.estimatedDuration,
@@ -852,7 +835,6 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
   let dist = fromMaybe 0 mbDistance -- TODO: Fix Later
       isAmbulanceEstimate = isAmbulanceTrip fullFarePolicy.tripCategory
       (vehicleTollCharges, vehicleTollNames, vehicleTollIds) = tollDetailsForVehicleServiceTier mbTollInfo fullFarePolicy.vehicleServiceTier
-  customerCancellationDuesTax <- getCarriedDuesTax (mbSearchReq >>= (.riderId)) (mbSearchReq >>= (.customerCancellationDues))
   (minFareParams, maxFareParams) <- do
     let params =
           CalculateFareParametersParams
@@ -870,7 +852,6 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
               petCharges = Nothing,
               nightShiftCharge = Nothing,
               customerCancellationDues = mbSearchReq >>= (.customerCancellationDues),
-              customerCancellationDuesTax,
               estimatedCongestionCharge = Nothing,
               nightShiftOverlapChecking = nightShiftOverlapChecking,
               estimatedDistance = Nothing,

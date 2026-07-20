@@ -2050,7 +2050,6 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
                 DFarePolicy.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
               } ::
               DFarePolicy.FullFarePolicy
-      customerCancellationDuesTax <- getCarriedDuesTax searchReq.riderId searchReq.customerCancellationDues
       fareParams <- do
         FC.calculateFareParameters
           CalculateFareParametersParams
@@ -2069,7 +2068,6 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               petCharges = if isJust searchTry.petCharges then farePolicy.petCharges else Nothing,
               nightShiftCharge = Nothing,
               customerCancellationDues = searchReq.customerCancellationDues,
-              customerCancellationDuesTax,
               tollCharges = searchReq.tollCharges,
               estimatedRideDuration = searchReq.estimatedDuration,
               nightShiftOverlapChecking = DTC.isFixedNightCharge searchTry.tripCategory,

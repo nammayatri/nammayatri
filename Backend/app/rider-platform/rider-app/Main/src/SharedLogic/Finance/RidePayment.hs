@@ -136,7 +136,6 @@ module SharedLogic.Finance.RidePayment
     settledRefundByComponent,
     createPendingCancellationFeeLedger,
     markCancellationFeeInvoicePaid,
-    markCancellationFeeInvoicePaidForRide,
     voidRideInvoice,
     markRideInvoicePaid,
     markRideInvoiceIssued,
@@ -950,27 +949,16 @@ markRideInvoicePaid ::
   m ()
 markRideInvoicePaid rideId = do
   rideEntries <- findRidePaymentEntries rideId
-  let settledEntry = find (\e -> e.referenceType == ridePaymentRefRideFare && e.status == LE.SETTLED) rideEntries
-  whenJust settledEntry $ \entry -> do
-    mbInvoice <- FInvoiceService.getInvoiceForEntry entry.id
-    whenJust mbInvoice $ \inv -> do
-      FInvoiceService.updateInvoiceStatus inv.id FInvoice.Paid
-      logInfo $ "Marked Ride invoice as Paid for rideId: " <> rideId
-
--- | Mark the RideCancellation invoice as Paid for a rideId. Unlike 'markCancellationFeeInvoicePaid',
---   usable from the ride capture path, which has no invoice id and may be retrying over existing entries.
-markCancellationFeeInvoicePaidForRide ::
-  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
-  Text -> -- rideId
-  m ()
-markCancellationFeeInvoicePaidForRide rideId = do
-  rideEntries <- findRidePaymentEntries rideId
-  let settledEntry = find (\e -> e.referenceType == ridePaymentRefCancellationFee && e.status == LE.SETTLED) rideEntries
-  whenJust settledEntry $ \entry -> do
-    mbInvoice <- FInvoiceService.getInvoiceForEntry entry.id
-    whenJust mbInvoice $ \inv -> do
-      FInvoiceService.updateInvoiceStatus inv.id FInvoice.Paid
-      logInfo $ "Marked cancellation fee invoice as Paid for rideId: " <> rideId
+  -- Close the Ride invoice and, when a cancellation fee was also collected on this ride
+  -- (its own intent, a dues payment, or a later ride's fare), the RideCancellation invoice —
+  -- both settle through the same capture, so one commonised pass handles them.
+  forM_ [ridePaymentRefRideFare, ridePaymentRefCancellationFee] $ \refType -> do
+    let settledEntry = find (\e -> e.referenceType == refType && e.status == LE.SETTLED) rideEntries
+    whenJust settledEntry $ \entry -> do
+      mbInvoice <- FInvoiceService.getInvoiceForEntry entry.id
+      whenJust mbInvoice $ \inv -> do
+        FInvoiceService.updateInvoiceStatus inv.id FInvoice.Paid
+        logInfo $ "Marked invoice " <> inv.id.getId <> " (" <> refType <> ") as Paid for rideId: " <> rideId
 
 -- | Mark the Ride invoice as Issued when capture fails (entries now DUE for collection).
 markRideInvoiceIssued ::
