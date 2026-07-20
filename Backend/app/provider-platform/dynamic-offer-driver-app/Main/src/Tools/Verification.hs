@@ -84,6 +84,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Forkable (runWithFallbackAndTimeout)
 import Storage.Beam.GovtDataRC ()
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
@@ -250,12 +251,21 @@ getServiceConfig merchantOptCityId cfg = case cfg of
       _ -> throwError $ InternalError "Unknown Service Config"
 
 validateImage ::
-  ServiceFlow m r =>
+  ( ServiceFlow m r,
+    Forkable m,
+    HasField "imageExtractionTimeoutSec" r Seconds
+  ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   ValidateImageReq ->
   m ValidateImageResp
-validateImage = runWithServiceConfig Verification.validateImage (.verificationService)
+validateImage _merchantId merchantOpCityId req = do
+  msuc <- getMerchantServiceUsageConfig merchantOpCityId
+  timeoutSec <- asks ((.getSeconds) . (.imageExtractionTimeoutSec))
+  let providers = fromMaybe [msuc.verificationService] msuc.imageExtractionProvidersPriorityList
+  runWithFallbackAndTimeout "validateImage" providers timeoutSec (const True) $ \provider -> do
+    cfg <- getVerificationServiceConfig merchantOpCityId provider
+    Verification.validateImage cfg req
 
 validateFaceImage ::
   ServiceFlow m r =>
@@ -266,12 +276,16 @@ validateFaceImage ::
 validateFaceImage = runWithServiceConfig Verification.validateFaceImage (.faceVerificationService)
 
 extractRCImage ::
-  ServiceFlow m r =>
+  ( ServiceFlow m r,
+    Forkable m,
+    HasField "imageExtractionTimeoutSec" r Seconds
+  ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   ExtractRCImageReq ->
   m ExtractRCImageResp
-extractRCImage = runWithServiceConfig Verification.extractRCImage (.verificationService)
+extractRCImage _merchantId merchantOpCityId req =
+  Verification.extractRCImage (mkImageExtractionHandler merchantOpCityId) req
 
 extractPanImage ::
   ServiceFlow m r =>
@@ -306,12 +320,31 @@ nameCompare ::
 nameCompare = runWithServiceConfig Verification.nameCompare (.verificationService)
 
 extractDLImage ::
-  ServiceFlow m r =>
+  ( ServiceFlow m r,
+    Forkable m,
+    HasField "imageExtractionTimeoutSec" r Seconds
+  ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   ExtractDLImageReq ->
   m ExtractDLImageResp
-extractDLImage = runWithServiceConfig Verification.extractDLImage (.verificationService)
+extractDLImage _merchantId merchantOpCityId req =
+  Verification.extractDLImage (mkImageExtractionHandler merchantOpCityId) req
+
+mkImageExtractionHandler ::
+  ( ServiceFlow m r,
+    HasField "imageExtractionTimeoutSec" r Seconds
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Verification.ImageExtractionHandler m
+mkImageExtractionHandler merchantOpCityId =
+  Verification.ImageExtractionHandler
+    { getProvidersPriorityList = do
+        msuc <- getMerchantServiceUsageConfig merchantOpCityId
+        pure $ fromMaybe [msuc.verificationService] msuc.imageExtractionProvidersPriorityList,
+      getProviderTimeout = asks ((.getSeconds) . (.imageExtractionTimeoutSec)),
+      getProviderConfig = getVerificationServiceConfig merchantOpCityId
+    }
 
 verifySdkResp ::
   ServiceFlow m r =>
@@ -345,18 +378,26 @@ runWithServiceConfig ::
   req ->
   m resp
 runWithServiceConfig func getCfg _merchantId merchantOpCityId req = do
-  merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
-      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  merchantServiceUsageConfig <- getMerchantServiceUsageConfig merchantOpCityId
   callService merchantOpCityId (getCfg merchantServiceUsageConfig) func req
+
+getMerchantServiceUsageConfig :: ServiceFlow m r => Id DMOC.MerchantOperatingCity -> m MerchantServiceUsageConfig
+getMerchantServiceUsageConfig merchantOpCityId =
+  CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+    >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
 
 callService :: ServiceFlow m r => Id DMOC.MerchantOperatingCity -> VerificationService -> (VerificationServiceConfig -> req -> m resp) -> req -> m resp
 callService merchantOpCityId vsc func req = do
+  vsc' <- getVerificationServiceConfig merchantOpCityId vsc
+  func vsc' req
+
+getVerificationServiceConfig :: ServiceFlow m r => Id DMOC.MerchantOperatingCity -> VerificationService -> m VerificationServiceConfig
+getVerificationServiceConfig merchantOpCityId vsc = do
   merchantServiceConfig <-
     CQMSC.findByServiceAndCity (DMSC.VerificationService vsc) merchantOpCityId
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId <> " Service : " <> T.pack (show vsc))
   case merchantServiceConfig.serviceConfig of
-    DMSC.VerificationServiceConfig vsc' -> func vsc' req
+    DMSC.VerificationServiceConfig vsc' -> pure vsc'
     _ -> throwError $ InternalError "Unknown Service Config"
 
 -- DigiLocker specific functions
