@@ -23,6 +23,26 @@ import Storage.Queries.OrphanInstances.DriverFee ()
 
 -- Extra code goes here --
 
+-- | Driver fees created in the given time range for a merchant / operating city.
+--   Used by the postpaid recon recipe framework — filters purely on time,
+--   status is applied downstream in the recipe.
+findByMerchantAndCreatedAtRange ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Text -> -- merchantId
+  Text -> -- merchantOperatingCityId
+  UTCTime ->
+  UTCTime ->
+  m [DriverFee]
+findByMerchantAndCreatedAtRange merchantId merchantOperatingCityId fromTime toTime =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
+          Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId),
+          Se.Is BeamDF.createdAt $ Se.GreaterThanOrEq fromTime,
+          Se.Is BeamDF.createdAt $ Se.LessThan toTime
+        ]
+    ]
+
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m (Maybe DriverFee)
 findById (Id driverFeeId) = findOneWithKV [Se.Is BeamDF.id $ Se.Eq driverFeeId]
 

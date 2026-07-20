@@ -8,7 +8,6 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
-import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport
 import qualified Tools.Beam.UtilsTH
 
 data PgPayoutSettlementReport = PgPayoutSettlementReport
@@ -36,8 +35,6 @@ data PgPayoutSettlementReport = PgPayoutSettlementReport
     payoutCustomerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payoutRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rawData :: Kernel.Prelude.Maybe Data.Aeson.Value,
-    reconMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    reconStatus :: Lib.Finance.Domain.Types.PgPaymentSettlementReport.ReconStatus,
     referenceType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rrn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     settlementAmount :: Kernel.Types.Common.HighPrecMoney,

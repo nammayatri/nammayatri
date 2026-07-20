@@ -477,6 +477,8 @@ library
       SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout
       SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout
       SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation
+      SharedLogic.Allocator.Jobs.Reconciliation.ReconciliationScheduler
+      SharedLogic.Allocator.Jobs.Reconciliation.ReconciliationSweep
       SharedLogic.Allocator.Jobs.Reminder.ProcessReminder
       SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyBAP
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate
@@ -555,7 +557,15 @@ library
       SharedLogic.Finance.EInvoice
       SharedLogic.Finance.InvoiceRegeneration
       SharedLogic.Finance.Prepaid
-      SharedLogic.Finance.Reconciliation
+      SharedLogic.Finance.Reconciliation.EntitySync
+      SharedLogic.Finance.Reconciliation.Recipes.PostpaidDriverFeeVsPaymentOrder
+      SharedLogic.Finance.Reconciliation.Recipes.PrepaidDsrVsLedger
+      SharedLogic.Finance.Reconciliation.Recipes.PrepaidDsrVsSubscription
+      SharedLogic.Finance.Reconciliation.Recipes.PrepaidDssrVsSubscription
+      SharedLogic.Finance.Reconciliation.Recipes.PrepaidPgPaymentVsSubscription
+      SharedLogic.Finance.Reconciliation.Recipes.PrepaidPgPayoutVsPayoutRequest
+      SharedLogic.Finance.Reconciliation.Recipes.PrepaidSubscriptionPurchaseVsTransaction
+      SharedLogic.Finance.Reconciliation.SubscriptionMeta
       SharedLogic.Finance.SubscriptionPurchase
       SharedLogic.Finance.Wallet
       SharedLogic.Fleet

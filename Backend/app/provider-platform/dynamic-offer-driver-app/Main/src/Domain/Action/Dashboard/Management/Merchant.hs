@@ -170,6 +170,7 @@ import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Reconciliation.Job
 import qualified Lib.GateInfo.Geometry as GGeom
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
@@ -183,8 +184,8 @@ import qualified MerchantDocuments.Domain.Action.UI.MerchantDocument as SMD
 import qualified MerchantDocuments.Domain.Types.MerchantDocument as DMD
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
-import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, ReconciliationJobData, ScheduledBatchPayoutJobData, SupplyDemandRequestJobData)
-import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
+import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, ScheduledBatchPayoutJobData, SupplyDemandRequestJobData)
+import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool -- still needed for BatchSplitByPickupDistance, OnRideRadiusConfig
 import qualified SharedLogic.DriverFee as SDF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
@@ -483,10 +484,14 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         Just Common.ReconciliationTrigger -> do
-          let jobData' = decodeFromText jobDataRaw :: Maybe ReconciliationJobData
+          let jobData' = decodeFromText jobDataRaw :: Maybe Lib.Finance.Reconciliation.Job.RecipeJobInput
           case jobData' of
             Just jobData -> do
-              createJobIn @_ @'Reconciliation (Just jobData.merchantId) (Just jobData.merchantOperatingCityId) diffTimeS (jobData :: ReconciliationJobData)
+              createJobIn @_ @'Reconciliation
+                (Just (Id jobData.scope.merchantId))
+                (Just (Id jobData.scope.merchantOperatingCityId))
+                diffTimeS
+                (jobData :: Lib.Finance.Reconciliation.Job.RecipeJobInput)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         Just Common.ScheduledBatchPayoutTrigger -> do

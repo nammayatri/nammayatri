@@ -12,7 +12,10 @@ imports:
   InvoiceStatus: Lib.Finance.Domain.Types.Invoice
   InvoiceType: Domain.Types.Invoice
   IssuedToType: Domain.Types.Invoice
-  ReconciliationType: Lib.Finance.Domain.Types.ReconciliationSummary
+  Domain: Lib.Finance.Reconciliation.Types
+  DataSource: Lib.Finance.Reconciliation.Types
+  Day: Data.Time
+  TimeOfDay: Kernel.Prelude
   DateOrTime: Lib.Finance.Invoice.PdfService
   Value: Data.Aeson
   Language: Kernel.External.Types
@@ -106,7 +109,9 @@ apis:
   - GET: # ReconciliationAPI
       endpoint: /finance/reconciliation
       mandatoryQuery:
-        reconciliationType: ReconciliationType
+        domain: Domain
+        source: DataSource
+        target: DataSource
       query:
         fromDate: UTCTime
         toDate: UTCTime
@@ -384,10 +389,16 @@ types:
     - summary: ReconciliationSummary
     - exceptions: [ReconciliationEntry]
     - completed: [ReconciliationEntry]
+  # Recipe is identified by its (domain, source, target) triple — the same
+  # key the framework registry uses. Exactly one of `day` (immediate one-off
+  # for that IST calendar day) or `runAt` (daily auto-schedule at that IST
+  # time-of-day, processing D-2) must be set.
   ReconciliationTriggerReq:
-    - fromDate: UTCTime
-    - toDate: UTCTime
-    - reconciliationType: Maybe Text
+    - domain: Domain
+    - source: DataSource
+    - target: DataSource
+    - day: Maybe Day
+    - runAt: Maybe TimeOfDay
   ReconciliationTriggerRes:
     - success: Bool
     - message: Text

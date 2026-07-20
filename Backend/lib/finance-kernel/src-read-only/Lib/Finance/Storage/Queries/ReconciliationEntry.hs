@@ -13,6 +13,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Lib.Finance.Domain.Types.ReconciliationEntry
 import qualified Lib.Finance.Domain.Types.ReconciliationSummary
+import qualified Lib.Finance.Reconciliation.Types
 import qualified Lib.Finance.Storage.Beam.BeamFlow
 import qualified Lib.Finance.Storage.Beam.ReconciliationEntry as Beam
 import qualified Sequelize as Se
@@ -23,10 +24,16 @@ create = createWithKV
 createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry] -> m ())
 createMany = traverse_ create
 
-findByDateAndType ::
+findByDomainSourceTarget ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.UTCTime -> Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationType -> m ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry]))
-findByDateAndType reconciliationDate reconciliationType = do findAllWithKV [Se.And [Se.Is Beam.reconciliationDate $ Se.Eq reconciliationDate, Se.Is Beam.reconciliationType $ Se.Eq reconciliationType]]
+  (Lib.Finance.Reconciliation.Types.Domain -> Lib.Finance.Reconciliation.Types.DataSource -> Lib.Finance.Reconciliation.Types.DataSource -> m ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry]))
+findByDomainSourceTarget domain source target = do findAllWithKV [Se.And [Se.Is Beam.domain $ Se.Eq domain, Se.Is Beam.source $ Se.Eq source, Se.Is Beam.target $ Se.Eq target]]
+
+findByEntityId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry]))
+findByEntityId entityId = do findAllWithKV [Se.Is Beam.entityId $ Se.Eq entityId]
+
+findByGroupTargetKey :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry]))
+findByGroupTargetKey groupTargetKey = do findAllWithKV [Se.Is Beam.groupTargetKey $ Se.Eq groupTargetKey]
 
 findById ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
@@ -35,18 +42,13 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 
 findByReconciliationStatus ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationStatus -> m ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry]))
+  (Lib.Finance.Reconciliation.Types.ReconciliationStatus -> m ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry]))
 findByReconciliationStatus reconStatus = do findAllWithKV [Se.Is Beam.reconStatus $ Se.Eq reconStatus]
 
 findBySummaryId ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Kernel.Types.Id.Id Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary -> m ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry]))
 findBySummaryId summaryId = do findAllWithKV [Se.Is Beam.summaryId $ Se.Eq (Kernel.Types.Id.getId summaryId)]
-
-findExceptions ::
-  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.UTCTime -> Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationType -> m ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry]))
-findExceptions reconciliationDate reconciliationType = do findAllWithKV [Se.And [Se.Is Beam.reconciliationDate $ Se.Eq reconciliationDate, Se.Is Beam.reconciliationType $ Se.Eq reconciliationType]]
 
 findByPrimaryKey ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
@@ -57,42 +59,39 @@ updateByPrimaryKey :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.F
 updateByPrimaryKey (Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.actualLedgerValue actualLedgerValue,
-      Se.Set Beam.bookingId bookingId,
-      Se.Set Beam.dcoId dcoId,
-      Se.Set Beam.expectedDsrValue expectedDsrValue,
-      Se.Set Beam.financeComponent financeComponent,
-      Se.Set Beam.gstOnSubscription gstOnSubscription,
+    [ Se.Set Beam.actualAmount actualAmount,
+      Se.Set Beam.closeReason closeReason,
+      Se.Set Beam.component component,
+      Se.Set Beam.domain domain,
+      Se.Set Beam.entityId entityId,
+      Se.Set Beam.entityMeta entityMeta,
+      Se.Set Beam.entryKey entryKey,
+      Se.Set Beam.expectedAmount expectedAmount,
+      Se.Set Beam.firstSeenAt firstSeenAt,
+      Se.Set Beam.groupSourceTotal groupSourceTotal,
+      Se.Set Beam.groupTargetAmount groupTargetAmount,
+      Se.Set Beam.groupTargetKey groupTargetKey,
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.mismatchReason mismatchReason,
-      Se.Set Beam.mode mode,
-      Se.Set Beam.paymentOrderId paymentOrderId,
-      Se.Set Beam.pgOrderId pgOrderId,
-      Se.Set Beam.pgTransactionDate pgTransactionDate,
-      Se.Set Beam.pgTxnId pgTxnId,
-      Se.Set Beam.planName planName,
-      Se.Set Beam.purchaseStatus purchaseStatus,
+      Se.Set Beam.open open,
+      Se.Set Beam.partyId partyId,
       Se.Set Beam.reconStatus reconStatus,
       Se.Set Beam.reconciliationDate reconciliationDate,
-      Se.Set Beam.reconciliationType reconciliationType,
-      Se.Set Beam.remainingSubscriptionBalance remainingSubscriptionBalance,
+      Se.Set Beam.resolvedAt resolvedAt,
       Se.Set Beam.rrn rrn,
       Se.Set Beam.settlementDate settlementDate,
       Se.Set Beam.settlementId settlementId,
       Se.Set Beam.settlementMode settlementMode,
-      Se.Set Beam.sourceDetails sourceDetails,
-      Se.Set Beam.sourceId sourceId,
-      Se.Set Beam.status status,
-      Se.Set Beam.subscriptionAmountExclGst subscriptionAmountExclGst,
+      Se.Set Beam.source source,
+      Se.Set Beam.sourceLifecycle sourceLifecycle,
+      Se.Set Beam.sourceRecordId sourceRecordId,
       Se.Set Beam.summaryId (Kernel.Types.Id.getId summaryId),
-      Se.Set Beam.targetDetails targetDetails,
-      Se.Set Beam.targetId targetId,
+      Se.Set Beam.target target,
+      Se.Set Beam.targetRecordId targetRecordId,
       Se.Set Beam.timestamp timestamp,
-      Se.Set Beam.totalTransactionAmount totalTransactionAmount,
       Se.Set Beam.transactionDate transactionDate,
       Se.Set Beam.updatedAt _now,
-      Se.Set Beam.utr utr,
       Se.Set Beam.variance variance
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -102,87 +101,81 @@ instance FromTType' Beam.ReconciliationEntry Lib.Finance.Domain.Types.Reconcilia
     pure $
       Just
         Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry
-          { actualLedgerValue = actualLedgerValue,
-            bookingId = bookingId,
+          { actualAmount = actualAmount,
+            closeReason = closeReason,
+            component = component,
             createdAt = createdAt,
-            dcoId = dcoId,
-            expectedDsrValue = expectedDsrValue,
-            financeComponent = financeComponent,
-            gstOnSubscription = gstOnSubscription,
+            domain = domain,
+            entityId = entityId,
+            entityMeta = entityMeta,
+            entryKey = entryKey,
+            expectedAmount = expectedAmount,
+            firstSeenAt = firstSeenAt,
+            groupSourceTotal = groupSourceTotal,
+            groupTargetAmount = groupTargetAmount,
+            groupTargetKey = groupTargetKey,
             id = Kernel.Types.Id.Id id,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId,
             mismatchReason = mismatchReason,
-            mode = mode,
-            paymentOrderId = paymentOrderId,
-            pgOrderId = pgOrderId,
-            pgTransactionDate = pgTransactionDate,
-            pgTxnId = pgTxnId,
-            planName = planName,
-            purchaseStatus = purchaseStatus,
+            open = open,
+            partyId = partyId,
             reconStatus = reconStatus,
             reconciliationDate = reconciliationDate,
-            reconciliationType = reconciliationType,
-            remainingSubscriptionBalance = remainingSubscriptionBalance,
+            resolvedAt = resolvedAt,
             rrn = rrn,
             settlementDate = settlementDate,
             settlementId = settlementId,
             settlementMode = settlementMode,
-            sourceDetails = sourceDetails,
-            sourceId = sourceId,
-            status = status,
-            subscriptionAmountExclGst = subscriptionAmountExclGst,
+            source = source,
+            sourceLifecycle = sourceLifecycle,
+            sourceRecordId = sourceRecordId,
             summaryId = Kernel.Types.Id.Id summaryId,
-            targetDetails = targetDetails,
-            targetId = targetId,
+            target = target,
+            targetRecordId = targetRecordId,
             timestamp = timestamp,
-            totalTransactionAmount = totalTransactionAmount,
             transactionDate = transactionDate,
             updatedAt = updatedAt,
-            utr = utr,
             variance = variance
           }
 
 instance ToTType' Beam.ReconciliationEntry Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry where
   toTType' (Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry {..}) = do
     Beam.ReconciliationEntryT
-      { Beam.actualLedgerValue = actualLedgerValue,
-        Beam.bookingId = bookingId,
+      { Beam.actualAmount = actualAmount,
+        Beam.closeReason = closeReason,
+        Beam.component = component,
         Beam.createdAt = createdAt,
-        Beam.dcoId = dcoId,
-        Beam.expectedDsrValue = expectedDsrValue,
-        Beam.financeComponent = financeComponent,
-        Beam.gstOnSubscription = gstOnSubscription,
+        Beam.domain = domain,
+        Beam.entityId = entityId,
+        Beam.entityMeta = entityMeta,
+        Beam.entryKey = entryKey,
+        Beam.expectedAmount = expectedAmount,
+        Beam.firstSeenAt = firstSeenAt,
+        Beam.groupSourceTotal = groupSourceTotal,
+        Beam.groupTargetAmount = groupTargetAmount,
+        Beam.groupTargetKey = groupTargetKey,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = merchantId,
         Beam.merchantOperatingCityId = merchantOperatingCityId,
         Beam.mismatchReason = mismatchReason,
-        Beam.mode = mode,
-        Beam.paymentOrderId = paymentOrderId,
-        Beam.pgOrderId = pgOrderId,
-        Beam.pgTransactionDate = pgTransactionDate,
-        Beam.pgTxnId = pgTxnId,
-        Beam.planName = planName,
-        Beam.purchaseStatus = purchaseStatus,
+        Beam.open = open,
+        Beam.partyId = partyId,
         Beam.reconStatus = reconStatus,
         Beam.reconciliationDate = reconciliationDate,
-        Beam.reconciliationType = reconciliationType,
-        Beam.remainingSubscriptionBalance = remainingSubscriptionBalance,
+        Beam.resolvedAt = resolvedAt,
         Beam.rrn = rrn,
         Beam.settlementDate = settlementDate,
         Beam.settlementId = settlementId,
         Beam.settlementMode = settlementMode,
-        Beam.sourceDetails = sourceDetails,
-        Beam.sourceId = sourceId,
-        Beam.status = status,
-        Beam.subscriptionAmountExclGst = subscriptionAmountExclGst,
+        Beam.source = source,
+        Beam.sourceLifecycle = sourceLifecycle,
+        Beam.sourceRecordId = sourceRecordId,
         Beam.summaryId = Kernel.Types.Id.getId summaryId,
-        Beam.targetDetails = targetDetails,
-        Beam.targetId = targetId,
+        Beam.target = target,
+        Beam.targetRecordId = targetRecordId,
         Beam.timestamp = timestamp,
-        Beam.totalTransactionAmount = totalTransactionAmount,
         Beam.transactionDate = transactionDate,
         Beam.updatedAt = updatedAt,
-        Beam.utr = utr,
         Beam.variance = variance
       }

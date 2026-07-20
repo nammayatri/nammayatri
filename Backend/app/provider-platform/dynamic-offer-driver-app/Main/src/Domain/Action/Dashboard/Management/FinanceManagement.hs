@@ -17,9 +17,15 @@ where
 import qualified API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement as API
 import qualified Dashboard.Common
 import qualified Dashboard.Common as Common
+import qualified Data.Aeson as A
+import qualified Data.Aeson.Key as AK
+import qualified Data.Aeson.KeyMap as AKM
+import qualified Data.Aeson.Types as AT
+import qualified Data.HashMap.Strict as HM
 import Data.List (nub, partition)
 import qualified Data.Text as T
-import Data.Time (addUTCTime)
+import qualified Data.Text.Encoding as TE
+import Data.Time (UTCTime (..), addDays, addUTCTime, diffUTCTime, timeOfDayToTime, utctDay)
 import qualified Data.Time as DT
 import Domain.Action.UI.Plan (getPlanAmount)
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
@@ -33,7 +39,7 @@ import Environment (Flow)
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Types (Language (ENGLISH))
 import qualified Kernel.External.Types as KET
-import Kernel.Prelude (UTCTime, listToMaybe, showBaseUrl)
+import Kernel.Prelude (listToMaybe, showBaseUrl)
 import qualified Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
@@ -56,6 +62,9 @@ import qualified Lib.Finance.Domain.Types.SapJournalEntry as SJE
 import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
 import qualified Lib.Finance.Ledger.Service as LedgerService
+import qualified Lib.Finance.Reconciliation.Job as ReconJob
+import qualified Lib.Finance.Reconciliation.Runner as ReconRunner
+import qualified Lib.Finance.Reconciliation.Types as ReconT
 import qualified Lib.Finance.Storage.Queries.AuditEntryExtra as QAuditEntryExtra
 import qualified Lib.Finance.Storage.Queries.DirectTaxTransaction as QDirectTax
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
@@ -75,7 +84,9 @@ import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaym
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QSchedulerJob
-import SharedLogic.Allocator (AllocatorJobType (..), ReconciliationJobData (..))
+import SharedLogic.Allocator (AllocatorJobType (..))
+import qualified SharedLogic.Allocator
+import SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation (reconciliationRegistry)
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
 import qualified SharedLogic.Finance.Wallet as WalletService
 import qualified SharedLogic.Merchant as SMerchant
@@ -108,31 +119,36 @@ mkPageOffset :: Maybe Int -> Int
 mkPageOffset = max 0 . fromMaybe 0
 
 subscriptionPurchaseIdFromReconEntry :: ReconciliationEntry.ReconciliationEntry -> Maybe Text
-subscriptionPurchaseIdFromReconEntry entry = entry.bookingId <|> entry.sourceId
+subscriptionPurchaseIdFromReconEntry entry = entry.entityId <|> entry.sourceRecordId
 
 pgPaymentVsSubscriptionMismatchCategory :: ReconciliationEntry.ReconciliationEntry -> Maybe Text
 pgPaymentVsSubscriptionMismatchCategory entry = case entry.reconStatus of
-  ReconciliationEntry.MATCHED -> Just "Matched"
-  ReconciliationEntry.MISSING_IN_TARGET -> Just "Missing in Pg Payment Settlement Report" -- not used
-  ReconciliationEntry.MISSING_IN_SOURCE -> Just "Missing in Subscription Purchase" -- not used
-  ReconciliationEntry.HIGHER_IN_TARGET -> Just "Overpaid"
-  ReconciliationEntry.LOWER_IN_TARGET -> Just "Underpaid"
+  ReconT.MATCHED -> Just "Matched"
+  ReconT.MISSING_IN_TARGET -> Just "Missing in Pg Payment Settlement Report"
+  ReconT.MISSING_IN_SOURCE -> Just "Missing in Subscription Purchase"
+  ReconT.HIGHER_IN_TARGET -> Just "Overpaid"
+  ReconT.LOWER_IN_TARGET -> Just "Underpaid"
+  ReconT.AWAITING_SETTLEMENT -> Just "Awaiting Settlement"
 
 purchaseVsTxnMismatchCategory :: ReconciliationEntry.ReconciliationEntry -> Maybe Text
 purchaseVsTxnMismatchCategory entry = case entry.reconStatus of
-  ReconciliationEntry.MATCHED -> Just "Matched"
-  ReconciliationEntry.MISSING_IN_TARGET -> Just "Missing in Subscription Transactions"
-  ReconciliationEntry.MISSING_IN_SOURCE -> Just "Missing in Subscription Purchase"
-  ReconciliationEntry.HIGHER_IN_TARGET -> Just "Over-consumption"
-  ReconciliationEntry.LOWER_IN_TARGET -> Just "Partial consumption"
+  ReconT.MATCHED -> Just "Matched"
+  ReconT.MISSING_IN_TARGET -> Just "Missing in Subscription Transactions"
+  ReconT.MISSING_IN_SOURCE -> Just "Missing in Subscription Purchase"
+  ReconT.HIGHER_IN_TARGET -> Just "Over-consumption"
+  ReconT.LOWER_IN_TARGET -> Just "Partial consumption"
+  ReconT.AWAITING_SETTLEMENT -> Just "Awaiting Settlement"
 
+-- | Dispatch to a recon-family-specific category label based on the
+--   (source, target) portion of the spec. Domain is ignored — the label
+--   depends on what's being compared, not which business area owns it.
 reconEntryMismatchCategory ::
-  ReconSummary.ReconciliationType ->
+  ReconT.ReconciliationSpec ->
   ReconciliationEntry.ReconciliationEntry ->
   Maybe Text
-reconEntryMismatchCategory reconType entry = case reconType of
-  ReconSummary.PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION -> pgPaymentVsSubscriptionMismatchCategory entry
-  ReconSummary.SUBSCRIPTION_PURCHASE_VS_SUBSCRIPTION_TRANSACTION -> purchaseVsTxnMismatchCategory entry
+reconEntryMismatchCategory spec entry = case (spec.source, spec.target) of
+  (ReconT.PG_PAYMENT_SETTLEMENT, ReconT.SUBSCRIPTION_PURCHASE) -> pgPaymentVsSubscriptionMismatchCategory entry
+  (ReconT.SUBSCRIPTION_PURCHASE, ReconT.LEDGER) -> purchaseVsTxnMismatchCategory entry
   _ -> Nothing
 
 -- | Get subscription purchase list with filters
@@ -676,7 +692,11 @@ getFinanceManagementFinanceAuditList merchantShortId opCity mbLimit mbOffset mbF
           updatedAt = entry.updatedAt
         }
 
--- | Get reconciliation data
+-- | Get reconciliation data. Query params come in as the (domain, source,
+--   target) triplet — the same recipe key the framework uses. Flat msil-era
+--   fields (pgTxnId, planName, remainingSubscriptionBalance, …) that no
+--   longer have first-class columns are decoded out of the entity's
+--   entityMeta JSON blob.
 getFinanceManagementFinanceReconciliation ::
   ShortId DM.Merchant ->
   Context.City ->
@@ -684,33 +704,37 @@ getFinanceManagementFinanceReconciliation ::
   Maybe Int ->
   Maybe Int ->
   Maybe UTCTime ->
-  ReconSummary.ReconciliationType ->
+  ReconT.Domain ->
+  ReconT.DataSource ->
+  ReconT.DataSource ->
   Flow API.ReconciliationRes
-getFinanceManagementFinanceReconciliation merchantShortId opCity mbFromDate mbLimit mbOffset mbToDate reconciliationType = do
+getFinanceManagementFinanceReconciliation merchantShortId opCity mbFromDate mbLimit mbOffset mbToDate domain source target = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   _merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
-  let limit = mkPageLimit mbLimit
+  let spec = ReconT.ReconciliationSpec {domain, source, target}
+      limit = mkPageLimit mbLimit
       offset = mkPageOffset mbOffset
-      -- Subtract IST offset (5h 30m) from incoming dates before querying (DB stores UTC)
+      -- Subtract IST offset (5h 30m) from incoming dates before querying (DB stores UTC).
       istOffset = secondsToNominalDiffTime 19800
       adjustedFromDate = addUTCTime (- istOffset) <$> mbFromDate
       adjustedToDate = addUTCTime (- istOffset) <$> mbToDate
 
-  latestSummary <- QReconSummaryExtra.findLatestByDateRangeAndType adjustedFromDate adjustedToDate reconciliationType
-
-  let summaryRes = maybe defaultSummary toSummary latestSummary
+  summaries <- QReconSummaryExtra.findByDateRangeAndSpec domain source target adjustedFromDate adjustedToDate
+  -- Pick the latest by createdAt to mirror the retired findLatestByDateRangeAndType.
+  let latestSummary = listToMaybe (sortBy (comparing (Down . (.createdAt))) summaries)
+      summaryRes = maybe defaultSummary toSummary latestSummary
 
   entries <- case latestSummary of
     Just summary -> QReconEntryExtra.findBySummaryIdWithPagination summary.id limit offset
     Nothing -> pure []
 
-  let (matched, mismatched) = partition (\e -> e.reconStatus == ReconciliationEntry.MATCHED) entries
+  let (matched, mismatched) = partition (\e -> e.reconStatus == ReconT.MATCHED) entries
   pure
     API.ReconciliationRes
       { summary = summaryRes,
-        exceptions = map toReconEntry mismatched,
-        completed = map toReconEntry matched
+        exceptions = map (toReconEntry spec) mismatched,
+        completed = map (toReconEntry spec) matched
       }
   where
     defaultSummary :: API.ReconciliationSummary
@@ -734,40 +758,48 @@ getFinanceManagementFinanceReconciliation merchantShortId opCity mbFromDate mbLi
           sourceTotal = s.sourceTotal,
           targetTotal = s.targetTotal,
           varianceAmount = s.varianceAmount,
-          disputeAmountTotal = fromMaybe 0.0 s.disputeAmountTotal
+          disputeAmountTotal = s.disputeAmountTotal
         }
 
-    toReconEntry :: ReconciliationEntry.ReconciliationEntry -> API.ReconciliationEntry
-    toReconEntry entry =
-      let baseEntry =
+    toReconEntry :: ReconT.ReconciliationSpec -> ReconciliationEntry.ReconciliationEntry -> API.ReconciliationEntry
+    toReconEntry spec entry =
+      let meta = decodeEntityMeta entry.entityMeta
+          remainingBal = metaField meta "remainingSubscriptionBalance"
+          isPurchaseVsTxn =
+            (spec.source == ReconT.SUBSCRIPTION_PURCHASE)
+              && (spec.target == ReconT.LEDGER)
+          mSubId = subscriptionPurchaseIdFromReconEntry entry
+          baseEntry =
             API.ReconciliationEntry
-              { bookingId = entry.bookingId,
-                dcoId = entry.dcoId,
-                status = show <$> entry.status,
-                mode = show <$> entry.mode,
-                expectedValue = Just entry.expectedDsrValue,
-                actualValue = Just entry.actualLedgerValue,
+              { bookingId = entry.entityId,
+                dcoId = entry.partyId,
+                -- msil-only ride-fare-specific fields — no longer first-class.
+                status = Nothing,
+                mode = Nothing,
+                expectedValue = Just entry.expectedAmount,
+                actualValue = Just entry.actualAmount,
                 variance = Just entry.variance,
                 disputeAmount = Just (abs entry.variance),
                 reconStatus = Just (show entry.reconStatus),
                 mismatchReason = entry.mismatchReason,
                 timestamp = Just entry.timestamp,
-                financeComponent = show <$> entry.financeComponent,
-                sourceId = entry.sourceId,
-                targetId = entry.targetId,
+                financeComponent = entry.component,
+                sourceId = entry.sourceRecordId,
+                targetId = entry.targetRecordId,
                 settlementId = entry.settlementId,
                 settlementDate = entry.settlementDate,
                 settlementMode = entry.settlementMode,
                 transactionDate = entry.transactionDate,
-                pgTransactionDate = entry.pgTransactionDate,
                 rrn = entry.rrn,
-                utr = entry.utr,
-                pgOrderId = entry.pgOrderId,
-                pgTxnId = entry.pgTxnId,
-                paymentOrderId = entry.paymentOrderId,
-                subscriptionAmountExclGst = entry.subscriptionAmountExclGst,
-                gstOnSubscription = entry.gstOnSubscription,
-                totalTransactionAmount = entry.totalTransactionAmount,
+                -- Fields sourced from the meta JSON blob (populated by recipes).
+                pgTransactionDate = metaField meta "pgTransactionDate",
+                utr = metaField meta "utr",
+                pgOrderId = metaField meta "pgOrderId",
+                pgTxnId = metaField meta "pgTxnId",
+                paymentOrderId = metaField meta "paymentOrderId",
+                subscriptionAmountExclGst = metaField meta "subscriptionAmountExclGst",
+                gstOnSubscription = metaField meta "gstOnSubscription",
+                totalTransactionAmount = metaField meta "totalTransactionAmount",
                 subscriptionPurchaseId = Nothing,
                 purchaseTimestamp = Nothing,
                 purchaseStatus = Nothing,
@@ -777,24 +809,44 @@ getFinanceManagementFinanceReconciliation merchantShortId opCity mbFromDate mbLi
                 remainingAmount = Nothing,
                 transactionType = Nothing,
                 linkedEntityId = Nothing,
-                mismatchCategory = reconEntryMismatchCategory reconciliationType entry
+                mismatchCategory = reconEntryMismatchCategory spec entry
               }
-       in case reconciliationType of
-            ReconSummary.SUBSCRIPTION_PURCHASE_VS_SUBSCRIPTION_TRANSACTION ->
-              let mSubId = subscriptionPurchaseIdFromReconEntry entry
-               in baseEntry
-                    { API.subscriptionPurchaseId = mSubId,
-                      API.purchaseTimestamp = entry.transactionDate,
-                      API.purchaseStatus = entry.purchaseStatus,
-                      API.planName = entry.planName,
-                      API.entitledAmount = Just entry.expectedDsrValue,
-                      API.consumedAmount = Just $ entry.actualLedgerValue - fromMaybe 0 entry.remainingSubscriptionBalance,
-                      API.remainingAmount = entry.remainingSubscriptionBalance,
-                      API.linkedEntityId = mSubId
-                    }
-            _ -> baseEntry
+       in if isPurchaseVsTxn
+            then
+              baseEntry
+                { API.subscriptionPurchaseId = mSubId,
+                  API.purchaseTimestamp = entry.transactionDate,
+                  API.purchaseStatus = metaField meta "purchaseStatus",
+                  API.planName = metaField meta "planName",
+                  API.entitledAmount = Just entry.expectedAmount,
+                  API.consumedAmount = Just $ entry.actualAmount - fromMaybe 0 remainingBal,
+                  API.remainingAmount = remainingBal,
+                  API.linkedEntityId = mSubId
+                }
+            else baseEntry
 
--- | Trigger a reconciliation job on-demand
+    -- Decode the entity's meta blob once per entry; recipes serialize it as
+    -- an object, so anything else (unlikely) parses as an empty map.
+    decodeEntityMeta :: Maybe Text -> AKM.KeyMap A.Value
+    decodeEntityMeta Nothing = AKM.empty
+    decodeEntityMeta (Just t) = fromMaybe AKM.empty $ A.decodeStrict (TE.encodeUtf8 t)
+
+    metaField :: A.FromJSON a => AKM.KeyMap A.Value -> Text -> Maybe a
+    metaField obj key = do
+      val <- AKM.lookup (AK.fromText key) obj
+      case A.fromJSON val of
+        AT.Success x -> Just x
+        _ -> Nothing
+
+-- | Trigger a reconciliation job.
+--
+--   Two modes, selected by which field the caller sets:
+--
+--     * 'day' present  → immediate one-off run for that IST calendar day.
+--     * 'runAt' present → daily auto-schedule at that IST time-of-day.
+--                         The wrapper 'ReconciliationScheduler' job fires
+--                         daily, each fire processing D-2 (see that
+--                         module for rationale).
 postFinanceManagementReconciliationTrigger ::
   ShortId DM.Merchant ->
   Context.City ->
@@ -804,35 +856,111 @@ postFinanceManagementReconciliationTrigger merchantShortId opCity req = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
-  -- Validate the reconciliation type
-  let reconciliationType = fromMaybe "DSR_VS_LEDGER" req.reconciliationType
-  case reconciliationType of
-    "DSR_VS_LEDGER" -> pure ()
-    "DSR_VS_SUBSCRIPTION" -> pure ()
-    "DSSR_VS_SUBSCRIPTION" -> pure ()
-    "SUBSCRIPTION_PURCHASE_VS_SUBSCRIPTION_TRANSACTION" -> pure ()
-    "PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION" -> pure ()
-    "PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST" -> pure ()
-    _ -> throwError $ InvalidRequest $ "Invalid reconciliation type: " <> reconciliationType
-
-  -- Create the reconciliation job data
-  let jobData =
-        SharedLogic.Allocator.ReconciliationJobData
-          { reconciliationType = reconciliationType,
-            merchantId = merchant.id,
-            merchantOperatingCityId = merchantOpCityId,
-            startTime = req.fromDate,
-            endTime = req.toDate
+  let spec =
+        ReconT.ReconciliationSpec
+          { domain = req.domain,
+            source = req.source,
+            target = req.target
+          }
+      scope =
+        ReconT.MerchantScope
+          { merchantId = merchant.id.getId,
+            merchantOperatingCityId = merchantOpCityId.getId
           }
 
-  -- Create the job immediately
-  QSchedulerJob.createJobIn @_ @'Reconciliation (Just merchant.id) (Just merchantOpCityId) 0 jobData
+  case (req.day, req.runAt) of
+    (Just _, Just _) -> throwError $ InvalidRequest "Provide exactly one of `day` (immediate) or `runAt` (auto-schedule), not both."
+    (Nothing, Nothing) -> throwError $ InvalidRequest "Provide either `day` (immediate) or `runAt` (auto-schedule)."
+    (Just day, Nothing) -> scheduleImmediate merchant.id merchantOpCityId spec scope day
+    (Nothing, Just runAt) -> scheduleAuto merchant.id merchantOpCityId spec scope runAt
+  where
+    scheduleImmediate merchantId merchantOpCityId spec scope day = do
+      -- One chunk per job under the new stateless runner. Enqueue every
+      -- chunk in the requested IST day, using the recipe's own chunkPlan
+      -- to slice it — the recipe is the source of truth for chunk size.
+      case ReconJob.lookupRecipe (reconciliationRegistry :: ReconJob.RecipeRegistry Flow) spec of
+        Nothing ->
+          throwError $
+            InvalidRequest $
+              "No recipe registered for spec " <> ReconT.specKey spec
+        Just recipe -> do
+          let rangeFrom = istMidnightAsUtc day
+              rangeTo = istMidnightAsUtc (addDays 1 day)
+              chunks =
+                ReconRunner.planChunks
+                  recipe.chunkPlan
+                  ReconT.DateRange {from = rangeFrom, to = rangeTo}
+          forM_ chunks $ \chunk -> do
+            let jobData =
+                  ReconJob.RecipeJobInput
+                    { spec = spec,
+                      scope = scope,
+                      range = chunk
+                    }
+            QSchedulerJob.createJobIn @_ @'Reconciliation (Just merchantId) (Just merchantOpCityId) 0 jobData
+          pure $
+            API.ReconciliationTriggerRes
+              { success = True,
+                message =
+                  "Reconciliation scheduled immediately for "
+                    <> ReconT.specKey spec
+                    <> " on "
+                    <> show day
+                    <> " (IST); "
+                    <> show (length chunks)
+                    <> " chunk jobs enqueued."
+              }
 
-  pure $
-    API.ReconciliationTriggerRes
-      { success = True,
-        message = "Reconciliation job scheduled successfully for " <> reconciliationType <> " from " <> show req.fromDate <> " to " <> show req.toDate
-      }
+    scheduleAuto merchantId merchantOpCityId spec scope runAt = do
+      -- The scheduler self-drives at the recipe's chunk cadence, so @runAt@
+      -- only controls when the first fire happens; from there the chain
+      -- advances on its own regardless of wall-clock time-of-day.
+      now <- getCurrentTime
+      let todayIst = utcToIstDay now
+          nextFireCandidateToday = istAtAsUtc todayIst runAt
+          nextFire =
+            if nextFireCandidateToday > now
+              then nextFireCandidateToday
+              else istAtAsUtc (addDays 1 todayIst) runAt
+          diff = diffUTCTime nextFire now
+          chunkSchedulerData =
+            SharedLogic.Allocator.ReconciliationSchedulerJobData
+              { spec = spec,
+                scope = scope
+              }
+          sweepData =
+            SharedLogic.Allocator.ReconciliationSweepJobData
+              { spec = spec,
+                scope = scope
+              }
+      QSchedulerJob.createJobIn @_ @'ReconciliationScheduler (Just merchantId) (Just merchantOpCityId) diff chunkSchedulerData
+      -- Kick off the B2 sweep on the same firing schedule. The sweep
+      -- self-reschedules at recipe.sweepInterval thereafter, independent
+      -- of the chunk scheduler.
+      QSchedulerJob.createJobIn @_ @'ReconciliationSweep (Just merchantId) (Just merchantOpCityId) diff sweepData
+      pure $
+        API.ReconciliationTriggerRes
+          { success = True,
+            message =
+              "Reconciliation auto-schedule started for "
+                <> ReconT.specKey spec
+                <> "; first fire at "
+                <> show nextFire
+                <> " UTC. Cadence follows the recipe's chunkPlan; sweep at recipe.sweepInterval."
+          }
+
+    -- IST helpers, kept local — mirror the ones in ReconciliationScheduler.
+    -- Consider promoting to a shared module if a third caller needs them.
+    istOffsetSeconds :: Integer
+    istOffsetSeconds = 5 * 3600 + 30 * 60
+
+    utcToIstDay t = utctDay (addUTCTime (secondsToNominalDiffTime (fromIntegral istOffsetSeconds)) t)
+
+    istMidnightAsUtc d = addUTCTime (secondsToNominalDiffTime (negate (fromIntegral istOffsetSeconds))) (UTCTime d 0)
+
+    istAtAsUtc d tod =
+      let istWallClock = UTCTime d (timeOfDayToTime tod)
+       in addUTCTime (secondsToNominalDiffTime (negate (fromIntegral istOffsetSeconds))) istWallClock
 
 getFinanceManagementFinancePaymentSettlementList ::
   ShortId DM.Merchant ->
@@ -881,45 +1009,53 @@ getFinanceManagementFinancePaymentSettlementList merchantShortId opCity mbFrom m
       (Just limit)
       (Just offset)
 
-  let selectedSubscriptionIds = reports <&> (.referenceId) & catMaybes & nub
-  latestReconEntries <- getLatestReconEntries merchant.id.getId selectedSubscriptionIds
-  settlements <- mapM (buildPaymentSettlementItem latestReconEntries) reports
+  -- Bulk-fetch reconciliation entries for these settlement reports so we
+  -- can attach per-row recon status / date / variance below. One query for
+  -- the whole page; the "latest entry per source id" pick is done in-app.
+  let reportIds = reports <&> (.id.getId) & nub
+  reconEntries <-
+    QReconEntryExtra.findBySpecAndSourceIds
+      ReconT.PREPAID_SUBSCRIPTION
+      ReconT.PG_PAYMENT_SETTLEMENT
+      ReconT.SUBSCRIPTION_PURCHASE
+      reportIds
+  let latestReconByReportId = pickLatestPerSource reconEntries
+
+  settlements <- mapM (buildPaymentSettlementItem latestReconByReportId) reports
 
   let totalItems = length settlements
       summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
 
   pure API.PaymentSettlementListRes {totalItems, summary, settlements}
   where
-    getLatestReconEntries :: Text -> [Text] -> Flow [(Text, ReconciliationEntry.ReconciliationEntry)]
-    getLatestReconEntries _ [] = pure []
-    getLatestReconEntries _ subscriptionIds = do
-      entries <- QReconEntryExtra.findBySourceIdsAndType subscriptionIds ReconciliationEntry.PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION
-      pure $ foldl' upsertLatest [] entries
-
-    upsertLatest ::
-      [(Text, ReconciliationEntry.ReconciliationEntry)] ->
-      ReconciliationEntry.ReconciliationEntry ->
-      [(Text, ReconciliationEntry.ReconciliationEntry)]
-    upsertLatest acc entry = case entry.sourceId of
-      Nothing -> acc
-      Just sourceId ->
-        let shouldReplace existing =
-              entry.reconciliationDate > existing.reconciliationDate
-                || ( entry.reconciliationDate == existing.reconciliationDate
-                       && entry.updatedAt > existing.updatedAt
-                   )
-            merge [] = [(sourceId, entry)]
-            merge ((key, existing) : rest)
-              | key /= sourceId = (key, existing) : merge rest
-              | shouldReplace existing = (sourceId, entry) : rest
-              | otherwise = (key, existing) : rest
-         in merge acc
+    -- Group by sourceRecordId, keep the one with the greatest
+    -- (reconciliationDate, updatedAt) tuple. Matches the old
+    -- 'upsertLatest' semantic without a scan-per-lookup.
+    pickLatestPerSource ::
+      [ReconciliationEntry.ReconciliationEntry] ->
+      HM.HashMap Text ReconciliationEntry.ReconciliationEntry
+    pickLatestPerSource =
+      foldl' step HM.empty
+      where
+        step acc e = case e.sourceRecordId of
+          Nothing -> acc
+          Just srcId ->
+            HM.insertWith
+              ( \new old ->
+                  if (new.reconciliationDate, new.updatedAt)
+                    > (old.reconciliationDate, old.updatedAt)
+                    then new
+                    else old
+              )
+              srcId
+              e
+              acc
 
     buildPaymentSettlementItem ::
-      [(Text, ReconciliationEntry.ReconciliationEntry)] ->
+      HM.HashMap Text ReconciliationEntry.ReconciliationEntry ->
       PgPaymentSettlementReport.PgPaymentSettlementReport ->
       Flow API.PaymentSettlementListItem
-    buildPaymentSettlementItem latestReconEntries report = do
+    buildPaymentSettlementItem latestReconByReportId report = do
       mbSubscription <- case report.referenceId of
         Just subscriptionPurchaseId -> QSubscriptionPurchase.findByPrimaryKey (Id subscriptionPurchaseId)
         Nothing -> pure Nothing
@@ -934,7 +1070,7 @@ getFinanceManagementFinancePaymentSettlementList merchantShortId opCity mbFrom m
 
       let driverName = mkFullName <$> mbDriver
           driverEmailId = mbDriver >>= (.email)
-          reconciliationEntry = report.referenceId >>= (`Kernel.Prelude.lookup` latestReconEntries)
+          mbEntry = HM.lookup report.id.getId latestReconByReportId
 
       pure
         API.PaymentSettlementListItem
@@ -974,9 +1110,9 @@ getFinanceManagementFinancePaymentSettlementList merchantShortId opCity mbFrom m
             utr = report.utr,
             settlementStatus = Just "Success",
             rrnNo = report.rrn,
-            reconciliationStatus = show . (.reconStatus) <$> reconciliationEntry,
-            reconciliationDate = (.reconciliationDate) <$> reconciliationEntry,
-            differenceAmount = (.variance) <$> reconciliationEntry
+            reconciliationStatus = show . (.reconStatus) <$> mbEntry,
+            reconciliationDate = (.reconciliationDate) <$> mbEntry,
+            differenceAmount = (.variance) <$> mbEntry
           }
 
     mkFullName :: DP.Person -> Text

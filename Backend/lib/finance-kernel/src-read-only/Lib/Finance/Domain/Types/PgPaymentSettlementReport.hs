@@ -39,8 +39,6 @@ data PgPaymentSettlementReport = PgPaymentSettlementReport
     pgBaseFee :: Kernel.Types.Common.HighPrecMoney,
     pgTax :: Kernel.Types.Common.HighPrecMoney,
     rawData :: Kernel.Prelude.Maybe Data.Aeson.Value,
-    reconMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    reconStatus :: Lib.Finance.Domain.Types.PgPaymentSettlementReport.ReconStatus,
     referenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referenceType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     refundAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -97,8 +95,6 @@ data PaymentMethod
   | INTERNATIONAL_CARD
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data ReconStatus = PENDING | MATCHED | MISMATCHED | MANUAL_REVIEW | IGNORED | SETTLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-
 data SettlementMode = GROSS | NET | NETTING deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data SettlementType = CREDIT | DEBIT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
@@ -118,10 +114,6 @@ $(mkHttpInstancesForEnum (''OrderType))
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentMethod))
 
 $(mkHttpInstancesForEnum (''PaymentMethod))
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ReconStatus))
-
-$(mkHttpInstancesForEnum (''ReconStatus))
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SettlementMode))
 

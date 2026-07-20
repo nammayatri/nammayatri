@@ -40,7 +40,12 @@ import qualified Prelude as P
 data SftpFetchMeta = SftpFetchMeta
   { trackedFileId :: Id SettlementFileInfo,
     firstDataRowIndex :: Int,
-    dataRowsDelivered :: Int
+    dataRowsDelivered :: Int,
+    -- | 'True' when the fetch delivered a full logical unit in one shot and
+    -- resumption-by-row-index doesn't apply (e.g. Juspay portal API's whole-day
+    -- pull). Ingestion short-circuits the SFTP chunking branch and always
+    -- flips the tracker to COMPLETED after storage, regardless of row counts.
+    atomicPull :: Bool
   }
   deriving stock (Show, Generic)
 
@@ -155,7 +160,8 @@ downloadAndSlice cfg mbParserTypeMap remoteFile infoId startRow chunkLimit = do
                 SftpFetchMeta
                   { trackedFileId = infoId,
                     firstDataRowIndex = startRow,
-                    dataRowsDelivered = nData
+                    dataRowsDelivered = nData,
+                    atomicPull = False
                   }
           logDebug $
             "downloadAndSlice: file=" <> show remoteFile

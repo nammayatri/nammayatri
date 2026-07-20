@@ -46,6 +46,8 @@ import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
+import qualified Lib.Finance.Reconciliation.Job
+import qualified Lib.Finance.Reconciliation.Types
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import Lib.Scheduler
@@ -91,6 +93,8 @@ data AllocatorJobType
   | ProcessReminder
   | ExpireSubscriptionPurchase
   | Reconciliation
+  | ReconciliationScheduler
+  | ReconciliationSweep
   | ScheduledBatchPayout
   | SettlementReportIngestion
   | CheckPickupZoneArrival
@@ -147,6 +151,8 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SProcessReminder jobData = AnyJobInfo <$> restoreJobInfo SProcessReminder jobData
   restoreAnyJobInfo SExpireSubscriptionPurchase jobData = AnyJobInfo <$> restoreJobInfo SExpireSubscriptionPurchase jobData
   restoreAnyJobInfo SReconciliation jobData = AnyJobInfo <$> restoreJobInfo SReconciliation jobData
+  restoreAnyJobInfo SReconciliationScheduler jobData = AnyJobInfo <$> restoreJobInfo SReconciliationScheduler jobData
+  restoreAnyJobInfo SReconciliationSweep jobData = AnyJobInfo <$> restoreJobInfo SReconciliationSweep jobData
   restoreAnyJobInfo SScheduledBatchPayout jobData = AnyJobInfo <$> restoreJobInfo SScheduledBatchPayout jobData
   restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
   restoreAnyJobInfo SCheckPickupZoneArrival jobData = AnyJobInfo <$> restoreJobInfo SCheckPickupZoneArrival jobData
@@ -538,18 +544,46 @@ instance JobInfoProcessor 'ExpireSubscriptionPurchase
 
 type instance JobContent 'ExpireSubscriptionPurchase = ExpireSubscriptionPurchaseJobData
 
-data ReconciliationJobData = ReconciliationJobData
-  { reconciliationType :: Text,
-    merchantId :: Id DM.Merchant,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    startTime :: UTCTime,
-    endTime :: UTCTime
+-- Reconciliation is driven by the finance-kernel framework in
+-- Lib.Finance.Reconciliation. Job payload is the framework's own
+-- RecipeJobInput — Text-typed merchant / opCity fields, the spec, the
+-- date range, and the chunk-resume marker. The framework runner reads
+-- these directly; app-side glue only translates the run outcome into
+-- an ExecutionResult + enqueue-next call.
+instance JobInfoProcessor 'Reconciliation
+
+type instance JobContent 'Reconciliation = Lib.Finance.Reconciliation.Job.RecipeJobInput
+
+-- | Per-chunk auto-schedule wrapper for a single recon spec. When this
+-- fires it enqueues one 'Reconciliation' job for the latest closed chunk
+-- (see 'ReconciliationScheduler' for the boundary math) and re-enqueues
+-- itself one chunk duration later. Cadence and buffer come from the
+-- recipe itself via 'reconciliationRegistry', so no timing fields live on
+-- the job payload.
+data ReconciliationSchedulerJobData = ReconciliationSchedulerJobData
+  { spec :: Lib.Finance.Reconciliation.Types.ReconciliationSpec,
+    scope :: Lib.Finance.Reconciliation.Types.MerchantScope
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
-instance JobInfoProcessor 'Reconciliation
+-- | The B2 sweep. Single-tier: this job both runs one sweep pass over
+-- the OPEN pool for (spec, scope) and re-enqueues itself at the
+-- recipe's 'sweepInterval'. No separate scheduler wrapper because a
+-- failed sweep pass just gets retried on the next enqueue — nothing to
+-- protect the way the chunk-side chain needed protecting.
+data ReconciliationSweepJobData = ReconciliationSweepJobData
+  { spec :: Lib.Finance.Reconciliation.Types.ReconciliationSpec,
+    scope :: Lib.Finance.Reconciliation.Types.MerchantScope
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
-type instance JobContent 'Reconciliation = ReconciliationJobData
+instance JobInfoProcessor 'ReconciliationScheduler
+
+type instance JobContent 'ReconciliationScheduler = ReconciliationSchedulerJobData
+
+instance JobInfoProcessor 'ReconciliationSweep
+
+type instance JobContent 'ReconciliationSweep = ReconciliationSweepJobData
 
 data ScheduledBatchPayoutJobData = ScheduledBatchPayoutJobData
   { merchantId :: Id DM.Merchant,

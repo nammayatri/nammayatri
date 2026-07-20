@@ -49,10 +49,6 @@ PgPaymentSettlementReport:
       enum: "FRAUD,CONSUMER,PROCESSING_ERROR,OTHER"
       derive: "HttpInstance"
 
-    ReconStatus:
-      enum: "PENDING,MATCHED,MISMATCHED,MANUAL_REVIEW,IGNORED,SETTLED"
-      derive: "HttpInstance"
-
     OrderType:
       enum: "SUBSCRIPTION,PAYOUT_REGISTRATION"
       derive: "HttpInstance"
@@ -132,10 +128,6 @@ PgPaymentSettlementReport:
     isValidSubscriptionPurchase: Maybe Bool
     subscriptionPurchaseId: Maybe Text
 
-    # --- Reconciliation result ---
-    reconStatus: ReconStatus                       # Set to UNMATCHED on ingest; updated by recon job
-    reconMessage: Maybe Text                       # Mismatch notes / error details
-
     # --- Raw PG report row ---
     rawData: Maybe Value                           # Full PG row stored as JSON for audit/debugging SENSITIVE
 
@@ -181,12 +173,6 @@ PgPaymentSettlementReport:
     findById:
       kvFunction: findOneWithKV
       where: id
-
-    updateReconStatus:
-      kvFunction: updateOneWithKV
-      params: [reconStatus, reconMessage, updatedBy, updatedById, updatedAt]
-      where: id
-
 
   extraOperations:
     - EXTRA_QUERY_FILE

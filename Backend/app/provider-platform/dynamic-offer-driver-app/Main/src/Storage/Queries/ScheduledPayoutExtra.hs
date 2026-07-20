@@ -4,7 +4,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PayoutStatusHistory as DPSH
 import qualified Domain.Types.ScheduledPayout as DSP
-import Kernel.Beam.Functions (updateOneWithKV)
+import Kernel.Beam.Functions (findAllWithKV, updateOneWithKV)
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -102,3 +102,10 @@ updatePayoutTransactionId txnId scheduledPayoutId = do
   updateOneWithKV
     [Se.Set Beam.payoutTransactionId txnId, Se.Set Beam.updatedAt now]
     [Se.Is Beam.id $ Se.Eq (getId scheduledPayoutId)]
+
+-- | Bulk shape used by the reconciliation framework: fetch every
+--   scheduled_payout whose id is in the given set. Replaces per-id
+--   findById loops in the recipe fetchers.
+findByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DSP.ScheduledPayout] -> m [DSP.ScheduledPayout]
+findByIds [] = pure []
+findByIds spIds = findAllWithKV [Se.Is Beam.id $ Se.In (map getId spIds)]

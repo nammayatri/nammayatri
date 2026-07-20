@@ -28,6 +28,18 @@ findByReferenceIds referenceIds =
         ]
     ]
 
+-- | Bulk fetch settlement reports by their primary key. Used by the B2
+--   sweep's 'fetchSourcesByIds' in 'PrepaidPgPaymentVsSubscription' to
+--   rebuild 'SourceRecord's for OPEN entries — no @txnStatus@ filter
+--   here because the sweep is checking the current state of a
+--   previously-classified row, not filtering fresh ingest.
+findByIds ::
+  (BeamFlow m r) =>
+  [Text] ->
+  m [Domain.PgPaymentSettlementReport]
+findByIds [] = pure []
+findByIds ids = findAllWithKV [Se.Is Beam.id $ Se.In ids]
+
 findByTxnDateRangeAndStatus ::
   (BeamFlow m r) =>
   Text -> -- merchantId

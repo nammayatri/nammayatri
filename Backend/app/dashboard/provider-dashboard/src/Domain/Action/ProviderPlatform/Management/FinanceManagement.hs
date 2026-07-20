@@ -32,8 +32,8 @@ import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.AuditEntry
 import qualified Lib.Finance.Domain.Types.Invoice
-import qualified Lib.Finance.Domain.Types.ReconciliationSummary
 import qualified Lib.Finance.Invoice.PdfService
+import qualified Lib.Finance.Reconciliation.Types
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
@@ -100,10 +100,10 @@ getFinanceManagementFinanceInvoiceList merchantShortId opCity apiTokenInfo fleet
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinanceInvoiceList) fleetOwnerOrDriverId from invoiceId invoiceNumber invoiceType issuedToType issuedToTypes limit offset status to
 
-getFinanceManagementFinanceReconciliation :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationType -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.ReconciliationRes)
-getFinanceManagementFinanceReconciliation merchantShortId opCity apiTokenInfo fromDate limit offset toDate reconciliationType = do
+getFinanceManagementFinanceReconciliation :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Lib.Finance.Reconciliation.Types.Domain -> Lib.Finance.Reconciliation.Types.DataSource -> Lib.Finance.Reconciliation.Types.DataSource -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.ReconciliationRes)
+getFinanceManagementFinanceReconciliation merchantShortId opCity apiTokenInfo fromDate limit offset toDate domain source target = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinanceReconciliation) fromDate limit offset toDate reconciliationType
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinanceReconciliation) fromDate limit offset toDate domain source target
 
 getFinanceManagementFinancePaymentGatewayTransactionList ::
   ( Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

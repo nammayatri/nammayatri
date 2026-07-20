@@ -1,52 +1,53 @@
 # Finance Kernel - Reconciliation Summary Table
-# Daily reconciliation summary per reconciliation type
+# One row per chunk × (domain, source, target) × (merchant, opCity).
+# Regenerate Beam + read-only queries after editing.
 # Namma-DSL YAML specification
 
 imports:
   UTCTime: Kernel.Prelude
   HighPrecMoney: Kernel.Types.Common
-  Currency: Kernel.Types.Common
+  # Domain / DataSource are shared with the entry table and the recipe
+  # framework — the single source of truth is Lib.Finance.Reconciliation.Types.
+  Domain: Lib.Finance.Reconciliation.Types
+  DataSource: Lib.Finance.Reconciliation.Types
 
 ReconciliationSummary:
   tableName: finance_reconciliation_summary
   derives: "Generic"
 
   types:
-    # Matches TypeScript ReconStatus
-    ReconciliationStatus:
-      enum: "MATCHED, HIGHER_IN_TARGET, LOWER_IN_TARGET, MISSING_IN_TARGET, MISSING_IN_SOURCE"
-      derive: "ToParamSchema"
-
-    # Reconciliation types
-    ReconciliationType:
-      enum: "DSR_VS_LEDGER, DSR_VS_SUBSCRIPTION, DSSR_VS_SUBSCRIPTION, SUBSCRIPTION_PURCHASE_VS_SUBSCRIPTION_TRANSACTION, PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION, PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST"
-      derive: "HttpInstance"
-
     JobStatus:
       enum: "COMPLETED, FAILED, IN_PROGRESS"
       derive: "ToParamSchema"
 
   fields:
     id: Id ReconciliationSummary
-    reconciliationDate: UTCTime
-    reconciliationType: ReconciliationType
 
-    # Record counts (matching JSON output)
-    totalDiscrepancies: Int  # totalRecords with issues
-    matchedRecords: Int  # MATCHED count
+    # Flat (domain, source, target) — matches the entry-side shape.
+    domain: Domain
+    source: DataSource
+    target: DataSource
+
+    # Start of the chunk this summary aggregates.
+    reconciliationDate: UTCTime
+
+    # Row counts.
+    totalRecords: Int
+    matchedRecords: Int
+    totalDiscrepancies: Int
+
+    # Financial totals.
+    sourceTotal: HighPrecMoney
+    targetTotal: HighPrecMoney
+    varianceAmount: HighPrecMoney
+    disputeAmountTotal: HighPrecMoney  # sum (abs (source - target)) across entries
+
     matchRate: Text  # "99.9%"
 
-    # Financial totals
-    sourceTotal: HighPrecMoney  # Expected total (from DSR/DSSR)
-    targetTotal: HighPrecMoney  # Actual total (from Ledger)
-    varianceAmount: HighPrecMoney  # sourceTotal - targetTotal
-    disputeAmountTotal: Maybe HighPrecMoney  # sum (abs (source - target))
-
-    # Status
     status: JobStatus
     errorMessage: Maybe Text
 
-    # Metadata
+    # Scope.
     merchantId: Text
     merchantOperatingCityId: Text
     createdAt: UTCTime
@@ -55,22 +56,21 @@ ReconciliationSummary:
   constraints:
     id: PrimaryKey
     reconciliationDate: SecondaryKey
-    reconciliationType: SecondaryKey
 
   queries:
     findById:
       kvFunction: findOneWithKV
       where: id
 
-    findByDateAndType:
+    findByChunk:
       kvFunction: findAllWithKV
       where:
-        and: [reconciliationDate, reconciliationType]
+        and: [domain, source, target, reconciliationDate, merchantId, merchantOperatingCityId]
 
-    findByDateRange:
+    findByDomainSourceTarget:
       kvFunction: findAllWithKV
       where:
-        and: [reconciliationDate, reconciliationType]
+        and: [domain, source, target]
 
     findByMerchantId:
       kvFunction: findAllWithKV

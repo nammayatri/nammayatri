@@ -1,104 +1,118 @@
 # Finance Kernel - Reconciliation Entry Table
-# Individual reconciliation records per booking/subscription
-# Row-level line item matching - NOT summed aggregate
+# One row per (source record, chunk) — domain-neutral schema. The recipe
+# framework in Lib.Finance.Reconciliation writes into this shape.
+# Regenerate Beam + read-only queries after editing.
 # Namma-DSL YAML specification
 
 imports:
   UTCTime: Kernel.Prelude
   HighPrecMoney: Kernel.Types.Common
   ReconciliationSummary: Lib.Finance.Domain.Types.ReconciliationSummary
+  # Recipe-neutral enums live in the framework module so both YAMLs and
+  # the runner reference exactly one canonical set of constructors.
+  Domain: Lib.Finance.Reconciliation.Types
+  DataSource: Lib.Finance.Reconciliation.Types
+  ReconciliationStatus: Lib.Finance.Reconciliation.Types
+  Lifecycle: Lib.Finance.Reconciliation.Types
 
 ReconciliationEntry:
   tableName: finance_reconciliation_entry
   derives: "Generic"
 
-  types:
-    # Matches TypeScript FinanceComponent
-    FinanceComponent:
-      enum: "GROSS_RIDE_FARE, GST, USER_CANCELLATION, DRIVER_CANCELLATION, DRIVER_TAKE_HOME_EARNINGS, SUBSCRIPTION_PURCHASE, EXPIRY, PG_PAYMENT_SETTLEMENT, PG_PAYOUT_SETTLEMENT"
-      derive: "ToParamSchema"
-
-    # Matches TypeScript ReconStatus
-    ReconciliationStatus:
-      enum: "MATCHED, HIGHER_IN_TARGET, LOWER_IN_TARGET, MISSING_IN_TARGET, MISSING_IN_SOURCE"
-      derive: "ToParamSchema"
-
-    # Matches JSON bookingId field
-    ReconciliationType:
-      enum: "DSR_VS_LEDGER, DSR_VS_SUBSCRIPTION, DSSR_VS_SUBSCRIPTION, SUBSCRIPTION_PURCHASE_VS_SUBSCRIPTION_TRANSACTION, PG_PAYMENT_SETTLEMENT_VS_SUBSCRIPTION, PG_PAYOUT_SETTLEMENT_VS_PAYOUT_REQUEST"
-      derive: "ToParamSchema"
-
-    # Matches JSON mode field
-    RideMode:
-      enum: "ONLINE, CASH"
-      derive: "ToParamSchema"
-
-    # Matches JSON status field (booking status)
-    RideStatus:
-      enum: "COMPLETED, CANCELLED"
-      derive: "ToParamSchema"
-
   fields:
     id: Id ReconciliationEntry
     summaryId: Id ReconciliationSummary
+
+    # Flat (domain, source, target) — indexed for cheap read paths.
+    domain: Domain
+    source: DataSource
+    target: DataSource
+
+    # Start of the chunk this entry belongs to (== summary.reconciliationDate
+    # for the group of entries that share a summary).
     reconciliationDate: UTCTime
-    reconciliationType: ReconciliationType
 
-    # Keys matching JSON output - all Maybe as they may be empty for some
-    bookingId: Maybe Text  # matches JSON "bookingId" - booking.id / subscription.id / payout.id
-    dcoId: Maybe Text  # matches JSON "dcoId" (driver/fleet owner ID) - driver.id / settlement.id
-    status: Maybe RideStatus  # matches JSON "status" (COMPLETED/CANCELLED)
-    mode: Maybe RideMode  # matches JSON "mode" (ONLINE/CASH)
+    # Amounts + result of the individual comparison.
+    expectedAmount: HighPrecMoney
+    actualAmount: HighPrecMoney
+    variance: HighPrecMoney
+    reconStatus: ReconciliationStatus
+    mismatchReason: Maybe Text
 
-    # Financial values matching JSON
-    expectedDsrValue: HighPrecMoney  # matches JSON "expectedDsrValue"
-    actualLedgerValue: HighPrecMoney  # matches JSON "actualLedgerValue"
-    variance: HighPrecMoney  # matches JSON "variance"
+    # Generic entity handles — domain-neutral replacements for the ride-fare
+    # vocabulary (booking_id / dco_id) the previous schema baked in.
+    entityId: Maybe Text        # primary domain entity (driver_fee.id / stcl_membership.id / …)
+    partyId: Maybe Text         # driver_id / owner_id / whoever
+    sourceRecordId: Maybe Text  # source table row id
+    targetRecordId: Maybe Text  # target table row id (null when MISSING_IN_TARGET)
 
-    # Result matching JSON
-    reconStatus: ReconciliationStatus  # matches JSON "reconStatus"
-    mismatchReason: Maybe Text  # matches JSON "mismatchReason"
-    timestamp: UTCTime  # matches JSON "timestamp"
+    # Freeform finance sub-classifier (e.g. "PENNY_DROP", "CAPITAL_PAYMENT").
+    # Text so recipes can add labels without a schema deploy; hoist to a
+    # typed enum per-domain once patterns stabilise.
+    component: Maybe Text
 
-    # Additional fields for detailed tracking
-    financeComponent: Maybe FinanceComponent  # Which component (GROSS_RIDE_FARE, GST, etc.)
+    # Per-domain extras persisted as JSON alongside the entry.
+    entityMeta: Maybe Text  # stored as JSONB; parsed application-side
 
-    # For PG Settlement reconciliation (Jobs 4 & 5)
-    sourceId: Maybe Text  # subscription.id / payout_request.id
-    targetId: Maybe Text  # settlement report row id (finance_reconciliation_entry.id)
-    settlementId: Maybe Text  # PG settlement batch ID from pg_*_settlement_report.settlement_id
-    settlementDate: Maybe UTCTime  # from settlement report
-    transactionDate: Maybe UTCTime  # purchaseTimestamp / createdAt
-    pgTransactionDate: Maybe UTCTime  # external PG txn date (transactionDate is internal)
-    rrn: Maybe Text  # bank reference number
-    utr: Maybe Text  # bank UTR (distinct from rrn)
-    settlementMode: Maybe Text  # payment method
-    pgOrderId: Maybe Text  # PG order id (external; not paymentOrderId)
-    pgTxnId: Maybe Text  # PG transaction id
-    paymentOrderId: Maybe Text  # internal payment_order.id (linked from subscription_purchase)
-    subscriptionAmountExclGst: Maybe HighPrecMoney  # internal base excl. GST (breakdown of expectedDsrValue)
-    gstOnSubscription: Maybe HighPrecMoney  # internal GST portion
-    totalTransactionAmount: Maybe HighPrecMoney  # internal total incl. GST (= expectedDsrValue for External PG Settlement Report vs Internal PG Settlement Summary)
+    # Group-level checkfields (populated only when the recipe uses
+    # GroupByTargetKey and this entry belongs to a group).
+    groupTargetKey: Maybe Text
+    groupSourceTotal: Maybe HighPrecMoney
+    groupTargetAmount: Maybe HighPrecMoney
 
-    # Subscription purchase snapshot at reconciliation time
-    purchaseStatus: Maybe Text  # subscription_purchase.status at EOD job run
-    planName: Maybe Text  # plan.name at EOD job run
-    remainingSubscriptionBalance: Maybe HighPrecMoney  # remaining wallet/FIFO attributable to this subscription
+    # PG / settlement context — populated only when target = PG_PAYMENT_SETTLEMENT.
+    settlementId: Maybe Text
+    settlementDate: Maybe UTCTime
+    settlementMode: Maybe Text
+    transactionDate: Maybe UTCTime
+    rrn: Maybe Text
 
-    # For debugging - store raw values as JSON
-    sourceDetails: Maybe Text
-    targetDetails: Maybe Text
-    merchantOperatingCityId: Maybe Text
+    # Scope + bookkeeping.
     merchantId: Maybe Text
+    merchantOperatingCityId: Maybe Text
+    timestamp: UTCTime
     createdAt: UTCTime
     updatedAt: UTCTime
+
+    # Stable natural-key identifier that survives re-processing. Populated
+    # by the runner as @srcId@ for source-derived entries and
+    # @"tgt:" <> tgtId@ for orphan-target entries — always non-null so a
+    # UNIQUE index over it dedupes both kinds. Distinct from @id@ (a UUID
+    # PK) so external references don't need to change on upsert.
+    entryKey: Text
+
+    # First insertion time for this natural key. Preserved across upserts;
+    # @updatedAt@ tracks the most recent write.
+    firstSeenAt: UTCTime
+
+    # Source state at classification time (@InFlight@ / @Settled@ /
+    # @Cancelled@). Drives @open@: the sweep re-checks any entry whose
+    # source could still change.
+    sourceLifecycle: Lifecycle
+
+    # Moment the entry transitioned from OPEN to CLOSED. Null while OPEN.
+    resolvedAt: Maybe UTCTime
+
+    # True while the entry still needs revisiting:
+    #   sourceLifecycle == InFlight  OR  reconStatus /= MATCHED
+    # The sweep only reads @open = true@ rows; the partial index below
+    # keeps the working set proportional to outstanding work, not history.
+    open: Bool
+
+    # Why the entry stopped being open. NULL for entries that closed
+    # naturally (reached MATCHED, or written closed on first pass);
+    # "AGED_OUT" for entries the sweep force-closed after outliving
+    # 'maxOpenAge'. The classifier's verdict in @reconStatus@ is never
+    # overwritten — 'closeReason' is the only signal that automation
+    # gave up on this entry rather than reaching a clean resolution.
+    closeReason: Maybe Text
 
   constraints:
     id: PrimaryKey
     summaryId: SecondaryKey
-    bookingId: "!SecondaryKey"
-    dcoId: "!SecondaryKey"
-    reconStatus: "!SecondaryKey"
+    entityId: "!SecondaryKey"
+    groupTargetKey: "!SecondaryKey"
+    entryKey: "!SecondaryKey"
 
   queries:
     findById:
@@ -113,21 +127,18 @@ ReconciliationEntry:
       kvFunction: findAllWithKV
       where: reconStatus
 
-    findByDateAndType:
+    findByEntityId:
+      kvFunction: findAllWithKV
+      where: entityId
+
+    findByGroupTargetKey:
+      kvFunction: findAllWithKV
+      where: groupTargetKey
+
+    findByDomainSourceTarget:
       kvFunction: findAllWithKV
       where:
-        and: [reconciliationDate, reconciliationType]
-
-    findExceptions:
-      kvFunction: findAllWithKV
-      where:
-        and: [reconciliationDate, reconciliationType]
-
-  default:
-    bookingId: "''"
-    dcoId: "''"
-    status: "'COMPLETED'"
-    mode: "'ONLINE'"
+        and: [domain, source, target]
 
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

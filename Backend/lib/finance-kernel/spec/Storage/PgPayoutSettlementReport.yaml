@@ -13,7 +13,6 @@ imports:
   Currency: Kernel.Types.Common
   HighPrecMoney: Kernel.Types.Common
   Value: Data.Aeson
-  ReconStatus: Lib.Finance.Domain.Types.PgPaymentSettlementReport
 
 PgPayoutSettlementReport:
   tableName: pg_payout_settlement_report
@@ -93,10 +92,6 @@ PgPayoutSettlementReport:
     fulfillmentAmount: Maybe HighPrecMoney
     fulfillmentOrderCreatedAt: Maybe UTCTime
 
-    # --- Reconciliation result ---
-    reconStatus: ReconStatus                       # Set to UNMATCHED on ingest; updated by recon job
-    reconMessage: Maybe Text                       # Mismatch notes / error details
-
     # --- Raw PG report row ---
     rawData: Maybe Value                           # Full PG row as JSON for audit/debugging
 
@@ -128,11 +123,6 @@ PgPayoutSettlementReport:
   # Generated queries
   # ---------------------------------------------------------------------------
   queries:
-
-    updateReconStatus:
-      kvFunction: updateOneWithKV
-      params: [reconStatus, reconMessage, updatedAt]
-      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE
