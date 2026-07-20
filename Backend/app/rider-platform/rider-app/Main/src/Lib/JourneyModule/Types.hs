@@ -380,6 +380,7 @@ data TaxiLegExtraInfo = TaxiLegExtraInfo
 
 data MetroLegExtraInfo = MetroLegExtraInfo
   { routeInfo :: [LegRouteInfo],
+    bppOrderId :: Maybe Text,
     bookingId :: Maybe (Id DFRFSBooking.FRFSTicketBooking),
     tickets :: Maybe [Text],
     ticketValidity :: Maybe [UTCTime],
@@ -950,6 +951,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
             Metro $
               MetroLegExtraInfo
                 { routeInfo = journeyLegInfo',
+                  bppOrderId = booking.bppOrderId,
                   bookingId = Just booking.id,
                   tickets = Just qrDataList,
                   ticketValidity = Just qrValidity,
@@ -1267,6 +1269,7 @@ mkStandaloneFrfsMinimalLegInfo frfsSearch mbFare mbSelectedServiceTier = do
           Metro
             MetroLegExtraInfo
               { routeInfo = [],
+                bppOrderId = Nothing,
                 bookingId = Nothing,
                 tickets = Nothing,
                 ticketValidity = Nothing,
@@ -1466,6 +1469,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
             Metro $
               MetroLegExtraInfo
                 { routeInfo = journeyLegInfo',
+                  bppOrderId = Nothing,
                   bookingId = Nothing,
                   tickets = Nothing,
                   ticketValidity = Nothing,
