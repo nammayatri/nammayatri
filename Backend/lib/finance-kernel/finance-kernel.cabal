@@ -63,6 +63,7 @@ library
       Lib.Finance.Storage.Queries.SapJournalEntryExtra
       Lib.Finance.Tax.Interface
       Lib.Finance.Tax.Types
+      Lib.Finance.Utils.GstBreakdown
       Lib.Finance.Utils.GstRates
       Lib.Finance.Utils.SensitiveData
       Tools.Beam.UtilsTH

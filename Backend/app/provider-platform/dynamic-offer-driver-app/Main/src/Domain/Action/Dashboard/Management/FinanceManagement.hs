@@ -295,6 +295,9 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
       -- GST details from IndirectTaxTransaction
       let gstRate = mbSubscriptionTxn <&> (.gstRate)
       let gstAmount = mbSubscriptionTxn <&> (.totalGstAmount)
+      let cgstAmount = mbSubscriptionTxn <&> (.cgstAmount)
+      let sgstAmount = mbSubscriptionTxn <&> (.sgstAmount)
+      let igstAmount = mbSubscriptionTxn <&> (.igstAmount)
 
       -- Gross and total subscription amounts
       let grossSubscriptionAmount = baseAmount
@@ -347,6 +350,9 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
             grossSubscriptionAmount = grossSubscriptionAmount,
             gstRate = gstRate,
             gstAmount = gstAmount,
+            cgstAmount = cgstAmount,
+            sgstAmount = sgstAmount,
+            igstAmount = igstAmount,
             totalSubscriptionAmount = totalSubscriptionAmount,
             invoiceId = subscription.financeInvoiceId <&> (.getId),
             totalEntitledValue = Just entitledValue,
@@ -518,20 +524,21 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
       -- Get GST details from indirect tax transaction
       indirectTaxTxns <- QIndirectTax.findByInvoiceNumber (Just invoice.invoiceNumber)
 
-      let (taxableValue, gstRate, gstAmount, cgstAmount, sgstAmount, gstinOfParty, sacCode, mbTaxRate, mbIssuedToTaxNo, mbIssuedByTaxNo) = case indirectTaxTxns of
+      let (taxableValue, gstRate, gstAmount, cgstAmount, sgstAmount, igstAmount, gstinOfParty, sacCode, mbTaxRate, mbIssuedToTaxNo, mbIssuedByTaxNo) = case indirectTaxTxns of
             (txn : _) ->
               ( Just txn.taxableValue,
                 Just txn.gstRate,
                 Just txn.totalGstAmount,
                 Just txn.cgstAmount,
                 Just txn.sgstAmount,
+                Just txn.igstAmount,
                 txn.gstinOfParty,
                 txn.sacCode,
                 txn.taxRate,
                 txn.issuedToTaxNo,
                 txn.issuedByTaxNo
               )
-            _ -> (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+            _ -> (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
 
       -- Get TDS details from direct tax transaction by invoiceNumber
       directTaxTxns <- QDirectTax.findByInvoiceNumber (Just invoice.invoiceNumber)
@@ -567,6 +574,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
             gstAmount = gstAmount,
             cgstAmount = cgstAmount,
             sgstAmount = sgstAmount,
+            igstAmount = igstAmount,
             totalInvoiceValue = invoice.totalAmount,
             tdsReference = tdsRef,
             irn = invoice.irn,

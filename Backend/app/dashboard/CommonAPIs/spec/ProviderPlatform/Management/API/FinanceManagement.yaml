@@ -273,6 +273,9 @@ types:
     - grossSubscriptionAmount: Maybe HighPrecMoney
     - gstRate: Maybe Double
     - gstAmount: Maybe HighPrecMoney
+    - cgstAmount: Maybe HighPrecMoney
+    - sgstAmount: Maybe HighPrecMoney
+    - igstAmount: Maybe HighPrecMoney
     - totalSubscriptionAmount: Maybe HighPrecMoney
     - invoiceId: Maybe Text
     - totalEntitledValue: Maybe HighPrecMoney
@@ -340,6 +343,7 @@ types:
     - subscriptionId: Maybe Text
     - cgstAmount: Maybe HighPrecMoney
     - sgstAmount: Maybe HighPrecMoney
+    - igstAmount: Maybe HighPrecMoney
     - supplierName: Maybe Text
     - supplierAddress: Maybe Text
     - supplierGstin: Maybe Text
