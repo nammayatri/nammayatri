@@ -437,6 +437,9 @@ types:
     - gstApplicableFlag: Maybe Bool
     - gstRate: Maybe Double
     - gstAmount: Maybe HighPrecMoney
+    - cgstAmount: Maybe HighPrecMoney
+    - sgstAmount: Maybe HighPrecMoney
+    - igstAmount: Maybe HighPrecMoney
     - tdsApplicableFlag: Maybe Bool
     - tdsRate: Maybe Double
     - tdsAmount: Maybe HighPrecMoney
