@@ -19,6 +19,7 @@ module SharedLogic.DriverOnboarding
 where
 
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
 import qualified API.Types.ProviderPlatform.Fleet.Onboarding
 import qualified API.Types.ProviderPlatform.Management.Endpoints.Account
 import qualified API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
@@ -30,6 +31,7 @@ import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Time.Calendar.OrdinalDate as TO
 import qualified Domain.Types as DVST
 import qualified Domain.Types.DocsVerificationStatus as DDVS
+import qualified Domain.Types.DocumentOnboardingStage
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DocumentVerificationConfig as ODC
@@ -782,7 +784,6 @@ mkFleetOwnerDocumentVerificationConfigAPIEntity language Domain.Types.FleetOwner
         documentType = castDocumentType documentType,
         dependencyDocumentType = map castDocumentType dependencyDocumentType,
         documentCategory = castDocumentCategory <$> documentCategory,
-        documentSubGroup = Nothing,
         isMandatoryForEnabling = fromMaybe isMandatory isMandatoryForEnabling,
         documentFields = Nothing,
         documentFlowGrouping = castDocumentFlowGrouping DVC.STANDARD,
@@ -831,13 +832,13 @@ castDocumentFieldType = \case
   Domain.Types.DocumentVerificationConfig.FieldDropdown -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldDropdown
   Domain.Types.DocumentVerificationConfig.FieldImage -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldImage
 
-castDocumentOnboardingStage :: Domain.Types.DocumentVerificationConfig.DocumentOnboardingStage -> API.Types.ProviderPlatform.Fleet.Onboarding.DocumentOnboardingStage
+castDocumentOnboardingStage :: Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.DocumentOnboardingStage
 castDocumentOnboardingStage = \case
-  Domain.Types.DocumentVerificationConfig.DRIVER_ONBOARDING -> API.Types.ProviderPlatform.Fleet.Onboarding.DRIVER_ONBOARDING
-  Domain.Types.DocumentVerificationConfig.VEHICLE_DETAILS -> API.Types.ProviderPlatform.Fleet.Onboarding.VEHICLE_DETAILS
-  Domain.Types.DocumentVerificationConfig.OPERATOR_PERMIT -> API.Types.ProviderPlatform.Fleet.Onboarding.OPERATOR_PERMIT
-  Domain.Types.DocumentVerificationConfig.TAX_AND_LEGAL -> API.Types.ProviderPlatform.Fleet.Onboarding.TAX_AND_LEGAL
-  Domain.Types.DocumentVerificationConfig.BANK_DETAILS -> API.Types.ProviderPlatform.Fleet.Onboarding.BANK_DETAILS
+  Domain.Types.DocumentOnboardingStage.DriverOnboarding -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.DriverOnboarding
+  Domain.Types.DocumentOnboardingStage.VehicleDetailsStage -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.VehicleDetailsStage
+  Domain.Types.DocumentOnboardingStage.OperatorPermit -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.OperatorPermit
+  Domain.Types.DocumentOnboardingStage.TaxAndLegal legalStructure -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.TaxAndLegal (castLegalStructure legalStructure)
+  Domain.Types.DocumentOnboardingStage.BankDetails -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.BankDetails
 
 castDocumentCategory :: Domain.Types.DocumentVerificationConfig.DocumentCategory -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.DocumentCategory
 castDocumentCategory = \case
@@ -846,10 +847,10 @@ castDocumentCategory = \case
   Domain.Types.DocumentVerificationConfig.Permission -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Permission
   Domain.Types.DocumentVerificationConfig.Training -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Training
 
-castDocumentSubGroup :: Domain.Types.DocumentVerificationConfig.DocumentSubGroup -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.DocumentSubGroup
-castDocumentSubGroup = \case
-  Domain.Types.DocumentVerificationConfig.INDIVIDUAL_LEGAL_STRUCTURE -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.INDIVIDUAL_LEGAL_STRUCTURE
-  Domain.Types.DocumentVerificationConfig.LEGAL_ENTITY_STRUCTURE -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.LEGAL_ENTITY_STRUCTURE
+castLegalStructure :: Domain.Types.DocumentOnboardingStage.LegalStructure -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.LegalStructure
+castLegalStructure = \case
+  Domain.Types.DocumentOnboardingStage.IndividualLegalStructure -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.IndividualLegalStructure
+  Domain.Types.DocumentOnboardingStage.LegalEntityStructure -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.LegalEntityStructure
 
 castDocumentType :: Domain.Types.DocumentVerificationConfig.DocumentType -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType
 castDocumentType = \case

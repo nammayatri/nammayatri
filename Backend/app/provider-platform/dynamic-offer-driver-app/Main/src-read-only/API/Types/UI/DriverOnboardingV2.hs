@@ -5,6 +5,7 @@ module API.Types.UI.DriverOnboardingV2 where
 import Data.OpenApi (ToSchema)
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Types.Common
+import qualified Domain.Types.DocumentOnboardingStage
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.DriverPanCard
@@ -97,8 +98,7 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     documentCategory :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory,
     documentFields :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo],
     documentFlowGrouping :: Domain.Types.DocumentVerificationConfig.DocumentFlowGrouping,
-    documentOnboardingStage :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentOnboardingStage,
-    documentSubGroup :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentSubGroup,
+    documentOnboardingStage :: Kernel.Prelude.Maybe Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isApprovalSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

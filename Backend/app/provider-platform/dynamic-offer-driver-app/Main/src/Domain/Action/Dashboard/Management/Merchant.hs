@@ -1263,7 +1263,6 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         faceMatchSourceDoc = Nothing,
         markImageValidOnValidationSkip = Nothing,
         documentOnboardingStage = Nothing,
-        documentSubGroup = Nothing,
         ..
       }
   where

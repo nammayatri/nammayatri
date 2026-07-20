@@ -396,6 +396,7 @@ library
       Domain.Types.DeliveryPersonDetails
       Domain.Types.DocStatus
       Domain.Types.DocsVerificationStatus
+      Domain.Types.DocumentOnboardingStage
       Domain.Types.Driver.DriverInformation
       Domain.Types.DriverFlowStatus
       Domain.Types.DriverLocation

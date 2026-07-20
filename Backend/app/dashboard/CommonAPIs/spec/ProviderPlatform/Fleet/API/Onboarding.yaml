@@ -12,6 +12,7 @@ imports:
   Driver: Dashboard.Common
   APISuccess: Kernel.Types.APISuccess
   DocsVerificationStatus: Dashboard.Common
+  DocumentOnboardingStage: API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
 
 module: Onboarding
 
@@ -23,8 +24,6 @@ apis:
         - makeSelfieAadhaarPanMandatory: Bool
         - onlyVehicle: Bool
         - role: Role
-        - documentOnboardingStage: DocumentOnboardingStage
-        - documentSubGroup: DocumentSubGroup
       response:
         type: DocumentVerificationConfigList
       helperApi:
@@ -37,8 +36,6 @@ apis:
               - makeSelfieAadhaarPanMandatory: Bool
               - onlyVehicle: Bool
               - role: Role
-              - documentOnboardingStage: DocumentOnboardingStage
-              - documentSubGroup: DocumentSubGroup
             response:
               type: DocumentVerificationConfigList
   - GET:
@@ -177,20 +174,13 @@ types:
     rcNumberPrefixList: '[Text]'
     filterForOldApks: Maybe Bool
     documentCategory: Maybe DocumentCategory
-    documentSubGroup: Maybe DocumentSubGroup
     isReminderSupported: Maybe Bool
     isApprovalSupported: Maybe Bool
     rolesAllowedToUploadDocument: Maybe [DashboardAccessType]
   DocumentCategory:
     enum: "Driver,Vehicle,Permission,Training"
-  DocumentSubGroup:
-    enum: "INDIVIDUAL_LEGAL_STRUCTURE,LEGAL_ENTITY_STRUCTURE"
-    derive: "HttpInstance"
   DocumentFlowGrouping:
     enum: "COMMON,STANDARD"
-  DocumentOnboardingStage:
-    enum: "DRIVER_ONBOARDING,VEHICLE_DETAILS,OPERATOR_PERMIT,TAX_AND_LEGAL,BANK_DETAILS"
-    derive: "HttpInstance"
   FieldType:
     enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage"
   FieldInfo:

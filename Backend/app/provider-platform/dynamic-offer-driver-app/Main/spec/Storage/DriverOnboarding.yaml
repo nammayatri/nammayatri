@@ -29,6 +29,7 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   Centesimal: Kernel.Types.Common
   CommonDocumentData: Domain.Types.CommonDocumentData
+  DocumentOnboardingStage: Domain.Types.DocumentOnboardingStage
 IdfyVerification:
   tableName: idfy_verification
   fields:
@@ -623,14 +624,10 @@ DocumentVerificationConfig:
       enum: "Infix,Prefix,Suffix,Exact"
     DocumentCategory:
       enum: "Driver,Vehicle,Permission,Training"
-    DocumentSubGroup:
-      enum: "INDIVIDUAL_LEGAL_STRUCTURE,LEGAL_ENTITY_STRUCTURE"
     DocumentFlowGrouping:
       enum: "COMMON,STANDARD"
     DocumentApplicableType:
       enum: "FLEET,INDIVIDUAL,FLEET_AND_INDIVIDUAL"
-    DocumentOnboardingStage:
-      enum: "DRIVER_ONBOARDING,VEHICLE_DETAILS,OPERATOR_PERMIT,TAX_AND_LEGAL,BANK_DETAILS"
     FieldType:
       enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage"
     FieldInfo:
@@ -669,7 +666,6 @@ DocumentVerificationConfig:
     order: Int
     filterForOldApks: Maybe Bool
     documentCategory: Maybe DocumentCategory
-    documentSubGroup: Maybe DocumentSubGroup
     documentFlowGrouping: Maybe DocumentFlowGrouping
     documentOnboardingStage: Maybe DocumentOnboardingStage
     applicableTo: DocumentApplicableType
