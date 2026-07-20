@@ -4148,6 +4148,15 @@ postMerchantUpdateOnboardingVehicleVariantMapping merchantShortId opCity req = d
       "BOAT" -> Just Enums.BOAT
       _ -> Nothing
 
+-- | Invalidate every cached read of a city's SubscriptionConfig: the per-service entry plus both
+-- UI-enabled listings, which are cached under their own keys and would otherwise keep serving the
+-- pre-update value to the driver app for the full config TTL.
+clearSubscriptionConfigCacheForCity :: Id DMOC.MerchantOperatingCity -> Plan.ServiceNames -> Flow ()
+clearSubscriptionConfigCacheForCity merchantOpCityId serviceName = do
+  CQSC.clearCacheByServiceName merchantOpCityId serviceName
+  CQSC.clearCacheByUIEnabled merchantOpCityId True
+  CQSC.clearCacheByUIEnabled merchantOpCityId False
+
 postMerchantConfigClearCacheSubscription :: ShortId DM.Merchant -> Context.City -> Common.ClearCacheSubscriptionReq -> Flow APISuccess
 postMerchantConfigClearCacheSubscription merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
@@ -4167,12 +4176,7 @@ postMerchantConfigClearCacheSubscription merchantShortId opCity req = do
       return Success
     clearSubscriptionConfigCache merchantOpCity mbServiceName = do
       let serviceName = maybe Plan.YATRI_SUBSCRIPTION castServiceName mbServiceName
-      let keysToClear =
-            [ CQSC.makeMerchantOpCityIdAndServiceKey merchantOpCity.id serviceName,
-              CQSC.makeMerchantOpCityIdAndUIEnabledKey merchantOpCity.id True,
-              CQSC.makeMerchantOpCityIdAndUIEnabledKey merchantOpCity.id False
-            ]
-      forM_ keysToClear $ \key -> Hedis.del key
+      clearSubscriptionConfigCacheForCity merchantOpCity.id serviceName
       return Success
     clearPlanTranslation = do
       pts <- SQPT.findAllByPlanId . Id =<< (pure req.planId >>= fromMaybeM (InvalidRequest $ "plan id not provided"))
@@ -4246,8 +4250,10 @@ postMerchantConfigUpsertPlanAndConfigSubscription merchantShortId city req = do
             (Common.CREATE_CONFIG, Common.SUBSCRIPTION_CONFIG) -> do
               templates <- QSC.findAllByMerchantOpCityId (Just resolvedMerchantOpCityId)
               template <- fromMaybeM (InvalidRequest "No existing subscription config in this city to clone as a create template") (listToMaybe (DL.sortOn (\c -> c.serviceName) templates))
-              runWithDecodeToType (mergeJsonObjects (toJSON template) config) tableName False $ \(sc :: DSC.SubscriptionConfig) ->
-                QSC.create (withResolvedSubscriptionConfigCity sc)
+              runWithDecodeToType (mergeJsonObjects (toJSON template) config) tableName False $ \(sc :: DSC.SubscriptionConfig) -> do
+                let scToCreate = withResolvedSubscriptionConfigCity sc
+                QSC.create scToCreate
+                clearSubscriptionConfigCacheForCity resolvedMerchantOpCityId scToCreate.serviceName
             (Common.CREATE_CONFIG, Common.PLAN) -> runWithDecodeToType config tableName False $ \(plan :: Plan.Plan) -> do
               let planToCreate = withResolvedPlanIds plan
               QPlan.create planToCreate
@@ -4263,8 +4269,10 @@ postMerchantConfigUpsertPlanAndConfigSubscription merchantShortId city req = do
               runWithDecodeToType config tableName False $ \(k :: SubscriptionConfigKey) -> do
                 existing <- QSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName (Just resolvedMerchantOpCityId) k.serviceName >>= fromMaybeM (InvalidRequest "SubscriptionConfig not found for update")
                 void $
-                  runWithDecodeToType (mergeJsonObjects (toJSON existing) config) tableName False $ \(sc :: DSC.SubscriptionConfig) ->
-                    QSC.updateByPrimaryKey (withResolvedSubscriptionConfigCity sc)
+                  runWithDecodeToType (mergeJsonObjects (toJSON existing) config) tableName False $ \(sc :: DSC.SubscriptionConfig) -> do
+                    let scToUpdate = withResolvedSubscriptionConfigCity sc
+                    QSC.updateByPrimaryKey scToUpdate
+                    clearSubscriptionConfigCacheForCity resolvedMerchantOpCityId scToUpdate.serviceName
             (Common.UPDATE_CONFIG, Common.PLAN) -> runWithDecodeToType config tableName False $ \(plan :: Plan.Plan) -> do
               let planToUpdate = withResolvedPlanIds plan
               mbOldPlan <- QPlan.findByPrimaryKey planToUpdate.id
