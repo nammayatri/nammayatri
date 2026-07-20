@@ -45,6 +45,14 @@ findLatestByPersonId personId =
     Nothing
     <&> listToMaybe
 
+findAllByPersonId :: BeamFlow m r => Text -> Maybe Int -> Maybe Int -> m [DOrder.PaymentOrder]
+findAllByPersonId personId mbLimit mbOffset =
+  findAllWithOptionsKV
+    [Se.Is BeamPO.personId $ Se.Eq personId]
+    (Se.Desc BeamPO.createdAt)
+    mbLimit
+    mbOffset
+
 findByDomainEntityId :: BeamFlow m r => Text -> m (Maybe DOrder.PaymentOrder)
 findByDomainEntityId domainEntityId =
   findAllWithOptionsKV

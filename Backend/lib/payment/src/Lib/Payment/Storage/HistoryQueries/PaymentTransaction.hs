@@ -7,6 +7,7 @@ module Lib.Payment.Storage.HistoryQueries.PaymentTransaction
     findByTxnId,
     findById,
     findAllByOrderId,
+    findAllByOrderIds,
     findNewTransactionByOrderId,
     findEarliestChargedTransactionByOrderId,
     updateStatusAndError,
@@ -74,6 +75,9 @@ findById = QTransaction.findById
 
 findAllByOrderId :: PaymentBeamFlow.BeamFlow m r => Id PaymentOrder -> m [PaymentTransaction]
 findAllByOrderId = QTransaction.findAllByOrderId
+
+findAllByOrderIds :: PaymentBeamFlow.BeamFlow m r => [Id PaymentOrder] -> m [PaymentTransaction]
+findAllByOrderIds = QTransaction.findAllByOrderIds
 
 findNewTransactionByOrderId :: PaymentBeamFlow.BeamFlow m r => Id PaymentOrder -> m (Maybe PaymentTransaction)
 findNewTransactionByOrderId = QTransaction.findNewTransactionByOrderId

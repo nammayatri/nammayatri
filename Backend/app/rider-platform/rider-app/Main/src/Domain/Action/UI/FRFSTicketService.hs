@@ -57,6 +57,7 @@ import Kernel.External.Maps.Interface.Types
 import qualified Kernel.External.Maps.Types
 import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.External.MultiModal.Utils
+import qualified Kernel.External.Payment.Interface.Types as KPayment
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude hiding (whenJust)
 import Kernel.Sms.Config (SmsConfig)
@@ -82,6 +83,10 @@ import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
+import qualified Lib.Payment.Domain.Types.PaymentTransaction as DPaymentTransaction
+import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
+import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as QPaymentTransaction
+import qualified Lib.Payment.Storage.HistoryQueries.Refunds as QRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.External.Nandi.Flow as NandiFlow
 import SharedLogic.External.Nandi.Types (GimsCurrentTripDetailsReq (..), GimsOperationAnchor (..), GimsTripAction (..), GimsTripActionReq (..), GimsTripInfo (..), StopInfo (..), StopSchedule (..))
@@ -1059,6 +1064,28 @@ getFrfsBookingList (mbPersonId, _merchantId) mbLimit mbOffset mbVehicleCategory 
         buildFRFSTicketBookingStatusAPIRes booking quoteCategories Nothing
     )
     bookings
+
+getFrfsBookingPaymentAttempts :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow (Id DFRFSTicketBooking.FRFSTicketBooking, [DPaymentTransaction.PaymentTransaction])
+getFrfsBookingPaymentAttempts _ bookingId = do
+  booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
+  paymentBooking <- QFRFSTicketBookingPayment.findTicketBookingPayment booking >>= fromMaybeM (InvalidRequest "Payment booking not found for TicketBookingId")
+  transactions <- QPaymentTransaction.findAllByOrderId paymentBooking.paymentOrderId
+  pure (bookingId, transactions)
+
+getPaymentAttemptsForCustomer :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow [(DPaymentOrder.PaymentOrder, [(DPaymentTransaction.PaymentTransaction, [DRefunds.Refunds])])]
+getPaymentAttemptsForCustomer (mbPersonId, _merchantId) mbLimit mbOffset = do
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  orders <- QPaymentOrder.findAllByPersonId personId.getId mbLimit mbOffset
+  mapM
+    ( \order -> do
+        transactions <- QPaymentTransaction.findAllByOrderId order.id
+        refunds <- QRefunds.findAllByOrderId order.shortId
+        -- refunds only reference the order (no transaction-level FK), so attach the order's
+        -- refunds to whichever transaction was actually CHARGED (the only one refundable).
+        let transactionsWithRefunds = map (\txn -> (txn, if txn.status == KPayment.CHARGED then refunds else [])) transactions
+        pure (order, transactionsWithRefunds)
+    )
+    orders
 
 cancelFRFSTicketBooking :: DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow ()
 cancelFRFSTicketBooking booking = do

@@ -12,6 +12,7 @@ imports:
   TimeBound: Kernel.Types.TimeBound
   FRFSTicketStatus: Domain.Types.FRFSTicketStatus
   HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
   PriceAPIEntity: Kernel.Types.Common
   FRFSSearch: Domain.Types.FRFSSearch
   VehicleCategory: BecknV2.FRFS.Enums
@@ -178,6 +179,60 @@ types:
     isFareChanged: Maybe Bool
     googleWalletJWTUrl: Maybe Text
     integratedBppConfigId: Id IntegratedBPPConfig
+    derive: "Show"
+
+  FRFSPaymentAttemptAPI:
+    id: Text
+    status: Text
+    amount: HighPrecMoney
+    currency: Currency
+    gatewayName: Maybe Text
+    respCode: Maybe Text
+    respMessage: Maybe Text
+    bankErrorCode: Maybe Text
+    bankErrorMessage: Maybe Text
+    createdAt: UTCTime
+    derive: "Show"
+
+  FRFSBookingPaymentAttemptsAPIRes:
+    bookingId: Id FRFSTicketBooking
+    attempts: "[FRFSPaymentAttemptAPI]"
+    derive: "Show"
+
+  FRFSRefundAttemptAPI:
+    id: Text
+    status: Text
+    refundAmount: HighPrecMoney
+    actualRefundedAmount: Maybe HighPrecMoney
+    errorCode: Maybe Text
+    errorMessage: Maybe Text
+    arn: Maybe Text
+    completedAt: Maybe UTCTime
+    createdAt: UTCTime
+    derive: "Show"
+
+  FRFSPaymentAttemptWithRefundsAPI:
+    id: Text
+    status: Text
+    amount: HighPrecMoney
+    currency: Currency
+    gatewayName: Maybe Text
+    respCode: Maybe Text
+    respMessage: Maybe Text
+    bankErrorCode: Maybe Text
+    bankErrorMessage: Maybe Text
+    createdAt: UTCTime
+    refunds: "[FRFSRefundAttemptAPI]"
+    derive: "Show"
+
+  FRFSPaymentOrderAttemptsAPI:
+    orderId: Text
+    domain: Maybe Text
+    transactions: "[FRFSPaymentAttemptWithRefundsAPI]"
+    derive: "Show"
+
+  FRFSPaymentAttemptsListAPIRes:
+    orders: "[FRFSPaymentOrderAttemptsAPI]"
     derive: "Show"
 
   FRFSVehicleServiceTierAPI:

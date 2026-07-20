@@ -9,6 +9,8 @@ module Domain.Action.Dashboard.AppManagement.FRFSTicketService
     getFRFSTicketServiceCustomerFrfsSearchQuote,
     postFRFSTicketServiceCustomerFrfsQuoteV2Confirm,
     getFRFSTicketServiceCustomerFrfsBookingStatus,
+    getFRFSTicketServiceCustomerFrfsBookingPaymentAttempts,
+    getFRFSTicketServiceCustomerFrfsPaymentAttempts,
     getFRFSTicketServiceCustomerFrfsRouteSeatLayout,
     getFRFSTicketServiceCustomerFrfsTripRouteSeats,
     postFRFSTicketServiceCustomerFrfsRouteServiceability,
@@ -35,6 +37,9 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Error
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
+import qualified Lib.Payment.Domain.Types.PaymentTransaction as DPaymentTransaction
+import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Tools.ActorInfo as ActorInfo
 
@@ -87,6 +92,71 @@ getFRFSTicketServiceCustomerFrfsBookingStatus :: (Kernel.Types.Id.ShortId Domain
 getFRFSTicketServiceCustomerFrfsBookingStatus merchantShortId _opCity customerId bookingId mbRequestorId = ActorInfo.withDashboardMbPersonIdActorInfo ((Kernel.Types.Id.Id @Domain.Types.Person.Person) <$> mbRequestorId) $ do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   DFrfs.getFrfsBookingStatusWithActor (Just customerId, merchant.id) bookingId
+
+getFRFSTicketServiceCustomerFrfsBookingPaymentAttempts :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSBookingPaymentAttemptsAPIRes)
+getFRFSTicketServiceCustomerFrfsBookingPaymentAttempts merchantShortId _opCity customerId bookingId = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  (bookingId', transactions) <- DFrfs.getFrfsBookingPaymentAttempts (Just customerId, merchant.id) bookingId
+  pure API.Types.UI.FRFSTicketService.FRFSBookingPaymentAttemptsAPIRes {bookingId = bookingId', attempts = map paymentTransactionToAPI transactions}
+
+getFRFSTicketServiceCustomerFrfsPaymentAttempts :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSPaymentAttemptsListAPIRes)
+getFRFSTicketServiceCustomerFrfsPaymentAttempts merchantShortId _opCity customerId limit offset = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  orderGroups <- DFrfs.getPaymentAttemptsForCustomer (Just customerId, merchant.id) limit offset
+  pure API.Types.UI.FRFSTicketService.FRFSPaymentAttemptsListAPIRes {orders = map orderGroupToAPI orderGroups}
+
+orderGroupToAPI :: (DPaymentOrder.PaymentOrder, [(DPaymentTransaction.PaymentTransaction, [DRefunds.Refunds])]) -> API.Types.UI.FRFSTicketService.FRFSPaymentOrderAttemptsAPI
+orderGroupToAPI (order, transactionsWithRefunds) =
+  API.Types.UI.FRFSTicketService.FRFSPaymentOrderAttemptsAPI
+    { orderId = order.id.getId,
+      domain = show <$> order.paymentServiceType,
+      transactions = map paymentTransactionWithRefundsToAPI transactionsWithRefunds
+    }
+
+paymentTransactionWithRefundsToAPI :: (DPaymentTransaction.PaymentTransaction, [DRefunds.Refunds]) -> API.Types.UI.FRFSTicketService.FRFSPaymentAttemptWithRefundsAPI
+paymentTransactionWithRefundsToAPI (txn, refunds) =
+  API.Types.UI.FRFSTicketService.FRFSPaymentAttemptWithRefundsAPI
+    { id = txn.id.getId,
+      status = show txn.status,
+      amount = txn.amount,
+      currency = txn.currency,
+      gatewayName = txn.gatewayName,
+      respCode = txn.respCode,
+      respMessage = txn.respMessage,
+      bankErrorCode = txn.bankErrorCode,
+      bankErrorMessage = txn.bankErrorMessage,
+      createdAt = txn.createdAt,
+      refunds = map refundToAPI refunds
+    }
+
+refundToAPI :: DRefunds.Refunds -> API.Types.UI.FRFSTicketService.FRFSRefundAttemptAPI
+refundToAPI r =
+  API.Types.UI.FRFSTicketService.FRFSRefundAttemptAPI
+    { id = r.id.getId,
+      status = show r.status,
+      refundAmount = r.refundAmount,
+      actualRefundedAmount = r.actualRefundedAmount,
+      errorCode = r.errorCode,
+      errorMessage = r.errorMessage,
+      arn = r.arn,
+      completedAt = r.completedAt,
+      createdAt = r.createdAt
+    }
+
+paymentTransactionToAPI :: DPaymentTransaction.PaymentTransaction -> API.Types.UI.FRFSTicketService.FRFSPaymentAttemptAPI
+paymentTransactionToAPI txn =
+  API.Types.UI.FRFSTicketService.FRFSPaymentAttemptAPI
+    { id = txn.id.getId,
+      status = show txn.status,
+      amount = txn.amount,
+      currency = txn.currency,
+      gatewayName = txn.gatewayName,
+      respCode = txn.respCode,
+      respMessage = txn.respMessage,
+      bankErrorCode = txn.bankErrorCode,
+      bankErrorMessage = txn.bankErrorMessage,
+      createdAt = txn.createdAt
+    }
 
 getFRFSTicketServiceCustomerFrfsRouteSeatLayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow API.Types.UI.FRFSTicketService.SeatLayoutDetailsResp)
 getFRFSTicketServiceCustomerFrfsRouteSeatLayout merchantShortId _opCity customerId routeId vehicleNumber = do
