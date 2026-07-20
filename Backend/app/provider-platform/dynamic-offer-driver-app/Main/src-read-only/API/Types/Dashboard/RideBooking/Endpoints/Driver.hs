@@ -160,7 +160,8 @@ data DriverInfoRes = DriverInfoRes
     upiId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     docsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus,
-    courtRecord :: Kernel.Prelude.Maybe CourtRecordResult
+    courtRecord :: Kernel.Prelude.Maybe CourtRecordResult,
+    approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

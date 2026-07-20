@@ -362,6 +362,7 @@ types:
     - fleetOwnerId: Maybe Text
     - docsVerificationStatus: Maybe DocsVerificationStatus
     - courtRecord: Maybe CourtRecordResult
+    - approved: Maybe Bool
   CourtRecordResult:
     - result: Maybe CRCVerificationResponse
     - errorMessage: Maybe Text
