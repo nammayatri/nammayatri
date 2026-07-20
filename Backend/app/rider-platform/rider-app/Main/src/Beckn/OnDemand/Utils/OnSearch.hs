@@ -457,6 +457,9 @@ buildSpecialLocationTag item =
 getPickupArea :: Spec.Item -> Maybe Text
 getPickupArea item = Utils.getTagV2 Tag.INFO Tag.PICKUP_AREA item.itemTags
 
+getPickupNavigationInstruction :: Spec.Item -> Maybe Text
+getPickupNavigationInstruction item = Utils.getTagV2 Tag.INFO Tag.PICKUP_NAVIGATION_INSTRUCTION item.itemTags
+
 getSpecialLocationName :: Spec.Item -> Maybe Text
 getSpecialLocationName item = Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_NAME item.itemTags
 
