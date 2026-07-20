@@ -101,9 +101,6 @@ module SharedLogic.Finance.Wallet
     payoutCutoffTimeUTC,
     todayRangeUTC,
     getNonRedeemableBalance,
-    computeGstBreakdown,
-    computeGstBreakdownByPlace,
-    computeGstBreakdownGSTIN,
     financeCtxFromRide,
     buildFinanceCtx,
     resolveIsOnlineFromBooking,
@@ -754,25 +751,6 @@ createWalletEntryDelta counterpartyType ownerId delta currency merchantId mercha
         (Left err, _) -> pure $ Left err
         (_, Left err) -> pure $ Left err
 
--- | Split a total GST amount into CGST/SGST/IGST proportionally based on GstBreakup percentages.
---   If the total percentage is 0, returns Nothing.
-computeGstBreakdown :: DTC.GstBreakup -> HighPrecMoney -> Maybe GstAmountBreakdown
-computeGstBreakdown gstBreakup totalGst
-  | totalGst <= 0 = Nothing
-  | totalPct <= 0 = Nothing
-  | otherwise =
-    Just
-      GstAmountBreakdown
-        { cgstAmount = if cgstPct > 0 then Just (totalGst * cgstPct / totalPct) else Nothing,
-          sgstAmount = if sgstPct > 0 then Just (totalGst * sgstPct / totalPct) else Nothing,
-          igstAmount = if igstPct > 0 then Just (totalGst * igstPct / totalPct) else Nothing
-        }
-  where
-    cgstPct = fromMaybe 0 gstBreakup.cgstPercentage
-    sgstPct = fromMaybe 0 gstBreakup.sgstPercentage
-    igstPct = fromMaybe 0 gstBreakup.igstPercentage
-    totalPct = cgstPct + sgstPct + igstPct
-
 -- | Get all unsettled redeemable wallet entry IDs (credits + debits before cutoff).
 --   Uses DB-level filtering for efficiency.
 getRedeemableEntryIds ::
@@ -897,109 +875,3 @@ estimateWalletDeductions mbTdsRate baseFare =
   case mbTdsRate of
     Just rate | rate > 0 -> max 0 baseFare * realToFrac rate
     _ -> 0
-
-computeGstBreakdownByPlace ::
-  DTC.GstBreakup ->
-  Maybe Text -> -- supplier state
-  Maybe Text -> -- receiver state
-  Maybe Text -> -- supplier city
-  Maybe Text -> -- receiver city
-  HighPrecMoney ->
-  Maybe GstAmountBreakdown
-computeGstBreakdownByPlace gstBreakup supplierState receiverState supplierCity receiverCity totalGst
-  | totalGst <= 0 = Nothing
-  | otherwise =
-    case comparePlace supplierState receiverState supplierCity receiverCity of
-      Just IntraState -> computeGstBreakdown intraStateGstBreakup totalGst
-      Just InterState -> computeGstBreakdown interStateGstBreakup totalGst
-      Nothing -> computeGstBreakdown gstBreakup totalGst
-  where
-    comparePlace s1 s2 c1 c2 =
-      case (normalizeGeoComponent s1, normalizeGeoComponent s2) of
-        (Just leftState, Just rightState) ->
-          Just $
-            if leftState == rightState
-              then IntraState
-              else InterState
-        _ ->
-          case (normalizeGeoComponent c1, normalizeGeoComponent c2) of
-            (Just leftCity, Just rightCity) ->
-              Just $
-                if leftCity == rightCity
-                  then IntraState
-                  else InterState
-            _ -> Nothing
-
-    intraStateGstBreakup =
-      DTC.GstBreakup
-        { cgstPercentage = gstBreakup.cgstPercentage,
-          sgstPercentage = gstBreakup.sgstPercentage,
-          igstPercentage = Nothing
-        }
-
-    interStateGstBreakup =
-      DTC.GstBreakup
-        { cgstPercentage = Nothing,
-          sgstPercentage = Nothing,
-          igstPercentage =
-            gstBreakup.igstPercentage
-              <|> ((+) <$> gstBreakup.cgstPercentage <*> gstBreakup.sgstPercentage)
-        }
-
--- | Determine GST jurisdiction by comparing the first 2 characters (state code)
---   of the seller and buyer GSTINs, then split the total GST accordingly.
---   GSTIN format: <2-digit state code><10-char PAN><entity><Z><checksum>.
---   Falls back to the supplied 'gstBreakup' as-is when either GSTIN is missing
---   or too short to extract a state code.
-computeGstBreakdownGSTIN ::
-  DTC.GstBreakup ->
-  Maybe Text -> -- seller (supplier) GSTIN
-  Maybe Text -> -- buyer (receiver) GSTIN
-  HighPrecMoney ->
-  Maybe GstAmountBreakdown
-computeGstBreakdownGSTIN gstBreakup sellerGstin buyerGstin totalGst
-  | totalGst <= 0 = Nothing
-  | otherwise =
-    case compareStateCode sellerGstin buyerGstin of
-      Just IntraState -> computeGstBreakdown intraStateGstBreakup totalGst
-      Just InterState -> computeGstBreakdown interStateGstBreakup totalGst
-      Nothing -> computeGstBreakdown gstBreakup totalGst
-  where
-    -- Normalise a GSTIN: trim, upper-case, drop if shorter than 2 chars.
-    normaliseGstin mbGstin = do
-      gstin <- T.toUpper . T.strip <$> mbGstin
-      if T.length gstin >= 2 then Just gstin else Nothing
-
-    -- Compare ONLY the first 2 characters (state code) of seller and buyer GSTIN.
-    compareStateCode mbSeller mbBuyer =
-      case (normaliseGstin mbSeller, normaliseGstin mbBuyer) of
-        (Just seller, Just buyer) ->
-          Just $
-            if T.take 2 seller == T.take 2 buyer
-              then IntraState
-              else InterState
-        _ -> Nothing
-
-    intraStateGstBreakup =
-      DTC.GstBreakup
-        { cgstPercentage = gstBreakup.cgstPercentage,
-          sgstPercentage = gstBreakup.sgstPercentage,
-          igstPercentage = Nothing
-        }
-
-    interStateGstBreakup =
-      DTC.GstBreakup
-        { cgstPercentage = Nothing,
-          sgstPercentage = Nothing,
-          igstPercentage =
-            gstBreakup.igstPercentage
-              <|> ((+) <$> gstBreakup.cgstPercentage <*> gstBreakup.sgstPercentage)
-        }
-
-data GstJurisdiction = IntraState | InterState
-
-normalizeGeoComponent :: Maybe Text -> Maybe Text
-normalizeGeoComponent mbText =
-  case T.toLower . T.strip <$> mbText of
-    Just value | not (T.null value) -> Just value
-    _ -> Nothing
