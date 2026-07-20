@@ -12,6 +12,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Lib.Finance.Domain.Types.ReconciliationSummary
+import qualified Lib.Finance.Reconciliation.Types
 import qualified Lib.Finance.Storage.Beam.BeamFlow
 import qualified Lib.Finance.Storage.Beam.ReconciliationSummary as Beam
 import qualified Sequelize as Se
@@ -22,15 +23,25 @@ create = createWithKV
 createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary] -> m ())
 createMany = traverse_ create
 
-findByDateAndType ::
+findByChunk ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.UTCTime -> Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationType -> m ([Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary]))
-findByDateAndType reconciliationDate reconciliationType = do findAllWithKV [Se.And [Se.Is Beam.reconciliationDate $ Se.Eq reconciliationDate, Se.Is Beam.reconciliationType $ Se.Eq reconciliationType]]
+  (Lib.Finance.Reconciliation.Types.Domain -> Lib.Finance.Reconciliation.Types.DataSource -> Lib.Finance.Reconciliation.Types.DataSource -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary]))
+findByChunk domain source target reconciliationDate merchantId merchantOperatingCityId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.domain $ Se.Eq domain,
+          Se.Is Beam.source $ Se.Eq source,
+          Se.Is Beam.target $ Se.Eq target,
+          Se.Is Beam.reconciliationDate $ Se.Eq reconciliationDate,
+          Se.Is Beam.merchantId $ Se.Eq merchantId,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
+        ]
+    ]
 
-findByDateRange ::
+findByDomainSourceTarget ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.UTCTime -> Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationType -> m ([Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary]))
-findByDateRange reconciliationDate reconciliationType = do findAllWithKV [Se.And [Se.Is Beam.reconciliationDate $ Se.Eq reconciliationDate, Se.Is Beam.reconciliationType $ Se.Eq reconciliationType]]
+  (Lib.Finance.Reconciliation.Types.Domain -> Lib.Finance.Reconciliation.Types.DataSource -> Lib.Finance.Reconciliation.Types.DataSource -> m ([Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary]))
+findByDomainSourceTarget domain source target = do findAllWithKV [Se.And [Se.Is Beam.domain $ Se.Eq domain, Se.Is Beam.source $ Se.Eq source, Se.Is Beam.target $ Se.Eq target]]
 
 findById ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
@@ -55,17 +66,20 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.ReconciliationSummary.Reconciliatio
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.disputeAmountTotal disputeAmountTotal,
+      Se.Set Beam.domain domain,
       Se.Set Beam.errorMessage errorMessage,
       Se.Set Beam.matchRate matchRate,
       Se.Set Beam.matchedRecords matchedRecords,
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.reconciliationDate reconciliationDate,
-      Se.Set Beam.reconciliationType reconciliationType,
+      Se.Set Beam.source source,
       Se.Set Beam.sourceTotal sourceTotal,
       Se.Set Beam.status status,
+      Se.Set Beam.target target,
       Se.Set Beam.targetTotal targetTotal,
       Se.Set Beam.totalDiscrepancies totalDiscrepancies,
+      Se.Set Beam.totalRecords totalRecords,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.varianceAmount varianceAmount
     ]
@@ -78,6 +92,7 @@ instance FromTType' Beam.ReconciliationSummary Lib.Finance.Domain.Types.Reconcil
         Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary
           { createdAt = createdAt,
             disputeAmountTotal = disputeAmountTotal,
+            domain = domain,
             errorMessage = errorMessage,
             id = Kernel.Types.Id.Id id,
             matchRate = matchRate,
@@ -85,11 +100,13 @@ instance FromTType' Beam.ReconciliationSummary Lib.Finance.Domain.Types.Reconcil
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId,
             reconciliationDate = reconciliationDate,
-            reconciliationType = reconciliationType,
+            source = source,
             sourceTotal = sourceTotal,
             status = status,
+            target = target,
             targetTotal = targetTotal,
             totalDiscrepancies = totalDiscrepancies,
+            totalRecords = totalRecords,
             updatedAt = updatedAt,
             varianceAmount = varianceAmount
           }
@@ -99,6 +116,7 @@ instance ToTType' Beam.ReconciliationSummary Lib.Finance.Domain.Types.Reconcilia
     Beam.ReconciliationSummaryT
       { Beam.createdAt = createdAt,
         Beam.disputeAmountTotal = disputeAmountTotal,
+        Beam.domain = domain,
         Beam.errorMessage = errorMessage,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.matchRate = matchRate,
@@ -106,11 +124,13 @@ instance ToTType' Beam.ReconciliationSummary Lib.Finance.Domain.Types.Reconcilia
         Beam.merchantId = merchantId,
         Beam.merchantOperatingCityId = merchantOperatingCityId,
         Beam.reconciliationDate = reconciliationDate,
-        Beam.reconciliationType = reconciliationType,
+        Beam.source = source,
         Beam.sourceTotal = sourceTotal,
         Beam.status = status,
+        Beam.target = target,
         Beam.targetTotal = targetTotal,
         Beam.totalDiscrepancies = totalDiscrepancies,
+        Beam.totalRecords = totalRecords,
         Beam.updatedAt = updatedAt,
         Beam.varianceAmount = varianceAmount
       }

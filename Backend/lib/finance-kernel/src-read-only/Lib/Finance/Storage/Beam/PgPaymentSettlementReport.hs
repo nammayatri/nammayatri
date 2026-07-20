@@ -41,8 +41,6 @@ data PgPaymentSettlementReportT f = PgPaymentSettlementReportT
     pgBaseFee :: (B.C f Kernel.Types.Common.HighPrecMoney),
     pgTax :: (B.C f Kernel.Types.Common.HighPrecMoney),
     rawData :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    reconMessage :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    reconStatus :: (B.C f Lib.Finance.Domain.Types.PgPaymentSettlementReport.ReconStatus),
     referenceId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     referenceType :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     refundAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),

@@ -8,48 +8,45 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Lib.Finance.Domain.Types.ReconciliationEntry
+import qualified Lib.Finance.Reconciliation.Types
 import Tools.Beam.UtilsTH
 
 data ReconciliationEntryT f = ReconciliationEntryT
-  { actualLedgerValue :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    bookingId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+  { actualAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
+    closeReason :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    component :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    dcoId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    expectedDsrValue :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    financeComponent :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.ReconciliationEntry.FinanceComponent)),
-    gstOnSubscription :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    domain :: (B.C f Lib.Finance.Reconciliation.Types.Domain),
+    entityId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    entityMeta :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    entryKey :: (B.C f Kernel.Prelude.Text),
+    expectedAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
+    firstSeenAt :: (B.C f Kernel.Prelude.UTCTime),
+    groupSourceTotal :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    groupTargetAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    groupTargetKey :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     id :: (B.C f Kernel.Prelude.Text),
     merchantId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     mismatchReason :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    mode :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.ReconciliationEntry.RideMode)),
-    paymentOrderId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    pgOrderId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    pgTransactionDate :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    pgTxnId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    planName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    purchaseStatus :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    reconStatus :: (B.C f Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationStatus),
+    open :: (B.C f Kernel.Prelude.Bool),
+    partyId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    reconStatus :: (B.C f Lib.Finance.Reconciliation.Types.ReconciliationStatus),
     reconciliationDate :: (B.C f Kernel.Prelude.UTCTime),
-    reconciliationType :: (B.C f Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationType),
-    remainingSubscriptionBalance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    resolvedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     rrn :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     settlementDate :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     settlementId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     settlementMode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    sourceDetails :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    sourceId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    status :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.ReconciliationEntry.RideStatus)),
-    subscriptionAmountExclGst :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    source :: (B.C f Lib.Finance.Reconciliation.Types.DataSource),
+    sourceLifecycle :: (B.C f Lib.Finance.Reconciliation.Types.Lifecycle),
+    sourceRecordId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     summaryId :: (B.C f Kernel.Prelude.Text),
-    targetDetails :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    targetId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    target :: (B.C f Lib.Finance.Reconciliation.Types.DataSource),
+    targetRecordId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     timestamp :: (B.C f Kernel.Prelude.UTCTime),
-    totalTransactionAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     transactionDate :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    utr :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     variance :: (B.C f Kernel.Types.Common.HighPrecMoney)
   }
   deriving (Generic, B.Beamable)
@@ -60,6 +57,6 @@ instance B.Table ReconciliationEntryT where
 
 type ReconciliationEntry = ReconciliationEntryT Identity
 
-$(enableKVPG (''ReconciliationEntryT) [('id)] [[('bookingId)], [('dcoId)], [('reconStatus)], [('summaryId)]])
+$(enableKVPG (''ReconciliationEntryT) [('id)] [[('entityId)], [('entryKey)], [('groupTargetKey)], [('summaryId)]])
 
 $(mkTableInstancesGenericSchema (''ReconciliationEntryT) "finance_reconciliation_entry")

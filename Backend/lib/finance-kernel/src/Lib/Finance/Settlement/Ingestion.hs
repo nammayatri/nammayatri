@@ -116,8 +116,11 @@ ingestPaymentSettlementReport cfg mbJuspayCfg merchantId merchantOperatingCityId
       logDebug $ "ingestPaymentSettlementReport: csvBytes=" <> show csvBytes
       logDebug $ "ingestPaymentSettlementReport: mbSftpMeta=" <> show mbSftpMeta
       logDebug $ "ingestPaymentSettlementReport: mbSplitCustomerTy=" <> show mbSplitCustomerTy
+      -- Only applies to SFTP chunk resumption: a zero-row chunk means \"past
+      -- end of file\", so we can skip parsing. Atomic-pull sources (e.g. Juspay
+      -- portal API) always carry the full dataset and must parse regardless.
       let sftpDeliveredZeroRows = case mbSftpMeta of
-            Just meta -> meta.dataRowsDelivered == 0
+            Just meta -> not meta.atomicPull && meta.dataRowsDelivered == 0
             Nothing -> False
       parseResult <-
         if sftpDeliveredZeroRows
@@ -177,7 +180,9 @@ finalizeSftpFileCursor mbMeta parseHadNoReports = do
   maybe (logInfo "finalizeSftpFileCursor: mbMeta=Nothing → no-op") finalize mbMeta
   where
     finalize meta@SftpFetchMeta {..}
-      | not parseHadNoReports && dataRowsDelivered > 0 = do
+      -- Atomic pulls (Juspay portal API's whole-day fetch) always land in the
+      -- COMPLETED branch: there's no row-index resume protocol for them.
+      | not atomicPull && not parseHadNoReports && dataRowsDelivered > 0 = do
         let newIndex = firstDataRowIndex + dataRowsDelivered - 1
         logInfo $
           "finalizeSftpFileCursor: branch=updateProgress(PENDING)"

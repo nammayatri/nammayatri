@@ -12,7 +12,10 @@ imports:
   InvoiceStatus: Lib.Finance.Domain.Types.Invoice
   InvoiceType: Domain.Types.Invoice
   IssuedToType: Domain.Types.Invoice
-  ReconciliationType: Lib.Finance.Domain.Types.ReconciliationSummary
+  Domain: Lib.Finance.Reconciliation.Types
+  DataSource: Lib.Finance.Reconciliation.Types
+  Day: Data.Time
+  TimeOfDay: Kernel.Prelude
   DateOrTime: Lib.Finance.Invoice.PdfService
   Value: Data.Aeson
   Language: Kernel.External.Types
@@ -106,7 +109,9 @@ apis:
   - GET: # ReconciliationAPI
       endpoint: /finance/reconciliation
       mandatoryQuery:
-        reconciliationType: ReconciliationType
+        domain: Domain
+        source: DataSource
+        target: DataSource
       query:
         fromDate: UTCTime
         toDate: UTCTime
@@ -384,10 +389,16 @@ types:
     - summary: ReconciliationSummary
     - exceptions: [ReconciliationEntry]
     - completed: [ReconciliationEntry]
+  # Recipe is identified by its (domain, source, target) triple — the same
+  # key the framework registry uses. Exactly one of `day` (immediate one-off
+  # for that IST calendar day) or `runAt` (daily auto-schedule at that IST
+  # time-of-day, processing D-2) must be set.
   ReconciliationTriggerReq:
-    - fromDate: UTCTime
-    - toDate: UTCTime
-    - reconciliationType: Maybe Text
+    - domain: Domain
+    - source: DataSource
+    - target: DataSource
+    - day: Maybe Day
+    - runAt: Maybe TimeOfDay
   ReconciliationTriggerRes:
     - success: Bool
     - message: Text
@@ -400,31 +411,45 @@ types:
     - targetTotal: HighPrecMoney
     - varianceAmount: HighPrecMoney
     - disputeAmountTotal: HighPrecMoney
+  # Generic-shaped recon entry. Old ride-fare-specific fields (bookingId,
+  # dcoId, mode, status) were renamed to their neutral equivalents so the
+  # response makes sense for postpaid / membership / consumption recons too.
+  # Legacy field pairs were collapsed:
+  #     expectedValue / actualValue     -> expectedAmount / actualAmount
+  #     sourceId       / targetId       -> sourceRecordId / targetRecordId
+  #     financeComponent                -> component
+  #     pgTransactionDate               -> transactionDate  (was a dup)
+  # B1/B2 fields (entryKey .. closeReason) surface the sweep's re-check
+  # state so dashboards can distinguish OPEN, aged-out, and twin-resolved
+  # entries at a glance.
   ReconciliationEntry:
-    - bookingId: Maybe Text
-    - dcoId: Maybe Text
-    - status: Maybe Text
-    - mode: Maybe Text
-    - expectedValue: Maybe HighPrecMoney
-    - actualValue: Maybe HighPrecMoney
+    # ── Core identity ────────────────────────────────────────────────
+    - entityId: Maybe Text          # primary domain entity (booking / driver_fee / sub id / …)
+    - partyId: Maybe Text           # driver_id / owner_id / whoever
+    - sourceRecordId: Maybe Text    # source table row PK (was sourceId)
+    - targetRecordId: Maybe Text    # target table row PK (was targetId; null when MISSING_IN_TARGET)
+    - component: Maybe Text         # finance sub-classifier (was financeComponent)
+    # ── Amounts / verdict ───────────────────────────────────────────
+    - expectedAmount: Maybe HighPrecMoney   # was expectedValue
+    - actualAmount: Maybe HighPrecMoney     # was actualValue
     - variance: Maybe HighPrecMoney
     - disputeAmount: Maybe HighPrecMoney
     - reconStatus: Maybe Text
     - mismatchReason: Maybe Text
+    - mismatchCategory: Maybe Text
+    # ── Timestamps ──────────────────────────────────────────────────
     - timestamp: Maybe UTCTime
-    - financeComponent: Maybe Text
-    - sourceId: Maybe Text
-    - targetId: Maybe Text
-    - settlementId: Maybe Text
-    - settlementDate: Maybe UTCTime
-    - settlementMode: Maybe Text
     - transactionDate: Maybe UTCTime
-    - pgTransactionDate: Maybe UTCTime
+    - settlementDate: Maybe UTCTime
+    # ── Settlement context ──────────────────────────────────────────
+    - settlementId: Maybe Text
+    - settlementMode: Maybe Text
     - rrn: Maybe Text
     - utr: Maybe Text
     - pgOrderId: Maybe Text
     - pgTxnId: Maybe Text
     - paymentOrderId: Maybe Text
+    # ── Meta-derived subscription context ───────────────────────────
     - subscriptionAmountExclGst: Maybe HighPrecMoney
     - gstOnSubscription: Maybe HighPrecMoney
     - totalTransactionAmount: Maybe HighPrecMoney
@@ -437,7 +462,18 @@ types:
     - remainingAmount: Maybe HighPrecMoney
     - transactionType: Maybe Text
     - linkedEntityId: Maybe Text
-    - mismatchCategory: Maybe Text
+    # ── B1: stable identity + upsert bookkeeping ────────────────────
+    - entryKey: Maybe Text                # natural key (srcId or "tgt:" <> tgtId)
+    - firstSeenAt: Maybe UTCTime          # preserved across upserts
+    - sourceLifecycle: Maybe Text         # InFlight / Settled / Cancelled
+    # ── B2: sweep-visible state ─────────────────────────────────────
+    - open: Maybe Bool                    # false once the sweep has closed it
+    - resolvedAt: Maybe UTCTime           # moment OPEN → CLOSED (null while OPEN)
+    - closeReason: Maybe Text             # null / AGED_OUT / RESOLVED_BY_SOURCE
+    # ── GroupByTargetKey / matchKey ─────────────────────────────────
+    - groupTargetKey: Maybe Text          # srcMatchKey uniformly; tgtMatchKey on orphans
+    - groupSourceTotal: Maybe HighPrecMoney
+    - groupTargetAmount: Maybe HighPrecMoney
 
   # ----- Payout list -----
   PayoutListRes:

@@ -9,7 +9,6 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport
 import qualified Lib.Finance.Domain.Types.PgPayoutSettlementReport
 import Tools.Beam.UtilsTH
 
@@ -38,8 +37,6 @@ data PgPayoutSettlementReportT f = PgPayoutSettlementReportT
     payoutCustomerId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     payoutRequestId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     rawData :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    reconMessage :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    reconStatus :: (B.C f Lib.Finance.Domain.Types.PgPaymentSettlementReport.ReconStatus),
     referenceType :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     rrn :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     settlementAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),

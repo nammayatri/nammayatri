@@ -110,6 +110,7 @@ library:
           - -j4
   dependencies:
     - euler-hs
+    - http-api-data
     - mobility-core
     - servant-server
     - openapi3

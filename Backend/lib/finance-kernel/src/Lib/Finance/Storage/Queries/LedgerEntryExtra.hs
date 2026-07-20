@@ -34,6 +34,24 @@ findByReferenceIn referenceTypes referenceId =
         ]
     ]
 
+-- | Bulk shape used by the reconciliation framework: many reference types AND
+--   many reference ids. Single indexed query — replaces per-id
+--   'findByReferenceIn' loops in every ledger-touching recipe.
+findByReferenceTypesAndReferenceIds ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  [Text] -> -- reference types
+  [Text] -> -- reference ids
+  m [Domain.LedgerEntry]
+findByReferenceTypesAndReferenceIds _ [] = pure []
+findByReferenceTypesAndReferenceIds [] _ = pure []
+findByReferenceTypesAndReferenceIds referenceTypes referenceIds =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.referenceType $ Se.In referenceTypes,
+          Se.Is Beam.referenceId $ Se.In referenceIds
+        ]
+    ]
+
 findByReferenceTypesAndDateRange ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
   [Text] ->

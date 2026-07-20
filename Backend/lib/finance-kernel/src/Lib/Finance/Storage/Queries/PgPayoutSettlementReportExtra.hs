@@ -27,6 +27,17 @@ findByPayoutRequestIds payoutRequestIds =
         ]
     ]
 
+-- | Bulk fetch payout settlement reports by primary key. Used by
+--   'PrepaidPgPayoutVsPayoutRequest' via the B2 sweep's
+--   'fetchSourcesByIds' — no status filter because the sweep is
+--   re-hydrating a previously-classified row, not filtering ingest.
+findByIds ::
+  (BeamFlow m r) =>
+  [Text] ->
+  m [Domain.PgPayoutSettlementReport]
+findByIds [] = pure []
+findByIds ids = findAllWithKV [Se.Is Beam.id $ Se.In ids]
+
 findByTxnDateRangeAndStatus ::
   (BeamFlow m r) =>
   Text -> -- merchantId
