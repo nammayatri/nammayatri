@@ -53,6 +53,7 @@ types:
     - estimatedDuration: Maybe Seconds
     - riderName: Maybe Text
     - vehicleVariant: VehicleVariant
+    - boothSpecificFleet: Maybe Text
   Location:
     - id: Id Location
     - lat: Double

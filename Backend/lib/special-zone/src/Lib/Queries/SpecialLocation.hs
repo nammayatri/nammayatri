@@ -27,6 +27,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.GateInfo.Geometry (minDistanceToPolygonEdges, parseGatePolygons, pointInPolygon)
 import qualified Lib.Queries.GateInfo as QGI
+import qualified Lib.Queries.SpecialLocationPriority as QSLP
 import Lib.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Tabular.SpecialLocation
 import qualified Lib.Types.GateInfoExtra as GD
@@ -52,7 +53,9 @@ data SpecialLocationFull = SpecialLocationFull
     supportNumber :: Maybe Text,
     render :: Maybe D.RenderType,
     paymentModes :: Maybe [D.PaymentMode],
-    fareSettlementType :: Maybe D.FareSettlementType
+    fareSettlementType :: Maybe D.FareSettlementType,
+    pickupPriority :: Maybe Int,
+    dropPriority :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -125,8 +128,27 @@ makeFullSpecialLocation D.SpecialLocation {..} = do
       { gatesInfo = gatesInfoFull,
         geoJson = geomGeoJson,
         merchantOperatingCityId = getId <$> merchantOperatingCityId,
+        pickupPriority = Nothing,
+        dropPriority = Nothing,
         ..
       }
+
+enrichSpecialLocationsWithPriority ::
+  (Transactionable m, EsqDBReplicaFlow m r) => Text -> [SpecialLocationFull] -> m [SpecialLocationFull]
+enrichSpecialLocationsWithPriority merchantId sls = do
+  priorities <- QSLP.findAllByMerchantId merchantId
+  pure $ map (enrich priorities) sls
+  where
+    enrich priorities sl =
+      let rows = filter (\p -> p.category == sl.category) priorities
+          mocId = fromMaybe "" sl.merchantOperatingCityId
+          mbPriority = case rows of
+            [single] | T.null single.merchantOperatingCityId -> Just single
+            _ -> find (\p -> p.merchantOperatingCityId == mocId) rows
+       in sl
+            { pickupPriority = (.pickupPriority) <$> mbPriority,
+              dropPriority = (.dropPriority) <$> mbPriority
+            }
 
 buildSpecialLocationWithGates :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => D.SpecialLocation -> m D.SpecialLocation
 buildSpecialLocationWithGates specialLocation = do
