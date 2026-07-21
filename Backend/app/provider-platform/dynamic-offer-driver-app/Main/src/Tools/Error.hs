@@ -1112,7 +1112,7 @@ instance IsBaseError RiderDetailsError where
 
 instance IsHTTPError RiderDetailsError where
   toErrorCode _ = "RIDER_DETAILS_NOT_FOUND"
-  toHttpCode _ = E500
+  toHttpCode _ = E404
 
 instance IsAPIError RiderDetailsError
 

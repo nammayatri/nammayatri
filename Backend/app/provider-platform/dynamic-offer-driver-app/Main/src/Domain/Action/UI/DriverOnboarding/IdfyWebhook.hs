@@ -185,31 +185,36 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
         CourtRecordCheck.onVerifyCRCError (Id rsp.group_id) ("Idfy CRC failed: status=" <> rsp.status)
         return Ack
       | otherwise -> do
-        verificationReq <- IVQuery.findByRequestId rsp.request_id >>= fromMaybeM (InternalError $ "Verification request not found for requestId=" <> rsp.request_id)
-        person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
-        logInfo $
-          "IdfyWebhook.onVerify: looked up verificationReq requestId=" <> rsp.request_id
-            <> " driverId="
-            <> verificationReq.driverId.getId
-            <> " docType="
-            <> verificationReq.docType
-            <> " status="
-            <> verificationReq.status
-        IVQuery.updateResponse rsp.status (Just respDump) rsp.request_id
-        let resultStatus = getResultStatus rsp.result
-        logInfo $ "IdfyWebhook.onVerify: parsed resultStatus=" <> show resultStatus
-        if resultStatus == Just "source_down"
-          then do
-            logInfo $ "IdfyWebhook.onVerify: source_down path requestId=" <> rsp.request_id
-            handleIdfySourceDown person scheduleRetryVerificationJob verificationReq
+        mbVerificationReq <- IVQuery.findByRequestId rsp.request_id
+        case mbVerificationReq of
+          Nothing -> do
+            logWarning $ "IdfyWebhook.onVerify: verification request not found for requestId=" <> rsp.request_id <> " — acking to stop Idfy retries"
             return Ack
-          else do
-            mbRemPriorityList <- CQO.getVerificationPriorityList verificationReq.driverId
-            logInfo $ "IdfyWebhook.onVerify: routing to verifyDocument mbRemPriorityList=" <> show mbRemPriorityList
-            ack_ <- maybe (pure Ack) (flip (verifyDocument person verificationReq) mbRemPriorityList) rsp.result
-            logInfo $ "IdfyWebhook.onVerify: completed requestId=" <> rsp.request_id
-            void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent verificationReq.driverId)
-            return ack_
+          Just verificationReq -> do
+            person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
+            logInfo $
+              "IdfyWebhook.onVerify: looked up verificationReq requestId=" <> rsp.request_id
+                <> " driverId="
+                <> verificationReq.driverId.getId
+                <> " docType="
+                <> verificationReq.docType
+                <> " status="
+                <> verificationReq.status
+            IVQuery.updateResponse rsp.status (Just respDump) rsp.request_id
+            let resultStatus = getResultStatus rsp.result
+            logInfo $ "IdfyWebhook.onVerify: parsed resultStatus=" <> show resultStatus
+            if resultStatus == Just "source_down"
+              then do
+                logInfo $ "IdfyWebhook.onVerify: source_down path requestId=" <> rsp.request_id
+                handleIdfySourceDown person scheduleRetryVerificationJob verificationReq
+                return Ack
+              else do
+                mbRemPriorityList <- CQO.getVerificationPriorityList verificationReq.driverId
+                logInfo $ "IdfyWebhook.onVerify: routing to verifyDocument mbRemPriorityList=" <> show mbRemPriorityList
+                ack_ <- maybe (pure Ack) (flip (verifyDocument person verificationReq) mbRemPriorityList) rsp.result
+                logInfo $ "IdfyWebhook.onVerify: completed requestId=" <> rsp.request_id
+                void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent verificationReq.driverId)
+                return ack_
   where
     getResultStatus :: Maybe Idfy.IdfyResult -> Maybe Text
     getResultStatus mbResult =

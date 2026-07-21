@@ -1691,7 +1691,7 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
         (Just $ updatedDL.id.getId)
         (Just updatedDL.licenseExpiry)
         Nothing
-    Nothing -> whenCreateDocumentRequired merchantOpCityId (throwError (InternalError "DL not found by image id")) $ do
+    Nothing -> whenCreateDocumentRequired merchantOpCityId (throwError (InvalidRequest "DL not found by image id")) $ do
       dlNumber <- req.driverLicenseNumber & fromMaybeM (InvalidRequest "driverLicenseNumber is required for creating DL document")
       dlExpiry <- req.dateOfExpiry & fromMaybeM (InvalidRequest "dateOfExpiry is required for creating DL document")
       encryptedDLNumber <- encrypt dlNumber
