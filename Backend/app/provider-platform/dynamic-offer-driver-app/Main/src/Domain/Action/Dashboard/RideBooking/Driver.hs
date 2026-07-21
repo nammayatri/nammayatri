@@ -88,6 +88,7 @@ import SharedLogic.DriverOnboarding
 import qualified SharedLogic.Finance.Wallet as FWallet
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Reminder.Helper (createReminder)
+import qualified SharedLogic.VehicleServiceTier as VST
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -447,7 +448,7 @@ getDriverFeedbackList merchantShortId opCity mbPersonId mbMobileNumber mbMobileC
 
 buildDriverInfoRes ::
   forall m r.
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   QPerson.DriverWithRidesCount ->
   Maybe DriverLicense ->
   [(DriverRCAssociation, VehicleRegistrationCertificate)] ->
@@ -489,6 +490,12 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
             return $ maybe (show serviceTierType) (.name) mbServiceTier
       )
       vehicle
+  whenJust vehicle $ \v -> do
+    transporterConfig <-
+      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing))
+        >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+    fork "backfillSelectedServiceTiers" $
+      VST.backfillSelectedServiceTiers v.selectedServiceTiers v info transporterConfig person.merchantOperatingCityId
   let serviceTierACThresholds =
         map
           (\DVST.VehicleServiceTier {..} -> airConditionedThreshold)

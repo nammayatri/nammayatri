@@ -28,8 +28,11 @@ import qualified Domain.Types.VehicleCategory as VC
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Domain.Utils (getVehicleAge)
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.DriverPool.DriverPoolData as DPD
+import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -117,7 +120,7 @@ fetchVehicleTierForDriverWithUsageRestriction mode mbDriverInfo mbVehicle mbDriv
 -- any default-for-variant tier if the intersection is empty. Also returns
 -- whether AC is currently working for this driver (using the picked tier's
 -- threshold) and whether the vehicle is supported at all in this city.
-getDriverDefaultServiceTier ::
+getDriverDefaultSupportedServiceTier ::
   DV.Vehicle ->
   DI.DriverInformation ->
   DTPC.TransporterConfig ->
@@ -125,7 +128,7 @@ getDriverDefaultServiceTier ::
   [DVST.VehicleServiceTier] ->
   UTCTime ->
   (Bool, Maybe DVST.VehicleServiceTier, Bool)
-getDriverDefaultServiceTier vehicle driverInfo transporterConfig supportedServiceTiers cityServiceTiers now =
+getDriverDefaultSupportedServiceTier vehicle driverInfo transporterConfig supportedServiceTiers cityServiceTiers now =
   let allVehicleSupportedDefaultServiceTiers =
         sortOn (fmap Down . (.airConditionedThreshold)) $
           filter
@@ -136,10 +139,80 @@ getDriverDefaultServiceTier vehicle driverInfo transporterConfig supportedServic
         if null allVehicleSupportedDefaultServiceTiers
           then find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
           else listToMaybe allVehicleSupportedDefaultServiceTiers
-      checkIfACWorking =
-        case mbDefaultServiceTierItem >>= (.airConditionedThreshold) of
-          Nothing -> False
-          Just acThreshold ->
-            fromMaybe 0 driverInfo.airConditionScore <= acThreshold
-              && maybe True (\lastCheckedAt -> fromInteger (diffDays (utctDay now) (utctDay lastCheckedAt)) >= transporterConfig.acStatusCheckGap) driverInfo.lastACStatusCheckedAt
+      checkIfACWorking = isACWorkingForDefault driverInfo transporterConfig mbDefaultServiceTierItem now
    in (checkIfACWorking, mbDefaultServiceTierItem, isVehicleSupported)
+
+-- | Like 'getDriverDefaultSupportedServiceTier' but ignores the city's
+-- supportedServiceTiers list — returns the highest-AC tier whose
+-- `defaultForVehicleVariant` contains the driver's variant, regardless of
+-- whether that tier is currently marked as supported in the city.
+getDriverDefaultServiceTier ::
+  DV.Vehicle ->
+  DI.DriverInformation ->
+  DTPC.TransporterConfig ->
+  [DVST.VehicleServiceTier] ->
+  UTCTime ->
+  (Bool, Maybe DVST.VehicleServiceTier)
+getDriverDefaultServiceTier vehicle driverInfo transporterConfig cityServiceTiers now =
+  let mbDefaultServiceTierItem =
+        listToMaybe $
+          sortOn (fmap Down . (.airConditionedThreshold)) $
+            filter (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
+      checkIfACWorking = isACWorkingForDefault driverInfo transporterConfig mbDefaultServiceTierItem now
+   in (checkIfACWorking, mbDefaultServiceTierItem)
+
+isACWorkingForDefault ::
+  DI.DriverInformation ->
+  DTPC.TransporterConfig ->
+  Maybe DVST.VehicleServiceTier ->
+  UTCTime ->
+  Bool
+isACWorkingForDefault driverInfo transporterConfig mbDefaultServiceTierItem now =
+  case mbDefaultServiceTierItem >>= (.airConditionedThreshold) of
+    Nothing -> False
+    Just acThreshold ->
+      fromMaybe 0 driverInfo.airConditionScore <= acThreshold
+        && maybe True (\lastCheckedAt -> fromInteger (diffDays (utctDay now) (utctDay lastCheckedAt)) >= transporterConfig.acStatusCheckGap) driverInfo.lastACStatusCheckedAt
+
+-- | Self-heal `selectedServiceTiers` on Vehicle + LTS pool data when either is empty.
+-- Called from the driver-info handlers (driver UI and dashboard) with the current
+-- vehicle.selectedServiceTiers as input. Intended to run inside a fork.
+--
+-- Behavior:
+--   * input tiers empty  → resolve the driver's default tier and write it to DB
+--     (which cascades to LTS via QVehicle.updateSelectedServiceTiers).
+--   * input non-empty but LTS pool data has empty selectedServiceTiers → push
+--     the input tiers to LTS via syncDriverPoolDataToLTS.
+--   * otherwise no-op.
+backfillSelectedServiceTiers ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r
+  ) =>
+  [DTC.ServiceTierType] ->
+  DV.Vehicle ->
+  DI.DriverInformation ->
+  DTPC.TransporterConfig ->
+  Id DMOC.MerchantOperatingCity ->
+  m ()
+backfillSelectedServiceTiers inputTiers vehicle driverInfo transporterConfig merchantOpCityId
+  | null inputTiers = do
+    now <- getCurrentTime
+    cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+    let (_, mbDefault) = getDriverDefaultServiceTier vehicle driverInfo transporterConfig cityServiceTiers now
+    case mbDefault of
+      Nothing ->
+        logWarning $ "backfillSelectedServiceTiers: no default service tier for driver " <> vehicle.driverId.getId <> " variant=" <> show vehicle.variant
+      Just defaultTier -> do
+        logInfo $ "backfillSelectedServiceTiers: empty selectedServiceTiers for driver " <> vehicle.driverId.getId <> ", inserting default " <> show defaultTier.serviceTierType
+        QVehicle.updateSelectedServiceTiers [defaultTier.serviceTierType] vehicle.driverId
+  | otherwise = do
+    let driverId = cast @DP.Person @DP.Driver vehicle.driverId
+    mbLtsData <- listToMaybe <$> DPD.getDriverPoolDataBatch [driverId]
+    whenJust mbLtsData $ \ltsData ->
+      when (null ltsData.selectedServiceTiers) $ do
+        logInfo $ "backfillSelectedServiceTiers: LTS selectedServiceTiers empty for driver " <> vehicle.driverId.getId <> ", pushing DB tiers"
+        LTSSync.syncDriverPoolDataToLTS driverId $
+          LTSSync.emptyUpdate {LTSSync.selectedServiceTiers = LTSSync.Set inputTiers}
