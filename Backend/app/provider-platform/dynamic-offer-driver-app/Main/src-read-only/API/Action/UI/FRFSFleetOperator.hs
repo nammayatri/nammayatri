@@ -35,7 +35,7 @@ type API =
            "vehicleType"
            BecknV2.FRFS.Enums.VehicleCategory
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSFleetOperator.FRFSRouteAPI
       :<|> TokenAuth
       :> "v2"
@@ -50,32 +50,48 @@ type API =
            Data.Text.Text
       :> "manifest"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSFleetOperator.FRFSTripPassengerManifestResp
       :<|> TokenAuth
       :> "frfs"
       :> "fleetOperator"
       :> "tripAction"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSFleetOperator.FleetOperatorTripActionReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSFleetOperator.FleetOperatorTripActionResp
       :<|> TokenAuth
       :> "frfs"
       :> "fleetOperator"
       :> "currentOperation"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSFleetOperator.FleetOperatorCurrentOperationReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSFleetOperator.FleetOperatorCurrentOperationResp
+      :<|> TokenAuth
+      :> "v2"
+      :> "frfs"
+      :> "busTripSchedule"
+      :> Capture
+           "routeId"
+           Data.Text.Text
+      :> MandatoryQueryParam
+           "tripNumber"
+           Kernel.Prelude.Int
+      :> MandatoryQueryParam
+           "waybillNo"
+           Data.Text.Text
+      :> Get
+           '[JSON]
+           API.Types.UI.FRFSFleetOperator.BusTripScheduleResp
   )
 
 handler :: Environment.FlowServer API
-handler = getV2FrfsRoute :<|> getV2FrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation
+handler = getV2FrfsRoute :<|> getV2FrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation :<|> getV2FrfsBusTripSchedule
 
 getV2FrfsRoute ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -83,8 +99,8 @@ getV2FrfsRoute ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Data.Text.Text ->
-    Kernel.Prelude.Maybe (Data.Text.Text) ->
-    Kernel.Prelude.Maybe (Data.Text.Text) ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Types.Beckn.Context.City ->
     BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler API.Types.UI.FRFSFleetOperator.FRFSRouteAPI
@@ -121,3 +137,15 @@ postFrfsFleetOperatorCurrentOperation ::
     Environment.FlowHandler API.Types.UI.FRFSFleetOperator.FleetOperatorCurrentOperationResp
   )
 postFrfsFleetOperatorCurrentOperation a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSFleetOperator.postFrfsFleetOperatorCurrentOperation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getV2FrfsBusTripSchedule ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Data.Text.Text ->
+    Kernel.Prelude.Int ->
+    Data.Text.Text ->
+    Environment.FlowHandler API.Types.UI.FRFSFleetOperator.BusTripScheduleResp
+  )
+getV2FrfsBusTripSchedule a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSFleetOperator.getV2FrfsBusTripSchedule (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
