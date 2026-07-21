@@ -1192,7 +1192,6 @@ TransporterConfig:
     canAddCancellationFee: Bool
     cancellationFeePaymentMethodExceptions: "Maybe [PaymentInstrument]"
     validCancellationPenaltyReasons: "Maybe [Text]"
-    enableCancellationCommission: Maybe Bool
     allowDefaultPlanAllocation: Bool
     arrivedStopThreshold: Maybe HighPrecMeters
     arrivedPickupThreshold: HighPrecMeters

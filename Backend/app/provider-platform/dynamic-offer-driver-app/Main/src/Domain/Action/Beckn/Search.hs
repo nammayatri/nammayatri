@@ -881,7 +881,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
   now <- getCurrentTime
   void $ cacheFarePolicyByEstimateId estimateId.getId fullFarePolicy
   rideCommissionCharges <- FC.calculateCommission minFareParams (Just fullFarePolicy)
-  cancellationCommissionCharges <- FC.calculateCancellationCommission (fromMaybe False transporterConfig.enableCancellationCommission) minFareParams (Just fullFarePolicy)
+  cancellationCommissionCharges <- FC.calculateCancellationCommission minFareParams (Just fullFarePolicy)
   -- The estimate carries ONE commission figure: ride + cancellation.
   let commissionCharges = case (rideCommissionCharges, cancellationCommissionCharges) of
         (Nothing, Nothing) -> Nothing

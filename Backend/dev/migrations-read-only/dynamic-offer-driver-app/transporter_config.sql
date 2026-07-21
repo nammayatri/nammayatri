@@ -997,4 +997,3 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN default_refund_
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_cancellation_commission boolean ;

@@ -558,12 +558,9 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
               return CancellationChargesOutcome {fee = Just 0, tax = Nothing, overdueFee = Nothing, overdueTax = Nothing, commission = Nothing, overdueCommission = Nothing}
       when (maybe False (`elem` validCancellationPenaltyReasonCodes transporterConfig) reasonCode && fromMaybe 0 outcome.fee <= 0) $
         logError $ "User no show charges was not applied: " <> show outcome.fee <> ": rideId: " <> ride.id.getId <> ". Please check dynamic logic"
-      -- enable_cancellation_commission gates the commission outputs only; the fee itself is
-      -- governed by canAddCancellationFee above.
-      let gatedOutcome
-            | fromMaybe False transporterConfig.enableCancellationCommission = outcome
-            | otherwise = outcome {commission = Nothing, overdueCommission = Nothing}
-      pure (Just gatedOutcome, mbVersion)
+      -- Commission outputs are controlled by the JsonLogic (Maybe commission /
+      -- overdueCommission) directly — no separate enable flag needed.
+      pure (Just outcome, mbVersion)
     else return (Nothing, Nothing)
 
 -- | Default no-show cancellation reason, used when transporter_config leaves the penalty reasons unset.
@@ -875,7 +872,7 @@ applyCancellationLedgerAction booking ride action transporterConfig = do
             | otherwise = mbCancellationDuesDetails >>= (.overdueCancellationCommission)
           cddWasPending = maybe False (\cdd -> cdd.paymentStatus == DCDD.PENDING) mbCancellationDuesDetails
           cancellationCommissionGross = fromMaybe 0 effectiveCancellationCommission
-      when (fromMaybe False transporterConfig.enableCancellationCommission && cddWasPending && cancellationCommissionGross > 0) $ do
+      when (cddWasPending && cancellationCommissionGross > 0) $ do
         let (ccBase, ccVat) = splitGrossByVatPct transporterConfig.taxConfig.commissionVatPercentage cancellationCommissionGross
         driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
         ctx <- buildCancellationFinanceCtx booking ride transporterConfig

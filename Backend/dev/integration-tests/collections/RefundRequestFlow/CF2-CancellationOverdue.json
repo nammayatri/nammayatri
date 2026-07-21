@@ -483,52 +483,6 @@
       }
     },
     {
-      "name": "BPP kill-switch ON (transporter_config.enable_cancellation_commission = true)",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
-              "pm.test('enable_cancellation_commission = true (main fixture books commission)', function () {",
-              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
-              "  var d = pm.response.json(); pm.expect(d.rowcount, 'no transporter_config row for the city').to.be.above(0);",
-              "});",
-              "// 2 cache layers again: flush redis here; if the CancellationCommission-leg guard below times out",
-              "// with 0 legs, the driver-app in-process transporter_config cache is stale -> restart driver-app, re-run.",
-              "// No flush-redis here: it wipes the scheduler streams' consumer groups (allocator+rider NOGROUP; agg jobs stall). The targeted cache-bust steps handle config eviction instead."
-            ]
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": {
-          "raw": "{{mockServerUrl}}/mock/sql/update",
-          "host": [
-            "{{mockServerUrl}}"
-          ],
-          "path": [
-            "mock",
-            "sql",
-            "update"
-          ]
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"transporter_config\", \"set\": {\"enable_cancellation_commission\": true}, \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{helsinki_moc_id}}\", \"op\": \"=\"}]}"
-        }
-      },
-      "response": []
-    },
-    {
       "name": "BOOT: bust config caches (redis DEL + in-proc force-cleanup broadcast)",
       "event": [
         {

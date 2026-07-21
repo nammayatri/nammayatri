@@ -174,7 +174,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   commission <- FC.calculateCommission booking.fareParams mbFarePolicy
-  cancellationCommission <- FC.calculateCancellationCommission (fromMaybe False transporterConfig.enableCancellationCommission) booking.fareParams mbFarePolicy
+  cancellationCommission <- FC.calculateCancellationCommission booking.fareParams mbFarePolicy
   ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission
   rideDetails <- buildRideDetails booking ride driver vehicle
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
@@ -241,8 +241,7 @@ recomputeRideFinancialsForFareUpdate booking ride newFareParamsId newEstimatedFa
   newFareParams <- QFP.findById newFareParamsId >>= fromMaybeM (FareParametersNotFound newFareParamsId.getId)
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   newCommission <- FC.calculateCommission newFareParams mbFarePolicy
-  recomputeTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  newCancellationCommission <- FC.calculateCancellationCommission (fromMaybe False recomputeTransporterConfig.enableCancellationCommission) newFareParams mbFarePolicy
+  newCancellationCommission <- FC.calculateCancellationCommission newFareParams mbFarePolicy
   let currentDiscount = ride.discountAmount
   rawDiscountAmount <-
     if isJust currentDiscount && newEstimatedFare /= booking.estimatedFare

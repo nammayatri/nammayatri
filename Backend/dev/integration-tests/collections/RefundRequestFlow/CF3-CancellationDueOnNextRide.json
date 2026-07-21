@@ -483,7 +483,7 @@
       }
     },
     {
-      "name": "BPP kill-switch ON (transporter_config.enable_cancellation_commission = true)",
+      "name": "Seed BPP invoice_config (commissionAggregationEnabled = true)",
       "event": [
         {
           "listen": "test",
@@ -491,7 +491,7 @@
             "type": "text/javascript",
             "exec": [
               "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
-              "pm.test('enable_cancellation_commission = true (main fixture books commission)', function () {",
+              "pm.test('transporter_config invoice_config seeded (aggregation on)', function () {",
               "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
               "  var d = pm.response.json(); pm.expect(d.rowcount, 'no transporter_config row for the city').to.be.above(0);",
               "});",
@@ -523,7 +523,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"transporter_config\", \"set\": {\"enable_cancellation_commission\": true, \"invoice_config\": \"{\\\"logoUrl\\\":null,\\\"emitLedgerEntries\\\":true,\\\"driverInvoiceLineItemsVatInclusive\\\":false,\\\"commissionAggregationEnabled\\\":true}\"}, \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{helsinki_moc_id}}\", \"op\": \"=\"}]}"
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"transporter_config\", \"set\": {\"invoice_config\": \"{\\\"logoUrl\\\":null,\\\"emitLedgerEntries\\\":true,\\\"driverInvoiceLineItemsVatInclusive\\\":false,\\\"commissionAggregationEnabled\\\":true}\"}, \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{helsinki_moc_id}}\", \"op\": \"=\"}]}"
         },
         "description": "Also (re)sets invoice_config.commissionAggregationEnabled=true (whole-JSON overwrite of the existing config; jsonb decode is all-or-nothing so every key must be present) - required or the AggregatedCommission job Terminates."
       },
@@ -3241,7 +3241,7 @@
               "  var cap = Number(cf[0].total.amount);",
               "  pm.expect(cap).to.be.closeTo(6.20, 0.011);",
               "  pm.environment.set('cancelFeeCap', String(cap));",
-              "  pm.environment.set('cancelFeeBase', '5.00'); pm.environment.set('cancelFeeTax', '1.20'); // dues-tax-split build: the BPP now re-splits the carried gross from the dues rows, so the pair reaches ride-2 as base 5.00 + VAT 1.20 (BAP sends fareAmount/vat split; refunds emit a real CancellationFeeRefundVAT leg)",
+              "  pm.environment.set('cancelFeeBase', '6.20'); pm.environment.set('cancelFeeTax', '0.00'); // gross-carry build: the base/tax re-split was reverted per review, so the carried due reaches ride-2 as one GROSS amount in the fee slot with tax 0; no CancellationFeeRefundVAT legs are expected (their sums assert to 0)",
               "});"
             ]
           }
@@ -3351,7 +3351,7 @@
               "  pm.environment.set('cancelBookedCommission', String(gross));",
               "  pm.environment.set('cancelBookedCommissionBase', String(base));",
               "  pm.environment.set('cancelBookedCommissionVAT', String(vat));",
-              "  pm.test('BPP CancellationCommission + VAT legs SETTLED (flag ON took effect)', function(){",
+              "  pm.test('BPP CancellationCommission + VAT legs SETTLED (commission booked from seeded JL orders)', function(){",
               "    pm.expect(base, 'no SETTLED CancellationCommission leg - if the flag-ON flip did not surface, restart driver-app (in-process transporter_config cache) and re-run this collection').to.be.above(0);",
               "    pm.expect(vat, 'no SETTLED CancellationCommissionVAT leg (Helsinki commissionVatPercentage=25.5 must split the gross)').to.be.above(0);",
               "  });",
@@ -3972,10 +3972,10 @@
               "  pm.test('legs SUM to cf1 (gross conservation)', function(){",
               "    pm.expect(mine.reduce(function(a,r){ return a+Number(r.amount); }, 0)).to.be.closeTo(cf1, 0.011);",
               "  });",
-              "  pm.test('driver base leg = feeBase*cf1/cap - slice (2.035 on the seeded 5.00+1.20/0.93)', function(){",
+              "  pm.test('driver base leg = feeBase*cf1/cap - slice (computed from the cancelFeeBase/cancelFeeTax env pair)', function(){",
               "    pm.expect(_sumOf('CancellationFeeRefund')).to.be.closeTo(feeBase*cf1/cap - slice, 0.011);",
               "  });",
-              "  pm.test('tax leg = feeTax*cf1/cap (0.60)', function(){",
+              "  pm.test('tax leg = feeTax*cf1/cap (computed from the cancelFeeTax env; 0 when the env pair carries no tax)', function(){",
               "    pm.expect(_sumOf('CancellationFeeRefundVAT')).to.be.closeTo(feeTax*cf1/cap, 0.011);",
               "  });",
               "  pm.test('commission slice legs = booked*cf1/cap split base/VAT (0.465 -> 0.3705+0.0945 at 25.5)', function(){",

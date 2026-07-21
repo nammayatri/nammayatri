@@ -165,7 +165,6 @@ data TransporterConfig = TransporterConfig
     editLocTimeThreshold :: Kernel.Types.Common.Seconds,
     emailOtpConfig :: Kernel.Prelude.Maybe Email.Types.EmailOTPConfig,
     enableBotFlow :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    enableCancellationCommission :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableCoinsToDirectPayout :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableCourtRecordCheck :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableDashboardSms :: Kernel.Prelude.Bool,

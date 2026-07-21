@@ -159,7 +159,6 @@ data TransporterConfigT f = TransporterConfigT
     editLocTimeThreshold :: B.C f Kernel.Types.Common.Seconds,
     emailOtpConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailOTPConfig),
     enableBotFlow :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    enableCancellationCommission :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableCoinsToDirectPayout :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableCourtRecordCheck :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableDashboardSms :: B.C f Kernel.Prelude.Bool,
