@@ -2091,6 +2091,7 @@ types:
     - operatorContact: Maybe Text
     - operators: "[(Text, Maybe Text)]"
     - referralCode: Maybe Text
+    - operatorReferralCode: Maybe Text
     - registeredAt: Maybe UTCTime
     - businessLicenseNumber: Maybe Text
     - vatNumber: Maybe Text
