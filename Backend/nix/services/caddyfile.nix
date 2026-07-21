@@ -1,13 +1,13 @@
-# Renders a Caddyfile from `ports.nix` (or the resolved overlay generated
-# by resolve-ports.sh). Pure builtins — no pkgs / no lib — so it can be
-# evaluated cheaply via `nix-instantiate --eval --raw`.
+# Renders a Caddyfile from a `ports` attrset. Pure builtins — no pkgs / no lib
+# — so it can be evaluated cheaply via `nix eval --raw`.
 #
-# Usage from a shell hook, AFTER resolve-ports.sh has written
-# data/ports-resolved.nix:
+# The run-mobility-stack-dev preflight passes the resolved ports read from this
+# checkout's devbox-registry.json slice:
 #
-#   nix-instantiate --eval --raw --impure --expr \
+#   nix eval --raw --impure --expr \
 #     "import $FLAKE_ROOT/Backend/nix/services/caddyfile.nix { \
-#        ports = import \"$RESOLVED_FILE\"; }" > data/Caddyfile
+#        ports = (builtins.fromJSON (builtins.readFile \"$REGISTRY\")).users.\"$DEVBOX_KEY\".ports; }" \
+#     > data/Caddyfile
 #
 # The Caddyfile provides a single reverse-proxy entry point so developers on
 # the devbox (via Tailscale) only need to know one port to reach any backend

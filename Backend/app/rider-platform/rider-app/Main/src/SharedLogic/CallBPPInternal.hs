@@ -566,7 +566,8 @@ data RefundLedgerStatus = APPROVED | REFUNDED | FAILED
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
 -- | Per-component refund breakdown (BAP-split). 'component' is the FareComponent enum;
---   Generic JSON encodes it as "RIDE_FARE"/"TOLL"/"PARKING". Field names byte-identical to BPP.
+--   Generic JSON encodes it as "RIDE_FARE"/"TOLL"/"PARKING"/"CANCELLATION_FEE". Field names
+--   byte-identical to BPP.
 data RefundLedgerComponent = RefundLedgerComponent
   { component :: DFareBreakup.FareComponent,
     fareAmount :: HighPrecMoney,
@@ -582,7 +583,8 @@ data RefundLedgerReq = RefundLedgerReq
     deductFromDriver :: Maybe Bool,
     refundRequestStatus :: RefundLedgerStatus,
     refundComponents :: Maybe [RefundLedgerComponent],
-    rideFareComponentTotal :: Maybe HighPrecMoney
+    rideFareComponentTotal :: Maybe HighPrecMoney,
+    cancellationComponentTotal :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

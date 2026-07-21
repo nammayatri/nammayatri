@@ -134,6 +134,7 @@ data BookingDetails
   | AmbulanceDetails Domain.Types.Booking.AmbulanceBookingDetails
   | DeliveryDetails Domain.Types.Booking.DeliveryBookingDetails
   | MeterRideDetails Domain.Types.Booking.MeterRideBookingDetails
+  | EasyBookingDetails Domain.Types.Booking.RentalBookingDetails
   deriving (Generic, Show, FromJSON, ToJSON)
 
 data DeliveryBookingDetails = DeliveryBookingDetails

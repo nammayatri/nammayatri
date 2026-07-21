@@ -111,6 +111,8 @@ module SharedLogic.Finance.Wallet
     walletReferenceCommissionCash,
     walletReferenceCommissionVATOnline,
     walletReferenceCommissionVATCash,
+    walletReferenceCancellationCommission,
+    walletReferenceCancellationCommissionVAT,
     walletReferenceVATOnline,
     walletReferenceVATCash,
     walletReferenceD2DReferral,
@@ -132,6 +134,12 @@ module SharedLogic.Finance.Wallet
     walletReferenceParkingRefundVAT,
     walletReferenceRideFareRefundCommission,
     walletReferenceRideFareRefundCommissionVAT,
+    walletReferenceCancellationFeeRefund,
+    walletReferenceCancellationFeeRefundVAT,
+    walletReferenceCancellationRefundCommission,
+    walletReferenceCancellationRefundCommissionVAT,
+    walletReferenceCancellationOverdueBenefitRefund,
+    walletReferenceCancellationOverdueBenefitRefundTax,
     splitGrossByVatPct,
     getRedeemableEntryIds,
     settleWalletEntries,
@@ -239,6 +247,13 @@ walletReferenceCommissionVATOnline = "CommissionVATOnline"
 walletReferenceCommissionVATCash :: Text
 walletReferenceCommissionVATCash = "CommissionVATCash"
 
+-- Commission on a cancellation fee (no Online/Cash suffix — matches the cancellation ref family).
+walletReferenceCancellationCommission :: Text
+walletReferenceCancellationCommission = "CancellationCommission"
+
+walletReferenceCancellationCommissionVAT :: Text
+walletReferenceCancellationCommissionVAT = "CancellationCommissionVAT"
+
 walletReferenceDeductedAtPaymentByPlatform :: Text
 walletReferenceDeductedAtPaymentByPlatform = "DeductedAtPaymentByPlatform"
 
@@ -315,6 +330,27 @@ walletReferenceRideFareRefundCommission = "RideFareRefundCommission"
 walletReferenceRideFareRefundCommissionVAT :: Text
 walletReferenceRideFareRefundCommissionVAT = "RideFareRefundCommissionVAT"
 
+-- Refund of a cancellation fee (driver-side legs).
+walletReferenceCancellationFeeRefund :: Text
+walletReferenceCancellationFeeRefund = "CancellationFeeRefund"
+
+walletReferenceCancellationFeeRefundVAT :: Text
+walletReferenceCancellationFeeRefundVAT = "CancellationFeeRefundVAT"
+
+-- The platform's commission slice given back on a driver-deducted cancellation-fee refund.
+walletReferenceCancellationRefundCommission :: Text
+walletReferenceCancellationRefundCommission = "CancellationRefundCommission"
+
+walletReferenceCancellationRefundCommissionVAT :: Text
+walletReferenceCancellationRefundCommissionVAT = "CancellationRefundCommissionVAT"
+
+-- The platform-kept overdue benefit given back on a driver-deducted cancellation-fee refund.
+walletReferenceCancellationOverdueBenefitRefund :: Text
+walletReferenceCancellationOverdueBenefitRefund = "CancellationOverdueBenefitRefund"
+
+walletReferenceCancellationOverdueBenefitRefundTax :: Text
+walletReferenceCancellationOverdueBenefitRefundTax = "CancellationOverdueBenefitRefundTax"
+
 -- | Single source of truth: all wallet reference types that represent
 --   redeemable credit entries (i.e. entries that increase driver wallet balance
 --   and should be tracked for settlement/payout).
@@ -341,6 +377,8 @@ walletCreditRefs =
     walletReferenceCommissionCash,
     walletReferenceCommissionVATOnline,
     walletReferenceCommissionVATCash,
+    walletReferenceCancellationCommission,
+    walletReferenceCancellationCommissionVAT,
     walletReferenceWalletIncentive,
     walletReferenceVATOnline,
     walletReferenceVATCash,

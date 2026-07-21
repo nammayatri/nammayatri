@@ -24,6 +24,7 @@ data RefundsT f = RefundsT
     isApiCallSuccess :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     merchantId :: (B.C f Kernel.Prelude.Text),
     orderId :: (B.C f Kernel.Prelude.Text),
+    referenceType :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     refundAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
     shortId :: (B.C f Kernel.Prelude.Text),
     status :: (B.C f Kernel.External.Payment.Interface.RefundStatus),

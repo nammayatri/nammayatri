@@ -54,7 +54,8 @@ data QuoteAPIEntity = QuoteAPIEntity
     isValueAddNP :: Bool,
     validTill :: UTCTime,
     vehicleIconUrl :: Maybe Text,
-    area :: Maybe Text
+    area :: Maybe Text,
+    navigationInstruction :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -128,6 +129,11 @@ mkQuoteAPIDetails tollCharges = \case
      in DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickupWithUnit', durationToPickup = durationToPickup', rating = rating', isUpgradedToCab = fromMaybe False isUpgradedToCab, ..}
   OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> OneWaySpecialZoneAPIDetails USpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
   InterCityDetails details -> InterCityAPIDetails $ DInterCityDetails.mkInterCityDetailsAPIEntity details tollCharges
+  -- Reuses RentalAPIDetails' wire shape (same underlying RentalDetails domain type, see
+  -- Storage/Queries/Transformers/Quote.hs) rather than a new API entity — the nested
+  -- quoteDetails.fareProductType sub-tag will read "RENTAL" here; the outer tripCategory
+  -- field on the quote/booking itself correctly reads "EasyBooking" regardless.
+  EasyBookingDetails details -> RentalAPIDetails $ DRentalDetails.mkRentalDetailsAPIEntity details tollCharges
 
 mkQAPIEntityList :: [Quote] -> [DBppDetails.BppDetails] -> [Bool] -> [QuoteAPIEntity]
 mkQAPIEntityList (q : qRemaining) (bpp : bppRemaining) (isValueAddNP : remVNP) =

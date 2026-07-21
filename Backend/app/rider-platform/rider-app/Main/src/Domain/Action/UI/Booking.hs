@@ -762,6 +762,8 @@ validateStopReq booking isEdit loc merchant = do
     SRB.AmbulanceDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in ambulance rides"
     SRB.DeliveryDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in delivery rides"
     SRB.MeterRideDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in meter rides"
+    -- Unlike Rental, EasyBooking has no mid-ride "planned stop" concept — reject like the others.
+    SRB.EasyBookingDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in easy booking rides"
 
   nearestCity <- getNearestOperatingCityHelper merchant (merchant.geofencingConfig.origin) loc.gps (CityState {city = merchant.defaultCity, state = merchant.defaultState})
   fromLocCity <- getNearestOperatingCityHelper merchant (merchant.geofencingConfig.origin) (LatLong booking.fromLocation.lat booking.fromLocation.lon) (CityState {city = merchant.defaultCity, state = merchant.defaultState})

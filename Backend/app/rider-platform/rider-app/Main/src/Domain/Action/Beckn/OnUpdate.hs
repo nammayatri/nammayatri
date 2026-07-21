@@ -717,6 +717,8 @@ validateRequest = \case
       DRB.AmbulanceDetails _ -> throwError $ InvalidRequest "Stops are not present in ambulance rides"
       DRB.DeliveryDetails _ -> throwError $ InvalidRequest "Stops are not present in delivery rides"
       DRB.MeterRideDetails _ -> throwError $ InvalidRequest "Stops are not present in meter rides"
+      -- Unlike Rental, EasyBooking has no mid-ride "planned stop" concept — reject like the others.
+      DRB.EasyBookingDetails _ -> throwError $ InvalidRequest "Stops are not present in easy booking rides"
       DRB.RentalDetails DRB.RentalBookingDetails {..} -> do
         unless (isJust stopLocation) $ throwError (InvalidRequest $ "Can't find stop to be reached for bpp ride " <> bppRideId.getId)
         return $ OUValidatedStopArrivedReq ValidatedStopArrivedReq {..}
