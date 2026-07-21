@@ -23,6 +23,7 @@ imports:
   Meters: Kernel.Types.Common
   LatLong: Kernel.External.Maps.Types
   RouteStopInfo: SharedLogic.FRFSUtils
+  RouteDetail: Domain.Types.RouteDetailsAPI
   PlatformType: Domain.Types.IntegratedBPPConfig
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   RecentLocation: Domain.Types.RecentLocation
@@ -71,7 +72,7 @@ types:
     priceWithCurrency: PriceAPIEntity
     stations: [FRFSStationAPI]
     routeStations: "Maybe [FRFSRouteStationsAPI]"
-    journeyStations: "Maybe [FRFSStationAPI]" # Start, interchange (line-change) and end stops, each annotated with the route boarded there.
+    routeDetails: "Maybe [RouteDetail]" # Per-sub-leg transit route details for interchange journeys, in the same shape as the multimodal journey response; created alongside the journey/leg in the discovery flow.
     validTill: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
@@ -270,7 +271,7 @@ types:
     address: Maybe Text
     stationType: Maybe StationType
     color: Maybe Text
-    routeDetails: Maybe Text # Route long name for the route boarded at this stop (populated for journeyStations).
+    routeDetails: Maybe Text # Route long name for the route boarded at this stop.
     distance: Maybe Meters
     sequenceNum: Maybe Int
     towards: Maybe Text

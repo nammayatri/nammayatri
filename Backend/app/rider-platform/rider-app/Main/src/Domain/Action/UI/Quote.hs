@@ -47,7 +47,6 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.BppDetails (BppDetails)
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Estimate as DEstimate
-import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Location as DL
@@ -58,7 +57,7 @@ import qualified Domain.Types.RideStatus as DRide
 import Domain.Types.RiderConfig (VehicleServiceTierOrderConfig)
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.RiderPreferredOption as DRPO
-import Domain.Types.RouteDetails
+import Domain.Types.RouteDetailsAPI (RouteDetail, mkRouteDetail)
 import qualified Domain.Types.SearchRequest as SSR
 import Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.Trip as DTrip
@@ -148,21 +147,6 @@ data JourneyLeg = JourneyLeg
     estimatedMinFare :: Maybe HighPrecMoney,
     estimatedMaxFare :: Maybe HighPrecMoney,
     validTill :: Maybe UTCTime
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
-
-data RouteDetail = RouteDetail
-  { routeCode :: Maybe Text,
-    fromStationCode :: Maybe Text,
-    toStationCode :: Maybe Text,
-    alternateShortNames :: [Text],
-    alternateRouteIds :: Maybe [Text],
-    color :: Maybe Text,
-    colorCode :: Maybe Text,
-    fromStationLatLong :: LatLong,
-    toStationLatLong :: LatLong,
-    fromStationPlatformCode :: Maybe Text,
-    toStationPlatformCode :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -504,30 +488,6 @@ getJourneys searchRequest hasMultimodalSearch = do
               }
       return . Just $ sortOn (.relevanceScore) journeyData
     _ -> return Nothing
-  where
-    mkRouteDetail :: RouteDetails -> RouteDetail
-    mkRouteDetail routeDetail =
-      RouteDetail
-        { routeCode = gtfsIdtoDomainCode <$> routeDetail.routeGtfsId,
-          fromStationCode = (gtfsIdtoDomainCode <$> (routeDetail.fromStopCode)) <|> (gtfsIdtoDomainCode <$> routeDetail.fromStopGtfsId),
-          toStationCode = (gtfsIdtoDomainCode <$> (routeDetail.toStopCode)) <|> (gtfsIdtoDomainCode <$> routeDetail.toStopGtfsId),
-          color = routeDetail.routeShortName,
-          colorCode = routeDetail.routeShortName,
-          alternateShortNames = routeDetail.alternateShortNames,
-          alternateRouteIds = routeDetail.alternateRouteIds,
-          fromStationLatLong =
-            LatLong
-              { lat = routeDetail.startLocationLat,
-                lon = routeDetail.startLocationLon
-              },
-          toStationLatLong =
-            LatLong
-              { lat = routeDetail.endLocationLat,
-                lon = routeDetail.endLocationLon
-              },
-          fromStationPlatformCode = routeDetail.fromStopPlatformCode,
-          toStationPlatformCode = routeDetail.toStopPlatformCode
-        }
 
 getSpecialLocationTierOrder :: Maybe Text -> Maybe DRC.RiderConfig -> [DVST.ServiceTierType]
 getSpecialLocationTierOrder Nothing _ = []

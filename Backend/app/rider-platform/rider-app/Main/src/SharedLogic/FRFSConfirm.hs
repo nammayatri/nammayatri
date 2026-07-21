@@ -728,6 +728,29 @@ buildJourneyAndLeg booking fareParameters = do
         (Just routeStation, Just vehicleNumber) -> JourneyUtils.getLiveRouteInfo integratedBppConfig vehicleNumber routeStation.code
         _ -> return Nothing
 
+    -- Platform codes are only carried by trip-stop data (Station / route-stop-mapping lookups don't have them),
+    -- so fetch the route's example trip and read the per-stop platform code from it.
+    mbTrip <-
+      case mbRouteStation of
+        Just routeStation -> OTPRest.getExampleTrip integratedBppConfig routeStation.code
+        Nothing -> return Nothing
+    let fromStopPlatformCode = mbTrip >>= \trip -> OTPRest.findTripStopByStopCode trip booking.fromStationCode >>= (.platformCode)
+        toStopPlatformCode = mbTrip >>= \trip -> OTPRest.findTripStopByStopCode trip booking.toStationCode >>= (.platformCode)
+        fromStopDetail =
+          MultiModalStopDetails
+            { stopCode = Just booking.fromStationCode,
+              platformCode = fromStopPlatformCode,
+              name = booking.fromStationName,
+              gtfsId = Just booking.fromStationCode
+            }
+        toStopDetail =
+          MultiModalStopDetails
+            { stopCode = Just booking.toStationCode,
+              platformCode = toStopPlatformCode,
+              name = booking.toStationName,
+              gtfsId = Just booking.toStationCode
+            }
+
     let journeyLeg =
           DJL.JourneyLeg
             { id = journeyLegGuid,
@@ -744,8 +767,8 @@ buildJourneyAndLeg booking fareParameters = do
                 duration >>= \duration' ->
                   Just $ addUTCTime (fromIntegral $ getSeconds duration') booking.createdAt,
               toDepartureTime = Nothing,
-              fromStopDetails = Nothing,
-              toStopDetails = Nothing,
+              fromStopDetails = Just fromStopDetail,
+              toStopDetails = Just toStopDetail,
               routeDetails =
                 [ DRD.RouteDetails
                     { agencyGtfsId = Just integratedBppConfig.feedKey,
@@ -760,7 +783,7 @@ buildJourneyAndLeg booking fareParameters = do
                       fromStopCode = Just booking.fromStationCode,
                       fromStopGtfsId = Just booking.fromStationCode,
                       fromStopName = booking.fromStationName,
-                      fromStopPlatformCode = Nothing,
+                      fromStopPlatformCode = fromStopPlatformCode,
                       id = journeyRouteDetailsId,
                       journeyLegId = journeyLegGuid.getId,
                       legStartTime = Just booking.createdAt,
@@ -784,7 +807,7 @@ buildJourneyAndLeg booking fareParameters = do
                       toStopCode = Just booking.toStationCode,
                       toStopGtfsId = Just booking.toStationCode,
                       toStopName = booking.toStationName,
-                      toStopPlatformCode = Nothing,
+                      toStopPlatformCode = toStopPlatformCode,
                       trackingStatus = Nothing,
                       trackingStatusLastUpdatedAt = Just now,
                       merchantId = Just booking.merchantId,
