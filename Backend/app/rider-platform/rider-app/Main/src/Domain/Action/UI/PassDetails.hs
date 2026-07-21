@@ -522,7 +522,7 @@ postPassDetailsUploadDocument (mbPersonId, merchantId) req = do
         status = Just DMF.COMPLETED,
         fileHash = Nothing,
         createdAt = now,
-        updatedAt = now
+        updatedAt = Just now
       }
   pure $ PassDetailsAPI.UploadDocumentResp {documentId}
 
