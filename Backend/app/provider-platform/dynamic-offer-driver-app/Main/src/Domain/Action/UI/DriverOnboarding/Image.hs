@@ -33,6 +33,7 @@ import AWS.S3 as S3
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import Data.Time.Format.ISO8601
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.Image as Domain hiding (SelfieFetchStatus (..))
 import qualified Domain.Types.Merchant as DM
@@ -56,6 +57,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified SharedLogic.DriverFleetOperatorAssociation as DFOA
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -148,13 +150,16 @@ createPath driverId merchantId documentType mbExtension = do
     )
 
 validateImageHandler ::
+  -- | Audit actor. 'Nothing' ⇒ the uploaded-for person is the uploader (driver / fleet self-upload).
+  -- 'Just' ⇒ an external actor (e.g. a dashboard operator uploading on a driver's behalf).
+  Maybe Audit.Requestor ->
   Bool ->
   Maybe Person.Role ->
   Maybe [DVC.DocumentVerificationConfig] ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ImageValidateRequest ->
   Flow ImageValidateResponse
-validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merchantOpCityId) req@ImageValidateRequest {..} = do
+validateImageHandler mbRequestor isDashboard mbUploaderRole mbDocConfigs (personId, _, merchantOpCityId) req@ImageValidateRequest {..} = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantId = person.merchantId
   docConfigs <- maybe (getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just imageType, vehicleCategory = Nothing}) (Just (CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing))) pure mbDocConfigs
@@ -232,10 +237,14 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
       case s3Result of
         Left err -> do
           logError $ "Image upload failed to S3:" <> show err
-          throwError $ InternalError ("Image upload failed. Please try again")
+          throwError $ InternalError "Image upload failed. Please try again"
         Right _ -> pure ()
       imageEntity <- mkImage personId merchantId (Just merchantOpCityId) imagePath imageType mbRcId (convertValidationStatusToVerificationStatus <$> validationStatus) workflowTransactionId sdkFailureReason
       Query.create imageEntity
+      -- Document audit: record the upload. Reuses the already-fetched `person` (no extra query).
+      -- Self-upload (driver/fleet) falls back to the person; a dashboard operator upload supplies its own actor.
+      let auditRequestor = fromMaybe (Audit.driverAppPerson personId (Audit.toActorRole person.role)) mbRequestor
+      Audit.auditImageUpload auditRequestor person.role imageEntity
 
       -- skipping validation for rc as validation not available in idfy
       (isImageValidationRequired, markValidOnSkip) <-
@@ -261,11 +270,16 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
           when validationOutput.validationAvailable $ do
             checkErrors imageEntity.id imageType validationOutput.detectedImage
           Query.updateVerificationStatusOnlyById Documents.VALID imageEntity.id
+          Audit.auditImageStatus auditRequestor person.role imageEntity imageEntity.verificationStatus Documents.VALID DAL.APPROVED
         else
           when (isNothing validationStatus) $
             if markValidOnSkip == Just True
-              then Query.updateVerificationStatusOnlyById Documents.VALID imageEntity.id
-              else Query.updateVerificationStatusOnlyById Documents.MANUAL_VERIFICATION_REQUIRED imageEntity.id
+              then do
+                Query.updateVerificationStatusOnlyById Documents.VALID imageEntity.id
+                Audit.auditImageStatus auditRequestor person.role imageEntity imageEntity.verificationStatus Documents.VALID DAL.APPROVED
+              else do
+                Query.updateVerificationStatusOnlyById Documents.MANUAL_VERIFICATION_REQUIRED imageEntity.id
+                Audit.auditImageStatus auditRequestor person.role imageEntity imageEntity.verificationStatus Documents.MANUAL_VERIFICATION_REQUIRED DAL.STATUS_CHANGED
       when (imageType == DVC.ProfilePhoto) $
         fork "deferred face match on selfie upload" $ do
           runDeferredFaceMatchOnSelfie person imageEntity.createdAt
@@ -302,18 +316,19 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
         _ -> void $ throwValidationError Nothing Nothing Nothing
 
 validateImage ::
+  Maybe Audit.Requestor ->
   Bool ->
   Maybe Person.Role ->
   Maybe [DVC.DocumentVerificationConfig] ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ImageValidateRequest ->
   Flow ImageValidateResponse
-validateImage isDashboard mbUploaderRole mbDocConfigs (personId, merchantId, merchantOpCityId) req@ImageValidateRequest {..} = do
+validateImage mbRequestor isDashboard mbUploaderRole mbDocConfigs (personId, merchantId, merchantOpCityId) req@ImageValidateRequest {..} = do
   isLocked <- withLockPersonId
   if isLocked
     then do
       finally
-        (validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, merchantId, merchantOpCityId) req)
+        (validateImageHandler mbRequestor isDashboard mbUploaderRole mbDocConfigs (personId, merchantId, merchantOpCityId) req)
         ( do
             Redis.unlockRedis mkLockKey
             logDebug $ "Create Image Lock for PersonId: " <> personId.getId <> " Unlocked"
@@ -335,10 +350,23 @@ convertHVStatusToValidationStatus status =
     "manually_approved" -> Domain.APPROVED
     _ -> Domain.DECLINED
 
-throwValidationError :: (EsqDBFlow m r, CacheFlow m r) => Maybe (Id Domain.Image) -> Maybe (Id Domain.Image) -> Maybe Text -> m a
+throwValidationError :: (EsqDBFlow m r, CacheFlow m r, Audit.AuditFlow m r) => Maybe (Id Domain.Image) -> Maybe (Id Domain.Image) -> Maybe Text -> m a
 throwValidationError imgId1 imgId2 msg = do
-  whenJust (imgId1) Query.deleteById
-  whenJust (imgId2) Query.deleteById
+  -- Document audit is best-effort and OFF unless a publisher is configured; skip the per-image
+  -- audit-only read entirely when publishing is disabled — the delete only needs the id.
+  mbPublisherCfg <- asks (.documentAuditPublisherCfg)
+  forM_ [imgId1, imgId2] $ \mbImgId -> whenJust mbImgId $ \imgId -> do
+    -- Document audit: SDK-mismatch rollback deletes the just-uploaded image(s). No requestor/city is threaded
+    -- here, so attribute to SYSTEM; owner role comes from an audit-gated fetch keyed on the image's city
+    -- (skip the audit when the image carries no operating city — the consumer would drop it anyway).
+    whenJust mbPublisherCfg $ \_ -> do
+      mbImg <- Query.findById imgId
+      whenJust mbImg $ \img ->
+        whenJust img.merchantOperatingCityId $ \cityId -> do
+          mbOwner <- Audit.fetchForAuditByCity cityId (Person.findById img.personId)
+          let (eType, eId) = Audit.imageEntity (maybe Person.DRIVER (.role) mbOwner) img
+          Audit.auditDelete Audit.systemActor eType eId (show img.imageType) DAL.IMAGE (Just img.id.getId) (Just "SDK validation mismatch") img.merchantId cityId
+    Query.deleteById imgId
   throwError $ InvalidRequest $ fromMaybe "Invalid Data !!!!!" msg
 
 convertValidationStatusToVerificationStatus :: Domain.ValidationStatus -> Documents.VerificationStatus
@@ -360,15 +388,16 @@ castImageType DVC.VehicleNOC = Verification.VehicleNOC
 castImageType _ = Verification.VehicleRegistrationCertificate -- Fix Later
 
 validateImageFile ::
+  Maybe Audit.Requestor ->
   Bool ->
   Maybe Person.Role ->
   Maybe [DVC.DocumentVerificationConfig] ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ImageValidateFileRequest ->
   Flow ImageValidateResponse
-validateImageFile isDashboard mbUploaderRole mbDocConfigs (personId, merchantId, merchantOpCityId) ImageValidateFileRequest {..} = do
+validateImageFile mbRequestor isDashboard mbUploaderRole mbDocConfigs (personId, merchantId, merchantOpCityId) ImageValidateFileRequest {..} = do
   image' <- L.runIO $ base64Encode <$> BS.readFile image
-  validateImage isDashboard mbUploaderRole mbDocConfigs (personId, merchantId, merchantOpCityId) $ ImageValidateRequest image' imageType rcNumber validationStatus workflowTransactionId Nothing Nothing Nothing
+  validateImage mbRequestor isDashboard mbUploaderRole mbDocConfigs (personId, merchantId, merchantOpCityId) $ ImageValidateRequest image' imageType rcNumber validationStatus workflowTransactionId Nothing Nothing Nothing
 
 mkImage ::
   (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>

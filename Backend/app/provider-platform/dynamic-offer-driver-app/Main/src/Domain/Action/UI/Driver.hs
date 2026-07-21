@@ -2472,7 +2472,9 @@ verifyAuth (personId, _, _) req = do
     Redis.setExp (makeAlternateNumberVerifiedKey personId) True expTime
     whenJust mbPerson $ \oldPerson -> do
       merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-      void $ DeleteDriverOnCheck.deleteDriver merchant.shortId (cast oldPerson.id)
+      -- Driver-app self-serve alternate-number update: auto-delete of a stale duplicate person is a system
+      -- cleanup, not a dashboard action → no requestor, audit stays under the system actor.
+      void $ DeleteDriverOnCheck.deleteDriver merchant.shortId (cast oldPerson.id) Nothing
     invalidateAlternateNoCache personId
   return Success
 

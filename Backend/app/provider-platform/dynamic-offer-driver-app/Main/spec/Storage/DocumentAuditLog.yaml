@@ -1,0 +1,62 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Value: Data.Aeson
+
+DocumentAuditLog:
+  tableName: document_audit_log
+  derives: "Generic,Show,Eq,ToJSON,FromJSON"
+
+  types:
+    AuditAction:
+      enum: "UPLOADED, APPROVED, REJECTED, STATUS_CHANGED, DELETED, FLAG_CHANGED, VERIFICATION_REQUESTED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+    AuditEntityType:
+      enum: "DRIVER, FLEET_OWNER, VEHICLE, OPERATOR"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+    ActorSource:
+      enum: "DRIVER_APP, DASHBOARD, SCHEDULER, WEBHOOK, SYSTEM"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+    DocumentRefType:
+      enum: "IMAGE, DRIVER_LICENSE, VEHICLE_REGISTRATION_CERTIFICATE, DRIVER_PAN_CARD, AADHAAR_CARD, VEHICLE_INSURANCE, VEHICLE_PUC, VEHICLE_FITNESS_CERTIFICATE, VEHICLE_PERMIT, DRIVER_GSTIN, VEHICLE_NOC, BUSINESS_LICENSE, DRIVER_SSN, DRIVER_UDYAM, COMMON_ONBOARDING_DOCUMENT, MEDIA_FILE_DOCUMENT, OPERATION_HUB_REQUEST, REVIEW_REQUEST, DOCUMENT_REMINDER_HISTORY, DRIVER_INFORMATION, FLEET_OWNER_INFORMATION, DRIVER_BANK_ACCOUNT"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <AuditAction>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <AuditEntityType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <ActorSource>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <DocumentRefType>
+
+  fields:
+    id: Id DocumentAuditLog
+    entityType: AuditEntityType
+    entityId: Text
+    documentType: Maybe Text
+    fieldName: Maybe Text
+    documentRefType: DocumentRefType
+    documentRefId: Maybe Text
+    eventId: Maybe Text
+    action: AuditAction
+    previousStatus: Maybe Text
+    newStatus: Maybe Text
+    actorId: Maybe Text
+    actorRole: Text
+    actorSource: ActorSource
+    reason: Maybe Text
+    details: Maybe Value
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    createdAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    entityId: SecondaryKey
+
+  sqlType:
+    details: json
+
+  queries:
+    findByEntity:
+      kvFunction: findAllWithOptionsKV
+      where: entityId
+      orderBy: createdAt

@@ -74,6 +74,7 @@ import qualified Domain.Types.BusinessLicense as DBL
 import qualified Domain.Types.CommonDocumentData as DCommonDocData
 import qualified Domain.Types.CommonDriverOnboardingDocuments as DCommonDoc
 import qualified Domain.Types.DocsVerificationStatus as DDVS
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverGstin as DGstin
 import qualified Domain.Types.DriverIdentityInfo as DII
@@ -129,6 +130,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Association.Change as AC
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Reminder.Helper (createReminder)
@@ -289,8 +291,8 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
   medicalCertificateImgs <- getDriverImages merchant.id DVC.MedicalCertificate
   commonDocumentsData <- runInReplica (QCommonDriverOnboardingDocuments.findByDriverId (Just (cast driverId)))
   let commonDocuments = map toCommonDocumentItem commonDocumentsData
-  allDlImgs <- runInReplica (QDL.findAllByImageId (map (Id) $ mapMaybe listToMaybe dlImgs))
-  allRCImgs <- runInReplica (QRC.findAllByImageId (map (Id) vehRegImgs))
+  allDlImgs <- runInReplica (QDL.findAllByImageId (map Id $ mapMaybe listToMaybe dlImgs))
+  allRCImgs <- runInReplica (QRC.findAllByImageId (map Id vehRegImgs))
   allDLDetails <- mapM convertDLToDLDetails allDlImgs
   allRCDetails <- mapM convertRCToRCDetails allRCImgs
   ssnEntry <- QSSN.findByDriverId (cast driverId)
@@ -605,8 +607,14 @@ postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
             isValid <- DDriver.isAssociationBetweenTwoPerson requestor entity
             unless isValid $ throwError (InvalidRequest "Driver is not associated with the entity")
         return Nothing
+  -- Dashboard upload: the audit actor is the dashboard operator, NOT the driver the doc is uploaded for.
+  -- Uses auditRequestorId (the acting user's id, forwarded independently of the access-control requestorId which is
+  -- Nothing for self-uploads) + requestorRole, both gated on sendDocumentAuditActorDetails. Nothing ⇒ fall back to
+  -- the driver actor in validateImage — so a DASHBOARD actor never has a missing actorId (which the sink would drop).
+  let mbAuditRequestor = Audit.dashboardActorFromForwarded req.auditRequestorId req.requestorRole
   res <-
     validateImage
+      mbAuditRequestor
       True
       mbUploaderRole
       (Just docConfigs)
@@ -645,7 +653,8 @@ postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.Com
   when (mapDocumentType documentType `Set.member` domainTableDocumentTypes) $
     throwError $ InvalidRequest $ "Document type " <> show documentType <> " cannot be registered as a common document. Please use the corresponding metadata variant."
   let driverPersonId = cast @Common.Driver @DP.Person driverId
-  void $ QPerson.findById driverPersonId >>= fromMaybeM (PersonNotFound driverPersonId.getId)
+  -- owner fetched up front: common docs (BusinessLicense/TAXDetails/…) can belong to fleet owners, so the audit entity is role-derived
+  person <- QPerson.findById driverPersonId >>= fromMaybeM (PersonNotFound driverPersonId.getId)
   whenJust imageId $ \imgId -> do
     void $ QImage.findById (cast imgId) >>= fromMaybeM (InvalidRequest "Image not found")
 
@@ -683,6 +692,10 @@ postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.Com
                   updatedAt = now
                 }
         QCommonDriverOnboardingDocuments.create documentEntry
+        -- Document audit: common onboarding document created via the dashboard. Attributed to the operator when
+        -- requestorRole is forwarded (gated on merchant.sendDocumentAuditActorDetails), else falls back to the doc owner.
+        let auditRequestor = Audit.auditActorFromPersonOrRequestor person (Audit.dashboardActorFromForwarded requestorId requestorRole)
+        Audit.auditDocStatus auditRequestor (Audit.entityTypeFromRole person.role) driverPersonId.getId (show documentType) DAL.COMMON_ONBOARDING_DOCUMENT (Just documentId.getId) Nothing (Just (show Documents.MANUAL_VERIFICATION_REQUIRED)) DAL.UPLOADED Nothing merchant.id merchantOpCityId
         pure $ Common.CommonDocumentCreateRes {result = "Success", documentId = cast documentId}
 
   res <-
@@ -702,16 +715,15 @@ postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.Com
             throwError $ InvalidRequest $ "Duplicate TDS invoiceIds already submitted: " <> T.intercalate ", " duplicateIds
           createDocumentEntry
       else createDocumentEntry
-  person <- QPerson.findById driverPersonId
   runStatusEventSafely
     "refreshDocsStatus:postDriverRegistrationDocumentsCommon"
-    person
+    (Just person)
     Nothing
     (SStatus.PersonDocChangedEvent driverPersonId)
   pure res
 
-postDriverRegistrationUnlinkDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.DocumentType -> Maybe Text -> Flow Common.UnlinkDocumentResp
-postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentType mbRequestorId = do
+postDriverRegistrationUnlinkDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.DocumentType -> Maybe Text -> Maybe Text -> Flow Common.UnlinkDocumentResp
+postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentType mbRequestorId mbRequestorRole = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   person <- case mbRequestorId of
@@ -725,6 +737,16 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
       pure entity
     Nothing -> runInReplica $ QPerson.findById (cast personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
   res <- unlinkPersonDocument merchantOpCityId person
+  -- Document audit: dashboard actor unlinked a document. Gated on the forwarded requestorId
+  -- (no actor ⇒ the consumer-side gate drops it). Role defaults to ADMIN until requestorRole is forwarded.
+  let auditRefType = case documentType of
+        Common.PanCard -> DAL.DRIVER_PAN_CARD
+        Common.GSTCertificate -> DAL.DRIVER_GSTIN
+        Common.AadhaarCard -> DAL.AADHAAR_CARD
+        Common.DriverLicense -> DAL.DRIVER_LICENSE
+        _ -> DAL.IMAGE
+      auditEType = if DCommon.checkFleetOwnerRole person.role then DAL.FLEET_OWNER else DAL.DRIVER
+  Audit.auditDelete (Audit.dashboardActorOrSystem mbRequestorId mbRequestorRole) auditEType person.id.getId (show documentType) auditRefType Nothing Nothing person.merchantId merchantOpCityId
   runStatusEventSafely
     "onDriverRegistrationUnlinkDocument:postDriverRegistrationUnlinkDocument"
     (Just person)
@@ -763,6 +785,9 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
     checkAndUpdateEnabledStatus merchantOpCityId docType person = do
       transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       let enableBotFlow = transporterConfig.enableBotFlow == Just True
+      -- Document audit: the consequential enabled=False flip is attributed to the same dashboard actor as the unlink itself.
+      -- Opted-out merchants forward no requestor id ⇒ fall back to SYSTEM so the mutation-side audit is not silently dropped.
+      let requestor = Audit.dashboardActorOrSystem mbRequestorId mbRequestorRole
       -- isMandatory → verified, isMandatoryForEnabling → enabled (deliberately split).
       case person.role of
         role | DCommon.checkFleetOwnerRole role -> do
@@ -772,11 +797,19 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
           if enableBotFlow
             then do
               -- BOT: downgrade enabled/verified independently (single query; leaves non-blocked field untouched).
+              mbPrevFoi <- Audit.fetchForAuditByCity merchantOpCityId (QFOI.findByPrimaryKey person.id)
               when (blocksEnabled || blocksVerified) $ QFOI.updateFleetOwnerDowngradeStatus blocksEnabled blocksVerified person.id
+              when blocksEnabled $
+                whenJust mbPrevFoi $ \prevFoi ->
+                  Audit.auditFlagChange requestor DAL.FLEET_OWNER person.id.getId "enabled" DAL.FLEET_OWNER_INFORMATION prevFoi.enabled False person.merchantId merchantOpCityId
               pure (blocksEnabled || blocksVerified)
             else do
               -- Legacy: isMandatory drives only enabled.
+              mbPrevFoi <- Audit.fetchForAuditByCity merchantOpCityId (QFOI.findByPrimaryKey person.id)
               when blocksVerified $ QFOI.updateFleetOwnerEnabledStatus False person.id
+              when blocksVerified $
+                whenJust mbPrevFoi $ \prevFoi ->
+                  Audit.auditFlagChange requestor DAL.FLEET_OWNER person.id.getId "enabled" DAL.FLEET_OWNER_INFORMATION prevFoi.enabled False person.merchantId merchantOpCityId
               pure blocksVerified
         DP.DRIVER -> do
           mbCfg <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just (mapDocumentType docType), vehicleCategory = Just DVCat.CAR}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (mapDocumentType docType) DVCat.CAR Nothing))
@@ -788,7 +821,7 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
               pure (blocksEnabled || blocksVerified)
             else do
               -- Legacy: mandatory drives only enabled.
-              when blocksEnabled $ Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig person.id False Nothing
+              when blocksEnabled $ Analytics.updateEnabledVerifiedStateWithAnalyticsAudited requestor Nothing transporterConfig person.id False Nothing
               pure False
         _ -> pure False
 
@@ -814,7 +847,11 @@ postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.Registe
           Common.DASHBOARD_USER -> DPan.DASHBOARD_USER
           _ -> DPan.DASHBOARD
         Nothing -> DPan.DASHBOARD
+  -- Dashboard DL registration: attribute audit to the dashboard operator, gated on requestorRole (forwarded only
+  -- when merchant.sendDocumentAuditActorDetails is on); otherwise fall back to the driver inside verifyDL.
+  let mbAuditRequestor = Audit.dashboardActorFromForwarded requestorId requestorRole
   verifyDL
+    mbAuditRequestor
     verifyBy
     (Just merchant)
     (cast driverId_, cast merchant.id, merchantOpCityId)
@@ -860,7 +897,12 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ req@Common.Reg
         if transporterConfig.allowDashboardToPassVehicleDetails == Just True
           then (castVehicleDetails <$> req.vehicleDetails, req.vehicleCategory, req.vehicleClass)
           else (Nothing, Nothing, Nothing)
+  -- Dashboard RC registration: attribute audit to the dashboard operator. requestorRole is forwarded only when
+  -- merchant.sendDocumentAuditActorDetails is on, so gate the operator attribution on its presence (else fall
+  -- back to the driver inside verifyRC).
+  let mbAuditRequestor = Audit.dashboardActorFromForwarded requestorId requestorRole
   verifyRC
+    mbAuditRequestor
     True
     (Just merchant)
     (cast driverId_, cast merchant.id, merchantOpCityId)
@@ -906,6 +948,7 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantSho
                 _ -> DPan.DASHBOARD
               Nothing -> defaultVerifyBy
       verifyDL
+        Nothing
         verifyBy
         (Just merchant)
         (cast driverId_, cast merchant.id, merchantOpCityId)
@@ -930,6 +973,7 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantSho
               then (castVehicleDetails <$> req.vehicleDetails, req.vehicleCategory, req.vehicleClass)
               else (Nothing, Nothing, Nothing)
       verifyRC
+        Nothing
         isDashboard
         (Just merchant)
         (cast driverId_, cast merchant.id, merchantOpCityId)
@@ -995,8 +1039,12 @@ postDriverRegistrationRegisterGenerateAadhaarOtp :: ShortId DM.Merchant -> Conte
 postDriverRegistrationRegisterGenerateAadhaarOtp merchantShortId opCity driverId_ req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  -- Dashboard-initiated generate-OTP: attribute the request-time audit to the operator, gated on the
+  -- forwarded requestorRole (only set when merchant.sendDocumentAuditActorDetails is on); else fall back to the driver.
+  let mbAuditRequestor = Audit.dashboardActorFromForwarded req.requestorId req.requestorRole
   res <-
     AV.generateAadhaarOtp
+      mbAuditRequestor
       True
       (Just merchant)
       (cast driverId_)
@@ -1011,8 +1059,12 @@ postDriverRegistrationRegisterVerifyAadhaarOtp :: ShortId DM.Merchant -> Context
 postDriverRegistrationRegisterVerifyAadhaarOtp merchantShortId opCity driverId_ req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  -- Dashboard-initiated Aadhaar OTP verify: attribute the resulting AadhaarCard to the operator, gated on the
+  -- forwarded requestorRole (only set when merchant.sendDocumentAuditActorDetails is on); else fall back to the driver.
+  let mbAuditRequestor = Audit.dashboardActorFromForwarded req.requestorId req.requestorRole
   res <-
     AV.verifyAadhaarOtp
+      mbAuditRequestor
       (Just merchant)
       (cast driverId_)
       merchantOpCityId
@@ -1126,8 +1178,8 @@ castMgmtResponseStatus = \case
   SStatus.PULL_REQUIRED -> Common.PENDING
   SStatus.CONSENT_DENIED -> Common.INVALID
 
-approveAndUpdateRC :: Common.RCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdateRC req merchantId merchantOpCityId = do
+approveAndUpdateRC :: Audit.Requestor -> Common.RCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveAndUpdateRC requestor req merchantId merchantOpCityId = do
   let imageId = Id req.documentImageId.getId
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mbRc <- QRC.findByImageId imageId
@@ -1182,6 +1234,7 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
         (Just $ udpatedRC.id.getId)
         (Just udpatedRC.fitnessExpiry)
         Nothing
+      Audit.auditDocStatus requestor DAL.VEHICLE udpatedRC.id.getId "VehicleRegistrationCertificate" DAL.VEHICLE_REGISTRATION_CERTIFICATE (Just udpatedRC.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing merchantId merchantOpCityId
     Nothing -> do
       case transporterConfig.createDocumentRequired of
         Just True -> do
@@ -1273,10 +1326,11 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
             (Just $ rcId.getId)
             (Just fitnessExpiry)
             Nothing
+          Audit.auditDocStatus requestor DAL.VEHICLE newRC.id.getId "VehicleRegistrationCertificate" DAL.VEHICLE_REGISTRATION_CERTIFICATE (Just newRC.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing merchantId merchantOpCityId
         _ -> throwError (InternalError "RC not found by image id")
 
-approveAndUpdateInsurance :: Common.VInsuranceApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId = do
+approveAndUpdateInsurance :: Audit.Requestor -> Common.VInsuranceApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveAndUpdateInsurance requestor req@Common.VInsuranceApproveDetails {..} mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
   QImage.updateVerificationStatusAndExpiry (Just VALID) req.policyExpiry DVC.VehicleInsurance imageId
   vinsurance <- QVI.findByImageId imageId
@@ -1305,6 +1359,8 @@ approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId
         (Just $ updatedInsurance.rcId.getId)
         (Just updatedInsurance.policyExpiry)
         Nothing
+      -- vehicle-doc audit keyed by the RC it belongs to (VEHICLE convention), not the uploader person
+      Audit.auditDocStatus requestor DAL.VEHICLE updatedInsurance.rcId.getId "VehicleInsurance" DAL.VEHICLE_INSURANCE (Just updatedInsurance.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing mId mOpCityId
     Nothing -> do
       case (req.policyNumber, req.policyExpiry, req.policyProvider, req.rcNumber) of
         (Just policyNum, Just policyExp, Just provider, Just rcNo) -> do
@@ -1339,14 +1395,15 @@ approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId
             (Just $ insurance.rcId.getId)
             (Just insurance.policyExpiry)
             Nothing
+          Audit.auditDocStatus requestor DAL.VEHICLE insurance.rcId.getId "VehicleInsurance" DAL.VEHICLE_INSURANCE (Just insurance.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing mId mOpCityId
         _ -> do
           transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId mOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
           case transporterConfig.createDocumentRequired of
             Just True -> throwError (InternalError "Provide all the details for creating insurance document: policyNumber, policyExpiry, policyProvider, rcNumber")
             _ -> pure ()
 
-approveAndUpdatePUC :: Common.VPUCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdatePUC req@Common.VPUCApproveDetails {..} mId mOpCityId = do
+approveAndUpdatePUC :: Audit.Requestor -> Common.VPUCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveAndUpdatePUC requestor req@Common.VPUCApproveDetails {..} mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
   QImage.updateVerificationStatusAndExpiry (Just VALID) (Just req.pucExpiry) DVC.VehiclePUC imageId
   vpuc <- QVPUC.findByImageId imageId
@@ -1374,6 +1431,8 @@ approveAndUpdatePUC req@Common.VPUCApproveDetails {..} mId mOpCityId = do
         (Just $ updatedpuc.rcId.getId)
         (Just updatedpuc.pucExpiry)
         Nothing
+      -- vehicle-doc audit keyed by the RC it belongs to (VEHICLE convention), not the uploader person
+      Audit.auditDocStatus requestor DAL.VEHICLE updatedpuc.rcId.getId "VehiclePUC" DAL.VEHICLE_PUC (Just updatedpuc.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing mId mOpCityId
     Nothing -> do
       pucImage <- findApproveImage imageId
       let puc =
@@ -1401,9 +1460,10 @@ approveAndUpdatePUC req@Common.VPUCApproveDetails {..} mId mOpCityId = do
         (Just $ puc.rcId.getId)
         (Just puc.pucExpiry)
         Nothing
+      Audit.auditDocStatus requestor DAL.VEHICLE puc.rcId.getId "VehiclePUC" DAL.VEHICLE_PUC (Just puc.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing mId mOpCityId
 
-approveAndUpdatePermit :: Common.VPermitApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdatePermit req@Common.VPermitApproveDetails {..} mId mOpCityId = do
+approveAndUpdatePermit :: Audit.Requestor -> Common.VPermitApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveAndUpdatePermit requestor req@Common.VPermitApproveDetails {..} mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
   QImage.updateVerificationStatusAndExpiry (Just VALID) (Just req.permitExpiry) DVC.VehiclePermit imageId
   vPremit <- QVPermit.findByImageId imageId
@@ -1435,6 +1495,8 @@ approveAndUpdatePermit req@Common.VPermitApproveDetails {..} mId mOpCityId = do
         (Just $ updatedpermit.rcId.getId)
         (Just updatedpermit.permitExpiry)
         Nothing
+      -- vehicle-doc audit keyed by the RC it belongs to (VEHICLE convention), not the uploader person
+      Audit.auditDocStatus requestor DAL.VEHICLE updatedpermit.rcId.getId "VehiclePermit" DAL.VEHICLE_PERMIT (Just updatedpermit.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing mId mOpCityId
     Nothing -> do
       permitImage <- findApproveImage imageId
       let permit =
@@ -1465,9 +1527,10 @@ approveAndUpdatePermit req@Common.VPermitApproveDetails {..} mId mOpCityId = do
         (Just $ permit.rcId.getId)
         (Just permit.permitExpiry)
         Nothing
+      Audit.auditDocStatus requestor DAL.VEHICLE permit.rcId.getId "VehiclePermit" DAL.VEHICLE_PERMIT (Just permit.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing mId mOpCityId
 
-approveAndUpdateFitnessCertificate :: Common.FitnessApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOpCityId = do
+approveAndUpdateFitnessCertificate :: Audit.Requestor -> Common.FitnessApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveAndUpdateFitnessCertificate requestor req@Common.FitnessApproveDetails {..} mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
   QImage.updateVerificationStatusByIdAndType VALID imageId DVC.VehicleFitnessCertificate
   mbFitnessCert <- QFC.findByImageId imageId
@@ -1497,6 +1560,8 @@ approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOp
         (Just $ updatedFitnessCert.rcId.getId)
         (Just updatedFitnessCert.fitnessExpiry)
         Nothing
+      -- vehicle-doc audit keyed by the RC it belongs to (VEHICLE convention), not the uploader person
+      Audit.auditDocStatus requestor DAL.VEHICLE updatedFitnessCert.rcId.getId "VehicleFitnessCertificate" DAL.VEHICLE_FITNESS_CERTIFICATE (Just updatedFitnessCert.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing mId mOpCityId
     Nothing -> do
       certificateImage <- findApproveImage imageId
       rcNoEnc <- encrypt rcNumber
@@ -1525,6 +1590,7 @@ approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOp
         (Just $ fitnessCert.rcId.getId)
         (Just fitnessCert.fitnessExpiry)
         Nothing
+      Audit.auditDocStatus requestor DAL.VEHICLE fitnessCert.rcId.getId "VehicleFitnessCertificate" DAL.VEHICLE_FITNESS_CERTIFICATE (Just fitnessCert.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing mId mOpCityId
 
 -- | Wrapper over the per-document domain rows so approve flows can share one validation path.
 data ApproveDocumentData
@@ -1647,8 +1713,8 @@ whenCreateDocumentRequired mOpCityId onSkip createAction = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId mOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
   if transporterConfig.createDocumentRequired == Just True then createAction else onSkip
 
-approveAndUpdateDL :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Common.DLApproveDetails -> Flow ()
-approveAndUpdateDL merchantId merchantOpCityId req = do
+approveAndUpdateDL :: Audit.Requestor -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Common.DLApproveDetails -> Flow ()
+approveAndUpdateDL requestor merchantId merchantOpCityId req = do
   let imageId = Id req.documentImageId.getId
   dlImage <- findApproveImage imageId
   let driverId = dlImage.personId
@@ -1691,6 +1757,9 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
         (Just $ updatedDL.id.getId)
         (Just updatedDL.licenseExpiry)
         Nothing
+      -- audit-only owner fetch (gated per-city): the DL owner's role decides the audit entity
+      mbOwner <- Audit.fetchForAuditByCity merchantOpCityId (QPerson.findById updatedDL.driverId)
+      Audit.auditDocStatus requestor (Audit.entityTypeFromMbPerson mbOwner) updatedDL.driverId.getId "DriverLicense" DAL.DRIVER_LICENSE (Just updatedDL.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing merchantId merchantOpCityId
     Nothing -> whenCreateDocumentRequired merchantOpCityId (throwError (InternalError "DL not found by image id")) $ do
       dlNumber <- req.driverLicenseNumber & fromMaybeM (InvalidRequest "driverLicenseNumber is required for creating DL document")
       dlExpiry <- req.dateOfExpiry & fromMaybeM (InvalidRequest "dateOfExpiry is required for creating DL document")
@@ -1730,9 +1799,12 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
         (Just $ dlId.getId)
         (Just dlExpiry)
         Nothing
+      -- audit-only owner fetch (gated per-city): the DL owner's role decides the audit entity
+      mbOwner <- Audit.fetchForAuditByCity merchantOpCityId (QPerson.findById newDL.driverId)
+      Audit.auditDocStatus requestor (Audit.entityTypeFromMbPerson mbOwner) newDL.driverId.getId "DriverLicense" DAL.DRIVER_LICENSE (Just newDL.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing merchantId merchantOpCityId
 
-approveAndUpdateNOC :: Common.NOCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdateNOC req@Common.NOCApproveDetails {..} mId mOpCityId = do
+approveAndUpdateNOC :: Audit.Requestor -> Common.NOCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveAndUpdateNOC requestor req@Common.NOCApproveDetails {..} mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
   QImage.updateVerificationStatusAndExpiry (Just VALID) (Just req.nocExpiry) DVC.VehicleNOC imageId
   vnoc <- QVNOC.findByImageId imageId
@@ -1750,6 +1822,8 @@ approveAndUpdateNOC req@Common.NOCApproveDetails {..} mId mOpCityId = do
                 DNOC.verificationStatus = VALID
                }
       QVNOC.updateByPrimaryKey updatednoc
+      -- vehicle-doc audit keyed by the RC it belongs to (VEHICLE convention), not the uploader person
+      Audit.auditDocStatus requestor DAL.VEHICLE updatednoc.rcId.getId "VehicleNOC" DAL.VEHICLE_NOC (Just updatednoc.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing mId mOpCityId
     Nothing -> do
       nocImage <- findApproveImage imageId
       let noc =
@@ -1767,9 +1841,10 @@ approveAndUpdateNOC req@Common.NOCApproveDetails {..} mId mOpCityId = do
                 updatedAt = now
               }
       QVNOC.create noc
+      Audit.auditDocStatus requestor DAL.VEHICLE noc.rcId.getId "VehicleNOC" DAL.VEHICLE_NOC (Just noc.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing mId mOpCityId
 
-approveAndUpdateBusinessLicense :: Common.BusinessLicenseApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdateBusinessLicense req mId mOpCityId = do
+approveAndUpdateBusinessLicense :: Audit.Requestor -> Common.BusinessLicenseApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveAndUpdateBusinessLicense requestor req mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
   blImage <- findApproveImage imageId
   let driverId = blImage.personId
@@ -1808,6 +1883,8 @@ approveAndUpdateBusinessLicense req mId mOpCityId = do
         Nothing
       updateFleetOwnerInfoOnDocApproval person $ \personId ->
         QFOIE.updateBusinessLicenseImageAndNumber (Just imageId.getId) (Just businessLicenseNumberEnc) personId
+      -- entity derived from the owner's role: BL typically belongs to a fleet owner
+      Audit.auditDocStatus requestor (Audit.entityTypeFromRole person.role) updatedBl.driverId.getId "BusinessLicense" DAL.BUSINESS_LICENSE (Just updatedBl.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing mId mOpCityId
     Nothing -> whenCreateDocumentRequired mOpCityId (throwError (InternalError "Business License not found by image id")) $ do
       businessLicenseNumberEnc <- encrypt req.businessLicenseNumber
       now <- getCurrentTime
@@ -1838,9 +1915,10 @@ approveAndUpdateBusinessLicense req mId mOpCityId = do
         Nothing
       updateFleetOwnerInfoOnDocApproval person $ \personId ->
         QFOIE.updateBusinessLicenseImageAndNumber (Just imageId.getId) (Just businessLicenseNumberEnc) personId
+      Audit.auditDocStatus requestor (Audit.entityTypeFromRole person.role) bl.driverId.getId "BusinessLicense" DAL.BUSINESS_LICENSE (Just bl.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing mId mOpCityId
 
-approveAndUpdatePan :: Common.PanApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdatePan req mId mOpCityId = do
+approveAndUpdatePan :: Audit.Requestor -> Common.PanApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveAndUpdatePan requestor req mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
   panImage <- findApproveImage imageId
   let driverId = panImage.personId
@@ -1878,6 +1956,8 @@ approveAndUpdatePan req mId mOpCityId = do
       -- Clean up stale INVALID rows, then upsert (the driver's own row may be among the deleted)
       deleteInvalidDocumentOfDriver DVC.PanCard driverId
       QPan.upsert updatedPan
+      -- entity derived from the owner's role: PAN belongs to fleet owners too
+      Audit.auditDocStatus requestor (Audit.entityTypeFromRole person.role) updatedPan.driverId.getId "PanCard" DAL.DRIVER_PAN_CARD (Just updatedPan.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing mId mOpCityId
     Nothing -> do
       let pan =
             DPan.DriverPanCard
@@ -1904,11 +1984,12 @@ approveAndUpdatePan req mId mOpCityId = do
               }
       deleteInvalidDocumentOfDriver DVC.PanCard driverId
       QPan.create pan
+      Audit.auditDocStatus requestor (Audit.entityTypeFromRole person.role) pan.driverId.getId "PanCard" DAL.DRIVER_PAN_CARD (Just pan.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing mId mOpCityId
   updateFleetOwnerInfoOnDocApproval person $ \personId ->
     QFOIE.updatePanImage (Just panNoEnc) (Just imageId.getId) personId
 
-approveAndUpdateAadhaar :: Common.AadhaarApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdateAadhaar req mId mOpCityId = do
+approveAndUpdateAadhaar :: Audit.Requestor -> Common.AadhaarApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveAndUpdateAadhaar requestor req mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
       mbImageId2 = Id . (.getId) <$> req.documentImageId2
   aadhaarImage <- findApproveImage imageId
@@ -1955,6 +2036,8 @@ approveAndUpdateAadhaar req mId mOpCityId = do
       -- Clean up stale INVALID rows, then upsert (the driver's own row may be among the deleted)
       deleteInvalidDocumentOfDriver DVC.AadhaarCard driverId
       QAadhaarCard.upsertAadhaarRecord updatedAadhaar
+      -- entity derived from the owner's role: Aadhaar belongs to fleet owners too
+      Audit.auditDocStatus requestor (Audit.entityTypeFromRole person.role) driverId.getId "AadhaarCard" DAL.AADHAAR_CARD (Just driverId.getId) Nothing (Just "VALID") DAL.APPROVED Nothing mId mOpCityId
     Nothing -> do
       let aadhaarCard =
             DAadhaar.AadhaarCard
@@ -1980,11 +2063,12 @@ approveAndUpdateAadhaar req mId mOpCityId = do
               }
       deleteInvalidDocumentOfDriver DVC.AadhaarCard driverId
       QAadhaarCard.create aadhaarCard
+      Audit.auditDocStatus requestor (Audit.entityTypeFromRole person.role) driverId.getId "AadhaarCard" DAL.AADHAAR_CARD (Just driverId.getId) Nothing (Just "VALID") DAL.APPROVED Nothing mId mOpCityId
   updateFleetOwnerInfoOnDocApproval person $ \personId ->
     QFOIE.updateAadhaarImage (Just encryptedAadhaar) (Just imageId.getId) ((.getId) <$> mbImageId2) personId
 
-approveAndUpdateCommonDocument :: Common.CommonDocumentApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdateCommonDocument req _mId _mOpCityId = do
+approveAndUpdateCommonDocument :: Audit.Requestor -> Common.CommonDocumentApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveAndUpdateCommonDocument requestor req _mId _mOpCityId = do
   let documentId = Id req.documentId.getId
   -- Get the existing document
   mbDocument <- QCommonDriverOnboardingDocuments.findById documentId
@@ -2001,6 +2085,11 @@ approveAndUpdateCommonDocument req _mId _mOpCityId = do
   -- Keep image and common-doc statuses in sync for common document approvals.
   whenJust document.documentImageId $ \documentImageId ->
     QImage.updateVerificationStatusOnlyById VALID (Id documentImageId.getId)
+  whenJust document.driverId $ \driverId -> do
+    -- audit-only owner fetch (gated per the doc's own city): common docs can belong to fleet owners
+    mbOwner <- Audit.fetchForAuditByCity document.merchantOperatingCityId (QPerson.findById driverId)
+    -- record the SPECIFIC common-doc type (BusinessLicense, TAXDetails, …), not a generic "CommonDocument"
+    Audit.auditDocStatus requestor (Audit.entityTypeFromMbPerson mbOwner) driverId.getId (show document.documentType) DAL.COMMON_ONBOARDING_DOCUMENT (Just documentId.getId) Nothing (Just "VALID") DAL.APPROVED Nothing document.merchantId document.merchantOperatingCityId
 
   -- When approving BusinessLicense or TAXDetails (used for BID/VAT in international flow),
   -- also update the fleet_owner_information table.
@@ -2024,8 +2113,8 @@ approveAndUpdateCommonDocument req _mId _mOpCityId = do
         A.String s -> if T.null s then Nothing else Just s
         _ -> Nothing
 
-rejectAndUpdateCommonDocument :: Common.CommonDocumentRejectDetails -> Id DMOC.MerchantOperatingCity -> Flow ()
-rejectAndUpdateCommonDocument req _mOpCityId = do
+rejectAndUpdateCommonDocument :: Audit.Requestor -> Common.CommonDocumentRejectDetails -> Id DMOC.MerchantOperatingCity -> Flow ()
+rejectAndUpdateCommonDocument requestor req _mOpCityId = do
   let documentId = Id req.documentId.getId
   -- Get the existing document
   mbDocument <- QCommonDriverOnboardingDocuments.findById documentId
@@ -2037,9 +2126,13 @@ rejectAndUpdateCommonDocument req _mOpCityId = do
   QCommonDriverOnboardingDocuments.updateByPrimaryKey updatedDocument
   whenJust document.documentImageId $ \imageId ->
     QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid req.reason) imageId
+  whenJust document.driverId $ \driverId -> do
+    -- audit-only owner fetch (gated per the doc's own city): common docs can belong to fleet owners
+    mbOwner <- Audit.fetchForAuditByCity document.merchantOperatingCityId (QPerson.findById driverId)
+    Audit.auditDocStatus requestor (Audit.entityTypeFromMbPerson mbOwner) driverId.getId (show document.documentType) DAL.COMMON_ONBOARDING_DOCUMENT (Just documentId.getId) Nothing (Just "INVALID") DAL.REJECTED (Just req.reason) document.merchantId document.merchantOperatingCityId
 
-approveAndUpdateUdyamDocument :: Common.UDYAMApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdateUdyamDocument req merchantId merchantOpCityId = do
+approveAndUpdateUdyamDocument :: Audit.Requestor -> Common.UDYAMApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveAndUpdateUdyamDocument requestor req merchantId merchantOpCityId = do
   let imageId = Id req.documentImageId.getId
   udyamImage <- findApproveImage imageId
   let driverId = udyamImage.personId
@@ -2055,6 +2148,8 @@ approveAndUpdateUdyamDocument req merchantId merchantOpCityId = do
       Nothing -> pure Nothing
   -- Common approve-time checks: number mismatch, document linked to another driver, driver already linked
   validateDocumentApprovalChecks DVC.UDYAMCertificate req.udyamNumber driverId (UdyamApproveData <$> mbUdyamResolved)
+  -- audit-only owner fetch (gated per-city): the Udyam owner's role decides the audit entity
+  mbOwner <- Audit.fetchForAuditByCity merchantOpCityId (QPerson.findById driverId)
   case mbUdyamResolved of
     Just udyam -> do
       storedUamNumber <- decrypt udyam.udyamNumber
@@ -2074,6 +2169,8 @@ approveAndUpdateUdyamDocument req merchantId merchantOpCityId = do
       QImage.updateVerificationStatusByIdAndType VALID imageId DVC.UDYAMCertificate
       whenJust req.tdsRate $ \rate ->
         QFOI.updateTdsRate (Just rate) driverId
+      -- entity derived from the owner's role: Udyam is typically a fleet-owner document
+      Audit.auditDocStatus requestor (Audit.entityTypeFromMbPerson mbOwner) driverId.getId "Udyam" DAL.DRIVER_UDYAM (Just updatedUdyam.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing merchantId merchantOpCityId
     Nothing -> whenCreateDocumentRequired merchantOpCityId (pure ()) $ do
       uamNumber <- req.udyamNumber & fromMaybeM (InvalidRequest "udyamNumber is required for creating UDYAM document")
       encryptedUam <- encrypt uamNumber
@@ -2100,13 +2197,19 @@ approveAndUpdateUdyamDocument req merchantId merchantOpCityId = do
       QImage.updateVerificationStatusByIdAndType VALID imageId DVC.UDYAMCertificate
       whenJust req.tdsRate $ \rate ->
         QFOI.updateTdsRate (Just rate) driverId
+      -- entity derived from the owner's role: Udyam is typically a fleet-owner document
+      Audit.auditDocStatus requestor (Audit.entityTypeFromMbPerson mbOwner) driverId.getId "Udyam" DAL.DRIVER_UDYAM (Just newUdyam.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing merchantId merchantOpCityId
 
-approveAndUpdateLdcDocument :: Common.LDCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdateLdcDocument req _mId _mOpCityId = do
+approveAndUpdateLdcDocument :: Audit.Requestor -> Common.LDCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveAndUpdateLdcDocument requestor req _mId _mOpCityId = do
   let documentId = Id req.documentId.getId
   document <- QCommonDriverOnboardingDocuments.findById documentId >>= fromMaybeM (DocumentNotFound documentId.getId)
   let updatedDocument = document {DCommonDoc.verificationStatus = VALID, DCommonDoc.rejectReason = Nothing}
   QCommonDriverOnboardingDocuments.updateByPrimaryKey updatedDocument
+  whenJust document.driverId $ \driverId -> do
+    -- audit-only owner fetch (gated per the doc's own city): LDC is a fleet-owner (TDS) document
+    mbOwner <- Audit.fetchForAuditByCity document.merchantOperatingCityId (QPerson.findById driverId)
+    Audit.auditDocStatus requestor (Audit.entityTypeFromMbPerson mbOwner) driverId.getId (show document.documentType) DAL.COMMON_ONBOARDING_DOCUMENT (Just documentId.getId) Nothing (Just "VALID") DAL.APPROVED Nothing document.merchantId document.merchantOperatingCityId
   whenJust req.tdsRate $ \rate ->
     whenJust document.driverId $ \driverId ->
       QFOI.updateTdsRate (Just rate) driverId
@@ -2126,14 +2229,21 @@ castReqTypeToDomain = \case
   Common.INDIVIDUAL -> DPan.INDIVIDUAL
   Common.BUSINESS -> DPan.BUSINESS
 
-handleMandatoryDocRejection :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DP.Person -> DVC.DocumentType -> Id DImage.Image -> Flow ()
-handleMandatoryDocRejection _merchantId merchantOperatingCityId driverId docType imageId = do
+handleMandatoryDocRejection :: Audit.Requestor -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DP.Person -> DVC.DocumentType -> Id DImage.Image -> Flow ()
+handleMandatoryDocRejection requestor merchantId merchantOperatingCityId driverId docType imageId = do
   docConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, documentType = Just docType, vehicleCategory = Nothing}) (Just (CQDVC.findByMerchantOpCityIdAndDocumentType merchantOperatingCityId docType Nothing))
   -- isMandatory → verified, isMandatoryForEnabling → enabled (split).
   let blocksVerified = Kernel.Prelude.any (.isMandatory) docConfigs
       blocksEnabled = Kernel.Prelude.any (\cfg -> fromMaybe cfg.isMandatory cfg.isMandatoryForEnabling) docConfigs
   when (blocksEnabled || blocksVerified) $ do
     transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+    -- pre-update enabled flag + audit of the consequential disable, prefetched only when audit is on for the city
+    mbPrevInfo <- Audit.fetchForAudit (Audit.auditEnabled transporterConfig) (QDriverInfo.findById driverId)
+    let auditDriverDisabled =
+          whenJust mbPrevInfo $ \prevInfo ->
+            -- only audit a real flip: an already-disabled driver must not emit a no-op enabled=False→False row
+            when prevInfo.enabled $
+              Audit.auditFlagChange requestor DAL.DRIVER driverId.getId "enabled" DAL.DRIVER_INFORMATION prevInfo.enabled False merchantId merchantOperatingCityId
     let isVehicleDoc = docType `elem` SDO.defaultVehicleDocumentTypes
         separateEnablement = transporterConfig.separateDriverVehicleEnablement == Just True
         -- BOT splits enabled/verified; legacy disables both together.
@@ -2150,10 +2260,16 @@ handleMandatoryDocRejection _merchantId merchantOperatingCityId driverId docType
           whenJust mbAssoc $ \assoc -> when (assoc.driverId == driverId) $ do
             QRCAssoc.deactivateRCForDriver False driverId rcId
             QVehicle.deleteByDriverid driverId
+            -- Document audit: RC deactivated as a side effect of the mandatory-doc rejection
+            Audit.auditDocStatus requestor DAL.VEHICLE rcId.getId "VehicleRegistrationCertificate" DAL.VEHICLE_REGISTRATION_CERTIFICATE (Just rcId.getId) Nothing Nothing DAL.STATUS_CHANGED (Just "mandatory doc rejected") merchantId merchantOperatingCityId
             -- If not separate enablement, also disable the driver
-            unless separateEnablement disableDriver
-      else -- Driver doc rejected: disable the driver
+            unless separateEnablement $ do
+              disableDriver
+              auditDriverDisabled
+      else do
+        -- Driver doc rejected: disable the driver
         disableDriver
+        auditDriverDisabled
 
 resolveRcIdFromDocument :: DVC.DocumentType -> Id DImage.Image -> Flow (Maybe (Id DRC.VehicleRegistrationCertificate))
 resolveRcIdFromDocument docType imageId = case docType of
@@ -2281,16 +2397,16 @@ approveAndUpdateLocalResidenceProof req merchantId merchantOperatingCityId = do
                 DII.updatedAt = now
               }
 
-handleApproveRequest :: Common.ApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-handleApproveRequest approveReq merchantId merchantOperatingCityId =
+handleApproveRequest :: Audit.Requestor -> Common.ApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+handleApproveRequest requestor approveReq merchantId merchantOperatingCityId =
   doApproveWithRevert (getImageIdsFromApproveDetails approveReq) $
     case approveReq of
-      Common.DL dlReq -> approveAndUpdateDL merchantId merchantOperatingCityId dlReq
-      Common.RC rcApproveReq -> approveAndUpdateRC rcApproveReq merchantId merchantOperatingCityId
-      Common.VehicleInsurance vInsuranceReq -> approveAndUpdateInsurance vInsuranceReq merchantId merchantOperatingCityId
-      Common.VehiclePUC pucReq -> approveAndUpdatePUC pucReq merchantId merchantOperatingCityId
-      Common.VehiclePermit permitReq -> approveAndUpdatePermit permitReq merchantId merchantOperatingCityId
-      Common.VehicleFitnessCertificate fitnessReq -> approveAndUpdateFitnessCertificate fitnessReq merchantId merchantOperatingCityId
+      Common.DL dlReq -> approveAndUpdateDL requestor merchantId merchantOperatingCityId dlReq
+      Common.RC rcApproveReq -> approveAndUpdateRC requestor rcApproveReq merchantId merchantOperatingCityId
+      Common.VehicleInsurance vInsuranceReq -> approveAndUpdateInsurance requestor vInsuranceReq merchantId merchantOperatingCityId
+      Common.VehiclePUC pucReq -> approveAndUpdatePUC requestor pucReq merchantId merchantOperatingCityId
+      Common.VehiclePermit permitReq -> approveAndUpdatePermit requestor permitReq merchantId merchantOperatingCityId
+      Common.VehicleFitnessCertificate fitnessReq -> approveAndUpdateFitnessCertificate requestor fitnessReq merchantId merchantOperatingCityId
       Common.UploadProfile imageId -> QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) DVC.UploadProfile
       Common.ProfilePhoto imageId -> QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) DVC.ProfilePhoto
       Common.VehicleInspectionForm req -> do
@@ -2299,11 +2415,15 @@ handleApproveRequest approveReq merchantId merchantOperatingCityId =
       Common.SSNApprove ssnNum -> do
         ssnEnc <- encrypt ssnNum
         QSSN.updateVerificationStatusAndReasonBySSN VALID Nothing (ssnEnc & hash)
-      Common.NOC req -> approveAndUpdateNOC req merchantId merchantOperatingCityId
-      Common.BusinessLicenseImg req -> approveAndUpdateBusinessLicense req merchantId merchantOperatingCityId
-      Common.Pan req -> approveAndUpdatePan req merchantId merchantOperatingCityId
-      Common.CommonDocument req -> approveAndUpdateCommonDocument req merchantId merchantOperatingCityId
-      Common.Aadhaar req -> approveAndUpdateAadhaar req merchantId merchantOperatingCityId
+        ssnEntry <- QSSN.findBySSN (ssnEnc & hash) >>= fromMaybeM (InternalError "SSN not found by ssn no")
+        -- audit-only owner fetch (gated per-city): SSN rows can belong to fleet owners (US bank-account flow)
+        mbOwner <- Audit.fetchForAuditByCity merchantOperatingCityId (QPerson.findById ssnEntry.driverId)
+        Audit.auditDocStatus requestor (Audit.entityTypeFromMbPerson mbOwner) ssnEntry.driverId.getId "SSN" DAL.DRIVER_SSN Nothing Nothing (Just "VALID") DAL.APPROVED Nothing merchantId merchantOperatingCityId
+      Common.NOC req -> approveAndUpdateNOC requestor req merchantId merchantOperatingCityId
+      Common.BusinessLicenseImg req -> approveAndUpdateBusinessLicense requestor req merchantId merchantOperatingCityId
+      Common.Pan req -> approveAndUpdatePan requestor req merchantId merchantOperatingCityId
+      Common.CommonDocument req -> approveAndUpdateCommonDocument requestor req merchantId merchantOperatingCityId
+      Common.Aadhaar req -> approveAndUpdateAadhaar requestor req merchantId merchantOperatingCityId
       Common.VehicleFrontImg imageId -> QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) DVC.VehicleFront
       Common.VehicleBackImg imageId -> QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) DVC.VehicleBack
       Common.VehicleRightImg imageId -> QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) DVC.VehicleRight
@@ -2314,9 +2434,9 @@ handleApproveRequest approveReq merchantId merchantOperatingCityId =
       Common.LocalResidenceProofApprove req -> approveAndUpdateLocalResidenceProof req merchantId merchantOperatingCityId
       Common.PoliceVerificationCertificateImg imageId -> QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) DVC.PoliceVerificationCertificate
       Common.DriverVehicleNOCImg imageId -> QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) DVC.DriverVehicleNOC
-      Common.UDYAMApprove req -> approveAndUpdateUdyamDocument req merchantId merchantOperatingCityId
-      Common.LDCApprove req -> approveAndUpdateLdcDocument req merchantId merchantOperatingCityId
-      Common.GSTApprove gstReq -> approveGST gstReq merchantId merchantOperatingCityId
+      Common.UDYAMApprove req -> approveAndUpdateUdyamDocument requestor req merchantId merchantOperatingCityId
+      Common.LDCApprove req -> approveAndUpdateLdcDocument requestor req merchantId merchantOperatingCityId
+      Common.GSTApprove gstReq -> approveGST requestor gstReq merchantId merchantOperatingCityId
       Common.TANApprove req -> approveAndUpdateTanDocument req merchantId merchantOperatingCityId
 
 -- | On any exception from the approval action, mark the uploaded image(s) INVALID and re-throw
@@ -2331,8 +2451,8 @@ doApproveWithRevert imageIds action = do
         QImage.updateVerificationStatusByIds (Just INVALID) (map (Id . (.getId)) imageIds)
       throwM err
 
-handleRejectRequest :: Common.RejectDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
+handleRejectRequest :: Audit.Requestor -> Common.RejectDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+handleRejectRequest requestor rejectReq merchantId merchantOperatingCityId = do
   case rejectReq of
     Common.SSNReject ssnRejectReq -> rejectSSNAndSendNotification ssnRejectReq merchantOperatingCityId
     Common.ImageDocuments imageRejectReq -> do
@@ -2341,15 +2461,24 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
           rejectImage imgId = QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid reason) imgId
           imageOnlyRejectTypes = [DVC.ProfilePhoto, DVC.UploadProfile, DVC.VehicleInspectionForm, DVC.VehicleFront, DVC.VehicleBack, DVC.VehicleRight, DVC.VehicleLeft, DVC.VehicleFrontInterior, DVC.VehicleBackInterior, DVC.Odometer, DVC.PoliceVerificationCertificate, DVC.DriverVehicleNOC] -- TODO Jitu: Fetch through config (onlyImageVerificationStatusLookupRequired)
       image <- findApproveImage imageId
+      -- Owner fetched once up front: role-derived entity for the person-doc audits below + the rejection notification.
+      mbOwner <- QDriver.findById image.personId
+      let ownerEType = Audit.entityTypeFromMbPerson mbOwner
+          -- vehicle-doc images carry their RC: key those audits by the RC (VEHICLE convention), else by the owner
+          (imgEType, imgEId) = Audit.imageEntity (maybe DP.DRIVER (.role) mbOwner) image
       case image.imageType of
         DVC.VehicleFitnessCertificate -> do
           rejectImage imageId
           QFC.updateVerificationStatus INVALID imageId
+          Audit.auditDocStatus requestor imgEType imgEId "VehicleFitnessCertificate" DAL.VEHICLE_FITNESS_CERTIFICATE Nothing Nothing (Just "INVALID") DAL.REJECTED (Just imageRejectReq.reason) merchantId merchantOperatingCityId
         DVC.VehicleInsurance -> do
           rejectImage imageId
           vInsurance <- QVI.findByImageId imageId
           whenJust vInsurance $ \_ ->
             QVI.updateVerificationStatusAndRejectReason INVALID reason imageId
+          -- prefer the insurance row's own RC + id when the row exists
+          let (insEType, insEId) = maybe (imgEType, imgEId) (\ins -> (DAL.VEHICLE, ins.rcId.getId)) vInsurance
+          Audit.auditDocStatus requestor insEType insEId "VehicleInsurance" DAL.VEHICLE_INSURANCE ((.id.getId) <$> vInsurance) Nothing (Just "INVALID") DAL.REJECTED (Just imageRejectReq.reason) merchantId merchantOperatingCityId
         DVC.DriverLicense -> do
           mbDl <- QDL.findByImageId imageId
           mbResolvedDl <- case mbDl of
@@ -2361,6 +2490,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
               QDL.updateDocImageAndStatusById dl.id imageId INVALID reason
               rejectImage dl.documentImageId1
               whenJust dl.documentImageId2 rejectImage
+              Audit.auditDocStatus requestor ownerEType dl.driverId.getId "DriverLicense" DAL.DRIVER_LICENSE (Just dl.id.getId) Nothing (Just "INVALID") DAL.REJECTED (Just imageRejectReq.reason) merchantId merchantOperatingCityId
           rejectImage imageId
         DVC.VehicleRegistrationCertificate -> do
           mbRc <- QRC.findByImageId imageId
@@ -2369,30 +2499,38 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
             Nothing -> case image.rcId of
               Just rcIdRaw -> QRC.findById (Id rcIdRaw)
               Nothing -> pure Nothing
-          whenJust mbResolvedRc $ \rc ->
+          whenJust mbResolvedRc $ \rc -> do
             QRC.updateDocImageAndStatusById rc.id imageId INVALID reason
+            Audit.auditDocStatus requestor DAL.VEHICLE rc.id.getId "VehicleRegistrationCertificate" DAL.VEHICLE_REGISTRATION_CERTIFICATE (Just rc.id.getId) Nothing (Just "INVALID") DAL.REJECTED (Just imageRejectReq.reason) merchantId merchantOperatingCityId
           rejectImage imageId
         DVC.VehiclePermit -> do
           rejectImage imageId
           QVPermit.updateVerificationStatusByImageId INVALID imageId
+          Audit.auditDocStatus requestor imgEType imgEId "VehiclePermit" DAL.VEHICLE_PERMIT Nothing Nothing (Just "INVALID") DAL.REJECTED (Just imageRejectReq.reason) merchantId merchantOperatingCityId
         DVC.VehiclePUC -> do
           rejectImage imageId
           QVPUC.updateVerificationStatusByImageId INVALID imageId
+          Audit.auditDocStatus requestor imgEType imgEId "VehiclePUC" DAL.VEHICLE_PUC Nothing Nothing (Just "INVALID") DAL.REJECTED (Just imageRejectReq.reason) merchantId merchantOperatingCityId
         DVC.VehicleNOC -> do
           rejectImage imageId
           QVNOC.updateVerificationStatusByImageId INVALID imageId
+          Audit.auditDocStatus requestor imgEType imgEId "VehicleNOC" DAL.VEHICLE_NOC Nothing Nothing (Just "INVALID") DAL.REJECTED (Just imageRejectReq.reason) merchantId merchantOperatingCityId
         DVC.BusinessLicense -> do
           rejectImage imageId
           QBL.updateVerificationStatusByImageId INVALID imageId
+          Audit.auditDocStatus requestor ownerEType image.personId.getId "BusinessLicense" DAL.BUSINESS_LICENSE Nothing Nothing (Just "INVALID") DAL.REJECTED (Just imageRejectReq.reason) merchantId merchantOperatingCityId
         DVC.PanCard -> do
           rejectImage imageId
           QPan.updateVerificationStatusAndRejectReason INVALID (Just reason) imageId
+          Audit.auditDocStatus requestor ownerEType image.personId.getId "PanCard" DAL.DRIVER_PAN_CARD Nothing Nothing (Just "INVALID") DAL.REJECTED (Just imageRejectReq.reason) merchantId merchantOperatingCityId
         DVC.AadhaarCard -> do
           rejectImage imageId
           QAadhaarCard.updateVerificationStatusAndRejectReason INVALID (Just reason) image.personId
+          Audit.auditDocStatus requestor ownerEType image.personId.getId "AadhaarCard" DAL.AADHAAR_CARD Nothing Nothing (Just "INVALID") DAL.REJECTED (Just imageRejectReq.reason) merchantId merchantOperatingCityId
         DVC.GSTCertificate -> do
           rejectImage imageId
           QGstin.updateVerificationStatusAndRejectReason INVALID (Just reason) imageId
+          Audit.auditDocStatus requestor ownerEType image.personId.getId "GST" DAL.DRIVER_GSTIN Nothing Nothing (Just "INVALID") DAL.REJECTED (Just imageRejectReq.reason) merchantId merchantOperatingCityId
         DVC.LocalResidenceProof -> do
           rejectImage imageId
           person <- QPerson.findById image.personId >>= fromMaybeM (PersonNotFound image.personId.getId)
@@ -2402,14 +2540,17 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
         DVC.UDYAMCertificate -> do
           rejectImage imageId
           mbUdyam <- QUdyam.findByImageId imageId
-          whenJust mbUdyam $ \udyam ->
+          whenJust mbUdyam $ \udyam -> do
             QUdyam.updateVerificationStatusAndRejectReason INVALID (Just reason) udyam.id
+            Audit.auditDocStatus requestor ownerEType image.personId.getId "Udyam" DAL.DRIVER_UDYAM (Just udyam.id.getId) Nothing (Just "INVALID") DAL.REJECTED (Just imageRejectReq.reason) merchantId merchantOperatingCityId
         docType
-          | docType `elem` imageOnlyRejectTypes -> rejectImage imageId
+          | docType `elem` imageOnlyRejectTypes -> do
+            rejectImage imageId
+            -- Image-only doc types (no domain table): record the SPECIFIC type so the audit isn't a generic "Document" row.
+            Audit.auditDocStatus requestor imgEType imgEId (show docType) DAL.IMAGE (Just imageId.getId) Nothing (Just "INVALID") DAL.REJECTED (Just imageRejectReq.reason) merchantId merchantOperatingCityId
         _ -> throwError (InternalError "Unknown Config in reject update document")
-      handleMandatoryDocRejection merchantId merchantOperatingCityId image.personId image.imageType imageId
-      mbDriver <- QDriver.findById image.personId
-      case mbDriver of
+      handleMandatoryDocRejection requestor merchantId merchantOperatingCityId image.personId image.imageType imageId
+      case mbOwner of
         Nothing -> logWarning $ "Driver not found for rejection notification, skipping: " <> image.personId.getId
         Just driver -> do
           let docType = show image.imageType
@@ -2419,7 +2560,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
     Common.CommonDocumentReject commonRejectReq -> do
       let documentId = Id commonRejectReq.documentId.getId
       document <- QCommonDriverOnboardingDocuments.findById documentId >>= fromMaybeM (DocumentNotFound documentId.getId)
-      rejectAndUpdateCommonDocument commonRejectReq merchantOperatingCityId
+      rejectAndUpdateCommonDocument requestor commonRejectReq merchantOperatingCityId
       -- LDC reject also resets the fleet owner's TDS: explicit rate from the request, else the configured default (mirrors approve)
       when (document.documentType == DVC.LDCCertificate) $ do
         transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
@@ -2452,6 +2593,8 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
       driver <- QDriver.findById ssnEntry.driverId >>= fromMaybeM (PersonNotFound ssnEntry.driverId.getId)
       let docType = "SSN"
           reason = req.reason
+      -- entity from the (already-fetched) owner's role: SSN rows can belong to fleet owners
+      Audit.auditDocStatus requestor (Audit.entityTypeFromRole driver.role) ssnEntry.driverId.getId "SSN" DAL.DRIVER_SSN Nothing Nothing (Just "INVALID") DAL.REJECTED (Just req.reason) merchantId _merchantOpCityId
       sendDocumentRejectionNotification _merchantOpCityId docType reason driver
 
 notificationType :: FCM.FCMNotificationType
@@ -2552,10 +2695,12 @@ sendDocumentRejectionNotification merchantOpCityId docType reason driver = do
   when smsEnabled $ do
     sendRejectDocumentSmsWithBody merchantOpCityId smsBody driver
 
-postDriverRegistrationDocumentsUpdate :: ShortId DM.Merchant -> Context.City -> Common.UpdateDocumentRequest -> Flow Common.UpdateDocumentResp
-postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
+postDriverRegistrationDocumentsUpdate :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Common.UpdateDocumentRequest -> Flow Common.UpdateDocumentResp
+postDriverRegistrationDocumentsUpdate _merchantShortId _opCity mbRequestorId mbRequestorRole _req = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
+  -- Opted-out merchants forward no requestor id ⇒ fall back to SYSTEM so mutation-side audits are not silently dropped.
+  let auditRequestor = Audit.dashboardActorOrSystem mbRequestorId mbRequestorRole
   let updateAndFetchEnabled mbPersonId = case mbPersonId of
         Just personId -> do
           result <-
@@ -2613,13 +2758,16 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
         pure $ mkUpdateResp mbPersonId enabled
   case _req of
     Common.Approve approveReq -> do
-      handleApproveRequest approveReq merchant.id merchantOpCityId
+      handleApproveRequest auditRequestor approveReq merchant.id merchantOpCityId
       whenJust (listToMaybe (getImageIdsFromApproveDetails approveReq)) $ \imgId -> do
         mbImage <- QImage.findById (Id imgId.getId)
         whenJust mbImage $ \image -> do
           person <- QPerson.findById image.personId >>= fromMaybeM (PersonNotFound image.personId.getId)
           when (DCommon.checkFleetOwnerRole person.role) $
-            void $ DRegistrationV2.enableFleetIfPossible image.personId Nothing (DRegistrationV2.castRoleToFleetType person.role) merchantOpCityId Nothing
+            void $ DRegistrationV2.enableFleetIfPossible (Audit.dashboardActorFromForwarded mbRequestorId mbRequestorRole) image.personId Nothing (DRegistrationV2.castRoleToFleetType person.role) merchantOpCityId Nothing
+          -- Document audit: dashboard approve of the document image. Gated on the forwarded requestorId;
+          -- entity derived from the (already-fetched) owner's role, or the RC for vehicle-doc images.
+          Audit.auditImageStatus auditRequestor person.role image image.verificationStatus Documents.VALID DAL.APPROVED
       mbPersonIdRaw <- getApproveTargetPersonId approveReq
       mbRcId <- getApproveTargetRcId approveReq
       processPostUpdate mbPersonIdRaw mbRcId
@@ -2633,7 +2781,9 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
             pure $ Kernel.Prelude.any (\config -> fromMaybe config.isMandatory config.isMandatoryForEnabling) docConfigs
           Nothing -> pure False
         when isMandatoryDoc $ AC.guardNoLiveRideByDriver personId
-      handleRejectRequest rejectReq merchant.id merchantOpCityId
+      -- handleRejectRequest already emits the SPECIFIC per-type REJECTED audit row for every reject variant
+      -- (PanCard/DriverLicense/Udyam/SSN/CommonDocument/image-only types), so no generic outer "Document" row here.
+      handleRejectRequest auditRequestor rejectReq merchant.id merchantOpCityId
       mbRcId <- getRejectTargetRcId rejectReq
       processPostUpdate mbPersonIdRaw mbRcId
   where
@@ -2755,8 +2905,8 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
         mbRequest <- QOHR.findByPrimaryKey requestId
         pure $ (.driverId) =<< mbRequest
 
-approveGST :: Common.GSTApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveGST req merchantId merchantOperatingCityId = do
+approveGST :: Audit.Requestor -> Common.GSTApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveGST requestor req merchantId merchantOperatingCityId = do
   let fleetOwnerId = cast req.fleetOwnerId :: Id DP.Person
       imageId = Id req.documentImageId.getId
   gstImage <- findApproveImage imageId
@@ -2789,6 +2939,8 @@ approveGST req merchantId merchantOperatingCityId = do
       -- Clean up stale INVALID rows, then upsert (the fleet owner's own row may be among the deleted)
       deleteInvalidDocumentOfDriver DVC.GSTCertificate fleetOwnerId
       QGstin.upsertGstinRecord updatedGstin
+      -- entity derived from the owner's role: GST is a fleet-owner document
+      Audit.auditDocStatus requestor (Audit.entityTypeFromRole person.role) fleetOwnerId.getId "GST" DAL.DRIVER_GSTIN (Just updatedGstin.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing merchantId merchantOperatingCityId
     Nothing -> do
       let gstin =
             DGstin.DriverGstin
@@ -2820,6 +2972,7 @@ approveGST req merchantId merchantOperatingCityId = do
               }
       deleteInvalidDocumentOfDriver DVC.GSTCertificate fleetOwnerId
       QGstin.create gstin
+      Audit.auditDocStatus requestor (Audit.entityTypeFromRole person.role) fleetOwnerId.getId "GST" DAL.DRIVER_GSTIN (Just gstin.id.getId) Nothing (Just "VALID") DAL.APPROVED Nothing merchantId merchantOperatingCityId
   updateFleetOwnerInfoOnDocApproval person $ \personId ->
     QFOIE.updateGstImage (Just gstEnc) (Just imageId.getId) personId
 
@@ -2910,7 +3063,10 @@ postDriverRegistrationVerifyBankAccount merchantShortId opCity driverId_ req = d
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId_
-  BankAccountVerification.verifyBankAccount (personId, merchant.id, merchantOpCityId) $
+      -- Dashboard-initiated bank verify: attribute the audit to the operator, gated on the forwarded
+      -- requestorRole (only set when merchant.sendDocumentAuditActorDetails is on); else fall back to the driver.
+      mbAuditRequestor = Audit.dashboardActorFromForwarded req.requestorId req.requestorRole
+  BankAccountVerification.verifyBankAccount mbAuditRequestor (personId, merchant.id, merchantOpCityId) $
     BankAccountVerification.DriverBankAccountVerifyReq
       { bankAccountNo = req.bankAccountNo,
         bankIfscCode = req.bankIfscCode,
@@ -2922,7 +3078,7 @@ getDriverRegistrationInfoBankAccount merchantShortId opCity driverId requestId =
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
-  BankAccountVerification.getInfoBankAccount (personId, merchant.id, merchantOpCityId) requestId
+  BankAccountVerification.getInfoBankAccount Nothing (personId, merchant.id, merchantOpCityId) requestId
 
 getDriverRegistrationPayoutRegistration :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Text -> Flow Common.PayoutRegistrationRes
 getDriverRegistrationPayoutRegistration merchantShortId opCity driverId mbRequestorId =
@@ -3005,10 +3161,12 @@ mapTxnStatusToPayoutStatus = \case
   Payment.CLIENT_AUTH_TOKEN_EXPIRED -> PayoutTypes.INVALID
   _ -> PayoutTypes.INITIATED
 
-postDriverRegistrationDeleteBankAccount :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
-postDriverRegistrationDeleteBankAccount merchantShortId opCity driverId = do
+postDriverRegistrationDeleteBankAccount :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Text -> Maybe Text -> Flow APISuccess
+postDriverRegistrationDeleteBankAccount merchantShortId opCity driverId mbRequestorId mbRequestorRole = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
-  _ <- BankAccountVerification.deleteBankAccount (personId, merchant.id, merchantOpCityId)
+      -- Dashboard delete: attribute to the operator forwarded (gated) from the dashboard; else fall back to driver.
+      mbAuditRequestor = Audit.dashboardActorFromForwarded mbRequestorId mbRequestorRole
+  _ <- BankAccountVerification.deleteBankAccount mbAuditRequestor (personId, merchant.id, merchantOpCityId)
   pure Success

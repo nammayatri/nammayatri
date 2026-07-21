@@ -275,7 +275,7 @@ data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPI
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("driver" :> (GetDriverPaymentDue :<|> PostDriverEnable :<|> PostDriverCollectCashHelper :<|> PostDriverCollectCashV2Helper :<|> PostDriverExemptCashHelper :<|> PostDriverExemptCashV2Helper :<|> GetDriverInfoHelper :<|> GetDriverFeedbackList :<|> PostDriverUnlinkVehicle :<|> PostDriverEndRCAssociation :<|> PostDriverDeleteAadhaar :<|> PostDriverDeletePanCard :<|> PostDriverAddVehicle :<|> PostDriverSetRCStatus :<|> PostDriverExemptDriverFeeV2Helper))
+type API = ("driver" :> (GetDriverPaymentDue :<|> PostDriverEnable :<|> PostDriverCollectCashHelper :<|> PostDriverCollectCashV2Helper :<|> PostDriverExemptCashHelper :<|> PostDriverExemptCashV2Helper :<|> GetDriverInfoHelper :<|> GetDriverFeedbackList :<|> PostDriverUnlinkVehicle :<|> PostDriverEndRCAssociation :<|> PostDriverDeleteAadhaarHelper :<|> PostDriverDeletePanCardHelper :<|> PostDriverAddVehicle :<|> PostDriverSetRCStatus :<|> PostDriverExemptDriverFeeV2Helper))
 
 type GetDriverPaymentDue = ("paymentDue" :> QueryParam "countryCode" Kernel.Prelude.Text :> MandatoryQueryParam "phone" Kernel.Prelude.Text :> Get '[JSON] [DriverOutstandingBalanceResp])
 
@@ -403,7 +403,23 @@ type PostDriverEndRCAssociation = (Capture "driverId" (Kernel.Types.Id.Id Dashbo
 
 type PostDriverDeleteAadhaar = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "deleteAadhaar" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
+type PostDriverDeleteAadhaarHelper =
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "deleteAadhaar" :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> QueryParam
+           "requestorRole"
+           Kernel.Prelude.Text
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
+
 type PostDriverDeletePanCard = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "deletePanCard" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PostDriverDeletePanCardHelper =
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "deletePanCard" :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> QueryParam
+           "requestorRole"
+           Kernel.Prelude.Text
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
 
 type PostDriverAddVehicle =
   ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "addVehicle"
@@ -452,8 +468,8 @@ data DriverAPIs = DriverAPIs
     getDriverFeedbackList :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient GetFeedbackListRes,
     postDriverUnlinkVehicle :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverEndRCAssociation :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverDeleteAadhaar :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverDeletePanCard :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverDeleteAadhaar :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverDeletePanCard :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverAddVehicle :: Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Fleet.Driver.AddVehicleReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverSetRCStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Fleet.Driver.RCStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverExemptDriverFee :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Dashboard.Common.Driver.ServiceNames -> ExemptionAndCashCollectionDriverFeeReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess

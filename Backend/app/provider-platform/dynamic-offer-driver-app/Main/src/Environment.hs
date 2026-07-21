@@ -199,7 +199,10 @@ data AppCfg = AppCfg
     enableLtsPoolDataForPooling :: Bool,
     rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
     xyneWebhookSigningSecret :: Text,
-    xyneWebhookBearerToken :: Text
+    xyneWebhookBearerToken :: Text,
+    -- Document-audit publisher (reuses the RideEventsPublisherCfg shape: streamPrefix + shardCount).
+    -- Nothing = audit publishing OFF. shardCount MUST match the DOCUMENT_AUDIT_CONSUMER side.
+    documentAuditPublisherCfg :: Maybe RideEventsPublisherCfg
   }
   deriving (Generic, FromDhall)
 
@@ -334,7 +337,8 @@ data AppEnv = AppEnv
     rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
     xyneWebhookSigningSecret :: Text,
     xyneWebhookBearerToken :: Text,
-    actorInfo :: Finance.ActorInfo
+    actorInfo :: Finance.ActorInfo,
+    documentAuditPublisherCfg :: Maybe RideEventsPublisherCfg
   }
   deriving (Generic)
 

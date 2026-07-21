@@ -38,6 +38,7 @@ import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DFR
 import qualified Domain.Action.UI.DriverOnboarding.GstVerification as GstVerification
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DVRC
+import qualified Domain.Types.DocumentAuditLog as DAL
 import Domain.Types.DocumentVerificationConfig (DocumentVerificationConfig)
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DocumentVerificationConfig as ODC
@@ -65,6 +66,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.Finance.Wallet as Wallet
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
@@ -94,6 +96,8 @@ data DriverPanReq = DriverPanReq
 type DriverPanRes = APISuccess
 
 verifyPan ::
+  -- | Audit actor. 'Nothing' ⇒ the driver/fleet-owner verifying their own PAN; 'Just' ⇒ a dashboard operator.
+  Maybe Audit.Requestor ->
   DPan.VerifiedBy ->
   Maybe DM.Merchant ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -102,10 +106,11 @@ verifyPan ::
   Maybe Text ->
   Bool ->
   Flow Bool
-verifyPan verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req adminApprovalRequired mbPanName isDashboard = do
-  verifyPanHandler verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req adminApprovalRequired mbPanName False isDashboard
+verifyPan mbRequestor verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req adminApprovalRequired mbPanName isDashboard = do
+  verifyPanHandler mbRequestor verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req adminApprovalRequired mbPanName False isDashboard
 
 verifyPanHandler ::
+  Maybe Audit.Requestor ->
   DPan.VerifiedBy ->
   Maybe DM.Merchant ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -115,7 +120,7 @@ verifyPanHandler ::
   Bool ->
   Bool ->
   Flow Bool
-verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalRequired panName isPanNameMandatory isDashboard = do
+verifyPanHandler mbRequestor verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalRequired panName isPanNameMandatory isDashboard = do
   when (isPanNameMandatory && isNothing panName) $ throwError (InvalidRequest "PAN name is required")
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyPanHitsCountKey req.panNumber) externalServiceRateLimitOptions
@@ -162,11 +167,13 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
             mbNameFromGovtDB <- checkIfGenuineReq panReq person
             panCardDetails <- buildPanCard person Nothing mbNameFromGovtDB Nothing (Just verifyBy) (Id req.imageId) req.panNumber (Just Documents.VALID)
             DPQuery.upsertPanRecord panCardDetails mdriverPanInformation
+            Audit.auditDocStatus (Audit.auditActorFromPersonOrRequestor person mbRequestor) (if DCommon.checkFleetOwnerRole person.role then DAL.FLEET_OWNER else DAL.DRIVER) person.id.getId "PanCard" DAL.DRIVER_PAN_CARD (Just (maybe panCardDetails.id.getId (.id.getId) mdriverPanInformation)) (show . (.verificationStatus) <$> mdriverPanInformation) (Just (show panCardDetails.verificationStatus)) DAL.STATUS_CHANGED Nothing person.merchantId person.merchantOperatingCityId
           Just VI.Idfy -> do
             void $ callIdfy person mdriverPanInformation driverDocument transporterConfig
           _ -> do
             panCardDetails <- buildPanCard person Nothing Nothing Nothing (Just verifyBy) (Id req.imageId) req.panNumber Nothing
             DPQuery.upsertPanRecord panCardDetails mdriverPanInformation
+            Audit.auditDocStatus (Audit.auditActorFromPersonOrRequestor person mbRequestor) (if DCommon.checkFleetOwnerRole person.role then DAL.FLEET_OWNER else DAL.DRIVER) person.id.getId "PanCard" DAL.DRIVER_PAN_CARD (Just (maybe panCardDetails.id.getId (.id.getId) mdriverPanInformation)) (show . (.verificationStatus) <$> mdriverPanInformation) (Just (show panCardDetails.verificationStatus)) DAL.STATUS_CHANGED Nothing person.merchantId person.merchantOperatingCityId
         case person.role of
           role | DCommon.checkFleetOwnerRole role -> do
             encryptedPanNumber <- encrypt req.panNumber
@@ -189,7 +196,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
       pure False
     role
       | DCommon.checkFleetOwnerRole role ->
-        DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId (Just transporterConfig)
+        DFR.enableFleetIfPossible mbRequestor person.id adminApprovalRequired (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId (Just transporterConfig)
     _ -> pure False
   pure res
   where
@@ -235,7 +242,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
                 when documentVerificationConfig.doStrictVerifcation $ do
                   now <- getCurrentTime
                   let parsedDob = extractedPan.date_of_birth >>= DVRC.parseDateTime
-                  verifyPanFlow person merchantOpCityId documentVerificationConfig (fromMaybe "" extractedPanNo) (fromMaybe now parsedDob) (Id req.imageId) extractedNameOnCard
+                  verifyPanFlow (Audit.auditActorFromPersonOrRequestor person mbRequestor) person merchantOpCityId documentVerificationConfig (fromMaybe "" extractedPanNo) (fromMaybe now parsedDob) (Id req.imageId) extractedNameOnCard
 
               pure (extractedPan, fmOutcome)
             Nothing -> throwImageError (Id req.imageId) ImageExtractionFailed
@@ -248,9 +255,11 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
       let nonStrictStatus = if fmOutcome == FMDeferred then Documents.PENDING else Documents.VALID
       panCardDetails <- buildPanCard person extractedPan.pan_type extractedPan.name_on_card extractedPan.date_of_birth (Just verifyBy) (Id req.imageId) req.panNumber (if not documentVerificationConfig.doStrictVerifcation then Just nonStrictStatus else Nothing)
       DPQuery.upsertPanRecord panCardDetails mdriverPanInformation
+      Audit.auditDocStatus (Audit.auditActorFromPersonOrRequestor person mbRequestor) (if DCommon.checkFleetOwnerRole person.role then DAL.FLEET_OWNER else DAL.DRIVER) person.id.getId "PanCard" DAL.DRIVER_PAN_CARD (Just (maybe panCardDetails.id.getId (.id.getId) mdriverPanInformation)) (show . (.verificationStatus) <$> mdriverPanInformation) (Just (show panCardDetails.verificationStatus)) DAL.STATUS_CHANGED Nothing person.merchantId person.merchantOperatingCityId
       pure Success
 
-    checkIfGenuineReq :: (ServiceFlow m r) => API.Types.UI.DriverOnboardingV2.DriverPanReq -> Person.Person -> m (Maybe Text)
+    -- AuditFlow: throwValidationError now audits the image rollback deletes
+    checkIfGenuineReq :: (ServiceFlow m r, Audit.AuditFlow m r) => API.Types.UI.DriverOnboardingV2.DriverPanReq -> Person.Person -> m (Maybe Text)
     checkIfGenuineReq API.Types.UI.DriverOnboardingV2.DriverPanReq {..} person = do
       (txnId, valStatus) <- CME.fromMaybeM (Image.throwValidationError (Just imageId1) Nothing (Just "Cannot find necessary data for SDK response!!!!")) (return $ (,) <$> transactionId <*> validationStatus)
       hvResp <- Verification.verifySdkResp person.merchantId merchantOpCityId (VI.VerifySdkDataReq txnId)
@@ -280,8 +289,8 @@ castTextToDomainType panType = case panType of
   Just _ -> Just DPan.BUSINESS
   Nothing -> Nothing
 
-verifyPanFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Id Image.Image -> Maybe Text -> Flow ()
-verifyPanFlow person merchantOpCityId documentVerificationConfig panNumber driverDateOfBirth imageId1 nameOnCard = do
+verifyPanFlow :: Audit.Requestor -> Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Id Image.Image -> Maybe Text -> Flow ()
+verifyPanFlow requestor person merchantOpCityId documentVerificationConfig panNumber driverDateOfBirth imageId1 nameOnCard = do
   logDebug $ "verifyPanFlow: " <> show panNumber
   now <- getCurrentTime
   encryptedPan <- encrypt panNumber
@@ -294,7 +303,11 @@ verifyPanFlow person merchantOpCityId documentVerificationConfig panNumber drive
       Verification.VerifyPanAsyncReq {panNumber, driverId = person.id.getId, dateOfBirth = driverDateOfBirth, fullName = fromMaybe "" nameOnCard}
   logDebug $ "verifyRes: " <> show verifyRes
   case verifyRes.requestor of
-    VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person imageId1 Nothing driverDateOfBirth Nothing nameOnCard verifyRes.requestId now imageExtractionValidation encryptedPan
+    VT.Idfy -> do
+      IVQuery.create =<< mkIdfyVerificationEntity person imageId1 Nothing driverDateOfBirth Nothing nameOnCard verifyRes.requestId now imageExtractionValidation encryptedPan
+      -- Async dispatch mutates no PAN/image row yet: record a request-time row (eventId = provider
+      -- requestId) so the webhook result can be correlated, mirroring DL/RC/Aadhaar/Bank flows.
+      Audit.auditImageStatusByIdWithEvent requestor (Audit.entityTypeFromRole person.role) person.id.getId "PanCard" imageId1 Nothing Documents.PENDING DAL.VERIFICATION_REQUESTED (Just verifyRes.requestId) person.merchantId person.merchantOperatingCityId
     -- Adding an async provider branch? Extend pullSourcesFor + hvWorkflowHint in SyncVerificationStatus.
     _ -> throwError $ InternalError ("Service provider not configured to return PAN verification async responses. Provider Name : " <> (show verifyRes.requestor))
 
@@ -324,13 +337,21 @@ onVerifyPanHandler person imageId1 imageId2 output = do
       -- Promote non-terminal images before resolution so MANUAL_VERIFICATION_REQUIRED doesn't read as FMDeferred.
       forM_ [(image1, Just imageId1), (image2, imageId2)] $ \(mbImg, mbImgId) ->
         when ((mbImg >>= (.verificationStatus)) `notElem` [Just Documents.VALID, Just Documents.INVALID]) $
-          whenJust mbImgId $ ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard.")
+          whenJust mbImgId $ \imgId -> do
+            ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard.") imgId
+            -- record the image-level approval too (same webhook actor, owner-role-derived entity).
+            Audit.auditImageStatusById Audit.externalProvider (Audit.entityTypeFromRole person.role) person.id.getId "PanCard" imgId (show <$> (mbImg >>= (.verificationStatus))) Documents.VALID DAL.APPROVED person.merchantId person.merchantOperatingCityId
       when (isvalid == Just True && not docImageInvalid) $ do
         panConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, documentType = Just DTO.PanCard, vehicleCategory = Just CAR}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId DTO.PanCard CAR Nothing)) >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show DTO.PanCard))
         -- Record stays PENDING until the face match passes; reuses a recorded result when the match already ran.
         finalStatus <- resolveFaceMatchVerificationStatus person panConfig imageId1 Nothing (Just details.inputPanNumber)
+        mdriverPanInformation <- Audit.fetchForAuditByCity person.merchantOperatingCityId (DPQuery.findByDriverId person.id)
         DPQuery.updateVerificationStatus finalStatus person.id
-      when (isvalid == Just False) $ DPQuery.updateVerificationStatus Documents.INVALID person.id
+        Audit.auditDocStatus Audit.externalProvider (if DCommon.checkFleetOwnerRole person.role then DAL.FLEET_OWNER else DAL.DRIVER) person.id.getId "PanCard" DAL.DRIVER_PAN_CARD ((.id.getId) <$> mdriverPanInformation) (show . (.verificationStatus) <$> mdriverPanInformation) (Just (show finalStatus)) DAL.STATUS_CHANGED Nothing person.merchantId person.merchantOperatingCityId
+      when (isvalid == Just False) $ do
+        mdriverPanInformation <- Audit.fetchForAuditByCity person.merchantOperatingCityId (DPQuery.findByDriverId person.id)
+        DPQuery.updateVerificationStatus Documents.INVALID person.id
+        Audit.auditDocStatus Audit.externalProvider (if DCommon.checkFleetOwnerRole person.role then DAL.FLEET_OWNER else DAL.DRIVER) person.id.getId "PanCard" DAL.DRIVER_PAN_CARD ((.id.getId) <$> mdriverPanInformation) (show . (.verificationStatus) <$> mdriverPanInformation) (Just (show Documents.INVALID)) DAL.STATUS_CHANGED Nothing person.merchantId person.merchantOperatingCityId
       case person.role of
         role | DCommon.checkFleetOwnerRole role -> do
           QFOI.updatePanImage mEncryptedPanNumber (Just imageId1.getId) person.id
@@ -543,16 +564,19 @@ onVerifyPanAadhaarLink verificationReq output serviceName = do
     VT.Idfy -> do
       logInfo ("onVerifyPanAadhaarLink: " <> show output)
       IVQuery.updateExtractValidationStatus Domain.Success verificationReq.requestId
-      case (output.isLinked, output.message) of
-        (Just True, _) ->
-          DPQuery.updatePanAadhaarLinkage (Just DPan.PAN_AADHAAR_LINKED) person.id
-        (Just False, Just "Aadhaar linked to some other PAN") ->
-          DPQuery.updatePanAadhaarLinkage (Just DPan.AADHAAR_LINKED_TO_OTHER_PAN) person.id
-        (Just False, Just "This PAN number does not exist") ->
-          DPQuery.updatePanAadhaarLinkage (Just DPan.PAN_DOES_NOT_EXIST) person.id
-        (Just False, _) ->
-          DPQuery.updatePanAadhaarLinkage (Just DPan.PAN_AADHAAR_NOT_LINKED) person.id
-        (Nothing, _) ->
+      let mbLinkage = case (output.isLinked, output.message) of
+            (Just True, _) -> Just DPan.PAN_AADHAAR_LINKED
+            (Just False, Just "Aadhaar linked to some other PAN") -> Just DPan.AADHAAR_LINKED_TO_OTHER_PAN
+            (Just False, Just "This PAN number does not exist") -> Just DPan.PAN_DOES_NOT_EXIST
+            (Just False, _) -> Just DPan.PAN_AADHAAR_NOT_LINKED
+            (Nothing, _) -> Nothing
+      case mbLinkage of
+        Just linkage -> do
+          DPQuery.updatePanAadhaarLinkage (Just linkage) person.id
+          -- The linkage result mutates the driver_pan_card row: record it with the webhook actor,
+          -- like the other webhook-driven PAN status mutations in this file.
+          Audit.auditDocStatus Audit.externalProvider (Audit.entityTypeFromRole person.role) person.id.getId "PanCard" DAL.DRIVER_PAN_CARD (Just person.id.getId) Nothing (Just (show linkage)) DAL.STATUS_CHANGED (Just "PAN-Aadhaar linkage") person.merchantId person.merchantOperatingCityId
+        Nothing ->
           logWarning $ "onVerifyPanAadhaarLink: Idfy response had no isLinked field, leaving column NULL. Payload: " <> show output
     _ -> throwError $ InternalError ("Unknown Service provider webhook encopuntered in onVerifyPanAadhaarLink. Name of provider : " <> show serviceName)
   -- Recompute and materialize the effective TDS rate now that linkage status

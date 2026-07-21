@@ -265,6 +265,7 @@ types:
     operatorId: Text
     remarks: Text
     responses: Maybe [InspectionResponseItem]
+    requestorRole: Maybe Text
     derive: "'HideSecrets"
   InspectionResponseItem:
     questionId: Text
@@ -354,6 +355,7 @@ types:
     - entityType: EntityType
     - entityId: Text
     - rejectDocumentUpdateReq: [DocumentDetail]
+    - requestorRole: Maybe Text
     - derive: "'HideSecrets"
   ReviewRequestHistoryList:
     - reviewHistory : [ReviewRequestHistory]

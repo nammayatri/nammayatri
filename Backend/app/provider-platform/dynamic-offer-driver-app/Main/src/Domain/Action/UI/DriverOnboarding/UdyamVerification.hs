@@ -9,12 +9,14 @@ module Domain.Action.UI.DriverOnboarding.UdyamVerification
     DriverUdyamRes,
     verifyUdyam,
     verifyUdyamFlow,
+    verifyUdyamFlowWithRequestor,
     onVerifyUdyam,
   )
 where
 
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DFR
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverUdyam as DUdyam
 import Domain.Types.Extra.IdfyVerification (docTypeToText)
@@ -34,6 +36,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding (VerificationReqRecord, getDriverDocumentInfo)
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -55,10 +58,12 @@ makeVerifyUdyamHitsCountKey :: Text -> Text
 makeVerifyUdyamHitsCountKey uamNumber = "VerifyUdyam:uamNumberHits:" <> uamNumber <> ":hitsCount"
 
 verifyUdyam ::
+  -- | Audit actor. 'Nothing' ⇒ the driver/fleet-owner verifying their own Udyam; 'Just' ⇒ a dashboard operator.
+  Maybe Audit.Requestor ->
   (Id Person.Person, Id DMOC.MerchantOperatingCity) ->
   DriverUdyamReq ->
   Flow Bool
-verifyUdyam (personId, merchantOpCityId) req = do
+verifyUdyam mbRequestor (personId, merchantOpCityId) req = do
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyUdyamHitsCountKey req.uamNumber) externalServiceRateLimitOptions
 
@@ -77,8 +82,8 @@ verifyUdyam (personId, merchantOpCityId) req = do
     _ -> pure ()
   cfg <- SStatus.getFleetDocVerificationConfig merchantOpCityId ODC.UDYAMCertificate person.role
   if cfg.doStrictVerifcation
-    then verifyUdyamFlow person merchantOpCityId req.uamNumber req.imageId1
-    else upsertManualUdyamRecord person req.uamNumber req.imageId1
+    then verifyUdyamFlowWithRequestor (Audit.auditActorFromPersonOrRequestor person mbRequestor) person merchantOpCityId req.uamNumber req.imageId1
+    else upsertManualUdyamRecord mbRequestor person req.uamNumber req.imageId1
   res <- case person.role of
     Person.DRIVER -> do
       fork "enabling driver if all the mandatory document is verified" $ do
@@ -86,12 +91,18 @@ verifyUdyam (personId, merchantOpCityId) req = do
       pure False
     role
       | DCommon.checkFleetOwnerRole role ->
-        DFR.enableFleetIfPossible person.id Nothing (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId (Just transporterConfig)
+        DFR.enableFleetIfPossible mbRequestor person.id Nothing (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId (Just transporterConfig)
     _ -> pure False
   pure res
 
+-- Backward-compatible wrapper: kept with the old signature because dashboard
+-- Management.DriverRegistration also calls it without an audit requestor; the audit
+-- actor then falls back to the document owner acting on their own behalf.
 verifyUdyamFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Id Image.Image -> Flow ()
-verifyUdyamFlow person merchantOpCityId uamNumber imageId1 = do
+verifyUdyamFlow person = verifyUdyamFlowWithRequestor (Audit.auditActorFromPersonOrRequestor person Nothing) person
+
+verifyUdyamFlowWithRequestor :: Audit.Requestor -> Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Id Image.Image -> Flow ()
+verifyUdyamFlowWithRequestor requestor person merchantOpCityId uamNumber imageId1 = do
   now <- getCurrentTime
   encryptedUam <- encrypt uamNumber
   let imageExtractionValidation = DIdfy.Skipped
@@ -99,7 +110,11 @@ verifyUdyamFlow person merchantOpCityId uamNumber imageId1 = do
     Verification.verifyUdyamAadhaarAsync person.merchantId merchantOpCityId $
       Verification.VerifyUdyamAadhaarAsyncReq {uamNumber, driverId = person.id.getId}
   case verifyRes.requestor of
-    VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntityUdyam person imageId1 verifyRes.requestId now imageExtractionValidation encryptedUam
+    VT.Idfy -> do
+      IVQuery.create =<< mkIdfyVerificationEntityUdyam person imageId1 verifyRes.requestId now imageExtractionValidation encryptedUam
+      -- Async dispatch mutates no Udyam/image row yet: record a request-time row (eventId = provider
+      -- requestId) so the webhook result can be correlated, mirroring DL/RC/Aadhaar/Bank flows.
+      Audit.auditImageStatusByIdWithEvent requestor (Audit.entityTypeFromRole person.role) person.id.getId "Udyam" imageId1 Nothing Documents.PENDING DAL.VERIFICATION_REQUESTED (Just verifyRes.requestId) person.merchantId person.merchantOperatingCityId
     -- Adding an async provider branch? Extend pullSourcesFor + hvWorkflowHint in SyncVerificationStatus.
     _ -> throwError $ InternalError ("Service provider not configured to return Udyam Aadhaar verification async responses. Provider Name : " <> show verifyRes.requestor)
   pure ()
@@ -123,19 +138,21 @@ onVerifyUdyam verificationReq output serviceName = do
                     DUdyam.updatedAt = now
                   }
           DUQuery.updateByPrimaryKey updated
+          Audit.auditDocStatus Audit.externalProvider (if DCommon.checkFleetOwnerRole person.role then DAL.FLEET_OWNER else DAL.DRIVER) person.id.getId "Udyam" DAL.DRIVER_UDYAM (Just updated.id.getId) (Just (show driverUdyam.verificationStatus)) (Just (show updated.verificationStatus)) DAL.STATUS_CHANGED Nothing person.merchantId person.merchantOperatingCityId
         Nothing -> do
           udyamCardDetails <- buildDriverUdyamCard person verificationReq.documentNumber output.enterpriseName output.enterpriseType Documents.VALID verificationReq.documentImageId1
           DUQuery.create udyamCardDetails
+          Audit.auditDocStatus Audit.externalProvider (if DCommon.checkFleetOwnerRole person.role then DAL.FLEET_OWNER else DAL.DRIVER) person.id.getId "Udyam" DAL.DRIVER_UDYAM (Just udyamCardDetails.id.getId) Nothing (Just (show udyamCardDetails.verificationStatus)) DAL.STATUS_CHANGED Nothing person.merchantId person.merchantOperatingCityId
       case person.role of
         role
           | DCommon.checkFleetOwnerRole role ->
-            void $ DFR.enableFleetIfPossible person.id Nothing (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId Nothing
+            void $ DFR.enableFleetIfPossible (Just Audit.externalProvider) person.id Nothing (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId Nothing
         _ -> pure ()
     _ -> throwError $ InternalError ("Unknown Service provider webhook encountered in onVerifyUdyam. Name of provider : " <> show serviceName)
   pure Ack
 
-upsertManualUdyamRecord :: Person.Person -> Text -> Id Image.Image -> Flow ()
-upsertManualUdyamRecord person uamNumber imageId = do
+upsertManualUdyamRecord :: Maybe Audit.Requestor -> Person.Person -> Text -> Id Image.Image -> Flow ()
+upsertManualUdyamRecord mbRequestor person uamNumber imageId = do
   encryptedUam <- encrypt uamNumber
   existing <- DUQuery.findByDriverId person.id
   now <- getCurrentTime
@@ -152,9 +169,11 @@ upsertManualUdyamRecord person uamNumber imageId = do
                 DUdyam.updatedAt = now
               }
       DUQuery.updateByPrimaryKey updated
+      Audit.auditDocStatus (Audit.auditActorFromPersonOrRequestor person mbRequestor) (if DCommon.checkFleetOwnerRole person.role then DAL.FLEET_OWNER else DAL.DRIVER) person.id.getId "Udyam" DAL.DRIVER_UDYAM (Just updated.id.getId) (Just (show driverUdyam.verificationStatus)) (Just (show updated.verificationStatus)) DAL.STATUS_CHANGED Nothing person.merchantId person.merchantOperatingCityId
     Nothing -> do
       udyamCardDetails <- buildDriverUdyamCard person encryptedUam Nothing Nothing Documents.MANUAL_VERIFICATION_REQUIRED imageId
       DUQuery.create udyamCardDetails
+      Audit.auditDocStatus (Audit.auditActorFromPersonOrRequestor person mbRequestor) (if DCommon.checkFleetOwnerRole person.role then DAL.FLEET_OWNER else DAL.DRIVER) person.id.getId "Udyam" DAL.DRIVER_UDYAM (Just udyamCardDetails.id.getId) Nothing (Just (show udyamCardDetails.verificationStatus)) DAL.STATUS_CHANGED Nothing person.merchantId person.merchantOperatingCityId
 
 buildDriverUdyamCard :: Person.Person -> EncryptedHashedField 'AsEncrypted Text -> Maybe Text -> Maybe Text -> Documents.VerificationStatus -> Id Image.Image -> Flow DUdyam.DriverUdyam
 buildDriverUdyamCard person encryptedUdyamNumber enterpriseName enterpriseType verificationStatus imageId = do

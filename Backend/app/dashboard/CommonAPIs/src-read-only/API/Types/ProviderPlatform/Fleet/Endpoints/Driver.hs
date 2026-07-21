@@ -83,7 +83,9 @@ data AddVehicleReq = AddVehicleReq
     vehicleTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     fuelType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     skipFleetChecks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    udinNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    udinNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    requestorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    requestorRole :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -428,7 +430,8 @@ data EditVehicleReq = EditVehicleReq
     model :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     color :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     year :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    certificateNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    certificateNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    requestorRole :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

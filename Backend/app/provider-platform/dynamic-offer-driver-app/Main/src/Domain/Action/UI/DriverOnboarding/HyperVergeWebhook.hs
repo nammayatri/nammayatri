@@ -5,6 +5,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DDL
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DRC
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Environment
@@ -15,6 +16,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Utils.Common hiding (Error)
 import Servant hiding (throwError)
 import qualified SharedLogic.DriverOnboarding as SLogicOnboarding
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
@@ -53,12 +55,19 @@ hyperVergeResultWebhookHandler payload = do
   vstatus <- convertHVStatusToPanValidationStatus parsedPayload.applicationStatus
   QImage.updateVerificationStatus (Just vstatus) parsedPayload.reviewerEmail (Just parsedPayload.transactionId)
   imageEntity <- QImage.findByWrokflowTransactionId (Just parsedPayload.transactionId) >>= fromMaybeM (ImageNotFoundForWorkflowId parsedPayload.transactionId) . listToMaybe
+  person <- QPerson.findById imageEntity.personId >>= fromMaybeM (PersonNotFound imageEntity.personId.getId)
+  -- Audit entity from the image owner's role: PAN/Aadhaar reviewed via HyperVerge can belong to fleet owners.
+  Audit.auditDocStatus Audit.externalProvider (Audit.entityTypeFromRole person.role) imageEntity.personId.getId (show imageEntity.imageType) DAL.IMAGE (Just imageEntity.id.getId) Nothing (Just (show vstatus)) DAL.STATUS_CHANGED Nothing person.merchantId person.merchantOperatingCityId
   case imageEntity.imageType of
     DVC.PanCard -> do
+      mOldPanCard <- Audit.fetchForAuditByCity person.merchantOperatingCityId (QDPC.findByDriverId imageEntity.personId)
       QDPC.updateVerificationStatus vstatus imageEntity.personId
+      Audit.auditDocStatus Audit.externalProvider (Audit.entityTypeFromRole person.role) imageEntity.personId.getId "PanCard" DAL.DRIVER_PAN_CARD (Just imageEntity.id.getId) (show . (.verificationStatus) <$> mOldPanCard) (Just (show vstatus)) DAL.STATUS_CHANGED Nothing person.merchantId person.merchantOperatingCityId
       logInfo $ "PAN Card Validation Status Updated for Driver: " <> show imageEntity.personId <> " to: " <> show vstatus
     DVC.AadhaarCard -> do
+      mOldAadhaarCard <- Audit.fetchForAuditByCity person.merchantOperatingCityId (QAadhaarCard.findByPrimaryKey imageEntity.personId)
       QAadhaarCard.updateVerificationStatus vstatus imageEntity.personId
+      Audit.auditDocStatus Audit.externalProvider (Audit.entityTypeFromRole person.role) imageEntity.personId.getId "AadhaarCard" DAL.AADHAAR_CARD (Just imageEntity.id.getId) (show . (.verificationStatus) <$> mOldAadhaarCard) (Just (show vstatus)) DAL.STATUS_CHANGED Nothing person.merchantId person.merchantOperatingCityId
       logInfo $ "Aadhaar Card Validation Status Updated for Driver: " <> show imageEntity.personId <> " to: " <> show vstatus
     DVC.ProfilePhoto ->
       logInfo $ "Profile Photo Validation Status Updated for Driver: " <> show imageEntity.personId <> " to: " <> show vstatus
@@ -124,7 +133,7 @@ hyperVergeVerificaitonWebhookHandler authData payload = do
       case rsp of
         KEV.RCResp resp -> do
           logDebug $ "RC: getTask api response for request id : " <> reqId <> " is : " <> show resp
-          ack_ <- DRC.onVerifyRC person (Just $ SLogicOnboarding.makeHVVerificationReqRecord verificationReq) (resp {Verification.registrationNumber = Just regNum}) mbRemPriorityList Nothing Nothing verificationReq.documentImageId1 verificationReq.retryCount (Just verificationReq.status) (Just KEV.HyperVergeRCDL) Nothing
+          ack_ <- DRC.onVerifyRC Audit.externalProvider person (Just $ SLogicOnboarding.makeHVVerificationReqRecord verificationReq) (resp {Verification.registrationNumber = Just regNum}) mbRemPriorityList Nothing Nothing verificationReq.documentImageId1 verificationReq.retryCount (Just verificationReq.status) (Just KEV.HyperVergeRCDL) Nothing
           void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent verificationReq.driverId)
           return ack_
         _ -> throwError $ InternalError "Document and apiEndpoint mismatch occurred !!!!!!!!"
@@ -133,7 +142,7 @@ hyperVergeVerificaitonWebhookHandler authData payload = do
       case rsp of
         KEV.DLResp resp -> do
           logDebug $ "DL: getTask api response for request id : " <> reqId <> " is : " <> show resp
-          ack_ <- DDL.onVerifyDL (SLogicOnboarding.makeHVVerificationReqRecord verificationReq) resp KEV.HyperVergeRCDL
+          ack_ <- DDL.onVerifyDL Audit.externalProvider (SLogicOnboarding.makeHVVerificationReqRecord verificationReq) resp KEV.HyperVergeRCDL
           void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent verificationReq.driverId)
           return ack_
         _ -> throwError $ InternalError "Document and apiEndpoint mismatch occurred !!!!!!!!"

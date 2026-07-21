@@ -19,6 +19,7 @@ import Kernel.Utils.Common
 import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import qualified "lib-dashboard" Storage.Queries.Person as QP
+import qualified Storage.Queries.Role as QRole
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 
@@ -39,12 +40,21 @@ postOnboardingVerify merchantShortId opCity apiTokenInfo verifyType req = do
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let mbAccessType = Common.castDashboardAccessType <$> apiTokenInfo.person.dashboardAccessType
+  -- Forward the acting operator id + actual role name (both gated on sendDocumentAuditActorDetails) so the BPP
+  -- attributes the onboarding verification to the operator with their real role. role.name is queried only when
+  -- the flag is on; best-effort (a missing role yields Nothing). mbAccessType is kept only for verifyBy below.
+  let mbRequestorId = case apiTokenInfo.merchant.sendDocumentAuditActorDetails of
+        Just True -> Just apiTokenInfo.personId.getId
+        _ -> Nothing
+  mbRequestorRole <- case apiTokenInfo.merchant.sendDocumentAuditActorDetails of
+    Just True -> QRole.findById apiTokenInfo.person.roleId <&> fmap (.name)
+    _ -> pure Nothing
   person <- QP.findById (Id req.driverId)
   let adminApprovalRequiredNow =
         case (person, merchant.requireAdminApprovalForFleetOnboarding) of
           (Just p, Just True) -> isNothing (p.approvedBy)
           _ -> False
-  res <- Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.postOnboardingVerify) verifyType mbAccessType (Just adminApprovalRequiredNow) req
+  res <- Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.postOnboardingVerify) verifyType mbAccessType (Just adminApprovalRequiredNow) (req {API.Types.ProviderPlatform.Fleet.Onboarding.requestorId = mbRequestorId, API.Types.ProviderPlatform.Fleet.Onboarding.requestorRole = mbRequestorRole})
   when res.enableFleetOwner $ do
     QP.updatePersonVerifiedStatus (Id req.driverId) True
   pure Success

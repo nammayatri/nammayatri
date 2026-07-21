@@ -51,6 +51,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import qualified SharedLogic.DriverOnboarding as SLogicOnboarding
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.SchedulerJob ()
@@ -225,6 +226,7 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
       case rslt of
         Idfy.RCResult resExtOp ->
           RC.onVerifyRC
+            Audit.externalProvider
             person
             (Just verificationReqRecord)
             (Idfy.convertRCOutputToRCVerificationResponse resExtOp.extraction_output)
@@ -238,6 +240,7 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
             Nothing
         Idfy.DLResult resSrcOp ->
           DL.onVerifyDL
+            Audit.externalProvider
             verificationReqRecord
             (Idfy.convertDLOutputToDLVerificationOutput resSrcOp.source_output)
             VT.Idfy
@@ -290,7 +293,7 @@ handleIdfySourceDown person retryFunc verificationReq = do
                 VT.HyperVergeRCDL -> HVQuery.create =<< RC.mkHyperVergeVerificationEntity person res.requestId now verificationReq.imageExtractionValidation verificationReq.documentNumber verificationReq.issueDateOnDoc verificationReq.vehicleCategory verificationReq.airConditioned verificationReq.oxygen verificationReq.ventilator verificationReq.documentImageId1 Nothing Nothing res.transactionId
                 _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> T.pack (show res.requestor))
               CQO.setVerificationPriorityList person.id resp'.remPriorityList
-            Verification.SyncResp res -> void $ RC.onVerifyRC person Nothing res.response (Just resp'.remPriorityList) (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.documentImageId1 verificationReq.retryCount (Just verificationReq.status) Nothing verificationReq.vehicleCategory
+            Verification.SyncResp res -> void $ RC.onVerifyRC Audit.externalProvider person Nothing res.response (Just resp'.remPriorityList) (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.documentImageId1 verificationReq.retryCount (Just verificationReq.status) Nothing verificationReq.vehicleCategory
 
 scheduleRetryVerificationJob :: IV.IdfyVerification -> Flow ()
 scheduleRetryVerificationJob verificationReq = do

@@ -1756,6 +1756,8 @@ types:
     - fuelType: Maybe Text
     - skipFleetChecks: Maybe Bool
     - udinNumber: Maybe Text
+    - requestorId: Maybe Text
+    - requestorRole: Maybe Text
     - derive: "'HideSecrets"
   ListVehicleResT:
     - recordType: NewType
@@ -2016,6 +2018,7 @@ types:
     - color: Maybe Text
     - year: Maybe Int
     - certificateNumber: Maybe Text
+    - requestorRole: Maybe Text
     - derive: "'HideSecrets"
   VerificationDocsStatus:
     - vehicleRegistrationCertificate: Maybe VerificationStatus

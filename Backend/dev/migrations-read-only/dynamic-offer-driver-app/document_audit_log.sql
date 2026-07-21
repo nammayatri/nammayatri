@@ -1,0 +1,23 @@
+CREATE TABLE atlas_driver_offer_bpp.document_audit_log ();
+
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD COLUMN action text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD COLUMN actor_id text ;
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD COLUMN actor_role text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD COLUMN actor_source text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD COLUMN details json ;
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD COLUMN document_ref_id text ;
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD COLUMN document_ref_type text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD COLUMN document_type text ;
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD COLUMN entity_id text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD COLUMN entity_type text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD COLUMN event_id text ;
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD COLUMN field_name text ;
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD COLUMN merchant_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD COLUMN merchant_operating_city_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD COLUMN new_status text ;
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD COLUMN previous_status text ;
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD COLUMN reason text ;
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.document_audit_log ADD PRIMARY KEY ( id);

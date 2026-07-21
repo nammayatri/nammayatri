@@ -463,6 +463,9 @@ let emailServiceConfig =
 
 let rideEventsPublisherCfg = Some { streamPrefix = "", shardCount = +10 }
 
+let documentAuditPublisherCfg =
+      Some { streamPrefix = "audit.events.shard", shardCount = +10 }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , kafkaClickhouseCfg
@@ -587,4 +590,5 @@ in  { esqDBCfg
     , rideEventsPublisherCfg
     , xyneWebhookSigningSecret = "<XYNE_WEBHOOK_SIGNING_SECRET>"
     , xyneWebhookBearerToken = "<XYNE_WEBHOOK_BEARER_TOKEN>"
+    , documentAuditPublisherCfg
     }

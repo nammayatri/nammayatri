@@ -281,6 +281,7 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           hasFleetMemberHierarchy = baseMerchant.hasFleetMemberHierarchy,
           isStrongNameCheckRequired = baseMerchant.isStrongNameCheckRequired,
           singleActiveSessionOnly = baseMerchant.singleActiveSessionOnly,
+          sendDocumentAuditActorDetails = baseMerchant.sendDocumentAuditActorDetails,
           trackLoginLogoutForRoles = baseMerchant.trackLoginLogoutForRoles
         }
 

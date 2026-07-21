@@ -30,6 +30,7 @@ import Data.Tuple.Extra (both)
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DFR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DVRC
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverGstin as DGst
 import qualified Domain.Types.DriverPanCard as DPan
@@ -56,6 +57,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -86,6 +88,8 @@ data DriverGstinReq = DriverGstinReq
 type DriverGstinRes = APISuccess
 
 verifyGstin ::
+  -- | Audit actor. 'Nothing' ⇒ the driver/fleet-owner verifying their own GSTIN; 'Just' ⇒ a dashboard operator.
+  Maybe Audit.Requestor ->
   DPan.VerifiedBy ->
   Maybe DM.Merchant ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -93,7 +97,7 @@ verifyGstin ::
   Maybe Bool ->
   Bool ->
   Flow Bool
-verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalRequired isDashboard = do
+verifyGstin mbRequestor verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalRequired isDashboard = do
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyGstinHitsCountKey req.gstin) externalServiceRateLimitOptions
 
@@ -153,8 +157,10 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
             mdriverGstInformation <- DGQuery.findByDriverId person.id
             void $ callIdfy person mdriverGstInformation driverDocument transporterConfig
           _ -> do
+            mdriverGstInformation <- DGQuery.findByDriverId person.id
             gstCardDetails <- buildGstinCard person Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
             DGQuery.create gstCardDetails
+            Audit.auditDocStatus (Audit.auditActorFromPersonOrRequestor person mbRequestor) (if DCommon.checkFleetOwnerRole person.role then DAL.FLEET_OWNER else DAL.DRIVER) person.id.getId "GST" DAL.DRIVER_GSTIN (Just gstCardDetails.id.getId) (show . (.verificationStatus) <$> mdriverGstInformation) (Just (show gstCardDetails.verificationStatus)) DAL.STATUS_CHANGED Nothing person.merchantId person.merchantOperatingCityId
 
         case person.role of
           role | DCommon.checkFleetOwnerRole role -> do
@@ -177,7 +183,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
       pure False
     role
       | DCommon.checkFleetOwnerRole role ->
-        DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType enablementRole) person.merchantOperatingCityId (Just transporterConfig)
+        DFR.enableFleetIfPossible mbRequestor person.id adminApprovalRequired (DFR.castRoleToFleetType enablementRole) person.merchantOperatingCityId (Just transporterConfig)
     _ -> pure False
   pure res
   where
@@ -246,7 +252,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
                   ImageDocumentNumberMismatch
                     (maybe "null" maskText extractedGstNo)
                     (maskText req.gstin)
-              verifyGstFlow person merchantOpCityId checkExtraction (fromMaybe "" extractedGstNo) (Id req.imageId)
+              verifyGstFlow (Audit.auditActorFromPersonOrRequestor person mbRequestor) person merchantOpCityId checkExtraction (fromMaybe "" extractedGstNo) (Id req.imageId)
               pure extractedGST
             Nothing -> throwImageError (Id req.imageId) ImageExtractionFailed
 
@@ -271,6 +277,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
           when (isNameCompareRequired transporterConfig verifyBy) $
             validateDocument person.merchantId merchantOpCityId person.id Nothing Nothing extractedGst.pan_number ODC.GSTCertificate driverDocument
           DGQuery.updateVerificationStatus Documents.MANUAL_VERIFICATION_REQUIRED person.id
+          Audit.auditDocStatus (Audit.auditActorFromPersonOrRequestor person mbRequestor) (if DCommon.checkFleetOwnerRole person.role then DAL.FLEET_OWNER else DAL.DRIVER) person.id.getId "GST" DAL.DRIVER_GSTIN (Just driverGstInformation.id.getId) (Just (show driverGstInformation.verificationStatus)) (Just (show Documents.MANUAL_VERIFICATION_REQUIRED)) DAL.STATUS_CHANGED Nothing person.merchantId person.merchantOperatingCityId
         Nothing -> do
           resp <- Verification.extractGSTImage person.merchantId merchantOpCityId extractReq
           extractedGst <- validateExtractedGst resp
@@ -278,10 +285,11 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
             validateDocument person.merchantId merchantOpCityId person.id Nothing Nothing extractedGst.pan_number ODC.GSTCertificate driverDocument
           gstCardDetails <- buildGstinCard person extractedGst.address extractedGst.constitution_of_business extractedGst.date_of_liability extractedGst.is_provisional extractedGst.legal_name extractedGst.trade_name extractedGst.type_of_registration extractedGst.valid_from extractedGst.valid_upto extractedGst.pan_number Nothing Nothing
           DGQuery.create gstCardDetails
+          Audit.auditDocStatus (Audit.auditActorFromPersonOrRequestor person mbRequestor) (if DCommon.checkFleetOwnerRole person.role then DAL.FLEET_OWNER else DAL.DRIVER) person.id.getId "GST" DAL.DRIVER_GSTIN (Just gstCardDetails.id.getId) Nothing (Just (show gstCardDetails.verificationStatus)) DAL.STATUS_CHANGED Nothing person.merchantId person.merchantOperatingCityId
       pure Success
 
-verifyGstFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Id Image.Image -> Flow ()
-verifyGstFlow person merchantOpCityId checkExtraction gstNumber imageId1 = do
+verifyGstFlow :: Audit.Requestor -> Person.Person -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Id Image.Image -> Flow ()
+verifyGstFlow requestor person merchantOpCityId checkExtraction gstNumber imageId1 = do
   logDebug $ "verifyGstFlow: " <> show gstNumber
   now <- getCurrentTime
   encryptedGst <- encrypt gstNumber
@@ -294,7 +302,11 @@ verifyGstFlow person merchantOpCityId checkExtraction gstNumber imageId1 = do
       Verification.VerifyGstAsyncReq {gstNumber, driverId = person.id.getId, filingDetails = True, eInvoiceDetails = True}
   logDebug $ "verifyRes: " <> show verifyRes
   case verifyRes.requestor of
-    VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntityGst person imageId1 verifyRes.requestId now imageExtractionValidation encryptedGst
+    VT.Idfy -> do
+      IVQuery.create =<< mkIdfyVerificationEntityGst person imageId1 verifyRes.requestId now imageExtractionValidation encryptedGst
+      -- Async dispatch mutates no GST/image row yet: record a request-time row (eventId = provider
+      -- requestId) so the webhook result can be correlated, mirroring DL/RC/Aadhaar/Bank flows.
+      Audit.auditImageStatusByIdWithEvent requestor (Audit.entityTypeFromRole person.role) person.id.getId "GST" imageId1 Nothing Documents.PENDING DAL.VERIFICATION_REQUESTED (Just verifyRes.requestId) person.merchantId person.merchantOperatingCityId
     -- Adding an async provider branch? Extend pullSourcesFor + hvWorkflowHint in SyncVerificationStatus.
     _ -> throwError $ InternalError ("Service provider not configured to return GST verification async responses. Provider Name : " <> (show verifyRes.requestor))
   pure ()
@@ -311,8 +323,11 @@ onVerifyGst verificationReq output serviceName = do
       logDebug $ "onVerifyGst: imageExtractionValidation == Domain.Skipped && output.gstinStatus /= Just \"Active\""
       case serviceName of
         VT.Idfy -> do
+          mdriverGstInformation <- Audit.fetchForAuditByCity person.merchantOperatingCityId (DGQuery.findByDriverId verificationReq.driverId)
           IVQuery.updateExtractValidationStatus Domain.Failed verificationReq.requestId
           DGQuery.updateVerificationStatus Documents.INVALID verificationReq.driverId
+          -- Entity from the owner's role (GST is a fleet-owner document too), matching the success path below.
+          Audit.auditDocStatus Audit.externalProvider (Audit.entityTypeFromRole person.role) verificationReq.driverId.getId "GST" DAL.DRIVER_GSTIN ((.id.getId) <$> mdriverGstInformation) (show . (.verificationStatus) <$> mdriverGstInformation) (Just (show Documents.INVALID)) DAL.STATUS_CHANGED Nothing person.merchantId person.merchantOperatingCityId
         _ -> throwError $ InternalError ("Unknown Service provider webhook encountered in onVerifyGst. Name of provider : " <> show serviceName)
       pure Ack
     else do
@@ -329,7 +344,9 @@ onVerifyGstHandler person imageId1 imageId2 output = do
       legalNameMissing = isFleet && isNothing mbLegalName
       verificationStatus = if isActive && not legalNameMissing then Documents.VALID else Documents.INVALID
       mbPrincipalAddr = output.principalPlaceOfBusinessFields
+  mdriverGstInformation <- Audit.fetchForAuditByCity person.merchantOperatingCityId (DGQuery.findByDriverId person.id)
   DGQueryExtra.updateVerificationStatusWithPlaceDetails verificationStatus (mbPrincipalAddr >>= (.pincode)) (mbPrincipalAddr >>= (.stateName)) person.id
+  Audit.auditDocStatus Audit.externalProvider (if DCommon.checkFleetOwnerRole person.role then DAL.FLEET_OWNER else DAL.DRIVER) person.id.getId "GST" DAL.DRIVER_GSTIN ((.id.getId) <$> mdriverGstInformation) (show . (.verificationStatus) <$> mdriverGstInformation) (Just (show verificationStatus)) DAL.STATUS_CHANGED Nothing person.merchantId person.merchantOperatingCityId
   when isFleet $ do
     QFOI.updateGstImage mEncryptedGstinNumber (Just imageId1.getId) person.id
     when (verificationStatus == Documents.VALID) $ QFOI.updateFleetName mbLegalName person.id
@@ -338,7 +355,10 @@ onVerifyGstHandler person imageId1 imageId2 output = do
       promoteImagesToValid =
         forM_ [(image1, Just imageId1), (image2, imageId2)] $ \(mbImg, mbImgId) ->
           unless ((mbImg >>= (.verificationStatus)) `elem` [Just Documents.VALID, Just Documents.INVALID]) $
-            whenJust mbImgId $ ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard.")
+            whenJust mbImgId $ \imgId -> do
+              ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard.") imgId
+              -- record the image-level approval too (same webhook actor, owner-role-derived entity).
+              Audit.auditImageStatusById Audit.externalProvider (Audit.entityTypeFromRole person.role) person.id.getId "GST" imgId (show <$> (mbImg >>= (.verificationStatus))) Documents.VALID DAL.APPROVED person.merchantId person.merchantOperatingCityId
       invalidateImages =
         forM_ [(image1, Just imageId1), (image2, imageId2)] $ \(mbImg, mbImgId) ->
           unless ((mbImg >>= (.verificationStatus)) == Just Documents.INVALID) $

@@ -9,6 +9,7 @@ import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified Dashboard.Common
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegistrationV2
 import qualified Domain.Types.DocsVerificationStatus as DDVS
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Environment
@@ -20,6 +21,7 @@ import Kernel.Types.Error (GenericError (InternalError), PersonError (PersonDoes
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, throwError)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -53,18 +55,19 @@ postAccountVerifyAccount _merchantShortId _opCity Common.VerifyAccountReq {..} =
         _ -> False
   let fleetOwnerId' = Kernel.Types.Id.cast fleetOwnerId
   fleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId' >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId'.getId)
+  fleetOwnerPerson <- QP.findById fleetOwnerId' >>= fromMaybeM (PersonDoesNotExist fleetOwnerId'.getId)
   let wasDisabled = not fleetOwnerInfo.enabled
   if enabled
     then do
       QFOI.updateFleetOwnerEnabledStatus True fleetOwnerId'
-      SStatus.cascadeFleetEnableToDrivers fleetOwnerId'
-      when wasDisabled $ do
-        person <- QP.findById fleetOwnerId' >>= fromMaybeM (PersonDoesNotExist fleetOwnerId'.getId)
-        DRegistrationV2.sendFleetOnboardingSms fleetOwnerId' person.merchantOperatingCityId
+      SStatus.cascadeFleetEnableToDrivers fleetOwnerPerson.merchantOperatingCityId fleetOwnerId'
+      when wasDisabled $ DRegistrationV2.sendFleetOnboardingSms fleetOwnerId' fleetOwnerPerson.merchantOperatingCityId
     else do
       SStatus.ensureNoActiveRidesUnderFleet fleetOwnerId'
       QFOI.updateFleetOwnerEnabledStatus False fleetOwnerId'
-      SStatus.cascadeFleetDisableToDrivers fleetOwnerId'
+      SStatus.cascadeFleetDisableToDrivers fleetOwnerPerson.merchantOperatingCityId fleetOwnerId'
+  -- Document audit: operator enabled/disabled the fleet owner. Operator forwarded when present, else the fleet owner.
+  Audit.auditFlagChange (Audit.auditActorFromPersonOrRequestor fleetOwnerPerson (Audit.dashboardActorFromForwarded requestorId requestorRole)) DAL.FLEET_OWNER fleetOwnerId'.getId "enabled" DAL.FLEET_OWNER_INFORMATION fleetOwnerInfo.enabled enabled fleetOwnerPerson.merchantId fleetOwnerPerson.merchantOperatingCityId
   pure Kernel.Types.APISuccess.Success
 
 putAccountUpdateRole ::

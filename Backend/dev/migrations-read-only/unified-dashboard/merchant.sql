@@ -17,5 +17,6 @@ ALTER TABLE atlas_dashboard.merchant ADD COLUMN single_active_session_only boole
 ALTER TABLE atlas_dashboard.merchant ADD COLUMN supported_operating_cities text[] NOT NULL;
 ALTER TABLE atlas_dashboard.merchant ADD COLUMN verify_fleet_while_login boolean ;
 ALTER TABLE atlas_dashboard.merchant ADD COLUMN website text ;
+ALTER TABLE atlas_dashboard.merchant ADD COLUMN send_document_audit_actor_details boolean ;
 ALTER TABLE atlas_dashboard.merchant ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_dashboard.merchant ADD PRIMARY KEY ( id);

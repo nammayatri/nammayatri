@@ -39,6 +39,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import SharedLogic.DriverOnboarding.VehicleDocs (ResponseStatus (..))
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
@@ -187,5 +188,5 @@ pullRcStatus person rcImageIdTxt =
 
 dispatchRc :: Person.Person -> SDO.VerificationReqRecord -> KEV.GetTaskResp -> KEV.VerificationService -> Flow ()
 dispatchRc person req resp service = case resp of
-  KEV.RCResp o -> void $ DRC.onVerifyRC person (Just req) o Nothing Nothing Nothing req.documentImageId1 req.retryCount (Just req.status) (Just service) Nothing
+  KEV.RCResp o -> void $ DRC.onVerifyRC Audit.externalProvider person (Just req) o Nothing Nothing Nothing req.documentImageId1 req.retryCount (Just req.status) (Just service) Nothing
   _ -> logInfo $ "pullRcStatus: unexpected response for " <> req.requestId

@@ -34,6 +34,7 @@ where
 import qualified API.Client.ProviderPlatform.RideBooking as Client
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.RideBooking.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as CommonFleet
+import Domain.Action.ProviderPlatform.Management.DriverRegistration (determineAuditRequestorId, determineAuditRequestorRole)
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Role as DRole
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
@@ -146,9 +147,12 @@ postDriverAddVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id C
 postDriverAddVehicle merchantShortId opCity apiTokenInfo driverId req = do
   runRequestValidation CommonFleet.validateAddVehicleReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction apiTokenInfo (Just driverId) $ Just req
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
+  let reqWithActor = req {CommonFleet.requestorId = mbRequestorId, CommonFleet.requestorRole = mbRequestorRole} :: CommonFleet.AddVehicleReq
+  transaction <- buildTransaction apiTokenInfo (Just driverId) $ Just reqWithActor
   T.withTransactionStoring transaction $
-    Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverAddVehicle) driverId req
+    Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverAddVehicle) driverId reqWithActor
 
 postDriverSetRCStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> CommonFleet.RCStatusReq -> Flow APISuccess
 postDriverSetRCStatus merchantShortId opCity apiTokenInfo driverId req = do
@@ -172,13 +176,17 @@ getDriverFeedbackList merchantShortId opCity apiTokenInfo personId mobileNumber 
 postDriverDeleteAadhaar :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
 postDriverDeleteAadhaar merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverDeleteAadhaar) driverId
+    Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverDeleteAadhaar) driverId mbRequestorId mbRequestorRole
 
 postDriverDeletePanCard :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
 postDriverDeletePanCard merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverDeletePanCard) driverId
+    Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverDeletePanCard) driverId mbRequestorId mbRequestorRole

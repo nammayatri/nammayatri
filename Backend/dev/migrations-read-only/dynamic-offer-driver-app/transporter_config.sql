@@ -962,6 +962,11 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN block_driver_ow
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_document_audit_log boolean ;
+
+
+------- SQL updates -------
+
 
 
 

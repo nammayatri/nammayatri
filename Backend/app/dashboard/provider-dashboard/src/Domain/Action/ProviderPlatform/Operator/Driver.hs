@@ -20,6 +20,7 @@ import qualified API.Types.ProviderPlatform.Operator.Driver
 import qualified API.Types.ProviderPlatform.Operator.Endpoints.Driver as CommonDriver
 import qualified Dashboard.ProviderPlatform.Management.DriverRegistration
 import Data.Time.Calendar
+import Domain.Action.ProviderPlatform.Management.DriverRegistration (determineAuditRequestorRole)
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
@@ -47,8 +48,8 @@ getDriverOperatorFetchHubRequests ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe (Kernel.Types.Id.Id CommonDriver.OperationHub) ->
-  Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
-  Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow API.Types.ProviderPlatform.Operator.Driver.OperationHubReqResp
 getDriverOperatorFetchHubRequests merchantShortId opCity apiTokenInfo mbFrom mbTo mbStatus mbReqType mbLimit mbOffset mbDriverId mbMobileNumber mbDriverMobileNumber mbOperationHubId mbOperationHubName mbRegistrationNo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
@@ -58,7 +59,8 @@ postDriverOperatorRespondHubRequest :: Kernel.Types.Id.ShortId Domain.Types.Merc
 postDriverOperatorRespondHubRequest merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
-  SharedLogic.Transaction.withTransactionStoring transaction $ Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.postDriverOperatorRespondHubRequest) req{operatorId = apiTokenInfo.personId.getId}
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
+  SharedLogic.Transaction.withTransactionStoring transaction $ Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.postDriverOperatorRespondHubRequest) req{operatorId = apiTokenInfo.personId.getId, requestorRole = mbRequestorRole}
 
 postDriverOperatorCreateRequest :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.Driver.DriverOperationHubRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postDriverOperatorCreateRequest merchantShortId opCity apiTokenInfo req = do
@@ -94,7 +96,7 @@ postDriverOperatorSendJoiningOtp merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.postDriverOperatorSendJoiningOtp) apiTokenInfo.personId.getId req
 
-postDriverOperatorVerifyJoiningOtp :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.ProviderPlatform.Operator.Driver.VerifyOperatorJoiningOtpReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postDriverOperatorVerifyJoiningOtp :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.ProviderPlatform.Operator.Driver.VerifyOperatorJoiningOtpReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postDriverOperatorVerifyJoiningOtp merchantShortId opCity apiTokenInfo authId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.postDriverOperatorVerifyJoiningOtp) authId apiTokenInfo.personId.getId req
@@ -118,7 +120,8 @@ postDriverSubmitReviewRequest :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.
 postDriverSubmitReviewRequest merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
-  SharedLogic.Transaction.withTransactionStoring transaction $ Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.postDriverSubmitReviewRequest) apiTokenInfo.personId.getId req
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
+  SharedLogic.Transaction.withTransactionStoring transaction $ Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.postDriverSubmitReviewRequest) apiTokenInfo.personId.getId (req{requestorRole = mbRequestorRole} :: API.Types.ProviderPlatform.Operator.Driver.SubmitReviewRequest)
 
 getDriverRequestReviewHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.Driver.EntityType -> API.Types.ProviderPlatform.Operator.Driver.ReviewRequestType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Operator.Driver.ReviewRequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.ReviewRequestHistoryList)
 getDriverRequestReviewHistory merchantShortId opCity apiTokenInfo entityType reviewRequestType mbFrom mbTo mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbPersonId mbRcNo mbRequestStatus mbRcId = do

@@ -10,6 +10,7 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Dr
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.FleetDriverAssociation as FDV
 import qualified Domain.Action.UI.Registration as DReg
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
@@ -24,6 +25,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverOnboarding as DomainRC
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -89,7 +91,10 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
     when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
     assoc <- FDV.makeFleetDriverAssociation res.person.id fleetOwnerId mbOperatorId DomainRC.defaultAssociationEnd
     QFDV.create assoc
-    when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById res.person.id
+    when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ do
+      QDBA.deleteById res.person.id
+      -- systemActor: no dashboard requestor (id + role) is forwarded on this fleet add-driver flow
+      Audit.auditDelete Audit.systemActor DAL.DRIVER res.person.id.getId "BankAccount" DAL.DRIVER_BANK_ACCOUNT (Just res.person.id.getId) (Just "Linked to fleet") transporterConfig.merchantId transporterConfig.merchantOperatingCityId
     Analytics.handleDriverAnalyticsAndFlowStatus
       transporterConfig
       res.person.id

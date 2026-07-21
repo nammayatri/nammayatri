@@ -39,6 +39,7 @@ import qualified Kernel.Utils.Servant.Server as Server
 import Kernel.Utils.Shutdown
 import Network.Wai.Handler.Warp
 import qualified Processor.BroadcastMessage.Processor as BMProcessor
+import qualified Processor.DocumentAudit.Processor as DAProcessor
 import qualified Processor.FleetCommunication.Processor as FCProcessor
 import qualified Processor.LocationUpdate.Processor as LCProcessor
 import qualified Processor.LocationUpdate.Types as LU
@@ -114,6 +115,9 @@ startKafkaTransport flowRt appEnv = do
     FLEET_COMMUNICATION_DISPATCH ->
       KafkaFlow.runPerEvent flowRt appEnv kc $ \payload _key ->
         FCProcessor.processFleetCommunicationDelivery payload
+    DOCUMENT_AUDIT_CONSUMER ->
+      KafkaFlow.runPerEvent flowRt appEnv kc $ \event _key ->
+        DAProcessor.processDocumentAudit event
     LOCATION_UPDATE -> do
       let enabledCityIds = maybe [] (.enabledMerchantCityIds) appEnv.healthCheckAppCfg
           batchSize = maybe 100 (fromIntegral . (.batchSize)) appEnv.healthCheckAppCfg
@@ -138,6 +142,8 @@ startRedisStreamTransport flowRt appEnv = do
         BMProcessor.broadcastMessage messageDict driverId
     FLEET_COMMUNICATION_DISPATCH ->
       RSFlow.run flowRt appEnv cfg instanceName FCProcessor.processFleetCommunicationDelivery
+    DOCUMENT_AUDIT_CONSUMER ->
+      RSFlow.run flowRt appEnv cfg instanceName DAProcessor.processDocumentAudit
     LOCATION_UPDATE -> do
       let enabledCityIds = maybe [] (.enabledMerchantCityIds) appEnv.healthCheckAppCfg
       RSFlow.runBatch flowRt appEnv cfg instanceName $ \(entries :: [LU.LocationEntry]) ->

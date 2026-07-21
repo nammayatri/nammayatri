@@ -120,13 +120,16 @@ postAccountVerifyAccount merchantShortId opCity apiTokenInfo req = do
       unless (person.verified == Just True) $ updatePersonVerifiedStatus personId True
       updatePersonApprovedBy personId apiTokenInfo.personId
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  -- Inlined (not the shared DriverRegistration helper) to avoid an Account <-> DriverRegistration import cycle.
+  let mbRequestorId = if apiTokenInfo.merchant.sendDocumentAuditActorDetails == Just True then Just apiTokenInfo.personId.getId else Nothing
+  mbRequestorRole <- if apiTokenInfo.merchant.sendDocumentAuditActorDetails == Just True then QRole.findById apiTokenInfo.person.roleId <&> fmap (.name) else pure Nothing
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $
     API.Client.ProviderPlatform.Management.callManagementAPI
       checkedMerchantId
       opCity
       (.accountDSL.postAccountVerifyAccount)
-      req
+      (Common.VerifyAccountReq {status = req.status, reason = req.reason, fleetOwnerId = req.fleetOwnerId, requestorId = mbRequestorId, requestorRole = mbRequestorRole})
 
 -- Validate the reason field in VerifyAccountReq
 validateVerifyAccountReq :: Validate Common.VerifyAccountReq

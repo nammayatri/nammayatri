@@ -19,6 +19,7 @@ where
 
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as VehicleRegistrationCert
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.HyperVergeVerification as DHVVerification
 import Domain.Types.IdfyVerification
@@ -35,12 +36,14 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import SharedLogic.Allocator (AllocatorJobType (..))
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -66,7 +69,8 @@ retryDocumentVerificationJob ::
     ServiceFlow m r,
     HasField "blackListedJobs" r [Text],
     HasSchemaName SchedulerJobT,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Audit.AuditFlow m r
   ) =>
   Job 'RetryDocumentVerification ->
   m ExecutionResult
@@ -91,7 +95,7 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
           IVQuery.updateStatus "source_down_failed" verificationReq.requestId
   return Complete
   where
-    callVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r, Redis.HedisLTSFlowEnv r) => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
+    callVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r, Redis.HedisLTSFlowEnv r, Audit.AuditFlow m r) => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
     callVerifyRC documentNum person verificationReq = do
       transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
       verifyRes <-
@@ -103,18 +107,23 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
             VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperNewVergeVerificationEntity res.requestId verificationReq res.transactionId DTO.VehicleRegistrationCertificate
             _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> T.pack (show res.requestor))
           CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
-        Verification.SyncResp res -> void $ VehicleRegistrationCert.onVerifyRC person Nothing res.response (Just verifyRes.remPriorityList) (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.documentImageId1 (verificationReq.retryCount <&> (+ 1)) (Just "source_down_retrying") Nothing verificationReq.vehicleCategory
-    callVerifyDL :: VerificationFlow m r => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
+          -- Scheduler retry re-requested async RC verification; record a requested row (result row follows at the webhook).
+          Audit.auditImageStatusById Audit.systemScheduler (Audit.entityTypeFromRole person.role) person.id.getId "VehicleRegistrationCertificate" verificationReq.documentImageId1 Nothing Documents.PENDING DAL.VERIFICATION_REQUESTED person.merchantId person.merchantOperatingCityId
+        Verification.SyncResp res -> void $ VehicleRegistrationCert.onVerifyRC Audit.systemScheduler person Nothing res.response (Just verifyRes.remPriorityList) (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.documentImageId1 (verificationReq.retryCount <&> (+ 1)) (Just "source_down_retrying") Nothing verificationReq.vehicleCategory
+    callVerifyDL :: (VerificationFlow m r, Audit.AuditFlow m r) => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
     callVerifyDL documentNum person verificationReq = do
       whenJust verificationReq.driverDateOfBirth $ \dob -> do
         verifyRes <-
           Verification.verifyDL person.merchantId person.merchantOperatingCityId $
             Verification.VerifyDLReq {dlNumber = documentNum, dateOfBirth = dob, driverId = person.id.getId, returnState = Just True, applicantMobile = Nothing}
         case verifyRes of
-          VerificationIntTypes.AsyncDLResp res -> case res.requestor of
-            VT.Idfy -> IVQuery.create =<< mkIdfyNewVerificationEntity verificationReq res.requestId
-            VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperNewVergeVerificationEntity res.requestId verificationReq res.transactionId DTO.DriverLicense
-            _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> show res.requestor)
+          VerificationIntTypes.AsyncDLResp res -> do
+            case res.requestor of
+              VT.Idfy -> IVQuery.create =<< mkIdfyNewVerificationEntity verificationReq res.requestId
+              VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperNewVergeVerificationEntity res.requestId verificationReq res.transactionId DTO.DriverLicense
+              _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> show res.requestor)
+            -- Scheduler retry re-requested async DL verification; record a requested row (result row follows at the webhook).
+            Audit.auditImageStatusById Audit.systemScheduler (Audit.entityTypeFromRole person.role) person.id.getId "DriverLicense" verificationReq.documentImageId1 Nothing Documents.PENDING DAL.VERIFICATION_REQUESTED person.merchantId person.merchantOperatingCityId
           VerificationIntTypes.SyncDLResp _ -> throwError $ InternalError "Service provider not configured to return DL verification sync responses in retry flow"
 
 mkHyperNewVergeVerificationEntity :: MonadFlow m => Text -> DIdfyVerification.IdfyVerification -> Maybe Text -> DTO.DocumentType -> m DHVVerification.HyperVergeVerification

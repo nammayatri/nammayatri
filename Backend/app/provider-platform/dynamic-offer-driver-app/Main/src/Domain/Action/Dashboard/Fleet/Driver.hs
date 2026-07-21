@@ -136,6 +136,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DocsVerificationStatus as DDVS
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.DocumentVerificationConfig as DDoc
 import qualified Domain.Types.DriverFlowStatus as DDF
 import qualified Domain.Types.DriverInformation as DI
@@ -196,6 +197,7 @@ import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverFlowStatus as SDF
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -367,7 +369,7 @@ checkRCAssociationForDriver driverId mbVehicleRC checkFleet = maybe checkAssocia
       let exactMatch = find (\assoc -> assoc.driverId == driverId && assoc.rcId == vehicleRC.id) allAssociations
           rcAssociations = filter (\assoc -> assoc.rcId == vehicleRC.id && assoc.driverId /= driverId && assoc.isRcActive) allAssociations
           driverAssociations = filter (\assoc -> assoc.driverId == driverId && assoc.rcId /= vehicleRC.id && assoc.isRcActive) allAssociations
-      if (isJust exactMatch)
+      if isJust exactMatch
         then return True
         else do
           unless (null rcAssociations) $ throwError VehicleAlreadyLinkedToAnotherDriver
@@ -465,7 +467,7 @@ checkRCAssociationForFleet fleetOwnerId vehicleRC = do
   let rcAssociatedDriverIds = map (.driverId) activeAssociationsOfRC
   forM_ rcAssociatedDriverIds $ \driverId -> do
     isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId True
-    when (isNothing isFleetDriver) $ throwError (VehicleLinkedToInvalidDriver)
+    when (isNothing isFleetDriver) $ throwError VehicleLinkedToInvalidDriver
 
 ---------------------------------------------------------------------
 
@@ -580,7 +582,8 @@ postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId req = do
             engineNumber = req.engineNumber,
             chassisNumber = req.chassisNumber
           }
-  void $ DomainRC.verifyRC False (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq False (Just personId)
+  -- audit actor: dashboard-forwarded requestor (gated on merchant opt-in); Nothing falls through to verifyRC's internal person fallback
+  void $ DomainRC.verifyRC (Audit.dashboardActorFromForwarded req.requestorId req.requestorRole) False (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq False (Just personId)
   logTagInfo "dashboard -> Register RC For Fleet : " (show driver.id)
   pure Success
 
@@ -636,7 +639,7 @@ convertToVehicleAPIEntityTFromAssociation sendDriverMobileNumber fleetNameMap (a
             model = rc.vehicleModel,
             color = rc.vehicleColor,
             registrationNo = certificateNumber',
-            isActive = (Just association.isRcActive),
+            isActive = Just association.isRcActive,
             fleetOwnerId = foId,
             fleetOwnerName = fromMaybe "" (Map.lookup foId fleetNameMap),
             driverName = driverDetails.driverName,
@@ -662,7 +665,7 @@ convertToVehicleAPIEntityT sendDriverMobileNumber fleetNameMap DVRC.VehicleRegis
             model = vehicleModel,
             color = vehicleColor,
             registrationNo = certificateNumber',
-            isActive = (Just isActive),
+            isActive = Just isActive,
             fleetOwnerId = foId,
             fleetOwnerName = fromMaybe "" (Map.lookup foId fleetNameMap),
             driverName = driverDetails.driverName,
@@ -835,7 +838,9 @@ unlinkVehicleFromDriver merchant personId vehicleNo opCity role = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   AC.guardNoLiveRideByRC rc.id
   when (transporterConfig.deactivateRCOnUnlink == Just True) $ DomainRC.deactivateCurrentRC transporterConfig personId
-  when ((driverInfo.onboardingVehicleCategory /= Just DVC.BUS && isNotVipOfficer) && transporterConfig.disableDriverWhenUnlinkingVehicle == Just True) $ Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig personId False (Just False)
+  -- audited (FLAG_CHANGED for enabled/verified): no requestor role is forwarded on this endpoint (path captures only),
+  -- so SYSTEM actor — the audit role must come from the dashboard, never a BPP person-table lookup
+  when ((driverInfo.onboardingVehicleCategory /= Just DVC.BUS && isNotVipOfficer) && transporterConfig.disableDriverWhenUnlinkingVehicle == Just True) $ Analytics.updateEnabledVerifiedStateWithAnalyticsAudited Audit.systemActor (Just driverInfo) transporterConfig personId False (Just False)
   _ <- QRCAssociation.endAssociationForRC personId rc.id
   logTagInfo (show role <> " -> unlinkVehicle : ") (show personId)
 
@@ -847,7 +852,7 @@ postDriverFleetRemoveVehicle ::
   Text ->
   Maybe Text ->
   Flow APISuccess
-postDriverFleetRemoveVehicle merchantShortId _ fleetOwnerId_ vehicleNo mbRequestorId = do
+postDriverFleetRemoveVehicle merchantShortId opCity fleetOwnerId_ vehicleNo mbRequestorId = do
   void $ FleetAccess.checkRequestorAccessToFleet False mbRequestorId fleetOwnerId_
   merchant <- findMerchantByShortId merchantShortId
   DCommon.checkFleetOwnerVerification fleetOwnerId_ merchant.fleetOwnerEnabledCheck
@@ -863,6 +868,10 @@ postDriverFleetRemoveVehicle merchantShortId _ fleetOwnerId_ vehicleNo mbRequest
     isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId assoc.driverId fleetOwnerId_ True
     when (isJust isFleetDriver) $ QRCAssociation.endAssociationForRC assoc.driverId vehicleRC.id
   RCQuery.upsert (updatedVehicleRegistrationCertificate vehicleRC)
+  -- Document audit: RC row mutated (fleetOwnerId cleared). No requestor role is forwarded on this
+  -- endpoint, so SYSTEM actor — the audit role must come from the dashboard, never a BPP person-table lookup
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  Audit.auditDocStatus Audit.systemActor DAL.VEHICLE vehicleRC.id.getId "VehicleRegistrationCertificate" DAL.VEHICLE_REGISTRATION_CERTIFICATE (Just vehicleRC.id.getId) Nothing Nothing DAL.STATUS_CHANGED (Just "Vehicle removed from fleet") merchant.id merchantOpCityId
   endFleetRCAssociationIfPossible (Id fleetOwnerId_) vehicleRC.id
   pure Success
   where
@@ -1095,6 +1104,8 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
               udinNumber = Nothing,
               engineNumber = Nothing,
               chassisNumber = Nothing,
+              requestorId = Nothing, -- bulk CSV upload: no per-row requestor; fleet-actor attribution handled at the add-vehicle helper
+              requestorRole = Nothing,
               ..
             },
           vehicleNumberHash,
@@ -2452,7 +2463,10 @@ postDriverFleetVehicleEdit merchantShortId opCity requestorId _mbFleetOwnerId _m
       mbMake = nonEmptyStripMb manufacturer
       mbModel = nonEmptyStripMb model
       mbColor = nonEmptyStripMb color
+      -- audit actor: dashboard-forwarded requestor role (gated on merchant opt-in); SYSTEM when not forwarded — never hardcode a role
+      auditRequestor = fromMaybe Audit.systemActor (Audit.dashboardActorFromForwarded (Just requestorId) requestorRole)
   QImage.updateVerificationStatusByIdAndType docStatus rc.documentImageId DDoc.VehicleRegistrationCertificate
+  Audit.auditDocStatus auditRequestor DAL.VEHICLE rc.id.getId "VehicleRegistrationCertificate" DAL.IMAGE (Just rc.documentImageId.getId) Nothing (Just (show docStatus)) DAL.STATUS_CHANGED Nothing merchant.id merchantOpCityId
   let updRc =
         rc
           { DVRC.certificateNumber = encCert,
@@ -2465,6 +2479,7 @@ postDriverFleetVehicleEdit merchantShortId opCity requestorId _mbFleetOwnerId _m
             DVRC.updatedAt = now
           }
   RCQuery.updateByPrimaryKey updRc
+  Audit.auditDocStatus auditRequestor DAL.VEHICLE rc.id.getId "VehicleRegistrationCertificate" DAL.VEHICLE_REGISTRATION_CERTIFICATE (Just rc.id.getId) (Just (show rc.verificationStatus)) (Just (show docStatus)) DAL.STATUS_CHANGED Nothing merchant.id merchantOpCityId
   QVehicleExtra.updateVehicleFromRcEdit vehicleNoGuard displayCert mbMake mbModel mbColor year
   logTagInfo "dashboard -> fleetVehicleEdit" (rc.id.getId <> " " <> vehicleNoGuard)
   pure Success
@@ -2833,7 +2848,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
   case mbAuthId of
     Just authId -> do
       smsCfg <- asks (.smsCfg)
-      deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
+      deviceToken <- fromMaybeM DeviceTokenNotFound $ req.deviceToken
       SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
       when (merchant.overwriteAssociation == Just True) $
         QRCAssociation.endAllRCAssociationsForDriver person.id
@@ -2915,7 +2930,7 @@ postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId mbRequestorI
   unless driverInfo.verified $ throwError (InvalidRequest "Driver documents are not verified")
   rc <- RCQuery.findLastVehicleRCWrapper req.vehicleRegistrationNumber >>= fromMaybeM (RCNotFound req.vehicleRegistrationNumber)
   when (isNothing rc.fleetOwnerId || (isJust rc.fleetOwnerId && rc.fleetOwnerId /= Just fleetOwnerId)) $ throwError VehicleNotPartOfFleet
-  unless (rc.verificationStatus == Documents.VALID) $ throwError (RcNotValid)
+  unless (rc.verificationStatus == Documents.VALID) $ throwError RcNotValid
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   SStatus.validateMandatoryVehicleDocsForRC transporterConfig rc
   validateFleetDriverAssociation fleetOwnerId driver.id
@@ -3958,7 +3973,9 @@ convertToAddVehicleReq rcReq =
       skipFleetChecks = Nothing,
       vehicleTags = Nothing,
       fuelType = Nothing,
-      udinNumber = rcReq.udinNumber
+      udinNumber = rcReq.udinNumber,
+      requestorId = Nothing,
+      requestorRole = Nothing
     }
 
 getDriverDashboardInternalHelperGetFleetOwnerId :: (ShortId DM.Merchant -> Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.Flow Text)
@@ -4764,7 +4781,7 @@ getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles merchantShortId opCity f
         rcActiveAssociation <- QRCAssociation.findActiveAssociationByRC vrc.id True
         pure (decryptedVehicleRC, rcActiveAssociation >>= (\assoc -> Just assoc.driverId))
       let unLinkedVehicles = map fst $ filter (\(_, driverId) -> isNothing driverId) vehicleDriverCombination
-      let linkedDriverIds = snd $ second (catMaybes) (unzip vehicleDriverCombination)
+      let linkedDriverIds = snd $ second catMaybes (unzip vehicleDriverCombination)
       pure $ (unLinkedVehicles, linkedDriverIds)
 
 getDriverFleetDriverDetails :: ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Flow Common.DriverDetailsRes

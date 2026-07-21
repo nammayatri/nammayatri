@@ -111,6 +111,17 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/delete/bankAccount
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            query:
+              - requestorId: Text
+              - requestorRole: Text
+            response:
+              type: APISuccess
   - GET: # PayoutOrderStatusAPI (dashboard proxy for driver ReferralPayout GET /payout/order/status)
       endpoint: /{driverId}/payout/order/status
       auth: ApiAuthV2
@@ -230,6 +241,17 @@ apis:
         endpoint: DriverRegistrationAPI UpdateDocumentEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DOCUMENT
+      helperApi:
+        - POST:
+            endpoint: /documents/update
+            auth: ApiAuthV2
+            query:
+              - requestorId: Text
+              - requestorRole: Text
+            request:
+              type: UpdateDocumentRequest
+            response:
+              type: UpdateDocumentResp
   - POST: # CreateCommonDocumentAPI
       endpoint: /{driverId}/documents/common
       auth: ApiAuthV2
@@ -265,6 +287,7 @@ apis:
               documentType: DocumentType
             query:
               - requestorId: Text
+              - requestorRole: Text
             response:
               type: UnlinkDocumentResp
   - POST: # TriggerReminderAPI
@@ -399,6 +422,8 @@ types:
     - imageType: DocumentType
     - rcNumber: Maybe Text
     - requestorId: Maybe Text
+    - auditRequestorId: Maybe Text
+    - requestorRole: Maybe Text
     - fileExtension: Maybe Text
   UploadDocumentTReq:
     - imageType: DocumentType
@@ -416,10 +441,14 @@ types:
     - imageId2: Maybe (Id Image)
     - dateOfIssue: Maybe UTCTime
     - accessType: Maybe DashboardAccessType
+    - requestorId: Maybe Text
+    - requestorRole: Maybe Text
     - derive: "'HideSecrets"
   VerifyBankAccountReq:
     - bankAccountNo : Text
     - bankIfscCode : Text
+    - requestorId: Maybe Text
+    - requestorRole: Maybe Text
   PayoutRegistrationRes:
     - orderId: Text
     - orderResp: CreateOrderResp
@@ -434,6 +463,8 @@ types:
     consentTimestamp: UTCTime
     validationStatus: ValidationStatus
     transactionId: Text
+    requestorId: Maybe Text
+    requestorRole: Maybe Text
     derive: "'HideSecrets"
   RegisterRCReq:
     - vehicleRegistrationCertNumber: Text
@@ -450,6 +481,8 @@ types:
     - udinNumber: Maybe Text
     - engineNumber: Maybe Text
     - chassisNumber: Maybe Text
+    - requestorId: Maybe Text
+    - requestorRole: Maybe Text
     - derive: "'HideSecrets"
   RegisterPanReq:
     - panNumber: Text
@@ -473,6 +506,8 @@ types:
   GenerateAadhaarOtpReq:
     - aadhaarNumber: Text
     - consent: Text
+    - requestorId: Maybe Text
+    - requestorRole: Maybe Text
     - derive: "'HideSecrets"
   GenerateAadhaarOtpRes:
     - message: Text
@@ -481,6 +516,8 @@ types:
   VerifyAadhaarOtpReq:
     - otp: Int
     - shareCode: Text
+    - requestorId: Maybe Text
+    - requestorRole: Maybe Text
     - derive: "'HideSecrets"
   VerifyAadhaarOtpRes:
     - message: Text
@@ -554,6 +591,8 @@ types:
     - documentType: DocumentType
     - documentData: Text
     - imageId: Maybe (Id Image)
+    - requestorId: Maybe Text
+    - requestorRole: Maybe Text
     - derive: "'HideSecrets"
   CommonDocumentCreateRes:
     - result: Text
