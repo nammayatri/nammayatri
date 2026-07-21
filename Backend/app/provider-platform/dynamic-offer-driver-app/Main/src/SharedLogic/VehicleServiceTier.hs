@@ -191,7 +191,7 @@ backfillSelectedServiceTiers ::
 backfillSelectedServiceTiers inputTiers vehicle driverInfo transporterConfig merchantOpCityId
   | null inputTiers = do
     now <- getCurrentTime
-    cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+    cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing Nothing
     let (_, mbDefault) = getDriverDefaultServiceTier vehicle driverInfo transporterConfig cityServiceTiers now
     case mbDefault of
       Nothing ->
