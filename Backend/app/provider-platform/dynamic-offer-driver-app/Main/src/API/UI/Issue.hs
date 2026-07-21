@@ -326,16 +326,16 @@ castRideInfo merchantId merchantOpCityId rideId = do
       let shouldCacheRideInfo = elem (rideInfoRes.bookingStatus) [PPMR.COMPLETED, PPMR.CANCELLED]
       bool (return ()) (Redis.setExp makeRideInfoCacheKey rideInfoRes 259200) shouldCacheRideInfo
 
--- Driver-app does not fan out ticket writes across multiple third-party
--- providers, so the create returns the primary response paired with an empty
--- 'AdditionalTicketId' list and the update ignores the trailing fan-out list.
-castCreateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> Flow (TIT.CreateTicketResp, [Common.AdditionalTicketId])
+-- Driver-app does not fan out ticket writes to a secondary provider, so
+-- create returns the primary response paired with 'Nothing' and update
+-- ignores the trailing secondary-ticketId argument.
+castCreateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> Flow (TIT.CreateTicketResp, Maybe Text)
 castCreateTicket merchantId merchantOpCityId req = do
   resp <- TT.createTicket (cast merchantId) (cast merchantOpCityId) req
-  pure (resp, [])
+  pure (resp, Nothing)
 
-castUpdateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> [Common.AdditionalTicketId] -> TIT.UpdateTicketReq -> Flow TIT.UpdateTicketResp
-castUpdateTicket merchantId merchantOperatingCityId _additionalTicketIds = TT.updateTicket (cast merchantId) (cast merchantOperatingCityId)
+castUpdateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Maybe Text -> TIT.UpdateTicketReq -> Flow TIT.UpdateTicketResp
+castUpdateTicket merchantId merchantOperatingCityId _additionalTicketId = TT.updateTicket (cast merchantId) (cast merchantOperatingCityId)
 
 castUpdateTicketStatus :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketStatusReq -> Flow ()
 castUpdateTicketStatus merchantId merchantOperatingCityId = TT.updateTicketStatus (cast merchantId) (cast merchantOperatingCityId)
