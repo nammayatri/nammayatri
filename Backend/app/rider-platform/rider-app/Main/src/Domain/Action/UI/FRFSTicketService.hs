@@ -39,6 +39,7 @@ import qualified Domain.Types.PartnerOrganization as DPO
 import qualified Domain.Types.Person
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Route as Route
+import Domain.Types.RouteDetailsAPI (mkRouteDetail)
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import Domain.Types.Station
 import Domain.Types.StationType
@@ -765,13 +766,15 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ = do
               if integratedBppConfig.platformType == DIBC.MULTIMODAL
                 then (Nothing, Nothing)
                 else (decodedRouteStations, decodeFromText quote.stationsJson)
-        -- Journey stations: the start, interchange (line-change) and end stops, derived at
-        -- response time only (storage is unchanged). Each stop is annotated with the route
-        -- (color + long name) boarded there, resolved fresh via getRouteByRouteId. Only surfaced
-        -- for the MULTIMODAL platform.
-        journeyStations <-
+        -- Per-sub-leg transit route details for interchange journeys. These rows are persisted
+        -- alongside the Journey/JourneyLeg during the discovery flow (buildInterchangeJourney), so
+        -- here we simply read them back off the leg tied to this quote's search. Only the MULTIMODAL
+        -- platform builds interchange journeys, so we skip the lookup otherwise.
+        routeDetails <-
           if integratedBppConfig.platformType == DIBC.MULTIMODAL
-            then mkJourneyStations integratedBppConfig quote decodedRouteStations stations
+            then do
+              mbLeg <- QJourneyLeg.findByLegSearchId (Just quote.searchId.getId)
+              pure $ (map mkRouteDetail . (.routeDetails)) <$> mbLeg
             else pure Nothing
         let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
             categories = map mkCategoryInfoResponse quoteCategories
@@ -796,55 +799,6 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ = do
             }
     )
     sortedQuotesWithCategories
-
--- | Build the "journey stations" for a quote: the start, interchange (line-change) and end stops,
--- each annotated with the route (color + long name) that the rider boards at that stop. The stop
--- set is derived from the stored route segments (routeStationsJson) — for each segment we take its
--- boarding stop (start of the leg) plus, for the final segment, its alighting stop (journey end).
--- Route details are resolved fresh via getRouteByRouteId (cached). When route segments are
--- unavailable we fall back to the flat station list, keeping START/END/TRANSIT stops without route
--- annotation. Result is deduped by station code.
-mkJourneyStations ::
-  (CallExternalBPP.FRFSSearchFlow m r, HasShortDurationRetryCfg r c) =>
-  DIBC.IntegratedBPPConfig ->
-  DFRFSQuote.FRFSQuote ->
-  Maybe [FRFSRouteStationsAPI] ->
-  Maybe [FRFSStationAPI] ->
-  m (Maybe [FRFSStationAPI])
-mkJourneyStations integratedBppConfig quote mbRouteSegments mbFlatStations =
-  case mbRouteSegments of
-    Just segments@(_ : _) -> do
-      let orderedSegments = sortBy (compare `on` (fromMaybe maxBound . (.sequenceNum))) segments
-      perSegment <-
-        forM orderedSegments $ \segment -> do
-          mbRoute <- OTPRest.getRouteByRouteId integratedBppConfig segment.code
-          let routeColor = (mbRoute >>= (.color)) <|> segment.color
-              routeName = (mbRoute <&> (.longName)) <|> Just segment.longName
-              orderedStops = sortBy (compare `on` (fromMaybe maxBound . (.sequenceNum))) segment.stations
-          pure (segment.code, routeColor, routeName, listToMaybe orderedStops, listToMaybe (reverse orderedStops))
-      let lastIdx = length perSegment - 1
-          annotate routeCode' routeColor routeName stationType' station =
-            station {routeCodes = Just [routeCode'], color = routeColor, routeDetails = routeName, stationType = Just stationType'}
-          journeyStops =
-            concat $
-              zipWith
-                ( \idx (routeCode', routeColor, routeName, mbBoarding, mbAlighting) ->
-                    let boarding = maybe [] (\stop -> [annotate routeCode' routeColor routeName (if idx == 0 then START else TRANSIT) stop]) mbBoarding
-                        alighting = if idx == lastIdx then maybe [] (\stop -> [annotate routeCode' routeColor routeName END stop]) mbAlighting else []
-                     in boarding <> alighting
-                )
-                [0 ..]
-                perSegment
-      pure $ Just $ dedupeByCodeKeepLast journeyStops
-    _ ->
-      pure $
-        (dedupeByCodeKeepLast . filter (\s -> s.stationType == Just START || s.stationType == Just END || s.stationType == Just TRANSIT))
-          <$> (mbFlatStations <|> decodeFromText quote.stationsJson)
-  where
-    -- Dedupe by station code keeping the LAST occurrence so a repeated destination (circular or
-    -- backtracking journeys where START/TRANSIT shares a code with END) stays marked END.
-    dedupeByCodeKeepLast :: [FRFSStationAPI] -> [FRFSStationAPI]
-    dedupeByCodeKeepLast sts = reverse (nubBy (\a b -> a.code == b.code) (reverse sts))
 
 postFrfsQuoteV2Confirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasFlowEnv m r '["seatBookingConfirmAPIRateLimitOptions" ::: APIRateLimitOptions], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Maybe Bool -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2Confirm (mbPersonId, merchantId) quoteId mbIsMockPayment req =

@@ -1667,7 +1667,7 @@ mkJourneyLeg ::
 mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId multimodalSearchRequestId maximumWalkDistance fare mbGates mbFinalBoardedBusData mbUserBookedServiceTierType busLocationData mbUserPreferredServiceTier = do
   now <- getCurrentTime
   journeyLegId <- generateGUID
-  routeDetails <- mapM (mkRouteDetail journeyLegId fare) leg.routeDetails
+  routeDetails <- mapM (mkRouteDetail merchantId merchantOpCityId journeyLegId fare) leg.routeDetails
   let travelMode = convertMultiModalModeToTripMode leg.mode straightLineDistance maximumWalkDistance
   gates <- maybe (getGates (mbPrev, leg, mbNext) merchantId merchantOpCityId) (pure . Just) mbGates
   let (fromStopDetails, toStopDetails) =
@@ -1763,65 +1763,67 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
           }
     mkStopDetails _ _ _ = Nothing
 
-    mkRouteDetail :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id DJL.JourneyLeg -> Maybe GetFareResponse -> EMInterface.MultiModalRouteDetails -> m RouteDetails
-    mkRouteDetail journeyLegId fare' routeDetail = do
-      now <- getCurrentTime
-      newId <- generateGUID
-      let fromStopDetails' = fromMaybe (EMInterface.MultiModalStopDetails Nothing Nothing Nothing Nothing) (routeDetail.fromStopDetails)
-          toStopDetails' = fromMaybe (EMInterface.MultiModalStopDetails Nothing Nothing Nothing Nothing) (routeDetail.toStopDetails)
-      let tierRoutes = maybe [] (concatMap (.availableRoutesInfo)) (fare' >>= (.possibleRoutes))
-      let alternateShortNames = if null tierRoutes then routeDetail.alternateShortNames else nub (map (.shortName) tierRoutes)
-      let alternateRouteIds = if null tierRoutes then [] else nub (map (.routeCode) tierRoutes)
-      return $
-        RouteDetails
-          { routeGtfsId = routeDetail.gtfsId <&> gtfsIdtoDomainCode,
-            routeCode = routeDetail.gtfsId <&> gtfsIdtoDomainCode,
-            id = newId,
-            routeLongName = routeDetail.longName,
-            routeShortName = routeDetail.shortName,
-            userBookedRouteShortName = Nothing,
-            routeColorName = routeDetail.shortName,
-            routeColorCode = routeDetail.color,
-            frequency = Nothing,
-            alternateShortNames = alternateShortNames,
-            alternateRouteIds = Just alternateRouteIds,
-            journeyLegId = journeyLegId.getId,
-            agencyGtfsId = routeDetail.gtfsId <&> gtfsIdtoDomainCode,
-            agencyName = routeDetail.longName,
-            subLegOrder = Just routeDetail.subLegOrder,
-            --fromStopDetails:
-            fromStopCode = fromStopDetails'.stopCode,
-            fromStopName = fromStopDetails'.name,
-            fromStopGtfsId = fromStopDetails'.gtfsId <&> gtfsIdtoDomainCode,
-            fromStopPlatformCode = fromStopDetails'.platformCode,
-            --toStopDetails:
-            toStopCode = toStopDetails'.stopCode,
-            toStopName = toStopDetails'.name,
-            toStopGtfsId = toStopDetails'.gtfsId <&> gtfsIdtoDomainCode,
-            toStopPlatformCode = toStopDetails'.platformCode,
-            --Times --
-            legStartTime = Nothing,
-            legEndTime = Nothing,
-            fromArrivalTime = routeDetail.fromArrivalTime,
-            fromDepartureTime = routeDetail.fromDepartureTime,
-            toArrivalTime = routeDetail.toArrivalTime,
-            toDepartureTime = routeDetail.toDepartureTime,
-            --startLocation:
-            startLocationLat = routeDetail.startLocation.latLng.latitude,
-            startLocationLon = routeDetail.startLocation.latLng.longitude,
-            --endLocation:
-            endLocationLat = routeDetail.endLocation.latLng.latitude,
-            endLocationLon = routeDetail.endLocation.latLng.longitude,
-            merchantId = Just merchantId,
-            merchantOperatingCityId = Just merchantOpCityId,
-            trackingStatus = Nothing,
-            trackingStatusLastUpdatedAt = Nothing,
-            createdAt = now,
-            updatedAt = now
-          }
-
     chooseGate :: Maybe KEMIT.MultiModalLegGate -> Maybe KEMIT.MultiModalLegGate -> Maybe KEMIT.MultiModalLegGate
     chooseGate fromGates fromLeg = fromGates <|> fromLeg
+
+-- | Convert a transit-planner MultiModalRouteDetails (one sub-leg) into a persisted RouteDetails row,
+-- stamped with the given journeyLegId. Shared by mkJourneyLeg and the FRFS interchange journey builder.
+mkRouteDetail :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DJL.JourneyLeg -> Maybe GetFareResponse -> EMInterface.MultiModalRouteDetails -> m RouteDetails
+mkRouteDetail merchantId merchantOpCityId journeyLegId fare' routeDetail = do
+  now <- getCurrentTime
+  newId <- generateGUID
+  let fromStopDetails' = fromMaybe (EMInterface.MultiModalStopDetails Nothing Nothing Nothing Nothing) (routeDetail.fromStopDetails)
+      toStopDetails' = fromMaybe (EMInterface.MultiModalStopDetails Nothing Nothing Nothing Nothing) (routeDetail.toStopDetails)
+  let tierRoutes = maybe [] (concatMap (.availableRoutesInfo)) (fare' >>= (.possibleRoutes))
+  let alternateShortNames = if null tierRoutes then routeDetail.alternateShortNames else nub (map (.shortName) tierRoutes)
+  let alternateRouteIds = if null tierRoutes then [] else nub (map (.routeCode) tierRoutes)
+  return $
+    RouteDetails
+      { routeGtfsId = routeDetail.gtfsId <&> gtfsIdtoDomainCode,
+        routeCode = routeDetail.gtfsId <&> gtfsIdtoDomainCode,
+        id = newId,
+        routeLongName = routeDetail.longName,
+        routeShortName = routeDetail.shortName,
+        userBookedRouteShortName = Nothing,
+        routeColorName = routeDetail.shortName,
+        routeColorCode = routeDetail.color,
+        frequency = Nothing,
+        alternateShortNames = alternateShortNames,
+        alternateRouteIds = Just alternateRouteIds,
+        journeyLegId = journeyLegId.getId,
+        agencyGtfsId = routeDetail.gtfsId <&> gtfsIdtoDomainCode,
+        agencyName = routeDetail.longName,
+        subLegOrder = Just routeDetail.subLegOrder,
+        --fromStopDetails:
+        fromStopCode = fromStopDetails'.stopCode,
+        fromStopName = fromStopDetails'.name,
+        fromStopGtfsId = fromStopDetails'.gtfsId <&> gtfsIdtoDomainCode,
+        fromStopPlatformCode = fromStopDetails'.platformCode,
+        --toStopDetails:
+        toStopCode = toStopDetails'.stopCode,
+        toStopName = toStopDetails'.name,
+        toStopGtfsId = toStopDetails'.gtfsId <&> gtfsIdtoDomainCode,
+        toStopPlatformCode = toStopDetails'.platformCode,
+        --Times --
+        legStartTime = Nothing,
+        legEndTime = Nothing,
+        fromArrivalTime = routeDetail.fromArrivalTime,
+        fromDepartureTime = routeDetail.fromDepartureTime,
+        toArrivalTime = routeDetail.toArrivalTime,
+        toDepartureTime = routeDetail.toDepartureTime,
+        --startLocation:
+        startLocationLat = routeDetail.startLocation.latLng.latitude,
+        startLocationLon = routeDetail.startLocation.latLng.longitude,
+        --endLocation:
+        endLocationLat = routeDetail.endLocation.latLng.latitude,
+        endLocationLon = routeDetail.endLocation.latLng.longitude,
+        merchantId = Just merchantId,
+        merchantOperatingCityId = Just merchantOpCityId,
+        trackingStatus = Nothing,
+        trackingStatusLastUpdatedAt = Nothing,
+        createdAt = now,
+        updatedAt = now
+      }
 
 sumHighPrecMoney :: [HighPrecMoney] -> HighPrecMoney
 sumHighPrecMoney = HighPrecMoney . sum . map getHighPrecMoney

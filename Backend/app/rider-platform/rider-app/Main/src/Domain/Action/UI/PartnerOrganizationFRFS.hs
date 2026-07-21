@@ -594,7 +594,7 @@ mkQuoteRes (quote, quoteCategories) = do
         integratedBppConfigId = quote.integratedBppConfigId,
         observingFailures = Nothing,
         offer = Nothing,
-        journeyStations = Nothing,
+        routeDetails = Nothing,
         ..
       }
 

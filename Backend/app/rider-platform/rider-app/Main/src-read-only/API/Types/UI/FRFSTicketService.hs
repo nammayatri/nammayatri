@@ -18,6 +18,7 @@ import qualified Domain.Types.FleetOperatorTripAction
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
+import qualified Domain.Types.RouteDetailsAPI
 import qualified Domain.Types.Seat
 import qualified Domain.Types.SeatLayout
 import qualified Domain.Types.StationType
@@ -184,7 +185,6 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
-    journeyStations :: Data.Maybe.Maybe [FRFSStationAPI],
     observingFailures :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     offer :: Data.Maybe.Maybe SharedLogic.OfferTypes.CumulativeOfferResp,
     price :: Kernel.Types.Common.HighPrecMoney,
@@ -192,6 +192,7 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     quantity :: Kernel.Prelude.Int,
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     routeCode :: Data.Maybe.Maybe Data.Text.Text,
+    routeDetails :: Data.Maybe.Maybe [Domain.Types.RouteDetailsAPI.RouteDetail],
     routeStations :: Data.Maybe.Maybe [FRFSRouteStationsAPI],
     serviceTierName :: Data.Maybe.Maybe Data.Text.Text,
     serviceTierType :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,

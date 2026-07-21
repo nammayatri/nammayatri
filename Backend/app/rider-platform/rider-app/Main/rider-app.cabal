@@ -404,6 +404,7 @@ library
       Domain.Types.RentalsIntercityCache
       Domain.Types.RewardContext
       Domain.Types.Route
+      Domain.Types.RouteDetailsAPI
       Domain.Types.RouteStopMapping
       Domain.Types.RouteStopTimeTable
       Domain.Types.Station
