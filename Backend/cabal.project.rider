@@ -1,0 +1,37 @@
+-- Rider (BAP) scoped project. Used by cabal-prod-hot-fix-push.yaml on prodHotPush-BAP.
+-- Excludes dynamic-offer-driver-app and everything coupled to both platforms: rider-dashboard,
+-- provider-dashboard, lib-dashboard, kafka-consumers, producer (these depend on both apps and
+-- must build on the Common/International full branches, not here). See cabal.project for the full set.
+
+packages:
+  app/rider-platform/rider-app-drainer
+  app/rider-platform/rider-app/Main
+  app/rider-platform/rider-app/Scheduler
+  app/special-zone
+  app/sdk-event-pipeline
+  app/dashboard/CommonAPIs
+  app/alchemist
+  lib/passetto-lib
+  lib/beckn-spec
+  lib/beckn-services
+  lib/payment
+  lib/shared-services
+  lib/gtfs-data-server
+  lib/location-updates
+  lib/special-zone
+  lib/scheduler
+  lib/sessionizer-metrics
+  lib/yudhishthira
+  lib/finance-kernel
+  lib/utils
+  lib/external
+  lib/webhook
+  lib/dashcam
+  lib/behavior-tracker
+  lib/consequence-engine
+  lib/communication-engine
+  lib/behavior-engine
+
+jobs: 6
+
+flags: +Local
