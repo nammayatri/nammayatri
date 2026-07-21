@@ -40,6 +40,8 @@ import Kernel.Types.Common (Forkable (fork), MonadTime (getCurrentTime), PriceAP
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, throwError)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Queries.SpecialLocation as QSpecialLocation
+import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Person (findPerson)
 import qualified SharedLogic.Ride as SRide
@@ -61,9 +63,10 @@ getVolunteerBooking merchantShortId opCity otpCode = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTPAndCity merchantOpCityId.getId otpCode now transporterConfig.specialZoneBookingOtpExpiry >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp otpCode)
-  return $ buildMessageInfoResponse booking
+  mbSpecialLocation <- maybe (pure Nothing) (QSpecialLocation.findById . Id) (booking.area >>= SL.pickupSpecialZoneIdFromArea)
+  return $ buildMessageInfoResponse (mbSpecialLocation >>= (.boothSpecificFleet)) booking
   where
-    buildMessageInfoResponse Domain.Booking {..} =
+    buildMessageInfoResponse boothSpecificFleet Domain.Booking {..} =
       Common.BookingInfoResponse
         { bookingId = cast id,
           displayBookingId,
@@ -76,7 +79,8 @@ getVolunteerBooking merchantShortId opCity otpCode = do
           estimatedFareWithCurrency = PriceAPIEntity estimatedFare currency,
           estimatedDuration,
           riderName,
-          vehicleVariant = convertVehicleVariant vehicleServiceTier
+          vehicleVariant = convertVehicleVariant vehicleServiceTier,
+          boothSpecificFleet
         }
 
     convertVehicleVariant DVST.SEDAN = Common.SEDAN
