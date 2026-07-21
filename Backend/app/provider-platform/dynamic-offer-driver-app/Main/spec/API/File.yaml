@@ -1,0 +1,24 @@
+imports:
+  FileUploadReq: FileManagement.Common.UI.File
+  FileUploadRes: FileManagement.Common.UI.File
+
+module: File
+
+types: {}
+
+apis:
+  - POST:
+      endpoint: /files/upload
+      auth: TokenAuth PROVIDER_TYPE
+      multipart:
+        type: FileUploadReq
+      response:
+        type: FileUploadRes
+
+  - GET:
+      endpoint: /files/media
+      auth: TokenAuth PROVIDER_TYPE
+      mandatoryQuery:
+        filePath: Text
+      response:
+        type: Text

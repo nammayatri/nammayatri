@@ -12,6 +12,7 @@ imports:
   Driver: Dashboard.Common
   APISuccess: Kernel.Types.APISuccess
   DocsVerificationStatus: Dashboard.Common
+  DocumentOnboardingStage: API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
 
 module: Onboarding
 
@@ -23,6 +24,7 @@ apis:
         - makeSelfieAadhaarPanMandatory: Bool
         - onlyVehicle: Bool
         - role: Role
+        - documentOnboardingStage: DocumentOnboardingStage
       response:
         type: DocumentVerificationConfigList
       helperApi:
@@ -35,6 +37,7 @@ apis:
               - makeSelfieAadhaarPanMandatory: Bool
               - onlyVehicle: Bool
               - role: Role
+              - documentOnboardingStage: DocumentOnboardingStage
             response:
               type: DocumentVerificationConfigList
   - GET:
@@ -159,6 +162,7 @@ types:
     applicableTo: DocumentApplicableType
     documentFields: Maybe [FieldInfo]
     documentFlowGrouping: DocumentFlowGrouping
+    documentOnboardingStage: Maybe DocumentOnboardingStage
     title: Text
     description: Maybe Text
     isMandatory: Bool
@@ -180,12 +184,15 @@ types:
   DocumentFlowGrouping:
     enum: "COMMON,STANDARD"
   FieldType:
-    enum: "FieldText,FieldInt,FieldDouble"
+    enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage"
   FieldInfo:
     name: Text
     _type: FieldType
     isMandatory: Bool
     regexValidation: Maybe Text
+    description: Maybe Text
+    placeholder: Maybe Text
+    dropdownValues: Maybe [Text]
   DocumentApplicableType:
     enum: "FLEET,INDIVIDUAL,FLEET_AND_INDIVIDUAL"
   StatusRes:

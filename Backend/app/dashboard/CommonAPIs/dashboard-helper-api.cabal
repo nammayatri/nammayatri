@@ -26,6 +26,7 @@ flag Local
 
 library
   exposed-modules:
+      API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
       Dashboard.Common
       Dashboard.Common.Booking
       Dashboard.Common.Driver
@@ -232,6 +233,7 @@ library
     , extra
     , finance-kernel
     , hashable
+    , lens
     , mobility-core
     , openapi3
     , payment

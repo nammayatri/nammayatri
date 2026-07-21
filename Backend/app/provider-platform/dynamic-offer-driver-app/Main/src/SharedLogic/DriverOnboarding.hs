@@ -19,6 +19,7 @@ module SharedLogic.DriverOnboarding
 where
 
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
 import qualified API.Types.ProviderPlatform.Fleet.Onboarding
 import qualified API.Types.ProviderPlatform.Management.Endpoints.Account
 import qualified API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
@@ -30,6 +31,7 @@ import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Time.Calendar.OrdinalDate as TO
 import qualified Domain.Types as DVST
 import qualified Domain.Types.DocsVerificationStatus as DDVS
+import qualified Domain.Types.DocumentOnboardingStage
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DocumentVerificationConfig as ODC
@@ -230,7 +232,7 @@ checkAndUpdateAirConditioned isDashboard isAirConditioned personId merchantOpCit
     let acRestricted = isAirConditioned && not (checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds))
         driverInfo' = if acRestricted then driverInfo {DI.airConditionScore = Just 0.0} else driverInfo
         vehicle' = vehicle {DV.airConditioned = Just isAirConditioned}
-    serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction True (Just driverInfo') (Just vehicle') Nothing (Just cityVehicleServiceTiers) personId merchantOpCityId
+    serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction SelectedServiceTiers (Just driverInfo') (Just vehicle') Nothing (Just cityVehicleServiceTiers) personId merchantOpCityId
     let newTiers = (.serviceTierType) . fst <$> filter (not . snd) serviceTiers
     QVehicle.updateSelectedServiceTiers newTiers personId
 
@@ -259,7 +261,7 @@ incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers merchantOpCityId 
         when (scoreInt == thresholdInt - 1 || scoreInt == thresholdInt) $
           fork "Send AC Warning Overlay" $ ACOverlay.sendACUsageWarningOverlay driver
   let updatedDriverInfo = driverInfo {DI.airConditionScore = Just airConditionScore}
-  serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction True (Just updatedDriverInfo) Nothing Nothing (Just cityVehicleServiceTiers) personId merchantOpCityId
+  serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction SelectedServiceTiers (Just updatedDriverInfo) Nothing Nothing (Just cityVehicleServiceTiers) personId merchantOpCityId
   let newTiers = (.serviceTierType) . fst <$> filter (not . snd) serviceTiers
   QVehicle.updateSelectedServiceTiers newTiers personId
   where
@@ -382,7 +384,7 @@ makeRCAPIEntity VehicleRegistrationCertificate {..} rcDecrypted =
 makeFullVehicleFromRC :: [DVST.VehicleServiceTier] -> DI.DriverInformation -> Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe [Text] -> Vehicle
 makeFullVehicleFromRC vehicleServiceTiers driverInfo driver merchantId_ certificateNumber rc merchantOpCityId now vehicleTag = do
   let vehicle = makeVehicleFromRC driver.id merchantId_ certificateNumber rc merchantOpCityId now vehicleTag
-  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction True driverInfo vehicle vehicleServiceTiers Nothing now
+  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction AutoSelectedVariants driverInfo vehicle vehicleServiceTiers Nothing now
   addSelectedServiceTiers availableServiceTiersForDriver vehicle
   where
     addSelectedServiceTiers :: [DVST.ServiceTierType] -> Vehicle -> Vehicle
@@ -785,6 +787,7 @@ mkFleetOwnerDocumentVerificationConfigAPIEntity language Domain.Types.FleetOwner
         isMandatoryForEnabling = fromMaybe isMandatory isMandatoryForEnabling,
         documentFields = Nothing,
         documentFlowGrouping = castDocumentFlowGrouping DVC.STANDARD,
+        documentOnboardingStage = Nothing,
         isReminderSupported = Nothing,
         isApprovalSupported = Nothing,
         rolesAllowedToUploadDocument = fmap (mapMaybe castPersonRoleToDashboardAccessType) rolesAllowedToUploadDocument,
@@ -815,7 +818,10 @@ castDocumentFieldInfo Domain.Types.DocumentVerificationConfig.FieldInfo {..} =
     { name = name,
       _type = castDocumentFieldType _type,
       isMandatory = isMandatory,
-      regexValidation = regexValidation
+      regexValidation = regexValidation,
+      description = description,
+      placeholder = placeholder,
+      dropdownValues = dropdownValues
     }
 
 castDocumentFieldType :: Domain.Types.DocumentVerificationConfig.FieldType -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldType
@@ -823,6 +829,16 @@ castDocumentFieldType = \case
   Domain.Types.DocumentVerificationConfig.FieldText -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldText
   Domain.Types.DocumentVerificationConfig.FieldInt -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldInt
   Domain.Types.DocumentVerificationConfig.FieldDouble -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldDouble
+  Domain.Types.DocumentVerificationConfig.FieldDropdown -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldDropdown
+  Domain.Types.DocumentVerificationConfig.FieldImage -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldImage
+
+castDocumentOnboardingStage :: Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.DocumentOnboardingStage
+castDocumentOnboardingStage = \case
+  Domain.Types.DocumentOnboardingStage.DriverOnboarding -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.DriverOnboarding
+  Domain.Types.DocumentOnboardingStage.VehicleDetailsStage -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.VehicleDetailsStage
+  Domain.Types.DocumentOnboardingStage.OperatorPermit -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.OperatorPermit
+  Domain.Types.DocumentOnboardingStage.TaxAndLegal legalStructure -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.TaxAndLegal (castLegalStructure legalStructure)
+  Domain.Types.DocumentOnboardingStage.BankDetails -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.BankDetails
 
 castDocumentCategory :: Domain.Types.DocumentVerificationConfig.DocumentCategory -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.DocumentCategory
 castDocumentCategory = \case
@@ -830,6 +846,11 @@ castDocumentCategory = \case
   Domain.Types.DocumentVerificationConfig.Vehicle -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Vehicle
   Domain.Types.DocumentVerificationConfig.Permission -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Permission
   Domain.Types.DocumentVerificationConfig.Training -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Training
+
+castLegalStructure :: Domain.Types.DocumentOnboardingStage.LegalStructure -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.LegalStructure
+castLegalStructure = \case
+  Domain.Types.DocumentOnboardingStage.IndividualLegalStructure -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.IndividualLegalStructure
+  Domain.Types.DocumentOnboardingStage.LegalEntityStructure -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.LegalEntityStructure
 
 castDocumentType :: Domain.Types.DocumentVerificationConfig.DocumentType -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType
 castDocumentType = \case

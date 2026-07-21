@@ -12,18 +12,18 @@ import qualified Lib.Yudhishthira.Types
 import Tools.Beam.UtilsTH
 
 data AppDynamicLogicRolloutT f = AppDynamicLogicRolloutT
-  { domain :: B.C f Lib.Yudhishthira.Types.LogicDomain,
-    experimentStatus :: B.C f (Kernel.Prelude.Maybe Lib.Yudhishthira.Types.ExperimentStatus),
-    isBaseVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    merchantOperatingCityId :: B.C f Data.Text.Text,
-    modifiedBy :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    percentageRollout :: B.C f Kernel.Prelude.Int,
-    timeBounds :: B.C f Data.Text.Text,
-    version :: B.C f Kernel.Prelude.Int,
-    versionDescription :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { domain :: (B.C f Lib.Yudhishthira.Types.LogicDomain),
+    experimentStatus :: (B.C f (Kernel.Prelude.Maybe Lib.Yudhishthira.Types.ExperimentStatus)),
+    isBaseVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    merchantId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text))),
+    merchantOperatingCityId :: (B.C f Data.Text.Text),
+    modifiedBy :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text))),
+    percentageRollout :: (B.C f Kernel.Prelude.Int),
+    timeBounds :: (B.C f Data.Text.Text),
+    version :: (B.C f Kernel.Prelude.Int),
+    versionDescription :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -35,6 +35,6 @@ instance B.Table AppDynamicLogicRolloutT where
 
 type AppDynamicLogicRollout = AppDynamicLogicRolloutT Identity
 
-$(enableKVPG ''AppDynamicLogicRolloutT ['domain, 'merchantOperatingCityId, 'timeBounds, 'version] [])
+$(enableKVPG (''AppDynamicLogicRolloutT) [('domain), ('merchantOperatingCityId), ('timeBounds), ('version)] [[('domain), ('merchantOperatingCityId)]])
 
-$(mkTableInstancesGenericSchema ''AppDynamicLogicRolloutT "app_dynamic_logic_rollout")
+$(mkTableInstancesGenericSchema (''AppDynamicLogicRolloutT) "app_dynamic_logic_rollout")

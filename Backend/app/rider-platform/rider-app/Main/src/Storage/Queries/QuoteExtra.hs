@@ -33,6 +33,9 @@ createDetails = \case
   DriverOfferDetails driverOffer -> QueryDO.create driverOffer
   OneWaySpecialZoneDetails specialZoneQuote -> QuerySZQ.create specialZoneQuote
   InterCityDetails interCityDetails -> QueryICD.create interCityDetails
+  -- EasyBookingDetails carries the same Domain.Types.RentalDetails.RentalDetails
+  -- payload as RentalDetails (reused table, see Quote.yaml) — persist it the same way.
+  EasyBookingDetails rentalDetails -> QueryRD.create rentalDetails
 
 createQuote' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Quote -> m ()
 createQuote' quote = do

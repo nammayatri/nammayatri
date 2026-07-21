@@ -155,6 +155,7 @@ types:
   FleetInfo:
     - id: Id Person
     - name: Text
+    - fleetName: Maybe Text
     - enabled: Bool
     - isActive: Bool
     - fleetType: Maybe FleetType

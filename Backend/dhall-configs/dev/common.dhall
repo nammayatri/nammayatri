@@ -21,6 +21,7 @@ let becknOneRegistryUrl = "https://beckn-one.succinct.in/subscribers"
 let googleRouteConfig =
       { computeAlternativeRoutes = False
       , routePreference = "TRAFFIC_AWARE_OPTIMAL"
+      , extraComputations = None (List Text)
       , url = "https://routes.googleapis.com/"
       }
 

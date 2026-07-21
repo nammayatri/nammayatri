@@ -12,15 +12,15 @@ import qualified Lib.Yudhishthira.Types
 import Tools.Beam.UtilsTH
 
 data AppDynamicLogicElementT f = AppDynamicLogicElementT
-  { description :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    domain :: B.C f Lib.Yudhishthira.Types.LogicDomain,
-    logic :: B.C f Data.Text.Text,
-    merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    order :: B.C f Kernel.Prelude.Int,
-    patchedElement :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    version :: B.C f Kernel.Prelude.Int,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { description :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
+    domain :: (B.C f Lib.Yudhishthira.Types.LogicDomain),
+    logic :: (B.C f Data.Text.Text),
+    merchantId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text))),
+    order :: (B.C f Kernel.Prelude.Int),
+    patchedElement :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
+    version :: (B.C f Kernel.Prelude.Int),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -32,6 +32,6 @@ instance B.Table AppDynamicLogicElementT where
 
 type AppDynamicLogicElement = AppDynamicLogicElementT Identity
 
-$(enableKVPG ''AppDynamicLogicElementT ['domain, 'order, 'version] [])
+$(enableKVPG (''AppDynamicLogicElementT) [('domain), ('order), ('version)] [[('domain)], [('domain), ('version)]])
 
-$(mkTableInstancesGenericSchema ''AppDynamicLogicElementT "app_dynamic_logic_element")
+$(mkTableInstancesGenericSchema (''AppDynamicLogicElementT) "app_dynamic_logic_element")

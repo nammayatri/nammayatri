@@ -13,20 +13,22 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data CancellationDuesDetailsT f = CancellationDuesDetailsT
-  { cancellationAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    cancellationFee :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    cancellationFeeTax :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    overdueCancellationCharge :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    overdueCancellationTax :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency)),
-    id :: (B.C f Kernel.Prelude.Text),
-    paymentStatus :: (B.C f Domain.Types.CancellationDuesDetails.CancellationDuesPaymentStatus),
-    rideId :: (B.C f Kernel.Prelude.Text),
-    riderId :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
+  { cancellationAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    cancellationCommission :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    cancellationFee :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    cancellationFeeTax :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    id :: B.C f Kernel.Prelude.Text,
+    overdueCancellationCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    overdueCancellationCommission :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    overdueCancellationTax :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    paymentStatus :: B.C f Domain.Types.CancellationDuesDetails.CancellationDuesPaymentStatus,
+    rideId :: B.C f Kernel.Prelude.Text,
+    riderId :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -36,6 +38,6 @@ instance B.Table CancellationDuesDetailsT where
 
 type CancellationDuesDetails = CancellationDuesDetailsT Identity
 
-$(enableKVPG (''CancellationDuesDetailsT) [('id)] [[('rideId)]])
+$(enableKVPG ''CancellationDuesDetailsT ['id] [['rideId]])
 
-$(mkTableInstances (''CancellationDuesDetailsT) "cancellation_dues_details")
+$(mkTableInstances ''CancellationDuesDetailsT "cancellation_dues_details")
