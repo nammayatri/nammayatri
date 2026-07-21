@@ -101,6 +101,7 @@ getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled 
         Common.FleetInfo
           { id = ID.cast fleetOwnerPersonId,
             name = person.firstName,
+            fleetName = fleetName,
             isActive = foa.isActive,
             enabled = enabled,
             mobileCountryCode = fromMaybe "+91" person.mobileCountryCode,

@@ -57,6 +57,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.DriverPool as DP
+import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
@@ -173,7 +174,8 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   commission <- FC.calculateCommission booking.fareParams mbFarePolicy
-  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission
+  cancellationCommission <- FC.calculateCancellationCommission booking.fareParams mbFarePolicy
+  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission
   rideDetails <- buildRideDetails booking ride driver vehicle
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
@@ -199,6 +201,8 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
 
   fork "DriverScoreEventHandler OnNewRideAssigned" $
     DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency, distanceUnit = booking.distanceUnit}
+
+  fork "FleetEngine: create trip on ride assigned" $ FleetEngine.notifyTripCreated booking ride
 
   notifyRideRelatedNotificationOnEvent ride now DRN.RIDE_ASSIGNED
   notifyRideRelatedNotificationOnEvent ride now DRN.PICKUP_TIME
@@ -237,6 +241,7 @@ recomputeRideFinancialsForFareUpdate booking ride newFareParamsId newEstimatedFa
   newFareParams <- QFP.findById newFareParamsId >>= fromMaybeM (FareParametersNotFound newFareParamsId.getId)
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   newCommission <- FC.calculateCommission newFareParams mbFarePolicy
+  newCancellationCommission <- FC.calculateCancellationCommission newFareParams mbFarePolicy
   let currentDiscount = ride.discountAmount
   rawDiscountAmount <-
     if isJust currentDiscount && newEstimatedFare /= booking.estimatedFare
@@ -257,7 +262,7 @@ recomputeRideFinancialsForFareUpdate booking ride newFareParamsId newEstimatedFa
             pure currentDiscount
       else pure currentDiscount
   let newDiscount = FC.clampDiscountToDiscountable newFareParams rawDiscountAmount
-  QRide.updateCommissionAndDiscount newCommission newDiscount ride.id
+  QRide.updateCommissionAndDiscount newCommission newCancellationCommission newDiscount ride.id
 
 releaseLien ::
   ( Finance.HasActorInfo m r,
@@ -462,8 +467,9 @@ buildRide ::
   Maybe Bool ->
   Maybe (Id Person) ->
   Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   Flow DRide.Ride
-buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide mFleetOwnerId commission = do
+buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   envCloudType <- asks (.cloudType)
@@ -564,6 +570,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         isPickupOrDestinationEdited = Just False,
         isInsured = booking.isInsured,
         commission = commission,
+        cancellationCommission = cancellationCommission,
         discountAmount = booking.discountAmount,
         driverGpsTurnedOff = Nothing,
         insuredAmount = booking.insuredAmount,

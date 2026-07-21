@@ -32,6 +32,8 @@ library
       ConfigPilotFrontend.Types
       Email.OTP.API
       Email.OTP.Types
+      FileManagement.Common.UI.File
+      FileManagement.Domain.Action.UI.File
       IssueManagement.API.Beckn.Issue
       IssueManagement.API.UI.Issue
       IssueManagement.Beckn.ACL.IGM.Utils

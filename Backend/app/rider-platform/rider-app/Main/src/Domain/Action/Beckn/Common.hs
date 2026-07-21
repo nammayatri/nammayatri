@@ -353,6 +353,8 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
       (toLocation, stops) = case booking.bookingDetails of
         DRB.OneWayDetails details -> (Just details.toLocation, details.stops)
         DRB.RentalDetails _ -> (Nothing, [])
+        -- EasyBooking is destination-less like Rental: no toLocation, no stops.
+        DRB.EasyBookingDetails _ -> (Nothing, [])
         DRB.DriverOfferDetails details -> (Just details.toLocation, details.stops)
         DRB.OneWaySpecialZoneDetails details -> (Just details.toLocation, details.stops)
         DRB.InterCityDetails details -> (Just details.toLocation, [])
@@ -1005,12 +1007,17 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           cashLedgerInfo.offerDiscountAmount
           cashLedgerInfo.cashbackPayoutAmount
           cashLedgerInfo.rideVatAbsorbedOnDiscount
-          0 -- cancellationCharge (not applicable at ride-end)
-          0 -- cancellationTax
-      unless (null upsertRes.coreEntryIds) $ do
-        settleResult <- RidePaymentFinance.settleRidePaymentLedger cashLedgerCtx upsertRes.coreEntryIds RidePaymentFinance.settledReasonRidePayment
+          cashLedgerInfo.cancellationCharge
+          cashLedgerInfo.cancellationTax
+      -- Cash settles the ids given to it, where the online capture re-queries every unsettled entry
+      -- on the ride. So the carried cancellation entries must be listed here or they stay PENDING.
+      let settleableIds = upsertRes.coreEntryIds <> upsertRes.cancellationEntryIds
+      unless (null settleableIds) $ do
+        settleResult <- RidePaymentFinance.settleRidePaymentLedger cashLedgerCtx settleableIds RidePaymentFinance.settledReasonRidePayment
         case settleResult of
-          Right () -> logInfo $ "Cash ride BAP ledger settled for ride: " <> ride.id.getId <> " invoiceId=" <> show upsertRes.invoiceId
+          Right () -> do
+            RidePaymentFinance.markRideInvoicePaid ride.id.getId
+            logInfo $ "Cash ride BAP ledger settled for ride: " <> ride.id.getId <> " invoiceId=" <> show upsertRes.invoiceId
           Left err -> logError $ "Cash ride settle failed: " <> show err
     else do
       -- Online Ride End branch → isOnline=True.
@@ -1936,6 +1943,8 @@ createRecentLocationForTaxi booking = do
   let mbToLocation = case booking.bookingDetails of
         DRB.OneWayDetails details -> Just details.toLocation
         DRB.RentalDetails _ -> Nothing
+        -- No recent-location entry for EasyBooking either — no destination to record.
+        DRB.EasyBookingDetails _ -> Nothing
         DRB.DriverOfferDetails details -> Just details.toLocation
         DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
         DRB.InterCityDetails details -> Just details.toLocation

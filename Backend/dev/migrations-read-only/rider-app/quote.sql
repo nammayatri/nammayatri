@@ -145,3 +145,9 @@ ALTER TABLE atlas_app.quote ADD COLUMN fare_settlement_type text ;
 
 ALTER TABLE atlas_app.quote ADD COLUMN area text ;
 ALTER TABLE atlas_app.quote ADD COLUMN vehicle_service_tier_luggage_capacity integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.quote ADD COLUMN navigation_instruction text ;

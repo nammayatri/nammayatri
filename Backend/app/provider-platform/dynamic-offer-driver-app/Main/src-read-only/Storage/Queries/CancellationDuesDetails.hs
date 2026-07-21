@@ -41,7 +41,13 @@ updateByPrimaryKey (Domain.Types.CancellationDuesDetails.CancellationDuesDetails
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.cancellationAmount cancellationAmount,
+      Se.Set Beam.cancellationCommission cancellationCommission,
+      Se.Set Beam.cancellationFee cancellationFee,
+      Se.Set Beam.cancellationFeeTax cancellationFeeTax,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
+      Se.Set Beam.overdueCancellationCharge overdueCancellationCharge,
+      Se.Set Beam.overdueCancellationCommission overdueCancellationCommission,
+      Se.Set Beam.overdueCancellationTax overdueCancellationTax,
       Se.Set Beam.paymentStatus paymentStatus,
       Se.Set Beam.rideId (Kernel.Types.Id.getId rideId),
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),

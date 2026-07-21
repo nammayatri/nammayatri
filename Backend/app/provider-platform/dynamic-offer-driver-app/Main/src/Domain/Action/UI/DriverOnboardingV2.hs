@@ -22,6 +22,7 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Types.AadhaarCard
 import Domain.Types.BackgroundVerification
 import Domain.Types.Common
+import qualified Domain.Types.CommonDocumentData as DCommonDocData
 import qualified Domain.Types.CommonDriverOnboardingDocuments
 import qualified Domain.Types.DigilockerVerification as DDV
 import qualified Domain.Types.DocStatus as DocStatus
@@ -288,7 +289,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
         booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound $ "Booking not found for ride booking id:" <> ride.bookingId.getId)
         pure (ride.tripCategory, Just $ LatLong booking.fromLocation.lat booking.fromLocation.lon, Just booking.vehicleServiceTier)
       else pure (Nothing, Nothing, Nothing)
-  serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction False (Just driverInfo) Nothing Nothing Nothing personId merchantOperatingCityId
+  serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) Nothing Nothing Nothing personId merchantOperatingCityId
   let driverVehicleServiceTierTypes = (.serviceTierType) . fst <$> serviceTiers
   let mbServiceTierType' = mbServiceTierType <|> mbVehicleServiceType
   let tripCategory = fromMaybe (OneWay OneWayOnDemandDynamicOffer) (mbTripCategoryQuery <|> mbTripCategory)
@@ -432,7 +433,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
   let cityVehicleServiceTiers = map (CQVST.applySpecialZoneName mbSpecialLocationId) baseCityVehicleServiceTiers
   let personLanguage = fromMaybe ENGLISH person.language
 
-  driverVehicleServiceTierTypes <- fetchVehicleTierForDriverWithUsageRestriction False (Just driverInfo) (Just vehicle) Nothing (Just cityVehicleServiceTiers) personId merchantOpCityId
+  driverVehicleServiceTierTypes <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) (Just vehicle) Nothing (Just cityVehicleServiceTiers) personId merchantOpCityId
   let serviceTierACThresholds = map (\(VehicleServiceTier {..}, _) -> airConditionedThreshold) driverVehicleServiceTierTypes
   let isACCheckEnabledForCity = any isJust serviceTierACThresholds
   let isACAllowedForDriver = SDO.checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
@@ -533,15 +534,15 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
   driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
 
-  driverVehicleServiceTierTypes <- fetchVehicleTierForDriverWithUsageRestriction False (Just driverInfo) (Just vehicle) Nothing (Just cityVehicleServiceTiers) personId merchantOperatingCityId
+  driverVehicleServiceTierTypes <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) (Just vehicle) Nothing (Just cityVehicleServiceTiers) personId merchantOperatingCityId
   mbSelectedServiceTiers <-
-    driverVehicleServiceTierTypes `forM` \(driverServiceTier, _) -> do
+    driverVehicleServiceTierTypes `forM` \(driverServiceTier, isUsageRestricted) -> do
       let isAlreadySelected = driverServiceTier.serviceTierType `elem` vehicle.selectedServiceTiers
           isDefault = vehicle.variant `elem` driverServiceTier.defaultForVehicleVariant
           mbServiceTierDriverRequest = find (\tier -> tier.serviceTierType == driverServiceTier.serviceTierType) tiers
           isSelected = maybe isAlreadySelected (.isSelected) mbServiceTierDriverRequest
 
-      if isSelected || (isDefault && (vehicle.category /= Just DVC.AMBULANCE)) -- Suppressing isDefault check for Ambulance
+      if not isUsageRestricted && (isSelected || (isDefault && (vehicle.category /= Just DVC.AMBULANCE))) -- Suppressing isDefault check for Ambulance
         then return $ Just driverServiceTier
         else return Nothing
   let selectedServiceTierTypes = map (.serviceTierType) $ catMaybes mbSelectedServiceTiers
@@ -1303,13 +1304,14 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
     buildCommonDocument driverId = do
       id <- generateGUID
       now <- getCurrentTime
+      typedDocumentData <- either (throwError . InvalidRequest) pure (DCommonDocData.parseCommonDocumentDataByType documentType documentData)
       return $
         Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments
           { id = id,
             documentImageId = imageId,
             driverId = Just driverId,
             documentType = documentType,
-            documentData = documentData,
+            documentData = typedDocumentData,
             rejectReason = Nothing,
             verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
             merchantOperatingCityId = merchantOperatingCityId,

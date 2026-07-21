@@ -44,6 +44,7 @@ library
       API.Dashboard.Fleet
       API.Dashboard.Fleet.Registration
       API.External.LiveEKD
+      API.FleetEngineToken
       API.IGM
       API.Internal
       API.Internal.Auth
@@ -313,8 +314,10 @@ library
       Domain.Action.UI.Faq
       Domain.Action.UI.FareCalculator
       Domain.Action.UI.FeedbackForm
+      Domain.Action.UI.File
       Domain.Action.UI.FinanceInvoice
       Domain.Action.UI.FleetDriverAssociation
+      Domain.Action.UI.FleetEngineToken
       Domain.Action.UI.FleetOwnerList
       Domain.Action.UI.FRFSFleetOperator
       Domain.Action.UI.Insurance
@@ -390,10 +393,12 @@ library
       Domain.Types.Coins.CoinHistory
       Domain.Types.Coins.CoinsConfig
       Domain.Types.Common
+      Domain.Types.CommonDocumentData
       Domain.Types.DeliveryDetails
       Domain.Types.DeliveryPersonDetails
       Domain.Types.DocStatus
       Domain.Types.DocsVerificationStatus
+      Domain.Types.DocumentOnboardingStage
       Domain.Types.Driver.DriverInformation
       Domain.Types.DriverFlowStatus
       Domain.Types.DriverLocation
@@ -554,6 +559,7 @@ library
       SharedLogic.Finance.SubscriptionPurchase
       SharedLogic.Finance.Wallet
       SharedLogic.Fleet
+      SharedLogic.FleetEngine
       SharedLogic.FleetOperatorStats
       SharedLogic.FleetVehicleStats
       SharedLogic.GoogleMaps
@@ -1033,8 +1039,8 @@ library
       API.Action.UI.CallFeedback
       API.Action.UI.CancellationReasonLookup
       API.Action.UI.DemandHotspots
-      API.Action.UI.DriverIncentiveCoins
       API.Action.UI.DriverDocument
+      API.Action.UI.DriverIncentiveCoins
       API.Action.UI.DriverOnboardingV2
       API.Action.UI.DriverProfile
       API.Action.UI.DriverProfileQuestions
@@ -1043,6 +1049,7 @@ library
       API.Action.UI.EditBooking
       API.Action.UI.Faq
       API.Action.UI.FareCalculator
+      API.Action.UI.File
       API.Action.UI.FinanceInvoice
       API.Action.UI.FleetOwnerList
       API.Action.UI.FRFSFleetOperator

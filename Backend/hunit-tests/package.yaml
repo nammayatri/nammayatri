@@ -88,6 +88,7 @@ library:
   source-dirs: src
   exposed-modules:
     - Dashboard
+    - FileManagementUnitTests
   other-modules:
     - RegistrationUnitTests
     - VehicleAssociationUnitTests

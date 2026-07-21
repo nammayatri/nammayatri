@@ -20,7 +20,8 @@ data RouteInfo = RouteInfo
     distance :: Maybe Meters,
     distanceWithUnit :: Maybe Distance,
     points :: Maybe [LatLong],
-    routeToken :: Maybe Text
+    routeToken :: Maybe Text,
+    trafficSegments :: Maybe [Maps.RouteTrafficSegment]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

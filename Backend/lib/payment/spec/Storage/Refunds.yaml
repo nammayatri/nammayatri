@@ -24,6 +24,7 @@ Refunds:
     updatedAt : UTCTime
     isApiCallSuccess: Maybe Bool
     arn: Maybe Text
+    referenceType: Maybe Text
     completedAt: Maybe UTCTime
     actualRefundedAmount: Maybe HighPrecMoney
 
@@ -55,7 +56,7 @@ Refunds:
       where: id
     updateRefundsEntryByStripeResponse:
       kvFunction: updateWithKV
-      params: [idAssignedByServiceProvider, errorCode, status, isApiCallSuccess, completedAt, actualRefundedAmount]
+      params: [idAssignedByServiceProvider, errorCode, status, arn, referenceType, isApiCallSuccess, completedAt, actualRefundedAmount]
       where: id
     updateIsApiCallSuccess:
       kvFunction: updateWithKV

@@ -2112,6 +2112,7 @@ types:
     - address: Maybe Text
     - addressState: Maybe IndianState
     - addressDocumentType: Maybe AddressDocumentType
+    - approved: Maybe Bool
     - derive: "'HideSecrets"
   FleetConfig:
     - allowAutomaticRoundTripAssignment: Bool

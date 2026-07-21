@@ -44,7 +44,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified SharedLogic.Analytics as Analytics
-import SharedLogic.VehicleServiceTier (fetchVehicleTierForDriverWithUsageRestriction)
+import SharedLogic.VehicleServiceTier (ServiceTierFilterMode (..), fetchVehicleTierForDriverWithUsageRestriction)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -171,7 +171,7 @@ syncServiceTiersOnRatingChange ::
   m ()
 syncServiceTiersOnRatingChange driverStats newRating personId merchantOpCityId = do
   let updatedDriverStats = driverStats {DDriverStats.rating = newRating}
-  tierResults <- fetchVehicleTierForDriverWithUsageRestriction True Nothing Nothing (Just updatedDriverStats) Nothing personId merchantOpCityId
+  tierResults <- fetchVehicleTierForDriverWithUsageRestriction SelectedServiceTiers Nothing Nothing (Just updatedDriverStats) Nothing personId merchantOpCityId
   let newTiers = (.serviceTierType) . fst <$> filter (not . snd) tierResults
   QVehicle.updateSelectedServiceTiers newTiers personId
 

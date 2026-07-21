@@ -315,6 +315,8 @@ confirm DConfirmReq {..} = do
       DQuote.OneWaySpecialZoneDetails details -> pure (details.quoteId, Nothing)
       DQuote.InterCityDetails details -> pure (details.id.getId, Nothing)
       DQuote.MeterRideDetails details -> pure (details.quoteId, Nothing)
+      -- EasyBookingDetails reuses RentalDetails's shape, so `.id` is the bpp quote id, same as Rental above.
+      DQuote.EasyBookingDetails details -> pure (details.id.getId, Nothing)
 
     getBppQuoteIdFromDriverOffer driverOffer now = do
       estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
@@ -500,6 +502,8 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
       DQuote.OneWaySpecialZoneDetails _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails
       DQuote.InterCityDetails _ -> DRB.InterCityDetails <$> buildInterCityDetails
       DQuote.MeterRideDetails _ -> DRB.MeterRideDetails <$> buildMeterRideDetails
+      -- Same RentalBookingDetails shape as Rental (line above) — EasyBooking has no separate table.
+      DQuote.EasyBookingDetails _ -> pure $ DRB.EasyBookingDetails (DRB.RentalBookingDetails {stopLocation = mbToLoc, ..})
 
     buildInterCityDetails = do
       -- we need to throw errors here because of some redundancy of our domain model

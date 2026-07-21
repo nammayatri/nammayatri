@@ -71,6 +71,7 @@ import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Action.UI.ReferralPayout as ReferralPayout
 import qualified Domain.Types.AadhaarCard as DAadhaar
 import qualified Domain.Types.BusinessLicense as DBL
+import qualified Domain.Types.CommonDocumentData as DCommonDocData
 import qualified Domain.Types.CommonDriverOnboardingDocuments as DCommonDoc
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DVC
@@ -250,9 +251,9 @@ validateInvoiceEntry entry = do
 
   pure (invoiceErrors <> taxErrors)
 
-extractInvoiceIds :: Text -> [Text]
+extractInvoiceIds :: DCommonDocData.CommonDocumentData -> [Text]
 extractInvoiceIds docData =
-  case A.eitherDecode (BSL.fromStrict $ TE.encodeUtf8 docData) of
+  case A.eitherDecode (BSL.fromStrict $ TE.encodeUtf8 $ DCommonDocData.renderCommonDocumentData docData) of
     Right tdsData -> map (.invoiceId) (tdsData :: API.Types.UI.DriverOnboardingV2.TDSCertificateData).tdsCertificates
     Left _ -> []
 
@@ -384,7 +385,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
       Common.CommonDocumentItem
         { documentId = cast doc.id,
           documentType = SDO.castDocumentType doc.documentType,
-          documentData = doc.documentData,
+          documentData = DCommonDocData.renderCommonDocumentData doc.documentData,
           verificationStatus = DCommon.castVerificationStatus doc.verificationStatus,
           rejectReason = doc.rejectReason,
           documentImageId = getId <$> doc.documentImageId,
@@ -450,7 +451,7 @@ getDriverRegistrationCommonDocumentsList merchantShortId opCity mbLimit mbOffset
         { documentId = cast doc.id,
           driverId = (.getId) <$> doc.driverId,
           documentType = SDO.castDocumentType doc.documentType,
-          documentData = doc.documentData,
+          documentData = DCommonDocData.renderCommonDocumentData doc.documentData,
           verificationStatus = DCommon.castVerificationStatus doc.verificationStatus,
           rejectReason = doc.rejectReason,
           documentImageId = (.getId) <$> doc.documentImageId,
@@ -666,13 +667,14 @@ postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.Com
   let createDocumentEntry = do
         documentId <- generateGUID
         now <- getCurrentTime
+        typedDocumentData <- either (throwError . InvalidRequest) pure (DCommonDocData.parseCommonDocumentDataByType (mapDocumentType documentType) documentData)
         let documentEntry =
               DCommonDoc.CommonDriverOnboardingDocuments
                 { id = documentId,
                   documentImageId = cast <$> imageId,
                   documentType = mapDocumentType documentType,
                   driverId = Just driverPersonId,
-                  documentData = documentData,
+                  documentData = typedDocumentData,
                   rejectReason = Nothing,
                   verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
                   merchantOperatingCityId = merchantOpCityId,
@@ -1989,9 +1991,11 @@ approveAndUpdateCommonDocument req _mId _mOpCityId = do
   document <- mbDocument & fromMaybeM (DocumentNotFound documentId.getId)
 
   -- Update document with new data if provided, otherwise just update verification status
-  let updatedDocument = case req.updatedDocumentData of
-        Just newData -> document {DCommonDoc.documentData = newData, DCommonDoc.verificationStatus = VALID}
-        Nothing -> document {DCommonDoc.verificationStatus = VALID}
+  updatedDocument <- case req.updatedDocumentData of
+    Just newData -> do
+      typedDocumentData <- either (throwError . InvalidRequest) pure (DCommonDocData.parseCommonDocumentDataByType document.documentType newData)
+      pure document {DCommonDoc.documentData = typedDocumentData, DCommonDoc.verificationStatus = VALID}
+    Nothing -> pure document {DCommonDoc.verificationStatus = VALID}
 
   QCommonDriverOnboardingDocuments.updateByPrimaryKey updatedDocument
   -- Keep image and common-doc statuses in sync for common document approvals.
@@ -2013,9 +2017,9 @@ approveAndUpdateCommonDocument req _mId _mOpCityId = do
         QFOIE.updateVatNumberById mbIdentifier personId
       _ -> pure ()
   where
-    extractIdentifierFromDocData :: Text -> Maybe Text
+    extractIdentifierFromDocData :: DCommonDocData.CommonDocumentData -> Maybe Text
     extractIdentifierFromDocData docData = do
-      let parsed = A.decode (BSL.fromStrict (TE.encodeUtf8 docData)) :: Maybe A.Object
+      let parsed = A.decode (BSL.fromStrict (TE.encodeUtf8 (DCommonDocData.renderCommonDocumentData docData))) :: Maybe A.Object
       parsed >>= DAKM.lookup (DAK.fromText "identifierNumber") >>= \case
         A.String s -> if T.null s then Nothing else Just s
         _ -> Nothing
