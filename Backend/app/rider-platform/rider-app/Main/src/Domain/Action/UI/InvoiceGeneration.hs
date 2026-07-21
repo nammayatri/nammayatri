@@ -31,6 +31,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow)
 import qualified SharedLogic.Booking as SB
 import qualified SharedLogic.Type as SLT
@@ -79,6 +80,7 @@ generateInvoice ::
     ServiceFlow m r,
     ClickhouseFlow m r,
     BeamFlow m r,
+    PaymentBeamFlow.BeamFlow m r,
     HasField "emailServiceConfig" r Email.EmailServiceConfig
   ) =>
   (Id DP.Person, Id DM.Merchant) ->
