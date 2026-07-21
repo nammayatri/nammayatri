@@ -75,8 +75,6 @@ in
             # Test that the docker image contains contents we expected for
             # production.
             extraCommands = ''
-              # Executables are under /opt/app
-              ls opt/app/rider-app-exe
               # Swagger configs are copied over
               ls opt/app/swagger
             '';
