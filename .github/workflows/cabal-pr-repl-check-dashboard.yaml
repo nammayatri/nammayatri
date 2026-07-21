@@ -40,8 +40,25 @@ jobs:
       - name: Check minio-pushed tag for merge base
         id: artifact-check
         run: |
-          echo "found=true" >> $GITHUB_OUTPUT
-          echo "base_sha=6be008032ba9045a84f20e0d6d13e956a46eadcb" >> $GITHUB_OUTPUT
+          git fetch origin --tags
+          BASE_SHA="${{ steps.merge-base.outputs.sha }}"
+          FOUND_SHA=""
+          for sha in $(git log --format='%H' "$BASE_SHA" | head -20); do
+            if git tag --list "minio-pushed/$sha" | grep -q .; then
+              if mc stat "minio/haskell-cache/cabal-repl/$sha/dashboard-check.tar.zst" > /dev/null 2>&1; then
+                FOUND_SHA="$sha"
+                break
+              fi
+            fi
+          done
+          if [ -n "$FOUND_SHA" ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "base_sha=$FOUND_SHA" >> $GITHUB_OUTPUT
+            echo "Using artifact SHA: $FOUND_SHA"
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+            echo "No minio-pushed artifact found for merge base ancestors"
+          fi
 
       - name: Download repl artifacts from MinIO
         if: steps.artifact-check.outputs.found == 'true'
