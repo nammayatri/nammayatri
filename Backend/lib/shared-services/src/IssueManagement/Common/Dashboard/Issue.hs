@@ -464,6 +464,7 @@ data IssueReportReqV2 = IssueReportReqV2
     rideId :: Maybe (Id Ride),
     ticketBookingId :: Maybe (Id FRFSTicketBooking),
     personId :: Id Common.Person,
+    categoryId :: Maybe (Id IssueCategory),
     mediaFiles :: [Text],
     chats :: [Text],
     issueReportType :: Maybe IssueReportType,
