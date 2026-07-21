@@ -19,8 +19,7 @@ module Utils.Common.Events where
 
 -- import Data.List (lookup)
 
-import qualified Control.Concurrent as TD
-import Control.Concurrent.Async
+import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.UUID.V4 (nextRandom)
 import qualified EulerHS.Runtime as R
 import Kernel.Prelude hiding (app)
@@ -30,18 +29,24 @@ import Kernel.Utils.IOLogging (HasLog)
 import Network.Wai
 import qualified Network.Wai as Wai
 import qualified Network.Wai.Internal as NWI
+import qualified System.Timeout as Timeout
 
 timeoutEvent :: HasLog env => R.FlowRuntime -> env -> NWI.Response -> Int -> Middleware
 timeoutEvent flowRt appEnv timeoutResponse seconds app req respond = do
-  result <- race (app req respond) (TD.threadDelay (seconds * 1000000))
+  receivedRef <- newIORef Nothing
+  let respond' res = do
+        received <- respond res
+        writeIORef receivedRef (Just received)
+        pure received
+  result <- Timeout.timeout (seconds * 1000000) (app req respond')
   case result of
-    Left response -> pure response
-    Right _ -> do
+    Just received -> pure received
+    Nothing -> do
       requestId <- getRequestId $ Wai.requestHeaders req
       let path = Wai.rawPathInfo req
           query = Wai.rawQueryString req
       runFlowR flowRt appEnv $ timeoutLog requestId path query
-      respond timeoutResponse
+      readIORef receivedRef >>= maybe (respond timeoutResponse) pure
   where
     getRequestId headers = do
       let value = lookup "x-request-id" headers
