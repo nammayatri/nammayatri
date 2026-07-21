@@ -223,6 +223,8 @@ getDoMultimodalSearch = \case
   DSearch.DeliverySearch DSearch.OneWaySearchReq {doMultimodalSearch} -> doMultimodalSearch
   DSearch.PTSearch DSearch.PublicTransportSearchReq {doMultimodalSearch} -> doMultimodalSearch
   DSearch.FixedRouteSearch DSearch.FixedRouteSearchReq {doMultimodalSearch} -> doMultimodalSearch
+  -- EasyBooking has no multimodal search concept (destination-less, single-tier only).
+  DSearch.EasyBookingSearch DSearch.EasyBookingSearchReq {} -> Nothing
 
 search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Maybe Bool -> FlowHandler SearchResp
 search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch = withFlowHandlerAPIPersonId personId $ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch

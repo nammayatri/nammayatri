@@ -93,6 +93,7 @@ instance ToTType' BeamQSZ.QuoteSpecialZone Quote where
         BeamQSZ.isBlockedRoute = isBlockedRoute,
         BeamQSZ.tollNames = tollNames,
         BeamQSZ.area = area,
+        BeamQSZ.navigationInstruction = navigationInstruction,
         BeamQSZ.farePolicyId = getId . (.id) <$> farePolicy,
         BeamQSZ.merchantOperatingCityId = getId <$> merchantOperatingCityId
       }

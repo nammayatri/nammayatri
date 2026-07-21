@@ -58,7 +58,7 @@ data SearchRes = SearchRes
     riderGender :: Maybe Text
   }
 
-data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq | InterCitySearch InterCitySearchReq | AmbulanceSearch OneWaySearchReq | DeliverySearch OneWaySearchReq | PTSearch PublicTransportSearchReq | FixedRouteSearch FixedRouteSearchReq
+data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq | InterCitySearch InterCitySearchReq | AmbulanceSearch OneWaySearchReq | DeliverySearch OneWaySearchReq | PTSearch PublicTransportSearchReq | FixedRouteSearch FixedRouteSearchReq | EasyBookingSearch EasyBookingSearchReq
   deriving (Generic, Show)
 
 instance ToJSON SearchReq where
@@ -92,6 +92,7 @@ fareProductConstructorModifier = \case
   "AmbulanceSearch" -> "AMBULANCE"
   "DeliverySearch" -> "DELIVERY"
   "FixedRouteSearch" -> "FIXED_ROUTE"
+  "EasyBookingSearch" -> "EASY_BOOKING"
   x -> x
 
 data OneWaySearchReq = OneWaySearchReq
@@ -157,6 +158,20 @@ data RentalSearchReq = RentalSearchReq
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
     numberOfLuggages :: Maybe Int,
     doMultimodalSearch :: Maybe Bool
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+-- Destination-less and estimate-less by design: EasyBooking shows only a base-fare quote
+-- at search time (no estimatedDistance/estimatedDuration to give), with the real fare
+-- recalculated from actual GPS distance at end-ride via the regular Progressive fare policy.
+data EasyBookingSearchReq = EasyBookingSearchReq
+  { origin :: SearchReqLocation,
+    startTime :: UTCTime,
+    isSourceManuallyMoved :: Maybe Bool,
+    isSpecialLocation :: Maybe Bool,
+    quotesUnifiedFlow :: Maybe Bool,
+    isReallocationEnabled :: Maybe Bool,
+    numberOfLuggages :: Maybe Int
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

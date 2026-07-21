@@ -26,17 +26,17 @@ create = createWithKV
 createMany :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Yudhishthira.Types.AppDynamicLogicElement.AppDynamicLogicElement] -> m ())
 createMany = traverse_ create
 
-findByDomain :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.AppDynamicLogicElement.AppDynamicLogicElement])
+findByDomain :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.LogicDomain -> m ([Lib.Yudhishthira.Types.AppDynamicLogicElement.AppDynamicLogicElement]))
 findByDomain domain = do findAllWithKV [Se.Is Beam.domain $ Se.Eq domain]
 
 findByDomainAndVersion ::
   (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Maybe Int -> Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> Kernel.Prelude.Int -> m [Lib.Yudhishthira.Types.AppDynamicLogicElement.AppDynamicLogicElement])
+  (Maybe Int -> Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> Kernel.Prelude.Int -> m ([Lib.Yudhishthira.Types.AppDynamicLogicElement.AppDynamicLogicElement]))
 findByDomainAndVersion limit offset domain version = do findAllWithOptionsKV [Se.And [Se.Is Beam.domain $ Se.Eq domain, Se.Is Beam.version $ Se.Eq version]] (Se.Asc Beam.order) limit offset
 
 findLatestVersion ::
   (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Maybe Int -> Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.AppDynamicLogicElement.AppDynamicLogicElement])
+  (Maybe Int -> Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> m ([Lib.Yudhishthira.Types.AppDynamicLogicElement.AppDynamicLogicElement]))
 findLatestVersion limit offset domain = do findAllWithOptionsKV [Se.Is Beam.domain $ Se.Eq domain] (Se.Desc Beam.version) limit offset
 
 findByPrimaryKey ::
@@ -49,9 +49,9 @@ updateByPrimaryKey (Lib.Yudhishthira.Types.AppDynamicLogicElement.AppDynamicLogi
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.description description,
-      Se.Set Beam.logic ((Data.String.Conversions.cs . Data.Aeson.encode) logic),
+      Se.Set Beam.logic (((Data.String.Conversions.cs . Data.Aeson.encode)) logic),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.patchedElement (fmap (Data.String.Conversions.cs . Data.Aeson.encode) patchedElement),
+      Se.Set Beam.patchedElement ((fmap (Data.String.Conversions.cs . Data.Aeson.encode)) patchedElement),
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.domain $ Se.Eq domain, Se.Is Beam.order $ Se.Eq order, Se.Is Beam.version $ Se.Eq version]]

@@ -15,10 +15,10 @@ import {
   remoteSessions,
   remoteSyncCaddyPort,
   remoteCabalClean,
-  fetchMachines,
+  resolveDevbox,
   setupSsh,
   RemoteTarget,
-  MachineInfo,
+  DevboxAssignment,
 } from '../services/remote';
 import './RemoteStackPanel.css';
 
@@ -40,6 +40,9 @@ const DEFAULT_REMOTE_DIR = '/tmp/nammayatri';
 // local-api as the first line of the session, so users see what runs.
 const DEFAULT_COMMAND = 'cd Backend && nix develop .#backend -c , run-mobility-stack-dev';
 const FORM_STORAGE_KEY = 'ny.remoteStack.target';
+const MODE_STORAGE_KEY = 'ny.remoteStack.mode';
+
+type RunMode = 'local' | 'devbox';
 
 const loadStoredTarget = (): RemoteTarget => {
   try {
@@ -49,6 +52,19 @@ const loadStoredTarget = (): RemoteTarget => {
     /* ignore */
   }
   return defaultTarget();
+};
+
+const loadStoredMode = (): RunMode => {
+  try {
+    const raw = window.localStorage.getItem(MODE_STORAGE_KEY);
+    if (raw === 'local' || raw === 'devbox') return raw;
+    // Migration from the old 5-field form: a stored remote host means devbox.
+    const t = loadStoredTarget();
+    if (t.host && !['localhost', '127.0.0.1', '::1'].includes(t.host.trim())) return 'devbox';
+  } catch {
+    /* ignore */
+  }
+  return 'local';
 };
 
 const defaultTarget = (): RemoteTarget => ({
@@ -67,67 +83,86 @@ export const RemoteStackPanel: React.FC = () => {
   const [state, setState] = useState<PanelState>({});
   const [busy, setBusy] = useState<'deploy' | 'start' | 'stop' | 'clear-data' | 'cabal-clean' | null>(null);
   const [override] = useState<string | null>(getContextApiBaseOverride());
-  const [machines, setMachines] = useState<MachineInfo[]>([]);
-  const [selectedMachine, setSelectedMachine] = useState<string>('localhost');
+  const [mode, setMode] = useState<RunMode>(loadStoredMode);
+  const [devbox, setDevbox] = useState<DevboxAssignment | null>(null);
+  const [devboxErr, setDevboxErr] = useState<string | null>(null);
+  const [resolving, setResolving] = useState(false);
   const [sshStatus, setSshStatus] = useState<{ ok: boolean; message?: string } | null>(null);
 
   const isLocalhost = !target.host || ['localhost', '127.0.0.1', '::1'].includes(target.host.trim());
   const hasDevName = isLocalhost || !!target.devName?.trim();
+  // In Dev-Box mode nothing may run until an assignment is resolved —
+  // otherwise a stale localStorage target could be deployed to.
+  const devboxNotReady = mode === 'devbox' && (resolving || !devbox);
 
-  // Fetch available machines from ServiceDiscovery API
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
+  // Apply a resolved devbox assignment to the deploy target and verify SSH.
+  const applyAssignment = async (a: DevboxAssignment) => {
+    setDevbox(a);
+    setTarget({
+      host: a.host || '',
+      user: a.sshUser || '',
+      port: a.port || 22,
+      identityFile: '',
+      devName: a.id || '',
+      remoteDir: a.remoteDir || DEFAULT_REMOTE_DIR,
+      copyMode: 'rsync',
+      command: DEFAULT_COMMAND,
+    });
+    if (a.host && a.sshUser) {
       try {
-        const res = await fetchMachines();
-        if (cancelled || !res.machines) return;
-        setMachines(res.machines);
-        // If current host matches a machine, select it
-        const match = res.machines.find(
-          m => m.bestIp === target.host || m.localIp === target.host || m.awsIp === target.host
-        );
-        if (match) {
-          setSelectedMachine(match.name);
-          // Sync user and host from ServiceDiscovery (overrides stale localStorage values)
-          setTarget(prev => ({ ...prev, host: match.bestIp, user: match.user }));
-          // Run SSH check for auto-selected remote machine
-          try {
-            const sshRes = await setupSsh(match.bestIp, match.user, target.port);
-            if (!cancelled) {
-              setSshStatus(sshRes.status === 'ok'
-                ? { ok: true, message: sshRes.message }
-                : { ok: false, message: sshRes.message });
-            }
-          } catch (e) {
-            if (!cancelled) setSshStatus({ ok: false, message: `SSH check failed: ${e}` });
-          }
-        }
-      } catch { /* ServiceDiscovery unavailable */ }
-    })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const onMachineSelect = async (value: string) => {
-    setSelectedMachine(value);
-    setSshStatus(null);
-    if (value === 'localhost') {
-      setTarget(prev => ({ ...prev, host: 'localhost', user: '' }));
-    } else {
-      const m = machines.find(m => m.name === value);
-      if (m) {
-        setTarget(prev => ({ ...prev, host: m.bestIp, user: m.user }));
-        try {
-          const res = await setupSsh(m.bestIp, m.user, target.port);
-          if (res.status === 'ok') {
-            setSshStatus({ ok: true, message: res.message });
-          } else {
-            setSshStatus({ ok: false, message: res.message });
-          }
-        } catch (e) {
-          setSshStatus({ ok: false, message: `SSH check failed: ${e}` });
-        }
+        const res = await setupSsh(a.host, a.sshUser, a.port || 22);
+        setSshStatus(res.status === 'ok'
+          ? { ok: true, message: res.message }
+          : { ok: false, message: res.message });
+      } catch (e) {
+        setSshStatus({ ok: false, message: `SSH check failed: ${e}` });
       }
+    }
+  };
+
+  // Resolve the devbox assignment (auto-picks lowest-RAM machine on first use;
+  // afterwards reuses the pin from .devbox-id.json at the repo root).
+  const resolveAssignment = async (forceNew = false) => {
+    setResolving(true);
+    setDevboxErr(null);
+    setSshStatus(null);
+    try {
+      const a = await resolveDevbox(forceNew);
+      if (a.error || !a.host || !a.id) {
+        setDevbox(null);
+        setDevboxErr(a.error || 'devbox resolution returned no machine');
+      } else {
+        await applyAssignment(a);
+      }
+    } catch (e) {
+      setDevbox(null);
+      setDevboxErr(`devbox resolution failed: ${e}`);
+    } finally {
+      setResolving(false);
+    }
+  };
+
+  // Mode switch: Local uses this machine directly (no SSH/rsync); Dev-Box
+  // resolves the pinned/auto-assigned fleet machine.
+  useEffect(() => {
+    try { window.localStorage.setItem(MODE_STORAGE_KEY, mode); } catch { /* ignore */ }
+    if (mode === 'local') {
+      setDevbox(null);
+      setDevboxErr(null);
+      setSshStatus(null);
+      setTarget(defaultTarget());
+    } else {
+      resolveAssignment(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
+
+  const onReassign = () => {
+    if (window.confirm(
+      'Re-assign this checkout to the currently least-loaded dev-box?\n' +
+      'A new developer id is generated — any state under the old remote dir is left behind.'
+    )) {
+      resolveAssignment(true);
     }
   };
 
@@ -225,19 +260,6 @@ export const RemoteStackPanel: React.FC = () => {
         : { ...prev, status: `Cabal clean exited (code ${code}).` },
     ),
   );
-
-  const update = (k: keyof RemoteTarget, v: string | number) => {
-    setTarget(prev => {
-      const next = { ...prev, [k]: v };
-      // Auto-derive remoteDir from devName.
-      if (k === 'devName' && typeof v === 'string') {
-        const name = v.trim().toLowerCase();
-        next.devName = name;
-        next.remoteDir = name ? `/tmp/${name}/nammayatri` : DEFAULT_REMOTE_DIR;
-      }
-      return next;
-    });
-  };
 
   const onDeploy = async () => {
     setBusy('deploy');
@@ -339,20 +361,27 @@ export const RemoteStackPanel: React.FC = () => {
     }
   };
 
-  const onSyncCaddyPort = async () => {
-    if (!target.devName?.trim() || isLocalhost) return;
-    try {
-      const res = await remoteSyncCaddyPort(target);
-      if (res.caddyPort != null) {
-        setState(prev => ({ ...prev, caddyPort: res.caddyPort }));
-      } else if (res.error) {
-        setState(prev => ({ ...prev, error: res.error }));
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setState(prev => ({ ...prev, error: `Caddy port sync failed: ${msg}` }));
-    }
-  };
+  useEffect(() => {
+    if (!state.startSession || isLocalhost || !target.devName?.trim()) return;
+    let cancelled = false;
+    let attempts = 0;
+    let iv: number | undefined;
+    const stop = () => { if (iv != null) { window.clearInterval(iv); iv = undefined; } };
+    const tick = async () => {
+      if (cancelled || ++attempts > 45) { stop(); return; }
+      try {
+        const res = await remoteSyncCaddyPort(target);
+        if (!cancelled && res.caddyPort != null) {
+          setState(prev => ({ ...prev, caddyPort: res.caddyPort }));
+          stop();
+        }
+      } catch { /* registry not ready yet — keep polling */ }
+    };
+    tick();
+    iv = window.setInterval(tick, 7000);
+    return () => { cancelled = true; stop(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.startSession]);
 
   const onCabalClean = async () => {
     setBusy('cabal-clean');
@@ -372,9 +401,14 @@ export const RemoteStackPanel: React.FC = () => {
     }
   };
 
-  const onUseRemoteContextApi = () => {
+  const onUseRemoteContextApi = async () => {
     const host = target.host || 'localhost';
-    const url = `http://${host}:7082`;
+    let ctxPort = 7082;
+    try {
+      const res = await remoteSyncCaddyPort(target);
+      if (res.contextApiPort != null) ctxPort = res.contextApiPort;
+    } catch { /* registry unavailable — fall back to base port */ }
+    const url = `http://${host}:${ctxPort}`;
     setContextApiBase(url); // reloads page
   };
 
@@ -385,71 +419,63 @@ export const RemoteStackPanel: React.FC = () => {
       <div className="rsp-header">
         <h2>Remote Stack</h2>
         <p className="rsp-sub">
-          SSH into a host, rsync the repo, then launch <code>, run-mobility-stack-dev</code>
-          (backend + test-context-api + mock-server). Streams the PTY back to this panel.
-          For <code>localhost</code>, no SSH or rsync is used.
+          Run the stack (<code>, run-mobility-stack-dev</code>: backend + test-context-api + mock-server)
+          either on this machine (<b>Local</b>) or on an auto-assigned fleet <b>Dev-Box</b>.
+          First Dev-Box use picks the least-loaded machine and pins it to this checkout
+          via <code>.devbox-id.json</code>; after that the same machine and workspace are
+          reused automatically.
         </p>
       </div>
 
       <div className="rsp-form">
         <label>
-          <span>Machine</span>
-          <select value={selectedMachine} onChange={e => onMachineSelect(e.target.value)}>
-            <option value="localhost">localhost</option>
-            {machines.filter(m => m.role === 'worker' && m.type === 'dev-box').map(m => (
-              <option key={m.name} value={m.name}>
-                {m.user || m.name} — {m.bestIp} [{m.resources?.cpu}, {m.resources?.ram}]
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>Port</span>
-          <input
-            type="number"
-            value={target.port || 22}
-            onChange={e => update('port', Number(e.target.value) || 22)}
-            disabled={isLocalhost}
-          />
-        </label>
-        <label>
-          <span>Developer name (Full name without spaces and special characters) {!isLocalhost && <span style={{ color: '#e53e3e' }}>*</span>}</span>
-          <input
-            value={target.devName || ''}
-            onChange={e => update('devName', e.target.value)}
-            placeholder="e.g. rohitsaini"
-            disabled={isLocalhost}
-            required={!isLocalhost}
-            style={!isLocalhost && !target.devName?.trim() ? { borderColor: '#e53e3e' } : undefined}
-          />
-          {!isLocalhost && !target.devName?.trim() && (
-            <span style={{ color: '#e53e3e', fontSize: '0.8em' }}>Required for remote hosts</span>
-          )}
-        </label>
-        <label>
-          <span>Remote dir</span>
-          <input
-            value={target.remoteDir || DEFAULT_REMOTE_DIR}
-            onChange={e => update('remoteDir', e.target.value)}
-            disabled={isLocalhost || !!target.devName?.trim()}
-            title={target.devName?.trim() ? 'Auto-derived from developer name' : undefined}
-          />
-        </label>
-        <label>
-          <span>Copy mode</span>
-          <select
-            value={target.copyMode || 'rsync'}
-            onChange={e => update('copyMode', e.target.value)}
-            disabled={isLocalhost}
-          >
-            <option value="rsync">rsync</option>
-            <option value="skip">skip</option>
+          <span>Run on</span>
+          <select value={mode} onChange={e => setMode(e.target.value as RunMode)}>
+            <option value="local">Local (this machine)</option>
+            <option value="devbox">Dev-Box (auto-assigned)</option>
           </select>
         </label>
       </div>
 
+      {mode === 'devbox' && (
+        <div className="rsp-meta" style={{ marginTop: 8 }}>
+          {resolving && <div>Resolving dev-box assignment…</div>}
+          {devboxErr && (
+            <div style={{ color: '#e53e3e' }}>
+              {devboxErr}{' '}
+              <button onClick={() => resolveAssignment(false)} style={{ marginLeft: 8 }}>Retry</button>
+            </div>
+          )}
+          {devbox && !resolving && (
+            <>
+              <div>
+                <span className="rsp-label">Assigned dev-box:</span>{' '}
+                <code>{devbox.machine}</code> — <code>{devbox.host}</code>
+                {devbox.resources?.cpu && (
+                  <span> [{devbox.resources.cpu}, {devbox.resources.ram}]</span>
+                )}
+                {devbox.usage?.ram && <span> · RAM in use: {devbox.usage.ram}</span>}
+                {devbox.created && <span className="rsp-tag">new assignment</span>}
+                {devbox.repinned && <span className="rsp-tag">re-pinned (old machine offline)</span>}
+              </div>
+              <div>
+                <span className="rsp-label">Developer id:</span> <code>{devbox.id}</code>
+                {' '}<span className="rsp-label">workspace:</span> <code>{devbox.remoteDir}</code>
+                <button
+                  onClick={onReassign}
+                  style={{ marginLeft: 12 }}
+                  title="Drop the pin and re-pick the least-loaded dev-box (generates a new developer id)"
+                >
+                  Re-assign
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       <div className="rsp-actions">
-        <button onClick={onDeploy} disabled={!!busy || !hasDevName || !!state.deploySession || !!state.startSession || !!state.clearSession || !!state.cabalCleanSession || (!isLocalhost && (!sshStatus || !sshStatus.ok))}>
+        <button onClick={onDeploy} disabled={!!busy || devboxNotReady || !hasDevName || !!state.deploySession || !!state.startSession || !!state.clearSession || !!state.cabalCleanSession || (!isLocalhost && (!sshStatus || !sshStatus.ok))}>
           {busy === 'deploy' ? 'Deploying…' : 'Deploy (rsync)'}
         </button>
         {state.clearSession ? (
@@ -457,26 +483,27 @@ export const RemoteStackPanel: React.FC = () => {
             {busy === 'clear-data' ? 'Stopping…' : 'Stop Clear data'}
           </button>
         ) : (
-          <button onClick={onClearData} disabled={!!busy || !hasDevName || !!state.deploySession || !!state.startSession || !!state.cabalCleanSession} title="Wipe runtime data under <repo>/data (postgres, kafka, metabase, …) using `, clear-data`.">
+          <button onClick={onClearData} disabled={!!busy || devboxNotReady || !hasDevName || !!state.deploySession || !!state.startSession || !!state.cabalCleanSession} title="Wipe runtime data under <repo>/data (postgres, kafka, metabase, …) using `, clear-data`.">
             {busy === 'clear-data' ? 'Clearing…' : 'Clear data'}
           </button>
         )}
-        <button onClick={onStart} disabled={!!busy || !hasDevName || !!state.deploySession || !!state.startSession || !!state.clearSession || !!state.cabalCleanSession}>
-          {busy === 'start' ? 'Starting…' : 'Start mobility-stack-dev'}
-        </button>
-        <button onClick={onStop} disabled={!state.startSession || busy === 'stop' || !hasDevName}>
-          {busy === 'stop' ? 'Stopping…' : 'Stop'}
-        </button>
-        <button
-          onClick={onSyncCaddyPort}
-          disabled={!state.startSession || !target.devName?.trim() || isLocalhost}
-          title="Read the resolved Caddy port from the running stack and store it in the registry"
-        >
-          Sync Caddy Port
-        </button>
+        {state.startSession ? (
+          <button
+            onClick={onStop}
+            disabled={busy === 'stop'}
+            style={{ background: '#e53e3e' }}
+            title="Stops ONLY the running mobility-stack-dev session — deploy / clear-data / cabal-clean are unaffected"
+          >
+            {busy === 'stop' ? 'Stopping…' : 'Stop mobility-stack-dev'}
+          </button>
+        ) : (
+          <button onClick={onStart} disabled={!!busy || devboxNotReady || !hasDevName || !!state.deploySession || !!state.clearSession || !!state.cabalCleanSession}>
+            {busy === 'start' ? 'Starting…' : 'Start mobility-stack-dev'}
+          </button>
+        )}
         <button
           onClick={onCabalClean}
-          disabled={!!busy || !hasDevName || !!state.deploySession || !!state.startSession || !!state.clearSession}
+          disabled={!!busy || devboxNotReady || !hasDevName || !!state.deploySession || !!state.startSession || !!state.clearSession}
           title="Run `cabal clean` in the Backend directory to clear stale build artifacts (fixes GHC panics / package-database corruption)"
         >
           {busy === 'cabal-clean' ? 'Cleaning…' : 'Cabal Clean'}

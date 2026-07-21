@@ -183,16 +183,25 @@ cancel req merchant booking mbActiveSearchTry = do
                     then do
                       QRD.updateValidCancellationsCount riderId.getId
                       mbExistingCancellationDuesDetails <- QCDD.findByRideId ride.id
-                      (charges', mbTax, mbOverdueCharge, mbOverdueTax) <- case ride.cancellationFeeIfCancelled of
-                        Just cancelCharges -> return (Just cancelCharges, mbExistingCancellationDuesDetails >>= (.cancellationFeeTax), mbExistingCancellationDuesDetails >>= (.overdueCancellationCharge), mbExistingCancellationDuesDetails >>= (.overdueCancellationTax))
+                      chargesOutcome <- case ride.cancellationFeeIfCancelled of
+                        Just cancelCharges ->
+                          return
+                            CancellationChargesOutcome
+                              { fee = Just cancelCharges,
+                                tax = mbExistingCancellationDuesDetails >>= (.cancellationFeeTax),
+                                overdueFee = mbExistingCancellationDuesDetails >>= (.overdueCancellationCharge),
+                                overdueTax = mbExistingCancellationDuesDetails >>= (.overdueCancellationTax),
+                                commission = mbExistingCancellationDuesDetails >>= (.cancellationCommission),
+                                overdueCommission = mbExistingCancellationDuesDetails >>= (.overdueCancellationCommission)
+                              }
                         Nothing -> do
-                          (cancellationdues, tax, _mbLogicVersion, overdueCharge, overdueTax) <- customerCancellationChargesCalculation booking ride riderDetails DCT.CancellationByCustomer bookingCR.reasonCode ride.cancellationChargesLogicVersion
-                          case cancellationdues of
-                            Just charges -> do
-                              logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellation dues: " <> show charges <> " tax: " <> show tax)
-                              return (Just charges, tax, overdueCharge, overdueTax)
-                            Nothing -> return (Nothing, Nothing, overdueCharge, overdueTax)
-                      let totalCharges = fromMaybe 0 charges' + fromMaybe 0 mbTax
+                          (mbOutcome, _mbLogicVersion) <- customerCancellationChargesCalculation booking ride riderDetails DCT.CancellationByCustomer bookingCR.reasonCode ride.cancellationChargesLogicVersion
+                          case mbOutcome of
+                            Just o -> do
+                              logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellation dues: " <> show o.fee <> " tax: " <> show o.tax)
+                              return o
+                            Nothing -> return (CancellationChargesOutcome Nothing Nothing Nothing Nothing Nothing Nothing)
+                      let totalCharges = fromMaybe 0 chargesOutcome.fee + fromMaybe 0 chargesOutcome.tax
                       QRD.updateCancellationDues (totalCharges + riderDetails.cancellationDues) riderId
                       when (totalCharges > 0) $ do
                         QRD.updateCancellationDueRidesCount riderId.getId
@@ -204,10 +213,12 @@ cancel req merchant booking mbActiveSearchTry = do
                                   rideId = ride.id,
                                   riderId = riderId,
                                   cancellationAmount = totalCharges,
-                                  cancellationFee = charges',
-                                  cancellationFeeTax = mbTax,
-                                  overdueCancellationCharge = mbOverdueCharge,
-                                  overdueCancellationTax = mbOverdueTax,
+                                  cancellationFee = chargesOutcome.fee,
+                                  cancellationFeeTax = chargesOutcome.tax,
+                                  overdueCancellationCharge = chargesOutcome.overdueFee,
+                                  overdueCancellationTax = chargesOutcome.overdueTax,
+                                  cancellationCommission = chargesOutcome.commission,
+                                  overdueCancellationCommission = chargesOutcome.overdueCommission,
                                   currency = booking.currency,
                                   paymentStatus = DCDD.PENDING,
                                   createdAt = now,
@@ -216,7 +227,7 @@ cancel req merchant booking mbActiveSearchTry = do
                                   merchantOperatingCityId = Just ride.merchantOperatingCityId
                                 }
                         QCDD.create cancellationDuesDetails
-                      return (charges', mbTax, mbOverdueCharge, mbOverdueTax)
+                      return (chargesOutcome.fee, chargesOutcome.tax, chargesOutcome.overdueFee, chargesOutcome.overdueTax)
                     else return (Nothing, Nothing, Nothing, Nothing)
                 Nothing -> return (Nothing, Nothing, Nothing, Nothing)
             Nothing -> return (Nothing, Nothing, Nothing, Nothing)

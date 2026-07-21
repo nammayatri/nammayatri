@@ -19,6 +19,7 @@ import qualified API.Action.UI.EditLocation as EditLocation
 import qualified API.Action.UI.EstimateBP as EstimateBP
 import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Action.UI.FavouriteDriver as FavouriteDriver
+import qualified API.Action.UI.File as File
 import qualified API.Action.UI.FinanceInvoice as FinanceInvoice
 import qualified API.Action.UI.FollowRide as FollowRide
 import qualified API.Action.UI.Insurance as Insurance
@@ -136,6 +137,7 @@ type API =
            :<|> HotSpot.API
            :<|> Disability.API
            :<|> AadhaarVerification.API
+           :<|> File.API
            :<|> Issue.API
            :<|> TicketService.API
            :<|> FinanceInvoice.API
@@ -222,6 +224,7 @@ handler =
     :<|> HotSpot.handler
     :<|> Disability.handler
     :<|> AadhaarVerification.handler
+    :<|> File.handler
     :<|> Issue.handler
     :<|> TicketService.handler
     :<|> FinanceInvoice.handler

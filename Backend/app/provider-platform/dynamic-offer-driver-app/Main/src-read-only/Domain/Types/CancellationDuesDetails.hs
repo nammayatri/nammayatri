@@ -15,13 +15,15 @@ import qualified Tools.Beam.UtilsTH
 
 data CancellationDuesDetails = CancellationDuesDetails
   { cancellationAmount :: Kernel.Types.Common.HighPrecMoney,
+    cancellationCommission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationFeeTax :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    overdueCancellationCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    overdueCancellationTax :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     id :: Kernel.Types.Id.Id Domain.Types.CancellationDuesDetails.CancellationDuesDetails,
+    overdueCancellationCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    overdueCancellationCommission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    overdueCancellationTax :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     paymentStatus :: Domain.Types.CancellationDuesDetails.CancellationDuesPaymentStatus,
     rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
     riderId :: Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails,
@@ -33,4 +35,4 @@ data CancellationDuesDetails = CancellationDuesDetails
 
 data CancellationDuesPaymentStatus = PENDING | PAID | WAIVED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CancellationDuesPaymentStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancellationDuesPaymentStatus)

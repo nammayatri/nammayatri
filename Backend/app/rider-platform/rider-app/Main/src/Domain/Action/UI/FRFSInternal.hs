@@ -27,5 +27,5 @@ postFrfsTripNotifyTripStarted tripId mbToken = do
   internalAPIKey <- asks (.internalAPIKey)
   unless (Just internalAPIKey == mbToken) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
-  FRFSTicketService.notifyBusTripStartedForTrip tripId
+  fork ("notifyBusTripStartedForTrip" <> tripId) (FRFSTicketService.notifyBusTripStartedForTrip tripId)
   pure APISuccess.Success
