@@ -71,6 +71,7 @@ library
       API.Internal.MasterCloudForward
       API.Internal.Multimodal
       API.Internal.NotificationWebhook
+      API.Internal.PersonCreate
       API.Internal.PickupInstruction
       API.Internal.PopulateTipAmount
       API.Internal.ProdLoopStatus
