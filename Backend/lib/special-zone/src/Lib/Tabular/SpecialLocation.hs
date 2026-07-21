@@ -52,6 +52,7 @@ mkPersist
       supportNumber Text Maybe
       paymentModes (PostgresList Domain.PaymentMode) Maybe
       fareSettlementType Domain.FareSettlementType Maybe
+      boothSpecificFleet Text Maybe
       geomGeoJson Text Maybe
       createdAt UTCTime
       updatedAt UTCTime

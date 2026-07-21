@@ -99,6 +99,7 @@ data SpecialLocation = SpecialLocation
     supportNumber :: Maybe Text,
     paymentModes :: Maybe [PaymentMode],
     fareSettlementType :: Maybe FareSettlementType,
+    boothSpecificFleet :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
