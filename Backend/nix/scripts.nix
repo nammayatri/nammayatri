@@ -395,47 +395,44 @@ _:
           category = "Backend";
           description = "Run the nammayatri backend + test-context-api + mock-server (no test-dashboard).";
           exec = ''
+            # errexit + pipefail for the whole preflight (matches sibling scripts).
+            # nounset is intentionally omitted — this legacy block has guarded
+            # optional refs (''${VAR:-}) but wasn't audited for a hard set -u.
+            set -eo pipefail
             # NOTE: DEV is intentionally NOT exported. Only the location-tracking-service
             # reads it: with DEV=1 the LTS skips /internal/auth and uses the raw `token`
             # header as the driver id, which breaks real apps/emulators (they send a
             # registration token, so drivers never enter the geo pool and never get
             # nearbyRideRequest). Integration-test collections now send {{driver_token}}
             # to the LTS, so they work in authenticated (non-DEV) mode too.
-            # Free up ports from previous run FIRST — so resolve-ports.sh
-            # sees them as free and can reuse the same ports.
+            REGISTRY="/tmp/devbox-registry.json"
+            DEVBOX_KEY=""
+            if [[ -f "''${FLAKE_ROOT}/.devbox-id.json" ]]; then
+              DEVBOX_KEY=$(${pkgs.jq}/bin/jq -r '.id // ""' "''${FLAKE_ROOT}/.devbox-id.json" 2>/dev/null || true)
+            fi
+            if [[ -z "$DEVBOX_KEY" ]]; then
+              DEVBOX_KEY=$(echo "''${FLAKE_ROOT}" | ${pkgs.gnused}/bin/sed -n 's|^/tmp/\([^/]*\)/nammayatri.*|\1|p')
+            fi
+            if [[ -z "$DEVBOX_KEY" ]]; then
+              DEVBOX_KEY="local-$(id -un 2>/dev/null || echo dev)"
+            fi
+            # Exported for: resolve-ports (self-exclusion), the Caddyfile eval,
+            # and nammayatri.nix (module + test-context-api) — all key off these.
+            DEVBOX_REGISTRY_FILE="$REGISTRY"
+            export DEVBOX_KEY DEVBOX_REGISTRY_FILE
+
+            # Free up ports from the PREVIOUS run FIRST — so resolve-ports sees
+            # them free and can reuse the same numbers. The previous run's ports
+            # live in our registry slice (devbox-registry.json[KEY]).
             echo "── Pre-flight: freeing stale service ports ──"
-            RESOLVED_FILE="''${FLAKE_ROOT}/data/ports-resolved.nix"
-            # Collect ports to kill from ports-resolved.nix or devbox-registry.json.
             PORTS_TO_KILL=""
-            if [[ -f "$RESOLVED_FILE" ]]; then
-              while IFS= read -r line; do
-                if [[ "$line" =~ ^[[:space:]]*([a-zA-Z][a-zA-Z0-9_-]*)[[:space:]]*=[[:space:]]*([0-9]+)[[:space:]]*\;  ]]; then
-                  port_name="''${BASH_REMATCH[1]}"
-                  port_num="''${BASH_REMATCH[2]}"
-                  PORTS_TO_KILL="$PORTS_TO_KILL $port_num"
-                  # Redis cluster nodes also bind a cluster-bus port at
-                  # client-port + 10000 (e.g. 30040 -> 40040). A stale node can
-                  # survive holding only the bus port, which then blocks the
-                  # next cluster startup — kill those too.
-                  if [[ "$port_name" == redis-cluster-* ]]; then
-                    PORTS_TO_KILL="$PORTS_TO_KILL $((port_num + 10000))"
-                  fi
-                fi
-              done < "$RESOLVED_FILE"
-            else
-              # Fallback: read ports from devbox-registry.json if ports-resolved.nix
-              # doesn't exist yet (e.g. first re-deploy after a crash).
-              REGISTRY="/tmp/devbox-registry.json"
-              if [[ -f "$REGISTRY" ]]; then
-                # Derive dev name from FLAKE_ROOT: /tmp/<devname>/nammayatri → <devname>
-                DEV_NAME=$(echo "''${FLAKE_ROOT}" | ${pkgs.gnused}/bin/sed -n 's|^/tmp/\([^/]*\)/nammayatri.*|\1|p')
-                if [[ -n "$DEV_NAME" ]]; then
-                  echo "ports-resolved.nix not found, falling back to devbox-registry.json (dev: $DEV_NAME)"
-                  # For redis-cluster-* ports also emit the cluster-bus port
-                  # (client-port + 10000) — see the note in the branch above.
-                  PORTS_TO_KILL=$(${pkgs.jq}/bin/jq -r ".users[\"$DEV_NAME\"].ports // {} | to_entries[] | if (.key | startswith(\"redis-cluster\")) then \"\(.value)\n\(.value + 10000)\" else \"\(.value)\" end" "$REGISTRY" 2>/dev/null || true)
-                fi
-              fi
+            if [[ -f "$REGISTRY" ]]; then
+              # For redis-cluster-* ports also emit the cluster-bus port
+              # (client-port + 10000, e.g. 30040 -> 40040): a stale node can
+              # survive holding only that and block the next cluster startup.
+              PORTS_TO_KILL=$(${pkgs.jq}/bin/jq -r --arg me "$DEVBOX_KEY" \
+                '.users[$me].ports // {} | to_entries[] | if (.key | startswith("redis-cluster")) then "\(.value)\n\(.value + 10000)" else "\(.value)" end' \
+                "$REGISTRY" 2>/dev/null || true)
             fi
             # Kill only processes whose cwd is under our FLAKE_ROOT.
             for port in $PORTS_TO_KILL; do
@@ -455,82 +452,69 @@ _:
                 esac
               done
             done
-            # Derive developer name for registry and locking.
-            REGISTRY="/tmp/devbox-registry.json"
-            DEV_NAME=$(echo "''${FLAKE_ROOT}" | ${pkgs.gnused}/bin/sed -n 's|^/tmp/\([^/]*\)/nammayatri.*|\1|p')
-            # Acquire an exclusive lock so concurrent startups on the same
-            # devbox serialise their resolve-ports + registry-write sequence.
-            # This prevents two developers from reading the registry at the
-            # same time and resolving to the same ports.
-            # The lock is fd-based: if the process exits (including on error
-            # or signal), the fd is closed and the lock is released automatically.
+
+            # ── Acquire an exclusive lock so concurrent startups on the same
+            #    devbox serialise their resolve-ports + registry-write (prevents
+            #    two developers resolving to the same ports). fd-based: released
+            #    automatically if the process exits on error or signal. ──
             LOCKFILE="/tmp/devbox-ports.lock"
-            if [[ -n "$DEV_NAME" ]]; then
-              exec 9>"$LOCKFILE"
-              ${pkgs.util-linux}/bin/flock 9
-              echo "── Pre-flight: acquired devbox port lock ──"
-            fi
-            # Resolve ports.nix with available free ports so multiple
-            # backend instances on the same devbox don't collide.
+            exec 9>"$LOCKFILE"
+            ${pkgs.util-linux}/bin/flock 9
+            echo "── Pre-flight: acquired devbox port lock ──"
+
+            # ── Resolve free ports. resolve-ports prints the resolved map as
+            #    JSON on stdout (diagnostics go to stderr). ──
             echo "── Pre-flight: resolving free ports ──"
-            ${lib.getExe resolvePorts}
-            if [[ ! -f "$RESOLVED_FILE" ]]; then
-              echo "ERROR: resolve-ports did not produce $RESOLVED_FILE" >&2
+            PORTS_JSON=$(${lib.getExe resolvePorts})
+            if ! echo "$PORTS_JSON" | ${pkgs.jq}/bin/jq -e 'type == "object" and length > 0' >/dev/null 2>&1; then
+              echo "ERROR: resolve-ports did not produce a valid ports JSON object" >&2
               exit 1
             fi
-            # Write resolved ports to devbox-registry.json so other tools
-            # (dashboard, other developers) can discover our ports.
-            if [[ -n "$DEV_NAME" ]]; then
-              echo "── Pre-flight: updating devbox-registry.json (dev: $DEV_NAME) ──"
-              # Parse ports-resolved.nix into a JSON object: {"name": port, ...}
-              PORTS_JSON="{"
-              first=true
-              while IFS= read -r line; do
-                if [[ "$line" =~ ^[[:space:]]*([a-zA-Z][a-zA-Z0-9_-]*)[[:space:]]*=[[:space:]]*([0-9]+)[[:space:]]*\;  ]]; then
-                  name="''${BASH_REMATCH[1]}"
-                  port="''${BASH_REMATCH[2]}"
-                  if [[ "$first" == true ]]; then first=false; else PORTS_JSON+=","; fi
-                  PORTS_JSON+="\"$name\":$port"
-                fi
-              done < "$RESOLVED_FILE"
-              PORTS_JSON+="}"
-              # Extract caddy port
-              CADDY_PORT=$(echo "$PORTS_JSON" | ${pkgs.jq}/bin/jq -r '.["caddy-reverse-proxy"] // empty' 2>/dev/null || true)
-              # Read existing registry or create empty one
-              if [[ -f "$REGISTRY" ]]; then
-                REG=$(cat "$REGISTRY")
-              else
-                REG='{"users":{}}'
-              fi
-              # Update this developer's entry with dir, ports, and caddyPort
-              REG=$(echo "$REG" | ${pkgs.jq}/bin/jq \
-                --arg dev "$DEV_NAME" \
-                --arg dir "''${FLAKE_ROOT}" \
-                --argjson ports "$PORTS_JSON" \
-                --argjson caddy "''${CADDY_PORT:-null}" \
-                '.users[$dev] = {dir: $dir, ports: $ports, caddyPort: $caddy}')
-              echo "$REG" > "$REGISTRY"
-            fi
-            # Release the devbox port lock now that the registry is written.
-            if [[ -n "$DEV_NAME" ]]; then
-              ${pkgs.util-linux}/bin/flock -u 9
-              exec 9>&-
-              echo "── Pre-flight: released devbox port lock ──"
-            fi
-            # Generate Caddyfile from resolved ports for single-entry-point access.
-            # Service list lives in Backend/nix/services/caddyfile.nix; we
-            # evaluate it via nix-instantiate so the source-of-truth is Nix,
-            # not a shell array. Falls back to the base ports.nix if the
-            # resolved overlay isn't on disk yet.
+
+            # ── Record our slice in the registry so nammayatri.nix, the
+            #    Caddyfile, the dashboard and other developers can read it.
+            #    ATOMIC (temp + rename): a concurrent reader — our own Nix eval,
+            #    or another dev's preflight — never sees a half-written file.
+            #    We touch only .users[KEY]; every other entry is preserved. ──
+            echo "── Pre-flight: updating devbox-registry.json (key: $DEVBOX_KEY) ──"
+            CADDY_PORT=$(echo "$PORTS_JSON" | ${pkgs.jq}/bin/jq -r '.["caddy-reverse-proxy"] // empty' 2>/dev/null || true)
+            if [[ -f "$REGISTRY" ]]; then REG=$(cat "$REGISTRY"); else REG='{"users":{}}'; fi
+            REG=$(echo "$REG" | ${pkgs.jq}/bin/jq \
+              --arg dev "$DEVBOX_KEY" \
+              --arg dir "''${FLAKE_ROOT}" \
+              --argjson ports "$PORTS_JSON" \
+              --argjson caddy "''${CADDY_PORT:-null}" \
+              '.users[$dev] = {dir: $dir, ports: $ports, caddyPort: $caddy}')
+            # temp + rename = atomic; set -eo pipefail aborts if either fails.
+            printf '%s\n' "$REG" > "$REGISTRY.tmp.$$"
+            mv -f "$REGISTRY.tmp.$$" "$REGISTRY"
+
+            # ── Release the devbox port lock now that the registry is written. ──
+            ${pkgs.util-linux}/bin/flock -u 9
+            exec 9>&-
+            echo "── Pre-flight: released devbox port lock ──"
+
+            # ── Generate the Caddyfile from our registry slice (single entry
+            #    point). Service list is the source of truth in caddyfile.nix.
+            #    The expression is single-quoted so the key never enters the Nix
+            #    source text: it reads FLAKE_ROOT / DEVBOX_REGISTRY_FILE /
+            #    DEVBOX_KEY via getEnv (same, injection-proof mechanism as
+            #    nammayatri.nix) and falls back to base ports.nix if the registry
+            #    file is missing. ──
             echo "── Pre-flight: generating Caddyfile ──"
-            CADDY_PORTS_FILE="$RESOLVED_FILE"
-            if [[ ! -f "$CADDY_PORTS_FILE" ]]; then
-              CADDY_PORTS_FILE="''${FLAKE_ROOT}/Backend/nix/services/ports.nix"
-            fi
             mkdir -p "''${FLAKE_ROOT}/data"
-            nix eval --raw --impure --expr \
-              "import ''${FLAKE_ROOT}/Backend/nix/services/caddyfile.nix { ports = import $CADDY_PORTS_FILE; }" \
-              > "''${FLAKE_ROOT}/data/Caddyfile"
+            # shellcheck disable=SC2016  # single quotes intentional: the expr is Nix, not shell
+            nix eval --raw --impure --expr '
+              let root = builtins.getEnv "FLAKE_ROOT";
+                  base = import (/. + (root + "/Backend/nix/services/ports.nix"));
+                  registryPath = builtins.getEnv "DEVBOX_REGISTRY_FILE";
+                  devKey = builtins.getEnv "DEVBOX_KEY";
+                  ports =
+                    if registryPath != "" && devKey != "" && builtins.pathExists (/. + registryPath)
+                    then (builtins.fromJSON (builtins.readFile (/. + registryPath))).users.''${devKey}.ports or base
+                    else base;
+              in import (/. + (root + "/Backend/nix/services/caddyfile.nix")) { inherit ports; }
+            ' > "''${FLAKE_ROOT}/data/Caddyfile"
             if [[ ! -s "''${FLAKE_ROOT}/data/Caddyfile" ]]; then
               echo "ERROR: Caddyfile generation produced an empty file" >&2
               exit 1
@@ -544,9 +528,6 @@ _:
               ulimit -s "$_hard" 2>/dev/null || true
               ulimit -n "$_hard" 2>/dev/null || true
             fi
-            # Tell nammayatri.nix where to find the resolved ports file.
-            # --impure lets builtins.getEnv read this at Nix evaluation time.
-            export PORTS_RESOLVED_FILE="$RESOLVED_FILE"
             # -S NAME forces stable sort by process name (no re-ordering on status change)
             nix run --impure .#run-mobility-stack-dev -- -S NAME "$@"
           '';
