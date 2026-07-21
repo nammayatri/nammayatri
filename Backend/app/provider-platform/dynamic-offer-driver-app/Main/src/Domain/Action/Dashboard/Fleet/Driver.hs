@@ -2619,6 +2619,7 @@ getFleetOrOperatorInfo person = do
             lastName = person.lastName,
             fleetType = "",
             referralCode = (.referralCode.getId) <$> referral,
+            operatorReferralCode = Nothing,
             blocked = False,
             enabled = True,
             verified = True,
@@ -2678,11 +2679,15 @@ getFleetOrOperatorInfo person = do
       let (operatorName, operatorContact) = case operatorsList of
             [] -> (Nothing, Nothing)
             ((name, contact) : _) -> (Just name, contact)
-      makeFleetOwnerInfoRes fleetConfig fleetOwnerInfo person operatorName operatorContact operatorsList
+      let mbOperatorId = (\foa -> Id foa.operatorId) <$> listToMaybe fleetOperatorAssocs
+      referrals <- QDR.findAllByDriverIds (personId : maybeToList mbOperatorId)
+      let referralCodeFor pid = (.referralCode.getId) <$> find ((== pid) . (.driverId)) referrals
+          ownerReferralCode = referralCodeFor personId
+          operatorReferralCode = mbOperatorId >>= referralCodeFor
+      makeFleetOwnerInfoRes fleetConfig fleetOwnerInfo person operatorName operatorContact operatorsList ownerReferralCode operatorReferralCode
   where
-    makeFleetOwnerInfoRes :: Maybe DFC.FleetConfig -> DFOI.FleetOwnerInformation -> DP.Person -> Maybe Text -> Maybe Text -> [(Text, Maybe Text)] -> Flow Common.FleetOwnerInfoRes
-    makeFleetOwnerInfoRes mbFleetConfig DFOI.FleetOwnerInformation {..} fleetOwner operatorName operatorContact operatorsList = do
-      referral <- QDR.findById fleetOwnerPersonId
+    makeFleetOwnerInfoRes :: Maybe DFC.FleetConfig -> DFOI.FleetOwnerInformation -> DP.Person -> Maybe Text -> Maybe Text -> [(Text, Maybe Text)] -> Maybe Text -> Maybe Text -> Flow Common.FleetOwnerInfoRes
+    makeFleetOwnerInfoRes mbFleetConfig DFOI.FleetOwnerInformation {..} fleetOwner operatorName operatorContact operatorsList ownerReferralCode operatorReferralCode = do
       let fleetConfig =
             mbFleetConfig <&> \fleetConfig' ->
               Common.FleetConfig
@@ -2731,7 +2736,8 @@ getFleetOrOperatorInfo person = do
       return $
         Common.FleetOwnerInfoRes
           { fleetType = show fleetType,
-            referralCode = (.referralCode.getId) <$> referral,
+            referralCode = ownerReferralCode,
+            operatorReferralCode = operatorReferralCode,
             gstNumber = gstNumber',
             gstImageId = gstImageIdVal,
             panNumber = panNumber',

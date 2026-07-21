@@ -2,6 +2,7 @@ module Storage.Queries.DriverReferralExtra where
 
 import qualified Data.Text
 import qualified Database.Beam as B
+import qualified Domain.Types.DriverReferral
 import qualified Domain.Types.Person
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
@@ -15,6 +16,10 @@ import qualified Storage.Beam.DriverReferral as BeamDR
 import Storage.Queries.OrphanInstances.DriverReferral ()
 
 -- Extra code goes here --
+
+findAllByDriverIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Id Domain.Types.Person.Person] -> m [Domain.Types.DriverReferral.DriverReferral]
+findAllByDriverIds driverIds =
+  findAllWithKV [Se.Is Beam.driverId $ Se.In (getId <$> driverIds)]
 
 getLastRefferalCode ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Log m) =>
