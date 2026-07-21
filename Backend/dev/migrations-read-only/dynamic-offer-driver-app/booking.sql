@@ -260,3 +260,4 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN fare_settlement_type text 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN customer_language text ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN cancellation_commission double precision ;

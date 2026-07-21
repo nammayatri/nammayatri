@@ -63,12 +63,16 @@ data UserCancellationDuesResult = UserCancellationDuesResult
   { cancellationCharges :: HighPrecMoney,
     cancellationChargesTax :: Maybe HighPrecMoney,
     overdueCancellationCharge :: Maybe HighPrecMoney,
-    overdueCancellationTax :: Maybe HighPrecMoney
+    overdueCancellationTax :: Maybe HighPrecMoney,
+    -- GROSS (ALV-inclusive); the base/ALV split happens in Haskell via
+    -- TaxConfig.commissionVatPercentage, never in the JL. Nothing => no cancellation commission.
+    cancellationCommission :: Maybe HighPrecMoney,
+    overdueCancellationCommission :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
 instance Default UserCancellationDuesResult where
-  def = UserCancellationDuesResult {cancellationCharges = 0, cancellationChargesTax = Nothing, overdueCancellationCharge = Nothing, overdueCancellationTax = Nothing}
+  def = UserCancellationDuesResult {cancellationCharges = 0, cancellationChargesTax = Nothing, overdueCancellationCharge = Nothing, overdueCancellationTax = Nothing, cancellationCommission = Nothing, overdueCancellationCommission = Nothing}
 
 data CancellationLedgerAction = SettleCancellationLedger | OverdueCancellationLedger
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)

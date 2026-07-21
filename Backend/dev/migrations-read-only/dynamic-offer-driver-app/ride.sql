@@ -285,3 +285,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN referral_flag_reason text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_charges_logic_version integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_commission double precision ;
