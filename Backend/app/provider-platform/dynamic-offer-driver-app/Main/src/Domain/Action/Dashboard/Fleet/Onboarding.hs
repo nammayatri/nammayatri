@@ -9,6 +9,7 @@ module Domain.Action.Dashboard.Fleet.Onboarding
   )
 where
 
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra as OnboardingExtra
 import qualified API.Types.ProviderPlatform.Fleet.Onboarding as CommonOnboarding
 import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration as CommonDriverRegistration
@@ -62,8 +63,9 @@ getOnboardingDocumentConfigs ::
   Maybe Bool ->
   Maybe Bool ->
   Maybe CommonOnboarding.Role ->
+  Maybe OnboardingExtra.DocumentOnboardingStage ->
   Environment.Flow CommonOnboarding.DocumentVerificationConfigList
-getOnboardingDocumentConfigs merchantShortId opCity fleetOwnerId makeSelfieAadhaarPanMandatory mbOnlyVehicle role = do
+getOnboardingDocumentConfigs merchantShortId opCity fleetOwnerId makeSelfieAadhaarPanMandatory mbOnlyVehicle role documentOnboardingStage = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   mbPerson <- runInReplica $ PersonQuery.findById (Id fleetOwnerId)
@@ -74,21 +76,29 @@ getOnboardingDocumentConfigs merchantShortId opCity fleetOwnerId makeSelfieAadha
     Just CommonOnboarding.BUSINESS_FLEET -> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, role = Just FLEET_BUSINESS}) (Just (FODVC.findAllByMerchantOpCityIdAndRole merchantOpCityId FLEET_BUSINESS (Just [])))
     _ -> pure []
 
-  fleetConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (SDO.mkFleetOwnerDocumentVerificationConfigAPIEntity personLanguage) fleetConfigsRaw
+  fleetConfigs <- filterByStage documentOnboardingStage . SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (SDO.mkFleetOwnerDocumentVerificationConfigAPIEntity personLanguage) fleetConfigsRaw
 
   Onboarding.DocumentVerificationConfigList {..} <- DOnboarding.getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandatory mbOnlyVehicle
+  let castConfigs = fmap castDocumentVerificationConfigAPIEntity
   return $
     CommonOnboarding.DocumentVerificationConfigList
       { fleet = SDO.toMaybe fleetConfigs,
-        ambulances = fmap (castDocumentVerificationConfigAPIEntity <$>) ambulances,
-        autos = fmap (castDocumentVerificationConfigAPIEntity <$>) autos,
-        bikes = fmap (castDocumentVerificationConfigAPIEntity <$>) bikes,
-        bus = fmap (castDocumentVerificationConfigAPIEntity <$>) bus,
-        cabs = fmap (castDocumentVerificationConfigAPIEntity <$>) cabs,
-        trucks = fmap (castDocumentVerificationConfigAPIEntity <$>) trucks,
-        boat = fmap (castDocumentVerificationConfigAPIEntity <$>) boat,
-        toto = fmap (castDocumentVerificationConfigAPIEntity <$>) toto
+        ambulances = fmap castConfigs ambulances,
+        autos = fmap castConfigs autos,
+        bikes = fmap castConfigs bikes,
+        bus = fmap castConfigs bus,
+        cabs = fmap castConfigs cabs,
+        trucks = fmap castConfigs trucks,
+        boat = fmap castConfigs boat,
+        toto = fmap castConfigs toto
       }
+
+filterByStage ::
+  Maybe OnboardingExtra.DocumentOnboardingStage ->
+  [CommonOnboarding.DocumentVerificationConfigAPIEntity] ->
+  [CommonOnboarding.DocumentVerificationConfigAPIEntity]
+filterByStage mbStage =
+  filter (\doc -> maybe True (\stage -> doc.documentOnboardingStage == Just stage) mbStage)
 
 castDocumentVerificationConfigAPIEntity :: Onboarding.DocumentVerificationConfigAPIEntity -> CommonOnboarding.DocumentVerificationConfigAPIEntity
 castDocumentVerificationConfigAPIEntity Onboarding.DocumentVerificationConfigAPIEntity {..} =
@@ -110,6 +120,7 @@ castDocumentVerificationConfigAPIEntity Onboarding.DocumentVerificationConfigAPI
       applicableTo = SDO.castDocumentApplicableType applicableTo,
       documentFields = fmap (map SDO.castDocumentFieldInfo) documentFields,
       documentFlowGrouping = SDO.castDocumentFlowGrouping documentFlowGrouping,
+      documentOnboardingStage = SDO.castDocumentOnboardingStage <$> documentOnboardingStage,
       isReminderSupported = isReminderSupported,
       isApprovalSupported = isApprovalSupported,
       rolesAllowedToUploadDocument = fmap (mapMaybe SDO.castPersonRoleToDashboardAccessType) rolesAllowedToUploadDocument

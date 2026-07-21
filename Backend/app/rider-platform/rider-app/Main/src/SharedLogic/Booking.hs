@@ -55,6 +55,10 @@ getRideTypeFromBookingDetails = \case
   DBooking.MeterRideDetails _ -> SLT.METER_RIDE
   DBooking.DriverOfferDetails _ -> SLT.NORMAL
   DBooking.OneWaySpecialZoneDetails _ -> SLT.NORMAL
+  -- RideType is a closed enum with no EasyBooking value; reuse RENTAL since
+  -- EasyBooking is structurally the same shape (destination-less, quote-based)
+  -- as Rental, consistent with every other closed-enum site in this change.
+  DBooking.EasyBookingDetails _ -> SLT.RENTAL
 
 -- | Check if booking matches any of the specified ride types
 matchesRideType :: [SLT.RideType] -> DBooking.Booking -> Bool

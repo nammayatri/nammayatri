@@ -1,6 +1,7 @@
 module Domain.Action.ProviderPlatform.Fleet.Onboarding (getOnboardingDocumentConfigs, getOnboardingRegisterStatus, getOnboardingRegisterVehicleStatus, postOnboardingVerify, getOnboardingVehicleDocuments, getOnboardingGetReferralDetails) where
 
 import qualified API.Client.ProviderPlatform.Fleet as Client
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
 import qualified API.Types.ProviderPlatform.Fleet.Onboarding
 import qualified Dashboard.Common
 import Domain.Action.ProviderPlatform.Fleet.Driver (getFleetOwnerId)
@@ -21,11 +22,11 @@ import qualified "lib-dashboard" Storage.Queries.Person as QP
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 
-getOnboardingDocumentConfigs :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Onboarding.Role -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigList)
-getOnboardingDocumentConfigs merchantShortId opCity apiTokenInfo makeSelfieAadhaarPanMandatory onlyVehicle role = do
+getOnboardingDocumentConfigs :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Onboarding.Role -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.DocumentOnboardingStage -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigList)
+getOnboardingDocumentConfigs merchantShortId opCity apiTokenInfo makeSelfieAadhaarPanMandatory onlyVehicle role documentOnboardingStage = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId Nothing
-  Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.getOnboardingDocumentConfigs) fleetOwnerId makeSelfieAadhaarPanMandatory onlyVehicle role
+  Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.getOnboardingDocumentConfigs) fleetOwnerId makeSelfieAadhaarPanMandatory onlyVehicle role documentOnboardingStage
 
 getOnboardingRegisterStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.StatusRes)
 getOnboardingRegisterStatus merchantShortId opCity apiTokenInfo driverId makeSelfieAadhaarPanMandatory onboardingVehicleCategory providePrefillDetails onlyMandatoryDocs docsVerificationStatus enableDocumentMetadata = do

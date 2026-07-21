@@ -21,6 +21,8 @@ CancellationDuesDetails:
     cancellationFeeTax : Maybe HighPrecMoney
     overdueCancellationCharge : Maybe HighPrecMoney
     overdueCancellationTax : Maybe HighPrecMoney
+    cancellationCommission : Maybe HighPrecMoney
+    overdueCancellationCommission : Maybe HighPrecMoney
     currency : Currency
     paymentStatus : CancellationDuesPaymentStatus
     createdAt : UTCTime

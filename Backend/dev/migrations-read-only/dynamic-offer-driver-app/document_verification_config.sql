@@ -158,3 +158,15 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN face_
 
 
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN mark_image_valid_on_validation_skip boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN document_onboarding_stage text ;
+
+
+
+
+------- SQL updates -------
+

@@ -766,7 +766,8 @@ data FleetOwnerInfoRes = FleetOwnerInfoRes
     docsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus,
     address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     addressState :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState,
-    addressDocumentType :: Kernel.Prelude.Maybe Dashboard.Common.Driver.AddressDocumentType
+    addressDocumentType :: Kernel.Prelude.Maybe Dashboard.Common.Driver.AddressDocumentType,
+    approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

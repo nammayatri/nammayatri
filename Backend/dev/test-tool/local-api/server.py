@@ -1052,6 +1052,7 @@ def _fetch_machines() -> dict:
             "user":      base.get("username", "ubuntu"),
             "type":      base.get("type", ""),
             "resources": base.get("resources", {}),
+            "usage":     base.get("usage", {}),
         })
 
     for w in data.get("workers", []):
@@ -1065,9 +1066,83 @@ def _fetch_machines() -> dict:
             "user":      w.get("username", "ubuntu"),
             "type":      w.get("type", ""),
             "resources": w.get("resources", {}),
+            "usage":     w.get("usage", {}),
         })
 
     return {"machines": machines, "myIps": my_ips}
+
+
+# ── Devbox auto-assignment ────────────────────────────────────────────────────
+
+DEVBOX_ID_FILE = PROJECT_ROOT / ".devbox-id.json"
+
+def _parse_ram_pct(usage: dict) -> float:
+    """'27.5Gi (88%)' -> 88.0. Unknown/missing -> 100.0 (least preferred)."""
+    try:
+        m = re.search(r"\((\d+(?:\.\d+)?)%\)", str((usage or {}).get("ram", "")))
+        return float(m.group(1)) if m else 100.0
+    except Exception:
+        return 100.0
+
+
+def _devbox_resolve(force_new: bool = False) -> dict:
+    """Return this checkout's devbox assignment, creating one if needed."""
+    res = _fetch_machines()
+    if res.get("error"):
+        return {"error": res["error"]}
+    devboxes = [m for m in res.get("machines", [])
+                if m.get("type") == "dev-box" and m.get("role") == "worker"]
+    if not devboxes:
+        return {"error": "no dev-box machines registered with the base station"}
+
+    saved = None
+    if not force_new and DEVBOX_ID_FILE.is_file():
+        try:
+            saved = json.loads(DEVBOX_ID_FILE.read_text())
+        except Exception:
+            saved = None  # corrupt file — regenerate below
+
+    machine = None
+    repinned = False
+    if saved and saved.get("machine"):
+        machine = next((m for m in devboxes if m.get("name") == saved["machine"]), None)
+        if machine is None:
+            repinned = True  # pinned machine dropped off the fleet — re-pick
+
+    created = False
+    if machine is None:
+        machine = min(devboxes, key=lambda m: _parse_ram_pct(m.get("usage")))
+        local_user = re.sub(r"[^a-z0-9]+", "",
+                            (os.environ.get("USER") or "dev").lower()) or "dev"
+        mslug = re.sub(r"[^a-z0-9]+", "-", machine["name"].lower()).strip("-")[:24]
+        dev_id = f"{local_user}-{mslug}-{_uuid.uuid4().hex[:6]}"
+        created = saved is None
+        saved = {
+            "id": dev_id,
+            "machine": machine["name"],
+            "sshUser": machine.get("user") or "",
+            "localUser": local_user,
+            "createdAt": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        }
+        try:
+            DEVBOX_ID_FILE.write_text(json.dumps(saved, indent=2) + "\n")
+        except OSError as e:
+            return {"error": f"cannot write {DEVBOX_ID_FILE}: {e}"}
+
+    dev_id = saved["id"]
+    return {
+        "id": dev_id,
+        "machine": machine.get("name", ""),
+        "host": machine.get("bestIp") or machine.get("localIp") or "",
+        "sshUser": machine.get("user") or saved.get("sshUser") or "",
+        "port": 22,
+        "remoteDir": f"/tmp/{dev_id}/nammayatri",
+        "copyMode": "rsync",
+        "resources": machine.get("resources", {}),
+        "usage": machine.get("usage", {}),
+        "created": created,
+        "repinned": repinned,
+    }
 
 
 def _setup_ssh(host: str, user: str, port: int = 22) -> dict:
@@ -1233,7 +1308,12 @@ def _remote_sync_caddy_port(body: dict) -> dict:
     registry_ports = entry.get("ports") or {}
     spec_loader.set_registry_ports(registry_ports)
 
-    return {"devName": dev_name, "caddyPort": caddy_port, "dir": entry.get("dir")}
+    return {
+        "devName": dev_name,
+        "caddyPort": caddy_port,
+        "contextApiPort": registry_ports.get("test-context-api"),
+        "dir": entry.get("dir"),
+    }
 
 
 def _remote_session_make(kind: str, host: str) -> dict:
@@ -2695,6 +2775,14 @@ class LocalApiHandler(BaseHTTPRequestHandler):
         # GET /api/remote/machines  — fetch ServiceDiscovery machine list
         if method == "GET" and path == "/api/remote/machines":
             self._send_json(_fetch_machines())
+            return True
+
+        # GET /api/devbox/resolve[?new=1] 
+        if method == "GET" and path == "/api/devbox/resolve":
+            from urllib.parse import parse_qs as _pq
+            q = _pq(urlparse(self.path).query)
+            force = (q.get("new", ["0"])[0] or "0") in ("1", "true")
+            self._send_json(_devbox_resolve(force_new=force))
             return True
 
         # POST /api/remote/setup-ssh  — generate key + test connectivity

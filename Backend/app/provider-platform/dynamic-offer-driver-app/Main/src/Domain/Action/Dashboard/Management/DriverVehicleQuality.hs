@@ -23,7 +23,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
-import SharedLogic.VehicleServiceTier (fetchVehicleTierForDriverWithUsageRestriction)
+import SharedLogic.VehicleServiceTier (ServiceTierFilterMode (..), fetchVehicleTierForDriverWithUsageRestriction)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FeedbackBadgeExtra as QFeedbackBadge
@@ -126,7 +126,7 @@ postDriverVehicleQualityUpdateVehicleRating merchantShortId opCity req = do
   whenJust mbVehicle $ \vehicle -> do
     QVehicle.updateVehicleRatingAndRemark (Just req.rating) (Just req.remark) vehicle.driverId
     let updatedVehicle = vehicle{DVeh.vehicleRating = Just req.rating}
-    tierResults <- fetchVehicleTierForDriverWithUsageRestriction True Nothing (Just updatedVehicle) Nothing Nothing vehicle.driverId _merchantOpCity.id
+    tierResults <- fetchVehicleTierForDriverWithUsageRestriction SelectedServiceTiers Nothing (Just updatedVehicle) Nothing Nothing vehicle.driverId _merchantOpCity.id
     let newTiers = (.serviceTierType) . fst <$> filter (not . snd) tierResults
     QVehicle.updateSelectedServiceTiers newTiers vehicle.driverId
 

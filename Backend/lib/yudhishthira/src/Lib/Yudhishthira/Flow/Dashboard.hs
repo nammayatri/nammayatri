@@ -870,7 +870,7 @@ getNammaTagConfigPilotAllConfigs ::
 getNammaTagConfigPilotAllConfigs merchantOpCityId mbUnderExp configChoice = do
   case mbUnderExp of
     Just True -> do
-      allRollouts <- CADLR.fetchAllConfigsByMerchantOpCityId merchantOpCityId
+      allRollouts <- CADLR.fetchAllConfigsByMerchantOpCityId merchantOpCityId -- can fall thru KV and go to DB (Currently Not Called Anywhere)
       let configRollouts =
             filter
               ( \rollout -> case configChoice of
@@ -897,7 +897,7 @@ getNammaTagConfigPilotAllUiConfigs :: BeamFlow m r => Id Lib.Yudhishthira.Types.
 getNammaTagConfigPilotAllUiConfigs merchantOpCityId mbUnderExp configChoice = do
   case mbUnderExp of
     Just True -> do
-      allRollouts <- CADLR.fetchAllConfigsByMerchantOpCityId merchantOpCityId
+      allRollouts <- CADLR.fetchAllConfigsByMerchantOpCityId merchantOpCityId -- can fall thru KV and go to DB if KV Enabled (Currently Not Called Anywhere)
       let configRollouts =
             filter
               ( \rollout -> case configChoice of
@@ -942,9 +942,8 @@ getNammaTagConfigPilotConfigDetails merchantOpCityId domain' = do
 
 getNammaTagConfigPilotUiConfigDetails :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.ConfigDetailsResp]
 getNammaTagConfigPilotUiConfigDetails merchantOpCityId domain' = do
-  allRollouts <- CADLR.fetchAllConfigsByMerchantOpCityId merchantOpCityId
-  let configRollouts = filter (\rollout -> rollout.domain == domain') allRollouts
-      hasDemotedBase = any (\r -> r.isBaseVersion /= Just True && r.experimentStatus == Just LYT.CONCLUDED) configRollouts
+  configRollouts <- CADLR.findByMerchantOpCityAndDomain merchantOpCityId domain'
+  let hasDemotedBase = any (\r -> r.isBaseVersion /= Just True && r.experimentStatus == Just LYT.CONCLUDED) configRollouts
   mapM (makeConfigDetailResp hasDemotedBase) configRollouts
   where
     makeConfigDetailResp :: BeamFlow m r => Bool -> AppDynamicLogicRollout -> m Lib.Yudhishthira.Types.ConfigDetailsResp
@@ -1067,8 +1066,8 @@ postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req handleConf
           LYT.Abort _ -> do
             pushConfigHistory domain version merchantOpCityId configsJson
           _ -> do
-            allRollouts <- CADLR.fetchAllConfigsByMerchantOpCityId merchantOpCityId
-            let configRollouts = filter (\rollout -> rollout.domain == domain && (rollout.percentageRollout /= 0 || rollout.isBaseVersion == Just True)) allRollouts
+            allDomainRollouts <- CADLR.findByMerchantOpCityAndDomain merchantOpCityId domain
+            let configRollouts = filter (\rollout -> rollout.percentageRollout /= 0 || rollout.isBaseVersion == Just True) allDomainRollouts
             mapM_ (\rollout -> pushConfigHistory domain rollout.version merchantOpCityId configsJson) configRollouts
 
     mkBaseAppDynamicLogicElement :: Int -> A.Value -> Int -> UTCTime -> LYT.LogicDomain -> DTADLE.AppDynamicLogicElement

@@ -27,6 +27,7 @@ GateInfo:
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     gateTags: Maybe [Text]
     walkDescription: Maybe Text
+    navigationInstructions: Maybe (Map Text Text)
     entryFeeAmount: Maybe Double
     minDriverThresholds: Maybe (Map Text Int)
     maxDriverThresholds: Maybe (Map Text Int)
@@ -50,6 +51,8 @@ GateInfo:
       maxDriverThresholdsJson: Maybe Text
     demandThresholds:
       demandThresholdsJson: Maybe Text
+    navigationInstructions:
+      navigationInstructionsJson: Maybe Text
 
   beamType:
     point: Text
@@ -65,6 +68,7 @@ GateInfo:
     minDriverThresholdsJson: text
     maxDriverThresholdsJson: text
     demandThresholdsJson: text
+    navigationInstructionsJson: text
     enableQueueFilter: text
 
   fromTType:
@@ -73,6 +77,7 @@ GateInfo:
     minDriverThresholds: Lib.Queries.Transformers.GateInfo.decodeThresholdMap minDriverThresholdsJson|E
     maxDriverThresholds: Lib.Queries.Transformers.GateInfo.decodeThresholdMap maxDriverThresholdsJson|E
     demandThresholds: Lib.Queries.Transformers.GateInfo.decodeThresholdMap demandThresholdsJson|E
+    navigationInstructions: Lib.Queries.Transformers.GateInfo.decodeTextMap navigationInstructionsJson|E
 
   toTType:
     point: Lib.Queries.Transformers.GateInfo.latLongToText point|E
@@ -80,6 +85,7 @@ GateInfo:
     minDriverThresholdsJson: Lib.Queries.Transformers.GateInfo.encodeThresholdMap|I
     maxDriverThresholdsJson: Lib.Queries.Transformers.GateInfo.encodeThresholdMap|I
     demandThresholdsJson: Lib.Queries.Transformers.GateInfo.encodeThresholdMap|I
+    navigationInstructionsJson: Lib.Queries.Transformers.GateInfo.encodeTextMap|I
 
   constraints:
     id: PrimaryKey

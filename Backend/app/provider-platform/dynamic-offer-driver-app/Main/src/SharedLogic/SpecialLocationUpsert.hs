@@ -93,6 +93,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoMinDriverThresholdsJson :: Maybe Text,
     gateInfoMaxDriverThresholdsJson :: Maybe Text,
     gateInfoDemandThresholdsJson :: Maybe Text,
+    gateInfoNavigationInstructionsJson :: Maybe Text,
     gateInfoId :: Maybe Text,
     gateInfoNotificationActiveTillInSec :: Maybe Text,
     enforceTollRoute :: Maybe Text,
@@ -141,6 +142,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> optional (r .: "gate_info_min_driver_thresholds")
       <*> optional (r .: "gate_info_max_driver_thresholds")
       <*> optional (r .: "gate_info_demand_thresholds")
+      <*> optional (r .: "gate_info_navigation_instructions")
       <*> optional (r .: "gate_info_id")
       <*> optional (r .: "gate_info_notification_active_till_in_sec")
       <*> optional (r .: "enforce_toll_route")
@@ -176,6 +178,11 @@ cleanMaybeCSVField _ fieldValue _ = cleanField fieldValue
 
 parseJsonMap :: Maybe Text -> Maybe (Map.Map Text Int)
 parseJsonMap mbT = do
+  t <- mbT >>= cleanField
+  Aeson.decodeStrict (TE.encodeUtf8 t)
+
+parseJsonTextMap :: Maybe Text -> Maybe (Map.Map Text Text)
+parseJsonTextMap mbT = do
   t <- mbT >>= cleanField
   Aeson.decodeStrict (TE.encodeUtf8 t)
 
@@ -342,6 +349,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             minDriverThresholds = parseJsonMap row.gateInfoMinDriverThresholdsJson,
             maxDriverThresholds = parseJsonMap row.gateInfoMaxDriverThresholdsJson,
             demandThresholds = parseJsonMap row.gateInfoDemandThresholdsJson,
+            navigationInstructions = parseJsonTextMap row.gateInfoNavigationInstructionsJson,
             defaultMinDriverThreshold = readMaybeCSVField idx (fromMaybe "" row.gateInfoMinDriverThreshold) "Gate Info (min_driver_threshold)",
             defaultMaxDriverThreshold = readMaybeCSVField idx (fromMaybe "" row.gateInfoMaxDriverThreshold) "Gate Info (max_driver_threshold)",
             defaultDemandThreshold = readMaybeCSVField idx (fromMaybe "" row.gateInfoDemandThreshold) "Gate Info (demand_threshold)",
@@ -465,6 +473,7 @@ mergeGateInfoWithExisting new (Just old) =
       DGI.minDriverThresholds = new.minDriverThresholds <|> old.minDriverThresholds,
       DGI.maxDriverThresholds = new.maxDriverThresholds <|> old.maxDriverThresholds,
       DGI.demandThresholds = new.demandThresholds <|> old.demandThresholds,
+      DGI.navigationInstructions = new.navigationInstructions <|> old.navigationInstructions,
       DGI.defaultMinDriverThreshold = new.defaultMinDriverThreshold <|> old.defaultMinDriverThreshold,
       DGI.defaultMaxDriverThreshold = new.defaultMaxDriverThreshold <|> old.defaultMaxDriverThreshold,
       DGI.defaultDemandThreshold = new.defaultDemandThreshold <|> old.defaultDemandThreshold,

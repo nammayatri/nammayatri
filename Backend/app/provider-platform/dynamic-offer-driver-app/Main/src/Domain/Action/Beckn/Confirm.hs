@@ -323,6 +323,11 @@ validateRequest subscriber transporterId req now = do
     Delivery OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
     Delivery OneWayRideOtp -> getRideOtpQuoteDetails booking transporter
     OneWay MeterRide -> getMeterRideQuoteDetails booking transporter
+    -- FIX: this case previously had no EasyBooking branch (only a catch-all), so it silently
+    -- fell through to "UNSUPPORTED TYPE CATEGORY" at confirm time — same generic, static-quote
+    -- handling as Rental's static-offer branch above (EasyBooking is QuoteBased just like it).
+    -- RideOtp mode deliberately not handled yet (never produced at dispatch, see Search.hs).
+    EasyBooking OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
     _ -> throwError . InvalidRequest $ "UNSUPPORTED TYPE CATEGORY" <> show booking.tripCategory
   where
     getDriverQuoteDetails booking transporter = do

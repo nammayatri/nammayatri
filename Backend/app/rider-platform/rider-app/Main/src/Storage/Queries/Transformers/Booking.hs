@@ -34,6 +34,8 @@ getDistance = \case
   DRB.InterCityDetails details -> Just details.distance
   DRB.AmbulanceDetails details -> Just details.distance
   DRB.MeterRideDetails _ -> Nothing
+  -- No pre-computed distance stored for EasyBooking (fare is recomputed from actual GPS distance).
+  DRB.EasyBookingDetails _ -> Nothing
 
 -- TODO :: Deprecated, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
 getFareProductType :: Domain.Types.Booking.BookingDetails -> FareProductType
@@ -44,6 +46,7 @@ getFareProductType = \case
   DRB.InterCityDetails _ -> INTER_CITY
   DRB.AmbulanceDetails _ -> AMBULANCE
   DRB.MeterRideDetails _ -> ONE_WAY
+  DRB.EasyBookingDetails _ -> EASY_BOOKING
   _ -> DRIVER_OFFER
 
 getOtpCode :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
@@ -56,6 +59,9 @@ getOtpCode = \case
   DRB.AmbulanceDetails _ -> Nothing
   DRB.DeliveryDetails details -> details.otpCode
   DRB.MeterRideDetails _ -> Nothing
+  -- EasyBookingDetails reuses RentalBookingDetails's shape, so `.otpCode` is available
+  -- here too even though isEndOtpRequired EasyBooking is currently False (see Trip.hs).
+  DRB.EasyBookingDetails details -> details.otpCode
 
 getParcelQuantity :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Int
 getParcelQuantity = \case
@@ -77,6 +83,8 @@ getIsUpgradedToCab = \case
   DRB.AmbulanceDetails _ -> Nothing
   DRB.DeliveryDetails _ -> Nothing
   DRB.MeterRideDetails _ -> Nothing
+  -- No cab-upgrade concept for EasyBooking, same as Rental.
+  DRB.EasyBookingDetails _ -> Nothing
 
 getStopLocationId :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getStopLocationId = \case
@@ -88,6 +96,8 @@ getStopLocationId = \case
   DRB.AmbulanceDetails _ -> Nothing
   DRB.DeliveryDetails _ -> Nothing
   DRB.MeterRideDetails _ -> Nothing
+  -- Reuses RentalBookingDetails's stopLocation field, same as Rental would if it had one here.
+  DRB.EasyBookingDetails easyBookingDetails -> getId . (.id) <$> easyBookingDetails.stopLocation
 
 getToLocationId :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getToLocationId bookingDetails = do
@@ -104,6 +114,8 @@ getToLocation = \case
   DRB.AmbulanceDetails details -> Just details.toLocation
   DRB.DeliveryDetails details -> Just details.toLocation
   DRB.MeterRideDetails details -> details.toLocation
+  -- Destination-less, same as Rental.
+  DRB.EasyBookingDetails _ -> Nothing
 
 getDeliveryBookingInfo :: Domain.Types.Booking.BookingDetails -> Maybe Domain.Types.Booking.DeliveryBookingDetails
 getDeliveryBookingInfo = \case
@@ -160,6 +172,8 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             CrossCity OneWayRideOtp _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId []
             RideShare RideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId []
             Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
+            -- Same buildRentalDetails builder as Rental — EasyBooking reuses RentalBookingDetails.
+            EasyBooking _ -> DRB.EasyBookingDetails <$> buildRentalDetails stopLocationId
             InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocationId []
             Ambulance _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocationId
             Delivery _ -> DRB.DeliveryDetails <$> buildDeliveryDetails toLocationId
@@ -201,6 +215,8 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             CrossCity OneWayRideOtp _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId stops
             RideShare RideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId stops
             Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
+            -- Same buildRentalDetails builder as Rental — EasyBooking reuses RentalBookingDetails.
+            EasyBooking _ -> DRB.EasyBookingDetails <$> buildRentalDetails stopLocationId
             InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocId stops
             Ambulance _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocId
             Delivery _ -> DRB.DeliveryDetails <$> buildDeliveryDetails toLocId
@@ -213,6 +229,9 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId stops
             INTER_CITY -> DRB.InterCityDetails <$> buildInterCityDetails toLocId stops
             AMBULANCE -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocId
+            -- Unreachable in practice (EasyBooking is new, so no legacy row lacks tripCategory),
+            -- but the pattern must still be exhaustive; mirrors the RENTAL branch above.
+            EASY_BOOKING -> DRB.EasyBookingDetails <$> buildRentalDetails stopLocationId
       return (fl, bookingDetails)
   where
     buildOneWayDetails mbToLocid stops = do

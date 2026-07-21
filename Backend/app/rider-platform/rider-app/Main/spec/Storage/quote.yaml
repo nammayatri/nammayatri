@@ -35,7 +35,9 @@ Quote:
 
   types:
     QuoteDetails:
-      enum: OneWayDetails OneWayQuoteDetails, AmbulanceDetails DriverOffer, InterCityDetails InterCityDetails, RentalDetails RentalDetails, DriverOfferDetails DriverOffer, OneWaySpecialZoneDetails SpecialZoneQuote, DeliveryDetails DriverOffer, MeterRideDetails MeterRideQuoteDetails
+      # EasyBookingDetails reuses RentalDetails's shape — both are destination-less quotes,
+      # so no new quote-details type/table was needed.
+      enum: OneWayDetails OneWayQuoteDetails, AmbulanceDetails DriverOffer, InterCityDetails InterCityDetails, RentalDetails RentalDetails, DriverOfferDetails DriverOffer, OneWaySpecialZoneDetails SpecialZoneQuote, DeliveryDetails DriverOffer, MeterRideDetails MeterRideQuoteDetails, EasyBookingDetails RentalDetails
       derive': Generic,Show
 
     OneWayQuoteDetails:
@@ -96,6 +98,7 @@ Quote:
     specialLocationSupportNumber : Maybe Text
     fareSettlementType : Maybe FareSettlementType
     area : Maybe Text
+    navigationInstruction : Maybe Text
     clientBundleVersion : Maybe Version
     clientSdkVersion : Maybe Version
     clientConfigVersion : Maybe Version

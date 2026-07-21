@@ -80,7 +80,8 @@ data EstimateAPIEntity = EstimateAPIEntity
     isInsured :: Maybe Bool,
     insuredAmount :: Maybe Text,
     offer :: Maybe SOffer.CumulativeOfferResp,
-    area :: Maybe Text
+    area :: Maybe Text,
+    navigationInstruction :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

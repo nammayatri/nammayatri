@@ -394,6 +394,8 @@ sortByNearestDriverDistance = sortBy (compare `on` getMbDistanceToNearestDriver)
         SQuote.AmbulanceDetails details -> details.distanceToPickup
         SQuote.DeliveryDetails details -> details.distanceToPickup
         SQuote.RentalDetails _ -> Nothing
+        -- No nearest-driver-distance concept tracked for EasyBooking quotes, same as Rental.
+        SQuote.EasyBookingDetails _ -> Nothing
         SQuote.DriverOfferDetails details -> details.distanceToPickup
         SQuote.OneWaySpecialZoneDetails _ -> Just $ Distance 0 Meter
         SQuote.InterCityDetails _ -> Just $ Distance 0 Meter
