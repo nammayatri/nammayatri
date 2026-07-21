@@ -23,6 +23,7 @@ apis:
         - limit: Int
         - offset: Int
         - mbSearchString: Text
+        - mbOperatorId: Text
       response:
         type: FleetInfoRes
       helperApi:
@@ -36,6 +37,7 @@ apis:
               - limit: Int
               - offset: Int
               - mbSearchString: Text
+              - mbOperatorId: Text
             mandatoryQuery:
               - requestorId: Text
             response:
