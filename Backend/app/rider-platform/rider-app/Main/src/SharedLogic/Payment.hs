@@ -778,8 +778,11 @@ buildLedgerInfoFromBreakups breakups discount cashback appFee _tip ctx =
               r.clampedDiscount
               cashback
               r.rideVatAbsorbedOnDiscount
-              0 -- cancellationCharge (not applicable for normal ride)
-              0 -- cancellationTax
+              -- A cancelled ride's own fee arrives as a base+tax pair. A due carried into a LATER
+              -- ride's fare arrives gross in the tax-exclusive slot with cancellationTax = 0, since
+              -- the BPP tracks such dues as one running total.
+              breakupPostDiscount.cancellationFeeTaxExclusive
+              breakupPostDiscount.cancellationTax
               ctx
       pure (Just info)
   where
@@ -1018,6 +1021,7 @@ chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType p
         case result of
           Right () -> do
             logInfo $ "Settled " <> show (length entryIds) <> " ledger entries for ride: " <> rideId.getId <> " reason: " <> settledReason
+            -- markRideInvoicePaid now closes both the Ride and (if any) RideCancellation invoice.
             RidePaymentFinance.markRideInvoicePaid rideId.getId
           Left err -> logError $ "Failed to settle ledger entries for ride " <> rideId.getId <> ": " <> show err
       else do

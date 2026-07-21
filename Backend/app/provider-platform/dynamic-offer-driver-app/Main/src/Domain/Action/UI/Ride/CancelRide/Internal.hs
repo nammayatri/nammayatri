@@ -751,33 +751,42 @@ applyCancellationLedgerAction ::
 applyCancellationLedgerAction booking ride action transporterConfig = do
   mbCancellationDuesDetails <- QCDD.findByRideId ride.id
   let refId = booking.id.getId
-      overdueCharge = fromMaybe 0 (mbCancellationDuesDetails >>= (.overdueCancellationCharge))
-      overdueTax = fromMaybe 0 (mbCancellationDuesDetails >>= (.overdueCancellationTax))
+      cancellationFee = fromMaybe 0 (mbCancellationDuesDetails >>= (.cancellationFee))
+      cancellationFeeTax = fromMaybe 0 (mbCancellationDuesDetails >>= (.cancellationFeeTax))
+      -- No overdue amounts configured => no reduction: the driver keeps the full fee.
+      overdueCharge = fromMaybe cancellationFee (mbCancellationDuesDetails >>= (.overdueCancellationCharge))
+      overdueTax = fromMaybe cancellationFeeTax (mbCancellationDuesDetails >>= (.overdueCancellationTax))
       -- VAT stays with the driver (OwnerLiability), GST is remitted to govt (GovtIndirect) — mirrors createDriverWalletTransaction.
       cancellationTaxDest = if fromMaybe False booking.fareParams.isVatTaxType then OwnerLiability else GovtIndirect
       -- When a cancellation goes overdue the driver only gets the (lower) overdue charge; the
       -- platform keeps the (cancellation - overdue) difference as SellerRevenue.
-      overdueBenefit = max 0 (fromMaybe 0 (mbCancellationDuesDetails >>= (.cancellationFee)) - overdueCharge)
-      overdueBenefitTax = max 0 (fromMaybe 0 (mbCancellationDuesDetails >>= (.cancellationFeeTax)) - overdueTax)
+      overdueBenefit = max 0 (cancellationFee - overdueCharge)
+      overdueBenefitTax = max 0 (cancellationFeeTax - overdueTax)
       -- Benefit tax: VAT portion is the platform's revenue, GST is remitted to govt.
       overdueBenefitTaxDest = if fromMaybe False booking.fareParams.isVatTaxType then SellerRevenue else GovtIndirect
-  overdueEntries <- getEntriesByReference walletReferenceOverdueCancellationCharge refId
+      -- Only the driver's entries reach a payout, so only these ever carry a settlementStatus.
+      overdueDriverRefs = [walletReferenceOverdueCancellationCharge, walletReferenceOverdueCancellationTax]
+      overdueAllRefs = overdueDriverRefs <> [walletReferenceCancellationOverdueBenefit, walletReferenceCancellationOverdueBenefitTax]
+  -- All four refs: a zero-amount entry is never written, so one ref alone can miss an overdue.
+  overdueEntries <- concat <$> mapM (`getEntriesByReference` refId) overdueAllRefs
   let alreadyOverdue = not (Kernel.Prelude.null overdueEntries)
   case action of
     UserCancellationDues.SettleCancellationLedger -> do
       -- Decide once whether the settled charge is the actual cancellation fee (reversed overdue / never overdue)
       -- or the overdue charge that still stands; this single choice drives fare params + service VAT.
-      overdueAllEntries <- if alreadyOverdue then concat <$> mapM (`getEntriesByReference` refId) [walletReferenceOverdueCancellationCharge, walletReferenceOverdueCancellationTax, walletReferenceCancellationOverdueBenefit, walletReferenceCancellationOverdueBenefitTax] else pure []
-      let alreadyReversed = not (Kernel.Prelude.null (filter (\e -> isJust e.reversalOf) overdueAllEntries))
-          reversibleEntries = filter (\e -> isNothing e.reversalOf && isNothing e.settlementStatus) overdueAllEntries
-          willReverse = not (alreadyReversed || Kernel.Prelude.null reversibleEntries)
+      let alreadyReversed = not (Kernel.Prelude.null (filter (\e -> isJust e.reversalOf) overdueEntries))
+          -- Reversal covers driver + benefit entries together, so it is only safe while none of the
+          -- driver's has been paid out. Benefit entries never reach a payout and must not be counted.
+          reversibleEntries = filter (\e -> isNothing e.reversalOf) overdueEntries
+          driverPaidOut = any (\e -> e.referenceType `elem` overdueDriverRefs && isJust e.settlementStatus) reversibleEntries
+          willReverse = not (alreadyReversed || driverPaidOut || Kernel.Prelude.null reversibleEntries)
           useCancellationAmount = not alreadyOverdue || willReverse
       if alreadyOverdue
-        then -- Settled after going overdue: reverse the un-paid-out overdue entries and book the actual cancellation charge.
+        then -- Settled after going overdue: reverse the overdue AND benefit entries, then book the actual cancellation charge.
         when willReverse $ do
           Kernel.Prelude.forM_ reversibleEntries $ \e -> void $ createReversal e.id "CancellationSettledAfterOverdue"
-          let baseCancellation = fromMaybe 0 (mbCancellationDuesDetails >>= (.cancellationFee))
-              gstCancellation = fromMaybe 0 (mbCancellationDuesDetails >>= (.cancellationFeeTax))
+          let baseCancellation = cancellationFee
+              gstCancellation = cancellationFeeTax
           when (baseCancellation > 0 || gstCancellation > 0) $ do
             ctx <- buildCancellationFinanceCtx booking ride transporterConfig
             result <- runFinance ctx $ do
@@ -797,10 +806,11 @@ applyCancellationLedgerAction booking ride action transporterConfig = do
           logInfo $ "Settled cancellation ledger entries for bookingId: " <> refId
       settleCustomerCancellationDues booking ride
       -- Effective cancellation charge that now stands; drives both fare params and service VAT.
+      -- The overdue side reads the fallback-applied amounts, not the raw columns.
       let (effectiveCancellationFee, effectiveCancellationTax) =
             if useCancellationAmount
               then (mbCancellationDuesDetails >>= (.cancellationFee), mbCancellationDuesDetails >>= (.cancellationFeeTax))
-              else (mbCancellationDuesDetails >>= (.overdueCancellationCharge), mbCancellationDuesDetails >>= (.overdueCancellationTax))
+              else (overdueCharge <$ mbCancellationDuesDetails, overdueTax <$ mbCancellationDuesDetails)
       whenJust ride.fareParametersId $ QFP.updateCancellationCharges effectiveCancellationFee effectiveCancellationTax
       let cancelInclusive = fromMaybe 0 effectiveCancellationFee + fromMaybe 0 effectiveCancellationTax
           cancelServiceVatAmount = case transporterConfig.taxConfig.serviceVatPercentage of

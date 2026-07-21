@@ -1007,12 +1007,17 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           cashLedgerInfo.offerDiscountAmount
           cashLedgerInfo.cashbackPayoutAmount
           cashLedgerInfo.rideVatAbsorbedOnDiscount
-          0 -- cancellationCharge (not applicable at ride-end)
-          0 -- cancellationTax
-      unless (null upsertRes.coreEntryIds) $ do
-        settleResult <- RidePaymentFinance.settleRidePaymentLedger cashLedgerCtx upsertRes.coreEntryIds RidePaymentFinance.settledReasonRidePayment
+          cashLedgerInfo.cancellationCharge
+          cashLedgerInfo.cancellationTax
+      -- Cash settles the ids given to it, where the online capture re-queries every unsettled entry
+      -- on the ride. So the carried cancellation entries must be listed here or they stay PENDING.
+      let settleableIds = upsertRes.coreEntryIds <> upsertRes.cancellationEntryIds
+      unless (null settleableIds) $ do
+        settleResult <- RidePaymentFinance.settleRidePaymentLedger cashLedgerCtx settleableIds RidePaymentFinance.settledReasonRidePayment
         case settleResult of
-          Right () -> logInfo $ "Cash ride BAP ledger settled for ride: " <> ride.id.getId <> " invoiceId=" <> show upsertRes.invoiceId
+          Right () -> do
+            RidePaymentFinance.markRideInvoicePaid ride.id.getId
+            logInfo $ "Cash ride BAP ledger settled for ride: " <> ride.id.getId <> " invoiceId=" <> show upsertRes.invoiceId
           Left err -> logError $ "Cash ride settle failed: " <> show err
     else do
       -- Online Ride End branch → isOnline=True.
