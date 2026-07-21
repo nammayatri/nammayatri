@@ -121,7 +121,8 @@ data PlanEntity = PlanEntity
     bankErrors :: [ErrorEntity],
     cancellationPenalties :: [CancellationPenaltyInformation],
     airportRideSubscription :: Maybe HighPrecMoney,
-    remainingPlanCreditLimit :: Maybe HighPrecMoney
+    remainingPlanCreditLimit :: Maybe HighPrecMoney,
+    planBaseAmount :: HighPrecMoney
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1407,6 +1408,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
         dueBoothChargesWithCurrency = PriceAPIEntity dueBoothCharges currency,
         coinEntity = CoinEntity <$> coinDiscountUpto <*> (PriceAPIEntity <$> coinDiscountUpto <*> pure currency),
         remainingPlanCreditLimit = Nothing,
+        planBaseAmount = getPlanAmount plan.planBaseAmount,
         ..
       }
   where
