@@ -84,6 +84,9 @@ type GetFleetManagementFleets =
       :> QueryParam
            "mbSearchString"
            Kernel.Prelude.Text
+      :> QueryParam
+           "mbOperatorId"
+           Kernel.Prelude.Text
       :> Get
            '[JSON]
            FleetInfoRes
@@ -98,6 +101,9 @@ type GetFleetManagementFleetsHelper =
       :> QueryParam "offset" Kernel.Prelude.Int
       :> QueryParam
            "mbSearchString"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "mbOperatorId"
            Kernel.Prelude.Text
       :> MandatoryQueryParam
            "requestorId"
@@ -184,7 +190,7 @@ type PostFleetManagementFleetMemberAssociationCreateHelper =
   )
 
 data FleetManagementAPIs = FleetManagementAPIs
-  { getFleetManagementFleets :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetInfoRes,
+  { getFleetManagementFleets :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetInfoRes,
     postFleetManagementFleetCreate :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetOwnerLoginReqV2 -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetOwnerLoginResV2,
     postFleetManagementFleetRegister :: Kernel.Prelude.Text -> API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetOwnerRegisterReqV2 -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetOwnerRegisterResV2,
     postFleetManagementFleetLinkSendOtp :: Kernel.Prelude.Text -> FleetOwnerSendOtpReq -> EulerHS.Types.EulerClient FleetOwnerSendOtpRes,

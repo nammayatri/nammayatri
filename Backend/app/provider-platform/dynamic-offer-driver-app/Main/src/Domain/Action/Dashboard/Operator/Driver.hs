@@ -475,24 +475,26 @@ getDriverOperatorList ::
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Maybe CommonFleet.DriverMode ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Text ->
   Environment.Flow API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp
-getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString mbIncludeDocuments onlyMandatoryDocs mbStatus requestorId = do
-  requestor <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
-  unless (requestor.role == DP.OPERATOR) $
-    Kernel.Utils.Common.throwError (InvalidRequest "Requestor role is not OPERATOR")
+getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString mbIncludeDocuments onlyMandatoryDocs mbStatus mbOperatorId requestorId = do
+  (mbRole, mbEntityId) <- DFDriver.validateRequestorRoleAndGetEntityId requestorId mbOperatorId
+  effectiveOperatorId <- case (mbRole, mbEntityId) of
+    (Just DP.OPERATOR, Just eid) -> pure eid
+    _ -> Kernel.Utils.Common.throwError (InvalidRequest "Requestor role is not OPERATOR")
   now <- getCurrentTime
   let mbMode = castApiDriverMode <$> mbStatus
   driverOperatorInfoList <- case mbVehicleNo of
     Nothing -> do
-      driverOperatorAssociationAndPersonLs <- QDOA.findAllByOperatorIdWithLimitOffsetSearch requestorId mbIsActive mbLimit mbOffset mbSearchString Nothing mbMode
+      driverOperatorAssociationAndPersonLs <- QDOA.findAllByOperatorIdWithLimitOffsetSearch effectiveOperatorId mbIsActive mbLimit mbOffset mbSearchString Nothing mbMode
       forM driverOperatorAssociationAndPersonLs \(drvOpAsn, person, driverMode) -> do
         let driverId = drvOpAsn.driverId
         (vehicleModel, registrationNo, isRcActive) <- fetchVehicleDetailsByDriverId now driverId
         pure (drvOpAsn, person, vehicleModel, registrationNo, isRcActive, driverMode)
     Just vehicleNo -> (maybeToList <$>) . runMaybeT $ do
       (vehicleModel, registrationNo, isRcActive, driverId) <- fetchVehicleDetailsByVehicleNo now vehicleNo
-      (drvOpAsn, person, driverMode) <- MaybeT $ listToMaybe <$> QDOA.findAllByOperatorIdWithLimitOffsetSearch requestorId mbIsActive mbLimit mbOffset mbSearchString (Just driverId) mbMode
+      (drvOpAsn, person, driverMode) <- MaybeT $ listToMaybe <$> QDOA.findAllByOperatorIdWithLimitOffsetSearch effectiveOperatorId mbIsActive mbLimit mbOffset mbSearchString (Just driverId) mbMode
       pure (drvOpAsn, person, vehicleModel, registrationNo, isRcActive, driverMode)
 
   driverInfoList <- QDI.findAllByDriverIds (map (\(drvOpAsn, _, _, _, _, _) -> drvOpAsn.driverId.getId) driverOperatorInfoList)

@@ -1215,7 +1215,7 @@ validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId = do
   reqPerson <- QPerson.findById (Id requestorId)
   case reqPerson of
     Nothing -> do
-      fleetOwnerOrOperatorId <- mbFleetOwnerId & fromMaybeM (InvalidRequest "fleetOwnerId required")
+      fleetOwnerOrOperatorId <- mbFleetOwnerId & fromMaybeM (InvalidRequest "fleetOwnerId or OperatorId required")
       fleetOwnerOrOperator <- QPerson.findById (Id fleetOwnerOrOperatorId) >>= fromMaybeM (PersonNotFound fleetOwnerOrOperatorId)
       case fleetOwnerOrOperator.role of
         role

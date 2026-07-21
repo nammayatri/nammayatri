@@ -14,6 +14,7 @@ import qualified API.Types.ProviderPlatform.Fleet.RegistrationV2 as Common
 import qualified API.Types.ProviderPlatform.Operator.FleetManagement as Common
 import Data.List.Extra (notNull)
 import qualified Domain.Action.Dashboard.Common as DCommon
+import qualified Domain.Action.Dashboard.Fleet.Driver as DFDriver
 import Domain.Action.Dashboard.Fleet.Onboarding
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegistrationV2
 import qualified Domain.Action.Internal.DriverMode as DriverMode
@@ -69,12 +70,15 @@ getFleetManagementFleets ::
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Text ->
   Environment.Flow Common.FleetInfoRes
-getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled mbLimit mbOffset mbSearchString requestorId = do
-  person <- QP.findById (ID.Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
-  unless (person.role == DP.OPERATOR) $ throwError (InvalidRequest "Requestor role is not OPERATOR")
-  foaPersonFleetOwnerInfo <- findAllActiveByOperatorIdWithLimitOffsetSearch requestorId mbLimit mbOffset mbSearchString mbIsActive mbEnabled mbVerified
+getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled mbLimit mbOffset mbSearchString mbOperatorId requestorId = do
+  (mbRole, mbEntityId) <- DFDriver.validateRequestorRoleAndGetEntityId requestorId mbOperatorId
+  operatorId <- case (mbRole, mbEntityId) of
+    (Just DP.OPERATOR, Just eid) -> pure eid
+    _ -> throwError (InvalidRequest "Requestor role is not OPERATOR")
+  foaPersonFleetOwnerInfo <- findAllActiveByOperatorIdWithLimitOffsetSearch operatorId mbLimit mbOffset mbSearchString mbIsActive mbEnabled mbVerified
   listItem <- mapM createFleetInfo foaPersonFleetOwnerInfo
   let count = length listItem
   let summary = Common.Summary {totalCount = 10000, count}
