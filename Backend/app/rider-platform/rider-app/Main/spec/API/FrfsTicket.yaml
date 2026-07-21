@@ -182,24 +182,6 @@ types:
     integratedBppConfigId: Id IntegratedBPPConfig
     derive: "Show"
 
-  FRFSPaymentAttemptAPI:
-    id: Text
-    status: Text
-    amount: HighPrecMoney
-    currency: Currency
-    gatewayName: Maybe Text
-    respCode: Maybe Text
-    respMessage: Maybe Text
-    bankErrorCode: Maybe Text
-    bankErrorMessage: Maybe Text
-    createdAt: UTCTime
-    derive: "Show"
-
-  FRFSBookingPaymentAttemptsAPIRes:
-    bookingId: Id FRFSTicketBooking
-    attempts: "[FRFSPaymentAttemptAPI]"
-    derive: "Show"
-
   FRFSRefundAttemptAPI:
     id: Text
     status: Text
@@ -214,6 +196,7 @@ types:
 
   FRFSPaymentAttemptWithRefundsAPI:
     id: Text
+    transactionId: Text
     status: Text
     amount: HighPrecMoney
     currency: Currency
@@ -228,8 +211,14 @@ types:
 
   FRFSPaymentOrderAttemptsAPI:
     orderId: Text
+    paymentShortId: Text
     domain: Maybe Text
     transactions: "[FRFSPaymentAttemptWithRefundsAPI]"
+    derive: "Show"
+
+  FRFSBookingPaymentAttemptsAPIRes:
+    bookingId: Id FRFSTicketBooking
+    orders: "[FRFSPaymentOrderAttemptsAPI]"
     derive: "Show"
 
   FRFSPaymentAttemptsListAPIRes:

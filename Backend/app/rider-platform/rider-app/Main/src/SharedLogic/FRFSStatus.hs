@@ -490,7 +490,7 @@ buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
         status = booking.status,
         discountedTickets = booking.discountedTickets,
         eventDiscountAmount = booking.eventDiscountAmount,
-        payment = payment <&> (\p -> p {transactionId = booking.paymentTxnId}),
+        payment = payment <&> (\p -> (p :: FRFSTicketService.FRFSBookingPaymentAPI) {transactionId = booking.paymentTxnId}),
         isFareChanged = booking.isFareChanged,
         googleWalletJWTUrl = booking.googleWalletJWTUrl,
         integratedBppConfigId = booking.integratedBppConfigId,

@@ -1019,25 +1019,42 @@ getFrfsBookingList (mbPersonId, _merchantId) mbLimit mbOffset mbVehicleCategory 
     )
     bookings
 
-getFrfsBookingPaymentAttempts :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow (Id DFRFSTicketBooking.FRFSTicketBooking, [DPaymentTransaction.PaymentTransaction])
-getFrfsBookingPaymentAttempts _ bookingId = do
+-- refunds only reference the order (no transaction-level FK), so attach the order's
+-- refunds to whichever transaction was actually CHARGED (the only one refundable).
+pairTransactionsWithRefunds :: [DPaymentTransaction.PaymentTransaction] -> [DRefunds.Refunds] -> [(DPaymentTransaction.PaymentTransaction, [DRefunds.Refunds])]
+pairTransactionsWithRefunds transactions refunds =
+  map (\txn -> (txn, if txn.status == KPayment.CHARGED then refunds else [])) transactions
+
+getFrfsBookingPaymentAttempts :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow (Id DFRFSTicketBooking.FRFSTicketBooking, [(DPaymentOrder.PaymentOrder, [(DPaymentTransaction.PaymentTransaction, [DRefunds.Refunds])])])
+getFrfsBookingPaymentAttempts (mbPersonId, merchantId) bookingId = do
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
-  paymentBooking <- QFRFSTicketBookingPayment.findTicketBookingPayment booking >>= fromMaybeM (InvalidRequest "Payment booking not found for TicketBookingId")
-  transactions <- QPaymentTransaction.findAllByOrderId paymentBooking.paymentOrderId
-  pure (bookingId, transactions)
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  unless (personId == booking.riderId && merchantId == booking.merchantId) $ throwError AccessDenied
+  ticketBookingPayments <- QFRFSTicketBookingPayment.findAllTBPByBookingId bookingId
+  orderGroups <-
+    mapM
+      ( \tbp -> do
+          order <- QPaymentOrder.findById tbp.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for TicketBookingId")
+          transactions <- QPaymentTransaction.findAllByOrderId order.id
+          refunds <- QRefunds.findAllByOrderId order.shortId
+          pure (order, pairTransactionsWithRefunds transactions refunds)
+      )
+      ticketBookingPayments
+  pure (bookingId, orderGroups)
 
 getPaymentAttemptsForCustomer :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow [(DPaymentOrder.PaymentOrder, [(DPaymentTransaction.PaymentTransaction, [DRefunds.Refunds])])]
-getPaymentAttemptsForCustomer (mbPersonId, _merchantId) mbLimit mbOffset = do
+getPaymentAttemptsForCustomer (mbPersonId, merchantId) mbLimit mbOffset = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
-  orders <- QPaymentOrder.findAllByPersonId personId.getId mbLimit mbOffset
+  orders <- QPaymentOrder.findAllByPersonId personId.getId merchantId.getId mbLimit mbOffset
+  -- batched instead of one findAllByOrderId call per order; grouping via a stable sort
+  -- on orderId preserves the createdAt-desc order already established per order.
+  allTransactions <- QPaymentTransaction.findAllByOrderIds (map (.id) orders)
+  let transactionsByOrderId = Map.fromList [(txn.orderId, grp) | grp@(txn : _) <- groupBy (\a b -> a.orderId == b.orderId) (sortOn (.orderId) allTransactions)]
   mapM
     ( \order -> do
-        transactions <- QPaymentTransaction.findAllByOrderId order.id
         refunds <- QRefunds.findAllByOrderId order.shortId
-        -- refunds only reference the order (no transaction-level FK), so attach the order's
-        -- refunds to whichever transaction was actually CHARGED (the only one refundable).
-        let transactionsWithRefunds = map (\txn -> (txn, if txn.status == KPayment.CHARGED then refunds else [])) transactions
-        pure (order, transactionsWithRefunds)
+        let transactions = fromMaybe [] (Map.lookup order.id transactionsByOrderId)
+        pure (order, pairTransactionsWithRefunds transactions refunds)
     )
     orders
 
