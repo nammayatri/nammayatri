@@ -486,9 +486,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
       )
       vehicle
   whenJust vehicle $ \v -> do
-    transporterConfig <-
-      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing))
-        >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+    transporterConfig <- CTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
     fork "backfillSelectedServiceTiers" $
       VST.backfillSelectedServiceTiers v.selectedServiceTiers v info transporterConfig person.merchantOperatingCityId
   let serviceTierACThresholds =
