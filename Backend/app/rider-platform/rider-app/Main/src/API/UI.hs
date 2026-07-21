@@ -88,11 +88,14 @@ import qualified API.UI.Sos as Sos
 import qualified API.UI.Support as Support
 import qualified API.UI.Whatsapp as Whatsapp
 import qualified Data.Text as T
+import qualified Database.Persist.Sql as Persist
+import qualified Database.Redis as Redis
+import qualified Database.Redis.Cluster as RedisCluster
 import Environment
 import EulerHS.Prelude
 import GHC.TypeLits (symbolVal)
-import Kernel.Utils.Servant.Server (healthCheck)
 import Servant
+import System.Timeout (timeout)
 
 -- for multi-cloud proxy
 type UIAPIPrefix = "v2"
@@ -188,9 +191,54 @@ type API =
            :<|> ZendeskSdkToken.API
        )
 
+-- Healthcheck for every datastore connection the app holds, so a pod with any
+-- broken connection (e.g. a stale cluster shard map caching a dead node) fails
+-- its probe and gets restarted instead of serving errors. For clustered redis
+-- we PING every master of the cached shard map: a plain PING only reaches the
+-- shard owning slot 0 and would miss dead nodes for other slots.
+allConnectionsHealthCheck :: FlowHandler Text
+allConnectionsHealthCheck = do
+  env <- asks (.appEnv)
+  let redisEnvs =
+        [ ("clusterRedis", Just env.hedisClusterEnv),
+          ("secondaryClusterRedis", env.secondaryHedisClusterEnv)
+        ]
+      dbEnvs = [("db", env.esqDBEnv), ("replicaDb", env.esqDBReplicaEnv)]
+  dbErrors <- liftIO $ catMaybes <$> forM dbEnvs (\(name, dbEnv) -> runCheck name (checkDb dbEnv))
+  redisErrors <- liftIO $ catMaybes <$> forM redisEnvs (\(name, mbHedisEnv) -> maybe (pure Nothing) (runCheck name . checkRedis) mbHedisEnv)
+  case dbErrors <> redisErrors of
+    [] -> pure "Healthy"
+    errors -> do
+      let msg = "HealthCheck failed: " <> intercalate ", " errors
+      liftIO $ putStrLn @String msg
+      throwM err503 {errBody = encodeUtf8 msg}
+  where
+    perCheckTimeoutUs = 2000000
+    runCheck :: String -> IO Bool -> IO (Maybe String)
+    runCheck name check = do
+      (result :: Either SomeException (Maybe Bool)) <- try $ timeout perCheckTimeoutUs check
+      pure $ case result of
+        Right (Just True) -> Nothing
+        Right (Just False) -> Just (name <> ": check failed")
+        Right Nothing -> Just (name <> ": timed out")
+        Left err -> Just (name <> ": " <> show err)
+    checkDb dbEnv = do
+      (result :: [Persist.Single Int]) <- Persist.runSqlPool (Persist.rawSql "SELECT 1" []) dbEnv.connPool
+      pure $ not (null result)
+    checkRedis hedisEnv = case hedisEnv.hedisConnection of
+      Redis.ClusteredConnection _ clusterConn -> do
+        replies <- RedisCluster.requestMasterNodes clusterConn ["PING"]
+        pure $ not (null replies) && all isPong replies
+      nonClusteredConn -> do
+        res <- Redis.runRedis nonClusteredConn Redis.ping
+        pure $ res == Right Redis.Pong
+    isPong = \case
+      Redis.SingleLine "PONG" -> True
+      _ -> False
+
 handler :: FlowServer API
 handler =
-  healthCheck
+  allConnectionsHealthCheck
     :<|> Registration.handler
     :<|> Profile.handler
     :<|> RidePayment.handler
