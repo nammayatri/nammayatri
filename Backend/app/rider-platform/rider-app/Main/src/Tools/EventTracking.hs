@@ -3,13 +3,16 @@
 module Tools.EventTracking
   ( TrackingEvent (..),
     trackEvent,
+    trackVehicleRideCompletedEvents,
   )
 where
 
+import qualified BecknV2.OnDemand.Enums as BecknEnums
 import Data.Aeson (object, (.=))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
+import qualified Domain.Types.Person as DP
 import qualified Kernel.External.EventTracking as EventTracking
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -22,10 +25,14 @@ import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsa
 
 data TrackingEvent
   = FirstRideCompleted Text
-  | RideCompleted Text Int
+  | RideCompleted Text Int HighPrecMoney -- riderId, overallRideCount, fare
   | DriverAssigned Text
   | UserSearched Text Double Double (Maybe Double) (Maybe Double)
   | UserRequestedQuotes Text Int
+  | UserOnboarded Text Text Text -- riderId, signupMethod, city
+  | VehicleRideCompleted Text Text Int HighPrecMoney -- riderId, categorySlug (cab|auto|bike), catRideCount, fare
+  | VehicleFirstRideCompleted Text Text HighPrecMoney -- riderId, categorySlug, fare
+  | VehicleFifthRideCompleted Text Text HighPrecMoney -- riderId, categorySlug, fare
 
 trackEvent ::
   (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
@@ -87,8 +94,8 @@ eventToAction :: TrackingEvent -> (Text, Text, Value)
 eventToAction = \case
   FirstRideCompleted riderId ->
     (riderId, "ny_user_first_ride_completed", object [])
-  RideCompleted riderId rideCount ->
-    (riderId, "ny_rider_ride_completed", object ["ride_count" .= rideCount])
+  RideCompleted riderId rideCount fare ->
+    (riderId, "ny_rider_ride_completed", object ["ride_count" .= rideCount, "fare" .= fare])
   DriverAssigned riderId ->
     (riderId, "driver_assigned", object [])
   UserSearched riderId fromLat fromLon toLat toLon ->
@@ -101,3 +108,39 @@ eventToAction = \case
     )
   UserRequestedQuotes riderId quoteCount ->
     (riderId, "ny_user_request_quotes", object ["quote_count" .= quoteCount])
+  UserOnboarded riderId signupMethod city ->
+    (riderId, "ny_user_onboarded", object ["signup_method" .= signupMethod, "city" .= city])
+  VehicleRideCompleted riderId slug catRideCount fare ->
+    (riderId, "ny_" <> slug <> "_ride_completed", object ["ride_count" .= catRideCount, "fare" .= fare])
+  VehicleFirstRideCompleted riderId slug fare ->
+    (riderId, "ny_" <> slug <> "_first_ride_completed", object ["fare" .= fare])
+  VehicleFifthRideCompleted riderId slug fare ->
+    (riderId, "ny_" <> slug <> "_user_5_ride_completed", object ["fare" .= fare])
+
+-- | Per-vehicle ride-completion events (+ first/fifth milestones). No-op for
+-- unsupported categories. Does not fork; call it from within a fork.
+trackVehicleRideCompletedEvents ::
+  (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Id DP.Person ->
+  BecknEnums.VehicleCategory ->
+  Int ->
+  HighPrecMoney ->
+  m ()
+trackVehicleRideCompletedEvents merchantId merchantOperatingCityId riderId vehicleCat catRideCount fare =
+  forM_ (vehicleCategorySlug vehicleCat) $ \vehicleSlug -> do
+    let eventRiderId = getId riderId
+    trackEvent merchantId merchantOperatingCityId (VehicleRideCompleted eventRiderId vehicleSlug catRideCount fare)
+    when (catRideCount == 1) $
+      trackEvent merchantId merchantOperatingCityId (VehicleFirstRideCompleted eventRiderId vehicleSlug fare)
+    when (catRideCount == 5) $
+      trackEvent merchantId merchantOperatingCityId (VehicleFifthRideCompleted eventRiderId vehicleSlug fare)
+
+-- | Slug for segmented categories; 'Nothing' for the rest (generic event only).
+vehicleCategorySlug :: BecknEnums.VehicleCategory -> Maybe Text
+vehicleCategorySlug = \case
+  BecknEnums.CAB -> Just "cab"
+  BecknEnums.AUTO_RICKSHAW -> Just "auto"
+  BecknEnums.MOTORCYCLE -> Just "bike"
+  _ -> Nothing

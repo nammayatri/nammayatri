@@ -131,6 +131,7 @@ import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
+import qualified Tools.EventTracking as ET
 import qualified Tools.MultiModal as MM
 import qualified Tools.Notifications as Notify
 import Tools.SignatureResponseBody (SignatureResponseConfig (..), SignedResponse, wrapWithSignature)
@@ -1044,6 +1045,8 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
   Person.create person
   QPS.create createPersonStats
   addNammaTags person (Y.LoginTagData {id = person.id, gender = req.gender, clientSdkVersion = mbClientVersion, clientBundleVersion = mbBundleVersion, clientReactNativeVersion = mbRnVersion, clientConfigVersion = mbClientConfigVersion, clientDevice = mbDevice})
+  fork "event_tracking: user_onboarded" $
+    ET.trackEvent merchant.id merchantOperatingCityId (ET.UserOnboarded person.id.getId (show identifierType) (show currentCity))
   fork "update emergency contact id" $
     whenJust req.mobileNumber $ \mobileNumber -> updatePersonIdForEmergencyContacts person.id mobileNumber merchant.id
   pure person

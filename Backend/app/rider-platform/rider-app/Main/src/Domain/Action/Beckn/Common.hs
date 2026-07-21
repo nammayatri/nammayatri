@@ -938,19 +938,25 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           Just distance -> updRide.chargeableDistance >= Just distance && not person.hasTakenValidRide
           Nothing -> True
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
+  let vehicleCat = Utils.mapServiceTierToCategory booking.vehicleServiceTierType
   fork "update first ride info" $ do
-    mbPersonFirstRideInfo <- QCP.findByPersonIdAndVehicleCategory booking.riderId $ Just (Utils.mapServiceTierToCategory booking.vehicleServiceTierType)
-    case mbPersonFirstRideInfo of
+    mbPersonFirstRideInfo <- QCP.findByPersonIdAndVehicleCategory booking.riderId $ Just vehicleCat
+    -- Per-category count incl. this ride; reuses the cached count (O(N) query only on cache miss).
+    catRideCount <- case mbPersonFirstRideInfo of
       Just personFirstRideInfo -> do
-        QCP.updateHasTakenValidRideCount (personFirstRideInfo.rideCount + 1) booking.riderId $ Just (Utils.mapServiceTierToCategory booking.vehicleServiceTierType)
+        let newCount = personFirstRideInfo.rideCount + 1
+        QCP.updateHasTakenValidRideCount newCount booking.riderId $ Just vehicleCat
+        pure newCount
       Nothing -> do
-        totalCount <- B.runInReplica $ QRB.findCountByRideIdStatusAndVehicleServiceTierType booking.riderId BT.COMPLETED (Utils.getListOfServiceTireTypes $ Utils.mapServiceTierToCategory booking.vehicleServiceTierType)
-        personClientInfo <- buildPersonClientInfo booking.riderId booking.clientId booking.merchantOperatingCityId booking.merchantId (Utils.mapServiceTierToCategory booking.vehicleServiceTierType) (totalCount + 1)
+        totalCount <- B.runInReplica $ QRB.findCountByRideIdStatusAndVehicleServiceTierType booking.riderId BT.COMPLETED (Utils.getListOfServiceTireTypes vehicleCat)
+        personClientInfo <- buildPersonClientInfo booking.riderId booking.clientId booking.merchantOperatingCityId booking.merchantId vehicleCat (totalCount + 1)
         QCP.create personClientInfo
         when (totalCount == 0) $ do
-          Notify.notifyFirstRideEvent booking.riderId (Utils.mapServiceTierToCategory booking.vehicleServiceTierType) booking.tripCategory
+          Notify.notifyFirstRideEvent booking.riderId vehicleCat booking.tripCategory
           fork ("processing referral payouts for ride: " <> ride.id.getId) $ do
             customerReferralPayout ride totalFare.currency isValidRide riderConfig person booking.merchantId booking.merchantOperatingCityId
+        pure (totalCount + 1)
+    ET.trackVehicleRideCompletedEvents booking.merchantId booking.merchantOperatingCityId booking.riderId vehicleCat catRideCount totalFare.amount
 
   when (not person.hasTakenValidRide && fromMaybe 0 person.totalRidesCount == 0) $
     fork "event_tracking: first_ride_completed" $
@@ -1088,7 +1094,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
   whenJust person.totalRidesCount $ \rideCount ->
     fork "event_tracking: ride_completed" $
-      ET.trackEvent booking.merchantId booking.merchantOperatingCityId (ET.RideCompleted (getId booking.riderId) (rideCount + 1))
+      ET.trackEvent booking.merchantId booking.merchantOperatingCityId (ET.RideCompleted (getId booking.riderId) (rideCount + 1) totalFare.amount)
   when shouldUpdateRideComplete $ void $ QP.updateHasTakenValidRide booking.riderId
   otherParties <- Notify.getAllOtherRelatedPartyPersons booking
   unless (booking.status == DRB.COMPLETED) $
