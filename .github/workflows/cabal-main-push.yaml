@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - "main"
-      - "Prod-release-branch-18-jul"
 
   workflow_dispatch:
 

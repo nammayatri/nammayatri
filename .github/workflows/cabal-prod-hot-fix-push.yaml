@@ -74,7 +74,7 @@ jobs:
             name: Cabal Incremental Prod Release Build
             continue-on-error: false
       fail-fast: false
-    runs-on: x86_64_${{ github.ref_name }}_push
+    runs-on: x86_64_prodHotPush-Common_push
     outputs:
       docker-image-name: ${{ steps.docker.outputs.base_image }}
     steps:
