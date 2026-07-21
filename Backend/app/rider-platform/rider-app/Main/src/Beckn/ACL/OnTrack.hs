@@ -39,7 +39,7 @@ buildOnTrackReqV2 req = do
   handleErrorV2 req $ \message -> do
     messageUuid <- req.onTrackReqContext.contextMessageId & fromMaybeM (InvalidBecknSchema "Missing message_id in on_track req")
     let messageId = UUID.toText messageUuid
-    bppRideId <- Redis.get (key messageId) >>= fromMaybeM (InternalError "Track:bppRideId not found.")
+    bppRideId <- Redis.get (key messageId) >>= fromMaybeM (InternalError $ "Track:bppRideId not found." <> " messageId: " <> messageId)
     Redis.del $ key messageId
     let trackUrl = message.onTrackReqMessageTracking.trackingUrl >>= parseBaseUrl
     trackingLocation <- case message.onTrackReqMessageTracking.trackingLocation of

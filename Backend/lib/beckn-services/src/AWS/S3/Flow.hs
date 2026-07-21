@@ -58,6 +58,7 @@ import Servant hiding (GET, PUT, throwError)
 import Servant.Client
 import System.Directory (removeFile)
 import qualified System.Directory as Dir
+import System.Exit (ExitCode (..))
 import System.FilePath.Posix as Path
 import qualified System.Posix.Files as Posix
 import qualified System.Posix.IO as Posix
@@ -164,11 +165,19 @@ get'' ::
   m Text
 get'' bucketName path = withLogTag "S3" $ do
   let tmpPath = getTmpPath path
-  let cmd = "aws s3api get-object --bucket " <> T.unpack bucketName <> " --key " <> path <> " " <> tmpPath
-  liftIO $ callCommand cmd
-  result <- liftIO $ readFile tmpPath
-  liftIO $ removeFile tmpPath
-  return result
+  let args = ["s3api", "get-object", "--bucket", T.unpack bucketName, "--key", path, tmpPath]
+  (exitCode, _stdout, errOut) <- liftIO $ readProcessWithExitCode "aws" args ""
+  case exitCode of
+    ExitSuccess -> do
+      result <- liftIO $ readFile tmpPath
+      liftIO $ removeFile tmpPath
+      return result
+    ExitFailure code -> do
+      logError $ "S3 get-object failed for bucket=" <> bucketName <> " key=" <> T.pack path <> " exit=" <> show code <> " stderr=" <> T.pack errOut
+      let stderrLower = T.toLower $ T.pack errOut
+      if any (`T.isInfixOf` stderrLower) ["accessdenied", "access denied", "403", "forbidden", "invalidaccesskeyid", "unable to locate credentials", "could not connect", "connection", "timed out", "endpoint"]
+        then throwError S3ServerError
+        else throwError S3NotFound
 
 put'' ::
   ( CoreMetrics m,

@@ -211,6 +211,9 @@ data DriverError
   | InsufficientAirportBalance HighPrecMoney HighPrecMoney
   | DriverNotEnabledForAirport
   | DriverAirportAlreadyBlocked
+  | RideStartRequestInProgress Text
+  | RideEndRequestInProgress Text
+  | ImageUploadInProgress Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverError
@@ -235,6 +238,9 @@ instance IsBaseError DriverError where
   toMessage (InsufficientAirportBalance required available) = Just $ "Insufficient airport entry fee balance. Required: " <> show required <> ", Available: " <> show available <> ". Please recharge before starting this ride."
   toMessage DriverNotEnabledForAirport = Just "Driver is not enabled for airport rides"
   toMessage DriverAirportAlreadyBlocked = Just "Driver is already blocked for airport rides."
+  toMessage (RideStartRequestInProgress rideId) = Just $ "Start ride is already in progress for rideId: " <> rideId <> ". Please try again later."
+  toMessage (RideEndRequestInProgress rideId) = Just $ "End ride is already in progress for rideId: " <> rideId <> ". Please try again later."
+  toMessage (ImageUploadInProgress personId) = Just $ "Image upload is already in progress for personId: " <> personId <> ". Please try again later."
 
 instance IsHTTPError DriverError where
   toErrorCode = \case
@@ -257,6 +263,9 @@ instance IsHTTPError DriverError where
     InsufficientAirportBalance _ _ -> "INSUFFICIENT_AIRPORT_BALANCE"
     DriverNotEnabledForAirport -> "DRIVER_NOT_ENABLED_FOR_AIRPORT"
     DriverAirportAlreadyBlocked -> "DRIVER_AIRPORT_ALREADY_BLOCKED"
+    RideStartRequestInProgress _ -> "RIDE_START_REQUEST_IN_PROGRESS"
+    RideEndRequestInProgress _ -> "RIDE_END_REQUEST_IN_PROGRESS"
+    ImageUploadInProgress _ -> "IMAGE_UPLOAD_IN_PROGRESS"
   toHttpCode = \case
     DriverAccountDisabled -> E403
     DriverWithoutVehicle _ -> E400
@@ -277,6 +286,9 @@ instance IsHTTPError DriverError where
     InsufficientAirportBalance _ _ -> E402
     DriverNotEnabledForAirport -> E403
     DriverAirportAlreadyBlocked -> E403
+    RideStartRequestInProgress _ -> E409
+    RideEndRequestInProgress _ -> E409
+    ImageUploadInProgress _ -> E409
 
 instance IsAPIError DriverError where
   toPayload (DriverAccountBlocked errorPayload) = toJSON errorPayload
@@ -1100,7 +1112,7 @@ instance IsBaseError RiderDetailsError where
 
 instance IsHTTPError RiderDetailsError where
   toErrorCode _ = "RIDER_DETAILS_NOT_FOUND"
-  toHttpCode _ = E500
+  toHttpCode _ = E404
 
 instance IsAPIError RiderDetailsError
 

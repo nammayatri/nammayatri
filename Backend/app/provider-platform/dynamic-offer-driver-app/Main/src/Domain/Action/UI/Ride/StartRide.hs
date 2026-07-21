@@ -170,7 +170,11 @@ startRide handle rideId req = withLogTag ("rideId-" <> rideId.getId) $ do
             Redis.unlockRedis mkLockKey
             logDebug $ "Start ride for RideId: " <> rideId.getId <> " Unlocked"
         )
-    else throwError (InternalError "Start ride inprogress")
+    else do
+      ride <- handle.findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+      if ride.status == DRide.INPROGRESS
+        then pure APISuccess.Success
+        else throwError (RideStartRequestInProgress rideId.getId)
   where
     mkLockKey = "StartTransaction:RID:-" <> rideId.getId
 

@@ -368,10 +368,9 @@ mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPercentageSplit
   False -> return Nothing
   True -> do
     uuid <- L.generateGUID
-    when (isPercentageSplitEnabled && totalAmount <= 0) $ do
-      logError $ "Percentage split requested with non-positive total amount: " <> show totalAmount
-      throwError (InternalError "Percentage split requires total amount > 0")
-    if isPercentageSplitEnabled && isSingleMode
+    when (isPercentageSplitEnabled && totalAmount <= 0) $
+      logError $ "Percentage split requested with non-positive total amount; falling back to amount-based split. totalAmount: " <> show totalAmount
+    if isPercentageSplitEnabled && isSingleMode && totalAmount > 0
       then do
         -- Create percentage-based splits with aggregation
         let sortedVendorFees = sortBy (compare `on` (\p -> (p.vendorId, p.ticketId))) (roundVendorFee <$> vendorFees)
@@ -455,10 +454,9 @@ mkUnaggregatedSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPer
   False -> return Nothing
   True -> do
     uuid <- L.generateGUID
-    when (isPercentageSplitEnabled && totalAmount <= 0) $ do
-      logError $ "Percentage split requested with non-positive total amount: " <> show totalAmount
-      throwError (InternalError "Percentage split requires total amount > 0")
-    if isPercentageSplitEnabled && isSingleMode
+    when (isPercentageSplitEnabled && totalAmount <= 0) $
+      logError $ "Percentage split requested with non-positive total amount; falling back to amount-based split. totalAmount: " <> show totalAmount
+    if isPercentageSplitEnabled && isSingleMode && totalAmount > 0
       then do
         -- Create percentage-based splits
         let vendorPercentageSplits =
