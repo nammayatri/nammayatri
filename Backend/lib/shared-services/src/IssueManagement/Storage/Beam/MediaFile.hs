@@ -28,7 +28,7 @@ data MediaFileT f = MediaFileT
     status :: B.C f (Maybe Text),
     fileHash :: B.C f (Maybe Text),
     createdAt :: B.C f LocalTime,
-    updatedAt :: B.C f LocalTime
+    updatedAt :: B.C f (Maybe LocalTime)
   }
   deriving (Generic, B.Beamable)
 

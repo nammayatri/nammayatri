@@ -73,7 +73,7 @@ mediaFileDocumentUploadLink merchantShortId opCity _requestorId req = do
         status = Just DMF.PENDING,
         fileHash = Nothing,
         createdAt = now,
-        updatedAt = now
+        updatedAt = Just now
       }
   -- Fire the cleanup job well after the upload window. A real inspection (upload -> confirm -> fill -> submit)
   -- finishes long before then, so by the time it runs an un-submitted file = abandoned and is deleted from S3.

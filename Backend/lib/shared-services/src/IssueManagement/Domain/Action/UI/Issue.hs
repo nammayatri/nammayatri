@@ -353,7 +353,7 @@ createMediaEntry url fileType filePath = do
             status = Just D.PENDING,
             fileHash = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = Just now
           }
 
 -- | Maps an upload's MIME type to the file extension used in the S3 key,

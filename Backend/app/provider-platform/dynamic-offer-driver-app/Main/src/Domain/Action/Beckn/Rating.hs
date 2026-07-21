@@ -278,5 +278,5 @@ createMediaEntry url fileType filePath = do
             status = Just D.COMPLETED,
             fileHash = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = Just now
           }
