@@ -1,0 +1,215 @@
+name: Cabal CI (Prod Hot Fix Push)
+
+on:
+  push:
+    branches:
+      - "prodHotPush-Common"
+      - "prodHotPush-BAP"
+      - "prodHotPush-BPP"
+      - "prodHotPush-International"
+      - "Prod-release-branch-18-jul"
+  workflow_dispatch:
+
+# Cancel in-progress Pull Request workflows if a new workflow is triggered, or a new commit is pushed to the branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+  packages: write
+
+jobs:
+  check-conditions:
+    runs-on: ubuntu-latest
+    outputs:
+      should-proceed: ${{ steps.evaluate.outputs.should_proceed }}
+      should-push-docker: ${{ steps.check-docker-push.outputs.should_push_docker }}
+    steps:
+      - name: Apply labels
+        if: github.event_name == 'pull_request' && github.event.action != 'closed'
+        uses: actions/labeler@v4
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Check global conditions
+        id: evaluate
+        run: |
+          # Check if workflow should proceed (non-matrix conditions)
+          if [[ "${{ github.event.pull_request.merged }}" == "true" ||
+                "${{ github.event_name }}" != "pull_request" ||
+                "${{ github.event.action }}" != "closed" ]]; then
+            echo "should_proceed=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_proceed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check docker push conditions
+        id: check-docker-push
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/prodHotPush-Common" ||
+                "${{ github.ref }}" == "refs/heads/prodHotPush-MMFRFS" ||
+                "${{ github.ref }}" == "refs/heads/prodHotPush-BAP" ||
+                "${{ github.ref }}" == "refs/heads/prodHotPush-BPP" ||
+                "${{ github.ref }}" == "refs/heads/prodHotPush-International" ||
+                "${{ github.ref }}" == "refs/heads/Prod-release-branch-18-jul" ||
+                "${{ github.event.pull_request.merged }}" == "true" ]]; then
+            echo "should_push_docker=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_push_docker=false" >> $GITHUB_OUTPUT
+          fi
+
+  cabal-build:
+    name: ${{ matrix.name }}
+    needs: [check-conditions]
+    continue-on-error: ${{ matrix.continue-on-error }}
+    if: needs.check-conditions.outputs.should-proceed == 'true'
+    strategy:
+      matrix:
+        include:
+          - system: x86_64-linux
+            arch: amd64
+            name: Cabal Incremental Prod Release Build
+            continue-on-error: false
+      fail-fast: false
+    runs-on: x86_64_${{ github.ref_name }}_push
+    outputs:
+      docker-image-name: ${{ steps.docker.outputs.base_image }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          KEY=$(cat flake.lock Backend/cabal.project | sha256sum | cut -c1-16)
+          echo "key=$KEY" >> $GITHUB_OUTPUT
+
+      - name: Restore cabal cache
+        run: |
+          CACHE_ROOT=$HOME/ny-cabal-prod-cache/${RUNNER_NAME}/${{ github.ref_name }}
+          KEY_FILE="$CACHE_ROOT/.cache-key-prod"
+          CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
+
+          if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
+            echo "Cache key changed, busting dist-newstyle, cabal store and HIE caches"
+            rm -rf "$CACHE_ROOT/dist-newstyle"
+            rm -rf "$CACHE_ROOT/.cabal-dir"
+            rm -rf "$CACHE_ROOT/hie"
+          fi
+
+          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir"
+          echo "$CURRENT_KEY" > "$KEY_FILE"
+          ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
+
+      - name: Link HIE dirs to persistent cache
+        run: |
+          CACHE_ROOT=$HOME/ny-cabal-prod-cache/${RUNNER_NAME}/${{ github.ref_name }}
+          HIE_CACHE="$CACHE_ROOT/hie"
+          cd "$GITHUB_WORKSPACE/Backend"
+          # Each package builds with -fwrite-ide-info -hiedir=.hie, writing HIE info
+          # into <pkgdir>/.hie. Those dirs live in the source tree, so checkout's
+          # `git clean` wipes them every run while dist-newstyle (symlinked to the
+          # cache) survives -- so GHC recompiles every module with reason
+          # "[HIE file is missing]". Point each package's .hie at the persistent cache
+          # (exactly like dist-newstyle): GHC then reads/writes HIE straight into the
+          # cache, surviving across runs with zero copying, and its recompilation
+          # check stays satisfied.
+          grep -E '^[[:space:]]+(app|lib|test)' cabal.project | awk '{print $1}' | while read -r pkg; do
+            [ -d "$pkg" ] || continue
+            mkdir -p "$HIE_CACHE/$pkg"
+            rm -rf "$pkg/.hie"
+            ln -sfn "$HIE_CACHE/$pkg" "$pkg/.hie"
+          done
+          echo "Linked package .hie dirs under $HIE_CACHE"
+
+      - name: Cache diagnostics
+        run: |
+          echo "RUNNER_NAME      = $RUNNER_NAME"
+          echo "GITHUB_WORKSPACE = $GITHUB_WORKSPACE"
+          echo "pwd              = $(pwd)"
+          CACHE_ROOT=$HOME/ny-cabal-prod-cache/${RUNNER_NAME}/${{ github.ref_name }}
+          echo "cache dir        = $CACHE_ROOT"
+          echo "dist-newstyle size at START:"; du -sh "$CACHE_ROOT/dist-newstyle" 2>/dev/null || echo "  (absent/empty)"
+          echo "build dirs already present:"; ls "$CACHE_ROOT/dist-newstyle/build" 2>/dev/null | head || echo "  none"
+
+      - name: Build (incremental cabal)
+        run: |
+          set -o pipefail
+          nix develop .#backend --command bash -c "
+            export CABAL_DIR=$HOME/ny-cabal-prod-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir
+            cd Backend
+            # Clear cabal store to prevent stale package registrations that
+            # reference runner-local nix paths. Does not affect CI incrementality
+            # (all packages come from GHC/nix, store is redundant).
+            rm -rf \$CABAL_DIR/store
+            mkdir -p \$CABAL_DIR/store/ghc-\$(ghc --numeric-version)
+            ghc-pkg init \$CABAL_DIR/store/ghc-\$(ghc --numeric-version)/package.db 2>/dev/null || true
+            echo \"GHC libdir: \$(ghc --print-libdir)\"
+            echo '--- cabal dry-run (what it plans to rebuild) ---'
+            cabal build all --flags=-Local --dry-run 2>&1 | tail -20
+            echo '--- real build ---'
+            cabal build all --flags=-Local 2>&1
+            BUILD_EXIT=\$?
+            if [ \$BUILD_EXIT -ne 0 ]; then
+              # Stale cache detection: 'which is not loaded' or '<no location info>' means
+              # a previous cancelled build left dist-newstyle in an inconsistent state.
+              # Clear the entire dist-newstyle and do a clean rebuild.
+              if grep -qE 'which is not loaded|<no location info>' prod-build-log.txt 2>/dev/null; then
+                echo '--- stale cache detected, clearing dist-newstyle and retrying clean build ---'
+                rm -rf dist-newstyle
+                cabal build all --flags=-Local 2>&1
+                BUILD_EXIT=\$?
+              fi
+            fi
+            exit \$BUILD_EXIT
+          " | while IFS= read -r line; do
+            printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
+          done | tee prod-build-log.txt
+
+      - name: Collect binaries to staging
+        run: |
+          STAGING=$HOME/ny-staging/${{ github.run_id }}
+          rm -rf "$STAGING"
+          mkdir -p "$STAGING/bin" "$STAGING/opt/app"
+
+          find Backend/dist-newstyle/build -type f | awk -F/ '$NF == $(NF-1) && !seen[$NF]++ {print}' | xargs -I{} cp {} "$STAGING/bin/"
+
+          for f in "$STAGING/bin/"*; do
+            ln -sf "../../bin/$(basename "$f")" "$STAGING/opt/app/$(basename "$f")"
+          done
+
+          cp -rT Backend/dhall-configs "$STAGING/opt/app/dhall-configs"
+          cp -rT Backend/swagger "$STAGING/opt/app/swagger"
+
+      - name: Upload prod build log
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-build-log-${{ github.ref_name }}
+          path: prod-build-log.txt
+          retention-days: 1
+
+      - name: Build And Push Docker image
+        id: docker
+        if: (matrix.system == 'x86_64-linux' || matrix.system == 'aarch64-linux') && needs.check-conditions.outputs.should-push-docker == 'true'
+        env:
+          DOCKER_REGISTRY: ghcr.io
+        run: |
+          export LOCAL_BINARIES_PATH=$HOME/ny-staging/${{ github.run_id }}
+          nix build .#packages.${{ matrix.system }}.dockerImage --impure
+
+          BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName --impure):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag --impure)"
+          echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
+
+          gunzip -c ./result > image.tar || cp ./result image.tar
+          echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ${DOCKER_REGISTRY} -u "${{ github.actor }}" --password-stdin
+          # crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}-${{ matrix.arch }}" use this for multi arch builds, not needed for now
+          crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
+          crane auth logout ${DOCKER_REGISTRY}
+
+      - name: Cleanup staging dir
+        if: always()
+        run: rm -rf $HOME/ny-staging/${{ github.run_id }}
