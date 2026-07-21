@@ -33,7 +33,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import EulerHS.Prelude
-import qualified IssueManagement.Common as ICommon
 import qualified Kernel.External.Ticket.Interface as TI
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Ticket.Types as TicketTypes
@@ -48,13 +47,13 @@ import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDi
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 
 -- | Regular-issue create-ticket entry point. Calls the primary provider
--- (blocking) and, when the merchant is configured with
--- @additionalIssueTicketServices@, also fans out to every secondary provider
--- best-effort. Returns the primary provider's response paired with the list
--- of @(service, ticketId)@ pairs produced by successful secondary calls so
--- the caller (shared 'createIssueReport') can persist the mapping for future
--- update-ticket calls. Secondary failures are logged and never propagate.
-createTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.CreateTicketReq -> m (Ticket.CreateTicketResp, [ICommon.AdditionalTicketId])
+-- (blocking) and, when the merchant is configured with one secondary
+-- provider (at most one is supported), also creates a ticket there
+-- best-effort. Returns the primary provider's response paired with the
+-- secondary's ticketId, if that call succeeded, so the caller (shared
+-- 'createIssueReport') can persist it for future update-ticket calls.
+-- Secondary failures are logged and never propagate.
+createTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.CreateTicketReq -> m (Ticket.CreateTicketResp, Maybe Text)
 createTicket merchantId mocId req = do
   merchantConfig <- fetchUsageConfig mocId
   let primary = merchantConfig.issueTicketService
@@ -66,18 +65,15 @@ createTicket merchantId mocId req = do
   -- chat-forwarding path can then update the SAME Xyne thread instead of
   -- opening a new one on every message.
   primaryResult <- withTryCatch "createTicket:primary" (callCreateTicket merchantId mocId primary req)
-  secondaryResults <- fanOutCreates merchantId mocId secondaries req
+  secondaryResult <- fanOutCreates merchantId mocId secondaries req
   case primaryResult of
-    Right primaryResp -> do
-      let asAdditional = [ICommon.AdditionalTicketId {service = svc, ticketId = r.ticketId} | (svc, r) <- secondaryResults]
-      pure (primaryResp, asAdditional)
-    Left primaryErr -> case secondaryResults of
-      ((promotedSvc, promotedResp) : rest) -> do
+    Right primaryResp -> pure (primaryResp, (.ticketId) . snd <$> secondaryResult)
+    Left primaryErr -> case secondaryResult of
+      Just (promotedSvc, promotedResp) -> do
         logError $ "createTicket:primary " <> show primary <> " failed, promoting secondary " <> show promotedSvc <> " as effective ticket. err=" <> show primaryErr
-        let asAdditional = [ICommon.AdditionalTicketId {service = svc, ticketId = r.ticketId} | (svc, r) <- rest]
-        pure (promotedResp, asAdditional)
-      [] -> do
-        logError $ "createTicket:primary failed and no secondaries configured/succeeded. err=" <> show primaryErr
+        pure (promotedResp, Nothing)
+      Nothing -> do
+        logError $ "createTicket:primary failed and no secondary configured/succeeded. err=" <> show primaryErr
         -- Re-throw as an InternalError so the shared 'withTryCatch' at the
         -- call site sees it as a normal failure; SomeException isn't a
         -- Kernel error type accepted by 'throwError'.
@@ -91,18 +87,19 @@ createSosTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant
 createSosTicket = resolveAndCallTicketService (\cfg -> fromMaybe cfg.issueTicketService cfg.sosTicketService) TI.createTicket
 
 -- | Regular-issue update-ticket entry point. Updates the primary provider's
--- ticket (using 'req.ticketId') and, when @additionalTicketIds@ is non-empty,
--- also updates every secondary provider's mirrored ticket best-effort. The
--- caller (shared 'updateTicketStatus') is expected to pass through the
--- 'additionalTicketIds' persisted at create time on 'IssueReport'; pass @[]@
--- to hit the primary only (e.g. the chat-forwarding path targets Xyne
--- directly via 'updateTicketOnService' instead).
-updateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [ICommon.AdditionalTicketId] -> Ticket.UpdateTicketReq -> m Ticket.UpdateTicketResp
-updateTicket merchantId mocId additionalTicketIds req = do
+-- ticket (using 'req.ticketId') and, when present, also updates the
+-- secondary provider's mirrored ticket best-effort. The caller (shared
+-- 'updateTicketStatus') is expected to pass through the 'additionalTicketIds'
+-- persisted at create time on 'IssueReport'; pass 'Nothing' to hit the
+-- primary only (e.g. the chat-forwarding path targets Xyne directly via
+-- 'updateTicketOnService' instead).
+updateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Ticket.UpdateTicketReq -> m Ticket.UpdateTicketResp
+updateTicket merchantId mocId additionalTicketId req = do
   merchantConfig <- fetchUsageConfig mocId
   let primary = merchantConfig.issueTicketService
+      secondaries = filter (/= primary) . fromMaybe [] $ merchantConfig.additionalIssueTicketServices
   primaryResp <- callUpdateTicket merchantId mocId primary req
-  fanOutUpdates merchantId mocId primary additionalTicketIds req
+  fanOutUpdates merchantId mocId secondaries additionalTicketId req
   pure primaryResp
 
 updateSosTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.UpdateTicketReq -> m Ticket.UpdateTicketResp
@@ -142,19 +139,20 @@ kaptureGetTicket = resolveAndCallTicketService (.issueTicketService) TI.kaptureG
 getTicketStatus :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.SearchTicketByIdReq -> m [Ticket.GetTicketStatusResp]
 getTicketStatus = resolveAndCallTicketService (.issueTicketService) TI.getTicketStatus
 
--- | Iterates over secondary services and calls 'TI.createTicket' on each,
--- returning full '(service, response)' pairs so 'createTicket' can promote
--- the first success as the effective ticket when the primary fails.
--- Individual failures are swallowed with a log line so a flaky provider
--- cannot break the fan-out.
+-- | Creates a ticket on the (at most one) configured secondary provider.
+-- Logs an error and uses only the first if the merchant is misconfigured
+-- with more than one — only a single secondary ticketId can be persisted.
 fanOutCreates ::
   (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   [TicketTypes.IssueTicketService] ->
   Ticket.CreateTicketReq ->
-  m [(TicketTypes.IssueTicketService, Ticket.CreateTicketResp)]
-fanOutCreates merchantId mocId services req = fmap catMaybes . forM services $ \svc -> do
+  m (Maybe (TicketTypes.IssueTicketService, Ticket.CreateTicketResp))
+fanOutCreates _ _ [] _ = pure Nothing
+fanOutCreates merchantId mocId (svc : rest) req = do
+  unless (null rest) $
+    logError $ "fanOutCreates: merchant configured with multiple secondary providers " <> show (svc : rest) <> "; only one is supported, using " <> show svc
   result <- withTryCatch "createTicket:secondary" (callCreateTicket merchantId mocId svc req)
   case result of
     Right resp -> do
@@ -164,27 +162,31 @@ fanOutCreates merchantId mocId services req = fmap catMaybes . forM services $ \
       logError $ "createTicket:secondary failed service=" <> show svc <> " mocId=" <> mocId.getId <> " err=" <> show err
       pure Nothing
 
--- | Iterates over the ticketIds captured at create time and updates each
--- secondary provider's mirrored ticket. Skips any entry whose service equals
--- the primary (already updated by the caller). Failures are swallowed.
+-- | Updates the secondary provider's mirrored ticket, if one is configured
+-- and its ticketId was persisted. Re-derives the secondary's service from
+-- merchant config (same way 'createTicket' does) since only the plain
+-- ticketId is stored on 'IssueReport'. Failures are swallowed.
 fanOutUpdates ::
   (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
-  TicketTypes.IssueTicketService ->
-  [ICommon.AdditionalTicketId] ->
+  [TicketTypes.IssueTicketService] ->
+  Maybe Text ->
   Ticket.UpdateTicketReq ->
   m ()
-fanOutUpdates merchantId mocId primary additionalTicketIds req =
-  forM_ additionalTicketIds $ \entry ->
-    when (entry.service /= primary) $ do
-      -- Retarget the update request at this provider's own ticketId; the
+fanOutUpdates merchantId mocId secondaries mbAdditionalTicketId req =
+  case (secondaries, mbAdditionalTicketId) of
+    (svc : rest, Just additionalTicketId) -> do
+      unless (null rest) $
+        logError $ "fanOutUpdates: merchant configured with multiple secondary providers " <> show (svc : rest) <> "; only one is supported, using " <> show svc
+      -- Retarget the update request at the secondary's own ticketId; the
       -- comment, status, media, etc. stay the same across providers.
-      let secondaryReq = (req :: Ticket.UpdateTicketReq) {Ticket.ticketId = entry.ticketId}
-      result <- withTryCatch "updateTicket:secondary" (callUpdateTicket merchantId mocId entry.service secondaryReq)
+      let secondaryReq = (req :: Ticket.UpdateTicketReq) {Ticket.ticketId = additionalTicketId}
+      result <- withTryCatch "updateTicket:secondary" (callUpdateTicket merchantId mocId svc secondaryReq)
       case result of
-        Right _ -> logInfo $ "updateTicket:secondary success service=" <> show entry.service <> " ticketId=" <> entry.ticketId
-        Left err -> logError $ "updateTicket:secondary failed service=" <> show entry.service <> " ticketId=" <> entry.ticketId <> " err=" <> show err
+        Right _ -> logInfo $ "updateTicket:secondary success service=" <> show svc <> " ticketId=" <> additionalTicketId
+        Left err -> logError $ "updateTicket:secondary failed service=" <> show svc <> " ticketId=" <> additionalTicketId <> " err=" <> show err
+    _ -> pure ()
 
 callCreateTicket ::
   (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>

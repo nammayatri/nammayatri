@@ -36,7 +36,7 @@ data IssueReportT f = IssueReportT
     deleted :: B.C f Bool,
     mediaFiles :: B.C f [Text],
     ticketId :: B.C f (Maybe Text),
-    -- | JSON-encoded [AdditionalTicketId] persisted as text; NULL when the
+    -- | Ticket id from the (at most one) secondary provider; NULL when the
     -- merchant only writes to a single ticket provider.
     additionalTicketIds :: B.C f (Maybe Text),
     createdAt :: B.C f Time.LocalTime,
@@ -57,6 +57,6 @@ instance B.Table IssueReportT where
 
 type IssueReport = IssueReportT Identity
 
-$(enableKVPG ''IssueReportT ['id] [['personId], ['categoryId], ['ticketId], ['shortId]])
+$(enableKVPG ''IssueReportT ['id] [['personId], ['categoryId], ['ticketId], ['shortId], ['additionalTicketIds]])
 
 $(mkTableInstancesGenericSchema ''IssueReportT "issue_report")

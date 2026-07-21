@@ -417,10 +417,10 @@ castRideInfo merchantId _ rideId = do
       let shouldCacheRideInfo = elem (rideInfoRes.rideStatus) [DRR.COMPLETED, DRR.CANCELLED]
       bool (return ()) (Redis.setExp makeRideInfoCacheKey rideInfoRes 259200) shouldCacheRideInfo
 
-castCreateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> Flow (TIT.CreateTicketResp, [Common.AdditionalTicketId])
+castCreateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> Flow (TIT.CreateTicketResp, Maybe Text)
 castCreateTicket merchantId merchantOperatingCityId = TT.createTicket (cast merchantId) (cast merchantOperatingCityId)
 
-castUpdateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> [Common.AdditionalTicketId] -> TIT.UpdateTicketReq -> Flow TIT.UpdateTicketResp
+castUpdateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Maybe Text -> TIT.UpdateTicketReq -> Flow TIT.UpdateTicketResp
 castUpdateTicket merchantId merchantOperatingCityId = TT.updateTicket (cast merchantId) (cast merchantOperatingCityId)
 
 castUpdateTicketOnService :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TicketTypes.IssueTicketService -> TIT.UpdateTicketReq -> Flow TIT.UpdateTicketResp
