@@ -115,3 +115,8 @@ ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN sos_ticket_servic
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN additional_issue_ticket_services text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN event_tracking_overrides jsonb ;

@@ -38,6 +38,8 @@ imports:
   EventTrackingService: Kernel.External.EventTracking
   Currency: Kernel.Utils.Common
   CloudType: Kernel.Types.Version
+  Map: Data.Map.Strict
+  Value: Data.Aeson
 
 Merchant:
   derives: "Generic,Show,'UsageSafety"
@@ -358,6 +360,7 @@ MerchantServiceUsageConfig:
     getMultimodalWalkDistance: MapsService
     insuranceService: InsuranceService
     eventTrackingProviders: "[EventTrackingService]"
+    eventTrackingOverrides: "Maybe (Map Text [EventTrackingService])"
 
   beamType:
     cancelPaymentIntent: Maybe PaymentService
@@ -371,6 +374,7 @@ MerchantServiceUsageConfig:
     createPayoutOrder: Maybe PayoutService
     payoutOrderStatus: Maybe PayoutService
     eventTrackingProviders: Maybe [EventTrackingService]
+    eventTrackingOverrides: Maybe Value
     additionalIssueTicketServices: Maybe [IssueTicketService]
   fromTType:
     cancelPaymentIntent: fromMaybe (Kernel.External.Payment.Types.Stripe) cancelPaymentIntent|E
@@ -384,6 +388,7 @@ MerchantServiceUsageConfig:
     createPayoutOrder: fromMaybe (Kernel.External.Payout.Types.Juspay)|I
     payoutOrderStatus: fromMaybe (Kernel.External.Payout.Types.Juspay)|I
     eventTrackingProviders: fromMaybe [Kernel.External.EventTracking.Types.Moengage]|I
+    eventTrackingOverrides: Kernel.Utils.JSON.valueToMaybe =<< eventTrackingOverrides|E
   toTType:
     cancelPaymentIntent: Kernel.Prelude.Just|I
     getFrfsAutocompleteDistances: Kernel.Prelude.Just|I
@@ -396,6 +401,7 @@ MerchantServiceUsageConfig:
     createPayoutOrder: Kernel.Prelude.Just|I
     payoutOrderStatus: Kernel.Prelude.Just|I
     eventTrackingProviders: Kernel.Prelude.Just|I
+    eventTrackingOverrides: Data.Aeson.toJSON <$> eventTrackingOverrides|E
   beamInstance:
     - MakeTableInstances
     - Custom Domain.Types.UtilsTH.mkCacParseInstance <MerchantServiceUsageConfigT>
@@ -432,6 +438,7 @@ MerchantServiceUsageConfig:
     autoComplete: character varying(30)
     smsProvidersPriorityList: "text[]"
     eventTrackingProviders: "text[]"
+    eventTrackingOverrides: jsonb
     whatsappProvidersPriorityList: "text[]"
     initiateCall: character varying(30)
     issueTicketService: character varying(30)

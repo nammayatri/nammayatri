@@ -9,6 +9,7 @@ where
 
 import qualified BecknV2.OnDemand.Enums as BecknEnums
 import Data.Aeson (object, (.=))
+import qualified Data.Map.Strict as Map
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -58,7 +59,25 @@ trackEvent merchantId merchantOperatingCityId event = do
                     EventTracking.attributes = attrs,
                     EventTracking.timestamp = Just now
                   }
-          forM_ providers $ \provider ->
+              -- An event absent from the overrides map goes to every provider
+              -- live in this city. When present, the override can only narrow
+              -- that list -- never activate a provider that has no service
+              -- config row -- so the city-level list stays the source of truth.
+              targetProviders =
+                case Map.lookup actionName =<< merchantConfig.eventTrackingOverrides of
+                  Nothing -> providers
+                  Just allowed -> filter (`elem` allowed) providers
+              skipped = filter (`notElem` targetProviders) providers
+              -- Providers the build supports but this city has not enabled.
+              -- Without this, a provider that is simply absent from
+              -- eventTrackingProviders produces no log line at all, and its
+              -- silence is indistinguishable from a delivery failure.
+              notEnabled = filter (`notElem` providers) EventTracking.availableEventTrackingServices
+          unless (null notEnabled) $
+            logDebug $ "EventTracking: providers not enabled for this merchantOperatingCity: " <> show notEnabled
+          forM_ skipped $ \provider ->
+            logDebug $ "EventTracking: event " <> actionName <> " not routed to " <> show provider <> " by override config"
+          forM_ targetProviders $ \provider ->
             sendToProvider merchantId merchantOperatingCityId provider actionName req
 
 sendToProvider ::
