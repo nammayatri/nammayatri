@@ -3,6 +3,7 @@ module Domain.Action.UI.FRFSFleetOperator
     getV2FrfsTripRouteManifest,
     postFrfsFleetOperatorTripAction,
     postFrfsFleetOperatorCurrentOperation,
+    getV2FrfsBusTripSchedule,
   )
 where
 
@@ -141,6 +142,48 @@ getV2FrfsRoute (_, _merchantId, merchantOpCityId) routeCode mbConfigId mbPlatfor
         waypoints = Nothing,
         integratedBppConfigId = getId integratedBPPConfig.id
       }
+
+-- | Get bus trip schedule (per-stop ETAs) directly from GIMS for a given waybill/trip/route.
+-- Unlike the manifest above (proxied to rider-app), this hits GIMS' `bus-trip-schedule` endpoint
+-- directly via OTPRest, the same way route/stop lookups do.
+getV2FrfsBusTripSchedule ::
+  ( ( Maybe (Id Domain.Types.Person.Person),
+      Id Domain.Types.Merchant.Merchant,
+      Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Text ->
+    Int ->
+    Text ->
+    Flow BusTripScheduleResp
+  )
+getV2FrfsBusTripSchedule (_, _merchantId, merchantOpCityId) routeId tripNumber waybillNo = do
+  logInfo $ "FRFSFleetOperator: Getting bus trip schedule for routeId: " <> routeId <> ", waybillNo: " <> waybillNo <> ", tripNumber: " <> show tripNumber
+  integratedBPPConfig <-
+    findFirstIbppConfigByCityAndVehicle
+      merchantOpCityId
+      (show BUS)
+  schedules <- OTPRest.getBusTripSchedule integratedBPPConfig waybillNo tripNumber routeId
+  return $ BusTripScheduleResp {schedules = map mkFleetBusTripSchedule schedules}
+  where
+    mkFleetBusTripSchedule :: BusScheduleDetail -> FleetBusTripSchedule
+    mkFleetBusTripSchedule detail =
+      FleetBusTripSchedule
+        { eta = map mkFleetBusStopETA detail.eta,
+          isActiveTrip = detail.is_active_trip,
+          serviceTier = detail.service_tier,
+          tripNumber = detail.trip_number,
+          vehicleNo = detail.vehicle_no,
+          waybillNo = detail.waybill_no
+        }
+    mkFleetBusStopETA :: BusStopETA -> FleetBusStopETA
+    mkFleetBusStopETA e =
+      FleetBusStopETA
+        { arrivalTime = e.arrivalTime,
+          arrivalTimeUnix = fromIntegral e.arrivalTimeUnix,
+          etaSeconds = fromIntegral <$> e.etaSeconds,
+          stopCode = e.stopCode,
+          stopName = e.stopName
+        }
 
 -- | Get trip manifest - still proxied to rider-app (needs booking data)
 getV2FrfsTripRouteManifest ::

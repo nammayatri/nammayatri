@@ -14,6 +14,8 @@ type RouteByRouteIdAPI = "route" :> Capture "gtfs_id" Text :> Capture "route_id"
 
 type ExampleTripAPI = "example-trip" :> Capture "gtfs_id" Text :> Capture "route_id" Text :> Get '[JSON] TripDetails
 
+type BusTripScheduleAPI = "bus-trip-schedule" :> Capture "gtfs_id" Text :> Capture "waybill_no" Text :> Capture "trip_number" Int :> Capture "route_id" Text :> Get '[JSON] BusScheduleDetails
+
 type OperatorCurrentOperationAPI =
   "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "currentOperation"
     :> ReqBody '[JSON] GimsOperationAnchor
@@ -55,6 +57,9 @@ nandiRouteByRouteIdAPI = Proxy
 nandiExampleTripAPI :: Proxy ExampleTripAPI
 nandiExampleTripAPI = Proxy
 
+nandiBusTripScheduleAPI :: Proxy BusTripScheduleAPI
+nandiBusTripScheduleAPI = Proxy
+
 operatorCurrentOperationAPI :: Proxy OperatorCurrentOperationAPI
 operatorCurrentOperationAPI = Proxy
 
@@ -87,6 +92,9 @@ getNandiRouteByRouteId = ET.client nandiRouteByRouteIdAPI
 
 getNandiExampleTrip :: Text -> Text -> ET.EulerClient TripDetails
 getNandiExampleTrip = ET.client nandiExampleTripAPI
+
+getNandiBusTripSchedule :: Text -> Text -> Int -> Text -> ET.EulerClient BusScheduleDetails
+getNandiBusTripSchedule = ET.client nandiBusTripScheduleAPI
 
 postOperatorCurrentOperation :: Text -> GimsOperationAnchor -> ET.EulerClient GimsCurrentOperationResp
 postOperatorCurrentOperation = ET.client operatorCurrentOperationAPI

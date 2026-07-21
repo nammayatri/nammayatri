@@ -45,6 +45,10 @@ getExampleTrip baseUrl gtfsId routeId =
         logError $ "Error getting example trip: " <> show err
         pure Nothing
 
+getBusTripSchedule :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> Int -> Text -> m BusScheduleDetails
+getBusTripSchedule baseUrl gtfsId waybillNo tripNumber routeId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiBusTripSchedule gtfsId waybillNo tripNumber routeId) "getBusTripSchedule" NandiAPI.nandiBusTripScheduleAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_BUS_TRIP_SCHEDULE_API") baseUrl)
+
 gimsCurrentOperation :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> GimsOperationAnchor -> m GimsCurrentOperationResp
 gimsCurrentOperation baseUrl gtfsId req =
   withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorCurrentOperation gtfsId req) "gimsCurrentOperation" NandiAPI.operatorCurrentOperationAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_GIMS_CURRENT_OPERATION_API") baseUrl)

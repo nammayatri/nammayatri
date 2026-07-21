@@ -7,6 +7,8 @@ import Data.Aeson
 import Data.OpenApi ()
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import Data.Time.Clock (addUTCTime)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import Kernel.External.Maps (HasCoordinates (..))
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
@@ -55,6 +57,51 @@ data RouteInfoNandi = RouteInfoNandi
     serviceTierType :: Maybe BecknV2.FRFS.Enums.ServiceTierType
   }
   deriving (Generic, FromJSON, ToJSON, Show)
+
+-- | Per-stop ETA entry returned by GIMS' `bus-trip-schedule` endpoint. GIMS sends the arrival as a
+-- Unix epoch under snake_case keys, so JSON is hand-written (mirrors the rider app's `BusStopETA`).
+utcToIST :: UTCTime -> UTCTime
+utcToIST = addUTCTime 19800
+
+data BusStopETA = BusStopETA
+  { stopCode :: Text,
+    stopName :: Maybe Text,
+    arrivalTime :: UTCTime,
+    arrivalTimeUnix :: Integer,
+    etaSeconds :: Maybe Integer
+  }
+  deriving (Generic, Show, Eq)
+
+instance FromJSON BusStopETA where
+  parseJSON = withObject "BusStopETA" $ \v -> do
+    stopCode <- v .: "stop_id"
+    arrivalTimeUnix <- v .: "arrival_time"
+    etaSeconds <- v .:? "eta_seconds"
+    stopName <- v .:? "stop_name"
+    let arrivalTime = utcToIST $ posixSecondsToUTCTime $ realToFrac arrivalTimeUnix
+    return $ BusStopETA {..}
+
+instance ToJSON BusStopETA where
+  toJSON BusStopETA {..} =
+    object
+      [ "stop_id" .= stopCode,
+        "arrival_time" .= (floor (realToFrac (utcTimeToPOSIXSeconds arrivalTime) :: Double) :: Integer),
+        "eta_seconds" .= etaSeconds,
+        "stop_name" .= stopName,
+        "arrival_time_unix" .= arrivalTimeUnix
+      ]
+
+data BusScheduleDetail = BusScheduleDetail
+  { eta :: [BusStopETA],
+    vehicle_no :: Text,
+    service_tier :: BecknV2.FRFS.Enums.ServiceTierType,
+    trip_number :: Maybe Int,
+    waybill_no :: Maybe Text,
+    is_active_trip :: Maybe Bool
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+type BusScheduleDetails = [BusScheduleDetail]
 
 data ExtraInfo = ExtraInfo
   { fareStageNumber :: Maybe Text,
