@@ -23,7 +23,8 @@ data PayoutAccountReq = PayoutAccountReq
     fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentMode :: Kernel.Prelude.Maybe Domain.Types.PaymentMode.PaymentMode,
     bankAccountNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    bankIfscCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    bankIfscCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    requestorRole :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -43,7 +44,8 @@ data PayoutAccountStatusReq = PayoutAccountStatusReq
   { accountType :: PayoutAccountType,
     fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bankRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    upiOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    upiOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    requestorRole :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

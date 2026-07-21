@@ -144,6 +144,7 @@ buildMerchant req = do
         hasFleetMemberHierarchy = Just True,
         isStrongNameCheckRequired = Just True,
         singleActiveSessionOnly = Just False,
+        sendDocumentAuditActorDetails = Nothing,
         trackLoginLogoutForRoles = []
       }
 

@@ -163,6 +163,7 @@ data TransporterConfigT f = TransporterConfigT
     enableCourtRecordCheck :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableDashboardSms :: B.C f Kernel.Prelude.Bool,
     enableDirectWalletIncentives :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enableDocumentAuditLog :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableExistingVehicleInBulkUpload :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableFaceVerification :: B.C f Kernel.Prelude.Bool,
     enableFareCalculatorV2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

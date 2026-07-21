@@ -36,6 +36,8 @@ data AadhaarCardReq = AadhaarCardReq
     dateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     maskedAadhaarNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     nameOnCard :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    requestorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    requestorRole :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     transactionId :: Kernel.Prelude.Text,
     validationStatus :: ValidationStatus
   }

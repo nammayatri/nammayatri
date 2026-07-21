@@ -35,6 +35,10 @@ module Domain.Action.ProviderPlatform.Management.DriverRegistration
     postDriverRegistrationDeleteBankAccount,
     getDriverRegistrationDocumentsCommonList,
     postDriverRegistrationDocumentRegister,
+    -- Audit-actor helpers shared with the Management.Driver and RideBooking.Driver handlers (forwarded to the BPP
+    -- so document mutations triggered from the dashboard are attributed to the operator, gated per merchant).
+    determineAuditRequestorId,
+    determineAuditRequestorRole,
   )
 where
 
@@ -57,6 +61,7 @@ import Kernel.Utils.Validation (runRequestValidation)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.Person as QP
+import qualified Storage.Queries.Role as QRole
 import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
 
@@ -88,6 +93,23 @@ shouldExcludeRequestorId :: ApiTokenInfo -> Id Common.Driver -> Bool
 shouldExcludeRequestorId apiTokenInfo driverId =
   DP.isAdmin apiTokenInfo.person || apiTokenInfo.personId.getId == driverId.getId
 
+-- For document-audit attribution: forward the acting user's id only when the merchant has opted in
+-- via sendDocumentAuditActorDetails. The BPP attributes the DocumentAuditLog to this requestor.
+determineAuditRequestorId :: ApiTokenInfo -> Maybe Text
+determineAuditRequestorId apiTokenInfo =
+  case apiTokenInfo.merchant.sendDocumentAuditActorDetails of
+    Just True -> Just apiTokenInfo.personId.getId
+    _ -> Nothing
+
+-- The acting user's actual role name (from the role table), forwarded alongside the id so the BPP records the
+-- real role. Queried only when the merchant opted in via sendDocumentAuditActorDetails; best-effort (a missing
+-- role yields Nothing rather than failing the request). role.name is free-form so custom dashboard roles flow through.
+determineAuditRequestorRole :: ApiTokenInfo -> Flow (Maybe Text)
+determineAuditRequestorRole apiTokenInfo =
+  case apiTokenInfo.merchant.sendDocumentAuditActorDetails of
+    Just True -> QRole.findById apiTokenInfo.person.roleId <&> fmap (.name)
+    _ -> pure Nothing
+
 -----------------------------------------------------------------------------------------------------------------------
 ----------------------------------------------- Endpoints ------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------
@@ -106,8 +128,12 @@ postDriverRegistrationVerifyBankAccount :: ShortId DM.Merchant -> City.City -> A
 postDriverRegistrationVerifyBankAccount merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
+  -- Audit actor id + role, both gated on merchant.sendDocumentAuditActorDetails, so the BPP attributes the bank
+  -- verification to the dashboard operator instead of the driver.
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationVerifyBankAccount) driverId req
+    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationVerifyBankAccount) driverId (req {Common.requestorId = mbRequestorId, Common.requestorRole = mbRequestorRole} :: Common.VerifyBankAccountReq)
 
 getDriverRegistrationInfoBankAccount :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Kernel.Prelude.Text -> Flow Kernel.External.Verification.Types.BankAccountVerificationResponse
 getDriverRegistrationInfoBankAccount merchantShortId opCity apiTokenInfo driverId requestId = do
@@ -117,46 +143,71 @@ getDriverRegistrationInfoBankAccount merchantShortId opCity apiTokenInfo driverI
 postDriverRegistrationDeleteBankAccount :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
 postDriverRegistrationDeleteBankAccount merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  -- Bodyless endpoint: forward the audit actor (id + role) on the internal helperApi so the BPP attributes the
+  -- bank-account delete to the dashboard operator. Both gated on merchant.sendDocumentAuditActorDetails; the
+  -- frontend sends nothing (these are derived from the auth token here).
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationDeleteBankAccount) driverId
+    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationDeleteBankAccount) driverId mbRequestorId mbRequestorRole
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
   let mbRequestorId = determineRequestorId apiTokenInfo driverId
+  -- auditRequestorId is the audit ACTOR id (the acting user, forwarded when the merchant opted in), kept separate
+  -- from requestorId which drives the access checks and is Nothing for self-uploads. requestorRole is the role.
+  let mbAuditRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   T.withResponseTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationDocumentUpload) driverId req {Common.requestorId = mbRequestorId}
+    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationDocumentUpload) driverId (req {Common.requestorId = mbRequestorId, Common.auditRequestorId = mbAuditRequestorId, Common.requestorRole = mbRequestorRole} :: Common.UploadDocumentReq)
 
 postDriverRegistrationRegisterDl :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.RegisterDLReq -> Flow APISuccess
 postDriverRegistrationRegisterDl merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
   let mbAccessType = Common.castDashboardAccessType <$> apiTokenInfo.person.dashboardAccessType
+  -- Audit actor id + role, both gated on merchant.sendDocumentAuditActorDetails, so the BPP attributes the DL
+  -- verification to the dashboard operator instead of the driver.
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationRegisterDl) driverId req{accessType = mbAccessType}
+    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationRegisterDl) driverId (req {Common.accessType = mbAccessType, Common.requestorId = mbRequestorId, Common.requestorRole = mbRequestorRole} :: Common.RegisterDLReq)
 
 postDriverRegistrationRegisterRc :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.RegisterRCReq -> Flow APISuccess
 postDriverRegistrationRegisterRc merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
+  -- Audit actor id + role, both gated on merchant.sendDocumentAuditActorDetails, so the BPP attributes the RC
+  -- verification to the dashboard operator instead of the driver.
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationRegisterRc) driverId req
+    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationRegisterRc) driverId (req {Common.requestorId = mbRequestorId, Common.requestorRole = mbRequestorRole} :: Common.RegisterRCReq)
 
 postDriverRegistrationRegisterGenerateAadhaarOtp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.GenerateAadhaarOtpReq -> Flow Common.GenerateAadhaarOtpRes
 postDriverRegistrationRegisterGenerateAadhaarOtp merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Nothing :: Maybe Common.GenerateAadhaarOtpReq)
+  -- Audit actor id + role, both gated on merchant.sendDocumentAuditActorDetails, so the BPP attributes the
+  -- generate-OTP request to the dashboard operator instead of the driver.
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationRegisterGenerateAadhaarOtp) driverId req
+    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationRegisterGenerateAadhaarOtp) driverId (req {Common.requestorId = mbRequestorId, Common.requestorRole = mbRequestorRole} :: Common.GenerateAadhaarOtpReq)
 
 postDriverRegistrationRegisterVerifyAadhaarOtp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.VerifyAadhaarOtpReq -> Flow Common.VerifyAadhaarOtpRes
 postDriverRegistrationRegisterVerifyAadhaarOtp merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Nothing :: Maybe Common.VerifyAadhaarOtpReq)
+  -- Audit actor id + role, both gated on merchant.sendDocumentAuditActorDetails, so the BPP attributes the
+  -- Aadhaar OTP verification to the dashboard operator instead of the driver.
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationRegisterVerifyAadhaarOtp) driverId req
+    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationRegisterVerifyAadhaarOtp) driverId (req {Common.requestorId = mbRequestorId, Common.requestorRole = mbRequestorRole} :: Common.VerifyAadhaarOtpReq)
 
 getDriverRegistrationUnderReviewDrivers :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Flow Common.UnderReviewDriversListResponse
 getDriverRegistrationUnderReviewDrivers merchantShortId opCity apiTokenInfo limit offset = do
@@ -171,9 +222,11 @@ getDriverRegistrationDocumentsInfo merchantShortId opCity apiTokenInfo driverId 
 postDriverRegistrationDocumentsUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpdateDocumentRequest -> Flow Common.UpdateDocumentResp
 postDriverRegistrationDocumentsUpdate merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $ do
-    res <- Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationDocumentsUpdate) req
+    res <- Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationDocumentsUpdate) mbRequestorId mbRequestorRole req
     whenJust res.personId $ \personId ->
       QP.updatePersonVerifiedStatus (cast personId) res.enabled
     pure res
@@ -182,15 +235,22 @@ postDriverRegistrationRegisterAadhaar :: ShortId DM.Merchant -> City.City -> Api
 postDriverRegistrationRegisterAadhaar merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
-  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationRegisterAadhaar) driverId req
+  -- Audit actor id + role, both gated on merchant.sendDocumentAuditActorDetails, so the BPP attributes the
+  -- Aadhaar-card registration to the dashboard operator instead of the driver.
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationRegisterAadhaar) driverId (req {Common.requestorId = mbRequestorId, Common.requestorRole = mbRequestorRole} :: Common.AadhaarCardReq)
 
 postDriverRegistrationUnlinkDocument :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.DocumentType -> Flow APISuccess
 postDriverRegistrationUnlinkDocument merchantShortId opCity apiTokenInfo personId documentType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  let mbRequestorId = determineRequestorId apiTokenInfo personId
+  -- Audit actor id + role are BOTH gated on the merchant's sendDocumentAuditActorDetails flag (same as
+  -- documents/update). When the flag is off, neither is forwarded — so no actor details leave the dashboard.
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   transaction <- buildTransaction apiTokenInfo (Just personId) (Just documentType)
   T.withTransactionStoring transaction $ do
-    res <- Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationUnlinkDocument) personId documentType mbRequestorId
+    res <- Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationUnlinkDocument) personId documentType mbRequestorId mbRequestorRole
     when res.mandatoryDocumentRemoved $ do
       QP.updatePersonVerifiedStatus (cast personId) False
     pure Success
@@ -210,8 +270,12 @@ postDriverRegistrationDocumentsCommon ::
 postDriverRegistrationDocumentsCommon merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
+  -- Audit actor id + role, both gated on merchant.sendDocumentAuditActorDetails, so the BPP attributes the
+  -- common-document creation to the dashboard operator instead of the driver.
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationDocumentsCommon) driverId req
+    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationDocumentsCommon) driverId (req {Common.requestorId = mbRequestorId, Common.requestorRole = mbRequestorRole} :: Common.CommonDocumentCreateReq)
 
 postDriverRegistrationTriggerReminder :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.TriggerReminderReq -> Flow APISuccess
 postDriverRegistrationTriggerReminder merchantShortId opCity apiTokenInfo driverId req = do

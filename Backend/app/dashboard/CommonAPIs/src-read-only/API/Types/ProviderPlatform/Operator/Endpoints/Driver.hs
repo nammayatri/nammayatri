@@ -190,6 +190,7 @@ data RespondHubRequest = RespondHubRequest
   { operationHubRequestId :: Kernel.Prelude.Text,
     operatorId :: Kernel.Prelude.Text,
     remarks :: Kernel.Prelude.Text,
+    requestorRole :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     responses :: Kernel.Prelude.Maybe [InspectionResponseItem],
     status :: RequestStatus
   }
@@ -243,7 +244,7 @@ data ReviewRequestType
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SubmitReviewRequest = SubmitReviewRequest {entityType :: EntityType, entityId :: Kernel.Prelude.Text, rejectDocumentUpdateReq :: [DocumentDetail]}
+data SubmitReviewRequest = SubmitReviewRequest {entityType :: EntityType, entityId :: Kernel.Prelude.Text, rejectDocumentUpdateReq :: [DocumentDetail], requestorRole :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

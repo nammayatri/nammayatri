@@ -212,6 +212,17 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/deleteAadhaar
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            query:
+              - requestorId: Text
+              - requestorRole: Text
+            response:
+              type: APISuccess
   - POST: # DeletePanCardAPI
       endpoint: /{driverId}/deletePanCard
       auth: ApiAuthV2
@@ -219,6 +230,17 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/deletePanCard
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            query:
+              - requestorId: Text
+              - requestorRole: Text
+            response:
+              type: APISuccess
   - POST: # AddVehicleAPI
       endpoint: /{driverId}/addVehicle
       auth: ApiAuthV2

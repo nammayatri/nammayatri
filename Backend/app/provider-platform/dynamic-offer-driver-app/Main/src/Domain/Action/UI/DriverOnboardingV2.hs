@@ -26,6 +26,7 @@ import qualified Domain.Types.CommonDocumentData as DCommonDocData
 import qualified Domain.Types.CommonDriverOnboardingDocuments
 import qualified Domain.Types.DigilockerVerification as DDV
 import qualified Domain.Types.DocStatus as DocStatus
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DocumentVerificationConfig as Domain
@@ -72,6 +73,7 @@ import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import SharedLogic.DriverOnboarding.Digilocker
   ( base64UrlEncodeNoPadding,
     constructDigiLockerAuthUrl,
@@ -592,8 +594,18 @@ postDriverRegisterSsn (mbPersonId, _, _) API.Types.UI.DriverOnboardingV2.SSNReq 
   mbSsnEntry <- QDriverSSN.findBySSN (ssnEnc & hash)
   whenJust mbSsnEntry $ \ssnEntry -> do
     unless (ssnEntry.driverId == driverId) $ throwError (InvalidRequest "SSN Already linked to another Driver.")
+  mbDriver <- PersonQuery.findById driverId
+  -- Document audit: prefetch the pre-upsert SSN row keyed by driverId (the SAME key QDriverSSN.upsert writes on),
+  -- so changing the SSN value is recorded as an update (previousStatus = old, documentRefId = the persisted row)
+  -- rather than a spurious create. The findBySSN above is by ssn-hash and is only the cross-driver dedup check.
+  mbExistingSsn <- case (.merchantOperatingCityId) <$> mbDriver of
+    Just cityId -> Audit.fetchForAuditByCity cityId (QDriverSSN.findByDriverId driverId)
+    Nothing -> pure Nothing
   ssnEntry <- buildDriverSSN ssnEnc driverId
   QDriverSSN.upsert ssnEntry
+  -- SSN registered/updated (driver self-service).
+  whenJust mbDriver $ \driver ->
+    Audit.auditDocStatus (Audit.driverAppPerson driverId (Audit.toActorRole driver.role)) (Audit.entityTypeFromRole driver.role) driverId.getId "SSN" DAL.DRIVER_SSN (Just (maybe ssnEntry.id.getId (.id.getId) mbExistingSsn)) (show . (.verificationStatus) <$> mbExistingSsn) (Just (show ssnEntry.verificationStatus)) DAL.STATUS_CHANGED Nothing driver.merchantId driver.merchantOperatingCityId
   return Success
   where
     buildDriverSSN ssnEnc driverId = do
@@ -706,14 +718,19 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
         (if isDashboard then merchantServiceUsageConfig.dashboardPanVerificationService else merchantServiceUsageConfig.panVerificationService)
 
   mbPanInfo <- QDPC.findUnInvalidByPanNumber req.panNumber
+  -- Document audit: the just-uploaded PAN image is rolled back on rejection (its upload was already audited).
+  let auditPanImageRollback reason = Audit.auditDelete (Audit.driverAppPerson person.id (Audit.toActorRole person.role)) (Audit.entityTypeFromRole person.role) person.id.getId "PanCard" DAL.IMAGE (Just req.imageId1.getId) (Just reason) merchantId merchantOpCityId
   whenJust mbPanInfo $ \panInfo -> do
     when (panInfo.driverId /= personId) $ do
+      auditPanImageRollback "PAN already linked to another driver"
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentAlreadyLinkedToAnotherDriver "PAN"
     when (panInfo.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $ do
+      auditPanImageRollback "PAN under manual review"
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentUnderManualReview "PAN"
     when (panInfo.verificationStatus == Documents.VALID) $ do
+      auditPanImageRollback "PAN already validated"
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentAlreadyValidated "PAN"
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -730,6 +747,8 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
   mbDriverPanCard <- QDPC.findByDriverId personId
   panCardDetails <- buildPanCard merchantId person updatedReq verificationStatus (Just merchantOpCityId)
   QDPC.upsertPanRecord panCardDetails mbDriverPanCard
+  -- Document audit: PAN registered via DriverOnboardingV2 (driver self-service).
+  Audit.auditDocStatus (Audit.driverAppPerson person.id (Audit.toActorRole person.role)) (Audit.entityTypeFromRole person.role) person.id.getId "PanCard" DAL.DRIVER_PAN_CARD ((.id.getId) <$> mbDriverPanCard) (show . (.verificationStatus) <$> mbDriverPanCard) (Just (show verificationStatus)) DAL.STATUS_CHANGED Nothing merchantId merchantOpCityId
   let allowPanAadhaarLink = fromMaybe True transporterConfig.allowPanAadhaarLinkage
   unless allowPanAadhaarLink $
     logInfo $
@@ -800,7 +819,8 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
         throwError (ImageInvalidType (show DTO.PanCard) "")
       Redis.withLockRedisAndReturnValue (SDO.imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
-    checkIfGenuineReq :: (ServiceFlow m r) => API.Types.UI.DriverOnboardingV2.DriverPanReq -> m (Maybe Text)
+    -- Audit.AuditFlow: throwValidationError audits the image rollback it performs
+    checkIfGenuineReq :: (ServiceFlow m r, Audit.AuditFlow m r) => API.Types.UI.DriverOnboardingV2.DriverPanReq -> m (Maybe Text)
     checkIfGenuineReq API.Types.UI.DriverOnboardingV2.DriverPanReq {..} = do
       (txnId, valStatus) <- CME.fromMaybeM (Image.throwValidationError (Just imageId1) Nothing (Just "Cannot find necessary data for SDK response!!!!")) (return $ (,) <$> transactionId <*> validationStatus)
       hvResp <- Verification.verifySdkResp merchantId merchantOpCityId (VI.VerifySdkDataReq txnId)
@@ -893,14 +913,19 @@ postDriverRegisterGstin (mbPersonId, merchantId, merchantOpCityId) req = do
 
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mbGstInfo <- QDGTIN.findUnInvalidByGstNumber req.gstNumber
+  -- Document audit: the just-uploaded GST image is rolled back on rejection (its upload was already audited).
+  let auditGstImageRollback reason = Audit.auditDelete (Audit.driverAppPerson person.id (Audit.toActorRole person.role)) (Audit.entityTypeFromRole person.role) person.id.getId "GST" DAL.IMAGE (Just req.imageId1.getId) (Just reason) merchantId merchantOpCityId
   whenJust mbGstInfo $ \gstInfo -> do
     when (gstInfo.driverId /= personId) $ do
+      auditGstImageRollback "GSTIN already linked to another driver"
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentAlreadyLinkedToAnotherDriver "GSTIN"
     when (gstInfo.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $ do
+      auditGstImageRollback "GSTIN under manual review"
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentUnderManualReview "GSTIN"
     when (gstInfo.verificationStatus == Documents.VALID && not (fromMaybe False transporterConfig.allowGstReupload)) $ do
+      auditGstImageRollback "GSTIN already validated (re-upload not allowed)"
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentAlreadyValidated "GSTIN"
   verificationStatus <- case mbGstVerificationService of
@@ -908,7 +933,10 @@ postDriverRegisterGstin (mbPersonId, merchantId, merchantOpCityId) req = do
       callIdfy person.id.getId
     _ -> pure Documents.VALID
 
+  mbOldGstin <- Audit.fetchForAudit (Audit.auditEnabled transporterConfig) (QDGTIN.findByDriverId personId)
   QDGTIN.upsertGstinRecord =<< buildGstCard merchantId person req verificationStatus (Just merchantOpCityId)
+  -- Document audit: GST registered via DriverOnboardingV2 (driver self-service).
+  Audit.auditDocStatus (Audit.driverAppPerson person.id (Audit.toActorRole person.role)) (Audit.entityTypeFromRole person.role) person.id.getId "GST" DAL.DRIVER_GSTIN ((.id.getId) <$> mbOldGstin) (show . (.verificationStatus) <$> mbOldGstin) (Just (show verificationStatus)) DAL.STATUS_CHANGED Nothing merchantId merchantOpCityId
   return Success
   where
     getImage :: Id Image.Image -> Flow Text
@@ -1076,7 +1104,8 @@ postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) 
 
   return Success
   where
-    checkIfGenuineReq :: ServiceFlow m r => API.Types.UI.DriverOnboardingV2.AadhaarCardReq -> m ()
+    -- Audit.AuditFlow: throwValidationError audits the image rollback it performs
+    checkIfGenuineReq :: (ServiceFlow m r, Audit.AuditFlow m r) => API.Types.UI.DriverOnboardingV2.AadhaarCardReq -> m ()
     checkIfGenuineReq aadhaarReq = do
       hvResp <- Verification.verifySdkResp merchantId merchantOperatingCityId (VI.VerifySdkDataReq aadhaarReq.transactionId)
       (respTxnId, respStatus, respUserDetails) <- CME.fromMaybeM (Image.throwValidationError aadhaarReq.aadhaarBackImageId aadhaarReq.aadhaarFrontImageId (Just "Invalid data recieved while validating data.")) (return $ (,,) <$> hvResp.transactionId <*> hvResp.status <*> hvResp.userDetails)
@@ -1107,7 +1136,7 @@ validateAadhaarChecks personId = do
 -- | Create and store Aadhaar record
 -- Can be called independently from DigiLocker (without SDK validation)
 createAadhaarRecord ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Audit.AuditFlow m r) =>
   Id Domain.Types.Person.Person ->
   Id Domain.Types.Merchant.Merchant ->
   Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
@@ -1134,7 +1163,19 @@ createAadhaarRecord personId merchantId merchantOperatingCityId API.Types.UI.Dri
             rejectReason = Nothing,
             ..
           }
+  mbOldAadhaar <- Audit.fetchForAuditByCity merchantOperatingCityId (QAadhaarCard.findByPrimaryKey personId)
   QAadhaarCard.upsertAadhaarRecord aadhaarCard
+  -- Document audit: Aadhaar card created/updated via RegisterAadhaar (dashboard) or DigiLocker (driver pull).
+  -- requestorRole is set (gated on merchant.sendDocumentAuditActorDetails) only on the dashboard path → attribute
+  -- to that operator; otherwise (driver self-register / DigiLocker pull) fall back to the owner.
+  -- Owner fetched (audit-gated) so entityType and the self-actor fallback use the real role, not a hardcoded DRIVER.
+  mbOwner <- Audit.fetchForAuditByCity merchantOperatingCityId (PersonQuery.findById personId)
+  let ownerRole = maybe Domain.Types.Person.DRIVER (.role) mbOwner
+      auditRequestor =
+        fromMaybe
+          (Audit.driverAppPerson personId (Audit.toActorRole ownerRole))
+          (Audit.dashboardActorFromForwarded requestorId requestorRole)
+  Audit.auditDocStatus auditRequestor (Audit.entityTypeFromRole ownerRole) personId.getId "AadhaarCard" DAL.AADHAAR_CARD (Just personId.getId) (show . (.verificationStatus) <$> mbOldAadhaar) (Just (show aadhaarCard.verificationStatus)) DAL.STATUS_CHANGED Nothing merchantId merchantOperatingCityId
 
 getDriverRegisterBankAccountLink ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -1299,6 +1340,9 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
   documentEntry <- buildCommonDocument driverId
   logInfo $ "documentEntry: " <> show documentEntry
   QCommonDriverOnboardingDocuments.create documentEntry
+  -- Document audit: common onboarding doc uploaded (driver-app self-service; dashboard analog already audits).
+  mbPerson <- Audit.fetchForAuditByCity merchantOperatingCityId (PersonQuery.findById driverId)
+  whenJust mbPerson $ \person -> Audit.auditDocStatus (Audit.driverAppPerson person.id (Audit.toActorRole person.role)) (Audit.entityTypeFromRole person.role) driverId.getId (show documentType) DAL.COMMON_ONBOARDING_DOCUMENT (Just documentEntry.id.getId) Nothing (Just (show Documents.MANUAL_VERIFICATION_REQUIRED)) DAL.UPLOADED Nothing merchantId merchantOperatingCityId
   return Success
   where
     buildCommonDocument driverId = do
@@ -1746,7 +1790,7 @@ postDriverVerifyBankAccount ::
 postDriverVerifyBankAccount (mbPersonId, merchantId, merchantOpCityId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   bankAccountVerificationResponse <-
-    BankAccountVerification.verifyBankAccount (personId, merchantId, merchantOpCityId) $
+    BankAccountVerification.verifyBankAccount Nothing (personId, merchantId, merchantOpCityId) $
       BankAccountVerification.DriverBankAccountVerifyReq
         { bankAccountNo = req.bankAccountNo,
           bankIfscCode = req.bankIfscCode,
@@ -1765,7 +1809,7 @@ getInfoBankAccount ::
 getInfoBankAccount (mbPersonId, merchantId, merchantOpCityId) requestId _driverId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   bankAccountVerificationResponse <-
-    BankAccountVerification.getInfoBankAccount (personId, merchantId, merchantOpCityId) requestId
+    BankAccountVerification.getInfoBankAccount Nothing (personId, merchantId, merchantOpCityId) requestId
   when (bankAccountVerificationResponse.accountExists) $
     case (bankAccountVerificationResponse.bankAccountNumber, bankAccountVerificationResponse.ifscCode) of
       (Just accNo, Just ifsc) ->
@@ -1781,7 +1825,7 @@ postDriverDeleteBankAccount ::
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postDriverDeleteBankAccount (mbPersonId, merchantId, merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  _ <- BankAccountVerification.deleteBankAccount (personId, merchantId, merchantOpCityId)
+  _ <- BankAccountVerification.deleteBankAccount Nothing (personId, merchantId, merchantOpCityId)
   pure Kernel.Types.APISuccess.Success
 
 mkIdfyVerificationEntityPanAadhaarLink :: (MonadFlow m) => Domain.Types.Person.Person -> Id Image.Image -> Text -> UTCTime -> EncryptedHashedField 'AsEncrypted Text -> m DIV.IdfyVerification

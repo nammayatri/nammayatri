@@ -40,6 +40,7 @@ import qualified Domain.Action.UI.OperationHub as Domain
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.AadhaarCard as DAadhaarCard
 import qualified Domain.Types.Common as DC
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.DocumentReminderHistory as DRH
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverGstin as DDGST
@@ -80,6 +81,7 @@ import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.DriverOnboarding.VehicleDocs as VDocs
 import qualified SharedLogic.FleetOperatorStats as FleetOpStats
@@ -226,6 +228,17 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         -- Handle rejection based on request type
         when (req.status == API.Types.ProviderPlatform.Operator.Driver.REJECTED) $ do
           void $ SQOHR.updateStatusWithDetails reqDomainStatus (Just req.remarks) (Just now) (Just (Kernel.Types.Id.Id req.operatorId)) (Kernel.Types.Id.Id req.operationHubRequestId)
+          -- Document audit: operator rejected an inspection/ops-hub request. Vehicle inspections are
+          -- keyed by the RC id (matching the approve path); the RC lookup is audit-only so it is
+          -- city-flag gated, falling back to the driver/request id when no RC resolves.
+          let fallbackAuditEId = maybe opHubReq.id.getId (.getId) opHubReq.driverId
+          (auditEType, auditEId) <- case opHubReq.requestType of
+            DRIVER_ONBOARDING_INSPECTION -> pure (DAL.DRIVER, fallbackAuditEId)
+            DRIVER_REGULAR_INSPECTION -> pure (DAL.DRIVER, fallbackAuditEId)
+            _ -> do
+              mbRc <- maybe (pure Nothing) (\regNo -> Audit.fetchForAuditByCity merchantOpCity.id (QVRCE.findLastVehicleRCWrapper regNo)) opHubReq.registrationNo
+              pure (DAL.VEHICLE, maybe fallbackAuditEId (.id.getId) mbRc)
+          Audit.auditDocStatus (Audit.dashboardActorOrFallback req.operatorId req.requestorRole "OPERATOR") auditEType auditEId (show opHubReq.requestType) DAL.OPERATION_HUB_REQUEST (Just opHubReq.id.getId) (Just (show opHubReq.requestStatus)) (Just "REJECTED") DAL.REJECTED (Just req.remarks) merchantOpCity.merchantId merchantOpCity.id
           when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
             let analyticsDriverId = maybe req.operatorId (.getId) opHubReq.driverId
             case opHubReq.requestType of
@@ -296,12 +309,14 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         if enableBotFlow
           then -- BOT: mark RC verified now, then reconcile in the fork.
           whenJust mbVehicleDocs $ \(vehicleDocItem, allDocumentVerificationConfigs) -> do
-            SStatus.forkRecomputeVehicleVerified registrationNo vehicleDocItem allDocumentVerificationConfigs
+            SStatus.forkRecomputeVehicleVerified merchantOpCity.id registrationNo vehicleDocItem allDocumentVerificationConfigs
           else QVRC.updateApproved (Just True) rc.id
         -- Cancel pending vehicle inspection reminders for all drivers using this RC
         cancelRemindersForRCByDocumentType rc.id DVC.InspectionHub
         -- Record inspection completion for auto-trigger monitoring (per RC, not per driver)
         recordDocumentCompletion DVC.InspectionHub rc.id.getId DRH.RC Nothing merchantOpCity.merchantId merchantOpCity.id
+        -- Document audit: operator approved the vehicle inspection.
+        Audit.auditDocStatus (Audit.dashboardActorOrFallback request.operatorId request.requestorRole "OPERATOR") DAL.VEHICLE rc.id.getId "InspectionHub" DAL.DOCUMENT_REMINDER_HISTORY Nothing Nothing (Just "VALID") DAL.APPROVED Nothing merchantOpCity.merchantId merchantOpCity.id
         when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
           void $
             withTryCatch "incrementApprovedVehicleRequests" $
@@ -366,6 +381,8 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
             void $
               withTryCatch "courtRecordCheck" $
                 CourtRecordCheck.runCourtRecordCheck person merchantOpCity
+        -- Document audit: operator approved the driver inspection.
+        Audit.auditDocStatus (Audit.dashboardActorOrFallback request.operatorId request.requestorRole "OPERATOR") DAL.DRIVER personId.getId "DriverInspectionHub" DAL.DOCUMENT_REMINDER_HISTORY Nothing Nothing (Just "VALID") DAL.APPROVED Nothing merchantOpCity.merchantId merchantOpCity.id
         when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
           void $
             withTryCatch "incrementApprovedDriverRequestsDaily" $
@@ -390,7 +407,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
 
     getPersonInfo merchantOpCity mbPerson = do
       let language = fromMaybe merchantOpCity.language $ mbPerson >>= (.language)
-      pure (language)
+      pure language
 
 opsHubRequestLockKey :: Text -> Text
 opsHubRequestLockKey reqId = "opsHub:Request:Id-" <> reqId
@@ -673,7 +690,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       when (merchant.overwriteAssociation == Just True) $
         QDRC.endAllRCAssociationsForDriver person.id
 
-      deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
+      deviceToken <- fromMaybeM DeviceTokenNotFound $ req.deviceToken
       let regId = Id authId :: Id SR.RegistrationToken
       _ <-
         DReg.verify
@@ -982,6 +999,8 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
   let reqId = req.entityId
   Redis.whenWithLockRedis (reviewRequestLockKey reqId) 60 $ do
     let isDocReqEmpty = null req.rejectDocumentUpdateReq
+    -- BOT review is a dashboard-originated call; audit actor forwarded from dashboard (role falls back to BOT).
+    let botActor = Audit.dashboardActorOrFallback requestorId req.requestorRole "BOT"
 
     validatedDocs <- if isDocReqEmpty then pure [] else validateDocs merchantOpCity.id req.entityType
     let docDetails = map (\(_, _, d) -> d) validatedDocs
@@ -1000,17 +1019,21 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
                   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound reqId)
                   transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
                   -- Throws (naming the offending docs) if any BotApproval dependency doc isn't VALID.
-                  SStatus.botApproveAndReconcile merchantOpCity person transporterConfig
+                  SStatus.botApproveAndReconcile botActor merchantOpCity person transporterConfig
                   QDIExtra.updateEnabledVerifiedState driverId True Nothing Nothing
                   pure (DRR.COMPLETED, Nothing, Nothing)
             if driverInfo.approved == Just True
               then runReconcile
               else do
                 QDI.updateByPrimaryKey driverInfo {DDI.approved = Just True}
+                -- First BOT Check (flag level): driver `approved` flip.
+                Audit.auditFlagChange botActor DAL.DRIVER driverId.getId "approved" DAL.DRIVER_INFORMATION (driverInfo.approved == Just True) True merchant.id merchantOpCity.id
                 pure (DRR.IN_PROGRESS, Nothing, Nothing)
           else do
-            applyDocRejections req.entityType reqId validatedDocs
+            applyDocRejections merchant.id merchantOpCity.id req.entityType reqId validatedDocs
             QDI.updateByPrimaryKey driverInfo {DDI.approved = Just False, DDI.verified = False}
+            Audit.auditFlagChange botActor DAL.DRIVER driverId.getId "approved" DAL.DRIVER_INFORMATION (driverInfo.approved == Just True) False merchant.id merchantOpCity.id
+            Audit.auditFlagChange botActor DAL.DRIVER driverId.getId "verified" DAL.DRIVER_INFORMATION driverInfo.verified False merchant.id merchantOpCity.id
             person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound reqId)
             pure (DRR.REJECTED, Nothing, Just person)
       API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> do
@@ -1023,13 +1046,15 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
             fleetPerson <- QPerson.findById fleetOwnerInfo.fleetOwnerPersonId >>= fromMaybeM (PersonNotFound fleetOwnerInfo.fleetOwnerPersonId.getId)
             transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
             -- Throws (naming the offending docs) if any BotApproval dependency doc isn't VALID.
-            SStatus.botApproveAndReconcile merchantOpCity fleetPerson transporterConfig
+            SStatus.botApproveAndReconcile botActor merchantOpCity fleetPerson transporterConfig
             QFOIExtra.updateFleetOwnerApprovedAndEnabledStatus (Just True) True fleetOwnerInfo.fleetOwnerPersonId
             pure (DRR.COMPLETED, Nothing, Nothing)
           else do
-            applyDocRejections req.entityType reqId validatedDocs
+            applyDocRejections merchant.id merchantOpCity.id req.entityType reqId validatedDocs
             QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.enabled = False, DFOI.verified = False, DFOI.approved = Just False}
             person <- QPerson.findById fleetOwnerInfo.fleetOwnerPersonId >>= fromMaybeM (PersonNotFound fleetOwnerInfo.fleetOwnerPersonId.getId)
+            Audit.auditFlagChange botActor DAL.FLEET_OWNER person.id.getId "enabled" DAL.FLEET_OWNER_INFORMATION fleetOwnerInfo.enabled False merchant.id merchantOpCity.id
+            Audit.auditFlagChange botActor DAL.FLEET_OWNER person.id.getId "verified" DAL.FLEET_OWNER_INFORMATION fleetOwnerInfo.verified False merchant.id merchantOpCity.id
             pure (DRR.REJECTED, Nothing, Just person)
       API.Types.ProviderPlatform.Operator.Driver.VEHICLE -> do
         let rcId = Kernel.Types.Id.Id reqId
@@ -1037,11 +1062,15 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
         when (rcInfo.verified /= Just True) $ throwError (InvalidRequest "RC is not verified")
         if isDocReqEmpty
           then do
-            unless (rcInfo.approved == Just True) $ QVRC.updateApproved (Just True) rcId
+            unless (rcInfo.approved == Just True) $ do
+              QVRC.updateApproved (Just True) rcId
+              Audit.auditFlagChange botActor DAL.VEHICLE rcId.getId "approved" DAL.VEHICLE_REGISTRATION_CERTIFICATE (rcInfo.approved == Just True) True merchant.id merchantOpCity.id
             pure (DRR.COMPLETED, rcInfo.unencryptedCertificateNumber, Nothing)
           else do
-            applyDocRejections req.entityType reqId validatedDocs
+            applyDocRejections merchant.id merchantOpCity.id req.entityType reqId validatedDocs
             QVRCE.updateApprovedAndVerifiedById (Just False) (Just False) rcId
+            Audit.auditFlagChange botActor DAL.VEHICLE rcId.getId "approved" DAL.VEHICLE_REGISTRATION_CERTIFICATE (rcInfo.approved == Just True) False merchant.id merchantOpCity.id
+            Audit.auditFlagChange botActor DAL.VEHICLE rcId.getId "verified" DAL.VEHICLE_REGISTRATION_CERTIFICATE (rcInfo.verified == Just True) False merchant.id merchantOpCity.id
             mbPersonId <- resolvePersonIdViaRc rcId
             mbPerson <- case mbPersonId of
               Just pId -> QPerson.findById pId
@@ -1058,6 +1087,16 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
           API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> DRR.FLEET_OWNER
           API.Types.ProviderPlatform.Operator.Driver.VEHICLE -> DRR.VEHICLE
 
+    -- Document audit: BOT review decision, tagged with the two-phase check (IN_PROGRESS = First, COMPLETED = Second).
+    let botAuditEType = case domainEntityType of
+          DRR.DRIVER -> DAL.DRIVER
+          DRR.FLEET_OWNER -> DAL.FLEET_OWNER
+          DRR.VEHICLE -> DAL.VEHICLE
+        (botAuditAction, botCheckPhase) = case status of
+          DRR.IN_PROGRESS -> (DAL.STATUS_CHANGED, Just "First BOT Check")
+          DRR.COMPLETED -> (DAL.APPROVED, Just "Second BOT Check")
+          DRR.REJECTED -> (DAL.REJECTED, Nothing)
+
     existingRecords <- QRR.findByEntityIdAndEntityTypeAndRequestTypeAndStatusAndRcNo reqId domainEntityType DRR.BOT_REVIEW status mbRegNo
 
     inProgressRecords <-
@@ -1065,10 +1104,17 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
         then QRR.findByEntityIdAndEntityTypeAndRequestTypeAndStatusAndRcNo reqId domainEntityType DRR.BOT_REVIEW DRR.IN_PROGRESS mbRegNo
         else pure []
 
+    -- Document audit: emitted only inside the branches that actually write a ReviewRequest row, with the
+    -- real row id as documentRefId, so a no-op resubmit records nothing and the REVIEW_REQUEST ref resolves.
+    let auditBot mbPrev reviewReqId =
+          Audit.auditBotApproval botActor botAuditEType reqId reviewReqId botAuditAction mbPrev (Just (show status)) merchant.id merchantOpCity.id botCheckPhase
+
     if not (null inProgressRecords)
       then do
         forM_ inProgressRecords $ \record -> do
           QRR.updateByPrimaryKey record {DRR.requestStatus = status, DRR.updatedAt = now, DRR.reviewerId = Just (Kernel.Types.Id.Id requestorId)}
+          -- Second BOT Check: audit the ReviewRequest status transition (prev = record's old status, e.g. IN_PROGRESS -> COMPLETED).
+          auditBot (Just (show record.requestStatus)) record.id.getId
       else when (null existingRecords) $ do
         reqUUID <- generateGUID
         QRR.create
@@ -1086,6 +1132,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
               merchantId = merchant.id,
               merchantOperatingCityId = merchantOpCity.id
             }
+        auditBot Nothing reqUUID.getId
 
   pure Success
   where
@@ -1152,13 +1199,27 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
                   mediaId = Nothing
                 }
         pure (images, doc.rejectedReason, docDetail)
-    applyDocRejections entityType reqId validatedDocs =
+    -- Single source of truth for the reviewed entity's owner role; the audit entity is derived
+    -- from it via 'Audit.entityTypeFromRole' so the FLEET_OWNER/DRIVER mapping lives in one place.
+    reviewedOwnerRole :: API.Types.ProviderPlatform.Operator.Driver.EntityType -> DP.Role
+    reviewedOwnerRole = \case
+      API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> DP.FLEET_OWNER
+      _ -> DP.DRIVER
+    -- mId/mocId: handler-context fallbacks for doc rows whose merchant/city fields are Maybe
+    -- (audits prefer the doc row's own values).
+    applyDocRejections mId mocId entityType reqId validatedDocs =
       forM_ validatedDocs $ \(images, rejectedReason, docDetail) -> do
         let imageIds = map (.id) images
         IQuery.updateVerificationStatusAndFailureReasonForIds (Just Documents.INVALID) (Just $ ImageNotValid rejectedReason) imageIds
-        invalidateSpecificDocument entityType reqId docDetail.documentType (Just rejectedReason)
+        forM_ images $ \image -> do
+          -- The image owner's role decides the audit entity (a rejected fleet-owner doc image must
+          -- not log as DRIVER). The owner read is audit-only, so it is city-flag gated; the reviewed
+          -- entity type supplies the role fallback.
+          mbImgOwner <- Audit.fetchForAuditByCity (fromMaybe mocId image.merchantOperatingCityId) (QPerson.findById image.personId)
+          Audit.auditImageStatus (Audit.dashboardActorOrFallback requestorId req.requestorRole "BOT") (maybe (reviewedOwnerRole entityType) (.role) mbImgOwner) image image.verificationStatus Documents.INVALID DAL.REJECTED
+        invalidateSpecificDocument mId mocId entityType reqId docDetail.documentType (Just rejectedReason)
 
-    invalidateSpecificDocument entityType entityIdTxt docType rejectReason = do
+    invalidateSpecificDocument mId mocId entityType entityIdTxt docType rejectReason = do
       now <- getCurrentTime
       case entityType of
         API.Types.ProviderPlatform.Operator.Driver.VEHICLE -> do
@@ -1166,7 +1227,11 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
           case docType of
             DVC.VehicleRegistrationCertificate -> do
               mbDoc <- QVRC.findByPrimaryKey rcId
-              forM_ mbDoc $ \doc -> QVRC.updateByPrimaryKey doc {DVRC.verificationStatus = Documents.INVALID, DVRC.rejectReason = rejectReason}
+              forM_ mbDoc $ \doc -> do
+                QVRC.updateByPrimaryKey doc {DVRC.verificationStatus = Documents.INVALID, DVRC.rejectReason = rejectReason}
+                -- Audit beside the mutation (previously dropped when no owner resolved via the RC);
+                -- merchant/city from the RC row when set.
+                Audit.auditDocStatus (Audit.dashboardActorOrFallback requestorId req.requestorRole "BOT") DAL.VEHICLE rcId.getId "VehicleRegistrationCertificate" DAL.VEHICLE_REGISTRATION_CERTIFICATE (Just rcId.getId) (Just (show doc.verificationStatus)) (Just (show Documents.INVALID)) DAL.REJECTED rejectReason (fromMaybe mId doc.merchantId) (fromMaybe mocId doc.merchantOperatingCityId)
             DVC.VehicleInspectionForm ->
               IQuery.updateVerificationStatusByRcIdAndImageTypes Documents.INVALID rcId VDocs.vehicleDocsByRcIdList
             DVC.InspectionHub -> do
@@ -1175,33 +1240,57 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
                 case rc.unencryptedCertificateNumber of
                   Just rcNo -> do
                     mbReq <- SQOH.findLatestByRegistrationNoAndRequestType rcNo ONBOARDING_INSPECTION
-                    forM_ mbReq $ \hubReq -> SQOHR.updateByPrimaryKey hubReq {requestStatus = REJECTED, updatedAt = now, remarks = rejectReason}
+                    forM_ mbReq $ \hubReq -> do
+                      SQOHR.updateByPrimaryKey hubReq {requestStatus = REJECTED, updatedAt = now, remarks = rejectReason}
+                      -- Document audit: the ops-hub inspection request itself was rejected via BOT review.
+                      Audit.auditDocStatus (Audit.dashboardActorOrFallback requestorId req.requestorRole "BOT") DAL.VEHICLE rcId.getId "InspectionHub" DAL.OPERATION_HUB_REQUEST (Just hubReq.id.getId) (Just (show hubReq.requestStatus)) (Just "REJECTED") DAL.REJECTED rejectReason hubReq.merchantId hubReq.merchantOperatingCityId
                   Nothing -> pure ()
             _ -> pure ()
         _ -> do
+          -- BOT review rejects fleet-owner docs through this same branch, so the reviewed entity
+          -- type (not a hardcoded DRIVER) decides the person-doc audit entity. Audits sit beside
+          -- their mutation (no owner-lookup gating); merchant/city from the doc row when set.
           let personId = Kernel.Types.Id.Id entityIdTxt
+              auditEType = Audit.entityTypeFromRole (reviewedOwnerRole entityType)
           case docType of
             DVC.AadhaarCard -> do
               mbDoc <- QAadhaarCard.findByPrimaryKey personId
-              forM_ mbDoc $ \doc -> QAadhaarCard.updateByPrimaryKey doc {DAadhaarCard.verificationStatus = Documents.INVALID, DAadhaarCard.rejectReason = rejectReason}
+              forM_ mbDoc $ \doc -> do
+                QAadhaarCard.updateByPrimaryKey doc {DAadhaarCard.verificationStatus = Documents.INVALID, DAadhaarCard.rejectReason = rejectReason}
+                Audit.auditDocStatus (Audit.dashboardActorOrFallback requestorId req.requestorRole "BOT") auditEType personId.getId "AadhaarCard" DAL.AADHAAR_CARD (Just personId.getId) (Just (show doc.verificationStatus)) (Just (show Documents.INVALID)) DAL.REJECTED rejectReason doc.merchantId doc.merchantOperatingCityId
             DVC.PanCard -> do
               mbDoc <- QDPC.findByDriverId personId
-              forM_ mbDoc $ \doc -> QDPC.updateByPrimaryKey doc {DDPC.verificationStatus = Documents.INVALID, DDPC.rejectReason = rejectReason}
+              forM_ mbDoc $ \doc -> do
+                QDPC.updateByPrimaryKey doc {DDPC.verificationStatus = Documents.INVALID, DDPC.rejectReason = rejectReason}
+                Audit.auditDocStatus (Audit.dashboardActorOrFallback requestorId req.requestorRole "BOT") auditEType personId.getId "PanCard" DAL.DRIVER_PAN_CARD (Just personId.getId) (Just (show doc.verificationStatus)) (Just (show Documents.INVALID)) DAL.REJECTED rejectReason (fromMaybe mId doc.merchantId) (fromMaybe mocId doc.merchantOperatingCityId)
             DVC.DriverLicense -> do
               mbDoc <- DLQuery.findByDriverId personId
-              forM_ mbDoc $ \doc -> DLQuery.updateByPrimaryKey doc {DDL.verificationStatus = Documents.INVALID, DDL.rejectReason = rejectReason}
+              forM_ mbDoc $ \doc -> do
+                DLQuery.updateByPrimaryKey doc {DDL.verificationStatus = Documents.INVALID, DDL.rejectReason = rejectReason}
+                -- DriverLicense rows carry no city — use the handler's city.
+                Audit.auditDocStatus (Audit.dashboardActorOrFallback requestorId req.requestorRole "BOT") auditEType personId.getId "DriverLicense" DAL.DRIVER_LICENSE (Just personId.getId) (Just (show doc.verificationStatus)) (Just (show Documents.INVALID)) DAL.REJECTED rejectReason (fromMaybe mId doc.merchantId) mocId
             DVC.SocialSecurityNumber -> do
               mbDoc <- QDSSN.findByDriverId personId
-              forM_ mbDoc $ \doc -> QDSSN.updateByPrimaryKey doc {DDSSN.verificationStatus = Documents.INVALID, DDSSN.rejectReason = rejectReason}
+              forM_ mbDoc $ \doc -> do
+                QDSSN.updateByPrimaryKey doc {DDSSN.verificationStatus = Documents.INVALID, DDSSN.rejectReason = rejectReason}
+                -- DriverSSN rows carry no merchant/city — use the handler's.
+                Audit.auditDocStatus (Audit.dashboardActorOrFallback requestorId req.requestorRole "BOT") auditEType personId.getId "SSN" DAL.DRIVER_SSN (Just personId.getId) (Just (show doc.verificationStatus)) (Just (show Documents.INVALID)) DAL.REJECTED rejectReason mId mocId
             DVC.GSTCertificate -> do
               mbDoc <- QDGST.findByDriverId personId
-              forM_ mbDoc $ \doc -> QDGST.updateByPrimaryKey doc {DDGST.verificationStatus = Documents.INVALID, DDGST.rejectReason = rejectReason}
+              forM_ mbDoc $ \doc -> do
+                QDGST.updateByPrimaryKey doc {DDGST.verificationStatus = Documents.INVALID, DDGST.rejectReason = rejectReason}
+                Audit.auditDocStatus (Audit.dashboardActorOrFallback requestorId req.requestorRole "BOT") auditEType personId.getId "GST" DAL.DRIVER_GSTIN (Just personId.getId) (Just (show doc.verificationStatus)) (Just (show Documents.INVALID)) DAL.REJECTED rejectReason (fromMaybe mId doc.merchantId) (fromMaybe mocId doc.merchantOperatingCityId)
             DVC.UDYAMCertificate -> do
               mbDoc <- QUDYAM.findByDriverId personId
-              forM_ mbDoc $ \doc -> QUDYAM.updateByPrimaryKey doc {DDUDYAM.verificationStatus = Documents.INVALID, DDUDYAM.rejectReason = rejectReason}
+              forM_ mbDoc $ \doc -> do
+                QUDYAM.updateByPrimaryKey doc {DDUDYAM.verificationStatus = Documents.INVALID, DDUDYAM.rejectReason = rejectReason}
+                Audit.auditDocStatus (Audit.dashboardActorOrFallback requestorId req.requestorRole "BOT") auditEType personId.getId "Udyam" DAL.DRIVER_UDYAM (Just personId.getId) (Just (show doc.verificationStatus)) (Just (show Documents.INVALID)) DAL.REJECTED rejectReason (fromMaybe mId doc.merchantId) (fromMaybe mocId doc.merchantOperatingCityId)
             DVC.DriverInspectionHub -> do
               mbReq <- SQOH.findLatestByDriverIdAndRequestType personId DRIVER_ONBOARDING_INSPECTION
-              forM_ mbReq $ \hubReq -> SQOHR.updateByPrimaryKey hubReq {requestStatus = REJECTED, updatedAt = now, remarks = rejectReason}
+              forM_ mbReq $ \hubReq -> do
+                SQOHR.updateByPrimaryKey hubReq {requestStatus = REJECTED, updatedAt = now, remarks = rejectReason}
+                -- Document audit: the driver ops-hub inspection request itself was rejected via BOT review.
+                Audit.auditDocStatus (Audit.dashboardActorOrFallback requestorId req.requestorRole "BOT") DAL.DRIVER personId.getId "DriverInspectionHub" DAL.OPERATION_HUB_REQUEST (Just hubReq.id.getId) (Just (show hubReq.requestStatus)) (Just "REJECTED") DAL.REJECTED rejectReason hubReq.merchantId hubReq.merchantOperatingCityId
             DVC.LocalResidenceProof -> do
               proofImages <- IQuery.findRecentByPersonIdAndImageType personId DVC.LocalResidenceProof
               forM_ proofImages $ \img ->

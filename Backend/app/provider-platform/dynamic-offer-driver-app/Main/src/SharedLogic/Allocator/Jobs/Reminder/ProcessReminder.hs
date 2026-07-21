@@ -26,6 +26,7 @@ import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Types.BusinessLicense as DBL
 import qualified Domain.Types.Common as DDriverInfo
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.Merchant as DM
@@ -60,6 +61,7 @@ import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.Allocator as Allocator
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.AnalyticsExtra as AnalyticsExtra
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified SharedLogic.DriverOnboarding.Status as DriverOnboardingStatus (ResponseStatus (..), checkLMSTrainingStatus)
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -144,7 +146,8 @@ scheduleReminderJob scheduleAfter reminderId merchantId merchantOpCityId = do
 
 -- | Disable driver, set OFFLINE mode and update fleet/operator analytics. Used when a mandatory reminder has expired.
 disableDriverForMandatoryReminder ::
-  ( EsqDBFlow m r,
+  ( Audit.AuditFlow m r,
+    EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
@@ -159,7 +162,8 @@ disableDriverForMandatoryReminder ::
 disableDriverForMandatoryReminder transporterConfig driverId now documentTypeName = do
   driverInfo <- QDriverInfo.findById driverId >>= fromMaybeM (InternalError "DriverInformation not found")
   when driverInfo.enabled $ do
-    Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig driverId False Nothing
+    -- Audited wrapper: emits the scheduler-attributed enabled FLAG_CHANGED audit row itself.
+    Analytics.updateEnabledVerifiedStateWithAnalyticsAudited Audit.systemScheduler (Just driverInfo) transporterConfig driverId False Nothing
     logInfo $ "Disabled driver " <> driverId.getId <> " due to expired mandatory " <> documentTypeName <> " reminder"
 
   let isActive = False
@@ -174,7 +178,8 @@ disableDriverForMandatoryReminder transporterConfig driverId now documentTypeNam
       else DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (Just mode) newFlowStatus driverInfo Nothing Nothing
 
 processReminder ::
-  ( CoreMetrics m,
+  ( Audit.AuditFlow m r,
+    CoreMetrics m,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -218,7 +223,8 @@ processReminder Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
 
 -- | Route reminder processing based on document type
 processReminderByType ::
-  ( CoreMetrics m,
+  ( Audit.AuditFlow m r,
+    CoreMetrics m,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
@@ -288,8 +294,12 @@ processReminderByType reminder driver config merchantId merchantOpCityId =
           FCM.DRIVER_INSPECTION
           DMM.DRIVER_INSPECTION_SMS
           $ do
+            -- Audit-only pre-read (skipped when audit is off for the city); defaults True — this branch is reached only for currently-approved drivers.
+            mbDriverInfo <- Audit.fetchForAuditByCity merchantOpCityId (QDriverInfo.findById reminder.driverId)
             -- Set approved flag to False for DriverInformation
             QDIExtra.updateApproved (Just False) reminder.driverId
+            -- Scheduler-attributed audit for the approved flag flip (was unaudited).
+            Audit.auditFlagChange Audit.systemScheduler DAL.DRIVER reminder.driverId.getId "approved" DAL.DRIVER_INFORMATION (maybe True (fromMaybe True . (.approved)) mbDriverInfo) False merchantId merchantOpCityId
             refreshPersonDocsStatusForReminder reminder.driverId "processInspectionReminder:DriverInspectionHub"
             logInfo $ "Set approved = false for driver " <> reminder.driverId.getId <> " due to expired mandatory driver inspection reminder"
       DVC.TrainingForm -> do
@@ -325,7 +335,8 @@ processReminderByType reminder driver config merchantId merchantOpCityId =
 -- | Process inspection reminders (vehicle, driver inspection, or training)
 -- Handles blocking, setting approved flags, sending notifications, and scheduling next reminder
 processInspectionReminder ::
-  ( EsqDBFlow m r,
+  ( Audit.AuditFlow m r,
+    EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     Redis.HedisFlow m r,
@@ -381,7 +392,8 @@ processInspectionReminder reminder driver config merchantId merchantOpCityId dis
       logInfo $ "Reminder " <> reminder.id.getId <> " is no longer PENDING (status: " <> maybe "not found" (show . (.status)) mbCurrentReminder <> "), skipping notification and reschedule"
 
 processDocumentExpiryReminder ::
-  ( EsqDBFlow m r,
+  ( Audit.AuditFlow m r,
+    EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     MonadFlow m,
@@ -435,11 +447,11 @@ processDocumentExpiryReminder reminder driver reminderConfig merchantId merchant
                   let rcId = Id @DVRC.VehicleRegistrationCertificate reminder.entityId
                       expiryReason = "Expired mandatory vehicle document reminder"
                   DomainRC.invalidateRCAndRemoveVehicleForReminder rcId reminder.driverId merchantOpCityId expiryReason
-                  invalidateExpiredDocument reminder.documentType reminder.entityId merchantId reminder.driverId expiryReason
+                  invalidateExpiredDocument reminder.documentType reminder.entityId merchantId merchantOpCityId reminder.driverId expiryReason
                   refreshVehicleDocsStatusForReminder rcId "processDocumentExpiryReminder:vehicleExpired"
                   logInfo $ "Invalidated RC " <> reminder.entityId <> " (type: " <> documentTypeName <> ") for driver " <> reminder.driverId.getId <> " due to expiry"
                 else do
-                  invalidateExpiredDocument reminder.documentType reminder.entityId merchantId reminder.driverId "Document expired"
+                  invalidateExpiredDocument reminder.documentType reminder.entityId merchantId merchantOpCityId reminder.driverId "Document expired"
                   refreshPersonDocsStatusForReminder reminder.driverId "processDocumentExpiryReminder:personDocumentExpired"
                   logInfo $ "Invalidated document " <> reminder.entityId <> " (type: " <> documentTypeName <> ") due to expiry"
             else do
@@ -473,15 +485,17 @@ processDocumentExpiryReminder reminder driver reminderConfig merchantId merchant
 invalidateExpiredDocument ::
   ( EsqDBFlow m r,
     MonadFlow m,
-    CacheFlow m r
+    CacheFlow m r,
+    Audit.AuditFlow m r
   ) =>
   DVC.DocumentType ->
   Text ->
   Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   Text ->
   m ()
-invalidateExpiredDocument documentType entityId _merchantId _driverId expiryReason = do
+invalidateExpiredDocument documentType entityId merchantId merchantOpCityId driverId expiryReason = do
   case documentType of
     DVC.DriverLicense -> do
       let docId = Id @DDL.DriverLicense entityId
@@ -489,33 +503,62 @@ invalidateExpiredDocument documentType entityId _merchantId _driverId expiryReas
       Kernel.Prelude.whenJust mbDL $ \dl -> do
         QDL.updateVerificationStatusAndRejectReason Documents.INVALID expiryReason dl.documentImageId1
         void $ uncurry (liftA2 (,)) $ TE.both (maybe (return ()) (QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid expiryReason))) (Just dl.documentImageId1, dl.documentImageId2)
+        -- Audit-only read (skipped when audit is off for the city): DL is a person doc, entity type derives from the owner's role.
+        mbPerson <- Audit.fetchForAuditByCity merchantOpCityId (QPerson.findById driverId)
+        -- Person row missing must not skip the audit: fall back to the DL row's owner/merchant (DL has no city column → scope city).
+        let (eType, eId, mId, cId) = case mbPerson of
+              Just person -> (Audit.entityTypeFromRole person.role, person.id.getId, person.merchantId, person.merchantOperatingCityId)
+              Nothing -> (DAL.DRIVER, dl.driverId.getId, fromMaybe merchantId dl.merchantId, merchantOpCityId)
+        Audit.auditDocStatus Audit.systemScheduler eType eId "DriverLicense" DAL.DRIVER_LICENSE (Just entityId) (Just (show dl.verificationStatus)) (Just (show Documents.INVALID)) DAL.STATUS_CHANGED (Just "expired") mId cId
     DVC.VehicleRegistrationCertificate -> pure ()
     DVC.VehicleInsurance -> do
       let rcId = Id @DVRC.VehicleRegistrationCertificate entityId
           rcIdText = Just (getId rcId)
+      -- Audit-only pre-read (skipped when audit is off for the city): latest row's status = real previousStatus.
+      mbVI <- Audit.fetchForAuditByCity merchantOpCityId (listToMaybe <$> QVI.findByRcId (Just 1) Nothing rcId)
       QVI.updateVerificationStatusAndRejectReasonByRcId Documents.INVALID (Just expiryReason) rcId
       QImage.updateVerificationStatusAndFailureReasonByRcIdAndImageType (Just Documents.INVALID) (Just $ ImageNotValid expiryReason) rcIdText DVC.VehicleInsurance
+      -- Vehicle doc: entity is the vehicle (RC), independent of the reminder person.
+      Audit.auditDocStatus Audit.systemScheduler DAL.VEHICLE rcId.getId "VehicleInsurance" DAL.VEHICLE_INSURANCE rcIdText ((\vi -> show vi.verificationStatus) <$> mbVI) (Just (show Documents.INVALID)) DAL.STATUS_CHANGED (Just "expired") (fromMaybe merchantId (mbVI >>= (.merchantId))) (fromMaybe merchantOpCityId (mbVI >>= (.merchantOperatingCityId)))
     DVC.VehiclePermit -> do
       let rcId = Id @DVRC.VehicleRegistrationCertificate entityId
           rcIdText = Just (getId rcId)
+      -- Audit-only pre-read (skipped when audit is off for the city): latest row's status = real previousStatus.
+      mbPermit <- Audit.fetchForAuditByCity merchantOpCityId (listToMaybe <$> QVPermit.findByRcId (Just 1) Nothing rcId)
       QVPermit.updateVerificationStatusByRcId Documents.INVALID rcId
       QImage.updateVerificationStatusAndFailureReasonByRcIdAndImageType (Just Documents.INVALID) (Just $ ImageNotValid expiryReason) rcIdText DVC.VehiclePermit
+      -- Vehicle doc: entity is the vehicle (RC), independent of the reminder person.
+      Audit.auditDocStatus Audit.systemScheduler DAL.VEHICLE rcId.getId "VehiclePermit" DAL.VEHICLE_PERMIT rcIdText ((\p -> show p.verificationStatus) <$> mbPermit) (Just (show Documents.INVALID)) DAL.STATUS_CHANGED (Just "expired") (fromMaybe merchantId (mbPermit >>= (.merchantId))) (fromMaybe merchantOpCityId (mbPermit >>= (.merchantOperatingCityId)))
     DVC.VehiclePUC -> do
       let rcId = Id @DVRC.VehicleRegistrationCertificate entityId
           rcIdText = Just (getId rcId)
+      -- Audit-only pre-read (skipped when audit is off for the city): latest row's status = real previousStatus.
+      mbPUC <- Audit.fetchForAuditByCity merchantOpCityId (listToMaybe <$> QVPUC.findByRcId (Just 1) Nothing rcId)
       QVPUC.updateVerificationStatusByRcId Documents.INVALID rcId
       QImage.updateVerificationStatusAndFailureReasonByRcIdAndImageType (Just Documents.INVALID) (Just $ ImageNotValid expiryReason) rcIdText DVC.VehiclePUC
+      -- Vehicle doc: entity is the vehicle (RC), independent of the reminder person.
+      Audit.auditDocStatus Audit.systemScheduler DAL.VEHICLE rcId.getId "VehiclePUC" DAL.VEHICLE_PUC rcIdText ((\p -> show p.verificationStatus) <$> mbPUC) (Just (show Documents.INVALID)) DAL.STATUS_CHANGED (Just "expired") (fromMaybe merchantId (mbPUC >>= (.merchantId))) (fromMaybe merchantOpCityId (mbPUC >>= (.merchantOperatingCityId)))
     DVC.VehicleFitnessCertificate -> do
       let rcId = Id @DVRC.VehicleRegistrationCertificate entityId
           rcIdText = Just (getId rcId)
+      -- Audit-only pre-read (skipped when audit is off for the city): latest row's status = real previousStatus.
+      mbFC <- Audit.fetchForAuditByCity merchantOpCityId (listToMaybe <$> QFC.findByRcId (Just 1) Nothing rcId)
       QFC.updateVerificationStatusByRcId Documents.INVALID rcId
       QImage.updateVerificationStatusAndFailureReasonByRcIdAndImageType (Just Documents.INVALID) (Just $ ImageNotValid expiryReason) rcIdText DVC.VehicleFitnessCertificate
+      -- Vehicle doc: entity is the vehicle (RC), independent of the reminder person.
+      Audit.auditDocStatus Audit.systemScheduler DAL.VEHICLE rcId.getId "VehicleFitnessCertificate" DAL.VEHICLE_FITNESS_CERTIFICATE rcIdText ((\fc -> show fc.verificationStatus) <$> mbFC) (Just (show Documents.INVALID)) DAL.STATUS_CHANGED (Just "expired") (fromMaybe merchantId (mbFC >>= (.merchantId))) (fromMaybe merchantOpCityId (mbFC >>= (.merchantOperatingCityId)))
     DVC.BusinessLicense -> do
       let docId = Id @DBL.BusinessLicense entityId
       mbBL <- QBL.findByPrimaryKey docId
       Kernel.Prelude.whenJust mbBL $ \bl -> do
         QBL.updateVerificationStatusByImageId Documents.INVALID bl.documentImageId
         QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid expiryReason) bl.documentImageId
+        -- Audit-only read (skipped when audit is off for the city): BL is a fleet-owner doc — entity from the owner's role when loadable, else FLEET_OWNER (BL is fleet-only).
+        mbPerson <- Audit.fetchForAuditByCity merchantOpCityId (QPerson.findById driverId)
+        let (eType, eId, mId, cId) = case mbPerson of
+              Just person -> (Audit.entityTypeFromRole person.role, person.id.getId, person.merchantId, person.merchantOperatingCityId)
+              Nothing -> (DAL.FLEET_OWNER, bl.driverId.getId, fromMaybe merchantId bl.merchantId, fromMaybe merchantOpCityId bl.merchantOperatingCityId)
+        Audit.auditDocStatus Audit.systemScheduler eType eId "BusinessLicense" DAL.BUSINESS_LICENSE (Just entityId) (Just (show bl.verificationStatus)) (Just (show Documents.INVALID)) DAL.STATUS_CHANGED (Just "expired") mId cId
     DVC.TrainingForm -> pure ()
     _ -> logError $ "Unknown document type for invalidation: " <> show documentType
 

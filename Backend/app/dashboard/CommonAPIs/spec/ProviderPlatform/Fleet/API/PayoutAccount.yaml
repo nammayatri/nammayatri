@@ -55,6 +55,7 @@ types:
     - paymentMode: Maybe PaymentMode
     - bankAccountNo: Maybe Text
     - bankIfscCode: Maybe Text
+    - requestorRole: Maybe Text
     - derive: "'HideSecrets"
   PayoutAccountResp:
     - accountType: PayoutAccountType
@@ -65,6 +66,7 @@ types:
     - fleetOwnerId: Maybe Text
     - bankRequestId: Maybe Text
     - upiOrderId: Maybe Text
+    - requestorRole: Maybe Text
     - derive: "'HideSecrets"
   PayoutAccountStatusResp:
     - accountType: PayoutAccountType

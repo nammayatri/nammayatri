@@ -153,6 +153,8 @@ types:
     consentTimestamp: UTCTime
     validationStatus: ValidationStatus
     transactionId: Text
+    requestorId: Maybe Text
+    requestorRole: Maybe Text
   BankAccountLinkResp:
     chargesEnabled: Bool
     payoutsEnabled: Maybe Bool

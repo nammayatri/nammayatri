@@ -225,7 +225,7 @@ postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req s
         deploymentVersion <- asks (.version)
         personData <- DRegistrationV2.createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled
         -- Fleet owner info is created with NORMAL_FLEET by default (can be overwritten in register)
-        void $ DRegistrationV2.enableFleetIfPossible personData.id Nothing (Just FOI.NORMAL_FLEET) merchantOpCityId Nothing
+        void $ DRegistrationV2.enableFleetIfPossible Nothing personData.id Nothing (Just FOI.NORMAL_FLEET) merchantOpCityId Nothing
         pure personData
 
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)

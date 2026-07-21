@@ -20,6 +20,7 @@ where
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.MediaFileDocument as Common
 import AWS.S3 as S3
 import qualified Data.Text as T
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Environment
@@ -36,6 +37,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SchedulerJob ()
@@ -95,13 +97,16 @@ mediaFileDocumentConfirm ::
   Text ->
   Common.MediaFileDocumentReq ->
   Flow APISuccess
-mediaFileDocumentConfirm merchantShortId opCity _requestorId req = do
+mediaFileDocumentConfirm merchantShortId opCity requestorId req = do
   let fileId = cast req.mediaFileDocumentId :: Id DMF.MediaFile
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeConfirmMediaHitsCountKey fileId) externalServiceRateLimitOptions
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   mediaFile <- QMF.findById fileId >>= fromMaybeM (InvalidRequest "MediaFile does not exist")
+  -- Document audit: the dashboard actor confirming the upload. Role comes forwarded from the dashboard
+  -- (audit-gated); when it isn't forwarded the audit degrades to SYSTEM rather than guessing a role.
+  let auditActor = Audit.dashboardActorOrSystem (Just requestorId) req.requestorRole
 
   -- if status is PENDING, FAILED or CONFIRMED, we allow multiple reloads within rate limits, unless link will be expired
   when (mediaFile.status == Just DMF.DELETED) $
@@ -113,6 +118,7 @@ mediaFileDocumentConfirm merchantShortId opCity _requestorId req = do
   s3ObjectStatus <- catch (S3.headRequest (T.unpack s3Path)) $ \(err :: SomeException) -> do
     logError $ "File was not found: fileId: " <> fileId.getId <> " err: " <> show err
     QMF.updateStatusAndHashById DMF.FAILED Nothing fileId
+    auditMediaFileStatus auditActor fileId (show <$> mediaFile.status) (Just "FAILED") DAL.STATUS_CHANGED (Just "File was not found") merchant.id merchantOpCityId
     throwError $ InvalidRequest "File was not found"
 
   let fileSizeInBytes = s3ObjectStatus.fileSizeInBytes
@@ -121,10 +127,12 @@ mediaFileDocumentConfirm merchantShortId opCity _requestorId req = do
     Right () -> pure ()
     Left errMessage -> do
       QMF.updateStatusAndHashById DMF.FAILED Nothing fileId
+      auditMediaFileStatus auditActor fileId (show <$> mediaFile.status) (Just "FAILED") DAL.STATUS_CHANGED (Just errMessage) merchant.id merchantOpCityId
       catch (S3.delete (T.unpack s3Path)) $ \(err :: SomeException) -> logWarning $ "Unable to delete oversize file: " <> show err
       throwError $ InvalidRequest errMessage
 
   QMF.updateStatusAndHashById DMF.CONFIRMED (Just fileHash) fileId
+  auditMediaFileStatus auditActor fileId Nothing (Just "CONFIRMED") DAL.UPLOADED Nothing merchant.id merchantOpCityId
   pure Success
   where
     makeConfirmMediaHitsCountKey :: Id DMF.MediaFile -> Text
@@ -166,6 +174,12 @@ finalizeInspectionMedia merchantOpCityId fileId = do
   unless (Just (S3.eTagToHash s3ObjectStatus.entityTag) == mediaFile.fileHash) $
     throwError (InvalidRequest "Inspection media changed after confirmation; please re-upload and confirm")
   QMF.updateStatusById DMF.COMPLETED fileId
+  -- Document audit: inspection media finalized (kept) at submit. No requestor is threaded through this shared
+  -- finalization step, so it attributes to SYSTEM. merchantId is read (audit-gated) off the city, as the
+  -- generic MediaFile row carries no merchant/city.
+  mbMoc <- Audit.fetchForAuditByCity merchantOpCityId (CQMOC.findById merchantOpCityId)
+  whenJust mbMoc $ \moc ->
+    auditMediaFileStatus Audit.systemActor fileId (Just "CONFIRMED") (Just "COMPLETED") DAL.STATUS_CHANGED Nothing moc.merchantId merchantOpCityId
 
 -- Delete a MediaFile. Within the upload window, soft-delete (status DELETED); after it, hard delete. Then S3 delete.
 mediaFileDocumentDelete ::
@@ -174,15 +188,18 @@ mediaFileDocumentDelete ::
   Text ->
   Common.MediaFileDocumentReq ->
   Flow APISuccess
-mediaFileDocumentDelete merchantShortId _opCity _requestorId req = do
+mediaFileDocumentDelete merchantShortId opCity requestorId req = do
   let fileId = cast req.mediaFileDocumentId :: Id DMF.MediaFile
   mediaFile <- QMF.findById fileId >>= fromMaybeM (InvalidRequest "MediaFile does not exist")
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let uploadLinkExpiredIn = fromIntegral merchant.mediaFileDocumentLinkExpires + 300 -- 5 minutes buffer
   now <- getCurrentTime
   if now > addUTCTime uploadLinkExpiredIn mediaFile.createdAt
     then QMF.deleteById fileId
     else QMF.updateStatusById DMF.DELETED fileId -- upload may be in progress, so only soft delete within the window
+    -- Document audit: media-file deleted by the dashboard actor (role forwarded from the dashboard; SYSTEM when absent).
+  auditMediaFileDelete (Audit.dashboardActorOrSystem (Just requestorId) req.requestorRole) fileId merchant.id merchantOpCityId
   whenJust mediaFile.s3FilePath $ \s3Path ->
     catch (S3.delete (T.unpack s3Path)) $ \(err :: SomeException) ->
       logWarning $ "Unable to delete file from S3: fileId: " <> fileId.getId <> " err: " <> show err
@@ -217,10 +234,10 @@ mediaFileDocumentDownloadLink merchantShortId _opCity fileId _requestorId = do
 -- COMPLETED (at submit) and kept; anything else -- never confirmed, or confirmed but never submitted -- was
 -- abandoned, so it is deleted from S3 + the row.
 mediaFileDocumentComplete ::
-  (CacheFlow m r, MonadFlow m, EsqDBFlow m r, HasField "s3Env" r (S3Env m)) =>
+  (CacheFlow m r, MonadFlow m, EsqDBFlow m r, HasField "s3Env" r (S3Env m), Audit.AuditFlow m r) =>
   Job 'MediaFileDocumentComplete ->
   m ExecutionResult
-mediaFileDocumentComplete Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
+mediaFileDocumentComplete Job {id, jobInfo, merchantId = mbMerchantId, merchantOperatingCityId = mbMerchantOpCityId} = withLogTag ("JobId-" <> id.getId) $ do
   let mediaFileId = jobInfo.jobData.mediaFileId
   QMF.findById mediaFileId >>= \case
     Nothing -> logInfo $ "MediaFile: " <> mediaFileId.getId <> " already removed; nothing to clean"
@@ -230,10 +247,26 @@ mediaFileDocumentComplete Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
         _ -> do
           logInfo $ "Removing abandoned MediaFile: " <> mediaFileId.getId <> " (status: " <> show mediaFile.status <> ")"
           QMF.deleteById mediaFileId
+          -- Document audit: abandoned media-file removed by the cleanup scheduler. merchant/city come off the
+          -- Job (the generic MediaFile row carries neither); skipped if the Job lacks them (row would be gate-dropped anyway).
+          whenJust ((,) <$> mbMerchantId <*> mbMerchantOpCityId) $ \(mId, cId) ->
+            auditMediaFileDelete Audit.systemScheduler mediaFileId mId cId
           whenJust mediaFile.s3FilePath $ \s3Path ->
             catch (S3.delete (T.unpack s3Path)) $ \(err :: SomeException) ->
               logWarning $ "Unable to delete abandoned file from S3: fileId: " <> mediaFileId.getId <> " err: " <> show err
   pure Complete
+
+-- ─── Document audit (VehicleVideo / inspection media on the shared MediaFile table) ───
+-- The generic MediaFile model dropped the RC↔file coupling the old audit keyed on (rcId /
+-- mediaFileDocumentType), so the row is keyed on the MediaFile id itself: entity = VEHICLE + fileId,
+-- documentType = "VehicleVideo", refType = MEDIA_FILE_DOCUMENT.
+auditMediaFileStatus :: Audit.AuditFlow m r => Audit.Requestor -> Id DMF.MediaFile -> Maybe Text -> Maybe Text -> DAL.AuditAction -> Maybe Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
+auditMediaFileStatus requestor fileId =
+  Audit.auditDocStatus requestor DAL.VEHICLE fileId.getId "VehicleVideo" DAL.MEDIA_FILE_DOCUMENT (Just fileId.getId)
+
+auditMediaFileDelete :: Audit.AuditFlow m r => Audit.Requestor -> Id DMF.MediaFile -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
+auditMediaFileDelete requestor fileId =
+  Audit.auditDelete requestor DAL.VEHICLE fileId.getId "VehicleVideo" DAL.MEDIA_FILE_DOCUMENT (Just fileId.getId) Nothing
 
 -- Map the MediaFile upload status onto the dashboard-facing status enum (kept identical to the old flow).
 castMediaFileStatus :: Maybe DMF.MediaFileUploadStatus -> Common.MediaFileDocumentStatus

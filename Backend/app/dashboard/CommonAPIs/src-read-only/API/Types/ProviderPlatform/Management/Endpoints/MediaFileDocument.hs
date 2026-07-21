@@ -17,7 +17,7 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
-data MediaFileDocumentReq = MediaFileDocumentReq {mediaFileDocumentId :: Kernel.Types.Id.Id Dashboard.Common.File}
+data MediaFileDocumentReq = MediaFileDocumentReq {mediaFileDocumentId :: Kernel.Types.Id.Id Dashboard.Common.File, requestorRole :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -45,6 +45,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified SharedLogic.DriverOnboarding.Digilocker as DigilockerLockerShared
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -253,7 +254,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
             fileExtension = Just "pdf"
           }
 
-  Image.ImageValidateResponse {imageId} <- Image.validateImage False Nothing Nothing (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
+  Image.ImageValidateResponse {imageId} <- Image.validateImage Nothing False Nothing Nothing (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
   logInfo $ "PullDocument - Uploaded DL PDF to S3 (DigiLocker verified), ImageId: " <> imageId.getId
 
   let vehicleCategory = session.vehicleCategory
@@ -277,6 +278,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
 
   logInfo $ "PullDocument - Calling onVerifyDLHandler with COVs: " <> show dlFlow.classOfVehicles <> ", VehicleCategory: " <> show vehicleCategory
   DLModule.onVerifyDLHandler
+    (Audit.driverAppPerson person.id (Audit.toActorRole person.role)) -- driver self-pull via DigiLocker
     person
     (Just dlNumber)
     (Just dlExpiryText)
@@ -289,6 +291,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
     dlFlow.name
     dateOfIssueUTC
     (Just vehicleCategory)
+    Nothing -- synchronous document pull: no async provider requestId to correlate
   logInfo $ "PullDocument - Successfully stored DL via onVerifyDLHandler for DriverId: " <> person.id.getId
 
 updateDocStatusField ::

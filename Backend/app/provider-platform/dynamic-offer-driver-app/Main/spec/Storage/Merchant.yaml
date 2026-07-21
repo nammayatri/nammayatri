@@ -1269,6 +1269,7 @@ TransporterConfig:
     dontAutoEnableDriver: Maybe Bool
     enableBotFlow: Maybe Bool # Just True ⇒ statusHandler computes verified (isMandatory docs) + enabled (isMandatoryForEnabling docs AND BOT-set approved). NULL ⇒ legacy flow.
     enablePullPendingDocVerification: Maybe Bool # Just True ⇒ status renders re-pull stuck doc verifications via getTask (SyncVerificationStatus). NULL ⇒ off.
+    enableDocumentAuditLog: Maybe Bool # Just True ⇒ DOCUMENT_AUDIT_CONSUMER persists document/flag audit events for this city. NULL/False ⇒ events are dropped (feature off). City-level master switch for the document audit log.
     reminderSystemEnabled: Maybe Bool
     allowedReferralEntities: "[Role]"
     enableOverchargingBlocker: Bool

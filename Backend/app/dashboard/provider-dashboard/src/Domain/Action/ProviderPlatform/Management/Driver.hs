@@ -72,6 +72,7 @@ where
 import qualified API.Client.ProviderPlatform.Management as Client
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as Common
 import Data.Time.Calendar (Day)
+import Domain.Action.ProviderPlatform.Management.DriverRegistration (determineAuditRequestorId, determineAuditRequestorRole)
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -129,9 +130,11 @@ getDriverActivity merchantShortId opCity apiTokenInfo = do
 postDriverDisable :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
 postDriverDisable merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverDisable) driverId
+    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverDisable) driverId mbRequestorId mbRequestorRole
 
 postDriverAcRestrictionUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateACUsageRestrictionReq -> Flow APISuccess
 postDriverAcRestrictionUpdate merchantShortId opCity apiTokenInfo driverId req = do
@@ -178,9 +181,13 @@ getDriverLocation merchantShortId opCity apiTokenInfo mbLimit mbOffset req = do
 deleteDriverPermanentlyDelete :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
 deleteDriverPermanentlyDelete merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  -- Audit actor id + role, both gated on merchant.sendDocumentAuditActorDetails, so the BPP attributes the
+  -- account-deletion document-audit rows to the acting dashboard operator instead of the system scheduler.
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $ do
-    result <- Client.callManagementAPI checkedMerchantId opCity (.driverDSL.deleteDriverPermanentlyDelete) driverId
+    result <- Client.callManagementAPI checkedMerchantId opCity (.driverDSL.deleteDriverPermanentlyDelete) driverId mbRequestorId mbRequestorRole
     let personId = Kernel.Types.Id.cast driverId
     mbPerson <- QP.findById personId
     whenJust mbPerson $ \_ -> do
@@ -193,16 +200,20 @@ deleteDriverPermanentlyDelete merchantShortId opCity apiTokenInfo driverId = do
 postDriverUnlinkDL :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
 postDriverUnlinkDL merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverUnlinkDL) driverId
+    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverUnlinkDL) driverId mbRequestorId mbRequestorRole
 
 postDriverUnlinkAadhaar :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
 postDriverUnlinkAadhaar merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverUnlinkAadhaar) driverId
+    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverUnlinkAadhaar) driverId mbRequestorId mbRequestorRole
 
 postDriverUpdatePhoneNumber :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> Flow APISuccess
 postDriverUpdatePhoneNumber merchantShortId opCity apiTokenInfo driverId req = do
@@ -216,7 +227,9 @@ postDriverUpdatePhoneNumber merchantShortId opCity apiTokenInfo driverId req = d
 postDriverUpdateByPhoneNumber :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Common.UpdateDriverDataReq -> Flow APISuccess
 postDriverUpdateByPhoneNumber merchantShortId opCity apiTokenInfo phoneNo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverUpdateByPhoneNumber) phoneNo req
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
+  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverUpdateByPhoneNumber) phoneNo (req {Common.requestorId = mbRequestorId, Common.requestorRole = mbRequestorRole} :: Common.UpdateDriverDataReq)
 
 postDriverUpdateName :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateDriverNameReq -> Flow APISuccess
 postDriverUpdateName merchantShortId opCity apiTokenInfo driverId req = do
@@ -229,9 +242,11 @@ postDriverUpdateName merchantShortId opCity apiTokenInfo driverId req = do
 postDriverDeleteRC :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.DeleteRCReq -> Flow APISuccess
 postDriverDeleteRC merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   transaction <- buildTransaction apiTokenInfo (Just driverId) $ Just req
   T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverDeleteRC) driverId req
+    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverDeleteRC) driverId (req {Common.requestorId = mbRequestorId, Common.requestorRole = mbRequestorRole} :: Common.DeleteRCReq)
 
 getDriverClearStuckOnRide :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Flow Common.ClearOnRideStuckDriversRes
 getDriverClearStuckOnRide merchantShortId opCity apiTokenInfo dbSyncTime = do
@@ -268,23 +283,30 @@ postDriverPauseOrResumeServiceCharges merchantShortId opCity apiTokenInfo driver
 postDriverUpdateRCInvalidStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateRCInvalidStatusReq -> Flow APISuccess
 postDriverUpdateRCInvalidStatus merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
   T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverUpdateRCInvalidStatus) driverId req
+    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverUpdateRCInvalidStatus) driverId (req {Common.requestorId = mbRequestorId, Common.requestorRole = mbRequestorRole} :: Common.UpdateRCInvalidStatusReq)
 
 postDriverUpdateVehicleVariant :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateVehicleVariantReq -> Flow APISuccess
 postDriverUpdateVehicleVariant merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
   T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverUpdateVehicleVariant) driverId req
+    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverUpdateVehicleVariant) driverId (req {Common.requestorId = mbRequestorId, Common.requestorRole = mbRequestorRole} :: Common.UpdateVehicleVariantReq)
 
 postDriverBulkReviewRCVariant :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> [Common.ReviewRCVariantReq] -> Flow [Common.ReviewRCVariantRes]
 postDriverBulkReviewRCVariant merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction apiTokenInfo Nothing (Just req)
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
+  let reqWithActor = map (\r -> r {Common.requestorId = mbRequestorId, Common.requestorRole = mbRequestorRole} :: Common.ReviewRCVariantReq) req
+  transaction <- buildTransaction apiTokenInfo Nothing (Just reqWithActor)
   T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverBulkReviewRCVariant) req
+    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverBulkReviewRCVariant) reqWithActor
 
 postDriverUpdateDriverTag :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateDriverTagReq -> Flow APISuccess
 postDriverUpdateDriverTag merchantShortId opCity apiTokenInfo driverId req = do
@@ -314,9 +336,14 @@ getDriverPanAadharSelfieDetails merchantShortId opCity apiTokenInfo countryCode 
 postDriverSyncDocAadharPan :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.AadharPanSyncReq -> Environment.Flow APISuccess)
 postDriverSyncDocAadharPan merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction apiTokenInfo Nothing (Just req)
+  -- Audit actor id + role, both gated on merchant.sendDocumentAuditActorDetails, so the BPP attributes the
+  -- re-sync image deletes to the acting dashboard operator instead of SYSTEM.
+  let mbAuditRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
+  let reqA = req {Common.auditRequestorId = mbAuditRequestorId, Common.requestorRole = mbRequestorRole} :: Common.AadharPanSyncReq
+  transaction <- buildTransaction apiTokenInfo Nothing (Just reqA)
   T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverSyncDocAadharPan) req
+    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverSyncDocAadharPan) reqA
 
 postDriverPersonId :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.PersonMobileNoReq -> Environment.Flow [Common.PersonRes])
 postDriverPersonId merchantShortId opCity apiTokenInfo req = do
@@ -398,8 +425,10 @@ postDriverVehicleUpsertSelectedServiceTiers merchantShortId opCity apiTokenInfo 
 postDriverUpdateRCInvalidStatusByRCNumber :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpdateRCInvalidStatusByRCNumberReq -> Environment.Flow APISuccess)
 postDriverUpdateRCInvalidStatusByRCNumber merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let mbRequestorId = determineAuditRequestorId apiTokenInfo
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
-  T.withTransactionStoring transaction $ (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverUpdateRCInvalidStatusByRCNumber) req)
+  T.withTransactionStoring transaction $ (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverUpdateRCInvalidStatusByRCNumber) (req {Common.requestorId = mbRequestorId, Common.requestorRole = mbRequestorRole} :: Common.UpdateRCInvalidStatusByRCNumberReq))
 
 postDriverTdsRateUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpdateTdsRateReq -> Environment.Flow APISuccess
 postDriverTdsRateUpdate merchantShortId opCity apiTokenInfo req = do

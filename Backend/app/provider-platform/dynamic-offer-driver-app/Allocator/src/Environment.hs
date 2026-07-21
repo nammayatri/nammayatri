@@ -152,7 +152,8 @@ data HandlerEnv = HandlerEnv
     enableLtsPoolDataForPooling :: Bool,
     cloudType :: Maybe CloudType,
     rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
-    actorInfo :: Finance.ActorInfo
+    actorInfo :: Finance.ActorInfo,
+    documentAuditPublisherCfg :: Maybe RideEventsPublisherCfg
   }
   deriving (Generic)
 

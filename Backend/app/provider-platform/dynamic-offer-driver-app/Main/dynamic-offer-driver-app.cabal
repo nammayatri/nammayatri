@@ -401,6 +401,7 @@ library
       Domain.Types.DriverFlowStatus
       Domain.Types.DriverLocation
       Domain.Types.DriverWallet
+      Domain.Types.Event.DocumentAuditEvent
       Domain.Types.Event.RideEndedEvent
       Domain.Types.External.LiveEKD
       Domain.Types.Extra.ConditionalCharges
@@ -523,6 +524,7 @@ library
       SharedLogic.DriverFlowStatus
       SharedLogic.DriverIdentityInfo
       SharedLogic.DriverOnboarding
+      SharedLogic.DriverOnboarding.Audit
       SharedLogic.DriverOnboarding.Digilocker
       SharedLogic.DriverOnboarding.Status
       SharedLogic.DriverOnboarding.VehicleDocs
@@ -1196,6 +1198,7 @@ library
       Domain.Types.ConditionalCharges
       Domain.Types.DailyStats
       Domain.Types.DigilockerVerification
+      Domain.Types.DocumentAuditLog
       Domain.Types.DocumentReminderHistory
       Domain.Types.DocumentVerificationConfig
       Domain.Types.DomainDiscountConfig
@@ -1382,6 +1385,7 @@ library
       Storage.Beam.ConditionalCharges
       Storage.Beam.DailyStats
       Storage.Beam.DigilockerVerification
+      Storage.Beam.DocumentAuditLog
       Storage.Beam.DocumentReminderHistory
       Storage.Beam.DocumentVerificationConfig
       Storage.Beam.DomainDiscountConfig
@@ -1573,6 +1577,7 @@ library
       Storage.Queries.ConditionalCharges
       Storage.Queries.DailyStats
       Storage.Queries.DigilockerVerification
+      Storage.Queries.DocumentAuditLog
       Storage.Queries.DocumentReminderHistory
       Storage.Queries.DocumentVerificationConfig
       Storage.Queries.DomainDiscountConfig

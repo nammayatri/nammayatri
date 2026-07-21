@@ -8,6 +8,7 @@ where
 
 import qualified API.Client.ProviderPlatform.Management as Client
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.MediaFileDocument as Common
+import Domain.Action.ProviderPlatform.Management.DriverRegistration (determineAuditRequestorRole)
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -42,9 +43,10 @@ postMediaFileDocumentConfirm ::
 postMediaFileDocumentConfirm merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   let requestorId = apiTokenInfo.personId.getId
   T.withTransactionStoring transaction $ do
-    Client.callManagementAPI checkedMerchantId opCity (.mediaFileDocumentDSL.postMediaFileDocumentConfirm) requestorId req
+    Client.callManagementAPI checkedMerchantId opCity (.mediaFileDocumentDSL.postMediaFileDocumentConfirm) requestorId (req {Common.requestorRole = mbRequestorRole})
 
 postMediaFileDocumentDelete ::
   ShortId DM.Merchant ->
@@ -55,9 +57,10 @@ postMediaFileDocumentDelete ::
 postMediaFileDocumentDelete merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  mbRequestorRole <- determineAuditRequestorRole apiTokenInfo
   let requestorId = apiTokenInfo.personId.getId
   T.withTransactionStoring transaction $ do
-    Client.callManagementAPI checkedMerchantId opCity (.mediaFileDocumentDSL.postMediaFileDocumentDelete) requestorId req
+    Client.callManagementAPI checkedMerchantId opCity (.mediaFileDocumentDSL.postMediaFileDocumentDelete) requestorId (req {Common.requestorRole = mbRequestorRole})
 
 getMediaFileDocumentDownloadLink ::
   ShortId DM.Merchant ->

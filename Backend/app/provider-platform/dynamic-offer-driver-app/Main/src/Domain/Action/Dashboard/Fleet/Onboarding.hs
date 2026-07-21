@@ -41,6 +41,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.DriverOnboarding.VehicleDocs as VehicleDocs
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -225,11 +226,14 @@ postOnboardingVerify merchantShortId opCity reqType mbAccessType adminApprovalRe
           Common.DASHBOARD_USER -> DPan.DASHBOARD_USER
           _ -> DPan.DASHBOARD
         Nothing -> DPan.DASHBOARD
+  -- Dashboard-initiated onboarding verify: attribute the audit to the operator with their real role.name when
+  -- forwarded (gated on sendDocumentAuditActorDetails); else fall back to driver. (mbAccessType is only verifyBy.)
+  let mbAuditRequestor = Audit.dashboardActorFromForwarded req.requestorId req.requestorRole
   enable <- case reqType of
-    CommonOnboarding.VERIFY_PAN -> DPV.verifyPan verifyBy (Just merchant) (Id req.driverId, merchant.id, merchantOpCity.id) (DPV.DriverPanReq {panNumber = req.identifierNumber, imageId = req.imageId, driverId = req.driverId}) adminApprovalRequired req.identifierName True
-    CommonOnboarding.VERIFY_GST -> DGV.verifyGstin verifyBy (Just merchant) (Id req.driverId, merchant.id, merchantOpCity.id) (DGV.DriverGstinReq {gstin = req.identifierNumber, imageId = req.imageId, driverId = req.driverId}) adminApprovalRequired True
-    CommonOnboarding.VERIFY_AADHAAR -> DAV.verifyAadhaar verifyBy (Just merchant) (Id req.driverId, merchant.id, merchantOpCity.id) (DAV.DriverAadhaarReq {aadhaarNumber = Just req.identifierNumber, aadhaarFrontImageId = req.imageId, aadhaarBackImageId = req.optionalImageId, consent = True, driverId = req.driverId, aadhaarName = Nothing}) adminApprovalRequired
-    CommonOnboarding.VERIFY_UDYAM -> UDYAM.verifyUdyam (Id req.driverId, merchantOpCity.id) (UDYAM.DriverUdyamReq {uamNumber = req.identifierNumber, imageId1 = Id req.imageId})
+    CommonOnboarding.VERIFY_PAN -> DPV.verifyPan mbAuditRequestor verifyBy (Just merchant) (Id req.driverId, merchant.id, merchantOpCity.id) (DPV.DriverPanReq {panNumber = req.identifierNumber, imageId = req.imageId, driverId = req.driverId}) adminApprovalRequired req.identifierName True
+    CommonOnboarding.VERIFY_GST -> DGV.verifyGstin mbAuditRequestor verifyBy (Just merchant) (Id req.driverId, merchant.id, merchantOpCity.id) (DGV.DriverGstinReq {gstin = req.identifierNumber, imageId = req.imageId, driverId = req.driverId}) adminApprovalRequired True
+    CommonOnboarding.VERIFY_AADHAAR -> DAV.verifyAadhaar mbAuditRequestor verifyBy (Just merchant) (Id req.driverId, merchant.id, merchantOpCity.id) (DAV.DriverAadhaarReq {aadhaarNumber = Just req.identifierNumber, aadhaarFrontImageId = req.imageId, aadhaarBackImageId = req.optionalImageId, consent = True, driverId = req.driverId, aadhaarName = Nothing}) adminApprovalRequired
+    CommonOnboarding.VERIFY_UDYAM -> UDYAM.verifyUdyam mbAuditRequestor (Id req.driverId, merchantOpCity.id) (UDYAM.DriverUdyamReq {uamNumber = req.identifierNumber, imageId1 = Id req.imageId})
   return
     CommonOnboarding.VerifyDocumentRes
       { enableFleetOwner = enable

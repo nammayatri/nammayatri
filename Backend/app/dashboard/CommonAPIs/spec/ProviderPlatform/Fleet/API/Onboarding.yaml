@@ -138,6 +138,8 @@ types:
     optionalImageId: Maybe Text
     identifierNumber: Text
     identifierName: Maybe Text
+    requestorId: Maybe Text
+    requestorRole: Maybe Text
   VerifyDocumentRes:
     - enableFleetOwner: Bool
     - recordType: NewType

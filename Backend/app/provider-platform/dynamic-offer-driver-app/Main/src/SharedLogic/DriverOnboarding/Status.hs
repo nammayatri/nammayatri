@@ -55,6 +55,7 @@ import qualified Domain.Types.CommonDocumentData as DCommonDocData
 import qualified Domain.Types.CommonDriverOnboardingDocuments as DCDOD
 import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocsVerificationStatus as DDVS
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverInformation as DI
@@ -85,6 +86,7 @@ import Kernel.Utils.Common hiding (HasField)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
 import SharedLogic.DriverOnboarding.VehicleDocs
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -598,9 +600,9 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
         -- independent of separateDriverVehicleEnablement. The BOT sets `approved`; statusHandler derives the rest.
         let vehicleCategory = fromMaybe DVC.CAR $ onboardingVehicleCategory <|> listToMaybe possibleVehicleCategories
         when (SDO.isFleetRole person.role) $
-          void $ recomputeFleetVerifiedAndEnabled person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
+          void $ recomputeFleetVerifiedAndEnabled Audit.systemActor person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
         when (person.role == DP.DRIVER) $
-          void $ recomputeDriverVerifiedAndEnabled merchantOpCityId merchantId person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory (mDL >>= (.driverName)) onboardingVehicleCategory transporterConfig Nothing
+          void $ recomputeDriverVerifiedAndEnabled Audit.systemActor merchantOpCityId merchantId person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory (mDL >>= (.driverName)) onboardingVehicleCategory transporterConfig Nothing
         -- Vehicle status list (+ vehicle `verified` write, handled inside getVehicleDocuments under enableBotFlow)
         getVehicleDocuments driverDocConfigs person.role vehicleDocumentsUnverified transporterConfig.requiresOnboardingInspection transporterConfig.vehicleCategoryExcludedFromVerification True driverDocuments merchantOpCityId
       else -- Legacy enablement (unchanged): conditional on separateDriverVehicleEnablement.
@@ -619,7 +621,8 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
                 disableFleetOwnerOnRejectionDoc personId
               -- Then check if fleet should be enabled (all mandatory docs valid)
               when allFleetDocsVerified $
-                enableDriver merchantOpCityId personId person.role Nothing transporterConfig merchantId True
+                -- Legacy doc-driven auto-enable → systemActor (matches the sibling verified-flip audits below).
+                enableDriver Audit.systemActor merchantOpCityId personId person.role Nothing transporterConfig merchantId True
             -- Check driver enablement separately (only driver docs + driver inspection)
             when (person.role == DP.DRIVER) $ do
               let vehicleCategory = fromMaybe DVC.CAR $ onboardingVehicleCategory <|> listToMaybe possibleVehicleCategories
@@ -630,9 +633,9 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
                     -- Allow first-time auto-enable even when dontAutoEnableDriver=true (enabledAt=Nothing means never enabled before)
                     autoEnableAllowed = not (fromMaybe False transporterConfig.dontAutoEnableDriver) || isNothing driverInfo.enabledAt
                 when driverInspectionNotRequired $ do
-                  unless driverInfo.verified $ DIQuery.updateVerifiedState (cast personId) True
+                  unless driverInfo.verified $ DIQuery.updateVerifiedState (cast personId) True >> Audit.auditFlagChange Audit.systemActor DAL.DRIVER personId.getId "verified" DAL.DRIVER_INFORMATION driverInfo.verified True merchantId merchantOpCityId
                   when autoEnableAllowed $ do
-                    enableDriver merchantOpCityId personId person.role (mDL >>= (.driverName)) transporterConfig merchantId True
+                    enableDriver Audit.systemActor merchantOpCityId personId person.role (mDL >>= (.driverName)) transporterConfig merchantId True
                     whenJust onboardingVehicleCategory $ \category -> do
                       DIIQuery.updateOnboardingVehicleCategory (Just category) personId
             -- Check vehicle enablement separately (only vehicle docs + vehicle inspection)
@@ -644,9 +647,9 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
               when (allDriverDocsVerified && transporterConfig.requiresOnboardingInspection /= Just True && person.role == DP.DRIVER) $ do
                 driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
                 let autoEnableAllowed = not (fromMaybe False transporterConfig.dontAutoEnableDriver) || isNothing driverInfo.enabledAt
-                unless driverInfo.verified $ DIQuery.updateVerifiedState (cast personId) True
+                unless driverInfo.verified $ DIQuery.updateVerifiedState (cast personId) True >> Audit.auditFlagChange Audit.systemActor DAL.DRIVER personId.getId "verified" DAL.DRIVER_INFORMATION driverInfo.verified True merchantId merchantOpCityId
                 when autoEnableAllowed $ do
-                  enableDriver merchantOpCityId personId person.role (mDL >>= (.driverName)) transporterConfig merchantId True
+                  enableDriver Audit.systemActor merchantOpCityId personId person.role (mDL >>= (.driverName)) transporterConfig merchantId True
                   whenJust onboardingVehicleCategory $ \category -> do
                     DIIQuery.updateOnboardingVehicleCategory (Just category) personId
             -- Check vehicle enablement (old combined logic - checks both driver and vehicle docs)
@@ -716,7 +719,7 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
       vehicleDocumentsUnverified `forM` \vehicleDoc@VehicleDocumentItem {..} -> do
         let allVehicleDocsVerified = checkAllVehicleDocsValidForEnabling driverDocConfs vehicleDoc makeSelfieAadhaarPanMandatory
             inspectionNotRequired = requiresOnboardingInspection /= Just True || vehicleDoc.isApproved
-            isVehicleCategoryExcludedFromVerification = (fromMaybe userSelectedVehicleCategory verifiedVehicleCategory) `elem` (fromMaybe [] vehicleCategoryExcludedFromVerification)
+            isVehicleCategoryExcludedFromVerification = fromMaybe userSelectedVehicleCategory verifiedVehicleCategory `elem` fromMaybe [] vehicleCategoryExcludedFromVerification
             -- When separated: only check vehicle docs. When combined: check both driver and vehicle docs
             allDriverDocsVerified = separateEnablement || checkAllDriverDocsValidForEnabling (Right driverDocConfs) role driverDocuments (fromMaybe userSelectedVehicleCategory verifiedVehicleCategory) makeSelfieAadhaarPanMandatory
             -- Vehicle activation logic depends on enablement mode
@@ -733,7 +736,13 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
         when enableBotFlow $ do
           let allVehicleMandatoryDocsValid = checkAllVehicleDocsValidForVerified driverDocConfs vehicleDoc makeSelfieAadhaarPanMandatory
           rcHash <- getDbHash vehicleDoc.registrationNo
+          -- Document audit: pre-update RC read is audit-gated (city flag); systemActor matches the
+          -- doc-driven recompute actor used elsewhere in this BOT-flow statusHandler.
+          mbRcForAudit <- Audit.fetchForAudit (Audit.auditEnabled entityImagesInfo.transporterConfig) (RCQuery.findByCertificateNumberHash rcHash)
           RCQuery.updateVerifiedByCertificateNumberHash (Just allVehicleMandatoryDocsValid) rcHash
+          whenJust mbRcForAudit $ \rc ->
+            when (rc.verified /= Just allVehicleMandatoryDocsValid) $
+              Audit.auditFlagChange Audit.systemActor DAL.VEHICLE rc.id.getId "verified" DAL.VEHICLE_REGISTRATION_CERTIFICATE (fromMaybe False rc.verified) allVehicleMandatoryDocsValid entityImagesInfo.merchantOperatingCity.merchantId merchantOpCityId
         mbVehicle <- QVehicle.findById personId
         when (shouldActivateRc && isNothing mbVehicle && checkToActivateRC && role == DP.DRIVER && not enableBotFlow && (isActive || not (fromMaybe False entityImagesInfo.transporterConfig.dontAutoEnableDriver))) $ do
           void $ withTryCatch "activateRCAutomatically:statusHandler" (activateRCAutomatically personId entityImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
@@ -742,8 +751,9 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
           unless separateEnablement $ do
             when (checkToActivateRC && not (fromMaybe False entityImagesInfo.transporterConfig.dontAutoEnableDriver)) $ do
               case (isVehicleCategoryExcludedFromVerification, mDL) of
-                (True, _) -> enableDriver merchantOpCityId personId role Nothing entityImagesInfo.transporterConfig entityImagesInfo.merchantOperatingCity.merchantId True
-                (False, Just dl) -> enableDriver merchantOpCityId personId role dl.driverName entityImagesInfo.transporterConfig entityImagesInfo.merchantOperatingCity.merchantId True
+                -- RC-activation auto-enable (no acting user) → systemActor.
+                (True, _) -> enableDriver Audit.systemActor merchantOpCityId personId role Nothing entityImagesInfo.transporterConfig entityImagesInfo.merchantOperatingCity.merchantId True
+                (False, Just dl) -> enableDriver Audit.systemActor merchantOpCityId personId role dl.driverName entityImagesInfo.transporterConfig entityImagesInfo.merchantOperatingCity.merchantId True
                 (_, _) -> return ()
         if allVehicleDocsVerified then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
 
@@ -972,6 +982,8 @@ checkAllDriverDocsValid' mode mbIsFleetDriver allDocVerificationConfigs role dri
 --     enabled  = verified AND all isMandatoryForEnabling docs VALID AND approved == Just True
 --   enabled routes through enableDriver (preserves alerts/SMS/LTS); disable via disableDriverWithAnalytics.
 recomputeDriverVerifiedAndEnabled ::
+  -- | Audit actor for the resulting verified/enabled flag changes (operator on the BOT path, systemActor on the status-event path).
+  Audit.Requestor ->
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
   DP.Person ->
@@ -984,24 +996,26 @@ recomputeDriverVerifiedAndEnabled ::
   DTC.TransporterConfig ->
   Maybe Bool ->
   Flow Bool
-recomputeDriverVerifiedAndEnabled merchantOpCityId merchantId person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory driverName onboardingVehicleCategory transporterConfig mbIsFleetDriver = do
+recomputeDriverVerifiedAndEnabled requestor merchantOpCityId merchantId person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory driverName onboardingVehicleCategory transporterConfig mbIsFleetDriver = do
   driverInfo <- DIQuery.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
   isFleetDriver <- maybe (hasActiveFleetAssociation person.id) pure mbIsFleetDriver
   -- A fleet driver (active fleet association) skips INDIVIDUAL-only docs like OperatorPartnerCode, via applicableTo.
   let allMandatoryDocsValid = checkAllDriverDocsValid' ForVerified (Just isFleetDriver) allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
       allEnablingDocsValid = checkAllDriverDocsValid' ForEnabling (Just isFleetDriver) allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
-  when (allMandatoryDocsValid /= driverInfo.verified) $
+  when (allMandatoryDocsValid /= driverInfo.verified) $ do
     -- Downgrading verified revokes approved (re-approval required); the disable branch below does the same.
     DIQueryExtra.updateVerifiedAndApprovedState (cast person.id) allMandatoryDocsValid (if allMandatoryDocsValid then Nothing else Just False)
+    Audit.auditFlagChange requestor DAL.DRIVER person.id.getId "verified" DAL.DRIVER_INFORMATION driverInfo.verified allMandatoryDocsValid merchantId merchantOpCityId
   let shouldEnable = allMandatoryDocsValid && allEnablingDocsValid && driverInfo.approved == Just True
   if shouldEnable && not driverInfo.enabled
     then do
-      enableDriver merchantOpCityId person.id person.role driverName transporterConfig merchantId allMandatoryDocsValid
+      -- enableDriver audits the enabled flip internally with this requestor.
+      enableDriver requestor merchantOpCityId person.id person.role driverName transporterConfig merchantId allMandatoryDocsValid
       whenJust onboardingVehicleCategory $ \category ->
         DIIQuery.updateOnboardingVehicleCategory (Just category) person.id
-    else
-      when (not shouldEnable && driverInfo.enabled) $
-        SDO.disableDriverWithAnalytics merchantOpCityId person.id Nothing
+    else when (not shouldEnable && driverInfo.enabled) $ do
+      SDO.disableDriverWithAnalytics merchantOpCityId person.id Nothing
+      Audit.auditFlagChange requestor DAL.DRIVER person.id.getId "enabled" DAL.DRIVER_INFORMATION driverInfo.enabled False merchantId merchantOpCityId
   -- Return the freshly computed enable state so callers don't re-read driver_information (which could
   -- be stale under read-replica lag right after the write).
   pure shouldEnable
@@ -1013,21 +1027,25 @@ recomputeDriverVerifiedAndEnabled merchantOpCityId merchantId person allDocVerif
 --   `approved` is BOT-owned: downgrading verified revokes it. Under enableBotFlow there is NO driver
 --   cascade — flags are written directly.
 recomputeFleetVerifiedAndEnabled ::
+  -- | Audit actor for the resulting fleet verified/enabled flag changes (operator on the BOT path, systemActor on the status-event path).
+  Audit.Requestor ->
   DP.Person ->
   DocVerificationConfigs ->
   [DocumentStatusItem] ->
   DVC.VehicleCategory ->
   Maybe Bool ->
   Flow Bool
-recomputeFleetVerifiedAndEnabled person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory = do
+recomputeFleetVerifiedAndEnabled requestor person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory = do
   fleetOwnerInfo <- QFOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
   let allFleetMandatoryDocsValid = checkAllDriverDocsValidForVerified allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
       allFleetEnablingDocsValid = checkAllDriverDocsValidForEnabling allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
-  when (allFleetMandatoryDocsValid /= fleetOwnerInfo.verified) $
+  when (allFleetMandatoryDocsValid /= fleetOwnerInfo.verified) $ do
     -- Downgrading verified revokes approved (re-approval required), mirroring the driver side.
     QFOI.updateFleetOwnerVerifiedAndApprovedStatus allFleetMandatoryDocsValid (if allFleetMandatoryDocsValid then Nothing else Just False) person.id
-  when (allFleetEnablingDocsValid /= fleetOwnerInfo.enabled) $
+    Audit.auditFlagChange requestor DAL.FLEET_OWNER person.id.getId "verified" DAL.FLEET_OWNER_INFORMATION fleetOwnerInfo.verified allFleetMandatoryDocsValid person.merchantId person.merchantOperatingCityId
+  when (allFleetEnablingDocsValid /= fleetOwnerInfo.enabled) $ do
     QFOI.updateFleetOwnerEnabledStatus allFleetEnablingDocsValid person.id
+    Audit.auditFlagChange requestor DAL.FLEET_OWNER person.id.getId "enabled" DAL.FLEET_OWNER_INFORMATION fleetOwnerInfo.enabled allFleetEnablingDocsValid person.merchantId person.merchantOperatingCityId
   -- Return the freshly computed `enabled` so callers don't re-read FOI (which could be stale under
   -- read-replica lag right after the write).
   pure allFleetEnablingDocsValid
@@ -1036,11 +1054,13 @@ recomputeFleetVerifiedAndEnabled person allDocVerificationConfigs driverDocument
 --   otherwise forks the verified/enabled recompute. Throwing before the fork guarantees we never
 --   force-enable a fleet/driver whose deps haven't passed.
 botApproveAndReconcile ::
+  -- | Audit actor for the resulting verified/enabled flag changes — the BOT operator who approved.
+  Audit.Requestor ->
   DMOC.MerchantOperatingCity ->
   DP.Person ->
   DTC.TransporterConfig ->
   Flow ()
-botApproveAndReconcile merchantOperatingCity person transporterConfig = do
+botApproveAndReconcile requestor merchantOperatingCity person transporterConfig = do
   let language = fromMaybe merchantOperatingCity.language person.language
   (allDocVerificationConfigs, driverDocuments, vehicleCategory) <- fetchDriverDocStatusesForPerson person merchantOperatingCity transporterConfig language (Just True)
   -- BotApproval's dependency docs must be VALID. On the DVC (driver) side a dep counts only if it applies per
@@ -1061,8 +1081,8 @@ botApproveAndReconcile merchantOperatingCity person transporterConfig = do
   fork "botApproveAndReconcile: recompute verified/enabled" $ do
     let docs' = map forceBotApprovalValid driverDocuments
     if SDO.isFleetRole person.role
-      then void $ recomputeFleetVerifiedAndEnabled person allDocVerificationConfigs docs' vehicleCategory Nothing
-      else void $ recomputeDriverVerifiedAndEnabled merchantOperatingCity.id merchantOperatingCity.merchantId person allDocVerificationConfigs docs' vehicleCategory Nothing Nothing Nothing transporterConfig (Just isFleetDriver)
+      then void $ recomputeFleetVerifiedAndEnabled requestor person allDocVerificationConfigs docs' vehicleCategory Nothing
+      else void $ recomputeDriverVerifiedAndEnabled requestor merchantOperatingCity.id merchantOperatingCity.merchantId person allDocVerificationConfigs docs' vehicleCategory Nothing Nothing Nothing transporterConfig (Just isFleetDriver)
   where
     forceBotApprovalValid :: DocumentStatusItem -> DocumentStatusItem
     forceBotApprovalValid d
@@ -1072,16 +1092,25 @@ botApproveAndReconcile merchantOperatingCity person transporterConfig = do
 -- | Fork RC-verified recompute (reusing fetched docs): RC.verified = all mandatory vehicle docs VALID,
 --   with InspectionHub forced VALID (OHR not APPROVED yet). `approved`/RC activation stay BOT-owned.
 forkRecomputeVehicleVerified ::
+  Id DMOC.MerchantOperatingCity ->
   Text ->
   VehicleDocumentItem ->
   [DVC.DocumentVerificationConfig] ->
   Flow ()
-forkRecomputeVehicleVerified registrationNo vehicleDocItem allDocumentVerificationConfigs =
+forkRecomputeVehicleVerified merchantOpCityId registrationNo vehicleDocItem allDocumentVerificationConfigs =
   fork "forkRecomputeVehicleVerified: recompute vehicle verified" $ do
     let vehicleDocItem' = vehicleDocItem {documents = map overrideInspectionHubAsValid vehicleDocItem.documents}
         allVehicleMandatoryDocsValid = checkAllVehicleDocsValidForVerified allDocumentVerificationConfigs vehicleDocItem' Nothing
     rcHash <- getDbHash registrationNo
+    -- Document audit: the audit-only RC read is city-gated (the caller's operating city), so it is skipped
+    -- when the city has document audit off; the RC row then supplies id/prev/merchant/city for the row.
+    -- No requestor is threaded into this recompute → systemActor.
+    mbRcForAudit <- Audit.fetchForAuditByCity merchantOpCityId (RCQuery.findByCertificateNumberHash rcHash)
     RCQuery.updateVerifiedByCertificateNumberHash (Just allVehicleMandatoryDocsValid) rcHash
+    whenJust mbRcForAudit $ \rc ->
+      when (rc.verified /= Just allVehicleMandatoryDocsValid) $
+        whenJust ((,) <$> rc.merchantId <*> rc.merchantOperatingCityId) $ \(mId, cId) ->
+          Audit.auditFlagChange Audit.systemActor DAL.VEHICLE rc.id.getId "verified" DAL.VEHICLE_REGISTRATION_CERTIFICATE (fromMaybe False rc.verified) allVehicleMandatoryDocsValid mId cId
   where
     overrideInspectionHubAsValid :: DocumentStatusItem -> DocumentStatusItem
     overrideInspectionHubAsValid d
@@ -1089,19 +1118,30 @@ forkRecomputeVehicleVerified registrationNo vehicleDocItem allDocumentVerificati
       | otherwise = d
 
 -- | Enable a driver/fleet (cascades fleet→drivers). @verifiedToSet@ is written for `verified` too;
---   legacy callers pass True.
-enableDriver :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> DP.Role -> Maybe Text -> DTC.TransporterConfig -> Id DM.Merchant -> Bool -> Flow ()
-enableDriver merchantOpCityId personId role driverName transporterConfig merchantId verifiedToSet = do
+--   legacy callers pass True. @requestor@ attributes the resulting flag-flip audit rows.
+enableDriver :: Audit.Requestor -> Id DMOC.MerchantOperatingCity -> Id DP.Person -> DP.Role -> Maybe Text -> DTC.TransporterConfig -> Id DM.Merchant -> Bool -> Flow ()
+enableDriver requestor merchantOpCityId personId role driverName transporterConfig merchantId verifiedToSet = do
   if SDO.isFleetRole role
     then do
       fleetOwnerInfo <- QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
       unless (fleetOwnerInfo.enabled && fleetOwnerInfo.verified) $ do
         QFOI.updateFleetOwnerEnabledAndVerifiedStatus True verifiedToSet personId
-        cascadeFleetEnableToDrivers personId
+        -- Document audit: record only the flags that actually flip (enabled always goes to True here).
+        unless fleetOwnerInfo.enabled $
+          Audit.auditFlagChange requestor DAL.FLEET_OWNER personId.getId "enabled" DAL.FLEET_OWNER_INFORMATION fleetOwnerInfo.enabled True merchantId merchantOpCityId
+        when (fleetOwnerInfo.verified /= verifiedToSet) $
+          Audit.auditFlagChange requestor DAL.FLEET_OWNER personId.getId "verified" DAL.FLEET_OWNER_INFORMATION fleetOwnerInfo.verified verifiedToSet merchantId merchantOpCityId
+        cascadeFleetEnableToDrivers merchantOpCityId personId
     else do
       driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
       unless (driverInfo.enabled && driverInfo.verified) $ do
         SDO.enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verifiedToSet
+        -- Document audit: the helper above co-writes enabled=True AND verified=verifiedToSet; record
+        -- each flag that actually flips (mirrors the fleet branch above).
+        unless driverInfo.enabled $
+          Audit.auditFlagChange requestor DAL.DRIVER personId.getId "enabled" DAL.DRIVER_INFORMATION driverInfo.enabled True merchantId merchantOpCityId
+        when (driverInfo.verified /= verifiedToSet) $
+          Audit.auditFlagChange requestor DAL.DRIVER personId.getId "verified" DAL.DRIVER_INFORMATION driverInfo.verified verifiedToSet merchantId merchantOpCityId
         whenJust driverName $ \name -> QPerson.updateName name personId
         sendEnablementSms merchantOpCityId personId transporterConfig merchantId
 
@@ -1111,7 +1151,10 @@ disableFleetOwnerOnRejectionDoc personId = do
   when fleetOwnerInfo.enabled $ do
     ensureNoActiveRidesUnderFleet personId
     QFOI.updateFleetOwnerEnabledStatus False personId
-    cascadeFleetDisableToDrivers personId
+    -- Document audit: automatic fleet-owner disable triggered by a document rejection (system actor).
+    person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    Audit.auditFlagChange Audit.systemActor DAL.FLEET_OWNER person.id.getId "enabled" DAL.FLEET_OWNER_INFORMATION fleetOwnerInfo.enabled False person.merchantId person.merchantOperatingCityId
+    cascadeFleetDisableToDrivers person.merchantOperatingCityId personId
 
 -- | Throw InvalidRequest if any driver under the fleet has a NEW or
 --   INPROGRESS ride. Used as a guard before flipping fleet enabled to false.
@@ -1122,19 +1165,35 @@ ensureNoActiveRidesUnderFleet fleetOwnerId = do
   when anyActive $
     throwError $ InvalidRequest "Cannot disable fleet: one or more drivers have active rides"
 
+-- | Emit the per-driver `enabled` FLAG_CHANGED audit rows for a fleet cascade (shared by the
+--   enable/disable cascades). The owner read is audit-gated on the caller's operating city — skipped
+--   when that city has document audit off — and, when present, supplies merchant/city for the rows
+--   (the cascade has no merchant context of its own); no requestor is threaded → systemActor.
+--   @prev@/@new@ are hardcoded to the cascade's own DB flag filter (disable True→False, enable
+--   False→True): this is best-effort — a driver already in the target state is a no-op DB write but
+--   still gets a row (the cascade doesn't re-read each driver).
+cascadeFleetFlag :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> Bool -> Bool -> [Id DP.Person] -> Flow ()
+cascadeFleetFlag merchantOpCityId fleetOwnerId prev new driverIds = do
+  mbFleetOwner <- Audit.fetchForAuditByCity merchantOpCityId (QPerson.findById fleetOwnerId)
+  whenJust mbFleetOwner $ \owner ->
+    forM_ driverIds $ \driverId ->
+      Audit.auditFlagChange Audit.systemActor DAL.DRIVER driverId.getId "enabled" DAL.DRIVER_INFORMATION prev new owner.merchantId owner.merchantOperatingCityId
+
 -- | Disable every active driver under the fleet, tagging each with the
 --   FleetDisabled flag so the inverse cascade can find them.
-cascadeFleetDisableToDrivers :: Id DP.Person -> Flow ()
-cascadeFleetDisableToDrivers fleetOwnerId = do
+cascadeFleetDisableToDrivers :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> Flow ()
+cascadeFleetDisableToDrivers merchantOpCityId fleetOwnerId = do
   driverIds <- QFDA.getActiveDriverIdsByFleetOwnerId fleetOwnerId.getId
   forM_ driverIds $ \driverId -> DIQueryExtra.markDisabledForFleetCascade (cast driverId)
+  cascadeFleetFlag merchantOpCityId fleetOwnerId True False driverIds
 
 -- | Re-enable drivers previously disabled by 'cascadeFleetDisableToDrivers'.
 --   Drivers blocked for other reasons are left alone.
-cascadeFleetEnableToDrivers :: Id DP.Person -> Flow ()
-cascadeFleetEnableToDrivers fleetOwnerId = do
+cascadeFleetEnableToDrivers :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> Flow ()
+cascadeFleetEnableToDrivers merchantOpCityId fleetOwnerId = do
   driverIds <- QFDA.getActiveDriverIdsByFleetOwnerId fleetOwnerId.getId
   forM_ driverIds $ \driverId -> DIQueryExtra.clearFleetCascadeAndEnable (cast driverId)
+  cascadeFleetFlag merchantOpCityId fleetOwnerId False True driverIds
 
 sendEnablementSms :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> DTC.TransporterConfig -> Id DM.Merchant -> Flow ()
 sendEnablementSms merchantOpCityId personId transporterConfig merchantId =
@@ -1534,7 +1593,7 @@ callGetDLGetStatus driverId merchantOpCityId = do
           case rsp of
             KEV.DLResp resp -> do
               logDebug $ "callGetDLGetStatus: getTask api response for request id : " <> verificationReq.requestId <> " is : " <> show resp
-              unless ("still being processed" `T.isInfixOf` (fromMaybe "" resp.message)) (void $ DDL.onVerifyDL (SDO.makeHVVerificationReqRecord verificationReq) resp KEV.HyperVergeRCDL)
+              unless ("still being processed" `T.isInfixOf` (fromMaybe "" resp.message)) (void $ DDL.onVerifyDL Audit.externalProvider (SDO.makeHVVerificationReqRecord verificationReq) resp KEV.HyperVergeRCDL)
             _ -> throwError $ InternalError "Document and apiEndpoint mismatch occurred !!!!!!!!"
 
 checkImageValidity :: IQuery.EntityImagesInfo -> DVC.DocumentType -> (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl)

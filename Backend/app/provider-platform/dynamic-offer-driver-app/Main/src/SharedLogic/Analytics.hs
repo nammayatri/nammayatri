@@ -17,6 +17,7 @@ module SharedLogic.Analytics where
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.DriverFlowStatus as DDF
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Person as DP
@@ -33,6 +34,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.AnalyticsExtra
 import qualified SharedLogic.DriverFlowStatus as SDFStatus
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified SharedLogic.FleetOperatorStats as SFleetOperatorStats
 import qualified Storage.Clickhouse.DriverInformation as CDI
 import qualified Storage.Clickhouse.FleetOperatorDailyStats as CFleetOpDailyStats
@@ -376,6 +378,25 @@ updateEnabledVerifiedStateWithAnalytics mbDriverInfoData transporterConfig drive
   -- BOT: setting enabled or verified to False also revokes `approved` (re-approval required).
   let isApproved = if transporterConfig.enableBotFlow == Just True && (not isEnabled || isVerified == Just False) then Just False else Nothing
   QDI.updateEnabledVerifiedState driverId isEnabled isVerified isApproved
+
+-- Audited variant of 'updateEnabledVerifiedStateWithAnalytics': additionally emits FLAG_CHANGED
+-- audit rows for the enabled/verified flips (entity = the driver; driver_information is driver-only).
+-- The actor comes from the TRIGGER point: dashboard endpoints pass their forwarded requestor,
+-- scheduler jobs Audit.systemScheduler, driver-app flows the acting person. Previous values are
+-- prefetched audit-gated (no extra read when audit is off for the city).
+updateEnabledVerifiedStateWithAnalyticsAudited :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, Audit.AuditFlow m r) => Audit.Requestor -> Maybe DI.DriverInformation -> TC.TransporterConfig -> Id DP.Person -> Bool -> Maybe Bool -> m ()
+updateEnabledVerifiedStateWithAnalyticsAudited requestor mbDriverInfoData transporterConfig driverId isEnabled isVerified = do
+  mbPrev <-
+    if Audit.auditEnabled transporterConfig
+      then maybe (QDI.findById driverId) (pure . Just) mbDriverInfoData
+      else pure mbDriverInfoData
+  updateEnabledVerifiedStateWithAnalytics mbPrev transporterConfig driverId isEnabled isVerified
+  whenJust mbPrev $ \prev -> do
+    when (prev.enabled /= isEnabled) $
+      Audit.auditFlagChange requestor DAL.DRIVER driverId.getId "enabled" DAL.DRIVER_INFORMATION prev.enabled isEnabled transporterConfig.merchantId transporterConfig.merchantOperatingCityId
+    whenJust isVerified $ \newVerified ->
+      when (prev.verified /= newVerified) $
+        Audit.auditFlagChange requestor DAL.DRIVER driverId.getId "verified" DAL.DRIVER_INFORMATION prev.verified newVerified transporterConfig.merchantId transporterConfig.merchantOperatingCityId
 
 incrementOperatorTotalActiveDriversIfFirstDriverSubscription ::
   ( MonadFlow m,

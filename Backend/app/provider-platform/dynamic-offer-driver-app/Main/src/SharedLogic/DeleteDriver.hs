@@ -14,6 +14,7 @@
 
 module SharedLogic.DeleteDriver where
 
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
@@ -22,6 +23,7 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -73,8 +75,8 @@ checkDriverActiveAssociations personId = do
   QFleetDriverAssociation.findByDriverId personId True >>= flip whenJust (\_ -> throwError $ InvalidRequest "Cannot delete driver with active fleet associations")
   QDriverOperatorAssociation.findByDriverId personId True >>= flip whenJust (\_ -> throwError $ InvalidRequest "Cannot delete driver with active operator associations")
 
-deleteDriver :: ShortId DM.Merchant -> Id DP.Person -> Flow APISuccess
-deleteDriver merchantShortId reqDriverId = do
+deleteDriver :: ShortId DM.Merchant -> Id DP.Person -> Maybe Audit.Requestor -> Flow APISuccess
+deleteDriver merchantShortId reqDriverId mbRequestor = do
   merchant <- findMerchantByShortId merchantShortId
   mbPerson <- QPerson.findById reqDriverId
   case mbPerson of
@@ -84,6 +86,19 @@ deleteDriver merchantShortId reqDriverId = do
     Just person -> do
       when (person.merchantId /= merchant.id) $
         throwError $ InvalidRequest "Person does not belong to this merchant"
+      -- Document audit: account-deletion cascade wipes the person's documents. Attributed to the forwarded
+      -- dashboard requestor when supplied (dashboard-initiated permanent delete), else the system actor
+      -- (system/auto-delete paths pass Nothing); per-table summary rows, reason "Account deletion".
+      let auditDocDeletion eType docTxt refType =
+            Audit.auditDelete (fromMaybe Audit.systemActor mbRequestor) eType person.id.getId docTxt refType Nothing (Just "Account deletion") person.merchantId person.merchantOperatingCityId
+      -- Per-image audit: capture the person's images BEFORE the cascade delete wipes them, so each image
+      -- gets its OWN DELETED row (its real doc type + image id) instead of one "AllImages" summary. The
+      -- prefetch is gated + read in-memory via auditConfigByCity (Nothing when audit is off — no extra query).
+      mbAuditTc <- Audit.auditConfigByCity person.merchantOperatingCityId
+      mbImages <- maybe (pure Nothing) (\tc -> Just <$> QImage.findAllByPersonId tc person.id) mbAuditTc
+      let auditImageDeletions eType =
+            forM_ (fromMaybe [] mbImages) $ \img ->
+              Audit.auditDelete (fromMaybe Audit.systemActor mbRequestor) eType person.id.getId (show img.imageType) DAL.IMAGE (Just img.id.getId) (Just "Account deletion") person.merchantId person.merchantOperatingCityId
       case person.role of
         role | role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS] -> do
           checkFleetActiveAssociations person.id
@@ -101,6 +116,11 @@ deleteDriver merchantShortId reqDriverId = do
           QDBA.deleteById person.id
           QFleetOwnerInformation.deleteByFleetOwnerPersonId person.id
           QPerson.deleteById person.id
+          auditDocDeletion DAL.FLEET_OWNER "AadhaarCard" DAL.AADHAAR_CARD
+          auditDocDeletion DAL.FLEET_OWNER "PanCard" DAL.DRIVER_PAN_CARD
+          auditDocDeletion DAL.FLEET_OWNER "GST" DAL.DRIVER_GSTIN
+          auditImageDeletions DAL.FLEET_OWNER
+          auditDocDeletion DAL.FLEET_OWNER "BankAccount" DAL.DRIVER_BANK_ACCOUNT
           logTagInfo "deleteFleet : " (show reqDriverId)
         DP.DRIVER -> do
           driverDeleteCheck <- validateDriver merchant person
@@ -133,6 +153,12 @@ deleteDriver merchantShortId reqDriverId = do
           QDriverIdentityInfo.deleteByDriverId person.id
           QDBA.deleteById person.id
           QPerson.deleteById person.id
+          auditDocDeletion DAL.DRIVER "DriverLicense" DAL.DRIVER_LICENSE
+          auditDocDeletion DAL.DRIVER "AadhaarCard" DAL.AADHAAR_CARD
+          auditDocDeletion DAL.DRIVER "PanCard" DAL.DRIVER_PAN_CARD
+          auditImageDeletions DAL.DRIVER
+          auditDocDeletion DAL.DRIVER "BankAccount" DAL.DRIVER_BANK_ACCOUNT
+          auditDocDeletion DAL.DRIVER "OperationHubRequests" DAL.OPERATION_HUB_REQUEST
           logTagInfo "deleteDriver : " (show reqDriverId)
         DP.OPERATOR -> do
           checkOperatorActiveAssociations person.id
@@ -143,6 +169,9 @@ deleteDriver merchantShortId reqDriverId = do
           QIV.deleteByPersonId person.id
           QImage.deleteByPersonId person.id
           QPerson.deleteById person.id
+          -- The operator's own rows → OPERATOR entity (not DRIVER; the enum gap is closed).
+          auditDocDeletion DAL.OPERATOR "OperationHubRequests" DAL.OPERATION_HUB_REQUEST
+          auditImageDeletions DAL.OPERATOR
           logTagInfo "deleteOperator : " (show reqDriverId)
         _ -> pure ()
       return Success

@@ -36,6 +36,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common hiding (Error)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Servant hiding (throwError)
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -218,7 +219,7 @@ getRequiredDocuments merchantOpCityId vehicleCategory = do
     docsForCategory
       & filter (.isMandatory)
       & filter
-        ( (\config -> config.documentType `elem` digiLockerSupportedDocs)
+        ( \config -> config.documentType `elem` digiLockerSupportedDocs
         )
 
 getAlreadyVerifiedDocuments :: Id DP.Person -> Flow [DVC.DocumentType]
@@ -569,7 +570,7 @@ verifyAndStorePAN session person pdfBytes extractedPan = do
             fileExtension = Just "pdf"
           }
 
-  Image.ImageValidateResponse {imageId} <- Image.validateImage False Nothing Nothing (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
+  Image.ImageValidateResponse {imageId} <- Image.validateImage Nothing False Nothing Nothing (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
   logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Uploaded PAN PDF to S3, ImageId: " <> imageId.getId
 
   let panReq =
@@ -629,7 +630,7 @@ verifyAndStoreAadhaar session person xmlBytes extractedAadhaar = do
             fileExtension = Just "xml"
           }
 
-  Image.ImageValidateResponse {imageId} <- Image.validateImage False Nothing Nothing (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
+  Image.ImageValidateResponse {imageId} <- Image.validateImage Nothing False Nothing Nothing (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
   logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Uploaded Aadhaar XML to S3, ImageId: " <> imageId.getId
 
   now <- getCurrentTime
@@ -644,7 +645,9 @@ verifyAndStoreAadhaar session person xmlBytes extractedAadhaar = do
             consent = True,
             consentTimestamp = now,
             transactionId = "DIGILOCKER",
-            validationStatus = APITypes.AUTO_APPROVED
+            validationStatus = APITypes.AUTO_APPROVED,
+            requestorId = Nothing, -- driver self-pull via DigiLocker: no dashboard operator
+            requestorRole = Nothing
           }
 
   DriverOnboardingV2.createAadhaarRecord
@@ -713,7 +716,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
             fileExtension = Just "pdf"
           }
 
-  Image.ImageValidateResponse {imageId} <- Image.validateImage False Nothing Nothing (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
+  Image.ImageValidateResponse {imageId} <- Image.validateImage Nothing False Nothing Nothing (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
   logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Uploaded DL PDF to S3, ImageId: " <> imageId.getId
 
   let vehicleCategory = session.vehicleCategory
@@ -743,6 +746,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
   logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Calling onVerifyDLHandler with COVs: " <> show dlFlow.classOfVehicles <> ", VehicleCategory: " <> show vehicleCategory
 
   DLModule.onVerifyDLHandler
+    (Audit.driverAppPerson person.id (Audit.toActorRole person.role)) -- driver self-pull via DigiLocker
     person
     (Just dlNumber)
     (Just normalizedExpiryText)
@@ -755,6 +759,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
     dlFlow.name
     dateOfIssueUTC
     (Just vehicleCategory)
+    Nothing -- synchronous DigiLocker self-pull: no async provider requestId to correlate
   logInfo $ "DigiLocker - Successfully stored DL via onVerifyDLHandler for DriverId: " <> person.id.getId <> ", StateId: " <> stateId
 
 updateDocStatusField ::

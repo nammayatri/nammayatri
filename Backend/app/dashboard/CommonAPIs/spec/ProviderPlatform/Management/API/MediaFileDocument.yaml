@@ -89,6 +89,7 @@ types:
     - mediaFileDocumentStatus: MediaFileDocumentStatus
   MediaFileDocumentReq:
     - mediaFileDocumentId: Id File
+    - requestorRole: Maybe Text
     - derive: "'HideSecrets"
   MediaFileDocumentStatus:
     - enum: "PENDING, DELETED, FAILED, CONFIRMED, COMPLETED"

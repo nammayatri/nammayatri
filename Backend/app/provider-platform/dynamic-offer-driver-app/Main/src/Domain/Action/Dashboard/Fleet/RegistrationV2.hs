@@ -32,6 +32,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.DocsVerificationStatus as DDVS
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import Domain.Types.FleetOwnerInformation as FOI
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
@@ -59,6 +60,7 @@ import qualified SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MobileNumberValidation as MobileValidation
@@ -160,7 +162,7 @@ fleetOwnerRegister merchantShortId opCity mbRequestorId req = do
       requestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
       when (requestor.role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $
         unless (requestor.id == fleetOwnerId) $ throwError AccessDenied
-      if (requestor.role == DP.OPERATOR) then pure (Just requestor.id.getId) else pure Nothing
+      if requestor.role == DP.OPERATOR then pure (Just requestor.id.getId) else pure Nothing
     Nothing -> pure Nothing
 
   whenJust req.email $ \reqEmail -> do
@@ -195,13 +197,16 @@ fleetOwnerRegister merchantShortId opCity mbRequestorId req = do
   fork "Uploading Business License Image" $ do
     whenJust req.businessLicenseImage $ \businessLicenseImage -> do
       let req' = Image.ImageValidateRequest {imageType = DVC.BusinessLicense, image = businessLicenseImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing, fileExtension = Nothing}
-      image <- Image.validateImage True Nothing Nothing (fleetOwnerId, person.merchantId, person.merchantOperatingCityId) req'
+      -- Fleet-owner registration upload: attributed to the fleet owner (the document subject). True operator
+      -- attribution here would need the audit-gated requestor forwarded (sendDocumentAuditActorDetails lives on
+      -- the dashboard merchant, not DMerchant.Merchant), so we keep self-attribution to respect gating-by-omission.
+      image <- Image.validateImage Nothing True Nothing Nothing (fleetOwnerId, person.merchantId, person.merchantOperatingCityId) req'
       businessLicenseNumber <- forM req.businessLicenseNumber encrypt
       QFOI.updateBusinessLicenseImageAndNumber (Just image.imageId.getId) businessLicenseNumber fleetOwnerId
   enabled <-
     case req.setIsEnabled of -- Required for fleets where docs are not mandatory
       Just True -> pure True
-      _ -> enableFleetIfPossible fleetOwnerId req.adminApprovalRequired (castFleetType <$> req.fleetType) person.merchantOperatingCityId (Just transporterConfig)
+      _ -> enableFleetIfPossible Nothing fleetOwnerId req.adminApprovalRequired (castFleetType <$> req.fleetType) person.merchantOperatingCityId (Just transporterConfig)
   return $ Common.FleetOwnerRegisterResV2 enabled
 
 sendFleetOnboardingSms :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()
@@ -222,8 +227,10 @@ sendFleetOnboardingSms fleetOwnerId merchantOperatingCityId = do
           MessageBuilder.BuildOnboardingMessageReq {}
       Sms.sendSMS merchant.id merchantOperatingCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId messageType) >>= Sms.checkSmsResult
 
-enableFleetIfPossible :: Id DP.Person -> Maybe Bool -> Maybe FOI.FleetType -> Id DMOC.MerchantOperatingCity -> Maybe DTC.TransporterConfig -> Flow Bool
-enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOperatingCityId mbTransporterConfig = do
+-- | @mbRequestor@ attributes the enabled-flip audit row (dashboard approve flows thread theirs);
+--   Nothing → systemActor (doc-driven auto-enable).
+enableFleetIfPossible :: Maybe Audit.Requestor -> Id DP.Person -> Maybe Bool -> Maybe FOI.FleetType -> Id DMOC.MerchantOperatingCity -> Maybe DTC.TransporterConfig -> Flow Bool
+enableFleetIfPossible mbRequestor fleetOwnerId adminApprovalRequired mbfleetType merchantOperatingCityId mbTransporterConfig = do
   transporterConfig <- case mbTransporterConfig of
     Just tc -> pure tc
     Nothing -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
@@ -279,6 +286,7 @@ enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOpe
             mbFleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId
             let wasDisabled = maybe True (not . (.enabled)) mbFleetOwnerInfo
             void $ QFOI.updateFleetOwnerEnabledStatus True fleetOwnerId
+            auditEnabledFlip transporterConfig wasDisabled
             when wasDisabled $ sendFleetOnboardingSms fleetOwnerId merchantOperatingCityId
             pure True
           | otherwise -> pure False
@@ -287,10 +295,19 @@ enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOpe
             mbFleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId
             let wasDisabled = maybe True (not . (.enabled)) mbFleetOwnerInfo
             void $ QFOI.updateFleetOwnerEnabledStatus True fleetOwnerId
+            auditEnabledFlip transporterConfig wasDisabled
             when wasDisabled $ sendFleetOnboardingSms fleetOwnerId merchantOperatingCityId
             pure True
           | otherwise -> pure False
         _ -> pure False
+  where
+    -- Document audit: fleet-owner enabled False -> True. merchantId isn't in scope, so the person row is
+    -- read purely for it, gated on the city audit flag; emitted only when the flag actually flipped.
+    auditEnabledFlip transporterConfig wasDisabled =
+      when wasDisabled $ do
+        mbPersonForAudit <- Audit.fetchForAudit (Audit.auditEnabled transporterConfig) (QP.findById fleetOwnerId)
+        whenJust mbPersonForAudit $ \p ->
+          Audit.auditFlagChange (fromMaybe Audit.systemActor mbRequestor) DAL.FLEET_OWNER fleetOwnerId.getId "enabled" DAL.FLEET_OWNER_INFORMATION False True p.merchantId merchantOperatingCityId
 
 castFleetType :: Common.FleetType -> FOI.FleetType
 castFleetType = \case

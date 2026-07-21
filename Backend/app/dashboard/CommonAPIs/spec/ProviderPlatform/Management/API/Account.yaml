@@ -53,6 +53,8 @@ types:
     - status: FleetOwnerStatus
     - reason: Maybe Text
     - fleetOwnerId: Id Person
+    - requestorId: Maybe Text
+    - requestorRole: Maybe Text
     - derive: "'HideSecrets"
   PersonAPIEntity:
     - id: Id Person

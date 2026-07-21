@@ -31,6 +31,7 @@ import qualified Domain.Types.AadhaarCard as DAadhaarCard
 import qualified Domain.Types.AadhaarCard as VDomain
 import qualified Domain.Types.AadhaarOtpReq as DAR
 import qualified Domain.Types.AadhaarOtpVerify as DAV
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverPanCard as DPan
@@ -51,6 +52,7 @@ import Kernel.Utils.Common hiding (ActorType (UNKNOWN))
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -98,13 +100,16 @@ data DriverAadhaarReq = DriverAadhaarReq
 type DriverAadhaarRes = APISuccess
 
 generateAadhaarOtp ::
+  -- | Audit actor. 'Nothing' ⇒ the driver generating their own Aadhaar OTP (resolved from the person's role);
+  -- 'Just' ⇒ a dashboard operator generating on the driver's behalf.
+  Maybe Audit.Requestor ->
   Bool ->
   Maybe DM.Merchant ->
   Id Person.Person ->
   Id DMOC.MerchantOperatingCity ->
   AadhaarVerification.AadhaarOtpReq ->
   Flow AadhaarVerification.AadhaarVerificationResp
-generateAadhaarOtp isDashboard mbMerchant personId merchantOpCityId req = do
+generateAadhaarOtp mbRequestor isDashboard mbMerchant personId merchantOpCityId req = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   when driverInfo.blocked $ throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
@@ -122,6 +127,9 @@ generateAadhaarOtp isDashboard mbMerchant personId merchantOpCityId req = do
   res <- AadhaarVerification.generateAadhaarOtp person.merchantId merchantOpCityId req
   aadhaarOtpEntity <- mkAadhaarOtp personId res
   _ <- QueryAR.create aadhaarOtpEntity
+  -- request-time row: eventId = res.transactionId links this to the later async STATUS_CHANGED on verify.
+  let requestor = Audit.auditActorFromPersonOrRequestor person mbRequestor
+  Audit.auditDocStatusWithEvent requestor (if DCommon.checkFleetOwnerRole person.role then DAL.FLEET_OWNER else DAL.DRIVER) person.id.getId "AadhaarCard" DAL.AADHAAR_CARD Nothing Nothing (Just (show Documents.PENDING)) DAL.VERIFICATION_REQUESTED Nothing res.transactionId person.merchantId person.merchantOperatingCityId
   cacheAadhaarVerifyTries personId tried res.transactionId aadhaarHash req.aadhaarNumber isDashboard
   pure res
 
@@ -135,13 +143,17 @@ cacheAadhaarVerifyTries personId tried transactionId aadhaarNumberHash aadhaarNu
   unless isDashboard $ Redis.setExp tryKey (tried + 1) expTime
 
 verifyAadhaarOtp ::
+  -- | Audit actor. 'Nothing' ⇒ the driver verifying their own Aadhaar (resolved from the person's role);
+  -- 'Just' ⇒ a dashboard operator verifying on the driver's behalf.
+  Maybe Audit.Requestor ->
   Maybe DM.Merchant ->
   Id Person.Person ->
   Id DMOC.MerchantOperatingCity ->
   VerifyAadhaarOtpReq ->
   Flow AadhaarVerification.AadhaarOtpVerifyRes
-verifyAadhaarOtp mbMerchant personId merchantOpCityId req = do
+verifyAadhaarOtp mbRequestor mbMerchant personId merchantOpCityId req = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound (getId personId))
+  let requestor = Audit.auditActorFromPersonOrRequestor person mbRequestor
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound (getId personId))
   when (driverInfo.blocked) $ throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   when (driverInfo.aadhaarVerified) $ throwError AadhaarAlreadyVerified
@@ -171,6 +183,8 @@ verifyAadhaarOtp mbMerchant personId merchantOpCityId req = do
             Right _ -> do
               aadhaarEntity <- mkAadhaar person.merchantId person.merchantOperatingCityId personId res.name res.gender res.date_of_birth (Just aadhaarNumber) Nothing True (Just orgImageFilePath)
               QAadhaarCard.create aadhaarEntity
+              -- eventId = tId correlates this async result with the request-time VERIFICATION_REQUESTED row.
+              Audit.auditDocStatusWithEvent requestor (if DCommon.checkFleetOwnerRole person.role then DAL.FLEET_OWNER else DAL.DRIVER) person.id.getId "AadhaarCard" DAL.AADHAAR_CARD Nothing Nothing (Just (show aadhaarEntity.verificationStatus)) DAL.STATUS_CHANGED Nothing (Just tId) person.merchantId person.merchantOperatingCityId
               DriverInfo.updateAadhaarVerifiedState True (cast personId)
               -- If PAN and Aadhaar exist, trigger PAN-Aadhaar linkage verification and create idfy_verification entry
               aadhaarCard <- QAadhaarCard.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -283,6 +297,7 @@ unVerifiedAadhaarData personId merchantId merchantOpCityId req = do
   QAadhaarCard.create aadhaarEntity
   -- If PAN and Aadhaar exist, trigger PAN-Aadhaar linkage verification and create idfy_verification entry
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  Audit.auditDocStatus (Audit.driverAppPerson person.id (Audit.toActorRole person.role)) (if DCommon.checkFleetOwnerRole person.role then DAL.FLEET_OWNER else DAL.DRIVER) person.id.getId "AadhaarCard" DAL.AADHAAR_CARD Nothing Nothing (Just (show aadhaarEntity.verificationStatus)) DAL.STATUS_CHANGED Nothing person.merchantId person.merchantOperatingCityId
   aadhaarCard <- QAadhaarCard.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbAadhaarNumber <- traverse decrypt aadhaarCard.aadhaarNumber
   PanVerification.triggerPanAadhaarLinkageWhenPanAndAadhaarExist person merchantOpCityId mbAadhaarNumber
@@ -380,13 +395,15 @@ checkForDuplicacy aadhaarHash = do
   when (isJust aadhaarInfo) $ throwError AadhaarAlreadyLinked
 
 verifyAadhaar ::
+  -- | Audit actor. 'Nothing' ⇒ the driver/fleet-owner verifying their own Aadhaar; 'Just' ⇒ a dashboard operator.
+  Maybe Audit.Requestor ->
   DPan.VerifiedBy ->
   Maybe DM.Merchant ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverAadhaarReq ->
   Maybe Bool ->
   Flow Bool
-verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req adminApprovalRequired = do
+verifyAadhaar mbRequestor verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req adminApprovalRequired = do
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   whenJust req.aadhaarNumber $ \aadhaarNumber -> do
     checkSlidingWindowLimitWithOptions (makeVerifyAadhaarHitsCountKey aadhaarNumber) externalServiceRateLimitOptions
@@ -460,8 +477,10 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
             when (isNameCompareRequired transporterConfig verifyBy) $
               validateDocument person.merchantId merchantOpCityId person.id extractedAadhaarOutputData.name_on_card extractedAadhaarOutputData.date_of_birth Nothing ODC.AadhaarCard driverDocument
             let aadhaarStatus = if faceMatchOutcome == FMDeferred then Documents.PENDING else Documents.VALID
+            mOldAadhaarCard <- Audit.fetchForAudit (Audit.auditEnabled transporterConfig) (QAadhaarCard.findByPrimaryKey person.id)
             aadhaarCard <- makeAadhaarCardEntity person.id extractedAadhaarOutputData req aadhaarStatus
             QAadhaarCard.upsertAadhaarRecord aadhaarCard
+            Audit.auditDocStatus (Audit.auditActorFromPersonOrRequestor person mbRequestor) (if DCommon.checkFleetOwnerRole person.role then DAL.FLEET_OWNER else DAL.DRIVER) person.id.getId "AadhaarCard" DAL.AADHAAR_CARD (Just person.id.getId) (show . (.verificationStatus) <$> mOldAadhaarCard) (Just (show aadhaarCard.verificationStatus)) DAL.STATUS_CHANGED Nothing person.merchantId person.merchantOperatingCityId
             return extractedAadhaarNumber
           Nothing -> throwImageError (Id req.aadhaarFrontImageId) ImageExtractionFailed
         whenJust mbAadhaarNumber $ \aadhaarNumber -> do
@@ -482,7 +501,7 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
         void $ SStatus.processStatusEvent (Just person) (Just transporterConfig) (SStatus.PersonDocChangedEvent person.id)
       pure False
     role
-      | DCommon.checkFleetOwnerRole role -> DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId (Just transporterConfig)
+      | DCommon.checkFleetOwnerRole role -> DFR.enableFleetIfPossible mbRequestor person.id adminApprovalRequired (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId (Just transporterConfig)
     _ -> pure False
   pure res
   where

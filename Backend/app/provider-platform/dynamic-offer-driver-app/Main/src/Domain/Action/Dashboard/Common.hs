@@ -115,7 +115,9 @@ runVerifyRCFlow skipFleetChecks personId merchant merchantOpCityId operatingCity
             engineNumber = Nothing,
             chassisNumber = Nothing
           }
-  void $ DomainRC.verifyRC ((not isFleet) || skipFleetChecks) (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq bulkUpload mbFleetOwnerId
+  -- Fleet/bulk RC registration: the acting person IS the fleet entity, so let verifyRC resolve the actor from
+  -- the fetched person's role (Nothing) rather than threading a separate operator here.
+  void $ DomainRC.verifyRC Nothing (not isFleet || skipFleetChecks) (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq bulkUpload mbFleetOwnerId
 
 notifyYatriRentalEventsToDriver :: Maybe Text -> MessageKey -> Id DP.Person -> TransporterConfig -> Maybe Text -> MediaChannel -> Flow ()
 notifyYatriRentalEventsToDriver vehicleId messageKey personId transporterConfig mbReason channel = do
@@ -139,7 +141,7 @@ notifyYatriRentalEventsToDriver vehicleId messageKey personId transporterConfig 
         merchantMessage <-
           QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId mkey Nothing Nothing
             >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show mkey))
-        result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [(Just $ fromMaybe "XXXXX" vehicleId), (Just timeStamp), mbReason] Nothing (Just merchantMessage.containsUrlButton)) -- Accepts at most 7 variables using GupShup
+        result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [Just $ fromMaybe "XXXXX" vehicleId, Just timeStamp, mbReason] Nothing (Just merchantMessage.containsUrlButton)) -- Accepts at most 7 variables using GupShup
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
       _ -> pure ()
 

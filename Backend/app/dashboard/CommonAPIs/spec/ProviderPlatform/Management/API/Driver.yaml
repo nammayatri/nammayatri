@@ -137,6 +137,17 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/disable
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            query:
+              - requestorId: Text
+              - requestorRole: Text
+            response:
+              type: APISuccess
       migrate:
         endpoint: DriverAPI DisableDriverEndpoint
         endpointV2:
@@ -241,6 +252,17 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
+      helperApi:
+        - DELETE:
+            endpoint: /{driverId}/permanentlyDelete
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            query:
+              - requestorId: Text
+              - requestorRole: Text
+            response:
+              type: APISuccess
       migrate:
         endpoint: DriverAPI DeleteDriverEndpoint
         endpointV2:
@@ -252,6 +274,17 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/unlinkDL
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            query:
+              - requestorId: Text
+              - requestorRole: Text
+            response:
+              type: APISuccess
       migrate:
         endpoint: DriverAPI UnlinkDLEndpoint
         endpointV2:
@@ -263,6 +296,17 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/unlinkAadhaar
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            query:
+              - requestorId: Text
+              - requestorRole: Text
+            response:
+              type: APISuccess
       migrate:
         endpoint: DriverAPI UnlinkAadhaarEndpoint
         endpointV2:
@@ -799,8 +843,9 @@ types:
     - location: LatLong
     - lastLocationTimestamp: UTCTime
   DeleteRCReq:
-    - recordType: NewType
     - rcNo: Text
+    - requestorId: Maybe Text
+    - requestorRole: Maybe Text
     - derive: "'HideSecrets"
   DriverEncDataReq:
     - driverIdReq: Id Driver
@@ -820,6 +865,8 @@ types:
     - driverDob: Text
     - driverAadhaarNumber: Text
     - isVerified: Bool
+    - requestorId: Maybe Text
+    - requestorRole: Maybe Text
   UpdateDriverNameReq:
     - firstName: Text
     - middleName: Maybe Text
@@ -846,14 +893,20 @@ types:
   UpdateRCInvalidStatusReq:
     - rcId: Text
     - vehicleVariant: VehicleVariant
+    - requestorId: Maybe Text
+    - requestorRole: Maybe Text
     - derive: "'HideSecrets"
   UpdateRCInvalidStatusByRCNumberReq:
     - rcNumber: Text
     - vehicleVariant: VehicleVariant
+    - requestorId: Maybe Text
+    - requestorRole: Maybe Text
     - derive: "'HideSecrets"
   UpdateVehicleVariantReq:
     - rcId: Text
     - vehicleVariant: VehicleVariant
+    - requestorId: Maybe Text
+    - requestorRole: Maybe Text
     - derive: "'HideSecrets"
   UpdateVehicleManufacturingReq:
     - rcId: Text
@@ -866,6 +919,8 @@ types:
     - rcId: Text
     - vehicleVariant: Maybe VehicleVariant
     - markReviewed: Maybe Bool
+    - requestorId: Maybe Text
+    - requestorRole: Maybe Text
   ReviewRCVariantRes:
     - rcId: Text
     - status: Text
@@ -908,6 +963,8 @@ types:
     - phoneNo: Text
     - countryCode: Text
     - documentType: SyncDocType
+    - auditRequestorId: Maybe Text
+    - requestorRole: Maybe Text
     - derive: "'HideSecrets"
   SecurityDepositDfStatusRes:
     - securityDepositStatus: DriverFeeStatus

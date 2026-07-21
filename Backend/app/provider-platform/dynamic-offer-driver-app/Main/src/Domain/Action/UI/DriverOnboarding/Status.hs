@@ -40,6 +40,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
@@ -152,7 +153,7 @@ applyPulledStatus req resp service =
     KEV.DLResp o
       | "still being processed" `T.isInfixOf` fromMaybe "" o.message ->
         logInfo $ "pullDriverDocStatus: still processing " <> req.requestId
-      | otherwise -> void $ DDL.onVerifyDL req o service
+      | otherwise -> void $ DDL.onVerifyDL Audit.externalProvider req o service
     KEV.PanResp o -> void $ DPan.onVerifyPan req o service
     KEV.GstResp o -> void $ DGst.onVerifyGst req o service
     KEV.UdyamAadhaarResp o -> void $ DUdyam.onVerifyUdyam req o service

@@ -42,6 +42,7 @@ import qualified Domain.Action.Dashboard.Fleet.Driver as Driver
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.AadhaarCard
 import qualified Domain.Types.DocsVerificationStatus as DDVS
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import Domain.Types.DriverFee as DDF
@@ -85,6 +86,7 @@ import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified SharedLogic.Finance.Wallet as FWallet
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Reminder.Helper (createReminder)
@@ -198,7 +200,15 @@ postDriverEnable merchantShortId opCity reqDriverId = do
   when (transporterConfig.separateDriverVehicleEnablement /= Just True && isNothing mVehicle && not hasValidRC) $
     throwError (InvalidRequest "Can't enable driver if no vehicle or no valid RCs are linked to them")
 
+  -- Document audit: dashboard-initiated enable flips enabled(→True)/verified(→False) via the shared helper.
+  -- No requestor is forwarded to this endpoint, so SYSTEM; prev state read audit-gated (skipped when audit off).
+  mbPrevInfo <- Audit.fetchForAuditByCity merchantOpCityId (QDriverInfo.findById driverId)
   enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId driverId False
+  whenJust mbPrevInfo $ \di -> do
+    when (not di.enabled) $
+      Audit.auditFlagChange Audit.systemActor DAL.DRIVER personId.getId "enabled" DAL.DRIVER_INFORMATION di.enabled True merchant.id merchantOpCityId
+    when di.verified $
+      Audit.auditFlagChange Audit.systemActor DAL.DRIVER personId.getId "verified" DAL.DRIVER_INFORMATION di.verified False merchant.id merchantOpCityId
   logTagInfo "dashboard -> enableDriver : " (show personId)
   fork "sending dashboard sms - onboarding" $ do
     Sms.sendDashboardSms merchant.id merchantOpCityId Sms.ONBOARDING Nothing personId Nothing 0
@@ -786,7 +796,8 @@ postDriverUnlinkVehicle merchantShortId opCity reqDriverId = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   DomainRC.deactivateCurrentRC transporterConfig personId
-  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False Nothing
+  -- systemActor: no requestor forwarded on this legacy endpoint
+  Analytics.updateEnabledVerifiedStateWithAnalyticsAudited Audit.systemActor Nothing transporterConfig driverId False Nothing
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   pure Success
 
@@ -815,10 +826,11 @@ postDriverEndRCAssociation merchantShortId opCity reqDriverId = do
   case mVehicleRC of
     Just vehicleRC -> do
       rcNo <- decrypt vehicleRC.certificateNumber
-      void $ DomainRC.deleteRC (personId, merchant.id, merchantOpCityId) (DomainRC.DeleteRCReq {rcNo}) True
+      void $ DomainRC.deleteRC Nothing (personId, merchant.id, merchantOpCityId) (DomainRC.DeleteRCReq {rcNo}) True
     Nothing -> throwError (InvalidRequest "No linked RC  to driver")
 
-  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False Nothing
+  -- systemActor: no requestor forwarded on this legacy endpoint
+  Analytics.updateEnabledVerifiedStateWithAnalyticsAudited Audit.systemActor Nothing transporterConfig driverId False Nothing
   logTagInfo "dashboard -> endRCAssociation : " (show personId)
   pure Success
 
@@ -827,8 +839,10 @@ postDriverDeleteAadhaar ::
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Driver ->
+  Maybe Text ->
+  Maybe Text ->
   Flow APISuccess
-postDriverDeleteAadhaar merchantShortId opCity reqDriverId = do
+postDriverDeleteAadhaar merchantShortId opCity reqDriverId mbRequestorId mbRequestorRole = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
@@ -844,12 +858,15 @@ postDriverDeleteAadhaar merchantShortId opCity reqDriverId = do
 
   -- Delete Aadhaar Card from database
   QAadhaarCard.deleteByPersonId personId
+  -- entity from the doc owner's role (fleet owners hold Aadhaar too); actor = forwarded dashboard requestor
+  let requestor = Audit.auditActorFromPersonOrRequestor driver (Audit.dashboardActorFromForwarded mbRequestorId mbRequestorRole)
+  Audit.auditDelete requestor (Audit.entityTypeFromRole driver.role) personId.getId "AadhaarCard" DAL.AADHAAR_CARD Nothing Nothing driver.merchantId driver.merchantOperatingCityId
 
   -- Update DriverInformation to clear Aadhaar number
   QDriverInfo.updateAadhaarNumber Nothing driverId
 
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False (Just False)
+  Analytics.updateEnabledVerifiedStateWithAnalyticsAudited requestor Nothing transporterConfig driverId False (Just False)
   logTagInfo "dashboard -> deleteAadhaar : " (show personId)
   pure Success
 
@@ -858,8 +875,10 @@ postDriverDeletePanCard ::
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Driver ->
+  Maybe Text ->
+  Maybe Text ->
   Flow APISuccess
-postDriverDeletePanCard merchantShortId opCity reqDriverId = do
+postDriverDeletePanCard merchantShortId opCity reqDriverId mbRequestorId mbRequestorRole = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
@@ -875,12 +894,15 @@ postDriverDeletePanCard merchantShortId opCity reqDriverId = do
 
   -- Delete Pan Card from database
   QDriverPanCard.deleteByDriverId personId
+  -- entity from the doc owner's role (fleet owners hold PAN too); actor = forwarded dashboard requestor
+  let requestor = Audit.auditActorFromPersonOrRequestor driver (Audit.dashboardActorFromForwarded mbRequestorId mbRequestorRole)
+  Audit.auditDelete requestor (Audit.entityTypeFromRole driver.role) personId.getId "PanCard" DAL.DRIVER_PAN_CARD Nothing Nothing driver.merchantId driver.merchantOperatingCityId
 
   -- Update DriverInformation to clear Pan number
   QDriverInfo.updatePanNumber Nothing driverId
 
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False (Just False)
+  Analytics.updateEnabledVerifiedStateWithAnalyticsAudited requestor Nothing transporterConfig driverId False (Just False)
   logTagInfo "dashboard -> deletePanCard : " (show personId)
   pure Success
 
@@ -947,6 +969,8 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
       when (isInvalid && null newRC.failedRules) $
         throwError (InvalidRequest $ "No valid mapping found for (vehicleClass: " <> req.vehicleClass <> ", manufacturer: " <> req.make <> " and model: " <> req.model <> ")")
       RCQuery.upsert newRC
+      -- Document audit: RC created via dashboard add-vehicle (attributed to the driver/entity the vehicle is added for).
+      Audit.auditDocStatus (Audit.auditActorFromPersonOrRequestor requestor (Audit.dashboardActorFromForwarded req.requestorId req.requestorRole)) DAL.VEHICLE newRC.id.getId "VehicleRegistrationCertificate" DAL.VEHICLE_REGISTRATION_CERTIFICATE (Just newRC.id.getId) Nothing (Just (show newRC.verificationStatus)) DAL.STATUS_CHANGED Nothing merchant.id merchantOpCityId
       createRCAssociationIfNotExists personId requestor.role newRC transporterConfig now
 
       unless isInvalid $ do

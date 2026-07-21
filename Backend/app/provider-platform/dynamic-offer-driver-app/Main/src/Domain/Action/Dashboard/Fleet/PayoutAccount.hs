@@ -17,6 +17,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
@@ -41,7 +42,10 @@ postPayoutAccount merchantShortId opCity requestorId req = ActorInfo.withDashboa
       bankNo <- req.bankAccountNo & fromMaybeM (InvalidRequest "bankAccountNo required for Bank")
       ifsc <- req.bankIfscCode & fromMaybeM (InvalidRequest "bankIfscCode required for Bank")
       let verifyReq = BankAccountVerification.DriverBankAccountVerifyReq {bankAccountNo = bankNo, bankIfscCode = ifsc, nfVerification = False}
-      verifyResp <- BankAccountVerification.verifyBankAccount (personId, merchant.id, merchantOpCityId) verifyReq
+      -- Fleet payout setup comes via the dashboard: attribute to the acting requestor + their real forwarded role.
+      -- Role not forwarded (merchant opted out) → Nothing → verifyBankAccount falls back to the person's own role.
+      let mbAuditRequestor = Audit.dashboardActorFromForwarded (Just requestorId) req.requestorRole
+      verifyResp <- BankAccountVerification.verifyBankAccount mbAuditRequestor (personId, merchant.id, merchantOpCityId) verifyReq
       pure $
         Common.PayoutAccountResp
           { accountType = Common.BANK,
@@ -73,7 +77,10 @@ postPayoutAccountStatus merchantShortId opCity requestorId req = do
   case req.accountType of
     Common.BANK -> do
       bankRequestId <- req.bankRequestId & fromMaybeM (InvalidRequest "bankRequestId required for Bank status")
-      bankInfoResp <- BankAccountVerification.getInfoBankAccount (personId, merchant.id, merchantOpCityId) bankRequestId
+      -- Fleet payout status poll: attribute to the acting requestor + their real forwarded role, matching create.
+      -- Role not forwarded → Nothing → getInfoBankAccount falls back to the driver-self default.
+      let mbAuditRequestor = Audit.dashboardActorFromForwarded (Just requestorId) req.requestorRole
+      bankInfoResp <- BankAccountVerification.getInfoBankAccount mbAuditRequestor (personId, merchant.id, merchantOpCityId) bankRequestId
       when (bankInfoResp.accountExists) $
         case (bankInfoResp.bankAccountNumber, bankInfoResp.ifscCode) of
           (Just accNo, Just ifsc) ->

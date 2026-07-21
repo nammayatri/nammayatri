@@ -4,6 +4,7 @@ import qualified API.Types.UI.DriverOnboardingV2
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Time as DT
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.DriverBankAccount as DDBA
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
@@ -17,6 +18,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverSSN as QDriverSSN
@@ -71,6 +73,9 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
       resp <- TPayment.retryAccountLink person.merchantOperatingCityId (Just paymentMode) bankAccount.accountId
       accountUrl <- Kernel.Prelude.parseBaseUrl resp.accountUrl
       QDBA.updateAccountLink (Just accountUrl) (Just resp.accountUrlExpiry) person.id
+      -- Document audit: Stripe onboarding link re-requested (driver-app self-serve; person acts on own doc),
+      -- mirroring the VERIFICATION_REQUESTED rows of the parallel BankAccountVerification flow.
+      Audit.auditDocStatus (Audit.driverAppPerson person.id (Audit.toActorRole person.role)) (Audit.entityTypeFromRole person.role) person.id.getId "BankAccount" DAL.DRIVER_BANK_ACCOUNT (Just person.id.getId) Nothing (Just "PENDING") DAL.VERIFICATION_REQUESTED (Just "Stripe onboarding link refreshed") person.merchantId person.merchantOperatingCityId
       return $
         API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
           { chargesEnabled = bankAccount.chargesEnabled,
@@ -156,6 +161,8 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
                 nameAtBank = Nothing
               }
       QDBA.create driverBankAccount
+      -- Document audit: Stripe connect-account row created (driver-app self-serve; person acts on own doc).
+      Audit.auditDocStatus (Audit.driverAppPerson person.id (Audit.toActorRole person.role)) (Audit.entityTypeFromRole person.role) person.id.getId "BankAccount" DAL.DRIVER_BANK_ACCOUNT (Just person.id.getId) Nothing (Just (bankAccountStatusTxt resp.chargesEnabled (Just resp.payoutsEnabled) resp.detailsSubmitted)) DAL.UPLOADED Nothing person.merchantId person.merchantOperatingCityId
       QDBA.syncBankAccountToPool person.id resp.chargesEnabled (Just paymentMode)
       return $
         API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
@@ -166,6 +173,11 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
             detailsSubmitted = resp.detailsSubmitted,
             paymentMode
           }
+
+-- | Compact status text for Stripe bank-account audit rows (charges/payouts/details flags).
+bankAccountStatusTxt :: Bool -> Maybe Bool -> Bool -> Text
+bankAccountStatusTxt charges payouts details =
+  "chargesEnabled=" <> show charges <> ",payoutsEnabled=" <> show (fromMaybe False payouts) <> ",detailsSubmitted=" <> show details
 
 castBusinessType :: DFOI.FleetType -> Payment.BusinessType
 castBusinessType = \case
@@ -204,6 +216,11 @@ getPersonRegisterBankAccountStatus person = do
     else do
       resp <- TPayment.getAccount person.merchantOperatingCityId (Just paymentMode) driverBankAccount.accountId
       QDBA.updateAccountStatus resp.chargesEnabled resp.payoutsEnabled resp.detailsSubmitted person.id
+      -- Document audit: this endpoint is polled — emit only when Stripe reports an actual change.
+      let prevStatusTxt = bankAccountStatusTxt driverBankAccount.chargesEnabled driverBankAccount.payoutsEnabled driverBankAccount.detailsSubmitted
+          newStatusTxt = bankAccountStatusTxt resp.chargesEnabled (Just resp.payoutsEnabled) resp.detailsSubmitted
+      when (prevStatusTxt /= newStatusTxt) $
+        Audit.auditDocStatus (Audit.driverAppPerson person.id (Audit.toActorRole person.role)) (Audit.entityTypeFromRole person.role) person.id.getId "BankAccount" DAL.DRIVER_BANK_ACCOUNT (Just person.id.getId) (Just prevStatusTxt) (Just newStatusTxt) DAL.STATUS_CHANGED Nothing person.merchantId person.merchantOperatingCityId
       return $
         API.Types.UI.DriverOnboardingV2.BankAccountResp
           { chargesEnabled = resp.chargesEnabled,

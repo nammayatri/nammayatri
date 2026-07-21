@@ -175,7 +175,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             (feeWithoutDiscount, totalFee, offerId, offerTitle) <- do
               calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFeeWithPenalties waiveOffPercentage waiveOffMode waiveOffValidTill isMemberEligibleForOffers
             when (totalFee /= 0 && fromMaybe False subscriptionConfigs.isVendorSplitEnabled && fromMaybe False subscriptionConfigs.enableDailyPlanVendorSplit) $
-              recomputeVendorFeesForPlan driverFee.id plan driverFee.merchantOperatingCityId
+              recomputeVendorFeesForPlan driverFee.id plan driverFee.merchantOperatingCityId totalFee
             ---------------------------------------------------------------------
             ------------- update driver fee with offer and plan details ---------
             let offerAndPlanTitle = Just plan.name <> Just "-*@*-" <> offerTitle ---- this we will send in payment history ----
@@ -215,7 +215,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             -- blocking
             dueDriverFees <- QDF.findAllFeeByTypeServiceStatusAndDriver serviceName (cast driverFee.driverId) [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE] [PAYMENT_PENDING, PAYMENT_OVERDUE]
             let driverFeeIds = map (.id) dueDriverFees
-                due = sum $ map (\fee -> if (fee.startTime /= startTime && fee.endTime /= endTime) then roundToHalf driverFee.currency $ fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst + fromMaybe 0 fee.cancellationPenaltyAmount else 0) dueDriverFees
+                due = sum $ map (\fee -> if fee.startTime /= startTime && fee.endTime /= endTime then roundToHalf driverFee.currency $ fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst + fromMaybe 0 fee.cancellationPenaltyAmount else 0) dueDriverFees
             if roundToHalf driverFee.currency (due + totalFee - min coinCashLeft totalFee) >= fromMaybe plan.maxCreditLimit maxCreditLimitLinkedToDPlan
               then do
                 updateDriverFeeToManual $ driverFeeIds <> [driverFee.id]
@@ -416,7 +416,7 @@ processRestFee paymentMode DriverFee {..} vendorFees subscriptionConfig _ _ tran
             ..
           }
   QDF.create driverFee
-  when (fromMaybe False subscriptionConfig.isVendorSplitEnabled) $ mapM_ (QVF.create) vendorFees
+  when (fromMaybe False subscriptionConfig.isVendorSplitEnabled) $ mapM_ QVF.create vendorFees
   processDriverFee paymentMode driverFee subscriptionConfig transporterConfig
   updateSerialOrderForInvoicesInWindow driverFee.id merchantOperatingCityId startTime endTime driverFee.serviceName transporterConfig.timeDiffFromUtc
 
@@ -458,11 +458,11 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
   let dutyDate = driverFee.createdAt
       registrationDateLocal = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) registrationDate
       waiveOffValidTillIst = fmap (addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc)) waiveOffValidTill
-      waiveOffMultiplier = if (waiveOffMode == DPlan.NO_WAIVE_OFF || maybe True (driverFee.startTime >) waiveOffValidTillIst) then 1.0 else (1.0 - (waiveOffPercentage / 100)) -- If there is no driver plan or waive-off validity is Nothing, no discount applies
+      waiveOffMultiplier = if waiveOffMode == DPlan.NO_WAIVE_OFF || maybe True (driverFee.startTime >) waiveOffValidTillIst then 1.0 else 1.0 - (waiveOffPercentage / 100) -- If there is no driver plan or waive-off validity is Nothing, no discount applies
       feeWithoutDiscountWithWaiveOff = feeWithoutDiscount * waiveOffMultiplier
       feeWithoutDiscountWithWaiveOffAndSpecialZone = feeWithoutDiscountWithWaiveOff + driverFee.specialZoneAmount
       feeWithOutDiscountPlusSpecialZone = feeWithoutDiscount + driverFee.specialZoneAmount
-  if (feeWithOutDiscountPlusSpecialZone == 0 || feeWithoutDiscountWithWaiveOffAndSpecialZone == 0)
+  if feeWithOutDiscountPlusSpecialZone == 0 || feeWithoutDiscountWithWaiveOffAndSpecialZone == 0
     then do
       updateCollectedPaymentStatus CLEARED Nothing now Nothing driverFee.id
       return (0, 0, Nothing, Nothing)
@@ -502,7 +502,7 @@ splitPlatformFee feeWithoutDiscount_ totalFee plan DriverFee {..} maxAmountPerDr
               (amountVf, vendorId, remainingVf)
           )
           $ vendorFees
-  newIds <- replicateM (fromInteger $ if remainingFee == 0.0 then numEntitiesInt - 1 else numEntitiesInt) (generateGUID)
+  newIds <- replicateM (fromInteger $ if remainingFee == 0.0 then numEntitiesInt - 1 else numEntitiesInt) generateGUID
   let idsToApply = newIds <> [id]
   let vendorFeeAmountEqualParts :: [(HighPrecMoney, Text)] = map (\(amount, vendorId, _) -> (amount, vendorId)) vendorFeeAmountEqualPartsAndRemaining
   let vendorFeeAmountRemaining :: [(HighPrecMoney, Text)] = map (\(_, vendorId, amount) -> (amount, vendorId)) vendorFeeAmountEqualPartsAndRemaining
@@ -1044,8 +1044,9 @@ recomputeVendorFeesForPlan ::
   Id DriverFee ->
   Plan ->
   Id MerchantOperatingCity ->
+  HighPrecMoney ->
   m ()
-recomputeVendorFeesForPlan driverFeeId plan cityId = do
+recomputeVendorFeesForPlan driverFeeId plan cityId totalDriverFee = do
   planSplits <- CQVSD.findAllByCityAndPlan cityId plan.id
   unless (null planSplits) $ do
     now <- getCurrentTime
@@ -1054,11 +1055,16 @@ recomputeVendorFeesForPlan driverFeeId plan cityId = do
     -- the cancellation portion on top of the freshly-recreated plan-split rows. The cancellation
     -- vendor may overlap with a subscription vendor, so we cannot preserve rows selectively.
     Hedis.del (cancellationVendorFeeGuardKey driverFeeId)
-    forM_ planSplits $ \vsd -> do
-      let amount = maybe (HighPrecMoney (toRational vsd.splitValue)) (min (HighPrecMoney (toRational vsd.splitValue))) vsd.maxVendorFeeAmount
+    let configuredAmounts =
+          map (\vsd -> (vsd, maybe (HighPrecMoney (toRational vsd.splitValue)) (min (HighPrecMoney (toRational vsd.splitValue))) vsd.maxVendorFeeAmount)) planSplits
+        totalVendorFee = sum (map snd configuredAmounts)
+        -- Enforce invariant: sum of vendor fees must not exceed the driver fee total.
+        -- If the configured vendor fees overshoot, scale them all down proportionally.
+        scaleFactor = if totalVendorFee > totalDriverFee && totalVendorFee > 0 then totalDriverFee / totalVendorFee else 1
+    forM_ configuredAmounts $ \(vsd, amount) -> do
       QVF.create
         DVF.VendorFee
-          { amount = SPayment.roundToTwoDecimalPlaces amount,
+          { amount = SPayment.roundToTwoDecimalPlaces (amount * scaleFactor),
             driverFeeId = driverFeeId,
             vendorId = vsd.vendorId,
             createdAt = now,

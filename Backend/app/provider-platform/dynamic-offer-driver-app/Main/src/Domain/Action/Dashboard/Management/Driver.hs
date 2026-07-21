@@ -99,6 +99,7 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.Common as DI
+import qualified Domain.Types.DocumentAuditLog as DAL
 import qualified Domain.Types.DocumentVerificationConfig as DomainDVC
 import qualified Domain.Types.DriverBlockReason as DBR
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
@@ -144,6 +145,7 @@ import SharedLogic.DriverFleetOperatorAssociation (checkDriverOperatorAssociatio
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import SharedLogic.DriverOnboarding.Status (ResponseStatus (..))
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.EventTracking as SEVT
@@ -354,8 +356,8 @@ getDriverActivity _merchantShortId _ = do
   return $ Common.mkDriverActivityRes (0, 0) -- TODO: Remove this API usage from UI
 
 ---------------------------------------------------------------------
-postDriverDisable :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
-postDriverDisable merchantShortId opCity reqDriverId = do
+postDriverDisable :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Text -> Maybe Text -> Flow APISuccess
+postDriverDisable merchantShortId opCity reqDriverId mbRequestorId mbRequestorRole = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -368,8 +370,11 @@ postDriverDisable merchantShortId opCity reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
+  driverInfo <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False Nothing
   QDriverInfo.updateDisabledReasonFlag (Just DrInfo.DriverDisabled) driverId
+  -- Document audit: operator disabled the driver (enabled flag flip). Attributed to the forwarded operator when present, else the driver.
+  Audit.auditFlagChange (Audit.auditActorFromPersonOrRequestor driver (Audit.dashboardActorFromForwarded mbRequestorId mbRequestorRole)) DAL.DRIVER personId.getId "enabled" DAL.DRIVER_INFORMATION driverInfo.enabled False merchant.id merchantOpCityId
   logTagInfo "dashboard -> disableDriver : " (show personId)
   pure Success
 
@@ -524,12 +529,15 @@ limitOffset mbLimit mbOffset =
   maybe identity take mbLimit . maybe identity drop mbOffset
 
 ---------------------------------------------------------------------
-deleteDriverPermanentlyDelete :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
-deleteDriverPermanentlyDelete merchantShortId _ = DeleteDriver.deleteDriver merchantShortId . cast
+deleteDriverPermanentlyDelete :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Text -> Maybe Text -> Flow APISuccess
+deleteDriverPermanentlyDelete merchantShortId _ driverId mbRequestorId mbRequestorRole =
+  -- Dashboard-initiated permanent delete: attribute the account-deletion audit rows to the forwarded dashboard
+  -- requestor (gated on merchant.sendDocumentAuditActorDetails). Nothing when the merchant opted out → systemActor.
+  DeleteDriver.deleteDriver merchantShortId (cast driverId) (Audit.dashboardActorFromForwarded mbRequestorId mbRequestorRole)
 
 ---------------------------------------------------------------------
-postDriverUnlinkDL :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
-postDriverUnlinkDL merchantShortId opCity driverId = do
+postDriverUnlinkDL :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Text -> Maybe Text -> Flow APISuccess
+postDriverUnlinkDL merchantShortId opCity driverId mbRequestorId mbRequestorRole = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -541,24 +549,30 @@ postDriverUnlinkDL merchantShortId opCity driverId = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   QDriverLicense.deleteByDriverId personId
-  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId_ False (Just False)
+  -- entity from the fetched owner's role: a fleet owner's DL unlink must not log entityType=DRIVER
+  Audit.auditDelete (Audit.auditActorFromPersonOrRequestor driver (Audit.dashboardActorFromForwarded mbRequestorId mbRequestorRole)) (Audit.entityTypeFromRole driver.role) personId.getId "DriverLicense" DAL.DRIVER_LICENSE Nothing Nothing driver.merchantId driver.merchantOperatingCityId
+  Analytics.updateEnabledVerifiedStateWithAnalyticsAudited (Audit.auditActorFromPersonOrRequestor driver (Audit.dashboardActorFromForwarded mbRequestorId mbRequestorRole)) Nothing transporterConfig driverId_ False (Just False)
   logTagInfo "dashboard -> unlinkDL : " (show personId)
   pure Success
 
 ---------------------------------------------------------------------
-postDriverUnlinkAadhaar :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
-postDriverUnlinkAadhaar merchantShortId opCity driverId = do
+postDriverUnlinkAadhaar :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Text -> Maybe Text -> Flow APISuccess
+postDriverUnlinkAadhaar merchantShortId opCity driverId mbRequestorId mbRequestorRole = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let driverId_ = cast @Common.Driver @DP.Driver driverId
   let personId = cast @Common.Driver @DP.Person driverId
 
-  _ <- B.runInReplica $ QAadhaarCard.findByPrimaryKey personId >>= fromMaybeM (InvalidRequest "can't unlink Aadhaar")
+  aadhaarCard <- B.runInReplica $ QAadhaarCard.findByPrimaryKey personId >>= fromMaybeM (InvalidRequest "can't unlink Aadhaar")
 
+  -- audit-only owner fetch (gated on the city audit flag): Aadhaar rows are shared with fleet owners,
+  -- so derive the entity type from the owner's role instead of hardcoding DRIVER
+  mbOwner <- Audit.fetchForAuditByCity merchantOpCityId (QPerson.findById personId)
   QAadhaarCard.deleteByPersonId personId
+  Audit.auditDelete (Audit.auditActorFromIdOrRequestor personId (Audit.dashboardActorFromForwarded mbRequestorId mbRequestorRole)) (maybe DAL.DRIVER (Audit.entityTypeFromRole . (.role)) mbOwner) personId.getId "AadhaarCard" DAL.AADHAAR_CARD Nothing Nothing aadhaarCard.merchantId aadhaarCard.merchantOperatingCityId
   QDriverInfo.updateAadhaarVerifiedState False driverId_
-  unless (transporterConfig.aadhaarVerificationRequired) $ Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId_ False (Just False)
+  unless (transporterConfig.aadhaarVerificationRequired) $ Analytics.updateEnabledVerifiedStateWithAnalyticsAudited (Audit.auditActorFromIdOrRequestor personId (Audit.dashboardActorFromForwarded mbRequestorId mbRequestorRole)) Nothing transporterConfig driverId_ False (Just False)
   logTagInfo "dashboard -> unlinkAadhaar : " (show personId)
   pure Success
 
@@ -674,6 +688,8 @@ postDriverUpdateByPhoneNumber merchantShortId _ phoneNumber req = do
     Nothing -> do
       aadhaarEntity <- AVD.mkAadhaar merchant.id driver.merchantOperatingCityId driver.id req.driverName req.driverGender req.driverDob (Just req.driverAadhaarNumber) Nothing True Nothing
       QAadhaarCard.create aadhaarEntity
+  -- Document audit: admin update of a driver's Aadhaar by phone number (create or status update).
+  Audit.auditDocStatus (Audit.auditActorFromPersonOrRequestor driver (Audit.dashboardActorFromForwarded req.requestorId req.requestorRole)) DAL.DRIVER driver.id.getId "AadhaarCard" DAL.AADHAAR_CARD (Just driver.id.getId) (show . (.verificationStatus) <$> res) (Just (show (bool Documents.INVALID Documents.VALID req.isVerified))) DAL.STATUS_CHANGED Nothing merchant.id driver.merchantOperatingCityId
   QDriverInfo.updateAadhaarVerifiedState True (cast driver.id)
   pure Success
 
@@ -709,8 +725,7 @@ postDriverDeleteRC merchantShortId opCity reqDriverId Common.DeleteRCReq {..} = 
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-
-  DomainRC.deleteRC (personId, merchant.id, merchantOpCityId) (DomainRC.DeleteRCReq {..}) False
+  DomainRC.deleteRC (Audit.dashboardActorFromForwarded requestorId requestorRole) (personId, merchant.id, merchantOpCityId) (DomainRC.DeleteRCReq {..}) False
 
 ---------------------------------------------------------------------
 getDriverClearStuckOnRide :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Flow Common.ClearOnRideStuckDriversRes
@@ -855,25 +870,34 @@ toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanT
 
 ---------------------------------------------------------------------
 postDriverUpdateRCInvalidStatus :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateRCInvalidStatusReq -> Flow APISuccess
-postDriverUpdateRCInvalidStatus _merchantShortId _opCity _ req = do
+postDriverUpdateRCInvalidStatus merchantShortId opCity _ req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   vehicleRC <- RCQuery.findById (Id req.rcId) >>= fromMaybeM (VehicleNotFound req.rcId)
   RCQuery.updateVehicleVariant vehicleRC.id (Just req.vehicleVariant) Nothing (Just True)
+  Audit.auditDocStatus (fromMaybe Audit.systemActor (Audit.dashboardActorFromForwarded req.requestorId req.requestorRole)) DAL.VEHICLE vehicleRC.id.getId "VehicleRegistrationCertificate" DAL.VEHICLE_REGISTRATION_CERTIFICATE (Just vehicleRC.id.getId) (Just (show vehicleRC.verificationStatus)) (Just (show Documents.VALID)) DAL.STATUS_CHANGED Nothing merchant.id merchantOpCityId
   pure Success
 
 postDriverUpdateRCInvalidStatusByRCNumber :: ShortId DM.Merchant -> Context.City -> Common.UpdateRCInvalidStatusByRCNumberReq -> Flow APISuccess
-postDriverUpdateRCInvalidStatusByRCNumber _merchantShortId _opCity req = do
+postDriverUpdateRCInvalidStatusByRCNumber merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   vehicleRC <- RCQuery.findLastVehicleRCWrapper req.rcNumber >>= fromMaybeM (VehicleNotFound req.rcNumber)
   RCQuery.updateVehicleVariant vehicleRC.id (Just req.vehicleVariant) Nothing (Just True)
+  Audit.auditDocStatus (fromMaybe Audit.systemActor (Audit.dashboardActorFromForwarded req.requestorId req.requestorRole)) DAL.VEHICLE vehicleRC.id.getId "VehicleRegistrationCertificate" DAL.VEHICLE_REGISTRATION_CERTIFICATE (Just vehicleRC.id.getId) (Just (show vehicleRC.verificationStatus)) (Just (show Documents.VALID)) DAL.STATUS_CHANGED Nothing merchant.id merchantOpCityId
   pure Success
 
 ---------------------------------------------------------------------
 postDriverUpdateVehicleVariant :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateVehicleVariantReq -> Flow APISuccess
-postDriverUpdateVehicleVariant _merchantShortId _opCity _ req = do
+postDriverUpdateVehicleVariant merchantShortId opCity _ req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   vehicleRC <- RCQuery.findById (Id req.rcId) >>= fromMaybeM (VehicleNotFound req.rcId)
   rcNumber <- decrypt vehicleRC.certificateNumber
   mVehicle <- QVehicle.findByRegistrationNo rcNumber
   RCQuery.updateVehicleVariant vehicleRC.id (Just req.vehicleVariant) Nothing Nothing
   whenJust mVehicle $ \vehicle -> updateVehicleVariantAndServiceTier req.vehicleVariant vehicle $ DV.castVehicleVariantToVehicleCategory req.vehicleVariant
+  Audit.auditDocStatus (fromMaybe Audit.systemActor (Audit.dashboardActorFromForwarded req.requestorId req.requestorRole)) DAL.VEHICLE vehicleRC.id.getId "VehicleRegistrationCertificate" DAL.VEHICLE_REGISTRATION_CERTIFICATE (Just vehicleRC.id.getId) (Just (show vehicleRC.verificationStatus)) (Just (show Documents.VALID)) DAL.STATUS_CHANGED Nothing merchant.id merchantOpCityId
   pure Success
 
 updateVehicleVariantAndServiceTier :: DV.VehicleVariant -> DVeh.Vehicle -> DVC.VehicleCategory -> Flow ()
@@ -889,7 +913,7 @@ updateVehicleVariantAndServiceTier variant vehicle vehicleCategory = do
 
 ---------------------------------------------------------------------
 postDriverBulkReviewRCVariant :: ShortId DM.Merchant -> Context.City -> [Common.ReviewRCVariantReq] -> Flow [Common.ReviewRCVariantRes]
-postDriverBulkReviewRCVariant _ _ req = do
+postDriverBulkReviewRCVariant merchantShortId opCity req = do
   mapM
     ( \rcReq -> do
         res <- withTryCatch "processRCReq" (processRCReq rcReq)
@@ -900,10 +924,14 @@ postDriverBulkReviewRCVariant _ _ req = do
     req
   where
     processRCReq rcReq = do
+      merchant <- findMerchantByShortId merchantShortId
+      merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
       vehicleRC <- RCQuery.findById (Id rcReq.rcId) >>= fromMaybeM (VehicleNotFound rcReq.rcId)
       rcNumber <- decrypt vehicleRC.certificateNumber
       mVehicle <- QVehicle.findByRegistrationNo rcNumber
       RCQuery.updateVehicleVariant vehicleRC.id rcReq.vehicleVariant rcReq.markReviewed (not <$> rcReq.markReviewed)
+      -- verificationStatus flips to VALID only when a variant is supplied; audit STATUS_CHANGED then.
+      whenJust rcReq.vehicleVariant $ \_ -> Audit.auditDocStatus (fromMaybe Audit.systemActor (Audit.dashboardActorFromForwarded rcReq.requestorId rcReq.requestorRole)) DAL.VEHICLE vehicleRC.id.getId "VehicleRegistrationCertificate" DAL.VEHICLE_REGISTRATION_CERTIFICATE (Just vehicleRC.id.getId) (Just (show vehicleRC.verificationStatus)) (Just (show Documents.VALID)) DAL.STATUS_CHANGED Nothing merchant.id merchantOpCityId
       whenJust mVehicle $ \vehicle -> do
         whenJust rcReq.vehicleVariant $ \variant -> updateVehicleVariantAndServiceTier variant vehicle $ DV.castVehicleVariantToVehicleCategory variant
 
@@ -1047,16 +1075,22 @@ postDriverSyncDocAadharPan merchantShortId _opCity Common.AadharPanSyncReq {..} 
   hashedMobileNumber <- getDbHash phoneNo
   person <- QPerson.findByMobileNumberAndMerchantAndRole ("+" <> countryCode) hashedMobileNumber merchant.id DP.DRIVER >>= fromMaybeM (PersonNotFound ("Person with number :" <> show phoneNo <> " not found"))
   images <- QImage.findRecentLatestByPersonIdAndImagesType person.id (convertDocTypeToDVCDocType documentType)
+  -- image deletes must be audited: actor = the dashboard-forwarded requestor (gated on
+  -- merchant.sendDocumentAuditActorDetails), fallback SYSTEM; entity from the owner's role
+  let auditRequestor = fromMaybe Audit.systemActor (Audit.dashboardActorFromForwarded auditRequestorId requestorRole)
+      deleteImgAudited docTxt imgId = do
+        QImage.deleteById imgId
+        Audit.auditDelete auditRequestor (Audit.entityTypeFromRole person.role) person.id.getId docTxt DAL.IMAGE (Just imgId.getId) (Just "Document re-sync") person.merchantId person.merchantOperatingCityId
   case documentType of
     Common.Aadhaar -> do
       imgs <- extract2 images
       aadhaarDetails <- B.runInReplica $ QAadhaarCard.findByPrimaryKey person.id
       case aadhaarDetails of
-        Nothing -> void $ mapM (maybe (return ()) (QImage.deleteById . (.id))) imgs
+        Nothing -> void $ mapM (maybe (return ()) (deleteImgAudited "AadhaarCard" . (.id))) imgs
         Just aadhaar -> do
           if uncurry (&&) $ ((aadhaar.aadhaarFrontImageId `elem`) &&& (aadhaar.aadhaarBackImageId `elem`)) [img <&> (.id) | img <- imgs]
             then throwError DocumentAlreadyInSync
-            else void $ mapM (maybe (return ()) (QImage.deleteById . (.id))) imgs
+            else void $ mapM (maybe (return ()) (deleteImgAudited "AadhaarCard" . (.id))) imgs
     Common.Pan -> do
       image <- fromMaybeM UnsyncedImageNotFound (listToMaybe images)
       when (isNothing image.workflowTransactionId) $ throwError NotValidatedUisngFrontendSDK
@@ -1064,11 +1098,11 @@ postDriverSyncDocAadharPan merchantShortId _opCity Common.AadharPanSyncReq {..} 
 
       panDetails <- B.runInReplica $ QPanCard.findByDriverId person.id
       case panDetails of
-        Nothing -> QImage.deleteById image.id
+        Nothing -> deleteImgAudited "PanCard" image.id
         Just pan -> do
           if pan.documentImageId1 /= image.id
             then do
-              QImage.deleteById image.id
+              deleteImgAudited "PanCard" image.id
             else throwError DocumentAlreadyInSync
   return Success
   where
@@ -1340,7 +1374,9 @@ postDriverUpdateMerchant merchantShortId _opCity reqDriverId req = do
           -- IMPORTANT: Delete duplicate FIRST to avoid unique constraint violation on Person table
           -- (unique constraint on role, mobile_number_hash, mobile_country_code, merchant_id)
           logTagInfo "postDriverUpdateMerchant" $ "Case 3: Deleting duplicate " <> show duplicatePerson.id <> " and migrating driver " <> show personId <> " to new merchant"
-          void $ DeleteDriver.deleteDriver merchantShortId duplicatePerson.id
+          -- System-side merchant-migration cleanup of a stale duplicate person (no dashboard requestor forwarded on
+          -- this endpoint); the account-deletion audit falls back to the system actor.
+          void $ DeleteDriver.deleteDriver merchantShortId duplicatePerson.id Nothing
           updateMerchantInAllTables personId newMerchantId newMerchantOperatingCityId
           pure Success
         (False, True) ->

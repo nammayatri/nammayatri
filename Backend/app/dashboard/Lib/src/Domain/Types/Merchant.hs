@@ -39,7 +39,10 @@ data MerchantE e = Merchant
     hasFleetMemberHierarchy :: Maybe Bool,
     isStrongNameCheckRequired :: Maybe Bool,
     singleActiveSessionOnly :: Maybe Bool,
-    trackLoginLogoutForRoles :: [DRole.DashboardAccessType]
+    trackLoginLogoutForRoles :: [DRole.DashboardAccessType],
+    -- When Just True, the dashboard forwards the acting user's requestorId/role to the BPP on
+    -- document actions so the DocumentAuditLog can attribute the change. NULL/False ⇒ not forwarded.
+    sendDocumentAuditActorDetails :: Maybe Bool
   }
   deriving (Generic)
 

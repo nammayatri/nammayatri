@@ -27,6 +27,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import Domain.Types.Alert
 import Domain.Types.AlertRequest
 import Domain.Types.Common
+import qualified Domain.Types.DocumentAuditLog as DAL
 import Domain.Types.Extra.TransporterConfig
 import qualified Domain.Types.FleetBadgeType as DFBT
 import Domain.Types.FleetConfig
@@ -54,6 +55,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
+import qualified SharedLogic.DriverOnboarding.Audit as Audit
 import SharedLogic.WMB
 import qualified SharedLogic.WMB as WMB
 import Storage.Beam.SchedulerJob ()
@@ -91,7 +93,7 @@ getWmbFleetBadges ::
     Flow [API.Types.UI.WMB.AvailableBadge]
   )
 getWmbFleetBadges (mbDriverId, _, merchantOperatingCityId) mbSearchString mbBadgeType limit offset = do
-  driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
+  driverId <- fromMaybeM DriverNotFoundWithId mbDriverId
   fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (NoActiveFleetAssociated driverId.getId)
   fleetBadgesByOwner <- QFB.findAllMatchingBadges mbSearchString (Just $ toInteger limit) (Just $ toInteger offset) merchantOperatingCityId fleetDriverAssociation.fleetOwnerId mbBadgeType
   mapM
@@ -127,7 +129,7 @@ postWmbAvailableRoutes ::
     Flow [API.Types.UI.WMB.AvailableRoute]
   )
 postWmbAvailableRoutes (mbDriverId, _, _) req = do
-  driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
+  driverId <- fromMaybeM DriverNotFoundWithId mbDriverId
   vehicleNumberHash <-
     case req.vehicleNumber of
       Nothing -> do
@@ -158,7 +160,7 @@ postWmbQrStart ::
     Flow API.Types.UI.WMB.TripTransactionDetails
   )
 postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
-  driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
+  driverId <- fromMaybeM DriverNotFoundWithId mbDriverId
   vehicleNumberHash <-
     case req.vehicleNumberHash of
       Nothing -> do
@@ -171,7 +173,7 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
           A.Success vehicleNumberHash -> pure vehicleNumberHash
           A.Error err -> throwError $ InternalError (T.pack err)
   vehicleRouteMapping <- VRM.findOneMapping vehicleNumberHash req.routeCode >>= fromMaybeM (VehicleRouteMappingNotFound (show vehicleNumberHash) req.routeCode)
-  when (vehicleRouteMapping.blocked) $ throwError (VehicleRouteMappingBlocked)
+  when (vehicleRouteMapping.blocked) $ throwError VehicleRouteMappingBlocked
   route <- QR.findByRouteCode req.routeCode >>= fromMaybeM (RouteNotFound req.routeCode)
   fleetConfig <- QFC.findByPrimaryKey vehicleRouteMapping.fleetOwnerId >>= fromMaybeM (FleetConfigNotFound vehicleRouteMapping.fleetOwnerId.getId)
 
@@ -281,7 +283,7 @@ getWmbTripActive ::
     Flow API.Types.UI.WMB.ActiveTripTransaction
   )
 getWmbTripActive (mbDriverId, _, _) = do
-  driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
+  driverId <- fromMaybeM DriverNotFoundWithId mbDriverId
   fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (NoActiveFleetAssociated driverId.getId)
   WMB.findNextActiveTripTransaction fleetDriverAssociation.fleetOwnerId driverId
     >>= \case
@@ -300,7 +302,7 @@ postWmbTripStart ::
     Flow APISuccess
   )
 postWmbTripStart (mbDriverId, _, _) tripTransactionId req = do
-  driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
+  driverId <- fromMaybeM DriverNotFoundWithId mbDriverId
   fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (NoActiveFleetAssociated driverId.getId)
   tripTransaction <-
     WMB.findNextActiveTripTransaction fleetDriverAssociation.fleetOwnerId driverId
@@ -318,7 +320,7 @@ postWmbTripStart (mbDriverId, _, _) tripTransactionId req = do
       let sourceStopInfo = StopInfo "" "" source
       void $ WMB.startTripTransaction tripTransaction Nothing Nothing sourceStopInfo (LatLong req.location.lat req.location.lon) destination True DriverDirect
     _ -> do
-      closestStop <- WMB.findClosestStop tripTransaction.routeCode req.location >>= fromMaybeM (StopNotFound)
+      closestStop <- WMB.findClosestStop tripTransaction.routeCode req.location >>= fromMaybeM StopNotFound
       route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
       (sourceStopInfo, destinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route tripTransaction.routeCode
       void $ WMB.startTripTransaction tripTransaction (Just route) (Just closestStop) sourceStopInfo (LatLong req.location.lat req.location.lon) destinationStopInfo.point True DriverDirect
@@ -334,7 +336,7 @@ postWmbTripEnd ::
     Flow API.Types.UI.WMB.TripEndResp
   )
 postWmbTripEnd (person, _, _) tripTransactionId req = do
-  driverId <- fromMaybeM (DriverNotFoundWithId) person
+  driverId <- fromMaybeM DriverNotFoundWithId person
   fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (NoActiveFleetAssociated driverId.getId)
   tripTransaction <- QTT.findByTransactionId tripTransactionId >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
   fleetConfig <- QFC.findByPrimaryKey (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetDriverAssociation.fleetOwnerId)
@@ -397,13 +399,13 @@ getWmbTripList ::
       Id Merchant,
       Id MerchantOperatingCity
     ) ->
-    Maybe (Int) ->
-    Maybe (Int) ->
-    Maybe (Domain.Types.TripTransaction.TripStatus) ->
+    Maybe Int ->
+    Maybe Int ->
+    Maybe Domain.Types.TripTransaction.TripStatus ->
     Flow [API.Types.UI.WMB.TripTransactionDetails]
   )
 getWmbTripList (mbDriverId, _, _) limit offset status = do
-  driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
+  driverId <- fromMaybeM DriverNotFoundWithId mbDriverId
   fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (NoActiveFleetAssociated driverId.getId)
   let sortType = if maybe False WMB.isNonTerminalTripStatus status then QTTE.SortAsc else QTTE.SortDesc
   allTripTransactionDriver <- QTTE.findAllTripTransactionByDriverIdStatus (Id fleetDriverAssociation.fleetOwnerId) driverId limit offset status sortType
@@ -477,7 +479,7 @@ postFleetConsent ::
     Flow APISuccess
   )
 postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
-  driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
+  driverId <- fromMaybeM DriverNotFoundWithId mbDriverId
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   fleetDriverAssociation <- FDV.findByDriverId driverId False >>= fromMaybeM (InactiveFleetDriverAssociationNotFound driverId.getId)
 
@@ -494,7 +496,11 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
 
   FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
-  when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById driverId
+  -- audit actor = the consenting driver (driver-app-triggered flow)
+  let auditActor = Audit.driverAppPerson driverId (Audit.toActorRole driver.role)
+  when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ do
+    QDBA.deleteById driverId
+    Audit.auditDelete auditActor DAL.DRIVER driverId.getId "BankAccount" DAL.DRIVER_BANK_ACCOUNT (Just driverId.getId) (Just "Linked to fleet") driver.merchantId driver.merchantOperatingCityId
   Analytics.handleDriverAnalyticsAndFlowStatus
     transporterConfig
     fleetDriverAssociation.driverId
@@ -510,7 +516,7 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   whenJust fleetDriverAssociation.onboardedOperatorId $ \referredOperatorId -> do
     DOR.makeDriverReferredByOperator merchantOperatingCityId driverId referredOperatorId
 
-  unless (transporterConfig.requiresOnboardingInspection == Just True) $ Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId True (Just True)
+  unless (transporterConfig.requiresOnboardingInspection == Just True) $ Analytics.updateEnabledVerifiedStateWithAnalyticsAudited auditActor Nothing transporterConfig driverId True (Just True)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "FLEET_CONSENT" Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = T.replace "{#fleetOwnerName#}" fleetOwner.firstName merchantPN.title
@@ -538,7 +544,7 @@ getFleetConfig ::
     Flow FleetConfig
   )
 getFleetConfig (mbDriverId, _, _) = do
-  driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
+  driverId <- fromMaybeM DriverNotFoundWithId mbDriverId
   fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (NoActiveFleetAssociated driverId.getId)
   fleetConfig <- QFC.findByPrimaryKey (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetDriverAssociation.fleetOwnerId)
   pure $ fleetConfig
