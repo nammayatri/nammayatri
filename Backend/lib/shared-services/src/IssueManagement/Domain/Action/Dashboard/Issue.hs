@@ -236,6 +236,8 @@ createIssueReportV2 _merchantShortId _city Common.IssueReportReqV2 {..} issueHan
     when (identifier == DRIVER) $ do
       throwError $ InvalidRequest "Driver cannot create issue report v2"
     person <- issueHandle.findPersonById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    whenJust categoryId $ \justCategoryId ->
+      void $ CQIC.findById justCategoryId identifier >>= fromMaybeM (IssueCategoryDoesNotExist justCategoryId.getId)
     mbRide <- forM rideId \justRideId -> do
       B.runInReplica (issueHandle.findRideById justRideId person.merchantId) >>= fromMaybeM (RideNotFound justRideId.getId)
     let mocId = maybe person.merchantOperatingCityId (.merchantOperatingCityId) mbRide
@@ -258,7 +260,6 @@ createIssueReportV2 _merchantShortId _city Common.IssueReportReqV2 {..} issueHan
             driverId = if identifier == CUSTOMER then Nothing else Just personId,
             merchantOperatingCityId = Just mocId,
             optionId = Nothing,
-            categoryId = Nothing,
             mediaFiles = [],
             assignee = Nothing,
             status = OPEN,
