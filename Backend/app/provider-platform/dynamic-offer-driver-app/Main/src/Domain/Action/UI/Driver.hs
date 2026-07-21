@@ -2343,7 +2343,7 @@ createMediaEntry driverId Common.AddLinkAsMedia {..} filePath imageType mbRc = d
             status = Just Domain.COMPLETED,
             fileHash = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = Just now
           }
 
 makeAlternatePhoneNumberKey :: Id SP.Person -> Text
