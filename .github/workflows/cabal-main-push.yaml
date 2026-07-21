@@ -26,7 +26,7 @@ jobs:
         id: evaluate
         run: |
           echo "should_proceed=true" >> $GITHUB_OUTPUT
-  
+
   cabal-build:
     name: ${{ matrix.name }}
     needs: [check-conditions]
@@ -63,15 +63,13 @@ jobs:
             rm -rf "$CACHE_ROOT/dist-newstyle"
             rm -rf "$CACHE_ROOT/.cabal-dir"
             rm -rf "$CACHE_ROOT/hie"
-            rm -rf "$CACHE_ROOT/dist-newrepl-driver"
-            rm -rf "$CACHE_ROOT/dist-newrepl-rider"
+            rm -rf "$CACHE_ROOT/dist-newrepl-dashboard-check"
           fi
 
-          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir" "$CACHE_ROOT/dist-newrepl-driver" "$CACHE_ROOT/dist-newrepl-rider"
+          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir" "$CACHE_ROOT/dist-newrepl-dashboard-check"
           echo "$CURRENT_KEY" > "$KEY_FILE"
           ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
-          ln -sfn "$CACHE_ROOT/dist-newrepl-driver" Backend/dist-newrepl-driver
-          ln -sfn "$CACHE_ROOT/dist-newrepl-rider" Backend/dist-newrepl-rider
+          ln -sfn "$CACHE_ROOT/dist-newrepl-dashboard-check" Backend/dist-newrepl-dashboard-check
 
       - name: Link HIE dirs to persistent cache
         run: |
@@ -215,24 +213,14 @@ jobs:
           mc cp cabal-dir-path.txt "minio/haskell-cache/cabal-build/${{ github.sha }}/cabal-dir-path.txt"
           rm -f dist-newstyle.tar.zst build-path.txt cabal-dir-path.txt
 
-      - name: Build repl artifacts (dynamic-offer-driver-app)
+      - name: Build repl artifacts (dashboard-repl-check)
         run: |
           nix develop .#backend --command bash -c "
             export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir
             cd Backend
-            cabal repl dynamic-offer-driver-app \
+            cabal repl dashboard-repl-check \
               --repl-options='-fno-code -fwrite-interface' \
-              --builddir=dist-newrepl-driver <<< ':quit'
-          "
-
-      - name: Build repl artifacts (rider-app)
-        run: |
-          nix develop .#backend --command bash -c "
-            export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir
-            cd Backend
-            cabal repl rider-app \
-              --repl-options='-fno-code -fwrite-interface' \
-              --builddir=dist-newrepl-rider <<< ':quit'
+              --builddir=dist-newrepl-dashboard-check <<< ':quit'
           "
 
       - name: Push repl artifacts to MinIO
@@ -244,13 +232,9 @@ jobs:
 
           CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}
 
-          tar -I 'zstd -T0 -3' -cf driver.tar.zst -C "$CACHE_ROOT" dist-newrepl-driver/
-          mc cp driver.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/dynamic-offer-driver-app.tar.zst"
-          rm -f driver.tar.zst
-
-          tar -I 'zstd -T0 -3' -cf rider.tar.zst -C "$CACHE_ROOT" dist-newrepl-rider/
-          mc cp rider.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/rider-app.tar.zst"
-          rm -f rider.tar.zst
+          tar -I 'zstd -T0 -3' -cf dashboard-check.tar.zst -C "$CACHE_ROOT" dist-newrepl-dashboard-check/
+          mc cp dashboard-check.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/dashboard-check.tar.zst"
+          rm -f dashboard-check.tar.zst
 
           tar -I 'zstd -T0 -3' -cf repl-support.tar.zst -C "$CACHE_ROOT" --exclude='.cabal-dir/logs' hie/ .cabal-dir/ .nix-deps/
           mc cp repl-support.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/repl-support.tar.zst"
@@ -268,7 +252,7 @@ jobs:
       - name: Cleanup staging dir
         if: always()
         run: rm -rf $HOME/ny-staging/${{ github.run_id }}
-  
+
   cabal-build-times:
     name: Analyze Cabal Build Times
     needs: [cabal-build, check-conditions]
