@@ -163,7 +163,8 @@ callBAPInternalSendEmailOTP merchantShortId city req = do
 
 data VerifyEmailUpdateReq = VerifyEmailUpdateReq
   { email :: Text,
-    personId :: Text
+    requesteeId :: Text,
+    requestorId :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 

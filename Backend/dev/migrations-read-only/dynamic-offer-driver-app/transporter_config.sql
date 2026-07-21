@@ -1009,3 +1009,4 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_ip_blocked
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN mandate_email_verification boolean ;

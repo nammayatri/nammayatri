@@ -1372,6 +1372,7 @@ TransporterConfig:
     supportedMapProviders: "Maybe [MapProvider]" # Merchant-level allowlist constraining driver-selectable map providers; Nothing = allow all.
     blockDriverOwnRCForFleetDrivers: Maybe Bool # When True, fleet-linked drivers cannot onboard/activate their own (non-fleet) RC
     overrideOperatorDriverJoiningWithDeepLink: Maybe Bool
+    mandateEmailVerification: Maybe Bool
 
   beamType:
     currency: Maybe Currency

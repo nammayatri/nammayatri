@@ -221,6 +221,7 @@ data TransporterConfig = TransporterConfig
     liveEKD :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     localAmbulanceNumbers :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     localPoliceNumbers :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    mandateEmailVerification :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     mandateExecutionRescheduleInterval :: Kernel.Prelude.NominalDiffTime,
     mandateNotificationRescheduleInterval :: Kernel.Prelude.NominalDiffTime,
     mandateValidity :: Kernel.Prelude.Int,

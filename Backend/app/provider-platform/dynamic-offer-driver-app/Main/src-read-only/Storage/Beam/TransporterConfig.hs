@@ -218,6 +218,7 @@ data TransporterConfigT f = TransporterConfigT
     liveEKD :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     localAmbulanceNumbers :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     localPoliceNumbers :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    mandateEmailVerification :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     mandateExecutionRescheduleInterval :: B.C f Kernel.Types.Common.Seconds,
     mandateNotificationRescheduleInterval :: B.C f Kernel.Types.Common.Seconds,
     mandateValidity :: B.C f Kernel.Prelude.Int,
