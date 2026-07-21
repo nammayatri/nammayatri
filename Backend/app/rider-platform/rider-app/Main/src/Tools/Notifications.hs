@@ -750,6 +750,8 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParti
       toLocationDestination = do
         destinationAdd <- case booking.bookingDetails of
           SRB.RentalDetails _ -> Nothing
+          -- Destination-less like Rental — no toLocation to show in the notification.
+          SRB.EasyBookingDetails _ -> Nothing
           SRB.OneWayDetails details -> Just details.toLocation
           SRB.DriverOfferDetails details -> Just details.toLocation
           SRB.OneWaySpecialZoneDetails details -> Just details.toLocation
@@ -926,6 +928,8 @@ notifyOnEstOrQuoteReallocated cancellationSource booking estOrQuoteId = do
       toLocationDestination = do
         destinationAdd <- case booking.bookingDetails of
           SRB.RentalDetails _ -> Nothing
+          -- Destination-less like Rental — no toLocation to show in the notification.
+          SRB.EasyBookingDetails _ -> Nothing
           SRB.OneWayDetails details -> Just details.toLocation
           SRB.DriverOfferDetails details -> Just details.toLocation
           SRB.OneWaySpecialZoneDetails details -> Just details.toLocation
@@ -2013,38 +2017,43 @@ sendWhatsAppTemplateIfOptedIn ::
   DMM.MessageKey ->
   [Maybe Text] ->
   m ()
-sendWhatsAppTemplateIfOptedIn person messageKey variables =
-  when (person.whatsappNotificationEnrollStatus == Just Whatsapp.OPT_IN) $ do
-    mbMobileNumber <- mapM decrypt person.mobileNumber
-    let mbPhoneNumber = (<>) <$> person.mobileCountryCode <*> mbMobileNumber
-    case mbPhoneNumber of
-      Nothing -> logInfo $ "whatsapp.skipped key=" <> show messageKey <> " riderId=" <> person.id.getId <> " reason=noPhone"
-      Just phoneNumber -> do
-        mbMerchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey Nothing
-        case mbMerchantMessage of
-          Just merchantMessage
-            | not (T.null merchantMessage.templateId) -> do
-              result <-
-                try @_ @SomeException $
-                  Whatsapp.whatsAppSendMessageWithTemplateIdAPI
-                    person.merchantId
-                    person.merchantOperatingCityId
-                    ( Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq
-                        phoneNumber
-                        merchantMessage.templateId
-                        variables
-                        Nothing
-                        Nothing
-                    )
-              case result of
-                Right resp
-                  | resp._response.status == "success" ->
-                    logInfo $ "whatsapp.sent key=" <> show messageKey <> " riderId=" <> person.id.getId
-                Right resp ->
-                  logError $ "whatsapp.failed key=" <> show messageKey <> " riderId=" <> person.id.getId <> " status=" <> resp._response.status
-                Left err ->
-                  logError $ "whatsapp.failed key=" <> show messageKey <> " riderId=" <> person.id.getId <> " err=" <> show err
-          _ -> logInfo $ "whatsapp.skipped key=" <> show messageKey <> " riderId=" <> person.id.getId <> " reason=noTemplate"
+sendWhatsAppTemplateIfOptedIn person messageKey variables = do
+  logInfo $ "whatsapp.enter key=" <> show messageKey <> " riderId=" <> person.id.getId <> " cityId=" <> person.merchantOperatingCityId.getId <> " enrollStatus=" <> show person.whatsappNotificationEnrollStatus
+  if person.whatsappNotificationEnrollStatus /= Just Whatsapp.OPT_IN
+    then logInfo $ "whatsapp.skipped key=" <> show messageKey <> " riderId=" <> person.id.getId <> " reason=notOptedIn"
+    else do
+      mbMobileNumber <- mapM decrypt person.mobileNumber
+      let mbPhoneNumber = (<>) <$> person.mobileCountryCode <*> mbMobileNumber
+      case mbPhoneNumber of
+        Nothing -> logInfo $ "whatsapp.skipped key=" <> show messageKey <> " riderId=" <> person.id.getId <> " reason=noPhone"
+        Just phoneNumber -> do
+          mbMerchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey Nothing
+          case mbMerchantMessage of
+            Just merchantMessage
+              | not (T.null merchantMessage.templateId) -> do
+                logInfo $ "whatsapp.sending key=" <> show messageKey <> " riderId=" <> person.id.getId <> " templateId=" <> merchantMessage.templateId <> " containsUrlButton=" <> show merchantMessage.containsUrlButton <> " numVars=" <> show (length variables)
+                result <-
+                  try @_ @SomeException $
+                    Whatsapp.whatsAppSendMessageWithTemplateIdAPI
+                      person.merchantId
+                      person.merchantOperatingCityId
+                      ( Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq
+                          phoneNumber
+                          merchantMessage.templateId
+                          variables
+                          Nothing
+                          (Just merchantMessage.containsUrlButton)
+                      )
+                case result of
+                  Right resp
+                    | resp._response.status == "success" ->
+                      logInfo $ "whatsapp.sent key=" <> show messageKey <> " riderId=" <> person.id.getId
+                  Right resp ->
+                    logError $ "whatsapp.failed key=" <> show messageKey <> " riderId=" <> person.id.getId <> " status=" <> resp._response.status <> " resp=" <> show resp
+                  Left err ->
+                    logError $ "whatsapp.failed key=" <> show messageKey <> " riderId=" <> person.id.getId <> " err=" <> show err
+            Just merchantMessage -> logInfo $ "whatsapp.skipped key=" <> show messageKey <> " riderId=" <> person.id.getId <> " reason=emptyTemplateId templateId=" <> show merchantMessage.templateId
+            Nothing -> logInfo $ "whatsapp.skipped key=" <> show messageKey <> " riderId=" <> person.id.getId <> " reason=noMerchantMessageRow"
 
 -- | On FRFS shuttle booking confirmation (payment fulfillment success), send the reassurance:
 -- push `SHUTTLE_TRACKING_ON_START` (carries journeyId) + opt-in WhatsApp `shuttle_booking_confirmation`

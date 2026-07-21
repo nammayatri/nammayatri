@@ -28,6 +28,8 @@ imports:
   MediaFile: IssueManagement.Domain.Types.MediaFile
   HighPrecMoney: Kernel.Types.Common
   Centesimal: Kernel.Types.Common
+  CommonDocumentData: Domain.Types.CommonDocumentData
+  DocumentOnboardingStage: Domain.Types.DocumentOnboardingStage
 IdfyVerification:
   tableName: idfy_verification
   fields:
@@ -460,6 +462,7 @@ DriverRCAssociation:
 
 Image:
   tableName: image
+  derives: "Generic, Show, ToJSON, FromJSON"
   types:
     SelfieFetchStatus:
       enum: "APPROVED,NEEDS_REVIEW"
@@ -626,12 +629,15 @@ DocumentVerificationConfig:
     DocumentApplicableType:
       enum: "FLEET,INDIVIDUAL,FLEET_AND_INDIVIDUAL"
     FieldType:
-      enum: "FieldText,FieldInt,FieldDouble"
+      enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage"
     FieldInfo:
       name: Text
       _type: FieldType
       isMandatory: Bool
       regexValidation: Maybe Text
+      description: Maybe Text
+      placeholder: Maybe Text
+      dropdownValues: Maybe [Text]
       derive': "Eq,Ord,Show,Read,Generic,ToJSON,FromJSON,ToSchema"
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -661,6 +667,7 @@ DocumentVerificationConfig:
     filterForOldApks: Maybe Bool
     documentCategory: Maybe DocumentCategory
     documentFlowGrouping: Maybe DocumentFlowGrouping
+    documentOnboardingStage: Maybe DocumentOnboardingStage
     applicableTo: DocumentApplicableType
     # For RC: read regex from FieldInfo.regexValidation; prefix list remains fallback.
     documentFields: Maybe [FieldInfo]
@@ -1568,11 +1575,18 @@ CommonDriverOnboardingDocuments:
     documentImageId: Maybe (Id Image)
     driverId: Maybe (Id Person)
     documentType: DocumentType
-    documentData: Text  # JSON string containing all document data
+    documentData: CommonDocumentData|NoRelation  # typed per-documentType payload; stored as raw text, parsed/rendered in fromTType/toTType
     rejectReason: Maybe Text
     verificationStatus: VerificationStatus  # PENDING, VERIFIED, REJECTED
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
+  beamFields:
+    documentData:
+      documentData: Text
+  toTType:
+    documentData: Domain.Types.CommonDocumentData.renderCommonDocumentData documentData|E
+  fromTType:
+    documentData: Domain.Types.CommonDocumentData.parseCommonDocumentDataSafe documentType documentData|E
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey

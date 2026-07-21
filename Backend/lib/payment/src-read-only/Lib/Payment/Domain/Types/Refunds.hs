@@ -24,6 +24,7 @@ data Refunds = Refunds
     isApiCallSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Text,
     orderId :: Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
+    referenceType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     refundAmount :: Kernel.Types.Common.HighPrecMoney,
     shortId :: Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.Refunds.Refunds,
     status :: Kernel.External.Payment.Interface.RefundStatus,

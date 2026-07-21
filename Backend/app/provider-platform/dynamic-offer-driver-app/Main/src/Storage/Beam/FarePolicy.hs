@@ -58,6 +58,7 @@ data FarePolicyT f = FarePolicyT
     cgst :: B.C f (Maybe HighPrecMoney),
     vatChargeConfig :: B.C f (Maybe Text),
     commissionChargeConfig :: B.C f (Maybe Text),
+    cancellationCommissionChargeConfig :: B.C f (Maybe Text),
     tollTaxChargeConfig :: B.C f (Maybe Text),
     platformFeeChargesBy :: B.C f (Maybe Domain.PlatformFeeMethods),
     fixedCardCharge :: B.C f (Maybe HighPrecMoney),

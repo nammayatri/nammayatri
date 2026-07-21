@@ -65,6 +65,7 @@ update' farePolicy = do
       Se.Set BeamFP.priorityCharges $ farePolicy.priorityCharges,
       Se.Set BeamFP.vatChargeConfig $ encodeChargeConfig <$> farePolicy.vatChargeConfig,
       Se.Set BeamFP.commissionChargeConfig $ encodeChargeConfig <$> farePolicy.commissionChargeConfig,
+      Se.Set BeamFP.cancellationCommissionChargeConfig $ encodeChargeConfig <$> farePolicy.cancellationCommissionChargeConfig,
       Se.Set BeamFP.tollTaxChargeConfig $ encodeChargeConfig <$> farePolicy.tollTaxChargeConfig,
       Se.Set BeamFP.pickupBufferInSecsForNightShiftCal $ farePolicy.pickupBufferInSecsForNightShiftCal,
       Se.Set BeamFP.serviceChargeAmount $ farePolicy.serviceCharge,
@@ -135,6 +136,7 @@ instance ToTType' BeamFP.FarePolicy FarePolicy where
         BeamFP.priorityCharges = priorityCharges,
         BeamFP.vatChargeConfig = encodeChargeConfig <$> vatChargeConfig,
         BeamFP.commissionChargeConfig = encodeChargeConfig <$> commissionChargeConfig,
+        BeamFP.cancellationCommissionChargeConfig = encodeChargeConfig <$> cancellationCommissionChargeConfig,
         BeamFP.tollTaxChargeConfig = encodeChargeConfig <$> tollTaxChargeConfig,
         BeamFP.pickupBufferInSecsForNightShiftCal = pickupBufferInSecsForNightShiftCal,
         BeamFP.tipOptions = tipOptions,
@@ -195,7 +197,7 @@ fromTTypeFarePolicy ::
   FarePolicyHandler m ->
   BeamFP.FarePolicy ->
   m (Maybe Domain.FarePolicy)
-fromTTypeFarePolicy handler BeamFP.FarePolicyT {vatChargeConfig = beamVatChargeConfig, commissionChargeConfig = beamCommissionChargeConfig, tollTaxChargeConfig = beamTollTaxChargeConfig, ..} = do
+fromTTypeFarePolicy handler BeamFP.FarePolicyT {vatChargeConfig = beamVatChargeConfig, commissionChargeConfig = beamCommissionChargeConfig, cancellationCommissionChargeConfig = beamCancellationCommissionChargeConfig, tollTaxChargeConfig = beamTollTaxChargeConfig, ..} = do
   fullDEFB <- handler.findAllDriverExtraFeeBounds
   let fDEFB = snd <$> fullDEFB
   mFarePolicyDetails <-
@@ -270,6 +272,7 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {vatChargeConfig = beamVatChargeC
                     },
               vatChargeConfig = decodeChargeConfig beamVatChargeConfig,
               commissionChargeConfig = decodeChargeConfig beamCommissionChargeConfig,
+              cancellationCommissionChargeConfig = decodeChargeConfig beamCancellationCommissionChargeConfig,
               tollTaxChargeConfig = decodeChargeConfig beamTollTaxChargeConfig,
               description = description,
               cancellationFarePolicyId = Id <$> cancellationFarePolicyId,

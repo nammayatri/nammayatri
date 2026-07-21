@@ -626,6 +626,8 @@ getDistance = \case
   DBooking.DeliveryDetails details -> distanceToHighPrecMeters $ details.distance
   DBooking.MeterRideDetails _ -> 0
   DBooking.RentalDetails _ -> 0
+  -- No pre-computed distance stored for EasyBooking either, same as Rental.
+  DBooking.EasyBookingDetails _ -> 0
 
 mkLegInfoFromBookingAndRide :: GetStateFlow m r c => DBooking.Booking -> Maybe DRide.Ride -> DJourneyLeg.JourneyLeg -> m LegInfo
 mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
@@ -703,6 +705,8 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
     getBookingDetailsConstructor (DBooking.AmbulanceDetails _) = "AmbulanceDetails"
     getBookingDetailsConstructor (DBooking.DeliveryDetails _) = "DeliveryDetails"
     getBookingDetailsConstructor (DBooking.MeterRideDetails _) = "MeterRideDetails"
+    -- Debug label for the new EasyBooking booking-details constructor.
+    getBookingDetailsConstructor (DBooking.EasyBookingDetails _) = "EasyBookingDetails"
 
 mkLegInfoFromSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DSR.SearchRequest -> DJourneyLeg.JourneyLeg -> m LegInfo
 mkLegInfoFromSearchRequest DSR.SearchRequest {..} journeyLeg = do

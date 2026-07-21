@@ -111,6 +111,7 @@ Estimate:
     specialLocationName : Maybe Text
     fareSettlementType : Maybe FareSettlementType
     area : Maybe Text
+    navigationInstruction : Maybe Text
     serviceTierName : Maybe Text
     serviceTierShortDesc : Maybe Text
     clientSdkVersion: Maybe Version

@@ -675,7 +675,7 @@ refundPaymentService req refundCall = do
         Right response -> do
           now <- getCurrentTime
           let newCompletedAt = calculateCompletedAt response.status now
-          HQRefunds.updateRefundsEntryByStripeResponse req.merchantOpCityId (Just response.refundId) response.errorCode response.status (Just True) newCompletedAt response.amount refundsEntry mbAction
+          HQRefunds.updateRefundsEntryByStripeResponse req.merchantOpCityId (Just response.refundId) response.errorCode response.status response.reference response.referenceType (Just True) newCompletedAt response.amount refundsEntry mbAction
           -- Return the internal refunds.id (not Stripe's) so the caller links refund_request.refunds_id —
           -- the same id the Stripe webhook looks up via metadata.
           pure $ Just response {PInterface.refundId = refundId}
@@ -693,7 +693,9 @@ refundPaymentService req refundCall = do
                   status = PInterface.REFUND_FAILURE,
                   amount = Nothing,
                   errorCode = Nothing,
-                  errorMessage = Nothing
+                  errorMessage = Nothing,
+                  reference = Nothing,
+                  referenceType = Nothing
                 }
 
 -- | Refresh status from the payment gateway for a specific Stripe attempt.
@@ -725,7 +727,7 @@ getRefundStatusService orderId mbRefundsId merchantOpCityId getRefundStatusCall 
               Right result -> do
                 now <- getCurrentTime
                 let newCompletedAt = calculateCompletedAt result.status now
-                HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId (Just serviceProviderId) result.errorCode result.status refund.isApiCallSuccess newCompletedAt result.amount refund (Just "get refund status service")
+                HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId (Just serviceProviderId) result.errorCode result.status (result.reference <|> refund.arn) (result.referenceType <|> refund.referenceType) refund.isApiCallSuccess newCompletedAt result.amount refund (Just "get refund status service")
                 -- Return the internal refunds.id (matches refundPaymentService).
                 pure $ Just result {PInterface.refundId = refund.id.getId}
               Left err -> do
@@ -738,7 +740,9 @@ getRefundStatusService orderId mbRefundsId merchantOpCityId getRefundStatusCall 
           status = refund.status,
           amount = refund.actualRefundedAmount,
           errorCode = refund.errorCode,
-          errorMessage = refund.errorMessage
+          errorMessage = refund.errorMessage,
+          reference = refund.arn,
+          referenceType = refund.referenceType
         }
 
 -- create order -----------------------------------------------------
@@ -2147,10 +2151,13 @@ updateRefundsByWebhook ::
 updateRefundsByWebhook merchantOpCityId refundInfo = do
   refundsId <- (Id @Refunds <$>) $ refundInfo.refundsId & fromMaybeM (InvalidRequest "refundsId not found")
   refunds <- HQRefunds.findById refundsId >>= fromMaybeM (InvalidRequest $ "No refunds matches passed data \"" <> refundsId.getId <> "\" not exist.")
-  when (refundInfo.errorCode /= refunds.errorCode || refundInfo.status /= refunds.status) $ do
+  -- The reference lands on a refund.updated whose status and errorCode are unchanged, so it has to be
+  -- in the guard or it is dropped.
+  when (refundInfo.errorCode /= refunds.errorCode || refundInfo.status /= refunds.status || (isJust refundInfo.reference && refundInfo.reference /= refunds.arn)) $ do
     now <- getCurrentTime
-    let newCompletedAt = calculateCompletedAt refundInfo.status now
-    HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId refunds.idAssignedByServiceProvider refundInfo.errorCode refundInfo.status refunds.isApiCallSuccess newCompletedAt (Just refundInfo.amount) refunds (Just "update refunds by webhook")
+    -- Keep the first terminal timestamp; a late reference-only update would otherwise restamp it.
+    let newCompletedAt = refunds.completedAt <|> calculateCompletedAt refundInfo.status now
+    HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId refunds.idAssignedByServiceProvider refundInfo.errorCode refundInfo.status (refundInfo.reference <|> refunds.arn) (refundInfo.referenceType <|> refunds.referenceType) refunds.isApiCallSuccess newCompletedAt (Just refundInfo.amount) refunds (Just "update refunds by webhook")
 
 --- notification api ----------
 
@@ -2343,6 +2350,7 @@ mkRefundsEntry merchantId requestId orderShortId amount refundStatus = do
         createdAt = now,
         updatedAt = now,
         arn = Nothing,
+        referenceType = Nothing,
         completedAt = Nothing,
         actualRefundedAmount = Nothing
       }

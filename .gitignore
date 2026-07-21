@@ -49,3 +49,6 @@ shared-kernel/
 .claude/worktrees/gifted-fermi
 control-center/
 
+
+# Devbox auto-assignment identity (per-checkout, minted by the test dashboard)
+/.devbox-id.json

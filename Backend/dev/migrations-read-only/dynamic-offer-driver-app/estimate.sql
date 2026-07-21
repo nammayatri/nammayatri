@@ -179,3 +179,8 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN special_location_name tex
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN area text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN navigation_instruction text ;

@@ -56,3 +56,8 @@ ALTER TABLE atlas_driver_offer_bpp.refunds ADD COLUMN completed_at timestamp wit
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.refunds ADD COLUMN actual_refunded_amount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.refunds ADD COLUMN reference_type text ;

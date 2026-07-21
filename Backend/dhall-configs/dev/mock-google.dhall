@@ -9,9 +9,20 @@ let RoutingPreference =
       | TRAFFIC_AWARE_OPTIMAL
       >
 
+let ExtraComputationV2 =
+      < EXTRA_COMPUTATION_UNSPECIFIED
+      | TRAFFIC_ON_POLYLINE
+      | TOLLS
+      | FUEL_CONSUMPTION
+      | HTML_FORMATTED_NAVIGATION_INSTRUCTIONS
+      | FLYOVER_INFO_ON_POLYLINE
+      | NARROW_ROAD_INFO_ON_POLYLINE
+      >
+
 let googleRouteConfigType =
       { computeAlternativeRoutes : Bool
       , routePreference : RoutingPreference
+      , extraComputations : Optional (List ExtraComputationV2)
       , url : Text
       }
 

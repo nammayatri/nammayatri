@@ -407,6 +407,8 @@ getToLocation' booking =
       DRB.DeliveryDetails details -> Just details.toLocation
       DRB.RentalDetails details -> details.stopLocation
       DRB.MeterRideDetails details -> details.toLocation
+      -- Reuses RentalBookingDetails's stopLocation field like Rental does above.
+      DRB.EasyBookingDetails details -> details.stopLocation
 
 -- | Format address from LocationAddress
 formatAddress :: LocationAPIEntity -> Text

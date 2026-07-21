@@ -456,6 +456,10 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       commissionAmount = fromMaybe 0 (ride.commission <|> booking.commission)
       -- Commission is stored ALV-inclusive; split only at emission (pct unset ⇒ vat 0, behaviour unchanged).
       (commissionBaseAmount, commissionVatAmount) = splitGrossByVatPct transporterConfig.taxConfig.commissionVatPercentage commissionAmount
+      -- A past cancellation due folded into this ride's fare, commissioned at its own rate
+      -- (fare_policy.cancellation_commission_charge_config). Gross, split at emission.
+      cancellationCommissionAmount = fromMaybe 0 (ride.cancellationCommission <|> booking.cancellationCommission)
+      (cancellationCommissionBase, cancellationCommissionVat) = splitGrossByVatPct transporterConfig.taxConfig.commissionVatPercentage cancellationCommissionAmount
       mbProjectedBreakup = FC.projectFareParamsBreakup fareParams
       rawBaseFare = case mbProjectedBreakup of
         Just b -> b.discountApplicableRideFareTaxExclusive + b.nonDiscountApplicableRideFareTaxExclusive
@@ -643,6 +647,8 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 [ mkAdjustment "Tip" Tip tipAmount,
                   if issuedToType == CUSTOMER then Nothing else mkAdjustment "Platform Commission" PlatformCommission (negate commissionBaseAmount),
                   if issuedToType == CUSTOMER then Nothing else mkAdjustment "Commission VAT" PlatformCommissionTax (negate commissionVatAmount),
+                  if issuedToType == CUSTOMER then Nothing else mkAdjustment "Cancellation Commission" CancellationCommission (negate cancellationCommissionBase),
+                  if issuedToType == CUSTOMER then Nothing else mkAdjustment "Cancellation Commission VAT" CancellationCommissionTax (negate cancellationCommissionVat),
                   if showVatInput then mkStandaloneFare "VAT Input" VatInput serviceVatAmount else Nothing
                 ]
            in catMaybes (rideAndTollLines <> commonLines)
@@ -771,7 +777,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       Right _ -> pure ()
 
     let commissionAlreadyCollectedAtBooth = booking.fareSettlementType == Just CommissionOnly
-    when (commissionAmount > 0) $ do
+    when (commissionAmount + cancellationCommissionAmount > 0) $ do
       let commissionRef = if isOnline then walletReferenceCommissionOnline else walletReferenceCommissionCash
           commissionVatRef = if isOnline then walletReferenceCommissionVATOnline else walletReferenceCommissionVATCash
           onlineCommissionPaidOutDirectly = isOnline && fromMaybe False transporterConfig.driverWalletConfig.onlineCommissionPaidOutDirectly
@@ -786,9 +792,17 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 referenceId = Just booking.id.getId,
                 lineItems =
                   catMaybes
-                    [ Just InvoiceLineItem {description = "Platform Commission", descriptionType = Just PlatformCommission, quantity = 1, unitPrice = commissionBaseAmount, lineTotal = commissionBaseAmount, isExternalCharge = False, groupId = Just "g-commission", itemType = Just Fare},
+                    [ if commissionBaseAmount > 0
+                        then Just InvoiceLineItem {description = "Platform Commission", descriptionType = Just PlatformCommission, quantity = 1, unitPrice = commissionBaseAmount, lineTotal = commissionBaseAmount, isExternalCharge = False, groupId = Just "g-commission", itemType = Just Fare}
+                        else Nothing,
                       if commissionVatAmount > 0
                         then Just InvoiceLineItem {description = "Commission VAT", descriptionType = Just PlatformCommissionTax, quantity = 1, unitPrice = commissionVatAmount, lineTotal = commissionVatAmount, isExternalCharge = False, groupId = Just "g-commission", itemType = Just Tax}
+                        else Nothing,
+                      if cancellationCommissionBase > 0
+                        then Just InvoiceLineItem {description = "Cancellation Commission", descriptionType = Just CancellationCommission, quantity = 1, unitPrice = cancellationCommissionBase, lineTotal = cancellationCommissionBase, isExternalCharge = False, groupId = Just "g-commission-cancellation", itemType = Just Fare}
+                        else Nothing,
+                      if cancellationCommissionVat > 0
+                        then Just InvoiceLineItem {description = "Cancellation Commission VAT", descriptionType = Just CancellationCommissionTax, quantity = 1, unitPrice = cancellationCommissionVat, lineTotal = cancellationCommissionVat, isExternalCharge = False, groupId = Just "g-commission-cancellation", itemType = Just Tax}
                         else Nothing
                     ],
                 gstBreakdown = Nothing,
@@ -803,11 +817,19 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         void $ transfer OwnerLiability SellerRevenue commissionBaseAmount commissionRef
         when (commissionVatAmount > 0) $
           void $ transfer OwnerLiability SellerRevenue commissionVatAmount commissionVatRef
+        when (cancellationCommissionBase > 0) $
+          void $ transfer OwnerLiability SellerRevenue cancellationCommissionBase walletReferenceCancellationCommission
+        when (cancellationCommissionVat > 0) $
+          void $ transfer OwnerLiability SellerRevenue cancellationCommissionVat walletReferenceCancellationCommissionVAT
         -- Reversal mirrors every posted leg; shared refType, so the wallet still shows one summed row.
         when shouldReverseCommissionWalletDebit $ do
           void $ transfer SellerRevenue OwnerLiability commissionBaseAmount walletReferenceDeductedAtPaymentByPlatform
           when (commissionVatAmount > 0) $
             void $ transfer SellerRevenue OwnerLiability commissionVatAmount walletReferenceDeductedAtPaymentByPlatform
+          when (cancellationCommissionBase > 0) $
+            void $ transfer SellerRevenue OwnerLiability cancellationCommissionBase walletReferenceDeductedAtPaymentByPlatform
+          when (cancellationCommissionVat > 0) $
+            void $ transfer SellerRevenue OwnerLiability cancellationCommissionVat walletReferenceDeductedAtPaymentByPlatform
         invoice commissionInvoiceConfig
       case commissionResult of
         Left err -> fromEitherM (\e -> InternalError ("Failed to create commission invoice: " <> show e)) (Left err)

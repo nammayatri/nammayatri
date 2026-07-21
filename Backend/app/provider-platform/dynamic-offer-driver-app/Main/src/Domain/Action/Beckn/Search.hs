@@ -81,7 +81,8 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator (withTimeAPI)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import Lib.Queries.GateInfo (findGateInfoByLatLongWithinRadius)
+import Lib.Queries.GateInfo (findGateInfoByLatLongWithinRadius, getGatesBySpecialLocationIdCached)
+import qualified Lib.Types.GateInfoExtra as GExtra
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import Lib.Yudhishthira.Types
@@ -281,7 +282,7 @@ handler ValidatedDSearchReq {..} sReq = do
         let estimatedDistance = serviceableRoute.routeDistance
             estimatedDuration = serviceableRoute.routeDuration
         logDebug $ "distance: " <> show estimatedDistance
-        let routeInfo = RouteInfo {distance = Just estimatedDistance, distanceWithUnit = Just $ convertMetersToDistance cityDistanceUnit estimatedDistance, duration = Just estimatedDuration, points = Just serviceableRoute.routePoints, routeToken = serviceableRoute.routeToken}
+        let routeInfo = RouteInfo {distance = Just estimatedDistance, distanceWithUnit = Just $ convertMetersToDistance cityDistanceUnit estimatedDistance, duration = Just estimatedDuration, points = Just serviceableRoute.routePoints, routeToken = serviceableRoute.routeToken, trafficSegments = serviceableRoute.routeTrafficSegments}
         --------------build stops locations ---------------
         toLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.dropAddrress sReq.customerLanguage dropLoc
         let setRouteInfo transactionId =
@@ -365,10 +366,9 @@ handler ValidatedDSearchReq {..} sReq = do
         (pool, policies) <- selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocation transporterConfig possibleTripOption.isScheduled allFarePoliciesProduct.area farePolicies now isValueAddNP searchReq sReq.paymentMode
         pure (nonEmpty pool, policies)
       else return (Nothing, farePolicies)
-  -- This is to filter the fare policies based on the driverId, if passed during search
-  -- (driverPool, selectedFarePolicies) <- maybe (pure (driverPool', selectedFarePolicies')) (filterFPsForDriverId (driverPool', selectedFarePolicies')) searchReq.driverIdForSearch
-  let buildEstimateHelper = buildEstimate merchantId' merchantOpCityId cityCurrency cityDistanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance spcllocationTag specialLocName mbTollInfo mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute (length stops) searchReq.estimatedDuration transporterConfig
-  let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId' possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration spcllocationTag mbTollInfo mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute transporterConfig
+  navGateMap <- buildNavGateMap (SL.pickupSpecialZoneIdFromArea allFarePoliciesProduct.area)
+  let buildEstimateHelper = buildEstimate merchantId' merchantOpCityId cityCurrency cityDistanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance spcllocationTag specialLocName mbTollInfo mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute (length stops) searchReq.estimatedDuration transporterConfig navGateMap
+  let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId' possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration spcllocationTag mbTollInfo mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute transporterConfig navGateMap
   logInfo $ "DEBUG: allFarePoliciesProduct area=" <> show allFarePoliciesProduct.area <> " farePoliciesCount=" <> show (length farePolicies) <> " selectedFarePoliciesCount=" <> show (length selectedFarePolicies) <> " tripCategories=" <> show possibleTripOption.tripCategories
   logInfo $ "DEBUG: selectedFarePolicies tripCategories=" <> show (map (\fp -> (fp.tripCategory, fp.vehicleServiceTier)) selectedFarePolicies)
   (estimates', quotes) <- foldrM (\fp acc -> processPolicy buildEstimateHelper buildQuoteHelper fp configVersionMap acc mbAreaForVST) ([], []) selectedFarePolicies
@@ -697,6 +697,23 @@ tollDetailsForVehicleServiceTier (Just tollInfo) vehicleServiceTier =
       | tollCharges > 0 && not (null tollNames) = (Just tollCharges, Just tollNames, Just tollIds)
       | otherwise = (Nothing, Nothing, Nothing)
 
+-- | Pickup special-location gates keyed by gate id, fetched once per search (empty if no pickup zone).
+buildNavGateMap ::
+  (EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) =>
+  Maybe Text ->
+  m (M.Map Text GExtra.GateInfo)
+buildNavGateMap Nothing = pure M.empty
+buildNavGateMap (Just slId) = do
+  gates <- getGatesBySpecialLocationIdCached (Id slId)
+  pure $ M.fromList $ map (\(g, _) -> (g.id.getId, g)) gates
+
+-- | Per-tripCategory pickup-gate navigation instruction, resolved purely from the gate map.
+resolveGateNavigationInstruction :: M.Map Text GExtra.GateInfo -> Maybe SL.Area -> Text -> Maybe Text
+resolveGateNavigationInstruction gateMap mbArea tripCategoryKey = do
+  gateId <- mbArea >>= SL.pickupGateIdFromArea
+  gate <- M.lookup gateId gateMap
+  GExtra.navigationInstructionFor gate tripCategoryKey
+
 buildQuote ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -717,11 +734,12 @@ buildQuote ::
   Maybe Bool ->
   Maybe Bool ->
   DTMT.TransporterConfig ->
+  M.Map Text GExtra.GateInfo ->
   Bool ->
   DVST.VehicleServiceTier ->
   DFP.FullFarePolicy ->
   m DQuote.Quote
-buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled returnTime roundTrip mbDistance mbDuration specialLocationTag mbTollInfo isCustomerPrefferedSearchRoute isBlockedRoute transporterConfig nightShiftOverlapChecking vehicleServiceTierItem fullFarePolicy = do
+buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled returnTime roundTrip mbDistance mbDuration specialLocationTag mbTollInfo isCustomerPrefferedSearchRoute isBlockedRoute transporterConfig navGateMap nightShiftOverlapChecking vehicleServiceTierItem fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance
       (vehicleTollCharges, vehicleTollNames, _) = tollDetailsForVehicleServiceTier mbTollInfo fullFarePolicy.vehicleServiceTier
   fareParams <-
@@ -767,6 +785,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
   let validTill = searchRequestExpirationSeconds `addUTCTime` now
       estimatedFinishTime = (\duration -> fromIntegral duration `addUTCTime` now) <$> mbDuration
       isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
+      navigationInstruction = resolveGateNavigationInstruction navGateMap fullFarePolicy.mbArea (show fullFarePolicy.tripCategory)
   pure
     DQuote.Quote
       { id = quoteId,
@@ -807,11 +826,12 @@ buildEstimate ::
   Int ->
   Maybe Seconds ->
   DTMT.TransporterConfig ->
+  M.Map Text GExtra.GateInfo ->
   Bool ->
   DVST.VehicleServiceTier ->
   DFP.FullFarePolicy ->
   m DEst.Estimate
-buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchReq startTime isScheduled returnTime roundTrip mbDistance specialLocationTag mbSpecialLocName mbTollInfo isCustomerPrefferedSearchRoute isBlockedRoute noOfStops mbEstimatedDuration transporterConfig nightShiftOverlapChecking vehicleServiceTierItem fullFarePolicy = do
+buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchReq startTime isScheduled returnTime roundTrip mbDistance specialLocationTag mbSpecialLocName mbTollInfo isCustomerPrefferedSearchRoute isBlockedRoute noOfStops mbEstimatedDuration transporterConfig navGateMap nightShiftOverlapChecking vehicleServiceTierItem fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance -- TODO: Fix Later
       isAmbulanceEstimate = isAmbulanceTrip fullFarePolicy.tripCategory
       (vehicleTollCharges, vehicleTollNames, vehicleTollIds) = tollDetailsForVehicleServiceTier mbTollInfo fullFarePolicy.vehicleServiceTier
@@ -860,7 +880,12 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
   estimateId <- Id <$> generateGUID
   now <- getCurrentTime
   void $ cacheFarePolicyByEstimateId estimateId.getId fullFarePolicy
-  commissionCharges <- FC.calculateCommission minFareParams (Just fullFarePolicy)
+  rideCommissionCharges <- FC.calculateCommission minFareParams (Just fullFarePolicy)
+  cancellationCommissionCharges <- FC.calculateCancellationCommission minFareParams (Just fullFarePolicy)
+  -- The estimate carries ONE commission figure: ride + cancellation.
+  let commissionCharges = case (rideCommissionCharges, cancellationCommissionCharges) of
+        (Nothing, Nothing) -> Nothing
+        (a, b) -> Just (fromMaybe 0 a + fromMaybe 0 b)
   let pickupChargesMaxx = case fullFarePolicy.farePolicyDetails of
         DFP.ProgressiveDetails progressiveDetails ->
           if progressiveDetails.pickupCharges.pickupChargesMin == progressiveDetails.pickupCharges.pickupChargesMax then 0 else progressiveDetails.pickupCharges.pickupChargesMax - progressiveDetails.pickupCharges.pickupChargesMin
@@ -869,6 +894,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
       minFare = fareSum minFareParams (Just []) + maybe 0.0 (.minFee) mbDriverExtraFeeBounds
       maxFare = fareSum maxFareParams (Just []) + maybe 0.0 (.maxFee) mbDriverExtraFeeBounds + pickupChargesMaxx
   let isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
+      navigationInstruction = resolveGateNavigationInstruction navGateMap fullFarePolicy.mbArea (show fullFarePolicy.tripCategory)
   pure
     DEst.Estimate
       { id = estimateId,
@@ -1003,6 +1029,10 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
           [Ambulance OneWayOnDemandDynamicOffer | not isScheduled]
         DRPO.Delivery ->
           [Delivery OneWayOnDemandDynamicOffer | not isScheduled]
+        DRPO.EasyBooking ->
+          -- Only OnDemandStaticOffer wired up for now — RideOtp deliberately deferred
+          -- to a follow-up PR (mirrors Rental's own two-mode dispatch above once added).
+          [EasyBooking OnDemandStaticOffer]
         _ -> []
       tripCategories =
         if checkIfMeterRideSearch dsReq.isMeterRideSearch
@@ -1020,9 +1050,17 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
                         [InterCity OneWayOnDemandStaticOffer destinationTravelCityName]
                           <> (if not isScheduled then [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
                   else localBundleForPreference
-              Nothing ->
-                [Rental OnDemandStaticOffer]
-                  <> [Rental RideOtp | not isScheduled]
+              -- FIX (per review): rerouting this whole branch through localBundleForPreference
+              -- had a much bigger blast radius than intended — riderPreferredOption falls
+              -- back to OneWay in several places (no tag, unparseable tag, unrecognized
+              -- category code from an external BPP), and localBundleForPreference's catch-all
+              -- (`_ -> []`) would then return zero categories for InterCity/PublicTransport/
+              -- FixedRoute, or OneWay categories that need a destination we don't have here.
+              -- Scoped down to only carve out EasyBooking; every other preference keeps the
+              -- exact previous hardcoded-to-Rental behavior for destination-less searches.
+              Nothing -> case dsReq.riderPreferredOption of
+                DRPO.EasyBooking -> [EasyBooking OnDemandStaticOffer]
+                _ -> [Rental OnDemandStaticOffer] <> [Rental RideOtp | not isScheduled]
 
   TripOption {..}
   where
@@ -1183,6 +1221,7 @@ transformReserveRideEsttoEst DBppEstimate.BppEstimate {..} = do
     DEst.Estimate
       { commissionCharges = Nothing,
         area = Nothing,
+        navigationInstruction = Nothing,
         ..
       }
 
