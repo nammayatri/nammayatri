@@ -81,7 +81,7 @@ data FRFSBookingPaymentAPI = FRFSBookingPaymentAPI
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSBookingPaymentAttemptsAPIRes = FRFSBookingPaymentAttemptsAPIRes {attempts :: [FRFSPaymentAttemptAPI], bookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking}
+data FRFSBookingPaymentAttemptsAPIRes = FRFSBookingPaymentAttemptsAPIRes {bookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking, orders :: [FRFSPaymentOrderAttemptsAPI]}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -178,21 +178,6 @@ data FRFSGtfsStopAPI = FRFSGtfsStopAPI {code :: Data.Text.Text, lat :: Data.Mayb
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSPaymentAttemptAPI = FRFSPaymentAttemptAPI
-  { amount :: Kernel.Types.Common.HighPrecMoney,
-    bankErrorCode :: Data.Maybe.Maybe Data.Text.Text,
-    bankErrorMessage :: Data.Maybe.Maybe Data.Text.Text,
-    createdAt :: Kernel.Prelude.UTCTime,
-    currency :: Kernel.Types.Common.Currency,
-    gatewayName :: Data.Maybe.Maybe Data.Text.Text,
-    id :: Data.Text.Text,
-    respCode :: Data.Maybe.Maybe Data.Text.Text,
-    respMessage :: Data.Maybe.Maybe Data.Text.Text,
-    status :: Data.Text.Text
-  }
-  deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data FRFSPaymentAttemptWithRefundsAPI = FRFSPaymentAttemptWithRefundsAPI
   { amount :: Kernel.Types.Common.HighPrecMoney,
     bankErrorCode :: Data.Maybe.Maybe Data.Text.Text,
@@ -204,7 +189,8 @@ data FRFSPaymentAttemptWithRefundsAPI = FRFSPaymentAttemptWithRefundsAPI
     refunds :: [FRFSRefundAttemptAPI],
     respCode :: Data.Maybe.Maybe Data.Text.Text,
     respMessage :: Data.Maybe.Maybe Data.Text.Text,
-    status :: Data.Text.Text
+    status :: Data.Text.Text,
+    transactionId :: Data.Text.Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -213,7 +199,7 @@ data FRFSPaymentAttemptsListAPIRes = FRFSPaymentAttemptsListAPIRes {orders :: [F
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSPaymentOrderAttemptsAPI = FRFSPaymentOrderAttemptsAPI {domain :: Data.Maybe.Maybe Data.Text.Text, orderId :: Data.Text.Text, transactions :: [FRFSPaymentAttemptWithRefundsAPI]}
+data FRFSPaymentOrderAttemptsAPI = FRFSPaymentOrderAttemptsAPI {domain :: Data.Maybe.Maybe Data.Text.Text, orderId :: Data.Text.Text, paymentShortId :: Data.Text.Text, transactions :: [FRFSPaymentAttemptWithRefundsAPI]}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

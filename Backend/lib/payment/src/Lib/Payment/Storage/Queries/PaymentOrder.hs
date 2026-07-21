@@ -45,10 +45,10 @@ findLatestByPersonId personId =
     Nothing
     <&> listToMaybe
 
-findAllByPersonId :: BeamFlow m r => Text -> Maybe Int -> Maybe Int -> m [DOrder.PaymentOrder]
-findAllByPersonId personId mbLimit mbOffset =
+findAllByPersonId :: BeamFlow m r => Text -> Text -> Maybe Int -> Maybe Int -> m [DOrder.PaymentOrder]
+findAllByPersonId personId merchantId mbLimit mbOffset =
   findAllWithOptionsKV
-    [Se.Is BeamPO.personId $ Se.Eq personId]
+    [Se.And [Se.Is BeamPO.personId $ Se.Eq personId, Se.Is BeamPO.merchantId $ Se.Eq merchantId]]
     (Se.Desc BeamPO.createdAt)
     mbLimit
     mbOffset
