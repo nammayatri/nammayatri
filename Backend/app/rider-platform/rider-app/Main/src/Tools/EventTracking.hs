@@ -11,7 +11,6 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Kernel.External.EventTracking as EventTracking
-import qualified Kernel.External.EventTracking.Moengage.Types as MT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -43,12 +42,14 @@ trackEvent merchantId merchantOperatingCityId event = do
       if null providers
         then logDebug "EventTracking: no providers configured for merchantOperatingCity, skipping event"
         else do
+          now <- getCurrentTime
           let (customerId, actionName, attrs) = eventToAction event
               req =
-                MT.MoengageEventReq
-                  { MT._type = "event",
-                    MT.customer_id = customerId,
-                    MT.actions = [MT.MoengageAction {MT.action = actionName, MT.attributes = attrs}]
+                EventTracking.EventTrackingReq
+                  { EventTracking.customerId = customerId,
+                    EventTracking.eventName = actionName,
+                    EventTracking.attributes = attrs,
+                    EventTracking.timestamp = Just now
                   }
           forM_ providers $ \provider ->
             sendToProvider merchantId merchantOperatingCityId provider actionName req
@@ -59,7 +60,7 @@ sendToProvider ::
   Id DMOC.MerchantOperatingCity ->
   EventTracking.EventTrackingService ->
   Text ->
-  MT.MoengageEventReq ->
+  EventTracking.EventTrackingReq ->
   m ()
 sendToProvider merchantId merchantOperatingCityId provider actionName req = do
   mbConfig <-
@@ -73,7 +74,7 @@ sendToProvider merchantId merchantOperatingCityId provider actionName req = do
       (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.EventTrackingService provider)))
   case mbConfig of
     Nothing ->
-      logDebug $ "EventTracking: provider " <> show provider <> " listed in usage config but no service config row found, skipping"
+      logWarning $ "EventTracking: provider " <> show provider <> " listed in usage config but no service config row found, skipping"
     Just config -> case config.serviceConfig of
       DMSC.EventTrackingServiceConfig msc -> do
         result <- try @_ @SomeException $ EventTracking.pushEvent msc req

@@ -39,14 +39,14 @@ updateStatusById :: BeamFlow m r => DMF.MediaFileUploadStatus -> Id MediaFile ->
 updateStatusById newStatus (Id mediaFileId) = do
   now <- getCurrentTime
   updateWithKV
-    [Set BeamMF.status (Just $ DT.pack $ show newStatus), Set BeamMF.updatedAt (T.utcToLocalTime T.utc now)]
+    [Set BeamMF.status (Just $ DT.pack $ show newStatus), Set BeamMF.updatedAt (Just $ T.utcToLocalTime T.utc now)]
     [Is BeamMF.id $ Eq mediaFileId]
 
 updateStatusAndHashById :: BeamFlow m r => DMF.MediaFileUploadStatus -> Maybe Text -> Id MediaFile -> m ()
 updateStatusAndHashById newStatus fileHash (Id mediaFileId) = do
   now <- getCurrentTime
   updateWithKV
-    [Set BeamMF.status (Just $ DT.pack $ show newStatus), Set BeamMF.fileHash fileHash, Set BeamMF.updatedAt (T.utcToLocalTime T.utc now)]
+    [Set BeamMF.status (Just $ DT.pack $ show newStatus), Set BeamMF.fileHash fileHash, Set BeamMF.updatedAt (Just $ T.utcToLocalTime T.utc now)]
     [Is BeamMF.id $ Eq mediaFileId]
 
 instance FromTType' BeamMF.MediaFile MediaFile where
@@ -61,7 +61,7 @@ instance FromTType' BeamMF.MediaFile MediaFile where
             status = status >>= readMaybe . DT.unpack,
             fileHash = fileHash,
             createdAt = T.localTimeToUTC T.utc createdAt,
-            updatedAt = T.localTimeToUTC T.utc updatedAt
+            updatedAt = T.localTimeToUTC T.utc <$> updatedAt
           }
 
 instance ToTType' BeamMF.MediaFile MediaFile where
@@ -74,5 +74,7 @@ instance ToTType' BeamMF.MediaFile MediaFile where
         BeamMF.status = DT.pack . show <$> status,
         BeamMF.fileHash = fileHash,
         BeamMF.createdAt = T.utcToLocalTime T.utc createdAt,
-        BeamMF.updatedAt = T.utcToLocalTime T.utc updatedAt
+        -- The column is NOT NULL, so never write a NULL: a domain-level Nothing
+        -- only ever means "legacy KV entry", for which createdAt is the best value.
+        BeamMF.updatedAt = Just $ T.utcToLocalTime T.utc (fromMaybe createdAt updatedAt)
       }

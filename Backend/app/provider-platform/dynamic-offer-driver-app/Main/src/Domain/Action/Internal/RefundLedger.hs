@@ -50,7 +50,7 @@ data RefundLedgerStatus = APPROVED | REFUNDED | FAILED
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
 -- | Per-component refund breakdown (BAP-split). 'component' is the FareComponent enum
---   (Generic JSON: "RIDE_FARE"/"TOLL"/"PARKING"). Field names byte-identical to BAP.
+--   (Generic JSON: "RIDE_FARE"/"TOLL"/"PARKING"/"CANCELLATION_FEE"). Field names byte-identical to BAP.
 data RefundLedgerComponent = RefundLedgerComponent
   { component :: RefundFareComponent,
     fareAmount :: HighPrecMoney,
@@ -61,7 +61,7 @@ data RefundLedgerComponent = RefundLedgerComponent
 -- | Mirrors rider-app's Domain.Types.FareBreakup.FareComponent (can't be cross-imported) with
 --   identical constructors, so the Generic JSON wire is byte-compatible and FromJSON rejects any
 --   unknown tag at decode.
-data RefundFareComponent = RIDE_FARE | TOLL | PARKING deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+data RefundFareComponent = RIDE_FARE | TOLL | PARKING | CANCELLATION_FEE deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Field names must match the BAP-side request verbatim (Generic JSON wire).
 data RefundLedgerReq = RefundLedgerReq
@@ -70,7 +70,8 @@ data RefundLedgerReq = RefundLedgerReq
     deductFromDriver :: Maybe Bool,
     refundRequestStatus :: RefundLedgerStatus,
     refundComponents :: Maybe [RefundLedgerComponent], -- per-component split (always present for APPROVED/REFUNDED; Nothing only on FAILED, which just voids)
-    rideFareComponentTotal :: Maybe HighPrecMoney -- commission-slice denominator (BAP-supplied)
+    rideFareComponentTotal :: Maybe HighPrecMoney, -- ride-fare commission-slice denominator (BAP-supplied)
+    cancellationComponentTotal :: Maybe HighPrecMoney -- cancellation-fee commission-slice denominator (BAP-supplied): fee base+tax
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -88,12 +89,15 @@ refundLedger rideId req apiKey = do
     transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
     mbDriver <- QPerson.findById ride.driverId
     mbDriverInfo <- QDI.findById (cast ride.driverId)
-    -- online cab only; Case-2 clawback legs debit OwnerLiability (the driver wallet), reducing payout.
+    -- online cab only; driver-deducted clawback legs debit OwnerLiability (the driver wallet), reducing payout.
     ctx <- Wallet.buildFinanceCtx booking ride mbDriver Nothing mbDriverInfo transporterConfig True
     -- When the approval doesn't specify who bears the refund, the merchant config decides;
     -- with no config either, the platform absorbs.
+    cancellationCommissionGross <- cancellationCommissionFromLedger ride
+    overdueBenefit <- cancellationOverdueBenefitFromLedger ride
     let deductFromDriver = fromMaybe (fromMaybe False transporterConfig.defaultRefundDeductFromDriver) req.deductFromDriver
-        legs = refundLegs deductFromDriver transporterConfig.taxConfig.commissionVatPercentage req ride
+        isVatMarket = fromMaybe False booking.fareParams.isVatTaxType
+        legs = refundLegs deductFromDriver transporterConfig.taxConfig.commissionVatPercentage cancellationCommissionGross overdueBenefit isVatMarket req ride
     existing <- getRefundRequestLegs req.refundRequestId
     case req.refundRequestStatus of
       APPROVED ->
@@ -109,10 +113,10 @@ refundLedger rideId req apiKey = do
           then forM_ (filter (\e -> e.status == LE.PENDING) idLegs) $ \e -> LedgerSvc.settleEntry e.id
           else -- APPROVED was missed; post directly as SETTLED (reachable only with no live legs — fires at most once).
             postLegs ctx Settled legs req.refundRequestId
-        -- the fleet/driver-visible refund invoice + (Case-2) the negative Commission invoice, once per refund
+        -- the fleet/driver-visible refund invoice + (if driver-deducted) the negative Commission invoice, once per refund
         unless alreadyDone $ do
           createRefundInvoice ctx booking req.refundRequestId (fromMaybe [] req.refundComponents)
-          when deductFromDriver $ createCommissionRefundInvoice ctx req ride booking transporterConfig
+          when deductFromDriver $ createCommissionRefundInvoice ctx req ride booking transporterConfig cancellationCommissionGross
       FAILED ->
         -- Failed: void the pending APPROVED leg(s). Only PENDING → idempotent.
         forM_ (filter (\e -> e.status == LE.PENDING) existing) $ \e ->
@@ -133,49 +137,87 @@ postLegs ctx mode legs refundRequestId = do
     Left err -> throwError $ InternalError $ "Refund ledger write failed for " <> refundRequestId <> ": " <> show err
     Right _ -> pure ()
 
--- | Per-component refund legs. Case 1 (platform absorbs) posts every component on
---   SellerExpense→BuyerExternal. Case 2 (clawback) posts driver legs on OwnerLiability→BuyerExternal
---   (reducing the next payout) plus, for ride-fare only, a SellerExpense→BuyerExternal commission
---   slice the platform bears (base + ALV split when commissionVatPercentage is set; the driver
---   clawback uses the GROSS slice, so payout is rate-independent); toll/parking are 100% driver.
-refundLegs :: Bool -> Maybe Double -> RefundLedgerReq -> Ride -> [(AccountRole, AccountRole, HighPrecMoney, Text)]
-refundLegs deductFromDriver mbCommissionVatPct req ride =
+-- | The cancellation commission (incl. VAT) actually charged for this ride's booking: the sum of
+--   its SETTLED CancellationCommission(+VAT) ledger legs. Nothing ever reverses these legs
+--   (refund clawbacks post their own separate legs), so no reversal filtering is needed. The
+--   ledger is the source of truth here — the cancellation_dues_details table stores two candidate
+--   amounts (normal and overdue) without recording which one was actually charged.
+cancellationCommissionFromLedger :: Ride -> Flow HighPrecMoney
+cancellationCommissionFromLedger ride = do
+  baseLegs <- LedgerSvc.getEntriesByReference Wallet.walletReferenceCancellationCommission ride.bookingId.getId
+  vatLegs <- LedgerSvc.getEntriesByReference Wallet.walletReferenceCancellationCommissionVAT ride.bookingId.getId
+  let settledGross es = sum [e.amount | e <- es, e.status == LE.SETTLED]
+  pure (settledGross baseLegs + settledGross vatLegs)
+
+-- | The (base, tax) overdue benefit the platform kept for this ride's booking and still holds.
+--   Each is written as a pass-through PAIR of equal ledger legs under one reference, so ONE
+--   un-reversed leg carries the full amount; reversal entries and the originals they point at
+--   are skipped.
+cancellationOverdueBenefitFromLedger :: Ride -> Flow (HighPrecMoney, HighPrecMoney)
+cancellationOverdueBenefitFromLedger ride = do
+  let unreversedAmount ref = do
+        entries <- LedgerSvc.getEntriesByReference ref ride.bookingId.getId
+        let reversedIds = mapMaybe (.reversalOf) entries
+        pure $ maybe 0 (.amount) $ listToMaybe [e | e <- entries, e.status == LE.SETTLED, isNothing e.reversalOf, e.id `notElem` reversedIds]
+  (,) <$> unreversedAmount Wallet.walletReferenceCancellationOverdueBenefit <*> unreversedAmount Wallet.walletReferenceCancellationOverdueBenefitTax
+
+-- | Per-component refund legs. Platform-absorbed (deductFromDriver = False): every component posts
+--   from SellerExpense. Driver-deducted: each party gives back a prorated share of what it actually
+--   received — the driver his net share, the platform its commission slice and (if the fee went
+--   overdue) its kept benefit; toll/parking are fully driver-borne.
+refundLegs :: Bool -> Maybe Double -> HighPrecMoney -> (HighPrecMoney, HighPrecMoney) -> Bool -> RefundLedgerReq -> Ride -> [(AccountRole, AccountRole, HighPrecMoney, Text)]
+refundLegs deductFromDriver mbCommissionVatPct cancellationCommissionGross (overdueBenefit, overdueBenefitTax) isVatMarket req ride =
   concatMap componentLegs (fromMaybe [] req.refundComponents)
   where
     commission = fromMaybe 0 ride.commission
     rideFareTotal = fromMaybe 0 req.rideFareComponentTotal
+    cancellationTotal = fromMaybe 0 req.cancellationComponentTotal
+    -- Taxes return to where they sat forward: driver in VAT markets, government in GST.
+    cancelTaxDest = if isVatMarket then OwnerLiability else GovtIndirect
+    benefitTaxSource = if isVatMarket then SellerExpense else GovtIndirect
+    -- Full precision, no rounding: legs must sum to the component exactly and a full refund must
+    -- claw back exactly the charged commission (the commission aggregate nets to zero).
+    rideFareLegs comp baseRef vatRef =
+      -- ride-fare prorates by BASE (base/base); cancellation below prorates by GROSS (gross/gross)
+      let slice = if rideFareTotal > 0 then commission * comp.fareAmount / rideFareTotal else 0
+          (sliceBase, sliceVat) = Wallet.splitGrossByVatPct mbCommissionVatPct slice
+       in [ (OwnerLiability, BuyerExternal, comp.fareAmount - slice, baseRef),
+            (OwnerLiability, BuyerExternal, comp.vatAmount, vatRef),
+            (SellerExpense, BuyerExternal, sliceBase, Wallet.walletReferenceRideFareRefundCommission)
+          ]
+            <> [(SellerExpense, BuyerExternal, sliceVat, Wallet.walletReferenceRideFareRefundCommissionVAT) | sliceVat > 0]
+    -- Three buckets funded the fee (driver net share, charged commission, overdue benefit); each
+    -- returns the same fraction of the refunded gross, so a full refund zeroes every bucket.
+    cancellationFeeLegs comp baseRef vatRef =
+      let prorate amt = if cancellationTotal > 0 then amt * (comp.fareAmount + comp.vatAmount) / cancellationTotal else 0
+          commissionSlice = prorate cancellationCommissionGross
+          benefitSlice = prorate overdueBenefit
+          benefitTaxSlice = prorate overdueBenefitTax
+          (sliceBase, sliceVat) = Wallet.splitGrossByVatPct mbCommissionVatPct commissionSlice
+       in [ (OwnerLiability, BuyerExternal, comp.fareAmount - benefitSlice - commissionSlice, baseRef),
+            (cancelTaxDest, BuyerExternal, comp.vatAmount - benefitTaxSlice, vatRef)
+          ]
+            <> [(SellerExpense, BuyerExternal, sliceBase, Wallet.walletReferenceCancellationRefundCommission) | sliceBase > 0]
+            <> [(SellerExpense, BuyerExternal, sliceVat, Wallet.walletReferenceCancellationRefundCommissionVAT) | sliceVat > 0]
+            <> [(SellerExpense, BuyerExternal, benefitSlice, Wallet.walletReferenceCancellationOverdueBenefitRefund) | benefitSlice > 0]
+            <> [(benefitTaxSource, BuyerExternal, benefitTaxSlice, Wallet.walletReferenceCancellationOverdueBenefitRefundTax) | benefitTaxSlice > 0]
+    driverOnlyLegs comp baseRef vatRef =
+      [ (OwnerLiability, BuyerExternal, comp.fareAmount, baseRef),
+        (OwnerLiability, BuyerExternal, comp.vatAmount, vatRef)
+      ]
     componentLegs comp =
       let (baseRef, vatRef) = refundRefTypesForComponent comp.component
        in if not deductFromDriver
-            then -- Case 1: platform absorbs the whole component
+            then -- platform absorbs the whole component
 
               [ (SellerExpense, BuyerExternal, comp.fareAmount, baseRef),
                 (SellerExpense, BuyerExternal, comp.vatAmount, vatRef)
               ]
-            else
-              if comp.component == RIDE_FARE
-                then -- Case 2 ride-fare: driver bears all but the prorated commission slice
-
-                -- Full precision, no rounding: legs must sum to the component exactly, and a
-                -- full refund must claw back exactly the forward commission (agg nets to zero).
-                -- Rounding the complement over-debits the driver by the rounding residue.
-
-                  let commissionSlice =
-                        if rideFareTotal > 0
-                          then commission * comp.fareAmount / rideFareTotal
-                          else 0
-                      driverBase = comp.fareAmount - commissionSlice
-                      (commissionSliceBase, commissionSliceVat) = Wallet.splitGrossByVatPct mbCommissionVatPct commissionSlice
-                   in [ (OwnerLiability, BuyerExternal, driverBase, baseRef),
-                        (OwnerLiability, BuyerExternal, comp.vatAmount, vatRef),
-                        (SellerExpense, BuyerExternal, commissionSliceBase, Wallet.walletReferenceRideFareRefundCommission)
-                      ]
-                        <> [(SellerExpense, BuyerExternal, commissionSliceVat, Wallet.walletReferenceRideFareRefundCommissionVAT) | commissionSliceVat > 0]
-                else -- Case 2 toll/parking: 100% driver
-
-                  [ (OwnerLiability, BuyerExternal, comp.fareAmount, baseRef),
-                    (OwnerLiability, BuyerExternal, comp.vatAmount, vatRef)
-                  ]
+            else case comp.component of
+              RIDE_FARE -> rideFareLegs comp baseRef vatRef
+              CANCELLATION_FEE -> cancellationFeeLegs comp baseRef vatRef
+              TOLL -> driverOnlyLegs comp baseRef vatRef
+              PARKING -> driverOnlyLegs comp baseRef vatRef
 
 -- | (base refType, VAT refType) for a refunded component — exhaustive over the enum.
 refundRefTypesForComponent :: RefundFareComponent -> (Text, Text)
@@ -183,6 +225,7 @@ refundRefTypesForComponent fc = case fc of
   RIDE_FARE -> (Wallet.walletReferenceRideFareRefund, Wallet.walletReferenceRideFareRefundVAT)
   TOLL -> (Wallet.walletReferenceTollRefund, Wallet.walletReferenceTollRefundVAT)
   PARKING -> (Wallet.walletReferenceParkingRefund, Wallet.walletReferenceParkingRefundVAT)
+  CANCELLATION_FEE -> (Wallet.walletReferenceCancellationFeeRefund, Wallet.walletReferenceCancellationFeeRefundVAT)
 
 -- | The legs of one refund request. Every entry here is a leg: BPP refund legs are real debits
 --   against the driver or the platform, so nothing reverses them (the zero-out is BAP-only).
@@ -259,11 +302,12 @@ createRefundInvoice ctx booking refundsRequestId comps = do
       logInfo $ "createRefundInvoice: created BPP refund invoice " <> newInv.id.getId <> " for booking " <> referenceId <> " refundRequest " <> refundsRequestId
 
 -- | Per-component BPP refund invoice lines (negative Fare + inline Tax, shared groupId).
---   Toll/Parking are flagged external (mirrors the ride invoice); only Ride Fare is taxable.
+--   Ride fare and cancellation fee are regular taxable lines; toll/parking are flagged
+--   external, mirroring the ride invoice.
 mkRefundInvoiceLineItems :: RefundLedgerComponent -> [InvoiceI.InvoiceLineItem]
 mkRefundInvoiceLineItems c =
   let (fareDesc, fareType, taxDesc, taxType, gId) = refundInvoiceLineMeta c.component
-      isExt = case c.component of RIDE_FARE -> False; _ -> True
+      isExt = case c.component of RIDE_FARE -> False; CANCELLATION_FEE -> False; _ -> True
       mkNeg desc dtype amt typ =
         if amt > 0
           then Just InvoiceI.InvoiceLineItem {description = desc, descriptionType = Just dtype, quantity = 1, unitPrice = negate amt, lineTotal = negate amt, isExternalCharge = isExt, groupId = Just gId, itemType = Just typ}
@@ -275,32 +319,36 @@ refundInvoiceLineMeta fc = case fc of
   RIDE_FARE -> ("Ride Fare Refund", InvoiceI.RideFareRefund, "Ride Fare Refund VAT", InvoiceI.RideFareRefundTax, "g-refund-ridefare")
   TOLL -> ("Toll Refund", InvoiceI.TollRefund, "Toll Refund VAT", InvoiceI.TollRefundTax, "g-refund-toll")
   PARKING -> ("Parking Refund", InvoiceI.ParkingRefund, "Parking Refund VAT", InvoiceI.ParkingRefundTax, "g-refund-parking")
+  CANCELLATION_FEE -> ("Cancellation Fee Refund", InvoiceI.CancellationFeeRefund, "Cancellation Fee Refund VAT", InvoiceI.CancellationFeeRefundTax, "g-refund-cancellation")
 
--- | On a Case-2 ride-fare refund, record the returned commission slice as a NEGATIVE Commission
---   invoice, left Draft so the agg-commission scheduler nets it in. A record, not a second cash
---   movement (the cash is the RideFareRefundCommission ledger leg); issuedTo mirrors the per-ride
---   Commission invoice so it aggregates against the same recipient. Mirrors the forward
---   base + ALV split as a negative Fare + Tax pair.
-createCommissionRefundInvoice :: FinanceCtx -> RefundLedgerReq -> Ride -> DBooking.Booking -> DTC.TransporterConfig -> Flow ()
-createCommissionRefundInvoice ctx req ride booking transporterConfig = do
+-- | On a driver-deducted refund, record the returned commission slice(s) — ride fare and/or
+--   cancellation fee — as a NEGATIVE Commission invoice, left Draft so the commission-aggregation
+--   scheduler nets it in. A record, not a second cash movement (the cash is the *RefundCommission
+--   ledger legs). Same operands as refundLegs' slices, so invoice and legs agree to the last digit.
+createCommissionRefundInvoice :: FinanceCtx -> RefundLedgerReq -> Ride -> DBooking.Booking -> DTC.TransporterConfig -> HighPrecMoney -> Flow ()
+createCommissionRefundInvoice ctx req ride booking transporterConfig cancellationCommissionGross = do
   let commission = fromMaybe 0 ride.commission
       rideFareTotal = fromMaybe 0 req.rideFareComponentTotal
-      rideFareRefundedFare = maybe 0 (sum . map (.fareAmount) . filter (\c -> c.component == RIDE_FARE)) req.refundComponents
-      -- Full precision (same operands as refundLegs' slice — the ledger legs and this
-      -- invoice must agree to the last digit).
-      commissionSlice = if rideFareTotal > 0 then commission * rideFareRefundedFare / rideFareTotal else 0
-      (commissionSliceBase, commissionSliceVat) = Wallet.splitGrossByVatPct transporterConfig.taxConfig.commissionVatPercentage commissionSlice
-  when (commissionSlice > 0) $ do
+      cancellationTotal = fromMaybe 0 req.cancellationComponentTotal
+      refundedFor p f = maybe 0 (sum . map f . filter (\c -> c.component == p)) req.refundComponents
+      commissionSlice = if rideFareTotal > 0 then commission * refundedFor RIDE_FARE (.fareAmount) / rideFareTotal else 0
+      cancellationSlice = if cancellationTotal > 0 then cancellationCommissionGross * refundedFor CANCELLATION_FEE (\c -> c.fareAmount + c.vatAmount) / cancellationTotal else 0
+      splitPct = Wallet.splitGrossByVatPct transporterConfig.taxConfig.commissionVatPercentage
+      (commissionSliceBase, commissionSliceVat) = splitPct commissionSlice
+      (cancellationSliceBase, cancellationSliceVat) = splitPct cancellationSlice
+  when (commissionSlice > 0 || cancellationSlice > 0) $ do
     let issuedToType' = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER
         issuedToId' = maybe ride.driverId.getId (.getId) ride.fleetOwnerId
-        mkNegLine desc dtype amt typ =
+        mkNegLine gId desc dtype amt typ =
           if amt > 0
-            then Just InvoiceI.InvoiceLineItem {description = desc, descriptionType = Just dtype, quantity = 1, unitPrice = negate amt, lineTotal = negate amt, isExternalCharge = False, groupId = Just "g-commission-refund", itemType = Just typ}
+            then Just InvoiceI.InvoiceLineItem {description = desc, descriptionType = Just dtype, quantity = 1, unitPrice = negate amt, lineTotal = negate amt, isExternalCharge = False, groupId = Just gId, itemType = Just typ}
             else Nothing
         commissionRefundLines =
           catMaybes
-            [ mkNegLine "Commission Refund" InvoiceI.CommissionRefund commissionSliceBase InvoiceI.Fare,
-              mkNegLine "Commission VAT Refund" InvoiceI.CommissionRefundTax commissionSliceVat InvoiceI.Tax
+            [ mkNegLine "g-commission-refund" "Commission Refund" InvoiceI.CommissionRefund commissionSliceBase InvoiceI.Fare,
+              mkNegLine "g-commission-refund" "Commission VAT Refund" InvoiceI.CommissionRefundTax commissionSliceVat InvoiceI.Tax,
+              mkNegLine "g-commission-refund-cancellation" "Cancellation Commission Refund" InvoiceI.CancellationCommissionRefund cancellationSliceBase InvoiceI.Fare,
+              mkNegLine "g-commission-refund-cancellation" "Cancellation Commission VAT Refund" InvoiceI.CancellationCommissionRefundTax cancellationSliceVat InvoiceI.Tax
             ]
     -- Parent = the per-ride Commission invoice (keyed by bookingId; refund-commissions are keyed
     -- by refundRequestId, so they don't collide here); Nothing if none found.
@@ -350,4 +398,4 @@ createCommissionRefundInvoice ctx req ride booking transporterConfig = do
         []
     case createRes of
       Left err -> logError $ "createCommissionRefundInvoice: failed for refundRequest " <> req.refundRequestId <> ": " <> show err
-      Right newInv -> logInfo $ "createCommissionRefundInvoice: created negative Commission invoice " <> newInv.id.getId <> " (slice " <> show commissionSlice <> ") for refundRequest " <> req.refundRequestId
+      Right newInv -> logInfo $ "createCommissionRefundInvoice: created negative Commission invoice " <> newInv.id.getId <> " (ride-fare slice " <> show commissionSlice <> ", cancellation slice " <> show cancellationSlice <> ") for refundRequest " <> req.refundRequestId

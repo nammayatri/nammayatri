@@ -127,6 +127,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import Network.URI (parseURI, uriQuery)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FarePolicy as SFP
+import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import qualified SharedLogic.VehicleServiceTier as SVST
 import Storage.Beam.IssueManagement ()
@@ -646,6 +647,7 @@ sendRideStartedUpdateToBAP booking ride tripStartLocation = do
   retryConfig <- asks (.longDurationRetryCfg)
   rideStartedMsgV2 <- ACL.buildOnStatusReqV2 merchant booking rideStartedBuildReq Nothing
   void $ callOnStatusV2 rideStartedMsgV2 retryConfig merchant.id
+  fork "FleetEngine: trip enroute to dropoff on ride started" $ FleetEngine.notifyRideStarted booking ride
 
 sendRideEstimatedEndTimeRangeUpdateToBAP ::
   ( CacheFlow m r,
@@ -762,6 +764,7 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
   retryConfig <- asks (.longDurationRetryCfg)
   rideCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideCompletedBuildReq
   void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig merchant.id
+  fork "FleetEngine: complete trip on ride completed" $ FleetEngine.notifyRideCompleted booking ride
 
 sendBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
@@ -792,6 +795,8 @@ sendBookingCancelledUpdateToBAP booking transporter cancellationSource cancellat
   retryConfig <- asks (.longDurationRetryCfg)
   bookingCancelledMsgV2 <- ACL.buildOnCancelMessageV2 transporter booking.bapCity booking.bapCountry (show Enums.CANCELLED) bookingCancelledBuildReqV2 Nothing
   void $ callOnCancelV2 bookingCancelledMsgV2 retryConfig transporter.id
+  whenJust mbRide $ \cancelledRide ->
+    fork "FleetEngine: cancel trip on booking cancelled" $ FleetEngine.notifyTripCancelled booking.merchantOperatingCityId cancelledRide.id
 
 sendDriverOffer ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -902,6 +907,7 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
   retryConfig <- asks (.shortDurationRetryCfg)
   driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverArrivedBuildReq
   void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig merchant.id
+  fork "FleetEngine: arrived at pickup on driver arrival" $ FleetEngine.notifyDriverArrived booking ride
 
 sendPhoneCallRequestUpdateToBAP ::
   ( CacheFlow m r,

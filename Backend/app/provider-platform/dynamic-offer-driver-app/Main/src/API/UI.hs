@@ -33,6 +33,7 @@ import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.FRFSFleetOperator as FRFSFleetOperator
 import qualified API.Action.UI.Faq as Faq
 import qualified API.Action.UI.FareCalculator as FareCalculator
+import qualified API.Action.UI.File as File
 import qualified API.Action.UI.FinanceInvoice as FinanceInvoice
 import qualified API.Action.UI.FleetOwnerList as FleetOwnerList
 import qualified API.Action.UI.Insurance as Insurance
@@ -133,6 +134,7 @@ type API =
            :<|> Performance.API
            :<|> Rating.API
            :<|> DriverReferral.API
+           :<|> File.API
            :<|> Issue.API
            :<|> TicketKapture.API
            :<|> ExotelEndRide.API
@@ -211,6 +213,7 @@ handler =
     :<|> Performance.handler
     :<|> Rating.handler
     :<|> DriverReferral.handler
+    :<|> File.handler
     :<|> Issue.handler
     :<|> TicketKapture.handler
     :<|> ExotelEndRide.handler

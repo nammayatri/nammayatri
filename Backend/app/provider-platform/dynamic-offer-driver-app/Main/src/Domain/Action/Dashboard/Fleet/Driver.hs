@@ -2654,7 +2654,8 @@ getFleetOrOperatorInfo person = do
             docsVerificationStatus = Nothing,
             address = Nothing,
             addressState = Nothing,
-            addressDocumentType = Nothing
+            addressDocumentType = Nothing,
+            approved = Just True
           }
     Just fleetOwnerInfo -> do
       fleetConfig <- QFC.findByPrimaryKey personId
@@ -4991,7 +4992,7 @@ postDriverFleetScheduledBookingReassign merchantShortId _opCity fleetOwnerId Com
             distanceUnit = oldBooking.distanceUnit,
             merchantOperatingCityId = Just oldBooking.merchantOperatingCityId
           }
-  RideCancelInternal.cancelRideTransaction oldBooking oldRide bookingCReason merchant DRide.FleetOwner Nothing Nothing Nothing Nothing Nothing transporterConfig oldDriver
+  RideCancelInternal.cancelRideTransaction oldBooking oldRide bookingCReason merchant DRide.FleetOwner Nothing Nothing transporterConfig oldDriver
 
   -- 6. Create new booking and quote (similar to performStaticOfferReallocation)
   newBookingId <- generateGUID

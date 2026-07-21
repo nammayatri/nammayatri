@@ -1,16 +1,21 @@
 # resolve-ports.nix — Nix wrapper around the resolve-ports shell logic.
 #
-# Generates <repo-root>/data/ports-resolved.nix from the base ports.nix,
-# probing each port for availability and substituting free alternatives.
+# Probes each port in the base ports.nix for availability and substitutes free
+# alternatives, then emits the resolved ports as a JSON object {"name":port,...}
+# on STDOUT (all diagnostics go to STDERR). The run-mobility-stack-dev preflight
+# captures that JSON and records it in the devbox registry under DEVBOX_KEY;
+# nammayatri.nix + the Caddyfile then read the ports from the registry. There is
+# no longer a data/ports-resolved.nix file.
 #
-# Usage from a devshell hook:
-#   ${resolvePorts}/bin/resolve-ports                 # write data/ports-resolved.nix
-#   ${resolvePorts}/bin/resolve-ports --check-only    # just print, don't write
+# Usage:
+#   ${resolvePorts}/bin/resolve-ports                 # JSON map on stdout
+#   ${resolvePorts}/bin/resolve-ports --check-only    # human-readable list on stdout
 #
 # Env vars:
-#   FLAKE_ROOT          — repo root (provided by mission-control).
-#   BASE_PORTS_FILE     — optional override for the base template.
-#   RESOLVED_PORTS_FILE — optional override for the output path.
+#   FLAKE_ROOT       — repo root (provided by mission-control).
+#   BASE_PORTS_FILE  — optional override for the base template.
+#   DEVBOX_KEY       — this checkout's registry key (so we exclude our OWN
+#                      previously-claimed ports when reading the registry).
 { pkgs, lib ? pkgs.lib }:
 
 pkgs.writeShellApplication {
@@ -22,7 +27,6 @@ pkgs.writeShellApplication {
 
     : "''${FLAKE_ROOT:?FLAKE_ROOT must be set}"
     BASE_PORTS_FILE="''${BASE_PORTS_FILE:-''${FLAKE_ROOT}/Backend/nix/services/ports.nix}"
-    RESOLVED_PORTS_FILE="''${RESOLVED_PORTS_FILE:-''${FLAKE_ROOT}/data/ports-resolved.nix}"
 
     CHECK_ONLY=false
     if [[ "''${1:-}" == "--check-only" ]]; then
@@ -35,8 +39,12 @@ pkgs.writeShellApplication {
     declare -A registry_ports
     _registry_count=0
     REGISTRY="/tmp/devbox-registry.json"
-    # Derive current dev name from FLAKE_ROOT: /tmp/<devname>/nammayatri → <devname>
-    MY_DEV_NAME=$(echo "''${FLAKE_ROOT}" | sed -n 's|^/tmp/\([^/]*\)/nammayatri.*|\1|p')
+    # Our registry key: DEVBOX_KEY from the preflight, else derive from a devbox
+    # path (/tmp/<name>/nammayatri → <name>) for standalone invocation.
+    MY_DEV_NAME="''${DEVBOX_KEY:-}"
+    if [[ -z "$MY_DEV_NAME" ]]; then
+      MY_DEV_NAME=$(echo "''${FLAKE_ROOT}" | sed -n 's|^/tmp/\([^/]*\)/nammayatri.*|\1|p')
+    fi
     if [[ -f "$REGISTRY" ]] && [[ -n "$MY_DEV_NAME" ]]; then
       # Extract all ports from every developer EXCEPT ourselves.
       while IFS= read -r p; do
@@ -48,7 +56,7 @@ pkgs.writeShellApplication {
         '[.users // {} | to_entries[] | select(.key != $me) | .value.ports // {} | to_entries[].value] | .[]' \
         "$REGISTRY" 2>/dev/null || true)
       if [[ $_registry_count -gt 0 ]]; then
-        echo "  Loaded $_registry_count port(s) claimed by other developers from devbox-registry.json"
+        echo "  Loaded $_registry_count port(s) claimed by other developers from devbox-registry.json" >&2
       fi
     fi
 
@@ -111,15 +119,15 @@ pkgs.writeShellApplication {
     fi
 
     declare -A assigned_ports
-    output=""
+    # Accumulate resolved "name<TAB>port" pairs; the final JSON is built from
+    # these (comments / non-port lines in ports.nix are not needed anymore).
+    pairs=""
     changed=0
 
     while IFS= read -r line; do
       if [[ "$line" =~ ^([[:space:]]*([a-zA-Z][a-zA-Z0-9_-]*)[[:space:]]*=[[:space:]]*)([0-9]+)(\;.*)$ ]]; then
-        prefix="''${BASH_REMATCH[1]}"
         name="''${BASH_REMATCH[2]}"
         base_port="''${BASH_REMATCH[3]}"
-        suffix="''${BASH_REMATCH[4]}"
 
         check_bus=false
         if [[ "$name" == redis-cluster-* ]]; then
@@ -138,31 +146,26 @@ pkgs.writeShellApplication {
         fi
 
         if [[ "$resolved_port" != "$base_port" ]]; then
-          echo "  $name: $base_port → $resolved_port (was in use)"
+          echo "  $name: $base_port → $resolved_port (was in use)" >&2
           changed=1
         fi
 
-        output+="''${prefix}''${resolved_port}''${suffix}"$'\n'
-      else
-        output+="$line"$'\n'
+        pairs+="$name"$'\t'"$resolved_port"$'\n'
       fi
     done < "$BASE_PORTS_FILE"
 
-    output="''${output%$'\n'}"
+    if [[ $changed -eq 0 ]]; then
+      echo "All ports are free — no changes needed." >&2
+    fi
 
     if [[ "$CHECK_ONLY" == true ]]; then
-      if [[ $changed -eq 0 ]]; then
-        echo "All ports are free — no changes needed."
-      fi
-      echo "$output"
+      # Human-readable list on stdout for standalone debugging.
+      printf '%s' "$pairs" | while IFS=$'\t' read -r n p; do
+        [[ -n "$n" ]] && echo "$n = $p"
+      done
     else
-      mkdir -p "$(dirname "$RESOLVED_PORTS_FILE")"
-      echo "$output" > "$RESOLVED_PORTS_FILE"
-      if [[ $changed -eq 0 ]]; then
-        echo "All ports are free. Generated $(basename "$RESOLVED_PORTS_FILE")"
-      else
-        echo "Generated $(basename "$RESOLVED_PORTS_FILE") with resolved ports."
-      fi
+      # JSON map {"name":port,...} on stdout — the caller records it in the registry.
+      printf '%s' "$pairs" | jq -Rn '[inputs | select(length > 0) | split("\t") | {key: .[0], value: (.[1] | tonumber)}] | from_entries'
     fi
   '';
 }

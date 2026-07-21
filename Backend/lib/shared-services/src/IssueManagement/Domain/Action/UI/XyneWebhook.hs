@@ -190,7 +190,7 @@ xyneAttachmentToMediaFile att = do
             DMF.status = Just DMF.CONFIRMED,
             DMF.fileHash = Nothing,
             DMF.createdAt = now,
-            DMF.updatedAt = now
+            DMF.updatedAt = Just now
           }
   QMF.create mf
   pure fid

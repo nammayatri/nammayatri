@@ -317,7 +317,7 @@ createMediaFileEntry fileUrl filePath = do
         status = Just DMF.COMPLETED,
         fileHash = Nothing,
         createdAt = now,
-        updatedAt = now
+        updatedAt = Just now
       }
 
 getPickupinstructionsClosest ::

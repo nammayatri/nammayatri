@@ -462,7 +462,7 @@ uploadOdometerReading merchantOpCityId rideId UploadOdometerReq {..} = do
             status = Just MediaFile.PENDING,
             fileHash = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = Just now
           }
 
 uploadDeliveryImage ::
@@ -518,7 +518,7 @@ uploadDeliveryImage merchantOpCityId rideId DeliveryImageUploadReq {..} = do
             status = Just MediaFile.PENDING,
             fileHash = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = Just now
           }
 
 arrivedAtDestination :: Id DRide.Ride -> LatLong -> Flow APISuccess

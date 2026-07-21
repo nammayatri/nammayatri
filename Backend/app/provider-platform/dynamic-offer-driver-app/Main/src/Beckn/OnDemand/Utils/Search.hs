@@ -273,6 +273,8 @@ mapCategoryCodeToRiderPreferred = \case
   "ON_DEMAND_RENTAL" -> DRPO.Rental
   "SCHEDULED_TRIP" -> DRPO.OneWay
   "SCHEDULED_RENTAL" -> DRPO.Rental
+  -- New EasyBooking category code (destination-less search, Regular/Progressive fare).
+  "ON_DEMAND_EASY_BOOKING" -> DRPO.EasyBooking
   _ -> DRPO.OneWay
 
 firstStop :: [Spec.Stop] -> Maybe Spec.Stop

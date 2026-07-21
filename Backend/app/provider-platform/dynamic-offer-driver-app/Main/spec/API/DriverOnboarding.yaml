@@ -5,6 +5,7 @@ imports:
   DocumentCategory: Domain.Types.DocumentVerificationConfig
   DocumentApplicableType: Domain.Types.DocumentVerificationConfig
   DocumentFlowGrouping: Domain.Types.DocumentVerificationConfig
+  DocumentOnboardingStage: Domain.Types.DocumentOnboardingStage
   FieldType: Domain.Types.DocumentVerificationConfig
   FieldInfo: Domain.Types.DocumentVerificationConfig
   ServiceTierType: Domain.Types.Common
@@ -57,6 +58,7 @@ types:
     documentType: DocumentType
     documentCategory: Maybe DocumentCategory
     documentFlowGrouping: DocumentFlowGrouping
+    documentOnboardingStage: Maybe DocumentOnboardingStage
     title: Text
     description: Maybe Text
     isMandatory: Bool

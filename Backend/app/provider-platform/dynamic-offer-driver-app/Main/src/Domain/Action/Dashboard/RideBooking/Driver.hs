@@ -604,7 +604,8 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         upiId = driverInfo.payoutVpa,
         fleetOwnerId = fleetOwnerId',
         docsVerificationStatus = castDriverDocsVerificationStatus <$> info.docsVerificationStatus,
-        courtRecord = courtRecord'
+        courtRecord = courtRecord',
+        approved = driverInfo.approved
       }
   where
     buildDriverAssociationInfoFromPerson :: DP.Person -> Maybe DFOI.FleetOwnerInformation -> m Common.DriverAssociationInfo

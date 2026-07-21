@@ -244,7 +244,7 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
       _ -> return $ mkPaymentStatusResp paymentStatusResponse paymentOrder.paymentFulfillmentStatus paymentOrder.domainEntityId
   -- Create the Recon Entry and Trigger the Refund Notifications
   case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
-    Right (newPaymentFulfillmentStatus, mbDomainEntityId, mbDomainTransactionId) -> do
+    Right (newPaymentFulfillmentStatus, _, mbDomainTransactionId) -> do
       whenJust paymentOrder.paymentFulfillmentStatus $ \oldPaymentFulfillmentStatus -> do
         let personId = cast @DPayment.Person @Person.Person paymentOrder.personId
         when (newPaymentFulfillmentStatus /= oldPaymentFulfillmentStatus) $ do
@@ -266,15 +266,15 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
                 when (paymentOrder.status /= updatedPaymentOrder.status && updatedPaymentOrder.status == Payment.CHARGED) $ do
                   TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_PENDING paymentOrder.id personId paymentService
               DPayment.FulfillmentSucceeded -> do
-                -- FRFS shuttle bookings get a dedicated shuttle-only reassurance (push + opt-in WhatsApp,
-                -- "tracking available once trip starts"), gated on RiderConfig.busTrackingNotificationTiers.
-                -- When that fires, we SUPPRESS the generic FULFILLMENT_SUCCESS push for that booking; every
-                -- other case (non-shuttle FRFS, non-FRFS) still gets the generic push. Fails safe.
-                handledByShuttle <- case mbDomainEntityId of
-                  Just entityId
-                    | paymentService `elem` [DOrder.FRFSBusBooking, DOrder.FRFSMultiModalBooking] ->
-                      TNotifications.notifyShuttleBookingConfirmed personId (Id entityId)
-                  _ -> pure False
+                -- FRFS shuttle bookings get a dedicated shuttle-only reassurance (push + opt-in WhatsApp),
+                -- gated on RiderConfig.busTrackingNotificationTiers. The status handler's domain entity id is
+                -- the journeyId (not a booking id), so resolve the booking(s) from the payment order and
+                -- notify per booking. handledByShuttle = True if any shuttle booking was notified, so the
+                -- generic FULFILLMENT_SUCCESS push still fires for everything else.
+                bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId paymentOrder.id
+                handledByShuttle <-
+                  fmap or $
+                    mapM (\bp -> TNotifications.notifyShuttleBookingConfirmed personId bp.frfsTicketBookingId) bookingPayments
                 unless handledByShuttle $
                   TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_SUCCESS paymentOrder.id personId paymentService
               _ -> pure ()
@@ -778,8 +778,11 @@ buildLedgerInfoFromBreakups breakups discount cashback appFee _tip ctx =
               r.clampedDiscount
               cashback
               r.rideVatAbsorbedOnDiscount
-              0 -- cancellationCharge (not applicable for normal ride)
-              0 -- cancellationTax
+              -- A cancelled ride's own fee arrives as a base+tax pair. A due carried into a LATER
+              -- ride's fare arrives gross in the tax-exclusive slot with cancellationTax = 0, since
+              -- the BPP tracks such dues as one running total.
+              breakupPostDiscount.cancellationFeeTaxExclusive
+              breakupPostDiscount.cancellationTax
               ctx
       pure (Just info)
   where
@@ -1018,6 +1021,7 @@ chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType p
         case result of
           Right () -> do
             logInfo $ "Settled " <> show (length entryIds) <> " ledger entries for ride: " <> rideId.getId <> " reason: " <> settledReason
+            -- markRideInvoicePaid now closes both the Ride and (if any) RideCancellation invoice.
             RidePaymentFinance.markRideInvoicePaid rideId.getId
           Left err -> logError $ "Failed to settle ledger entries for ride " <> rideId.getId <> ": " <> show err
       else do
