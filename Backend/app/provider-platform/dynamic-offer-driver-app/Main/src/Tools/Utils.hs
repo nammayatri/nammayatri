@@ -1,5 +1,6 @@
 module Tools.Utils where
 
+import Control.Applicative ((<|>))
 import qualified Data.Map as M
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Image as Image
@@ -22,8 +23,10 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Error.Throwing (throwError)
 import qualified Storage.Queries.BookingExtra as QBookingE
 import qualified Storage.Queries.Image as QImage
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RideExtra as QRideE
 import Tools.Constants
+import Tools.Error
 
 isDropInsideThreshold :: DB.Booking -> DTConf.TransporterConfig -> LatLong -> Bool
 isDropInsideThreshold booking thresholdConfig currLoation = do
@@ -69,3 +72,19 @@ extractLocationFromMaps mbRideId rideMap bookingMap = case mbRideId of
 
 cleanupUploadedImages :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Image.Image] -> Id Person.Person -> m ()
 cleanupUploadedImages imageIds personId = mapM_ (\imageId -> QImage.deleteByIdAndPerson imageId personId) imageIds
+
+emailBasedonEmailVerificationMandate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Text -> Person.Person -> Bool -> m (Maybe Text)
+emailBasedonEmailVerificationMandate reqEmail person mandateEmailVerification = do
+  if mandateEmailVerification
+    then do
+      when (isNothing person.email) $
+        throwError (InvalidRequest "Email verification is required before registration")
+      when (isJust reqEmail && person.email /= reqEmail) $
+        throwError (InvalidRequest "Email is already verified !!")
+      pure person.email
+    else do
+      whenJust reqEmail $ \reqEmail' ->
+        unless (reqEmail == person.email) $
+          unlessM (isNothing <$> QP.findByEmailAndMerchantIdAndRole (Just reqEmail') person.merchantId Person.FLEET_OWNER) $
+            throwError (EmailAlreadyLinked reqEmail')
+      pure $ reqEmail <|> person.email

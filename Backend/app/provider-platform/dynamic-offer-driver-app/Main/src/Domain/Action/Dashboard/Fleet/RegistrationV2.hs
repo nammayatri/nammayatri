@@ -80,6 +80,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonExtra as QPExtra
 import Tools.Error
 import Tools.SMS as Sms hiding (Success)
+import Tools.Utils (emailBasedonEmailVerificationMandate)
 
 postRegistrationV2LoginOtp ::
   ShortId DMerchant.Merchant ->
@@ -163,19 +164,16 @@ fleetOwnerRegister merchantShortId opCity mbRequestorId req = do
       if (requestor.role == DP.OPERATOR) then pure (Just requestor.id.getId) else pure Nothing
     Nothing -> pure Nothing
 
-  whenJust req.email $ \reqEmail -> do
-    unless (req.email == person.email) $
-      unlessM (isNothing <$> QP.findByEmailAndMerchantIdAndRole (Just reqEmail) person.merchantId DP.FLEET_OWNER) $
-        throwError (EmailAlreadyLinked reqEmail)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  updEmail <- emailBasedonEmailVerificationMandate req.email person (fromMaybe False transporterConfig.mandateEmailVerification)
 
   let newRole = case req.fleetType of
         Just Common.BUSINESS_FLEET -> DP.FLEET_BUSINESS
         Just Common.NORMAL_FLEET -> DP.FLEET_OWNER
         _ -> person.role
-  let updPerson = person{firstName = req.firstName, lastName = Just req.lastName, email = req.email <|> person.email, role = newRole}
+  let updPerson = person{firstName = req.firstName, lastName = Just req.lastName, email = updEmail, role = newRole}
   void $ QP.updateByPrimaryKey updPerson
   void $ updateFleetOwnerInfo fleetOwnerInfo req
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   -- Registration is now a mandatory (verified-only) doc; recompute so `verified` flips once registeredAt is set.
   void $ SStatus.refreshDocsVerificationStatusesWithStatus (Just updPerson) (Just transporterConfig) fleetOwnerId
 

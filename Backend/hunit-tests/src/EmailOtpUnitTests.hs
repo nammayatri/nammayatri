@@ -41,15 +41,16 @@ testEmailOtpReqDataTypes =
             DEV.EmailOtpSendReq {email = reqEmail} = req
         reqEmail @?= "user@example.com",
       testCase "EmailOtpVerifyReq construction and field access" $ do
-        let req = DEV.EmailOtpVerifyReq {email = "user@example.com", otp = "1234"}
-            DEV.EmailOtpVerifyReq {email = reqEmail, otp = reqOtp} = req
+        let req = DEV.EmailOtpVerifyReq {email = "user@example.com", otp = "1234", requesteeId = Id "person-456"}
+            DEV.EmailOtpVerifyReq {email = reqEmail, otp = reqOtp, requesteeId = reqRequesteeId} = req
         reqEmail @?= "user@example.com"
-        reqOtp @?= "1234",
+        reqOtp @?= "1234"
+        reqRequesteeId @?= Id "person-456",
       testCase "EmailOtpSendReq positional construction" $ do
         let DEV.EmailOtpSendReq {email = reqEmail} = DEV.EmailOtpSendReq "test@nammayatri.in"
         reqEmail @?= "test@nammayatri.in",
       testCase "EmailOtpVerifyReq positional construction" $ do
-        let DEV.EmailOtpVerifyReq {email = reqEmail, otp = reqOtp} = DEV.EmailOtpVerifyReq "test@nammayatri.in" "5678"
+        let DEV.EmailOtpVerifyReq {email = reqEmail, otp = reqOtp} = DEV.EmailOtpVerifyReq "test@nammayatri.in" "5678" (Id "person-789")
         reqEmail @?= "test@nammayatri.in"
         reqOtp @?= "5678"
     ]
@@ -158,15 +159,15 @@ testVerifyEmailOtpStructure =
   testGroup
     "verifyEmailOtp Request Structure"
     [ testCase "Valid email and OTP request structure" $ do
-        let req = DEV.EmailOtpVerifyReq {email = "fleet@nammayatri.in", otp = "1234"}
+        let req = DEV.EmailOtpVerifyReq {email = "fleet@nammayatri.in", otp = "1234", requesteeId = Id "person-1"}
             DEV.EmailOtpVerifyReq {email = reqEmail, otp = reqOtp} = req
         reqEmail @?= "fleet@nammayatri.in"
         reqOtp @?= "1234"
         T.length reqOtp == 4 @? "OTP should be exactly 4 digits",
       testCase "Different OTP values are distinct" $ do
-        let DEV.EmailOtpVerifyReq {otp = otp1} = DEV.EmailOtpVerifyReq "test@example.com" "1234"
-            DEV.EmailOtpVerifyReq {otp = otp2} = DEV.EmailOtpVerifyReq "test@example.com" "5678"
-            DEV.EmailOtpVerifyReq {otp = otp3} = DEV.EmailOtpVerifyReq "test@example.com" "9012"
+        let DEV.EmailOtpVerifyReq {otp = otp1} = DEV.EmailOtpVerifyReq "test@example.com" "1234" (Id "p-1")
+            DEV.EmailOtpVerifyReq {otp = otp2} = DEV.EmailOtpVerifyReq "test@example.com" "5678" (Id "p-1")
+            DEV.EmailOtpVerifyReq {otp = otp3} = DEV.EmailOtpVerifyReq "test@example.com" "9012" (Id "p-1")
         otp1 /= otp2 @? "Different OTPs should be distinct"
         otp2 /= otp3 @? "Different OTPs should be distinct"
     ]
@@ -186,16 +187,16 @@ testEmailOtpValidationEdgeCases =
         let DEV.EmailOtpSendReq {email = reqEmail} = DEV.EmailOtpSendReq "not-an-email"
         not (T.isInfixOf "@" reqEmail) @? "Invalid email should not contain @",
       testCase "Empty OTP in verify request" $ do
-        let DEV.EmailOtpVerifyReq {otp = reqOtp} = DEV.EmailOtpVerifyReq "test@example.com" ""
+        let DEV.EmailOtpVerifyReq {otp = reqOtp} = DEV.EmailOtpVerifyReq "test@example.com" "" (Id "p-1")
         T.null reqOtp @? "Empty OTP should be null",
       testCase "OTP with wrong length (3 digits)" $ do
-        let DEV.EmailOtpVerifyReq {otp = reqOtp} = DEV.EmailOtpVerifyReq "test@example.com" "123"
+        let DEV.EmailOtpVerifyReq {otp = reqOtp} = DEV.EmailOtpVerifyReq "test@example.com" "123" (Id "p-1")
         T.length reqOtp /= 4 @? "3-digit OTP should not be 4 digits",
       testCase "OTP with wrong length (5 digits)" $ do
-        let DEV.EmailOtpVerifyReq {otp = reqOtp} = DEV.EmailOtpVerifyReq "test@example.com" "12345"
+        let DEV.EmailOtpVerifyReq {otp = reqOtp} = DEV.EmailOtpVerifyReq "test@example.com" "12345" (Id "p-1")
         T.length reqOtp /= 4 @? "5-digit OTP should not be 4 digits",
       testCase "Non-numeric OTP" $ do
-        let DEV.EmailOtpVerifyReq {otp = reqOtp} = DEV.EmailOtpVerifyReq "test@example.com" "abcd"
+        let DEV.EmailOtpVerifyReq {otp = reqOtp} = DEV.EmailOtpVerifyReq "test@example.com" "abcd" (Id "p-1")
         reqOtp @?= "abcd"
         T.length reqOtp == 4 @? "Non-numeric OTP still has 4 characters"
     ]
@@ -211,7 +212,7 @@ testEmailOtpComplexScenarios =
     [ testCase "Send and verify flow uses same email" $ do
         let emailAddr = "fleet@nammayatri.in"
             sendReq = DEV.EmailOtpSendReq emailAddr
-            verifyReq = DEV.EmailOtpVerifyReq emailAddr "4567"
+            verifyReq = DEV.EmailOtpVerifyReq emailAddr "4567" (Id "person-1")
             DEV.EmailOtpSendReq {email = sendEmail} = sendReq
             DEV.EmailOtpVerifyReq {email = verifyEmail} = verifyReq
         sendEmail @?= verifyEmail,
@@ -357,15 +358,16 @@ testVerifyFlowOrdering :: TestTree
 testVerifyFlowOrdering =
   testGroup
     "Verify Email Flow Ordering"
-    [ testCase "uniqueness check runs before internal API call (simulated step tracking)" $ do
-        let steps = ["otp_match", "uniqueness_check", "internal_api_call", "dashboard_update"]
-        length steps @?= 4
-        steps !! 0 @?= "otp_match"
-        steps !! 1 @?= "uniqueness_check"
-        steps !! 2 @?= "internal_api_call"
-        steps !! 3 @?= "dashboard_update",
+    [ testCase "authorization and uniqueness check runs before internal API call (simulated step tracking)" $ do
+        let steps = ["authorization_check", "otp_match", "uniqueness_check", "internal_api_call", "dashboard_update"]
+        length steps @?= 5
+        steps !! 0 @?= "authorization_check"
+        steps !! 1 @?= "otp_match"
+        steps !! 2 @?= "uniqueness_check"
+        steps !! 3 @?= "internal_api_call"
+        steps !! 4 @?= "dashboard_update",
       testCase "dashboard update is last step" $ do
-        let steps = ["otp_match", "uniqueness_check", "internal_api_call", "dashboard_update"]
+        let steps = ["authorization_check", "otp_match", "uniqueness_check", "internal_api_call", "dashboard_update"]
         last steps @?= "dashboard_update",
       testCase "internal API failure prevents dashboard update (simulated)" $ do
         let internalApiSuccess = False
