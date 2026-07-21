@@ -148,6 +148,17 @@ decodeAdditionalTicketIds =
 findByTicketId :: BeamFlow m r => Text -> m (Maybe IssueReport)
 findByTicketId ticketId = findOneWithKV [Is BeamIR.ticketId $ Eq (Just ticketId)]
 
+-- | Matches 'ticket_id' first; falls back to scanning 'additional_ticket_ids'
+-- (secondary/fan-out providers) when that misses.
+findByTicketIdOrAdditional :: BeamFlow m r => Text -> m (Maybe IssueReport)
+findByTicketIdOrAdditional ticketId = do
+  mbPrimary <- findByTicketId ticketId
+  case mbPrimary of
+    Just issueReport -> pure (Just issueReport)
+    Nothing -> do
+      candidates <- findAllWithKV [Is BeamIR.additionalTicketIds $ Not $ Eq Nothing]
+      pure $ find (any ((== ticketId) . (.ticketId)) . fromMaybe [] . (.additionalTicketIds)) candidates
+
 updateChats :: BeamFlow m r => Id IssueReport -> [Chat] -> m ()
 updateChats issueId chats = do
   now <- getCurrentTime

@@ -226,20 +226,19 @@ data XyneBearerWebhookEvent = XyneBearerWebhookEvent
   deriving anyclass (A.FromJSON)
 
 -- | Bearer-token webhook for Xyne @TICKET_STATUS_UPDATED@ notifications,
--- delivered at @/internal/xyne/webhook/bearer@. Deliberately self-contained:
--- it does not share code with 'processXyneWebhook' beyond the pre-existing
--- 'IssueManagement.Storage.Queries.Issue.IssueReport.updateIssueStatus' query,
--- so the HMAC-signature DESK_REPLY endpoint is never touched by changes here.
+-- delivered at @/internal/xyne/webhook/bearer@.
 processXyneBearerWebhook ::
-  BeamFlow m r =>
-  -- | Global bearer token paired with the @/internal/xyne/webhook/bearer@ URL.
+  ( Esq.EsqDBReplicaFlow m r,
+    EncFlow m r,
+    BeamFlow m r
+  ) =>
   Text ->
-  -- | Value of the @Authorization@ header.
+  DUI.ServiceHandle m ->
+  Common.Identifier ->
   Maybe Text ->
-  -- | Raw bytes of the request body.
   RawByteString ->
   m APISuccess
-processXyneBearerWebhook bearerToken mbAuthHeader rawBody = do
+processXyneBearerWebhook bearerToken issueHandle identifier mbAuthHeader rawBody = do
   unless (mbAuthHeader == Just ("Bearer " <> bearerToken)) $
     throwError $ AuthBlocked "Invalid Authorization header"
   event <- case A.eitherDecode (getRawByteString rawBody) of
@@ -250,7 +249,34 @@ processXyneBearerWebhook bearerToken mbAuthHeader rawBody = do
   case event.eventType of
     "TICKET_STATUS_UPDATED" ->
       case readMaybe (T.unpack (T.toUpper event.payload.status)) :: Maybe Common.IssueStatus of
-        Just status -> QIR.updateIssueStatus event.payload.ticketId status
+        Just status -> do
+          issueReport <-
+            QIR.findByTicketIdOrAdditional event.payload.ticketId
+              >>= fromMaybeM (IssueReportDoesNotExist event.payload.ticketId)
+          merchantId <-
+            issueReport.merchantId
+              & fromMaybeM (InternalError $ "IssueReport " <> issueReport.id.getId <> " has no merchantId")
+          mocId <-
+            issueReport.merchantOperatingCityId
+              & fromMaybeM (InternalError $ "IssueReport " <> issueReport.id.getId <> " has no merchantOperatingCityId")
+          merchant <-
+            issueHandle.findByMerchantId merchantId
+              >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+          moCity <-
+            issueHandle.findMOCityById mocId
+              >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
+          void $
+            DDI.issueUpdate
+              merchant.shortId
+              moCity.city
+              issueReport.id
+              issueHandle
+              identifier
+              DCI.IssueUpdateByUserReq
+                { status = Just status,
+                  assignee = Nothing,
+                  userId = cast issueReport.personId
+                }
         Nothing -> do
           logError $ "Xyne bearer webhook: unrecognized status=" <> event.payload.status
           throwError (InvalidRequest "XYNE_BEARER_WEBHOOK_INVALID_STATUS")
