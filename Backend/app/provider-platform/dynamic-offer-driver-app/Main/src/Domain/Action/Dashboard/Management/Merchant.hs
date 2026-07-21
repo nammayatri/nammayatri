@@ -418,7 +418,8 @@ getMerchantConfigSpecialLocationList merchantShortId opCity mbLimit mbOffset mbL
   let finalLocationTypes = case mbLocationType of
         Just locationType -> Just [locationType]
         Nothing -> mbLocationTypes
-  QSL.findAllSpecialLocationsWithGeoJSON merchantOpCity.id.getId mbLimit mbOffset finalLocationTypes
+  specialLocations <- QSL.findAllSpecialLocationsWithGeoJSON merchantOpCity.id.getId mbLimit mbOffset finalLocationTypes
+  QSL.enrichSpecialLocationsWithPriority merchant.id.getId specialLocations
 
 postMerchantSchedulerTrigger :: ShortId DM.Merchant -> Context.City -> Common.SchedulerTriggerReq -> Flow APISuccess
 postMerchantSchedulerTrigger merchantShortId opCity req = do
@@ -3394,6 +3395,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             supportNumber = request.supportNumber,
             paymentModes = request.paymentModes <|> (mbExistingSpLoc >>= (.paymentModes)) <|> Just SL.defaultPaymentModes,
             fareSettlementType = request.fareSettlementType,
+            boothSpecificFleet = mbExistingSpLoc >>= (.boothSpecificFleet),
             ..
           }
 

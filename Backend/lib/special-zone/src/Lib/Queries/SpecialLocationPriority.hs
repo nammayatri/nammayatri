@@ -32,5 +32,16 @@ findByMerchantOpCityIdAndCategory merchantOpCityId category = do
       where_ $ specialLocationPriority ^. SpecialLocationPriorityCategory ==. val category
       return specialLocationPriority
 
+findAllByMerchantId ::
+  (Transactionable m, EsqDBReplicaFlow m r) =>
+  Text ->
+  m [SpecialLocationPriorityD.SpecialLocationPriority]
+findAllByMerchantId merchantId = do
+  Esq.runInReplica $
+    Esq.findAll $ do
+      specialLocationPriority <- from $ table @SpecialLocationPriorityT
+      where_ $ specialLocationPriority ^. SpecialLocationPriorityMerchantId ==. val merchantId
+      return specialLocationPriority
+
 create :: SpecialLocationPriorityD.SpecialLocationPriority -> SqlDB ()
 create = Esq.create

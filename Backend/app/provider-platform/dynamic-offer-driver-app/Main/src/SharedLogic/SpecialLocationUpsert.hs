@@ -101,7 +101,8 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     fetchAllGateFareProduct :: Maybe Text,
     enableQueueFilter :: Maybe Text,
     paymentModes :: Maybe Text,
-    fareSettlementType :: Maybe Text
+    fareSettlementType :: Maybe Text,
+    boothSpecificFleet :: Maybe Text
   }
   deriving (Show)
 
@@ -150,6 +151,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
     enableQueueFilter <- optional (r .: "enable_queue_filter")
     paymentModes <- optional (r .: "payment_modes")
     fareSettlementType <- optional (r .: "fare_settlement_type")
+    boothSpecificFleet <- optional (r .: "booth_specific_fleet")
     pure SpecialLocationCSVRow {..}
 
 ---------------------------------------------------------------------
@@ -276,6 +278,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
   let priority :: Maybe Int = readMaybeCSVField idx row.priority "Priority"
       mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
       supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
+      boothSpecificFleet :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.boothSpecificFleet) "Booth Specific Fleet"
       mbRender :: Maybe DSL.RenderType = readMaybeCSVField idx (fromMaybe "" row.render) "Render"
       mbFareSettlementType :: Maybe DSL.FareSettlementType = readMaybeCSVField idx (fromMaybe "" row.fareSettlementType) "Payment Collection Mode"
       mbFetchAllGateFareProduct :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.fetchAllGateFareProduct) "Fetch All Gate Fare Product"
@@ -326,7 +329,8 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             fetchAllGateFareProduct = mbFetchAllGateFareProduct,
             supportNumber = supportNumber,
             paymentModes = resolvedPaymentModes,
-            fareSettlementType = mbFareSettlementType
+            fareSettlementType = mbFareSettlementType,
+            boothSpecificFleet = boothSpecificFleet
           }
       gateInfo =
         DGI.GateInfo
