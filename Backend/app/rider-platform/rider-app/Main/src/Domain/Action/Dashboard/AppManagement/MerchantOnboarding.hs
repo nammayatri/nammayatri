@@ -375,7 +375,7 @@ buildMediaEntry url fileType filePath = do
         status = Just DMF.PENDING,
         fileHash = Nothing,
         createdAt = now,
-        updatedAt = now
+        updatedAt = Just now
       }
 
 merchantOnboardingGetFile :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Environment.Flow Domain.Types.MerchantOnboarding.GetFileResponse)
