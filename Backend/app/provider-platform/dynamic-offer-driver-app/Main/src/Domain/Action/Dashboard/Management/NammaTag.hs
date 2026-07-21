@@ -583,7 +583,7 @@ postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq 
     LYT.DRIVER_CONFIG cfgType -> do
       TDL.deleteConfigHashKey (cast merchantOpCityId) rolloutObj.domain
       invalidateConfigInMem (TC.toCacheConfigType cfgType)
-      logDebug $ "CP Log: Cleared Cache for " <> show cfgType
+      logDebug $ "CP Log: Cleared Cache for " <> show (TC.toCacheConfigType cfgType)
     _ -> pure ()
   pure result
 
