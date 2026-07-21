@@ -38,7 +38,8 @@ import Tools.Error (RoleError (..))
 data CreateRoleReq = CreateRoleReq
   { name :: Text,
     dashboardAccessType :: Maybe DashboardAccessType,
-    description :: Text
+    description :: Text,
+    isBppSyncNeeded :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -90,6 +91,7 @@ buildRole req = do
         dashboardAccessType = fromMaybe DRole.DASHBOARD_USER req.dashboardAccessType,
         description = req.description,
         accessibleRoles = [],
+        isBppSyncNeeded = req.isBppSyncNeeded,
         createdAt = now,
         updatedAt = now
       }

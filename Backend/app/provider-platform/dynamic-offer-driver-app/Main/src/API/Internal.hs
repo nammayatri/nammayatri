@@ -27,6 +27,7 @@ import qualified API.Internal.KnowYourDriver as KnowYourDriver
 import qualified API.Internal.MasterCloudForward as MasterCloudForward
 import qualified API.Internal.Multimodal as Multimodal
 import qualified API.Internal.NotificationWebhook as NotificationWebhook
+import qualified API.Internal.PersonCreate as PersonCreate
 import qualified API.Internal.PickupInstruction as PickupInstruction
 import qualified API.Internal.PopulateTipAmount as PopulateTipAmount
 import qualified API.Internal.ProdLoopStatus as ProdLoopStatus
@@ -88,6 +89,7 @@ type API =
            :<|> SendSMS.API
            :<|> SendEmailOTP.API
            :<|> VerifyEmailUpdate.API
+           :<|> PersonCreate.API
            :<|> InMemManagement.API
            :<|> MasterCloudForward.API
            :<|> XyneWebhook.API
@@ -134,6 +136,7 @@ handler env =
     :<|> SendSMS.handler
     :<|> SendEmailOTP.handler
     :<|> VerifyEmailUpdate.handler
+    :<|> PersonCreate.handler
     :<|> InMemManagement.handler
     :<|> MasterCloudForward.handler env
     :<|> XyneWebhook.handler

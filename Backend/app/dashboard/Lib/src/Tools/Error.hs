@@ -58,6 +58,7 @@ data RoleError
   = RoleNotFound Text
   | RoleDoesNotExist Text
   | RoleNameExists Text
+  | RoleConversionNotAllowed
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''RoleError
@@ -67,16 +68,19 @@ instance IsBaseError RoleError where
     RoleNotFound roleId -> Just $ "Role with roleId \"" <> show roleId <> "\" not found."
     RoleDoesNotExist roleId -> Just $ "No role matches passed data \"" <> show roleId <> "\" not exist."
     RoleNameExists name -> Just $ "Role with name \"" <> show name <> "\" already exists."
+    RoleConversionNotAllowed -> Just "Role conversion is not allowed for BPP-synced roles."
 
 instance IsHTTPError RoleError where
   toErrorCode = \case
     RoleNotFound _ -> "ROLE_NOT_FOUND"
     RoleDoesNotExist _ -> "ROLE_DOES_NOT_EXIST"
     RoleNameExists _ -> "ROLE_NAME_ALREADY_EXISTS"
+    RoleConversionNotAllowed -> "ROLE_CONVERSION_NOT_ALLOWED"
   toHttpCode = \case
     RoleNotFound _ -> E500
     RoleDoesNotExist _ -> E400
     RoleNameExists _ -> E400
+    RoleConversionNotAllowed -> E400
 
 instance IsAPIError RoleError
 

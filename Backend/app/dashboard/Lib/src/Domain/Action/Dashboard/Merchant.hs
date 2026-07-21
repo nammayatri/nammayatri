@@ -15,6 +15,7 @@
 module Domain.Action.Dashboard.Merchant where
 
 import Dashboard.Common
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Person as DPerson
 import Domain.Types.Merchant
@@ -26,6 +27,7 @@ import qualified Domain.Types.Role as DRole
 import qualified Domain.Types.ServerName as DTServer
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Common
@@ -192,7 +194,7 @@ listMerchants _ mbLimit mbOffset mbShortId = do
   pure ListMerchantResp {list = list, summary = Summary {totalCount = 10000, count = length list}}
 
 createUserForMerchant ::
-  (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]], HasFlowEnv m r '["merchantUserAccountNumber" ::: Int], HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]) =>
+  (BeamFlow m r, EncFlow m r, CoreMetrics m, HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["merchantUserAccountNumber" ::: Int], HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]) =>
   TokenInfo ->
   DPerson.CreatePersonReq ->
   m DPerson.CreatePersonRes

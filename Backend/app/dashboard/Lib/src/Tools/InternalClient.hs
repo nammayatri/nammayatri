@@ -24,9 +24,11 @@ module Tools.InternalClient
     VerifyEmailUpdateReq (..),
     callBPPInternalVerifyEmailUpdate,
     callBAPInternalVerifyEmailUpdate,
+    callBPPInternalCreatePerson,
   )
 where
 
+import qualified API.Types.UnifiedDashboard.Management.Person as BPPPerson
 import qualified Data.HashMap.Strict as HM
 import Data.Map.Strict (Map)
 import qualified Domain.Types.ServerName as DSN
@@ -207,3 +209,33 @@ callBAPInternalVerifyEmailUpdate merchantShortId req = do
   dataServer <- maybe (throwError $ InternalError "APP_BACKEND data server not found") pure mbDataServer
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   callApiUnwrappingApiError (identity @Error) Nothing Nothing (Just internalEndPointHashMap) dataServer.url (verifyEmailUpdateClient merchantShortId (Just dataServer.token) req) "callBAPInternalVerifyEmailUpdate" (Proxy :: Proxy Raw)
+
+type CreatePersonAPI =
+  "internal"
+    :> "person"
+    :> "create"
+    :> Capture "merchantShortId" Text
+    :> Capture "city" City.City
+    :> Header "api-key" Text
+    :> ReqBody '[JSON] BPPPerson.CreatePersonReq
+    :> Post '[JSON] BPPPerson.CreatePersonResp
+
+createPersonClient :: Text -> City.City -> Maybe Text -> BPPPerson.CreatePersonReq -> Euler.EulerClient BPPPerson.CreatePersonResp
+createPersonClient = Euler.client (Proxy @CreatePersonAPI)
+
+callBPPInternalCreatePerson ::
+  ( CoreMetrics m,
+    HasFlowEnv m r '["dataServers" ::: [DSN.DataServer]],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  City.City ->
+  BPPPerson.CreatePersonReq ->
+  m BPPPerson.CreatePersonResp
+callBPPInternalCreatePerson merchantShortId city req = do
+  dataServers <- asks (.dataServers)
+  let mbDataServer = find (\s -> s.name == DSN.DRIVER_OFFER_BPP) dataServers
+  dataServer <- maybe (throwError $ InternalError "DRIVER_OFFER_BPP data server not found") pure mbDataServer
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  callApiUnwrappingApiError (identity @Error) Nothing Nothing (Just internalEndPointHashMap) dataServer.url (createPersonClient merchantShortId city (Just dataServer.token) req) "callBPPInternalCreatePerson" (Proxy :: Proxy Raw)
