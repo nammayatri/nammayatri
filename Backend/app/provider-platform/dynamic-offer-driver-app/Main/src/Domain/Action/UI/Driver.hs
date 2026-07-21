@@ -1197,7 +1197,9 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) merchan
       Nothing -> return (False, Nothing, False)
       Just vehicle -> do
         cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing Nothing
-        let (ac, mbTier, supported) = getDriverDefaultServiceTier vehicle driverInfo transporterConfig supportedServiceTiers cityServiceTiers now
+        let (ac, mbTier, supported) = getDriverDefaultSupportedServiceTier vehicle driverInfo transporterConfig supportedServiceTiers cityServiceTiers now
+        fork "backfillSelectedServiceTiers" $
+          backfillSelectedServiceTiers vehicle.selectedServiceTiers vehicle driverInfo transporterConfig person.merchantOperatingCityId
         return (ac, (.serviceTierType) <$> mbTier, supported)
   onRideFlag <-
     if driverInfo.onRide && driverInfo.onboardingVehicleCategory /= Just DVC.BUS

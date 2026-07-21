@@ -397,7 +397,7 @@ rideAssignedCommon booking ride driver veh = do
         now <- getCurrentTime
         let mbBookedCfg = DL.find (\t -> t.serviceTierType == bookedTier) cityTiers
             (_acWorking, mbAssignedCfg, _isVehicleSupported) =
-              SVST.getDriverDefaultServiceTier vehicle driverInfo transporterConfig supportedServiceTiers cityTiers now
+              SVST.getDriverDefaultSupportedServiceTier vehicle driverInfo transporterConfig supportedServiceTiers cityTiers now
             isUpgrade = fromMaybe False $ do
               a <- mbAssignedCfg
               b <- mbBookedCfg
