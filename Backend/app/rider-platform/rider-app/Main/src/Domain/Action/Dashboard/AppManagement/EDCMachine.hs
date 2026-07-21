@@ -1,41 +1,43 @@
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
-module Domain.Action.UI.EDCMachine
-  ( postEdcMachineAssign,
-    getEdcMachineList,
-    putEdcMachineUpdate,
-    deleteEdcMachineDelete,
+module Domain.Action.Dashboard.AppManagement.EDCMachine
+  ( assignEDCMachine,
+    listEDCMachine,
+    updateEDCMachine,
+    deleteEDCMachine,
   )
 where
 
-import qualified API.Types.UI.EDCMachine as API
+import qualified API.Types.Dashboard.AppManagement.EDCMachine as API
 import qualified Domain.Types.EDCMachineMapping as DEDCM
-import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
-import Environment
+import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
+import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
+import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.EDCMachineMapping as QEDCMachineMapping
 import qualified Storage.Queries.EDCMachineMappingExtra as QEDCMachineMappingExtra
-import qualified Storage.Queries.Person as QP
 
--- | Assign an EDC machine to a user.
--- If the user already has an active mapping, deactivate the old one and create a new one.
-postEdcMachineAssign ::
-  ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
-      Id.Id DM.Merchant
-    ) ->
-    API.AssignEDCMachineReq ->
-    Flow API.AssignEDCMachineResp
-  )
-postEdcMachineAssign (mbRequestorId, merchantId) req = do
-  requestorId <- mbRequestorId & fromMaybeM (InvalidRequest "Person not found")
-  person <- QP.findById requestorId >>= fromMaybeM (InvalidRequest "Person not found")
-  let merchantOperatingCityId = person.merchantOperatingCityId
+-- | Assign an EDC machine to a person.
+-- If the person already has an active mapping, or the machine is already assigned,
+-- the old mapping(s) are deactivated before creating the new one.
+assignEDCMachine ::
+  Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  API.AssignEDCMachineReq ->
+  Environment.Flow API.AssignEDCMachineResp
+assignEDCMachine merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let merchantId = merchant.id
+      merchantOperatingCityId = merchantOperatingCity.id
 
   -- Deactivate any existing active mapping for the target person
   QEDCMachineMappingExtra.deactivateExistingMapping req.personId merchantId merchantOperatingCityId
@@ -61,7 +63,7 @@ postEdcMachineAssign (mbRequestorId, merchantId) req = do
             isActive = True,
             createdAt = now,
             updatedAt = now,
-            createdBy = Just requestorId
+            createdBy = Kernel.Prelude.Nothing
           }
   QEDCMachineMapping.create mapping
   pure $
@@ -73,22 +75,20 @@ postEdcMachineAssign (mbRequestorId, merchantId) req = do
         isActive = True
       }
 
--- | List EDC machine mappings with optional filters.
-getEdcMachineList ::
-  ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
-      Id.Id DM.Merchant
-    ) ->
-    Kernel.Prelude.Maybe (Id.Id DP.Person) ->
-    Kernel.Prelude.Maybe Bool ->
-    Flow API.EDCMachineMappingListResp
-  )
-getEdcMachineList (mbRequestorId, merchantId) mbPersonId mbIsActive = do
-  requestorId <- mbRequestorId & fromMaybeM (InvalidRequest "Person not found")
-  person <- QP.findById requestorId >>= fromMaybeM (InvalidRequest "Person not found")
-  let merchantOperatingCityId = person.merchantOperatingCityId
-  mappings <- QEDCMachineMappingExtra.findAllByMerchantAndCityWithFilters merchantId merchantOperatingCityId mbPersonId mbIsActive
-  let items = map mkListItem mappings
-  pure $ API.EDCMachineMappingListResp {mappings = items}
+-- | List EDC machine mappings scoped to the merchant/city with optional filters.
+listEDCMachine ::
+  Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Maybe Bool ->
+  Kernel.Prelude.Maybe (Id.Id DP.Person) ->
+  Environment.Flow API.EDCMachineMappingListResp
+listEDCMachine merchantShortId opCity mbIsActive mbPersonId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  mappings <- QEDCMachineMappingExtra.findAllByMerchantAndCityWithFilters merchant.id merchantOperatingCity.id mbPersonId mbIsActive
+  pure $ API.EDCMachineMappingListResp {mappings = map mkListItem mappings}
   where
     mkListItem mapping =
       API.EDCMachineMappingListItem
@@ -101,16 +101,13 @@ getEdcMachineList (mbRequestorId, merchantId) mbPersonId mbIsActive = do
         }
 
 -- | Update an EDC machine mapping.
-putEdcMachineUpdate ::
-  ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
-      Id.Id DM.Merchant
-    ) ->
-    Id.Id DEDCM.EDCMachineMapping ->
-    API.UpdateEDCMachineReq ->
-    Flow APISuccess.APISuccess
-  )
-putEdcMachineUpdate (mbRequestorId, _merchantId) mappingId req = do
-  _requestorId <- mbRequestorId & fromMaybeM (InvalidRequest "Person not found")
+updateEDCMachine ::
+  Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Id.Id DEDCM.EDCMachineMapping ->
+  API.UpdateEDCMachineReq ->
+  Environment.Flow APISuccess.APISuccess
+updateEDCMachine _merchantShortId _opCity mappingId req = do
   mapping <- QEDCMachineMapping.findById mappingId >>= fromMaybeM (InvalidRequest "EDC machine mapping not found")
   now <- getCurrentTime
   let newTerminalId = fromMaybe mapping.terminalId req.paytmTid
@@ -135,15 +132,12 @@ putEdcMachineUpdate (mbRequestorId, _merchantId) mappingId req = do
   pure APISuccess.Success
 
 -- | Soft-delete an EDC machine mapping (set isActive = false).
-deleteEdcMachineDelete ::
-  ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
-      Id.Id DM.Merchant
-    ) ->
-    Id.Id DEDCM.EDCMachineMapping ->
-    Flow APISuccess.APISuccess
-  )
-deleteEdcMachineDelete (mbRequestorId, _merchantId) mappingId = do
-  _requestorId <- mbRequestorId & fromMaybeM (InvalidRequest "Person not found")
+deleteEDCMachine ::
+  Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Id.Id DEDCM.EDCMachineMapping ->
+  Environment.Flow APISuccess.APISuccess
+deleteEDCMachine _merchantShortId _opCity mappingId = do
   mapping <- QEDCMachineMapping.findById mappingId >>= fromMaybeM (InvalidRequest "EDC machine mapping not found")
   now <- getCurrentTime
   let deactivatedMapping = mapping {DEDCM.isActive = False, DEDCM.updatedAt = now}
