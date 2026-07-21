@@ -33,7 +33,7 @@ postXyneWebhook mbSig rawBody = do
 postXyneBearerWebhook :: Maybe Text -> RawByteString -> Flow APISuccess
 postXyneBearerWebhook mbAuth rawBody = do
   bearerToken <- asks (.xyneWebhookBearerToken)
-  XyneShared.processXyneBearerWebhook bearerToken mbAuth rawBody
+  XyneShared.processXyneBearerWebhook bearerToken AUI.driverIssueHandle Common.DRIVER mbAuth rawBody
 
 lookupXyneCfg ::
   KId.Id Common.Merchant ->
