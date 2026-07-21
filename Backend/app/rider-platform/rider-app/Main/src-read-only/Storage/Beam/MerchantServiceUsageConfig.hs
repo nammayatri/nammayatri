@@ -3,6 +3,7 @@
 
 module Storage.Beam.MerchantServiceUsageConfig where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.UtilsTH
@@ -38,6 +39,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     deleteCard :: B.C f Kernel.External.Payment.Types.PaymentService,
     enableDashboardSms :: B.C f Kernel.Prelude.Bool,
+    eventTrackingOverrides :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     eventTrackingProviders :: B.C f (Kernel.Prelude.Maybe [Kernel.External.EventTracking.EventTrackingService]),
     getCardList :: B.C f Kernel.External.Payment.Types.PaymentService,
     getDistances :: B.C f Kernel.External.Maps.Types.MapsService,
