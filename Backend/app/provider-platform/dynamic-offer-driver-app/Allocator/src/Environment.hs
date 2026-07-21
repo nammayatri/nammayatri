@@ -99,6 +99,7 @@ data HandlerEnv = HandlerEnv
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
     maxShards :: Int,
     maxNotificationShards :: Int,
+    gateNotifiedKeyShards :: Int,
     smsCfg :: SmsConfig,
     version :: DeploymentVersion,
     eventStreamMap :: [EventStreamMap],
