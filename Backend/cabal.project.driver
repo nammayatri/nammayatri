@@ -1,0 +1,37 @@
+-- Driver (BPP) scoped project. Used by cabal-prod-hot-fix-push.yaml on prodHotPush-BPP.
+-- Excludes rider-app and everything coupled to it: rider-dashboard, provider-dashboard,
+-- lib-dashboard, kafka-consumers, producer (these depend on rider-app and must build on the
+-- Common/International full branches, not here). See cabal.project for the full package set.
+
+packages:
+  app/provider-platform/dynamic-offer-driver-drainer
+  app/provider-platform/dynamic-offer-driver-app/Main
+  app/provider-platform/dynamic-offer-driver-app/Allocator
+  app/special-zone
+  app/sdk-event-pipeline
+  app/dashboard/CommonAPIs
+  app/alchemist
+  lib/passetto-lib
+  lib/beckn-spec
+  lib/beckn-services
+  lib/payment
+  lib/shared-services
+  lib/gtfs-data-server
+  lib/location-updates
+  lib/special-zone
+  lib/scheduler
+  lib/sessionizer-metrics
+  lib/yudhishthira
+  lib/finance-kernel
+  lib/utils
+  lib/external
+  lib/webhook
+  lib/dashcam
+  lib/behavior-tracker
+  lib/consequence-engine
+  lib/communication-engine
+  lib/behavior-engine
+
+jobs: 6
+
+flags: +Local
