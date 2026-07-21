@@ -171,13 +171,12 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 COLLECTIONS_DIR = SCRIPT_DIR.parent.parent / "integration-tests" / "collections"
 PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent  # nammayatri/
 
-# Per-user resolved port overlay (written by Backend/nix/services/resolve-ports.sh).
-# When absent — first run, or fresh clone — we fall back to the base ports.nix
-# so /api/ports always returns *some* answer.
-PORTS_RESOLVED_PATH = PROJECT_ROOT / "data" / "ports-resolved.nix"
+# Resolved ports from the devbox registry slice (.users[DEVBOX_KEY].ports, set
+# by the run-mobility-stack-dev preflight); fall back to base ports.nix if absent.
+DEVBOX_REGISTRY_FILE = os.environ.get("DEVBOX_REGISTRY_FILE", "/tmp/devbox-registry.json")
 PORTS_BASE_PATH = PROJECT_ROOT / "Backend" / "nix" / "services" / "ports.nix"
 
-# Compiled once. Matches lines like `  rider-app = 8013;` in either file.
+# Compiled once. Matches lines like `  rider-app = 8013;` in ports.nix.
 _PORTS_LINE_RE = re.compile(r"^\s*([a-zA-Z][a-zA-Z0-9_-]*)\s*=\s*(\d+)\s*;")
 
 
@@ -218,12 +217,25 @@ def _materialize_env_for_newman(src_path: Path) -> Path:
     return out
 
 
-def _read_ports_table():
-    """Return { 'service-name': 1234, ... } parsed from data/ports-resolved.nix
-    if present, otherwise from Backend/nix/services/ports.nix. Same line format
-    in both files, so one regex parser suffices. Used by the dashboard for
-    runtime port discovery — see GET /api/ports."""
-    path = PORTS_RESOLVED_PATH if PORTS_RESOLVED_PATH.exists() else PORTS_BASE_PATH
+def _read_ports_from_registry():
+    """{ 'service-name': port, ... } from this checkout's devbox-registry slice,
+    or None if the registry / key / entry isn't available."""
+    key = os.environ.get("DEVBOX_KEY", "")
+    if not key:
+        return None
+    try:
+        with open(DEVBOX_REGISTRY_FILE) as f:
+            reg = json.load(f)
+        ports = (reg.get("users", {}).get(key) or {}).get("ports")
+        if isinstance(ports, dict) and ports:
+            return {k: int(v) for k, v in ports.items()}
+    except (OSError, ValueError, TypeError):
+        pass
+    return None
+
+
+def _read_ports_from_nix(path):
+    """{ 'service-name': port, ... } parsed from a ports.nix-format file."""
     out = {}
     try:
         for line in path.read_text().splitlines():
@@ -232,17 +244,32 @@ def _read_ports_table():
                 out[m.group(1)] = int(m.group(2))
     except OSError:
         pass
-    return {"source": str(path.relative_to(PROJECT_ROOT)) if path.is_relative_to(PROJECT_ROOT) else str(path),
-            "ports": out}
+    return out
+
+
+def _read_ports_table():
+    """Return { 'source': ..., 'ports': { 'service-name': 1234, ... } }.
+
+    Prefers this checkout's devbox-registry.json slice (the DYNAMICALLY resolved
+    ports — same source nammayatri.nix reads), falling back to the base
+    Backend/nix/services/ports.nix. Used by the dashboard for runtime port
+    discovery — see GET /api/ports — and by _svc_port()."""
+    reg_ports = _read_ports_from_registry()
+    if reg_ports:
+        return {"source": f"{DEVBOX_REGISTRY_FILE}[{os.environ.get('DEVBOX_KEY', '')}]",
+                "ports": reg_ports}
+    src = (str(PORTS_BASE_PATH.relative_to(PROJECT_ROOT))
+           if PORTS_BASE_PATH.is_relative_to(PROJECT_ROOT) else str(PORTS_BASE_PATH))
+    return {"source": src, "ports": _read_ports_from_nix(PORTS_BASE_PATH)}
 
 
 def _svc_port(name, default):
     """Resolved port for a service by its ports.nix name, with a fallback.
 
-    The stack resolves each dev's ports DYNAMICALLY into data/ports-resolved.nix
-    (e.g. rider-app 8013 -> 9013). Anything that talks to a backend service must
-    read the resolved value, not the canonical base port — otherwise it connects
-    to a port nothing is listening on (the cause of the endless
+    The stack resolves each dev's ports DYNAMICALLY (e.g. rider-app 8013 -> 9013)
+    and records them in devbox-registry.json. Anything that talks to a backend
+    service must read the resolved value, not the canonical base port — otherwise
+    it connects to a port nothing is listening on (the cause of the endless
     '[startup] waiting for: rider-app:8013 Connection refused' loop)."""
     try:
         return _read_ports_table().get("ports", {}).get(name, default)
@@ -276,8 +303,8 @@ SERVICE_LOGS = {
 }
 MAX_LOG_DELTA_BYTES = 64 * 1024  # 64KB per service
 
-# Use the DYNAMICALLY-resolved ports (data/ports-resolved.nix), falling back to
-# the canonical base ports only if the resolved table is unavailable.
+# Use the DYNAMICALLY-resolved ports (devbox-registry.json slice), falling back
+# to the canonical base ports only if the resolved table is unavailable.
 RIDER_URL = os.environ.get("RIDER_URL") or f"http://localhost:{_svc_port('rider-app', 8013)}"
 DRIVER_URL = os.environ.get("DRIVER_URL") or f"http://localhost:{_svc_port('dynamic-offer-driver-app', 8016)}"
 
@@ -1643,7 +1670,7 @@ def run_startup_local_testing_data():
 
 DB_CONFIG = {
     "host": os.environ.get("DB_HOST", "localhost"),
-    "port": int(os.environ.get("DB_PORT", "5434")),
+    "port": int(os.environ["DB_PORT"]) if os.environ.get("DB_PORT") else _svc_port("db-primary", 5434),
     "dbname": os.environ.get("DB_NAME", "atlas_dev"),
     "user": os.environ.get("DB_USER", os.environ.get("USER", "atlas")),
     "password": os.environ.get("DB_PASS", ""),

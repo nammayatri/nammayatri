@@ -780,6 +780,7 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
             isApiCallSuccess = Nothing,
             idAssignedByServiceProvider = Nothing,
             initiatedBy = Nothing,
+            referenceType = Nothing, -- Juspay does not report a reference type
             completedAt = Nothing,
             actualRefundedAmount = Just amount,
             createdAt = now,

@@ -29,3 +29,9 @@ ALTER TABLE atlas_app.gate_info ADD COLUMN special_location_id character varying
 ALTER TABLE atlas_app.gate_info ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.gate_info ADD COLUMN walk_description text ;
 ALTER TABLE atlas_app.gate_info ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.gate_info ADD COLUMN navigation_instructions_json text ;

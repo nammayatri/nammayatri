@@ -25,6 +25,7 @@ module Domain.Action.Beckn.OnSearch
     InterCityQuoteDetails (..),
     MeterRideQuoteDetails (..),
     RentalQuoteDetails (..),
+    EasyBookingQuoteDetails (..),
     QuoteBreakupInfo (..),
     EstimateBreakupInfo (..),
     BreakupPriceInfo (..),
@@ -179,7 +180,8 @@ data EstimateInfo = EstimateInfo
     -- petCharges :: Maybe Price,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
-    area :: Maybe Text
+    area :: Maybe Text,
+    navigationInstruction :: Maybe Text
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -251,7 +253,8 @@ data QuoteInfo = QuoteInfo
     -- petCharges :: Maybe Price,
     vehicleCategory :: Enums.VehicleCategory,
     vehicleIconUrl :: Maybe BaseUrl,
-    area :: Maybe Text
+    area :: Maybe Text,
+    navigationInstruction :: Maybe Text
   }
 
 data QuoteDetails
@@ -260,6 +263,7 @@ data QuoteDetails
   | RentalDetails RentalQuoteDetails
   | OneWaySpecialZoneDetails OneWaySpecialZoneQuoteDetails
   | MeterRideDetails MeterRideQuoteDetails
+  | EasyBookingDetails EasyBookingQuoteDetails
 
 data MeterRideQuoteDetails = MeterRideQuoteDetails
   { quoteId :: Text
@@ -299,6 +303,21 @@ data RentalQuoteDetails = RentalQuoteDetails
     perExtraKmRate :: Price,
     deadKmFare :: Price,
     nightShiftInfo :: Maybe NightShiftInfo
+  }
+
+-- Minimal, matching OneWayQuoteDetails/MeterRideQuoteDetails's pattern: just the quote id.
+-- FIX: an earlier "fuller" version carried baseFare/baseDistance/perExtraKmRate fields that
+-- required the driver-app to populate Rental-package-style item tags (perHourCharge,
+-- includedDistancePerHr, etc.) via getPerHourCharge/getIncludedKmPerHr/etc. Those tags are
+-- only ever set for real Rental (package fare) quotes, never for EasyBooking's Progressive
+-- fare policy, so buildRentalQuoteInfo's Maybe-chain always failed, and the rider-app's
+-- /on_search handler rejected every EasyBooking callback with "Missing rental quote details"
+-- (verified in logs: HTTP 400 on-search from driver-app, empty quotes on rider-app searches).
+-- The actual fare total/breakup is already carried generically via quoteBreakupList/
+-- estimatedFare on the Quote itself (same mechanism OneWay's static-offer quotes use), so no
+-- per-category preview fields are needed here at all.
+newtype EasyBookingQuoteDetails = EasyBookingQuoteDetails
+  { quoteId :: Text
   }
 
 validateRequest :: DOnSearchReq -> DSearchReq.SearchRequest -> Flow ValidatedOnSearchReq
@@ -408,6 +427,9 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
         DRPO.OneWay -> filter (\quote -> isNotRental quote && isNotBlackListed blackListedVehicles quote.vehicleCategory && not (quote.vehicleVariant `elem` ambulanceVariants)) _quotesInfo
         DRPO.Ambulance -> filter (\qInfo -> qInfo.vehicleVariant `elem` ambulanceVariants) _quotesInfo
         DRPO.Delivery -> []
+        -- Same result as the catch-all below (isNotRental is True for EasyBookingDetails
+        -- quotes) — added explicitly for clarity/symmetry with the other categories here.
+        DRPO.EasyBooking -> filter isNotRental _quotesInfo
         _ -> filter isNotRental _quotesInfo
 
     filterEstimtesByPrefference :: [EstimateInfo] -> [Enums.VehicleCategory] -> Maybe NyRegularSubscription.NyRegularSubscription -> [EstimateInfo]
@@ -422,6 +444,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
         DRPO.InterCity -> filter (\eInfo -> not (eInfo.vehicleVariant `elem` ambulanceVariants || isDeliveryEstimate eInfo) && (isNotBlackListed blackListedVehicles eInfo.vehicleCategory)) _estimateInfo
         DRPO.Ambulance -> filter (\eInfo -> eInfo.vehicleVariant `elem` ambulanceVariants) _estimateInfo
         DRPO.Delivery -> filter isDeliveryEstimate _estimateInfo
+        DRPO.EasyBooking -> [] -- QuoteBased, never produces estimates
         _ -> []
 
     parseMetaDataFromSubs mbMetaData =
@@ -586,6 +609,10 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
       DQuote.InterCityDetails <$> buildInterCityQuoteDetails searchRequest.distanceUnit searchRequest.roundTrip details
     MeterRideDetails details -> do
       DQuote.MeterRideDetails <$> buildMeterRideQuoteDetails details
+    -- Parses the wire-level EasyBookingQuoteDetails from on_search into the domain
+    -- QuoteDetails, reusing the Rental builder shape (see buildEasyBookingDetails below).
+    EasyBookingDetails details -> do
+      DQuote.EasyBookingDetails <$> buildEasyBookingDetails searchRequest.distanceUnit details
   pure
     DQuote.Quote
       { id = uid,
@@ -666,6 +693,28 @@ buildRentalDetails distanceUnit RentalQuoteDetails {..} = do
         nightShiftInfo = nightShiftinfo',
         includedDistancePerHr = convertMetersToDistance distanceUnit . kilometersToMeters $ includedDistancePerHr,
         ..
+      }
+
+-- Reuses the RentalDetails domain shape (same table, no new module/migration needed) since
+-- EasyBooking's "details" record is conceptually the same kind of thing (a quote-detail
+-- rate-card breakdown). All the Rental-package-specific fields are zeroed out here — the
+-- actual EasyBooking price is carried generically via the Quote's own quoteBreakupList/
+-- estimatedFare (same mechanism OneWay's static-offer quotes already rely on), not via any
+-- per-category preview field, so there is nothing real to populate them with at this layer.
+buildEasyBookingDetails :: MonadFlow m => DistanceUnit -> EasyBookingQuoteDetails -> m DRentalDetails.RentalDetails
+buildEasyBookingDetails distanceUnit EasyBookingQuoteDetails {..} = do
+  let easyBookingId = Id quoteId
+  pure
+    DRentalDetails.RentalDetails
+      { id = easyBookingId,
+        nightShiftInfo = Nothing,
+        includedDistancePerHr = convertMetersToDistance distanceUnit (Meters 0),
+        baseFare = mkPrice Nothing 0,
+        perExtraKmRate = mkPrice Nothing 0,
+        perHourCharge = mkPrice Nothing 0,
+        perExtraMinRate = mkPrice Nothing 0,
+        plannedPerKmRate = mkPrice Nothing 0,
+        deadKmFare = mkPrice Nothing 0
       }
 
 buildEstimateBreakUp ::

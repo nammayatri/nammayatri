@@ -20,8 +20,8 @@ AppDynamicLogicElement:
     patchedElement: Maybe Data.Aeson.Value
 
   constraints:
-    domain: PrimaryKey
-    version: PrimaryKey
+    domain: "PrimaryKey | CompositeSecondaryKey DomainVersion | SecondaryKey"
+    version: "PrimaryKey | CompositeSecondaryKey DomainVersion"
     order: PrimaryKey
 
   queries:
@@ -77,10 +77,11 @@ AppDynamicLogicRollout:
     isBaseVersion: Maybe Bool
 
   constraints:
-    merchantOperatingCityId: PrimaryKey
-    domain: PrimaryKey
+    merchantOperatingCityId: "PrimaryKey | CompositeSecondaryKey MerchantOpCityDomain"
+    domain: "PrimaryKey | CompositeSecondaryKey MerchantOpCityDomain"
     timeBounds: PrimaryKey
     version: PrimaryKey
+
 
   queries:
     findRunningByMerchantOpCityAndDomain:
@@ -92,7 +93,7 @@ AppDynamicLogicRollout:
           - or:
               - experimentStatus: "(Just Lib.Yudhishthira.Types.RUNNING)|CIM"
               - experimentStatus: "Nothing|CIM"
-              - isBaseVersion: "Just True|CIM"
+              - isBaseVersion: "(Just True)|CIM"
     findByMerchantOpCityAndDomain:
       kvFunction: findAllWithKV
       where:

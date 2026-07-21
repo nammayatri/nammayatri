@@ -43,7 +43,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.External.LocationTrackingService.Types
-import SharedLogic.VehicleServiceTier (fetchVehicleTierForDriverWithUsageRestriction)
+import SharedLogic.VehicleServiceTier (ServiceTierFilterMode (..), fetchVehicleTierForDriverWithUsageRestriction)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.Queries.DriverInformation as QDriverInformation
@@ -112,7 +112,7 @@ dispatchConsequence ctx driverId = \case
       "AC_USAGE" -> do
         QDriverInformation.updateAcUsageRestrictionAndScore DI.ToggleNotAllowed (Just 0.0) (cast driverId)
         logInfo $ "AC usage restricted for driver " <> driverId.getId
-        serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction True Nothing Nothing Nothing Nothing (cast driverId) ctx.merchantOperatingCityId
+        serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction SelectedServiceTiers Nothing Nothing Nothing Nothing (cast driverId) ctx.merchantOperatingCityId
         let newTiers = (.serviceTierType) . fst <$> filter (not . snd) serviceTiers
         QVehicle.updateSelectedServiceTiers newTiers (cast driverId)
       other -> logWarning $ "Unknown feature for FeatureBlock: " <> other

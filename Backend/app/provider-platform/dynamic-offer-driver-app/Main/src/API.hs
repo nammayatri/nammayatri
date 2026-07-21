@@ -16,6 +16,7 @@ module API where
 
 import qualified API.Beckn as Beckn
 import qualified API.Dashboard as Dashboard
+import qualified API.FleetEngineToken as FleetEngineToken
 import qualified API.IGM as IGM
 import qualified API.Internal as Internal
 import qualified API.Internal.SyncSearch as InternalSyncSearch
@@ -63,6 +64,7 @@ type DriverOfferAPI =
 type MainAPI =
   UI.API
     -- :<|> Beckn.API -- TODO : Revert after 2.x release
+    :<|> FleetEngineToken.API
     :<|> Idfy.IdfyWebhookAPI
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> Idfy.IdfyWebhookAPI
@@ -119,6 +121,7 @@ mainServer :: AppEnv -> FlowServer MainAPI
 mainServer env =
   UI.handler
     -- :<|> Beckn.handler -- TODO : Revert after 2.x release
+    :<|> FleetEngineToken.handler
     :<|> oldIdfyWebhookHandler
     :<|> idfyWebhookHandler
     :<|> idfyWebhookV2Handler

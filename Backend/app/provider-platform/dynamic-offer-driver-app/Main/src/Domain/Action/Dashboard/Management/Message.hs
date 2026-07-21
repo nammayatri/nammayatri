@@ -82,7 +82,7 @@ createMediaEntry Common.AddLinkAsMedia {..} = do
             status = Just Domain.COMPLETED,
             fileHash = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = Just now
           }
 
 postMessageUploadFile :: ShortId DM.Merchant -> Context.City -> Common.UploadFileRequest -> Flow Common.UploadFileResponse
@@ -107,7 +107,7 @@ postMessageUploadFile merchantShortId opCity Common.UploadFileRequest {..} = do
             status = Just Domain.PENDING,
             fileHash = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = Just now
           }
   MFQuery.create fileEntity
   fork "S3 put file" $

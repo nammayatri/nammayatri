@@ -567,13 +567,15 @@ buildRefundRequestRow ctx evidenceS3Path code description requestedAmount refund
       }
 
 -- | Build per-component refund splits from the row's approved components, each split into fare + VAT
---   by the ride's breakup ratio. Returns the ride-fare total (the BPP commission-slice denominator).
---   Throws if the ride has no structured fare breakup, or if approved components are absent (approve always sets them).
+--   by the ride's breakup ratio. Also returns the ride-fare and cancellation-fee component totals,
+--   the BPP's commission-slice denominators. Throws if the ride has no structured fare breakup, or
+--   if approved components are absent (approve always sets them).
 computeRefundSplits ::
   Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
   DRefundRequest.RefundRequest ->
   FinanceCtx ->
-  Environment.Flow (Kernel.Types.Common.HighPrecMoney, [RidePaymentFinance.RefundComponentSplit])
+  -- (ride-fare component total, cancellation-fee component total, per-component splits)
+  Environment.Flow (Kernel.Types.Common.HighPrecMoney, Kernel.Types.Common.HighPrecMoney, [RidePaymentFinance.RefundComponentSplit])
 computeRefundSplits rideId refundRequest ctx = do
   mbOfferEntity <- QOfferEntity.findByEntityIdAndEntityType rideId.getId DOfferEntity.RIDE
   let discount = maybe 0 (.discountAmount) mbOfferEntity
@@ -585,7 +587,7 @@ computeRefundSplits rideId refundRequest ctx = do
   mbLi <- SPayment.buildLedgerInfoFromBreakups fareBreakups discount 0 0 0 ctx
   li <- mbLi & fromMaybeM (InvalidRequest $ "Refund requires a structured fare breakup; ride " <> rideId.getId <> " has none")
   case refundRequest.approvedRefundedComponents of
-    Just comps@(_ : _) -> pure (li.rideFare, map (splitComponent li) comps)
+    Just comps@(_ : _) -> pure (li.rideFare, li.cancellationCharge + li.cancellationTax, map (splitComponent li) comps)
     _ -> throwError (InternalError $ "Refund splits require approved components; refundRequest for ride " <> rideId.getId <> " has none")
   where
     splitComponent li comp =
@@ -593,6 +595,7 @@ computeRefundSplits rideId refundRequest ctx = do
             Domain.Types.FareBreakup.RIDE_FARE -> (li.rideFare, li.gstAmount)
             Domain.Types.FareBreakup.TOLL -> (li.tollFare, li.tollVatAmount)
             Domain.Types.FareBreakup.PARKING -> (li.parkingCharge, li.parkingChargeVat)
+            Domain.Types.FareBreakup.CANCELLATION_FEE -> (li.cancellationCharge, li.cancellationTax)
           tot = fareTot + vatTot
           fareAmt = if tot > 0 then comp.amount * fareTot / tot else comp.amount
        in RidePaymentFinance.RefundComponentSplit comp.component fareAmt (comp.amount - fareAmt)
@@ -708,9 +711,10 @@ getFareBreakupForRide rideId booking = do
                 catMaybes
                   [ mkComp Domain.Types.FareBreakup.RIDE_FARE li.rideFare li.gstAmount,
                     mkComp Domain.Types.FareBreakup.TOLL li.tollFare li.tollVatAmount,
-                    mkComp Domain.Types.FareBreakup.PARKING li.parkingCharge li.parkingChargeVat
+                    mkComp Domain.Types.FareBreakup.PARKING li.parkingCharge li.parkingChargeVat,
+                    mkComp Domain.Types.FareBreakup.CANCELLATION_FEE li.cancellationCharge li.cancellationTax
                   ],
-            totalAmount = toPrice (li.rideFare + li.gstAmount + li.tollFare + li.tollVatAmount + li.parkingCharge + li.parkingChargeVat)
+            totalAmount = toPrice (li.rideFare + li.gstAmount + li.tollFare + li.tollVatAmount + li.parkingCharge + li.parkingChargeVat + li.cancellationCharge + li.cancellationTax)
           }
 
 mkRefundRequestResp ::
@@ -878,6 +882,7 @@ validateRefundComponents rideId booking comps = do
       Domain.Types.FareBreakup.RIDE_FARE -> li.rideFare + li.gstAmount
       Domain.Types.FareBreakup.TOLL -> li.tollFare + li.tollVatAmount
       Domain.Types.FareBreakup.PARKING -> li.parkingCharge + li.parkingChargeVat
+      Domain.Types.FareBreakup.CANCELLATION_FEE -> li.cancellationCharge + li.cancellationTax
 
 castRefundRequestStatus :: TPayment.RefundStatus -> DRefundRequest.RefundRequestStatus
 castRefundRequestStatus = \case
@@ -907,7 +912,7 @@ processRefundRaised refundRequest = do
           Nothing
           Nothing
           (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
-  (rideFareTotal, splits) <- computeRefundSplits rideId refundRequest ctx
+  (rideFareTotal, cancellationTotal, splits) <- computeRefundSplits rideId refundRequest ctx
   RidePaymentFinance.createRefundRaisedLedger ctx refundRequest.id splits >>= \case
     Left err -> throwError $ InternalError $ "Failed to write refund raise ledger for refund request " <> refundRequest.id.getId <> ": " <> show err
     Right _ -> pure ()
@@ -919,7 +924,8 @@ processRefundRaised refundRequest = do
         deductFromDriver = refundRequest.deductFromDriver,
         refundRequestStatus = CallBPPInternal.APPROVED,
         refundComponents = Just (mkRefundLedgerComponents splits),
-        rideFareComponentTotal = Just rideFareTotal
+        rideFareComponentTotal = Just rideFareTotal,
+        cancellationComponentTotal = Just cancellationTotal
       }
 
 -- | Side-effects for the APPROVED→REFUNDED transition. Dispatched by processRefundResult
@@ -948,7 +954,7 @@ processRefundSucceeded refundRequest = do
           (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
   void $ RidePaymentFinance.createRefundSucceededLedger refundRequest.id
   unless alreadyRecorded $ do
-    (rideFareTotal, splits) <- computeRefundSplits rideId refundRequest ctx
+    (rideFareTotal, cancellationTotal, splits) <- computeRefundSplits rideId refundRequest ctx
     RidePaymentFinance.createRefundInvoice rideId.getId refundRequest.id.getId splits
     merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
     CallBPPInternal.refundLedger merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId $
@@ -958,7 +964,8 @@ processRefundSucceeded refundRequest = do
           deductFromDriver = refundRequest.deductFromDriver,
           refundRequestStatus = CallBPPInternal.REFUNDED,
           refundComponents = Just (mkRefundLedgerComponents splits), -- BPP builds its per-component refund + negative Commission invoices from these
-          rideFareComponentTotal = Just rideFareTotal
+          rideFareComponentTotal = Just rideFareTotal,
+          cancellationComponentTotal = Just cancellationTotal
         }
 
 -- | APPROVED→FAILED: void the pending refund legs on both BAP and BPP (no invoice — none until
@@ -978,7 +985,8 @@ processRefundFailed refundRequest = do
         deductFromDriver = refundRequest.deductFromDriver,
         refundRequestStatus = CallBPPInternal.FAILED,
         refundComponents = Nothing,
-        rideFareComponentTotal = Nothing
+        rideFareComponentTotal = Nothing,
+        cancellationComponentTotal = Nothing
       }
 
 -- | Apply an async Stripe result to an APPROVED refund_request: update status + notify, then

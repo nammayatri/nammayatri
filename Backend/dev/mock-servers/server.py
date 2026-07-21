@@ -1101,6 +1101,11 @@ class MockHandler(BaseHTTPRequestHandler):
             "RideFareRefund", "RideFareRefundVAT", "TollRefund", "TollRefundVAT",
             "ParkingRefund", "ParkingRefundVAT", "RideFareRefundCommission",
             "RideFareRefundCommissionVAT",
+            # cancellation-fee refund legs (cancellation commission feature): BAP + BPP driver legs,
+            # the BPP commission-clawback slice, and the overdue-benefit give-back pair.
+            "CancellationFeeRefund", "CancellationFeeRefundVAT",
+            "CancellationRefundCommission", "CancellationRefundCommissionVAT",
+            "CancellationOverdueBenefitRefund", "CancellationOverdueBenefitRefundTax",
         )
         if refunds_only:
             deletes = [
@@ -1126,6 +1131,20 @@ class MockHandler(BaseHTTPRequestHandler):
             try:
                 conn.autocommit = True
                 cur = conn.cursor()
+                # The BPP negative Commission (refund) invoices are keyed by
+                # reference_id = refund_request.id (RefundLedger.createCommissionRefundInvoice),
+                # so neither the ride- nor the booking-scoped deletes above catch them. Resolve
+                # this order's refund_request ids BEFORE the refund_request delete runs, and
+                # drop the Commission invoices that reference them (both scopes — leaked rows
+                # skew the AggregatedCommission netting for the driver on re-runs).
+                cur.execute(
+                    psql.SQL("SELECT id FROM {s}.{t} WHERE order_id = %s").format(
+                        s=psql.Identifier("atlas_app"), t=psql.Identifier("refund_request")),
+                    (order_id,))
+                rr_ids = tuple(r[0] for r in cur.fetchall())
+                if rr_ids:
+                    deletes.append(("atlas_driver_offer_bpp", "finance_invoice",
+                                    [("reference_id", "IN", rr_ids), ("invoice_type", "=", "Commission")]))
                 for schema, table, conditions in deletes:
                     where_parts, where_vals = [], []
                     for col, op, val in conditions:

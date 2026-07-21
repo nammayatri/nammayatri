@@ -97,6 +97,8 @@ module SharedLogic.Finance.RidePayment
     ridePaymentRefTollRefundVAT,
     ridePaymentRefParkingRefund,
     ridePaymentRefParkingRefundVAT,
+    ridePaymentRefCancellationFeeRefund,
+    ridePaymentRefCancellationFeeRefundVAT,
 
     -- * Settlement reason constants
     settledReasonRidePayment,
@@ -247,6 +249,14 @@ ridePaymentRefParkingRefund = "ParkingRefund"
 
 ridePaymentRefParkingRefundVAT :: Text
 ridePaymentRefParkingRefundVAT = "ParkingRefundVAT"
+
+-- Refund of a cancellation fee. Distinct from the charge-side 'CancellationFee' /
+-- 'CancellationGST' — those record the fee, these record giving it back.
+ridePaymentRefCancellationFeeRefund :: Text
+ridePaymentRefCancellationFeeRefund = "CancellationFeeRefund"
+
+ridePaymentRefCancellationFeeRefundVAT :: Text
+ridePaymentRefCancellationFeeRefundVAT = "CancellationFeeRefundVAT"
 
 -- ---------------------------------------------------------------------------
 -- Settlement reason constants
@@ -418,6 +428,9 @@ mkDeductionLineItem desc descType amt isExt
 data UpsertCoreLedgerResult = UpsertCoreLedgerResult
   { coreEntryIds :: [Id LE.LedgerEntry],
     invoiceId :: Maybe (Id FInvoice.Invoice),
+    -- | PENDING cancellation-fee entries (a due carried into this ride's fare). Outside
+    --   'coreRidePaymentRefTypes', so callers that settle an explicit id list must include these.
+    cancellationEntryIds :: [Id LE.LedgerEntry],
     -- | Whether a fresh 'createRidePaymentLedger' was issued on this call.
     didCreate :: Bool,
     -- | Whether stale PENDING core entries were voided (amount-change recreate).
@@ -448,8 +461,8 @@ upsertCoreRidePaymentLedger ::
   HighPrecMoney -> -- offerDiscountAmount
   HighPrecMoney -> -- cashbackPayoutAmount
   HighPrecMoney -> -- rideVatAbsorbedOnDiscount
-  HighPrecMoney -> -- cancellationCharge (0 for normal ride)
-  HighPrecMoney -> -- cancellationTax (0 for normal ride)
+  HighPrecMoney -> -- cancellationCharge (a due folded into this ride's fare; 0 when there is none)
+  HighPrecMoney -> -- cancellationTax
   m UpsertCoreLedgerResult
 upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount parkingCharge parkingChargeVat platformFee offerDiscountAmount cashbackPayoutAmount rideVatAbsorbedOnDiscount cancellationCharge cancellationTax = do
   let rideId = ctx.referenceId
@@ -491,10 +504,10 @@ upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount parkin
           then do
             (newIds, mbInv) <- doCreate
             logInfo $ "Created PENDING core ride payment ledger entries for ride: " <> rideId
-            pure UpsertCoreLedgerResult {coreEntryIds = newIds, invoiceId = mbInv, didCreate = True, didVoidStale = False}
+            pure UpsertCoreLedgerResult {coreEntryIds = newIds, invoiceId = mbInv, cancellationEntryIds = [], didCreate = True, didVoidStale = False}
           else do
             logInfo $ "Core ride payment total is zero, skipping create for ride: " <> rideId
-            pure UpsertCoreLedgerResult {coreEntryIds = [], invoiceId = Nothing, didCreate = False, didVoidStale = False}
+            pure UpsertCoreLedgerResult {coreEntryIds = [], invoiceId = Nothing, cancellationEntryIds = [], didCreate = False, didVoidStale = False}
       else
         if not (null pendingCoreEntries) && newTotal /= oldTotal
           then do
@@ -511,28 +524,39 @@ upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount parkin
             if newTotal > 0
               then do
                 (newIds, mbInv) <- doCreate
-                pure UpsertCoreLedgerResult {coreEntryIds = newIds, invoiceId = mbInv, didCreate = True, didVoidStale = True}
+                pure UpsertCoreLedgerResult {coreEntryIds = newIds, invoiceId = mbInv, cancellationEntryIds = [], didCreate = True, didVoidStale = True}
               else do
                 logInfo $ "Core ride payment total is zero, skipping create after void for ride: " <> rideId
-                pure UpsertCoreLedgerResult {coreEntryIds = [], invoiceId = Nothing, didCreate = False, didVoidStale = True}
+                pure UpsertCoreLedgerResult {coreEntryIds = [], invoiceId = Nothing, cancellationEntryIds = [], didCreate = False, didVoidStale = True}
           else do
             logInfo $ "Core ride payment ledger already up to date for ride: " <> rideId
             pure
               UpsertCoreLedgerResult
                 { coreEntryIds = map (.id) pendingCoreEntries,
                   invoiceId = Nothing,
+                  cancellationEntryIds = [],
                   didCreate = False,
                   didVoidStale = False
                 }
   -- Upsert cancellation fee entries when cancellationCharge is non-zero.
   -- Idempotent: if entries were already created (e.g. by createPendingCancellationFeeLedger
   -- before this call) the existing-entries check skips re-creation.
-  when (cancellationCharge > 0) $ do
-    let cancelEntries = filter (\e -> e.referenceType `elem` [ridePaymentRefCancellationFee, ridePaymentRefCancellationGST]) existingEntries
-    when (null cancelEntries) $ do
-      void $ createPendingCancellationFeeLedger ctx cancellationCharge cancellationTax
-      logInfo $ "Created PENDING cancellation fee ledger entries for ride: " <> rideId
-  pure coreResult
+  cancelIds <-
+    if cancellationCharge > 0
+      then do
+        let cancelEntries = filter (\e -> e.referenceType `elem` [ridePaymentRefCancellationFee, ridePaymentRefCancellationGST]) existingEntries
+        if null cancelEntries
+          then
+            createPendingCancellationFeeLedger ctx cancellationCharge cancellationTax >>= \case
+              Right (_mbInv, entryIds) -> do
+                logInfo $ "Created PENDING cancellation fee ledger entries for ride: " <> rideId
+                pure entryIds
+              Left err -> do
+                logError $ "Failed to create cancellation fee ledger for ride " <> rideId <> ": " <> show err
+                pure []
+          else pure (map (.id) (filter (\e -> e.status == LE.PENDING) cancelEntries))
+      else pure []
+  pure coreResult {cancellationEntryIds = cancelIds}
 
 -- ---------------------------------------------------------------------------
 -- 1b. Create SETTLED ledger entries for fully discounted rides (amount = 0)
@@ -935,12 +959,16 @@ markRideInvoicePaid ::
   m ()
 markRideInvoicePaid rideId = do
   rideEntries <- findRidePaymentEntries rideId
-  let settledEntry = find (\e -> e.referenceType == ridePaymentRefRideFare && e.status == LE.SETTLED) rideEntries
-  whenJust settledEntry $ \entry -> do
-    mbInvoice <- FInvoiceService.getInvoiceForEntry entry.id
-    whenJust mbInvoice $ \inv -> do
-      FInvoiceService.updateInvoiceStatus inv.id FInvoice.Paid
-      logInfo $ "Marked Ride invoice as Paid for rideId: " <> rideId
+  -- Close the Ride invoice and, when a cancellation fee was also collected on this ride
+  -- (its own intent, a dues payment, or a later ride's fare), the RideCancellation invoice —
+  -- both settle through the same capture, so one commonised pass handles them.
+  forM_ [ridePaymentRefRideFare, ridePaymentRefCancellationFee] $ \refType -> do
+    let settledEntry = find (\e -> e.referenceType == refType && e.status == LE.SETTLED) rideEntries
+    whenJust settledEntry $ \entry -> do
+      mbInvoice <- FInvoiceService.getInvoiceForEntry entry.id
+      whenJust mbInvoice $ \inv -> do
+        FInvoiceService.updateInvoiceStatus inv.id FInvoice.Paid
+        logInfo $ "Marked invoice " <> inv.id.getId <> " (" <> refType <> ") as Paid for rideId: " <> rideId
 
 -- | Mark the Ride invoice as Issued when capture fails (entries now DUE for collection).
 markRideInvoiceIssued ::
@@ -1019,9 +1047,11 @@ refundRefTypesForComponent = \case
   DFareBreakup.RIDE_FARE -> (ridePaymentRefRideFareRefund, ridePaymentRefRideFareRefundVAT)
   DFareBreakup.TOLL -> (ridePaymentRefTollRefund, ridePaymentRefTollRefundVAT)
   DFareBreakup.PARKING -> (ridePaymentRefParkingRefund, ridePaymentRefParkingRefundVAT)
+  DFareBreakup.CANCELLATION_FEE -> (ridePaymentRefCancellationFeeRefund, ridePaymentRefCancellationFeeRefundVAT)
 
--- | All refund leg refTypes: the 6 per-component legs (base + VAT for ride-fare/toll/parking).
---   Used to find every refund leg for a ride (dedup / settle / void / cap-check).
+-- | Every per-component refund leg refType (base + VAT for each 'FareComponent'). Used to find
+--   every refund leg for a ride (dedup / settle / void / cap-check) — a component missing here is
+--   invisible to the cap check, so it must list all of them.
 refundLegRefTypes :: [Text]
 refundLegRefTypes =
   [ ridePaymentRefRideFareRefund,
@@ -1029,7 +1059,9 @@ refundLegRefTypes =
     ridePaymentRefTollRefund,
     ridePaymentRefTollRefundVAT,
     ridePaymentRefParkingRefund,
-    ridePaymentRefParkingRefundVAT
+    ridePaymentRefParkingRefundVAT,
+    ridePaymentRefCancellationFeeRefund,
+    ridePaymentRefCancellationFeeRefundVAT
   ]
 
 getRefundLegEntries :: (BeamFlow.BeamFlow m r) => Text -> m [LE.LedgerEntry]
@@ -1392,10 +1424,15 @@ createRefundInvoice ::
   m ()
 createRefundInvoice rideId refundsRequestId splits = do
   let activeStatuses = [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid]
-  -- Parent ride invoice: header source (customer/merchant/currency) + referenceInvoiceNumber.
-  mbSource <- listToMaybe <$> QInvoiceExtra.findByReferenceIdWithOptions rideId (Just DInvType.Ride) Nothing activeStatuses (Just 1) (Just 0)
+  -- Parent invoice: header source (customer/merchant/currency) + referenceInvoiceNumber. Prefer the
+  -- Ride invoice; fall back to RideCancellation, since a cancelled ride's Ride invoice was voided and
+  -- the fee (the only thing a cancelled ride refunds) lives on its RideCancellation invoice instead.
+  mbRideInvoice <- listToMaybe <$> QInvoiceExtra.findByReferenceIdWithOptions rideId (Just DInvType.Ride) Nothing activeStatuses (Just 1) (Just 0)
+  mbSource <- case mbRideInvoice of
+    Just inv -> pure (Just inv)
+    Nothing -> listToMaybe <$> QInvoiceExtra.findByReferenceIdWithOptions rideId (Just DInvType.RideCancellation) Nothing activeStatuses (Just 1) (Just 0)
   case mbSource of
-    Nothing -> logInfo $ "createRefundInvoice: no ride invoice for ride " <> rideId <> "; skipping refund invoice"
+    Nothing -> logInfo $ "createRefundInvoice: no ride or cancellation invoice for ride " <> rideId <> "; skipping refund invoice"
     Just srcInv -> do
       let lineItems = concatMap mkRefundLineItems splits
           anyVat = any (\s -> s.vatAmount > 0) splits
@@ -1448,12 +1485,12 @@ createRefundInvoice rideId refundsRequestId splits = do
           logInfo $ "createRefundInvoice: created refund invoice " <> newInv.id.getId <> " for ride " <> rideId <> " refundRequest " <> refundsRequestId
 
 -- | Per-component refund invoice lines: a negative Fare + a negative inline Tax (shared
---   groupId). Toll/Parking are flagged external (mirrors the ride invoice) so they render
---   as their own lines; only Ride Fare is the taxable base.
+--   groupId). Ride fare and cancellation fee are regular taxable lines; toll/parking are
+--   flagged external, mirroring the ride invoice.
 mkRefundLineItems :: RefundComponentSplit -> [InvoiceLineItem]
 mkRefundLineItems s =
   let (fareDesc, fareType, taxDesc, taxType, gId) = refundLineItemMeta s.component
-      isExt = case s.component of DFareBreakup.RIDE_FARE -> False; _ -> True
+      isExt = case s.component of DFareBreakup.RIDE_FARE -> False; DFareBreakup.CANCELLATION_FEE -> False; _ -> True
       mkNeg desc dtype amt typ =
         if amt > 0
           then Just InvoiceLineItem {description = desc, descriptionType = Just dtype, quantity = 1, unitPrice = negate amt, lineTotal = negate amt, isExternalCharge = isExt, groupId = Just gId, itemType = Just typ}
@@ -1465,3 +1502,4 @@ refundLineItemMeta = \case
   DFareBreakup.RIDE_FARE -> ("Ride Fare Refund", RideFareRefund, "Ride Fare Refund VAT", RideFareRefundTax, "g-refund-ridefare")
   DFareBreakup.TOLL -> ("Toll Refund", TollRefund, "Toll Refund VAT", TollRefundTax, "g-refund-toll")
   DFareBreakup.PARKING -> ("Parking Refund", ParkingRefund, "Parking Refund VAT", ParkingRefundTax, "g-refund-parking")
+  DFareBreakup.CANCELLATION_FEE -> ("Cancellation Fee Refund", CancellationFeeRefund, "Cancellation Fee Refund VAT", CancellationFeeRefundTax, "g-refund-cancellation")

@@ -95,6 +95,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.itemId itemId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.navigationInstruction navigationInstruction,
       Se.Set Beam.nightShiftCharge (mknightShiftCharge nightShiftInfo),
       Se.Set Beam.nightShiftChargeAmount (mknightShiftChargeAmount nightShiftInfo),
       Se.Set Beam.nightShiftEnd (nightShiftInfo <&> (.nightShiftEnd)),

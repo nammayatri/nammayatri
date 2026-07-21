@@ -47,3 +47,10 @@ decodeBoolMap (Just t) = A.decode (BL.fromStrict (TE.encodeUtf8 t))
 
 encodeBoolMap :: Maybe (Map.Map Text Bool) -> Maybe Text
 encodeBoolMap = fmap (TE.decodeUtf8 . BL.toStrict . A.encode)
+
+decodeTextMap :: Maybe Text -> Maybe (Map.Map Text Text)
+decodeTextMap Nothing = Nothing
+decodeTextMap (Just t) = A.decode (BL.fromStrict (TE.encodeUtf8 t))
+
+encodeTextMap :: Maybe (Map.Map Text Text) -> Maybe Text
+encodeTextMap = fmap (TE.decodeUtf8 . BL.toStrict . A.encode)

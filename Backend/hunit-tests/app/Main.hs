@@ -15,6 +15,7 @@
 module Main where
 
 import qualified Dashboard (dashboardUnitTests)
+import qualified FileManagementUnitTests
 import qualified RewardsCouponPoolTests
 import qualified RewardsCouponTemplatedTests
 import qualified RewardsEvaluatorTests
@@ -31,6 +32,10 @@ main = do
       [ testGroup
           "Dashboard Unit Tests"
           [ Dashboard.dashboardUnitTests
+          ],
+        testGroup
+          "FileManagement Unit Tests"
+          [ FileManagementUnitTests.fileManagementUnitTests
           ],
         testGroup
           "Rewards Unit Tests"

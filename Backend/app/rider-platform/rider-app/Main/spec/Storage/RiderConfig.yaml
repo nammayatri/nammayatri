@@ -545,6 +545,7 @@ RiderConfig:
     permissibleModes: text []
     busTransitTypes: text []
     subwayTransitTypes: text []
+    busTrackingNotificationTiers: text []
     domainRouteCalculationEnabledModes: text []
     excludedVehicleVariants: text []
     rentalsConfig: text []

@@ -29,6 +29,6 @@ data MediaFile = MediaFile
     status :: Maybe MediaFileUploadStatus,
     fileHash :: Maybe Text,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: Maybe UTCTime
   }
   deriving (Generic, FromJSON, Eq, ToJSON, ToSchema, Show)
