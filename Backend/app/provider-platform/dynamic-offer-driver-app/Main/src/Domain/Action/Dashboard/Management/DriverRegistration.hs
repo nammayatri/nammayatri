@@ -949,6 +949,7 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ req@Common.Reg
           isRCImageValidated = Nothing,
           engineNumber = req.engineNumber,
           chassisNumber = req.chassisNumber,
+          previousRcNumber = Nothing,
           ..
         }
     )

@@ -1789,6 +1789,7 @@ types:
     - fuelType: Maybe Text
     - skipFleetChecks: Maybe Bool
     - udinNumber: Maybe Text
+    - previousRcNumber: Maybe Text
     - derive: "'HideSecrets"
   ListVehicleResT:
     - recordType: NewType
