@@ -494,6 +494,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
               deviceToken = deviceToken,
               whatsappNotificationEnroll = Nothing
             }
+          Nothing
 
       verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator res.person transporterConfig
 

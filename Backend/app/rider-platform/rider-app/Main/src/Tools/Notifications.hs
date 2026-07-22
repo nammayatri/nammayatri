@@ -30,6 +30,7 @@ import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.Journey
 import Domain.Types.Merchant
+import qualified Domain.Types.MerchantMessage as DMM
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
@@ -51,8 +52,6 @@ import qualified IssueManagement.Common
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
-import qualified Tools.Whatsapp as Whatsapp
-import qualified Domain.Types.MerchantMessage as DMM
 import qualified Kernel.External.Notification.FCM.Types as FCMType
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude (getField)
@@ -97,6 +96,7 @@ import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Error
 import qualified Tools.SMS as Sms
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
+import qualified Tools.Whatsapp as Whatsapp
 import qualified UrlShortner.Common as UrlShortner
 
 templateText :: Text -> Text

@@ -848,7 +848,7 @@ DriverIntelligentPoolConfig:
     cancellationAndRideFrequencyRatioWindowOption: "'{\"period\":7, \"periodType\":\"Days\"}'"
 
 TransporterConfig:
-  derives: Generic,Show,'UsageSafety,Eq
+  derives: Generic,Show,Eq,FromJSON,ToJSON
   types:
     CancellationRateSlab:
       cancellationPercentageThreshold: Int
@@ -1016,6 +1016,9 @@ TransporterConfig:
   fields:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    fraudAuthCountThreshold: Maybe Int
+    fraudAuthCountWindow: Maybe SlidingWindowOptions
+    authIpBlockedUntilInMins: Maybe Minutes
     pickupLocThreshold: Meters
     dropLocThreshold: Meters
     editLocTimeThreshold: Seconds
@@ -1601,6 +1604,8 @@ TransporterConfig:
 
   sqlType:
     exotelAppIdMapping: json
+    fraudAuthCountWindow: json
+    authIpBlockedUntilInMins: integer
     pickupLocThreshold: bigint
     dropLocThreshold: bigint
     rideTimeEstimatedThreshold: bigint
@@ -1864,6 +1869,9 @@ TransporterConfig:
       fullObjectAsParam: true
       where: merchantOperatingCityId
       params:
+        - fraudAuthCountThreshold
+        - fraudAuthCountWindow
+        - authIpBlockedUntilInMins
         - pickupLocThreshold
         - dropLocThreshold
         - rideTimeEstimatedThreshold

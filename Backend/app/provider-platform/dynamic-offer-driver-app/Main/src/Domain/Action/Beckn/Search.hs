@@ -711,6 +711,7 @@ resolveGateNavigationInstruction gateMap mbArea tripCategoryKey = do
   gateId <- mbArea >>= SL.pickupGateIdFromArea
   gate <- M.lookup gateId gateMap
   GExtra.navigationInstructionFor gate tripCategoryKey
+
 buildQuote ::
   ( CacheFlow m r,
     EsqDBFlow m r,

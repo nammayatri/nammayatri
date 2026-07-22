@@ -36,8 +36,11 @@ module Domain.Action.UI.Registration
 where
 
 import BecknV2.FRFS.Enums (VehicleCategory (BUS))
+import qualified Data.List as List
+import Data.Maybe (listToMaybe)
 import Data.OpenApi hiding (email, info, name, password, url)
 import Data.Text hiding (elem)
+import qualified Data.Text as T
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import Domain.Action.UI.DriverReferral
 import qualified Domain.Action.UI.Person as SP
@@ -76,6 +79,7 @@ import Kernel.Types.SlidingWindowLimiter
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
+import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
@@ -98,6 +102,7 @@ import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
+import qualified System.Environment as SE
 import qualified Text.Hex as Hex
 import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
@@ -199,8 +204,9 @@ auth ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Flow AuthRes
-auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash = do
+auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash mbXForwardedFor = do
   case fromMaybe SP.MOBILENUMBER req'.identifierType of
     SP.GIMS_EMAIL_PASSWORD -> do
       email <- req'.email & fromMaybeM (InvalidRequest "Email is required for GIMS_EMAIL_PASSWORD auth")
@@ -267,7 +273,7 @@ auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRe
       let personAPIEntity = SP.makePersonAPIEntity decPerson
       return $ AuthRes token.id token.attempts (Just token.token) (Just personAPIEntity)
     _ -> do
-      authRes <- authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash
+      authRes <- authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash mbXForwardedFor
       return $ AuthRes {attempts = authRes.attempts, authId = authRes.authId, token = Nothing, person = Nothing}
 
 authWithOtp ::
@@ -280,12 +286,14 @@ authWithOtp ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Flow AuthWithOtpRes
-authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash = do
+authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash mbXForwardedFor = do
   let req = if req'.merchantId == "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" then req' {merchantId = "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f", merchantOperatingCity = Just (City.City "Kochi")} :: AuthReq else req' ---   "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" -> YATRI_PARTNER_MERCHANT_ID  , "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f" -> NAMMA_YATRI_PARTNER_MERCHANT_ID
   deploymentVersion <- asks (.version)
   cloudType <- asks (.cloudType)
   runRequestValidation validateInitiateLoginReq req
+  mbClientIP <- extractClientIP mbXForwardedFor
   let identifierType = fromMaybe SP.MOBILENUMBER req'.identifierType
 
   smsCfg <- asks (.smsCfg)
@@ -294,6 +302,10 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
     QMerchant.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant req.merchantOperatingCity
+  whenJust mbClientIP $ \clientIP -> do
+    logInfo $ "Driver auth request from IP: " <> clientIP
+    ipBlocked <- isIPBlocked merchantOpCityId.getId clientIP
+    when ipBlocked $ throwError IpHitsLimitExceeded
 
   (person, otpChannel) <-
     case identifierType of
@@ -315,6 +327,9 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
       SP.GIMS_EMAIL_PASSWORD -> throwError $ InvalidRequest "GIMS_EMAIL_PASSWORD does not use OTP auth"
 
+  whenJust mbClientIP $ \clientIP -> fork "Driver Auth IP Fraud Check" $ do
+    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    checkAndUpdateAuthFraudByIP merchantOpCityId.getId clientIP transporterConfig
   checkSlidingWindowLimit (authHitsCountKey person)
   void $ cachePersonOTPChannel person.id otpChannel
   let entityId = getId $ person.id
@@ -639,8 +654,9 @@ verify ::
   ) =>
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
+  Maybe Text ->
   m AuthVerifyRes
-verify tokenId req = do
+verify tokenId req mbXForwardedFor = do
   runRequestValidation validateAuthVerifyReq req
   SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
   checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
@@ -658,6 +674,11 @@ verify tokenId req = do
   cleanCachedTokens person.id
   QR.deleteByPersonIdExceptNew person.id tokenId
   _ <- QR.setVerified True tokenId
+  fork "Decrement Auth IP Counter" $ do
+    mbClientIP <- extractClientIP mbXForwardedFor
+    whenJust mbClientIP $ \clientIP -> do
+      mbTransporterConfig <- SCTC.findByMerchantOpCityId (Id merchantOperatingCityId) Nothing
+      whenJust mbTransporterConfig $ decrementAuthCountersByIP merchantOperatingCityId clientIP
   _ <- QP.updateDeviceToken deviceToken person.id
   when isNewPerson $
     QP.setIsNewFalse False person.id
@@ -903,3 +924,49 @@ signatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVers
   decPerson <- decrypt person
   let personAPIEntity = SP.makePersonAPIEntity decPerson
   return $ AuthRes token.id token.attempts (Just token.token) (Just personAPIEntity)
+
+mkAuthIPCounterKey :: Text -> Text -> Text
+mkAuthIPCounterKey mocId clientIP = "Driver:AuthCount:" <> clientIP <> ":" <> mocId
+
+mkIPBlockKey :: Text -> Text -> Text
+mkIPBlockKey mocId clientIP = "Driver:IPBlocked:" <> clientIP <> ":" <> mocId
+
+lookupClientIPPositionFromRight :: IO Int
+lookupClientIPPositionFromRight = fromMaybe 3 . (>>= readMaybe) <$> SE.lookupEnv "XFF_CLIENT_IP_POSITION_FROM_RIGHT"
+
+extractClientIP :: MonadIO m => Maybe Text -> m (Maybe Text)
+extractClientIP mbXForwardedFor = do
+  clientIPPosition <- liftIO lookupClientIPPositionFromRight
+  pure $
+    mbXForwardedFor
+      >>= \headerValue ->
+        let ips = mapMaybe (\entry -> let s = T.strip entry in if T.null s then Nothing else Just s) (T.splitOn "," headerValue)
+            idx = List.length ips - clientIPPosition
+         in (if idx >= 0 then listToMaybe (List.drop idx ips) else Nothing) >>= \clientIP ->
+              let ipWithoutPort = T.takeWhile (/= ':') clientIP
+               in if T.null ipWithoutPort then Nothing else Just ipWithoutPort
+
+isIPBlocked :: (CacheFlow m r, MonadFlow m) => Text -> Text -> m Bool
+isIPBlocked mocId clientIP = Redis.withNonCriticalCrossAppRedis $ do
+  blockResult <- Redis.get (mkIPBlockKey mocId clientIP)
+  pure $ isJust (blockResult :: Maybe Text)
+
+checkAndUpdateAuthFraudByIP :: (CacheFlow m r, MonadFlow m) => Text -> Text -> TC.TransporterConfig -> m ()
+checkAndUpdateAuthFraudByIP mocId clientIP transporterConfig = Redis.withNonCriticalCrossAppRedis $
+  whenJust transporterConfig.fraudAuthCountWindow $ \window -> do
+    SWC.incrementWindowCount (mkAuthIPCounterKey mocId clientIP) window
+    whenJust transporterConfig.fraudAuthCountThreshold $ \threshold -> do
+      authCount <- SWC.getCurrentWindowCount (mkAuthIPCounterKey mocId clientIP) window
+      when (authCount >= fromIntegral threshold) $ do
+        logInfo $ "Driver auth fraud detected for IP " <> clientIP <> " with count " <> show authCount
+        SWC.deleteCurrentWindowValues (mkAuthIPCounterKey mocId clientIP) window
+        whenJust transporterConfig.authIpBlockedUntilInMins $ \mins -> do
+          let ttlSeconds = fromIntegral mins * 60
+          void $ Redis.setExp (mkIPBlockKey mocId clientIP) ("true" :: Text) ttlSeconds
+          logInfo $ "Driver auth IP " <> clientIP <> " blocked for " <> show mins <> " minutes in city " <> mocId
+
+decrementAuthCountersByIP :: (CacheFlow m r, MonadFlow m) => Text -> Text -> TC.TransporterConfig -> m ()
+decrementAuthCountersByIP mocId clientIP transporterConfig =
+  Redis.withNonCriticalCrossAppRedis $
+    whenJust transporterConfig.fraudAuthCountWindow $
+      SWC.decrementWindowCount (mkAuthIPCounterKey mocId clientIP)
