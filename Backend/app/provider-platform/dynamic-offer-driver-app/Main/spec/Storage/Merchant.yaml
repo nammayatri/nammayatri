@@ -848,7 +848,7 @@ DriverIntelligentPoolConfig:
     cancellationAndRideFrequencyRatioWindowOption: "'{\"period\":7, \"periodType\":\"Days\"}'"
 
 TransporterConfig:
-  derives: Generic,Show,Eq,FromJSON,ToJSON
+  derives: Generic,Show,'UsageSafety,Eq
   types:
     CancellationRateSlab:
       cancellationPercentageThreshold: Int
