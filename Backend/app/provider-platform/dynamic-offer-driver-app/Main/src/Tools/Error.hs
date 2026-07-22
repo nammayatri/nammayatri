@@ -2145,3 +2145,19 @@ instance IsHTTPError IntegratedBPPConfigError where
     IntegratedBPPConfigNotFound -> E404
 
 instance IsAPIError IntegratedBPPConfigError
+
+data CustomAuthError = IpHitsLimitExceeded deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''CustomAuthError
+
+instance IsBaseError CustomAuthError where
+  toMessage = \case
+    IpHitsLimitExceeded -> Just "IP Rate Limit Exceed, Too Many Requests In Short Duration"
+
+instance IsHTTPError CustomAuthError where
+  toErrorCode = \case
+    IpHitsLimitExceeded -> "IP_HITS_LIMIT_EXCEED"
+  toHttpCode = \case
+    IpHitsLimitExceeded -> E429
+
+instance IsAPIError CustomAuthError

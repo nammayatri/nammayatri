@@ -61,6 +61,7 @@ auth merchantShortId opCity req = do
       Nothing
       Nothing
       Nothing
+      Nothing
   pure $ Common.AuthRes {authId = res.authId.getId, attempts = res.attempts}
 
 postDriverRegistrationVerify :: ShortId DM.Merchant -> Context.City -> Text -> Bool -> Text -> Common.AuthVerifyReq -> Flow APISuccess
@@ -81,6 +82,7 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
           deviceToken = req.deviceToken,
           whatsappNotificationEnroll = Nothing
         }
+      Nothing
   when mbFleet $ do
     checkAssoc <- runInReplica $ QFDV.findByDriverIdAndFleetOwnerId res.person.id fleetOwnerId True
     when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
