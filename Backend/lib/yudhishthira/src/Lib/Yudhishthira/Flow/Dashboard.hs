@@ -6,12 +6,12 @@ import qualified ConfigPilotFrontend.Types as CPT
 import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.Aeson as A
+import qualified Data.Aeson.KeyMap as AKM
 import Data.List (groupBy, nub, sortBy)
 import qualified Data.List.NonEmpty as DLNE
 import qualified Data.List.NonEmpty as NE
 import Data.Scientific (toRealFloat)
 import qualified Data.Text as T
-import JsonLogic
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
@@ -343,11 +343,15 @@ postRunKaalChakraJob _h req =
     Lib.Yudhishthira.Types.ALL_USERS -> throwError (InvalidRequest "ALL_USERS option available only from kaal-chakra scheduler")
     _ -> kaalChakraEvent req
 
+mergeInputOverDefault :: A.Value -> A.Value -> A.Value
+mergeInputOverDefault (A.Object a) (A.Object b) = A.Object (AKM.unionWith mergeInputOverDefault a b)
+mergeInputOverDefault _ b = b
+
 mbCreateLogicData :: (FromJSON a, ToJSON a, BeamFlow m r) => Maybe a -> Maybe A.Value -> m (Maybe a)
 mbCreateLogicData defaultVal Nothing = return defaultVal
 mbCreateLogicData (Just defaultVal) (Just inputValue) = do
   let defaultValue = A.toJSON defaultVal
-      finalValue = deepMerge defaultValue inputValue
+      finalValue = mergeInputOverDefault defaultValue inputValue
   case A.fromJSON finalValue of
     A.Success a -> return (Just a)
     A.Error err -> throwError $ InvalidRequest ("Not able to merge input data into default value. Getting error: " <> show err)
@@ -360,7 +364,7 @@ createLogicData :: (FromJSON a, ToJSON a, BeamFlow m r) => a -> Maybe A.Value ->
 createLogicData defaultVal Nothing = return defaultVal
 createLogicData defaultVal (Just inputValue) = do
   let defaultValue = A.toJSON defaultVal
-      finalValue = deepMerge defaultValue inputValue
+      finalValue = mergeInputOverDefault defaultValue inputValue
   case A.fromJSON finalValue of
     A.Success a -> return a
     A.Error err -> throwError $ InvalidRequest ("Not able to merge input data into default value. Getting error: " <> show err)
