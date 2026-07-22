@@ -106,51 +106,51 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
   deriving (Show)
 
 instance FromNamedRecord SpecialLocationCSVRow where
-  parseNamedRecord r =
-    SpecialLocationCSVRow
-      <$> r .: "city"
-      <*> r .: "location_name"
-      <*> r .: "enabled"
-      <*> r .: "location_file_name"
-      <*> r .: "location_type"
-      <*> r .: "category"
-      <*> r .: "gate_info_name"
-      <*> r .: "gate_info_file_name"
-      <*> r .: "gate_info_lat"
-      <*> r .: "gate_info_lon"
-      <*> r .: "gate_info_default_driver_extra"
-      <*> r .: "gate_info_address"
-      <*> r .: "gate_info_has_geom"
-      <*> r .: "gate_info_can_queue_up_on_gate"
-      <*> r .: "gate_info_type"
-      <*> r .: "gate_info_tags"
-      <*> r .: "gate_info_walk_description"
-      <*> optional (r .: "gate_info_entry_fee_amount")
-      <*> r .: "priority"
-      <*> r .: "pickup_priority"
-      <*> r .: "drop_priority"
-      <*> r .: "special_location_id"
-      <*> optional (r .: "is_queue_enabled")
-      <*> optional (r .: "support_number")
-      <*> optional (r .: "gate_info_min_driver_threshold")
-      <*> optional (r .: "gate_info_demand_threshold")
-      <*> optional (r .: "gate_info_notification_cooldown_in_sec")
-      <*> optional (r .: "gate_info_max_ride_skips_before_queue_removal")
-      <*> optional (r .: "gate_info_pickup_zone_arrival_timeout_in_sec")
-      <*> optional (r .: "gate_info_pickup_request_response_timeout_in_sec")
-      <*> optional (r .: "gate_info_max_driver_threshold")
-      <*> optional (r .: "gate_info_min_driver_thresholds")
-      <*> optional (r .: "gate_info_max_driver_thresholds")
-      <*> optional (r .: "gate_info_demand_thresholds")
-      <*> optional (r .: "gate_info_navigation_instructions")
-      <*> optional (r .: "gate_info_id")
-      <*> optional (r .: "gate_info_notification_active_till_in_sec")
-      <*> optional (r .: "enforce_toll_route")
-      <*> optional (r .: "render")
-      <*> optional (r .: "fetch_all_gate_fare_product")
-      <*> optional (r .: "enable_queue_filter")
-      <*> optional (r .: "payment_modes")
-      <*> optional (r .: "fare_settlement_type")
+  parseNamedRecord r = do
+    city <- r .: "city"
+    locationName <- r .: "location_name"
+    enabled <- r .: "enabled"
+    locationFileName <- r .: "location_file_name"
+    locationType <- r .: "location_type"
+    category <- r .: "category"
+    gateInfoName <- r .: "gate_info_name"
+    gateInfoFileName <- r .: "gate_info_file_name"
+    gateInfoLat <- r .: "gate_info_lat"
+    gateInfoLon <- r .: "gate_info_lon"
+    gateInfoDefaultDriverExtra <- r .: "gate_info_default_driver_extra"
+    gateInfoAddress <- r .: "gate_info_address"
+    gateInfoHasGeom <- r .: "gate_info_has_geom"
+    gateInfoCanQueueUpOnGate <- r .: "gate_info_can_queue_up_on_gate"
+    gateInfoType <- r .: "gate_info_type"
+    gateInfoGateTags <- r .: "gate_info_tags"
+    gateInfoWalkDescription <- r .: "gate_info_walk_description"
+    gateInfoEntryFeeAmount <- optional (r .: "gate_info_entry_fee_amount")
+    priority <- r .: "priority"
+    pickupPriority <- r .: "pickup_priority"
+    dropPriority <- r .: "drop_priority"
+    specialLocationId <- r .: "special_location_id"
+    isQueueEnabled <- optional (r .: "is_queue_enabled")
+    supportNumber <- optional (r .: "support_number")
+    gateInfoMinDriverThreshold <- optional (r .: "gate_info_min_driver_threshold")
+    gateInfoDemandThreshold <- optional (r .: "gate_info_demand_threshold")
+    gateInfoNotificationCooldownInSec <- optional (r .: "gate_info_notification_cooldown_in_sec")
+    gateInfoMaxRideSkipsBeforeQueueRemoval <- optional (r .: "gate_info_max_ride_skips_before_queue_removal")
+    gateInfoPickupZoneArrivalTimeoutInSec <- optional (r .: "gate_info_pickup_zone_arrival_timeout_in_sec")
+    gateInfoPickupRequestResponseTimeoutInSec <- optional (r .: "gate_info_pickup_request_response_timeout_in_sec")
+    gateInfoMaxDriverThreshold <- optional (r .: "gate_info_max_driver_threshold")
+    gateInfoMinDriverThresholdsJson <- optional (r .: "gate_info_min_driver_thresholds")
+    gateInfoMaxDriverThresholdsJson <- optional (r .: "gate_info_max_driver_thresholds")
+    gateInfoDemandThresholdsJson <- optional (r .: "gate_info_demand_thresholds")
+    gateInfoNavigationInstructionsJson <- optional (r .: "gate_info_navigation_instructions")
+    gateInfoId <- optional (r .: "gate_info_id")
+    gateInfoNotificationActiveTillInSec <- optional (r .: "gate_info_notification_active_till_in_sec")
+    enforceTollRoute <- optional (r .: "enforce_toll_route")
+    render <- optional (r .: "render")
+    fetchAllGateFareProduct <- optional (r .: "fetch_all_gate_fare_product")
+    enableQueueFilter <- optional (r .: "enable_queue_filter")
+    paymentModes <- optional (r .: "payment_modes")
+    fareSettlementType <- optional (r .: "fare_settlement_type")
+    pure SpecialLocationCSVRow {..}
 
 ---------------------------------------------------------------------
 -- CSV Helper Functions
