@@ -283,7 +283,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       (mbVehicleDocs, allVehicleDocsVerified) <-
         if enableBotFlow
           then do
-            (vehicleDocItem, allDocumentVerificationConfigs) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOpCity transporterConfig language registrationNo Nothing False
+            (vehicleDocItem, allDocumentVerificationConfigs) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOpCity transporterConfig language registrationNo Nothing False True
             let vehicleCategory = fromMaybe vehicleDocItem.userSelectedVehicleCategory vehicleDocItem.verifiedVehicleCategory
             -- Vehicle docs: no fleet-driver/individual applicableTo split → Nothing, [].
             -- Throws (naming the offending docs) if any InspectionHub dependency doc isn't VALID.
