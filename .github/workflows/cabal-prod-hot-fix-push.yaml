@@ -6,8 +6,6 @@ on:
       - "prodHotPush-Common"
       - "prodHotPush-BAP"
       - "prodHotPush-BPP"
-      - "prodHotPush-International"
-      - "Prod-release-branch-18-jul"
   workflow_dispatch:
 
 # Cancel in-progress Pull Request workflows if a new workflow is triggered, or a new commit is pushed to the branch.

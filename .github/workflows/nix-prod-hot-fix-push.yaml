@@ -3,9 +3,8 @@ name: Nix CI (Prod Hot Fix Push)
 on:
   push:
     branches:
-      - "prodHotPush-Common"
-      - "prodHotPush-BAP"
-      - "prodHotPush-BPP"
+      - "prodHotPush-International"
+      - "Prod-release-branch-18-jul"
   workflow_dispatch:
 
 # Cancel in-progress Pull Request workflows if a new workflow is triggered, or a new commit is pushed to the branch.
@@ -70,7 +69,7 @@ jobs:
             name: Nix Optimized Prod Release Build
             continue-on-error: false
       fail-fast: false
-    runs-on: x86_64_${{ github.ref_name }}_push
+    runs-on: x86_64_prodHotPush-Common_push
     outputs:
       docker-image-name: ${{ steps.docker.outputs.base_image }}
     steps:
