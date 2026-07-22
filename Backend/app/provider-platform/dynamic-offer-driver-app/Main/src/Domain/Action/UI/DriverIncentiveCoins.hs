@@ -8,6 +8,7 @@ import qualified API.Types.UI.DriverIncentiveCoins as API
 import qualified Crypto.Hash as Hash
 import Data.Aeson (encode)
 import qualified Data.ByteString as BS
+import Data.List (nub)
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
 import qualified Domain.Types.Coins.CoinsConfig as CoinsConfig
@@ -59,11 +60,7 @@ getCoinsIncentiveConfig ::
 getCoinsIncentiveConfig (mbPersonId, merchantId, merchantOpCityId) mbIfNoneMatch = do
   (transporterConfig, _driverId, vehCategory, driver) <- loadDriverContext mbPersonId merchantId merchantOpCityId
   let mocId = merchantOpCityId.getId
-      eventFunctionKey =
-        case parseFirstIncentiveRidesCompletedThreshold driver.driverTag of
-          Just (eventFunction, _) -> T.pack (show eventFunction)
-          Nothing -> "None"
-  mbCachedETag <- CQCoinsConfig.getDriverIncentiveConfigHash mocId vehCategory eventFunctionKey
+  mbCachedETag <- CQCoinsConfig.getDriverIncentiveConfigHash mocId vehCategory
   case (mbIfNoneMatch, mbCachedETag) of
     (Just clientETag, Just cachedETag)
       | clientETag == cachedETag ->
@@ -71,7 +68,7 @@ getCoinsIncentiveConfig (mbPersonId, merchantId, merchantOpCityId) mbIfNoneMatch
     _ -> do
       items <- buildConfigItems transporterConfig merchantId merchantOpCityId vehCategory driver.driverTag
       let eTag = computeDriverIncentiveConfigETag items
-      CQCoinsConfig.setDriverIncentiveConfigHash mocId vehCategory eventFunctionKey eTag
+      CQCoinsConfig.setDriverIncentiveConfigHash mocId vehCategory eTag
       pure $ addHeader eTag items
 
 getCoinsIncentiveRideCount ::
@@ -82,35 +79,28 @@ getCoinsIncentiveRideCount ::
   Flow API.DriverIncentiveRideCountRes
 getCoinsIncentiveRideCount (mbPersonId, merchantId, merchantOpCityId) = do
   (transporterConfig, driverId, vehCategory, driver) <- loadDriverContext mbPersonId merchantId merchantOpCityId
-  mbSelected <- selectIncentiveConfig transporterConfig merchantId merchantOpCityId vehCategory driver.driverTag
-  case mbSelected of
-    Nothing ->
-      pure $
-        API.DriverIncentiveRideCountRes
-          { dayValidRideCount = 0,
-            timeBoundValidRideCount = Nothing,
-            progressValidRideCount = 0
-          }
-    Just SelectedIncentiveConfig {selected} -> do
-      localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-      dayValidRideCount <- fromMaybe 0 <$> Coins.getValidRideCountByDriverIdKey driverId
-      let mbWindowKey =
-            case selected.timeBounds of
-              Just tb | tb /= TB.Unbounded ->
-                case IncentiveMetrics.mkIncentiveWindowKey localTime tb of
-                  windowKey@(IncentiveMetrics.TimeBoundWindow _) -> Just windowKey
-                  IncentiveMetrics.DayWindow -> Nothing
-              _ -> Nothing
-      timeBoundValidRideCount <-
-        case mbWindowKey of
-          Just windowKey -> Just . fromMaybe 0 <$> Coins.getValidRideCountByDriverIdWindowKey driverId windowKey
-          Nothing -> pure Nothing
-      pure $
-        API.DriverIncentiveRideCountRes
-          { dayValidRideCount = dayValidRideCount,
-            timeBoundValidRideCount = timeBoundValidRideCount,
-            progressValidRideCount = fromMaybe dayValidRideCount timeBoundValidRideCount
-          }
+  -- Same selection as incentiveConfig (tagged cohort OR RidesCompleted fallback).
+  selectedConfigs <- selectIncentiveConfigs transporterConfig merchantId merchantOpCityId vehCategory driver.driverTag
+  -- Day key exists for any driver who completed a valid ride; missing Redis → 0.
+  dayValidRideCount <- fromMaybe 0 <$> Coins.getValidRideCountByDriverIdKey driverId
+  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  timeBoundValidRideCount <-
+    case listToMaybe selectedConfigs of
+      Nothing -> pure Nothing
+      Just SelectedIncentiveConfig {selected} ->
+        case selected.timeBounds of
+          Just tb | tb /= TB.Unbounded ->
+            case IncentiveMetrics.mkIncentiveWindowKey localTime tb of
+              windowKey@(IncentiveMetrics.TimeBoundWindow _) ->
+                Just . fromMaybe 0 <$> Coins.getValidRideCountByDriverIdWindowKey driverId windowKey
+              IncentiveMetrics.DayWindow -> pure Nothing
+          _ -> pure Nothing
+  pure $
+    API.DriverIncentiveRideCountRes
+      { dayValidRideCount = dayValidRideCount,
+        timeBoundValidRideCount = timeBoundValidRideCount,
+        progressValidRideCount = fromMaybe dayValidRideCount timeBoundValidRideCount
+      }
 
 loadDriverContext ::
   Maybe (Id SP.Person) ->
@@ -141,59 +131,101 @@ buildConfigItems ::
   Maybe [LYT.TagNameValueExpiry] ->
   Flow [API.DriverIncentiveCoinConfigItem]
 buildConfigItems transporterConfig merchantId merchantOpCityId vehCategory driverTag = do
-  mbSelected <- selectIncentiveConfig transporterConfig merchantId merchantOpCityId vehCategory driverTag
-  pure $ maybe [] (\SelectedIncentiveConfig {..} -> [toConfigItem selected ridesThreshold]) mbSelected
+  selectedConfigs <- selectIncentiveConfigs transporterConfig merchantId merchantOpCityId vehCategory driverTag
+  pure $ map (\SelectedIncentiveConfig {..} -> toConfigItem selected ridesThreshold) selectedConfigs
 
-selectIncentiveConfig ::
+selectIncentiveConfigs ::
   DTC.TransporterConfig ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   DTV.VehicleCategory ->
   Maybe [LYT.TagNameValueExpiry] ->
-  Flow (Maybe SelectedIncentiveConfig)
-selectIncentiveConfig transporterConfig merchantId merchantOpCityId vehCategory driverTag = do
-  case parseFirstIncentiveRidesCompletedThreshold driverTag of
-    Nothing -> pure Nothing
-    Just (eventFunction, ridesThreshold) -> do
-      activeConfigs <-
-        getConfig
-          ( CoinsConfigDimensions
-              { merchantOptCityId = merchantOpCityId.getId,
-                merchantId = Just merchantId.getId,
-                active = Just True,
-                vehicleCategory = Just vehCategory,
-                eventFunction = Nothing,
-                serviceTierType = Nothing,
-                eventName = Nothing,
-                tripCategoryType = Nothing,
-                configId = Nothing
-              }
+  Flow [SelectedIncentiveConfig]
+selectIncentiveConfigs transporterConfig merchantId merchantOpCityId vehCategory driverTag = do
+  activeConfigs <- fetchActiveCoinConfigs merchantId merchantOpCityId vehCategory
+  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let taggedEventFunctions = parseAllIncentiveRidesCompletedThresholds driverTag
+  if not (null taggedEventFunctions)
+    then
+      pure $
+        mapMaybe
+          ( \(eventFunction, ridesThreshold) ->
+              SelectedIncentiveConfig
+                <$> preferConfigForEventFunction localTime activeConfigs eventFunction
+                <*> pure ridesThreshold
           )
-          (Just (SQCC.getActiveCoinConfigs merchantId merchantOpCityId vehCategory))
-      localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-      let matchingConfigs =
+          taggedEventFunctions
+    else
+      let ridesCompletedConfigs =
             filter
               ( \cc ->
                   cc.active
                     && cc.eventName == "EndRide"
-                    && cc.eventFunction == eventFunction
+                    && isRidesCompletedFunction cc.eventFunction
               )
               activeConfigs
-          timeBoundCandidates =
-            [ CoinConfigWithTimeBounds cc tb
-              | cc <- matchingConfigs,
-                Just tb <- [cc.timeBounds],
-                tb /= TB.Unbounded
-            ]
-          matchedTimeBound = TB.findBoundedDomain timeBoundCandidates localTime
-          selectedConfigs =
-            case matchedTimeBound of
-              matched@(_ : _) -> (.coinsConfig) <$> matched
-              [] ->
-                case timeBoundCandidates of
-                  candidate : _ -> [candidate.coinsConfig]
-                  [] -> filter (\cc -> fromMaybe TB.Unbounded cc.timeBounds == TB.Unbounded) matchingConfigs
-      pure $ SelectedIncentiveConfig <$> listToMaybe selectedConfigs <*> pure ridesThreshold
+          eventFunctions = nub $ map (.eventFunction) ridesCompletedConfigs
+       in pure $
+            mapMaybe
+              ( \eventFunction -> do
+                  selected <- preferConfigForEventFunction localTime activeConfigs eventFunction
+                  ridesThreshold <- ridesThresholdFromEventFunction eventFunction
+                  pure $ SelectedIncentiveConfig selected ridesThreshold
+              )
+              eventFunctions
+
+fetchActiveCoinConfigs ::
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DTV.VehicleCategory ->
+  Flow [CoinsConfig.CoinsConfig]
+fetchActiveCoinConfigs merchantId merchantOpCityId vehCategory =
+  getConfig
+    ( CoinsConfigDimensions
+        { merchantOptCityId = merchantOpCityId.getId,
+          merchantId = Just merchantId.getId,
+          active = Just True,
+          vehicleCategory = Just vehCategory,
+          eventFunction = Nothing,
+          serviceTierType = Nothing,
+          eventName = Nothing,
+          tripCategoryType = Nothing,
+          configId = Nothing
+        }
+    )
+    (Just (SQCC.getActiveCoinConfigs merchantId merchantOpCityId vehCategory))
+
+-- | Prefer an in-window timebound row; else any bounded row for that eventFunction;
+-- else unbounded / null. Nothing if no matching EndRide config.
+preferConfigForEventFunction ::
+  UTCTime ->
+  [CoinsConfig.CoinsConfig] ->
+  DCT.DriverCoinsFunctionType ->
+  Maybe CoinsConfig.CoinsConfig
+preferConfigForEventFunction localTime activeConfigs eventFunction =
+  let matchingConfigs =
+        filter
+          ( \cc ->
+              cc.active
+                && cc.eventName == "EndRide"
+                && cc.eventFunction == eventFunction
+          )
+          activeConfigs
+      timeBoundCandidates =
+        [ CoinConfigWithTimeBounds cc tb
+          | cc <- matchingConfigs,
+            Just tb <- [cc.timeBounds],
+            tb /= TB.Unbounded
+        ]
+      matchedTimeBound = TB.findBoundedDomain timeBoundCandidates localTime
+      selectedConfigs =
+        case matchedTimeBound of
+          matched@(_ : _) -> (.coinsConfig) <$> matched
+          [] ->
+            case timeBoundCandidates of
+              candidate : _ -> [candidate.coinsConfig]
+              [] -> filter (\cc -> fromMaybe TB.Unbounded cc.timeBounds == TB.Unbounded) matchingConfigs
+   in listToMaybe selectedConfigs
 
 toConfigItem :: CoinsConfig.CoinsConfig -> Int -> API.DriverIncentiveCoinConfigItem
 toConfigItem selected ridesThreshold =
@@ -215,19 +247,29 @@ computeDriverIncentiveConfigETag :: [API.DriverIncentiveCoinConfigItem] -> Text
 computeDriverIncentiveConfigETag items =
   T.cons '"' (T.pack (show (Hash.hashWith Hash.SHA256 (BS.toStrict (encode items))))) `T.snoc` '"'
 
--- | First segment after Incentive# only (before any "&").
--- Returns threshold only when that segment is DriverIncentiveCohortRidesCompleted N.
-parseFirstIncentiveRidesCompletedThreshold :: Maybe [LYT.TagNameValueExpiry] -> Maybe (DCT.DriverCoinsFunctionType, Int)
-parseFirstIncentiveRidesCompletedThreshold =
-  (=<<) firstRidesCompleted . listToMaybe . concatMap parseFirstIncentiveSegment . fromMaybe []
+isRidesCompletedFunction :: DCT.DriverCoinsFunctionType -> Bool
+isRidesCompletedFunction = \case
+  DCT.RidesCompleted _ -> True
+  _ -> False
+
+ridesThresholdFromEventFunction :: DCT.DriverCoinsFunctionType -> Maybe Int
+ridesThresholdFromEventFunction = \case
+  DCT.DriverIncentiveCohortRidesCompleted n -> Just n
+  DCT.RidesCompleted n -> Just n
+  _ -> Nothing
+
+-- | All DriverIncentiveCohortRidesCompleted segments after Incentive# (split on "&").
+parseAllIncentiveRidesCompletedThresholds :: Maybe [LYT.TagNameValueExpiry] -> [(DCT.DriverCoinsFunctionType, Int)]
+parseAllIncentiveRidesCompletedThresholds =
+  mapMaybe asRidesCompleted . concatMap parseIncentiveSegments . fromMaybe []
   where
-    parseFirstIncentiveSegment (LYT.TagNameValueExpiry rawTagText) =
+    parseIncentiveSegments (LYT.TagNameValueExpiry rawTagText) =
       case T.splitOn "#" rawTagText of
         ("Incentive" : tagValueText : _) ->
-          case map T.strip (T.splitOn "&" tagValueText) of
-            (firstSeg : _) | not (T.null firstSeg) -> maybeToList (readMaybe (T.unpack firstSeg))
-            _ -> []
+          mapMaybe (readMaybe . T.unpack) $
+            filter (not . T.null) $
+              map T.strip (T.splitOn "&" tagValueText)
         _ -> []
-    firstRidesCompleted = \case
+    asRidesCompleted = \case
       DCT.DriverIncentiveCohortRidesCompleted n -> Just (DCT.DriverIncentiveCohortRidesCompleted n, n)
       _ -> Nothing
