@@ -45,13 +45,15 @@ data UpdateEmergencyInfo = UpdateEmergencyInfo
     notifySosWithEmergencyContacts :: Maybe Bool,
     shakeToActivate :: Maybe Bool,
     enableOtpLessRide :: Maybe Bool,
-    aggregatedRideShare :: Maybe SafetyCommon.RideShareOptions
+    aggregatedRideShare :: Maybe SafetyCommon.RideShareOptions,
+    consentToShareMobileNumber :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 emptyUpdateEmergencyInfo :: UpdateEmergencyInfo
 emptyUpdateEmergencyInfo =
   UpdateEmergencyInfo
+    Nothing
     Nothing
     Nothing
     Nothing
@@ -113,6 +115,7 @@ getDefaultSafetySettings personId mbPersonDefaults = do
             personId,
             safetyCenterDisabledOnDate = Nothing,
             shakeToActivate = False,
+            consentToShareMobileNumber = Nothing,
             updatedAt = now
           }
     Just p ->
@@ -133,6 +136,7 @@ getDefaultSafetySettings personId mbPersonDefaults = do
             personId,
             safetyCenterDisabledOnDate = p.safetyCenterDisabledOnDate,
             shakeToActivate = p.shakeToActivate,
+            consentToShareMobileNumber = Nothing,
             updatedAt = now
           }
 
@@ -182,6 +186,7 @@ upsert personId UpdateEmergencyInfo {..} getDefaultSettings =
               <> [Se.Set BeamP.shakeToActivate (fromJust shakeToActivate) | isJust shakeToActivate]
               <> [Se.Set BeamP.enableOtpLessRide enableOtpLessRide | isJust enableOtpLessRide]
               <> [Se.Set BeamP.aggregatedRideShareSetting aggregatedRideShare | isJust aggregatedRideShare]
+              <> [Se.Set BeamP.consentToShareMobileNumber consentToShareMobileNumber | isJust consentToShareMobileNumber]
           )
           [Se.Is BeamP.personId (Se.Eq $ getId personId)]
       else do
@@ -203,6 +208,7 @@ upsert personId UpdateEmergencyInfo {..} getDefaultSettings =
                   DSafety.personId = safetySettings.personId,
                   DSafety.safetyCenterDisabledOnDate = safetySettings.safetyCenterDisabledOnDate,
                   DSafety.shakeToActivate = fromMaybe safetySettings.shakeToActivate shakeToActivate,
+                  DSafety.consentToShareMobileNumber = consentToShareMobileNumber <|> safetySettings.consentToShareMobileNumber,
                   DSafety.updatedAt = now
                 }
         createWithKV merged

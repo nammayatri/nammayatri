@@ -51,6 +51,7 @@ updateByPrimaryKey (Safety.Domain.Types.SafetySettings.SafetySettings {..}) = do
   updateWithKV
     [ Se.Set Beam.aggregatedRideShareSetting aggregatedRideShareSetting,
       Se.Set Beam.autoCallDefaultContact autoCallDefaultContact,
+      Se.Set Beam.consentToShareMobileNumber consentToShareMobileNumber,
       Se.Set Beam.enableOtpLessRide enableOtpLessRide,
       Se.Set Beam.enablePostRideSafetyCheck enablePostRideSafetyCheck,
       Se.Set Beam.enableUnexpectedEventsCheck enableUnexpectedEventsCheck,

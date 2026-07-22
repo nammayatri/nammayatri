@@ -682,7 +682,8 @@ data UpdateEmergencySettingsReq = UpdateEmergencySettingsReq
     notifySosWithEmergencyContacts :: Maybe Bool,
     shakeToActivate :: Maybe Bool,
     safetyCenterDisabledOnDate :: Maybe UTCTime,
-    enableOtpLessRide :: Maybe Bool
+    enableOtpLessRide :: Maybe Bool,
+    consentToShareMobileNumber :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -728,7 +729,8 @@ updateEmergencySettings personId req = do
                 nightSafetyChecks = nightSafetyChecks,
                 notifySafetyTeamForSafetyCheckFailure = notifySafetyTeamForSafetyCheckFailure,
                 shakeToActivate = shakeToActivate,
-                enableOtpLessRide = enableOtpLessRide
+                enableOtpLessRide = enableOtpLessRide,
+                consentToShareMobileNumber = consentToShareMobileNumber
               }
       void $ Lib.upsert (cast personId) emergencyInfo (Lib.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
 
@@ -753,6 +755,7 @@ data EmergencySettingsRes = EmergencySettingsRes
     shakeToActivate :: Bool,
     safetyCenterDisabledOnDate :: Maybe UTCTime,
     enableOtpLessRide :: Maybe Bool,
+    consentToShareMobileNumber :: Maybe Bool,
     safetyCheckStartTime :: Seconds,
     safetyCheckEndTime :: Seconds
   }
@@ -791,6 +794,7 @@ getEmergencySettings personId = do
         shakeToActivate = safetySettings.shakeToActivate,
         safetyCenterDisabledOnDate = safetySettings.safetyCenterDisabledOnDate,
         enableOtpLessRide = safetySettings.enableOtpLessRide,
+        consentToShareMobileNumber = safetySettings.consentToShareMobileNumber,
         notifySosWithEmergencyContacts = safetySettings.notifySosWithEmergencyContacts
       }
 

@@ -343,8 +343,9 @@ handler merchantId req validatedReq = do
       QLoc.updateInstructionsAndExtrasById deliveryDetails.receiverDetails.address.instructions deliveryDetails.receiverDetails.address.extras receiverLocationId
 
       -- update Rider details
-      (senderRiderDetails, isNewSender) <- SRD.getRiderDetails searchReq.currency mId mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) deliveryDetails.senderDetails.phoneNumber searchReq.bapId False
-      (receiverRiderDetails, isNewReceiver) <- SRD.getRiderDetails searchReq.currency mId mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) deliveryDetails.receiverDetails.phoneNumber searchReq.bapId False
+      -- consent tag is only emitted at confirm, not init, so no consent to record yet here
+      (senderRiderDetails, isNewSender) <- SRD.getRiderDetails searchReq.currency mId mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) deliveryDetails.senderDetails.phoneNumber searchReq.bapId False False
+      (receiverRiderDetails, isNewReceiver) <- SRD.getRiderDetails searchReq.currency mId mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) deliveryDetails.receiverDetails.phoneNumber searchReq.bapId False False
       when isNewSender $ QRD.create senderRiderDetails
       when isNewReceiver $ QRD.create receiverRiderDetails
 

@@ -158,6 +158,7 @@ tfCustomer res =
       | otherwise =
         Tags.buildTagGroups
           [ Tags.NIGHT_SAFETY_CHECK Tags.~= show res.nightSafetyCheck,
+            Tags.CONSENT_TO_SHARE_MOBILE_NUMBER Tags.~= show res.consentToShareMobileNumber,
             Tags.ENABLE_FREQUENT_LOCATION_UPDATES Tags.~= show res.enableFrequentLocationUpdates,
             Tags.ENABLE_OTP_LESS_RIDE Tags.~= show res.enableOtpLessRide,
             Tags.DRIVER_PREFERENCE Tags.~=? (T.intercalate "&" <$> res.driverPreference),

@@ -219,7 +219,7 @@
         "replace": "http://localhost:8013"
       },
       {
-        "_comment": "Integrated BPP \u2014 CMRL metro"
+        "_comment": "Integrated BPP — CMRL metro"
       },
       {
         "find": "https://quickticketapi.chennaimetrorail.org/api",
@@ -230,14 +230,14 @@
         "replace": "http://localhost:8080/cmrl"
       },
       {
-        "_comment": "Integrated BPP \u2014 CRIS subway"
+        "_comment": "Integrated BPP — CRIS subway"
       },
       {
         "find": "https://tten.wb.gov.in/WBTTANRestAPI",
         "replace": "http://localhost:8080/cris"
       },
       {
-        "_comment": "Integrated BPP \u2014 ONDC external gateways"
+        "_comment": "Integrated BPP — ONDC external gateways"
       },
       {
         "find": "https://preprod.gateway.ondc.org",
@@ -263,7 +263,7 @@
         "replace": "/beckn/"
       },
       {
-        "_comment": "FCM \u2014 second project (fleetx)"
+        "_comment": "FCM — second project (fleetx)"
       },
       {
         "find": "https://fcm.googleapis.com/v1/projects/fleetx-f2519/messages:send/",
@@ -274,7 +274,7 @@
         "replace": "http://localhost:4545"
       },
       {
-        "_comment": "Google Maps \u2014 without trailing slash variants"
+        "_comment": "Google Maps — without trailing slash variants"
       },
       {
         "find": "https://maps.googleapis.com/maps/api",
@@ -300,7 +300,7 @@
         "replace": "http://localhost:8020"
       },
       {
-        "_comment": "Juspay \u2014 additional URL variants"
+        "_comment": "Juspay — additional URL variants"
       },
       {
         "find": "https://payments.sandbox.juspay.in",
@@ -311,7 +311,7 @@
         "replace": "http://localhost:8080/juspay"
       },
       {
-        "_comment": "Verification providers \u2192 mock server"
+        "_comment": "Verification providers → mock server"
       },
       {
         "find": "https://auth.hyperverge.co",
@@ -338,7 +338,7 @@
         "replace": "http://localhost:8080/gridline"
       },
       {
-        "_comment": "Tokenization/Insurance providers \u2192 mock server"
+        "_comment": "Tokenization/Insurance providers → mock server"
       },
       {
         "find": "https://dev.api.gullak.money",
@@ -420,14 +420,14 @@
         "replace": "http://localhost:8080/sos"
       },
       {
-        "_comment": "CRIS \u2014 Indian Railways API"
+        "_comment": "CRIS — Indian Railways API"
       },
       {
         "find": "https://gw.crisapis.indianrail.gov.in",
         "replace": "http://localhost:8080/cris"
       },
       {
-        "_comment": "K8s cluster internal URLs \u2192 localhost"
+        "_comment": "K8s cluster internal URLs → localhost"
       },
       {
         "find": "http://beckn-driver-offer-bpp-master.atlas.svc.cluster.local:8016",
@@ -492,7 +492,7 @@
         "replace": "http://localhost:8080/juspay"
       },
       {
-        "_comment": "FCM jp-beckn-dev \u2014 without trailing slash"
+        "_comment": "FCM jp-beckn-dev — without trailing slash"
       },
       {
         "find": "https://fcm.googleapis.com/v1/projects/jp-beckn-dev/messages:send",
@@ -1312,7 +1312,7 @@
             }
           },
           {
-            "_comment": "ONDC: external gateway URLs \u2192 local beckn-gateway",
+            "_comment": "ONDC: external gateway URLs → local beckn-gateway",
             "where": {
               "config_json.tag": "ONDC"
             },
@@ -2085,6 +2085,15 @@
               }
             }
           }
+        ],
+        "_comment_driver_calling_option": "Local integration tests (PhoneShareConsentFlow) need DirectCall so the rider phone-share consent gate can be exercised; upstream default is AnonymousCall which masks the number regardless of consent.",
+        "transporter_config": [
+          {
+            "where": {},
+            "set": {
+              "driver_calling_option": "DirectCall"
+            }
+          }
         ]
       },
       "atlas_registry": {
@@ -2096,7 +2105,7 @@
             }
           },
           {
-            "_comment": "BG (gateway) subscriber \u2192 local beckn-gateway",
+            "_comment": "BG (gateway) subscriber → local beckn-gateway",
             "where": {
               "type": "BG",
               "domain": "MOBILITY"
@@ -2527,21 +2536,21 @@
         "replace": "http://localhost:5001"
       },
       {
-        "_comment": "Prod integrated BPP \u2014 CMRL"
+        "_comment": "Prod integrated BPP — CMRL"
       },
       {
         "find": "https://ticketsapi.chennaimetrorail.org",
         "replace": "http://localhost:8080/cmrl"
       },
       {
-        "_comment": "Prod integrated BPP \u2014 CRIS"
+        "_comment": "Prod integrated BPP — CRIS"
       },
       {
         "find": "https://gw.crisapis.indianrail.gov.in",
         "replace": "http://localhost:8080/cris"
       },
       {
-        "_comment": "Prod integrated BPP \u2014 PMPML"
+        "_comment": "Prod integrated BPP — PMPML"
       },
       {
         "find": "https://app.pmpml.in",
@@ -3334,7 +3343,7 @@
             }
           },
           {
-            "_comment": "ONDC: external gateway URLs \u2192 local beckn-gateway",
+            "_comment": "ONDC: external gateway URLs → local beckn-gateway",
             "where": {
               "config_json.tag": "ONDC"
             },
@@ -4115,6 +4124,15 @@
               }
             }
           }
+        ],
+        "_comment_driver_calling_option": "Local integration tests (PhoneShareConsentFlow) need DirectCall so the rider phone-share consent gate can be exercised; upstream default is AnonymousCall which masks the number regardless of consent.",
+        "transporter_config": [
+          {
+            "where": {},
+            "set": {
+              "driver_calling_option": "DirectCall"
+            }
+          }
         ]
       },
       "atlas_registry": {
@@ -4126,7 +4144,7 @@
             }
           },
           {
-            "_comment": "BG (gateway) subscriber \u2192 local beckn-gateway",
+            "_comment": "BG (gateway) subscriber → local beckn-gateway",
             "where": {
               "type": "BG",
               "domain": "MOBILITY"
@@ -4557,21 +4575,21 @@
         "replace": "http://localhost:5001"
       },
       {
-        "_comment": "Prod integrated BPP \u2014 CMRL"
+        "_comment": "Prod integrated BPP — CMRL"
       },
       {
         "find": "https://ticketsapi.chennaimetrorail.org",
         "replace": "http://localhost:8080/cmrl"
       },
       {
-        "_comment": "Prod integrated BPP \u2014 CRIS"
+        "_comment": "Prod integrated BPP — CRIS"
       },
       {
         "find": "https://gw.crisapis.indianrail.gov.in",
         "replace": "http://localhost:8080/cris"
       },
       {
-        "_comment": "Prod integrated BPP \u2014 PMPML"
+        "_comment": "Prod integrated BPP — PMPML"
       },
       {
         "find": "https://app.pmpml.in",
@@ -5364,7 +5382,7 @@
             }
           },
           {
-            "_comment": "ONDC: external gateway URLs \u2192 local beckn-gateway",
+            "_comment": "ONDC: external gateway URLs → local beckn-gateway",
             "where": {
               "config_json.tag": "ONDC"
             },
@@ -6145,6 +6163,15 @@
               }
             }
           }
+        ],
+        "_comment_driver_calling_option": "Local integration tests (PhoneShareConsentFlow) need DirectCall so the rider phone-share consent gate can be exercised; upstream default is AnonymousCall which masks the number regardless of consent.",
+        "transporter_config": [
+          {
+            "where": {},
+            "set": {
+              "driver_calling_option": "DirectCall"
+            }
+          }
         ]
       },
       "atlas_registry": {
@@ -6156,7 +6183,7 @@
             }
           },
           {
-            "_comment": "BG (gateway) subscriber \u2192 local beckn-gateway",
+            "_comment": "BG (gateway) subscriber → local beckn-gateway",
             "where": {
               "type": "BG",
               "domain": "MOBILITY"

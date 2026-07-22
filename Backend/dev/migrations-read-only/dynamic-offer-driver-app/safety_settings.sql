@@ -17,3 +17,9 @@ ALTER TABLE atlas_driver_offer_bpp.safety_settings ADD COLUMN safety_center_disa
 ALTER TABLE atlas_driver_offer_bpp.safety_settings ADD COLUMN shake_to_activate boolean NOT NULL default false;
 ALTER TABLE atlas_driver_offer_bpp.safety_settings ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.safety_settings ADD PRIMARY KEY ( person_id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.safety_settings ADD COLUMN consent_to_share_mobile_number boolean ;

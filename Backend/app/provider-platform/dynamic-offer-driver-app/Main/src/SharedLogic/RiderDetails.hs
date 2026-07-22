@@ -23,8 +23,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.RiderDetails as QRD
 
-getRiderDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r) => Currency -> Id DM.Merchant -> Maybe (Id DMOC.MerchantOperatingCity) -> Text -> Text -> Text -> Bool -> m (DRD.RiderDetails, Bool)
-getRiderDetails currency merchantId mbMerchantOperatingCityId customerMobileCountryCode customerPhoneNumber bapId nightSafetyCheck = do
+getRiderDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r) => Currency -> Id DM.Merchant -> Maybe (Id DMOC.MerchantOperatingCity) -> Text -> Text -> Text -> Bool -> Bool -> m (DRD.RiderDetails, Bool)
+getRiderDetails currency merchantId mbMerchantOperatingCityId customerMobileCountryCode customerPhoneNumber bapId nightSafetyCheck consentToShareMobileNumber = do
   now <- getCurrentTime
   QRD.findByMobileNumberAndMerchantAndBapId customerPhoneNumber merchantId bapId >>= \case
     Nothing -> do
@@ -62,6 +62,7 @@ getRiderDetails currency merchantId mbMerchantOperatingCityId customerMobileCoun
             currency,
             disputeChancesUsed = 0,
             nightSafetyChecks = nightSafetyCheck,
+            consentToShareMobileNumber = consentToShareMobileNumber,
             firstRideId = Nothing,
             payoutFlagReason = Nothing,
             isDeviceIdExists = Nothing,

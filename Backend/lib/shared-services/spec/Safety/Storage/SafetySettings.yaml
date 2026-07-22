@@ -23,6 +23,7 @@ SafetySettings:
     shakeToActivate : Bool
     enableOtpLessRide : Maybe Bool
     aggregatedRideShareSetting : Maybe RideShareOptions
+    consentToShareMobileNumber : Maybe Bool
 
   beamType:
     falseSafetyAlarmCount: Maybe Int

@@ -71,3 +71,8 @@ ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN cancellation_dues_pa
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN rider_flagged_for_driver_incentives boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN consent_to_share_mobile_number boolean ;

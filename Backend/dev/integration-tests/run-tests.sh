@@ -60,6 +60,7 @@ REWARDS_DIR="$SCRIPT_DIR/collections/RewardsFlow"
 PANGST_DIR="$SCRIPT_DIR/collections/PanGstCrossCheckFlow"
 FACEMATCH_DIR="$SCRIPT_DIR/collections/FaceMatchOnboardingFlow"
 GOHOME_DIR="$SCRIPT_DIR/collections/GoHomeSpecialLocationFlow"
+PHONE_CONSENT_DIR="$SCRIPT_DIR/collections/PhoneShareConsentFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
 DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
@@ -203,7 +204,7 @@ list_suites() {
             done
         fi
     done
-    for label_dir in "Toll Config:$TOLL_CONFIG_DIR" "Toll Ride:$TOLL_RIDE_DIR" "Rewards:$REWARDS_DIR" "Online Ride:$ONLINE_DIR" "Bus:$BUS_DIR" "Metro:$METRO_DIR" "Subway:$SUBWAY_DIR" "Scheduler:$SCHEDULER_DIR" "Fleet Management:$FLEET_DIR"; do
+    for label_dir in "Toll Config:$TOLL_CONFIG_DIR" "Toll Ride:$TOLL_RIDE_DIR" "Rewards:$REWARDS_DIR" "Online Ride:$ONLINE_DIR" "Bus:$BUS_DIR" "Metro:$METRO_DIR" "Subway:$SUBWAY_DIR" "Scheduler:$SCHEDULER_DIR" "Fleet Management:$FLEET_DIR" "Phone Share Consent:$PHONE_CONSENT_DIR"; do
         local label="${label_dir%%:*}"
         local dir="${label_dir#*:}"
         echo ""
@@ -624,6 +625,27 @@ run_gohome() {
     run_frfs "$GOHOME_DIR" "GO HOME SPECIAL LOCATION" "${1:-}" "${2:-}"
 }
 
+# Phone share consent: the gate is merchant-option AND rider-consent; local default
+# driver_calling_option is 'AnonymousCall', under which consent can never share the
+# number. Seed DirectCall so the suite can exercise the consent half, then flush
+# Redis — transporter_config is cached, and a stale cached AnonymousCall would make
+# every positive assertion fail spuriously.
+seed_phone_consent_config() {
+    local sql="$PHONE_CONSENT_DIR/setup-phone-share-consent.sql"
+    echo "Seeding phone-share-consent config (transporter_config.driver_calling_option = DirectCall)..."
+    psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" -f "$sql" >/dev/null 2>&1 \
+        || echo "WARNING: phone-consent seed failed — run manually: psql -h $DB_HOST -p $DB_PORT -U $DB_USER_SUPER -d $DB_NAME -f $sql"
+    flush_redis
+    echo "NOTE: ConfigPilot also caches transporter_config IN-PROCESS for up to 1h"
+    echo "      (IM.withInMemCache, config-pilot Getter.hs). If dynamic-offer-driver-app"
+    echo "      was already running and has served a ride, RESTART it now — otherwise"
+    echo "      ride 2's positive assertion can fail on the stale in-memory AnonymousCall."
+}
+run_phone_consent() {
+    seed_phone_consent_config
+    run_frfs "$PHONE_CONSENT_DIR" "PHONE SHARE CONSENT" "${1:-}" "${2:-}"
+}
+
 # ── Help ──
 
 show_help() {
@@ -655,6 +677,7 @@ show_help() {
     echo "  rewards             Run rewards dashboard + rider unlock suites (NY + BT)"
     echo "  face-match          Run selfie<->document face match onboarding suites (auto-seeds face-match config)"
     echo "  gohome              Run Go-Home blocked special location suite (auto-seeds blocked airport special location)"
+    echo "  phone-consent       Run rider phone-share consent gate suite (auto-seeds DirectCall + flushes Redis)"
     echo "  ./run-tests.sh toll-config NY_Bangalore       # Toll dashboard APIs (Bangalore)"
     echo "  ./run-tests.sh toll-config BT_Delhi           # Toll dashboard APIs (Delhi)"
     echo "  ./run-tests.sh rewards NY_Bangalore           # Rewards APIs (Namma Yatri)"
@@ -796,6 +819,9 @@ case "${1:-}" in
         ;;
     gohome|go-home)
         run_gohome "${2:-}" "${3:-}"
+        ;;
+    phone-consent|consent)
+        run_phone_consent "${2:-}" "${3:-}"
         ;;
     "")
         run_rides
