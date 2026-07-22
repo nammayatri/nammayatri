@@ -88,7 +88,6 @@ import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.BppDetails as CQBppDetails
 import qualified Storage.CachedQueries.Merchant as QMerch
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
@@ -333,7 +332,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   now <- getCurrentTime
 
   mkBppDetails >>= CQBppDetails.createIfNotPresent
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId searchRequest.merchantOperatingCityId))
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
   let isReservedSearch = isReservedRideSearch searchRequest
   mbNySubscription <- getNyRegularSubs isReservedSearch
   isValueAddNP <- CQVAN.isValueAddNP providerInfo.providerId

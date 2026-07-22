@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Domain.Action.Dashboard.Management.DriverReferral
   ( postDriverReferralReferralOpsPassword,
@@ -37,6 +38,8 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
+import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Cac.TransporterConfig as SCT
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -55,6 +58,7 @@ postDriverReferralReferralOpsPassword merchantShortId opCity req = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   _ <- SCT.updateReferralLinkPassword merchantOpCityId req.referralLinkPassword
   SCT.clearCache merchantOpCityId
+  invalidateConfigInMem LYT.TransporterConfig
   logTagInfo "dashboard -> updateReferralLinkPassword : " (show merchant.id)
   pure Success
 

@@ -19,7 +19,6 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.CallBAP as BP
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -42,7 +41,7 @@ stopDetection StopDetectionReq {..} = do
   logDebug $ "Stopdetected for driverId:" <> driverId.getId
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   let distance = distanceBetweenInMeters location (LatLong booking.fromLocation.lat booking.fromLocation.lon)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   let isValidRideForStop = (ride.status == INPROGRESS || ride.status == NEW) && not booking.isScheduled

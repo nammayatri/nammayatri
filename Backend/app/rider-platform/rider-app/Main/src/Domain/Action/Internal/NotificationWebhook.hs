@@ -19,7 +19,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.CommunicationEngine.Webhook as Webhook
 import Lib.ConfigPilot.Interface.Types (getConfig)
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import qualified Storage.Queries.MerchantMessage as QMM
 import qualified Storage.Queries.Person as QPerson
@@ -78,9 +77,8 @@ findContact' pid = do
 
 resolveProviders' :: Webhook.NotifyChannel -> Text -> Flow [Webhook.NotifyProvider]
 resolveProviders' channel opCityId = do
-  let merchantOpCityId = Id opCityId :: Id DMOC.MerchantOperatingCity
   usageConfig <-
-    getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = opCityId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOpCityId))
+    getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = opCityId}) Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound opCityId)
   pure $ case channel of
     Webhook.SMS -> map Webhook.SmsProvider usageConfig.smsProvidersPriorityList

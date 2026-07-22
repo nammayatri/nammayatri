@@ -16,7 +16,6 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 
 postXyneWebhook :: Maybe Text -> RawByteString -> Flow XyneShared.XyneWebhookAck
@@ -44,7 +43,7 @@ lookupXyneCfg _merchantIdCommon mocIdCommon = do
   msc <-
     getOneConfig
       (MerchantServiceConfigDimensions {merchantOperatingCityId = mocId.getId, merchantId = Nothing, serviceName = Just (DMSC.IssueTicketService Ticket.XyneSpaces)})
-      (Just (maybeToList <$> QMSC.findByServiceAndCity (DMSC.IssueTicketService Ticket.XyneSpaces) mocId))
+      Nothing
       >>= fromMaybeM (InternalError $ "XyneSpaces config not found for mocId=" <> mocIdCommon.getId)
   case msc.serviceConfig of
     DMSC.IssueTicketServiceConfig (Ticket.XyneSpacesConfig cfg) -> pure cfg

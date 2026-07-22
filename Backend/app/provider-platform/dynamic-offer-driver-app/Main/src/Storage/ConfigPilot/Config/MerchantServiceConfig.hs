@@ -33,6 +33,7 @@ instance ConfigDimensions MerchantServiceConfigDimensions where
   type ConfigTypeOf MerchantServiceConfigDimensions = 'MerchantServiceConfigDriver
   type ConfigValueTypeOf MerchantServiceConfigDimensions = [DMSC.MerchantServiceConfig]
   getConfigType _ = MerchantServiceConfigDriver
+  configFallback a = (\svc -> maybeToList <$> SQ.findByServiceAndCity svc (Id a.merchantOperatingCityId)) <$> a.serviceName
   getConfigList a =
     LCP.resolveConfigList
       a

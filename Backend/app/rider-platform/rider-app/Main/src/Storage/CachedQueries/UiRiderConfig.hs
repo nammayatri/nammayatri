@@ -30,13 +30,12 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as YType
 import Storage.Beam.Yudhishthira ()
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
-import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.UiRiderConfig as Queries
 import qualified Tools.DynamicLogic as TDL
 
 findUiConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => YType.UiConfigRequest -> Id MerchantOperatingCity -> Bool -> m (Maybe (UiRiderConfig, Int))
 findUiConfig YType.UiConfigRequest {..} merchantOperatingCityId isBaseLogic = do
-  mbRiderConfig <- CPI.getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId))
+  mbRiderConfig <- CPI.getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
   localTime <- getLocalCurrentTime timeDiffFromUtc
   let config = LYT.UI_RIDER os platform

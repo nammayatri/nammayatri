@@ -19,7 +19,6 @@ import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -54,7 +53,7 @@ notificationAndOrderStatusUpdate (Job {id, jobInfo}) = withLogTag ("JobId-" <> i
       mbMerchantOpCityId = jobData.merchantOperatingCityId
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let batchSizeOfNotification = transporterConfig.updateNotificationStatusBatchSize
       batchSizeOfOrderStatus = transporterConfig.updateOrderStatusBatchSize
   allPendingNotification <- QNTF.findAllByStatusWithLimit [PaymentInterface.NOTIFICATION_CREATED, PaymentInterface.PENDING] merchantOpCityId batchSizeOfNotification

@@ -36,3 +36,4 @@ instance ConfigDimensions MerchantConfigDimensions where
       (SQ.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId) (Just []))
       ([] :: [LCP.DimMatcher MerchantConfigDimensions DT.MerchantConfig])
       Nothing
+  configFallback a = Just (SQ.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId) (Just []))

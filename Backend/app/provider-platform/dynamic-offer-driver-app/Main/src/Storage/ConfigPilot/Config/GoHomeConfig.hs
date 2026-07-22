@@ -37,3 +37,4 @@ instance ConfigDimensions GoHomeConfigDimensions where
         (maybeToList <$> SQ.getGoHomeConfigFromDB (Id a.merchantOperatingCityId))
         (([] :: [LCP.DimMatcher GoHomeConfigDimensions DT.GoHomeConfig]))
         Nothing
+  configFallback a = Just (SQ.getGoHomeConfigFromDB (Id a.merchantOperatingCityId))

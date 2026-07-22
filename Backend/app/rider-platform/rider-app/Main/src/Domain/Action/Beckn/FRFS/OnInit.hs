@@ -39,7 +39,6 @@ import Lib.Payment.Storage.Beam.BeamFlow
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
-import qualified Storage.CachedQueries.FRFSConfig as CQFRFS
 import qualified Storage.CachedQueries.Merchant as QMerch
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
@@ -116,7 +115,7 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
   void $ QFRFSTicketBooking.updateTotalPriceById totalPrice oldBooking.id
   void $ QFRFSTicketBooking.updateIsFareChangedById (Just isFareChanged) oldBooking.id -- Full Ticket Price (Multiplied By Quantity)
   void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) oldBooking.id
-  frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = oldBooking.merchantOperatingCityId.getId}) (Just (CQFRFS.findByMerchantOperatingCityId oldBooking.merchantOperatingCityId (Just []))) >>= fromMaybeM (FRFSConfigNotFound oldBooking.merchantOperatingCityId.getId)
+  frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = oldBooking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (FRFSConfigNotFound oldBooking.merchantOperatingCityId.getId)
   whenJust onInitReq.bppOrderId (\bppOrderId -> void $ QFRFSTicketBooking.updateBPPOrderIdById (Just bppOrderId) oldBooking.id)
   whenJust onInitReq.bppPaymentId (\bppPaymentId -> void $ QFRFSTicketBooking.updateBPPPaymentIdById (Just bppPaymentId) oldBooking.id)
   isMetroTestTransaction <- asks (.isMetroTestTransaction)

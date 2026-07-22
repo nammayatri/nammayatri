@@ -36,3 +36,4 @@ instance ConfigDimensions HotSpotConfigDimensions where
         (maybeToList <$> SQ.findConfigByMerchantId (Id a.merchantId))
         (([] :: [LCP.DimMatcher HotSpotConfigDimensions DT.HotSpotConfig]))
         Nothing
+  configFallback a = Just (SQ.findConfigByMerchantId (Id a.merchantId))

@@ -47,7 +47,6 @@ import SharedLogic.Search as SLS
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
 import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import Storage.ConfigPilot.Config.VehicleConfig (VehicleConfigDimensions (..))
-import qualified Storage.Queries.VehicleConfig as QVC
 import Tools.Error
 
 mkBapUri :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Id DM.Merchant -> m KP.BaseUrl
@@ -446,6 +445,6 @@ getBlackListedVehicles merchantOperatingCityId becknConfigId subscriberId = do
         { merchantOperatingCityId = merchantOperatingCityId.getId,
           becknConfigId = becknConfigId.getId
         }
-      (Just (QVC.findAllByBecknConfigId becknConfigId))
+      Nothing
   let blackListedVehicles = filter (\vc -> subscriberId `elem` vc.blackListedSubscribers) vehicleConfigs
   pure $ mapMaybe (\blv -> mapTextToVehicle blv.category) blackListedVehicles

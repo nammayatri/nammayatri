@@ -65,7 +65,6 @@ import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchas
 import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.Payment
 import qualified SharedLogic.Payment as SPayment
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Plan as QPD
 import qualified Storage.CachedQueries.PlanExtra as QPDE
 import qualified Storage.CachedQueries.PlanTranslation as CQPTD
@@ -277,7 +276,7 @@ subscriptionPurchaseList (driverId, _merchantId, merchantOperatingCityId) mbLimi
   let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
   let limit = Just $ fromMaybe 10 mbLimit
       offset = Just $ fromMaybe 0 mbOffset
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   let isolationEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
   mbVehicleCategory <-
     if isolationEnabled
@@ -471,7 +470,7 @@ getSubcriptionStatusWithPlanPrepaid driverId = do
   person <- QPerson.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   let isFleetOwner = DCommon.checkFleetOwnerRole person.role
       (ownerType, ownerId) = if isFleetOwner then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   let isolationEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
   mbVehicleCategory <-
     if isolationEnabled
@@ -561,7 +560,7 @@ getSubsriptionConfigAndPlanPrepaid ::
   m (SubscriptionConfig, [Plan])
 getSubsriptionConfigAndPlanPrepaid serviceName (personId, _, merchantOpCityId) mbDPlan = do
   subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   person <- QPerson.findById (cast personId) >>= fromMaybeM (InvalidRequest ("Person id " <> personId.getId <> " is not found"))
   let mbIsFleetOwnerPlan = if DCommon.checkFleetOwnerRole person.role then Just True else Nothing
       isolationEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
@@ -609,7 +608,7 @@ planList (personId, merchantId, merchantOpCityId) serviceName _mbLimit _mbOffset
           DI.findById (cast personId)
             >>= fromMaybeM (PersonNotFound personId.getId)
         pure (driverInfo.autoPayStatus == Just DI.ACTIVE)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let isolationEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
   mDriverPlan <- case serviceName of
     PREPAID_SUBSCRIPTION -> do
@@ -663,7 +662,7 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
   -- (Bharat Taxi). MSIL uses a pooled wallet so purchases must not be filtered by category.
   prepaidIsolationEnabled <- case serviceName of
     PREPAID_SUBSCRIPTION -> do
-      tc <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+      tc <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
       pure $ fromMaybe False tc.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
     _ -> pure False
   latestManualPaymentDate <- case serviceName of
@@ -1132,7 +1131,7 @@ resolvePrepaidPlanFee ::
   SP.Person ->
   Flow HighPrecMoney
 resolvePrepaidPlanFee driverId merchantId merchantOpCityId plan subscriptionConfig driver = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   now <- getCurrentTime
   isMember <- SPayment.checkDriverMembership driverId merchantOpCityId plan.serviceName (Just subscriptionConfig)
@@ -1286,7 +1285,7 @@ createMandateInvoiceAndOrder ::
   Maybe SPayment.DeepLinkData ->
   Flow (Payment.CreateOrderResp, Id DOrder.PaymentOrder)
 createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
@@ -1362,7 +1361,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
       dueDriverFees' <- B.runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceNameParam driverId [DF.RECURRING_INVOICE, DF.RECURRING_EXECUTION_INVOICE] [DF.PAYMENT_PENDING, DF.PAYMENT_OVERDUE]
       pendingRegistrationDfee' <- B.runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceNameParam driverId [DF.MANDATE_REGISTRATION] [DF.PAYMENT_PENDING]
       pure (dueDriverFees', pendingRegistrationDfee')
-  transporterConfig_ <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig_ <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   paymentCurrency <- case currency of
     INR -> pure INR
@@ -1675,7 +1674,7 @@ isOnFreeTrial driverId subscriptionConfig freeTrialDaysLeft mbDriverPlan = do
 
 updateWaiveOffByDriver :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> [WaiveOffEntity] -> m ()
 updateWaiveOffByDriver merchantOpCityId waiveOffEntities = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   if (length waiveOffEntities) > transporterConfig.bulkWaiveOffLimit
     then throwError $ InvalidRequest "Length entities exceeds bulk update limit"
     else QDPlan.updateAllWithWaiveOffPercantageAndType waiveOffEntities

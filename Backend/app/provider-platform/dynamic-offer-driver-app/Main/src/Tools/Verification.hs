@@ -91,8 +91,6 @@ import Kernel.Utils.Common
 import Kernel.Utils.Forkable (runWithFallbackAndTimeout)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Storage.Beam.GovtDataRC ()
-import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Tools.Error
@@ -106,7 +104,7 @@ verifyDL ::
   m VerifyDLResp
 verifyDL _ merchantOpCityId req = do
   merchantServiceUsageConfig <-
-    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   fromMaybeM (InternalError $ "Providers not configured in the priority list !!!!!" <> show merchantServiceUsageConfig.verificationProvidersPriorityList) (listToMaybe merchantServiceUsageConfig.verificationProvidersPriorityList) >>= \provider -> callService merchantOpCityId provider Verification.verifyDL req -- TODO: Using first element of priority list as of now would be soon replacing this with a proper fallback implementation.
 
@@ -142,7 +140,7 @@ verifyGstAsync ::
   m VerifyGstAsyncResp
 verifyGstAsync _ merchantOpCityId req = do
   merchantServiceUsageConfig <-
-    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   fromMaybeM (InternalError $ "Providers not configured in the priority list !!!!!" <> show merchantServiceUsageConfig.verificationProvidersPriorityList) (listToMaybe merchantServiceUsageConfig.verificationProvidersPriorityList) >>= \provider -> callService merchantOpCityId provider Verification.verifyGstAsync req
 
@@ -154,7 +152,7 @@ verifyPanAsync ::
   m VerifyPanAsyncResp
 verifyPanAsync _ merchantOpCityId req = do
   merchantServiceUsageConfig <-
-    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   fromMaybeM (InternalError $ "Providers not configured in the priority list !!!!!" <> show merchantServiceUsageConfig.verificationProvidersPriorityList) (listToMaybe merchantServiceUsageConfig.verificationProvidersPriorityList) >>= \provider -> callService merchantOpCityId provider Verification.verifyPanAsync req -- TODO: Using first element of priority list as of now would be soon replacing this with a proper fallback implementation.
 
@@ -166,7 +164,7 @@ verifyUdyamAadhaarAsync ::
   m VerifyUdyamAadhaarAsyncResp
 verifyUdyamAadhaarAsync _ merchantOpCityId req = do
   merchantServiceUsageConfig <-
-    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   fromMaybeM (InternalError $ "Providers not configured in the priority list !!!!!" <> show merchantServiceUsageConfig.verificationProvidersPriorityList) (listToMaybe merchantServiceUsageConfig.verificationProvidersPriorityList) >>= \provider -> callService merchantOpCityId provider Verification.verifyUdyamAadhaarAsync req
 
@@ -188,7 +186,7 @@ verifyRC _ merchantOptCityId useCategoryBasedPriority mbRemPriorityList mbVehicl
     case mbRemPriorityList of
       Nothing -> do
         merchantServiceUsageConfig <-
-          getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOptCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOptCityId Nothing))
+          getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOptCityId.getId}) Nothing
             >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOptCityId.getId)
         if useCategoryBasedPriority
           then do
@@ -236,7 +234,7 @@ verifyRC _ merchantOptCityId useCategoryBasedPriority mbRemPriorityList mbVehicl
     getTtenTokenizationServiceConfig :: (ServiceFlow m r, CoreMetrics m) => Id DMOC.MerchantOperatingCity -> m TIFT.TokenizationServiceConfig
     getTtenTokenizationServiceConfig mocid = do
       merchantServiceConfig <-
-        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mocid.getId, merchantId = Nothing, serviceName = Just (DMSC.TokenizationService TT.Tten)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.TokenizationService TT.Tten) mocid))
+        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mocid.getId, merchantId = Nothing, serviceName = Just (DMSC.TokenizationService TT.Tten)}) Nothing
           >>= fromMaybeM
             ( MerchantServiceConfigNotFound mocid.getId "tokenization" $
                 show (DMSC.TokenizationService TT.Tten)
@@ -266,7 +264,7 @@ getServiceConfig :: ServiceFlow m r => Id DMOC.MerchantOperatingCity -> Verifica
 getServiceConfig merchantOptCityId cfg = case cfg of
   GovtData -> return $ GovtDataConfig {}
   _ -> do
-    merchantServiceConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOptCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.VerificationService cfg)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.VerificationService cfg) merchantOptCityId)) >>= fromMaybeM (MerchantServiceConfigNotFound merchantOptCityId.getId "verification" $ show cfg)
+    merchantServiceConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOptCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.VerificationService cfg)}) Nothing >>= fromMaybeM (MerchantServiceConfigNotFound merchantOptCityId.getId "verification" $ show cfg)
     case merchantServiceConfig.serviceConfig of
       DMSC.VerificationServiceConfig vsc -> return vsc
       _ -> throwError $ InternalError "Unknown Service Config"
@@ -392,7 +390,7 @@ getTask ::
   m GetTaskResp
 getTask merchantOpCityId config req updateResp = do
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.VerificationService config)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.VerificationService config) merchantOpCityId))
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.VerificationService config)}) Nothing
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId <> " Service : " <> T.pack (show config))
   case merchantServiceConfig.serviceConfig of
     DMSC.VerificationServiceConfig vsc -> Verification.getTask vsc req updateResp
@@ -412,7 +410,7 @@ runWithServiceConfig func getCfg _merchantId merchantOpCityId req = do
 
 getMerchantServiceUsageConfig :: ServiceFlow m r => Id DMOC.MerchantOperatingCity -> m MerchantServiceUsageConfig
 getMerchantServiceUsageConfig merchantOpCityId =
-  getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
+  getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
     >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
 
 callService :: ServiceFlow m r => Id DMOC.MerchantOperatingCity -> VerificationService -> (VerificationServiceConfig -> req -> m resp) -> req -> m resp
@@ -423,7 +421,7 @@ callService merchantOpCityId vsc func req = do
 getVerificationServiceConfig :: ServiceFlow m r => Id DMOC.MerchantOperatingCity -> VerificationService -> m VerificationServiceConfig
 getVerificationServiceConfig merchantOpCityId vsc = do
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.VerificationService vsc)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.VerificationService vsc) merchantOpCityId))
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.VerificationService vsc)}) Nothing
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId <> " Service : " <> T.pack (show vsc))
   case merchantServiceConfig.serviceConfig of
     DMSC.VerificationServiceConfig vsc' -> pure vsc'

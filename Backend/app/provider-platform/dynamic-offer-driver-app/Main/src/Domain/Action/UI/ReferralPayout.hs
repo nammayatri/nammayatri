@@ -40,7 +40,6 @@ import qualified Lib.Payment.Payout.Status as PayoutStatus
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
@@ -238,7 +237,7 @@ getPayoutRegistrationWithActor (mbPersonId, merchantId, merchantOpCityId) = do
 
   -- Get MerchantServiceConfig to check if split is enabled
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just paymentServiceName}) (Just (maybeToList <$> CQMSC.findByServiceAndCity paymentServiceName merchantOpCityId))
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just paymentServiceName}) Nothing
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Payment" (show paymentServiceName))
   let isSplitEnabled = case merchantServiceConfig.serviceConfig of
         DEMSC.PaymentServiceConfig vsc -> Payment.isSplitEnabled vsc

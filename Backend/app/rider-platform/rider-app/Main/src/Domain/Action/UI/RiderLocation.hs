@@ -26,7 +26,6 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error
 
@@ -34,7 +33,7 @@ postIdentifyNearByBus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.
 postIdentifyNearByBus (_mbPersonId, merchantId) req = do
   _merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchantId req.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show req.city)
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCity.id)) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
   let riderLocation = Kernel.External.Maps.Types.LatLong req.riderLat req.riderLon
   nearbyBuses <- getNearbyBuses riderLocation riderConfig merchantOperatingCity.id
   busLocations <- mapMaybeM (convertToBusLocation riderLocation riderConfig) nearbyBuses

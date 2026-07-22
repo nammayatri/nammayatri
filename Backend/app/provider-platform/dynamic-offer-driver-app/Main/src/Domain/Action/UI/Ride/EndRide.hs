@@ -101,8 +101,6 @@ import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.Toll ()
-import qualified Storage.Cac.GoHomeConfig as CGHC
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as MerchantS
@@ -215,7 +213,7 @@ buildEndRideHandle merchantId merchantOpCityId rideId allowSnapshotVehicleFallba
         finalDistanceCalculation = LocUpd.finalDistanceCalculation defaultRideInterpolationHandler,
         getInterpolatedPoints = LocUpd.getInterpolatedPoints defaultRideInterpolationHandler,
         clearInterpolatedPoints = LocUpd.clearInterpolatedPoints defaultRideInterpolationHandler,
-        findConfig = \_ -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)),
+        findConfig = \_ -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing,
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock,
         getRouteAndDistanceBetweenPoints = RideEndInt.getRouteAndDistanceBetweenPoints merchantId merchantOpCityId,
         findPaymentMethodByIdAndMerchantId = CQMPM.findByIdAndMerchantOpCityId,
@@ -388,7 +386,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
       toLocation <- booking.toLocation & fromMaybeM (InvalidRequest "Trip end location is required")
       pure (getCoordinates toLocation, Nothing, DRide.CallBased)
 
-  goHomeConfig <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (Just <$> CGHC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> booking.merchantOperatingCityId.getId)
+  goHomeConfig <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> booking.merchantOperatingCityId.getId)
   ghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.merchantOperatingCityId (Just goHomeConfig)
 
   homeLocationReached' <-

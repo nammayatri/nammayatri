@@ -27,7 +27,6 @@ import qualified Kernel.Types.Version as Version
 import Kernel.Utils.Common
 import qualified Kernel.Utils.UUID as UUID
 import Lib.ConfigPilot.Interface.Types (getConfig)
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 
 -- | udf1 (user defined field 1) sent in the Juspay session/createOrder request.
@@ -52,7 +51,7 @@ getPureStaticCustomerId person phone =
 
 getStaticCustomerId :: (MonadFlow m, EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r) => DP.Person -> Text -> m Text
 getStaticCustomerId person phone = do
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId))
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
   let mbThreshold = mbRiderConfig >>= (.staticCustomerIdThresholdDay)
   case mbThreshold of
     Just threshold ->

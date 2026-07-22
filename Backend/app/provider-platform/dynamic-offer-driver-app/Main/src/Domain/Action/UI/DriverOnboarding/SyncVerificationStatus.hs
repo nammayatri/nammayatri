@@ -40,7 +40,6 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.DriverOnboarding.VehicleDocs (ResponseStatus (..))
-import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.HyperVergeVerificationExtra as HVQueryExtra
@@ -123,7 +122,7 @@ reconcilePending person docType mbImageIdTxt dispatch = do
   firstPullInWindow <- Redis.setNxExpire pullThrottleKey (round webhookGracePeriod) ()
   when firstPullInWindow $ do
     merchantServiceUsageConfig <-
-      getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CMSUC.findByMerchantOpCityId person.merchantOperatingCityId Nothing))
+      getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
         >>= fromMaybeM (MerchantServiceUsageConfigNotFound person.merchantOperatingCityId.getId)
     let sources = pullSourcesFor merchantServiceUsageConfig docType
     if not sources.checkIdfy && not sources.checkHyperVerge

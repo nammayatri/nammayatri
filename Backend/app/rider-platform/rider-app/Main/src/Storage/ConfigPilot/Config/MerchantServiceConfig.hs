@@ -5,6 +5,7 @@ module Storage.ConfigPilot.Config.MerchantServiceConfig
   )
 where
 
+import Control.Applicative ((<|>))
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Extra.MerchantServiceConfig ()
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -19,6 +20,7 @@ import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.MerchantServiceConfig as SQMSC
 import qualified Storage.Queries.Transformers.MerchantServiceConfig as TRMSC
 import System.Environment (lookupEnv)
@@ -53,6 +55,7 @@ instance ConfigDimensions MerchantServiceConfigDimensions where
   type ConfigTypeOf MerchantServiceConfigDimensions = 'MerchantServiceConfig
   type ConfigValueTypeOf MerchantServiceConfigDimensions = [DMSC.MerchantServiceConfig]
   getConfigType _ = MerchantServiceConfig
+  configFallback a = (\svc -> maybeToList <$> CQMSC.findByMerchantOpCityIdAndService (Id a.merchantId) (Id a.merchantOperatingCityId) svc) <$> a.serviceName
   getConfigList a =
     CR.resolveConfigList
       a
@@ -70,10 +73,11 @@ instance ConfigDimensions MerchantServiceConfigDimensions where
   -- classes have no way to call the shadowed default from an override).
   getConfig dims mbFallback = do
     let tableName = show (getConfigType dims)
+        effectiveFallback = mbFallback <|> configFallback dims
     disableConfigPilot <- liftIO $ maybe False read <$> lookupEnv "DISABLE_CONFIG_PILOT"
     withLogTag "CONFIG_PILOT:" $
       if disableConfigPilot
-        then fromMaybe (throwM $ InternalError $ "No Fallback configured for table: " <> tableName) mbFallback
+        then fromMaybe (throwM $ InternalError $ "No Fallback configured for table: " <> tableName) effectiveFallback
         else do
           logDebug $ "getConfig:entry table=" <> tableName <> " dims=" <> show dims
           let onSuccess cfg = do
@@ -82,7 +86,7 @@ instance ConfigDimensions MerchantServiceConfigDimensions where
               onFailure (e :: SomeException) = do
                 logError $ "Fetch failed from config pilot, triggering fallback. error=" <> show e
                 incrementConfigPilotFailureCounter tableName
-                fromMaybe (throwM e) mbFallback
+                fromMaybe (throwM e) effectiveFallback
           result <-
             handle onFailure $
               (>>= onSuccess) $ do

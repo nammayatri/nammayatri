@@ -45,7 +45,6 @@ import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.FareCalculator as FareCalculator
 import qualified SharedLogic.Finance.Wallet as Wallet
-import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDI
 import Tools.Error
@@ -116,7 +115,7 @@ deductAirportEntryFeeAtEndRide enabled ride booking = do
   mbTotalFee <- requiredEntryFeeForBooking enabled booking.pickupGateId
   whenJust mbTotalFee $ \totalFee -> do
     transporterConfig <-
-      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing))
+      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
         >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
     -- Derive the mode from the booking's payment method rather than hardcoding.
     isOnline <- Wallet.resolveIsOnlineFromBooking booking

@@ -58,7 +58,6 @@ import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.WMB
 import qualified SharedLogic.WMB as WMB
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Route as QR
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -451,7 +450,7 @@ postWmbTripRequest ::
     Flow AlertReqResp
   )
 postWmbTripRequest (_, merchantId, merchantOperatingCityId) tripTransactionId req = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   tripTransaction <- QTT.findByPrimaryKey tripTransactionId >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
   fleetDriverAssociation <- FDV.findByDriverId tripTransaction.driverId True >>= fromMaybeM (NoActiveFleetAssociated tripTransaction.driverId.getId)
   whenJust tripTransaction.endRideApprovalRequestId $ \endRideAlertRequestId -> do
@@ -484,7 +483,7 @@ postFleetConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
   when (isJust fleetDriverAssociation.requestReason) $ throwError $ InvalidRequest "Cannot consent to driver-initiated request. Fleet owner must approve first"
   onboardingVehicleCategory <- fleetDriverAssociation.onboardingVehicleCategory & fromMaybeM DriverOnboardingVehicleCategoryNotFound
   fleetOwner <- QPerson.findById (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (FleetOwnerNotFound fleetDriverAssociation.fleetOwnerId)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
 
   SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver fleetOwner.id (cast driverId)) SGuard.LinkToFleet (SGuard.TargetDriver (cast driverId)) $ do
     SA.endDriverAssociations merchantOperatingCityId transporterConfig driver

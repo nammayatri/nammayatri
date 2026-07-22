@@ -56,6 +56,7 @@ import Kernel.Utils.Time (secondsToNominalDiffTime)
 import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
 import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
+import "config-pilot" Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.LocationUpdates.Internal as LU
 import Lib.Scheduler.Environment (JobCreator)
@@ -71,8 +72,8 @@ import qualified "dynamic-offer-driver-app" SharedLogic.External.LocationTrackin
 import qualified "dynamic-offer-driver-app" SharedLogic.FleetVehicleStats as FVS
 import "dynamic-offer-driver-app" SharedLogic.Reminder.Helper (checkAndCreateRemindersForRidesThreshold)
 import qualified "dynamic-offer-driver-app" SharedLogic.ScheduledNotifications as SN
-import qualified "dynamic-offer-driver-app" Storage.Cac.TransporterConfig as SCTC
 import qualified "dynamic-offer-driver-app" Storage.CachedQueries.RideRelatedNotificationConfig as CRN
+import "dynamic-offer-driver-app" Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified "dynamic-offer-driver-app" Storage.Queries.Booking as QRB
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverRCAssociation as QDRCA
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverStats as QDriverStats
@@ -113,7 +114,7 @@ fetchTransporterConfig ::
   Ride.Ride ->
   m TransporterConfig
 fetchTransporterConfig ride =
-  SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing
+  getConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
     >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
 
 ------------------------------------------------------------

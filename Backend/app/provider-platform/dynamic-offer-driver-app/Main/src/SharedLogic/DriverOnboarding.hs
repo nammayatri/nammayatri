@@ -78,7 +78,6 @@ import SharedLogic.Analytics as Analytics
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import SharedLogic.VehicleServiceTier
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
@@ -151,7 +150,7 @@ notifyErrorToSupport ::
   [Maybe DriverOnboardingError] ->
   Flow ()
 notifyErrorToSupport person merchantId merchantOpCityId driverPhone _ errs = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let reasons = catMaybes $ mapMaybe toMsg errs
   let description = T.intercalate ", " reasons
   _ <- TT.createTicket merchantId merchantOpCityId (mkTicket description transporterConfig)
@@ -211,7 +210,7 @@ enableAndTriggerOnboardingAlertsAndMessages :: OnboardingFlow m r => Id DMOC.Mer
 enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verified = do
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig personId True (Just verified)
   DIQuery.updateDisabledReasonFlag Nothing (cast personId)
   when (not driverInfo.enabled && isNothing driverInfo.enabledAt) $ do
@@ -226,7 +225,7 @@ enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verified =
 disableDriverWithAnalytics :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> Id Person -> Maybe Bool -> m ()
 disableDriverWithAnalytics merchantOpCityId personId mbVerified = do
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig personId False mbVerified
 
 checkAndUpdateAirConditioned :: OnboardingFlow m r => Bool -> Bool -> Id Person -> Id DMOC.MerchantOperatingCity -> [DVST.VehicleServiceTier] -> Maybe Text -> Bool -> m ()
@@ -515,7 +514,7 @@ createRC ::
   UTCTime ->
   m VehicleRegistrationCertificate
 createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules certificateNumber expiry = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   (verificationStatus, reviewRequired, variant, mbVehicleModel) <- validateRCStatus input rcconfigs now expiry
   logInfo $ "createRC: verificationStatus=" <> show verificationStatus <> ", reviewRequired=" <> show reviewRequired <> ", variant=" <> show variant <> ", mbVehicleModel=" <> show mbVehicleModel
   let airConditioned = input.airConditioned
@@ -1003,7 +1002,7 @@ imageS3Lock path = "image-s3-lock-" <> path
 
 isNameComparePercentageValid :: OnboardingFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Verification.NameCompareReq -> m Bool
 isNameComparePercentageValid merchantId merchantOpCityId req = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   case transporterConfig.validNameComparePercentage of
     Just percentage -> do
       resp <- Verification.nameCompare merchantId merchantOpCityId req

@@ -43,7 +43,6 @@ import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.CallStatus as QCallStatus
@@ -77,7 +76,7 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
       notificationKey = jobData.notificationKey
   booking <- QB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   ride <- QR.findByRBId bookingId >>= fromMaybeM (RideDoesNotExist bookingId.getId)
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   let maybeAppId = (HM.lookup RentalAppletID . exotelMap) =<< riderConfig.exotelAppIdMapping
   when (booking.status `notElem` [DB.CANCELLED, DB.REALLOCATED]) $
     sendCommunicationToCustomer $

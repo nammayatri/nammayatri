@@ -93,7 +93,6 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified SharedLogic.VehicleServiceTier as VST
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -188,7 +187,7 @@ postDriverEnable merchantShortId opCity reqDriverId = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   -- Check driver inspection approval if required (similar to RC approval check in activateRC)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (InvalidRequest "TransporterConfig not found")
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest "TransporterConfig not found")
   when (transporterConfig.requiresDriverOnboardingInspection == Just True) $ do
     driverInfo <- QDriverInfo.findById driverId >>= fromMaybeM (PersonDoesNotExist personId.getId)
     unless (fromMaybe False driverInfo.approved) $
@@ -260,7 +259,7 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceN
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica (QPerson.findById personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let isVendorValidationRequired = fromMaybe False transporterConfig.enableVendorCheckForCollectingDues && not isExempted && isVolunteerReq
   when isVendorValidationRequired $ do
     case mbVendorId of
@@ -507,7 +506,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
       vehicle
   whenJust vehicle $ \v -> do
     transporterConfig <-
-      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing))
+      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
         >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
     fork "backfillSelectedServiceTiers" $
       VST.backfillSelectedServiceTiers v.selectedServiceTiers v info transporterConfig person.merchantOperatingCityId
@@ -828,7 +827,7 @@ postDriverUnlinkVehicle merchantShortId opCity reqDriverId = do
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
@@ -849,7 +848,7 @@ postDriverEndRCAssociation merchantShortId opCity reqDriverId = do
   -- API should be deprecated
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
 
@@ -892,7 +891,7 @@ postDriverDeleteAadhaar merchantShortId opCity reqDriverId = do
   mbAadhaarCard <- B.runInReplica $ QAadhaarCard.findByPrimaryKey personId
   unless (isJust mbAadhaarCard) $ throwError (InvalidRequest "Aadhaar Card does not exist for this driver")
 
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Unlink (SGuard.TargetDriver personId) $ do
     QAadhaarCard.deleteByPersonId personId
     QDriverInfo.updateAadhaarNumber Nothing driverId
@@ -950,7 +949,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
   -- merchant access checking
   let merchantId = requestor.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == requestor.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
   when (requestor.role == DP.DRIVER) $ do
     mbLinkedVehicle <- QVehicle.findById personId
@@ -1074,7 +1073,7 @@ postDriverSetRCStatus merchantShortId opCity reqDriverId Common.RCStatusReq {..}
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   SGuard.withOnboardingAction transporterConfig SGuard.None (if isActivate then SGuard.Activate else SGuard.Deactivate) (SGuard.TargetDriver personId) $
     DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) False (DomainRC.RCStatusReq {..})
 

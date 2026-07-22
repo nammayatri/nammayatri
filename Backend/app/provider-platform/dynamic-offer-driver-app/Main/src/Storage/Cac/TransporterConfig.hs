@@ -14,7 +14,12 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Cac.TransporterConfig where
+module Storage.Cac.TransporterConfig
+  {-# WARNING
+    "This module contains direct calls to the table and redis. \
+  \ But most likely you need a version from ConfigPilot with inMem results feature."
+    #-}
+where
 
 import qualified Client.Main as CM
 import Data.Aeson as A

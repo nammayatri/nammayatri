@@ -91,8 +91,6 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Reminder.Helper (cancelRemindersForDriverByDocumentType, cancelRemindersForRCByDocumentType, recordDocumentCompletion)
 import Storage.Beam.SystemConfigs ()
-import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -402,7 +400,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
     getMerchantInfo mShortId city = do
       merchant <- findMerchantByShortId mShortId
       merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> mShortId.getShortId <> " ,city: " <> show city)
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCity.id Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
       pure (merchantOpCity, transporterConfig)
 
     getPersonInfo merchantOpCity mbPerson = do
@@ -564,7 +562,7 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
             )
       let merchantOpCityId = person.merchantOperatingCityId
       transporterConfig <-
-        getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
+        getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
           >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       merchantOpCity <-
         CQMOC.findById merchantOpCityId
@@ -627,7 +625,7 @@ postDriverOperatorSendJoiningOtp merchantShortId opCity requestorId req = do
   case mbPerson of
     Nothing -> DRBReg.auth merchantShortId opCity req -------------- to onboard a driver that is not the part of the fleet
     Just person -> do
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       if transporterConfig.overrideOperatorDriverJoiningWithDeepLink == Just True
         then do
           withLogTag ("personId_" <> getId person.id) $ do
@@ -687,7 +685,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
 
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mobileNumberHash <- getDbHash req.mobileNumber
   person <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (PersonNotFound req.mobileNumber)
   case mbAuthId of
@@ -752,7 +750,7 @@ getDriverOperatorDashboardAnalyticsAllTime ::
 getDriverOperatorDashboardAnalyticsAllTime merchantShortId opCity requestorId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (not transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $ throwError (InvalidRequest "Analytics is not allowed for this merchant")
   operator <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
   unless (operator.role == DP.OPERATOR) $
@@ -817,7 +815,7 @@ getDriverOperatorDashboardAnalytics ::
 getDriverOperatorDashboardAnalytics merchantShortId opCity requestorId fromDay toDay = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (not transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $ throwError (InvalidRequest "Analytics is not allowed for this merchant")
   operator <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
   unless (operator.role == DP.OPERATOR) $ throwError AccessDenied
@@ -1012,7 +1010,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
     validatedDocs <- if isDocReqEmpty then pure [] else validateDocs merchantOpCity.id req.entityType
     let docDetails = map (\(_, _, d) -> d) validatedDocs
 
-    transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
 
     (status, mbRegNo, mbPersonToNotify) <- case req.entityType of
       API.Types.ProviderPlatform.Operator.Driver.DRIVER -> do

@@ -35,7 +35,6 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding (VerificationReqRecord, getDriverDocumentInfo)
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
-import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverUdyam as DUQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
@@ -65,7 +64,7 @@ verifyUdyam (personId, merchantOpCityId) req = do
   person <- PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   (blocked, _driverDocument) <- getDriverDocumentInfo person
   when blocked $ throwError AccountBlocked
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   case transporterConfig.allowDuplicateUdyam of
     Just False -> do
       udyamHash <- getDbHash req.uamNumber

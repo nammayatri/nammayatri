@@ -41,7 +41,6 @@ import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PayoutRequest
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import Servant (ServerT, (:<|>) (..))
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -77,7 +76,7 @@ resolveMerchantOpCityAndTz ::
 resolveMerchantOpCityAndTz merchantShortId opCity = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCity.id Nothing)) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCity.id.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCity.id.getId)
   pure (merchant, merchantOpCity, secondsToMinutes transporterConfig.timeDiffFromUtc)
 
 -- | Resolves merchant + operating-city + transporter config once per request
