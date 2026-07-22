@@ -19,5 +19,6 @@ ghc-options:
 
 library:
   dependencies:
+    - base
     - rider-dashboard
     - provider-dashboard
