@@ -783,6 +783,7 @@ data VehicleServiceTypeResponse = VehicleServiceTypeResponse
     trip_number :: Maybe Int,
     route_id :: Maybe Text,
     waybill_id :: Maybe Text,
+    waybill_no :: Maybe Text,
     route_number :: Maybe Text,
     depot :: Maybe Text,
     remaining_trip_details :: Maybe [BusScheduleTrip],
@@ -811,6 +812,7 @@ instance FromJSON VehicleServiceTypeResponse where
     trip_number <- v .:? "trip_number"
     route_id <- v .:? "route_id"
     waybill_id <- v .:? "waybill_id"
+    waybill_no <- v .:? "waybill_no"
     route_number <- v .:? "route_number"
     depot <- v .:? "depot"
     remaining_trip_details <- v .:? "remaining_trip_details"

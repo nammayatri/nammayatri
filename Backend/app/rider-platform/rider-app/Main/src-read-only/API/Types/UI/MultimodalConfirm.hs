@@ -466,6 +466,7 @@ data TransportRoute = TransportRoute
     st :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     stC :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     stn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    tid :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vt :: Kernel.Prelude.Text
   }
   deriving stock (Generic)

@@ -246,6 +246,7 @@ types:
     stn: Maybe Text
     sst: Maybe [ServiceSubType]
     clr: Maybe Text
+    tid: Maybe Text
     ibc: Id IntegratedBPPConfig
     derive': "Generic, ToSchema"
 

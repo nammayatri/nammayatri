@@ -1145,6 +1145,13 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
   let mbEligiblePassIds =
         mbVehicleLiveRouteInfo >>= (JMU.eligiblePassIds . snd)
 
+  let mbActiveTrip = do
+        (activeIntegratedBPPConfig, vehicleLiveRouteInfo) <- mbVehicleLiveRouteInfo
+        routeCode <- vehicleLiveRouteInfo.routeCode
+        waybillNo <- vehicleLiveRouteInfo.waybillNo
+        tripNumber <- vehicleLiveRouteInfo.tripNumber
+        pure (activeIntegratedBPPConfig.id, routeCode, JMU.makeTripIdFromWaybillNoAndTripNo waybillNo tripNumber)
+
   let mbOppositeTripDetails :: Maybe [NandiTypes.BusScheduleTrip] =
         case (mbEnableSwitchRoute, isPublicVehicleData) of
           (Just True, False) -> do
@@ -1213,6 +1220,9 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
                           sst = mbServiceSubTypes,
                           vt = show r.vehicleType,
                           clr = r.color,
+                          tid =
+                            mbActiveTrip >>= \(activeIntegratedBPPConfigId, activeRouteCode, activeTripId) ->
+                              if activeIntegratedBPPConfigId == bppConfig.id && activeRouteCode == r.code then Just activeTripId else Nothing,
                           ibc = bppConfig.id
                         }
                   )
