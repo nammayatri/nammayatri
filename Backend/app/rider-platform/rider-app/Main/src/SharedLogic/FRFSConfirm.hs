@@ -579,7 +579,13 @@ buildJourneyAndLeg booking fareParameters = do
     journeyGuid <- generateGUID
     journeyLegGuid <- generateGUID
 
-    distanceAndDuration <- getDistanceAndDuration booking.fromStationPoint booking.toStationPoint
+    eDistanceAndDuration <- withTryCatch "buildJourneyAndLeg:getDistanceAndDuration" (getDistanceAndDuration booking.fromStationPoint booking.toStationPoint)
+    distanceAndDuration <-
+      case eDistanceAndDuration of
+        Left err -> do
+          logError $ "Failed to fetch distance/duration from OSRM, defaulting distance to 0: " <> show err
+          pure Nothing
+        Right r -> pure r
     let distance = fromMaybe (Distance 0 Meter) (fst <$> distanceAndDuration)
         duration = snd <$> distanceAndDuration
 
