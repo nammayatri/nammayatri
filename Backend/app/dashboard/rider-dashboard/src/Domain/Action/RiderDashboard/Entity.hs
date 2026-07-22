@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
+
 module Domain.Action.RiderDashboard.Entity
   ( CreateEntityReq (..),
     CreateEntityResp (..),

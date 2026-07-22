@@ -1083,55 +1083,55 @@ data TicketConfigCSVRow = TicketConfigCSVRow
   deriving (Show)
 
 instance FromNamedRecord TicketConfigCSVRow where
-  parseNamedRecord r =
-    TicketConfigCSVRow
-      <$> r .: "name"
-      <*> r .: "city"
-      <*> r .: "allow_same_day_booking"
-      <*> r .: "description"
-      <*> r .: "open_timings"
-      <*> r .: "close_timing"
-      <*> r .: "place_type"
-      <*> r .: "short_desc"
-      <*> r .: "gallery"
-      <*> r .: "icon_url"
-      <*> r .: "lat"
-      <*> r .: "lon"
-      <*> r .: "map_image_url"
-      <*> r .: "status"
-      <*> r .: "terms_and_conditions"
-      <*> r .: "terms_and_conditions_url"
-      <*> r .: "svc"
-      <*> r .: "svc_short_desc"
-      <*> r .: "svc_operational_days"
-      <*> r .: "svc_start_date"
-      <*> r .: "svc_end_date"
-      <*> r .: "svc_max_verification"
-      <*> r .: "svc_expiry_type"
-      <*> r .: "svc_expiry_value"
-      <*> r .: "svc_expiry_time"
-      <*> r .: "svc_allow_future_booking"
-      <*> r .: "svc_allow_cancellation"
-      <*> r .: "business_hour_type"
-      <*> r .: "business_hour_slot_time"
-      <*> r .: "business_hour_start_time"
-      <*> r .: "business_hour_end_time"
-      <*> r .: "svc_category_allowed_seats"
-      <*> r .: "svc_category_available_seats"
-      <*> r .: "svc_category_description"
-      <*> r .: "svc_category_name"
-      <*> r .: "people_category_name"
-      <*> r .: "people_category_description"
-      <*> r .: "price_amount"
-      <*> r .: "price_currency"
-      <*> r .: "pricing_type"
-      <*> r .: "peak_timings"
-      <*> r .: "peak_days"
-      <*> r .: "cancellation_type"
-      <*> r .: "cancellation_time"
-      <*> r .: "cancellation_fee"
-      <*> r .: "vendor_split_details"
-      <*> r .: "booking_closing_time"
+  parseNamedRecord r = do
+    name <- r .: "name"
+    city <- r .: "city"
+    allowSameDayBooking <- r .: "allow_same_day_booking"
+    description <- r .: "description"
+    openTimings <- r .: "open_timings"
+    closeTimings <- r .: "close_timing"
+    placeType <- r .: "place_type"
+    shortDesc <- r .: "short_desc"
+    gallery <- r .: "gallery"
+    iconUrl <- r .: "icon_url"
+    lat <- r .: "lat"
+    lon <- r .: "lon"
+    mapImageUrl <- r .: "map_image_url"
+    status <- r .: "status"
+    termsAndConditions <- r .: "terms_and_conditions"
+    termsAndConditionsUrl <- r .: "terms_and_conditions_url"
+    svc <- r .: "svc"
+    svcShortDesc <- r .: "svc_short_desc"
+    svcOperationalDays <- r .: "svc_operational_days"
+    svcStartDate <- r .: "svc_start_date"
+    svcEndDate <- r .: "svc_end_date"
+    svcMaxVerification <- r .: "svc_max_verification"
+    svcExpiryType <- r .: "svc_expiry_type"
+    svcExpiryValue <- r .: "svc_expiry_value"
+    svcExpiryTime <- r .: "svc_expiry_time"
+    svcAllowFutureBooking <- r .: "svc_allow_future_booking"
+    svcAllowCancellation <- r .: "svc_allow_cancellation"
+    businessHourType <- r .: "business_hour_type"
+    businessHourSlotTime <- r .: "business_hour_slot_time"
+    businessHourStartTime <- r .: "business_hour_start_time"
+    businessHourEndTime <- r .: "business_hour_end_time"
+    svcCategoryAllowedSeats <- r .: "svc_category_allowed_seats"
+    svcCategoryAvailableSeats <- r .: "svc_category_available_seats"
+    svcCategoryDescription <- r .: "svc_category_description"
+    svcCategoryName <- r .: "svc_category_name"
+    peopleCategoryName <- r .: "people_category_name"
+    peopleCategoryDescription <- r .: "people_category_description"
+    priceAmount <- r .: "price_amount"
+    priceCurrency <- r .: "price_currency"
+    pricingType <- r .: "pricing_type"
+    peakTimings <- r .: "peak_timings"
+    peakDays <- r .: "peak_days"
+    cancellationType <- r .: "cancellation_type"
+    cancellationTime <- r .: "cancellation_time"
+    cancellationFee <- r .: "cancellation_fee"
+    vendorSplitDetails <- r .: "vendor_split_details"
+    businessBookingClosingTime <- r .: "booking_closing_time"
+    pure TicketConfigCSVRow {..}
 
 postMerchantTicketConfigUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertTicketConfigReq -> Flow Common.UpsertTicketConfigResp
 postMerchantTicketConfigUpsert merchantShortId opCity request = do
@@ -1571,50 +1571,52 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
   deriving (Show)
 
 instance FromNamedRecord SpecialLocationCSVRow where
-  parseNamedRecord r =
-    SpecialLocationCSVRow
-      <$> r .: "city"
-      <*> r .: "location_name"
-      <*> r .: "enabled"
-      <*> r .: "location_file_name"
-      <*> r .: "location_type"
-      <*> r .: "category"
-      <*> r .: "gate_info_name"
-      <*> r .: "gate_info_file_name"
-      <*> r .: "gate_info_lat"
-      <*> r .: "gate_info_lon"
-      <*> r .: "gate_info_default_driver_extra"
-      <*> r .: "gate_info_address"
-      <*> r .: "gate_info_has_geom"
-      <*> r .: "gate_info_can_queue_up_on_gate"
-      <*> r .: "gate_info_type"
-      <*> r .: "gate_info_tags"
-      <*> r .: "gate_info_walk_description"
-      <*> r .: "priority"
-      <*> r .: "pickup_priority"
-      <*> r .: "drop_priority"
-      <*> r .: "special_location_id"
-      <*> optional (r .: "is_queue_enabled")
-      <*> optional (r .: "support_number")
-      <*> optional (r .: "gate_info_entry_fee_amount")
-      <*> optional (r .: "gate_info_min_driver_threshold")
-      <*> optional (r .: "gate_info_demand_threshold")
-      <*> optional (r .: "gate_info_notification_cooldown_in_sec")
-      <*> optional (r .: "gate_info_max_ride_skips_before_queue_removal")
-      <*> optional (r .: "gate_info_pickup_zone_arrival_timeout_in_sec")
-      <*> optional (r .: "gate_info_pickup_request_response_timeout_in_sec")
-      <*> optional (r .: "gate_info_max_driver_threshold")
-      <*> optional (r .: "gate_info_min_driver_thresholds")
-      <*> optional (r .: "gate_info_max_driver_thresholds")
-      <*> optional (r .: "gate_info_demand_thresholds")
-      <*> optional (r .: "gate_info_id")
-      <*> optional (r .: "gate_info_notification_active_till_in_sec")
-      <*> optional (r .: "enforce_toll_route")
-      <*> optional (r .: "render")
-      <*> optional (r .: "fetch_all_gate_fare_product")
-      <*> optional (r .: "enable_queue_filter")
-      <*> optional (r .: "payment_modes")
-      <*> optional (r .: "fare_settlement_type")
+  -- do-notation (not a single <$>/<*> chain) so GHC typechecks the fields linearly
+  -- instead of quadratically; the long applicative chain made this module take >15 min.
+  parseNamedRecord r = do
+    city <- r .: "city"
+    locationName <- r .: "location_name"
+    enabled <- r .: "enabled"
+    locationFileName <- r .: "location_file_name"
+    locationType <- r .: "location_type"
+    category <- r .: "category"
+    gateInfoName <- r .: "gate_info_name"
+    gateInfoFileName <- r .: "gate_info_file_name"
+    gateInfoLat <- r .: "gate_info_lat"
+    gateInfoLon <- r .: "gate_info_lon"
+    gateInfoDefaultDriverExtra <- r .: "gate_info_default_driver_extra"
+    gateInfoAddress <- r .: "gate_info_address"
+    gateInfoHasGeom <- r .: "gate_info_has_geom"
+    gateInfoCanQueueUpOnGate <- r .: "gate_info_can_queue_up_on_gate"
+    gateInfoType <- r .: "gate_info_type"
+    gateInfoGateTags <- r .: "gate_info_tags"
+    gateInfoWalkDescription <- r .: "gate_info_walk_description"
+    priority <- r .: "priority"
+    pickupPriority <- r .: "pickup_priority"
+    dropPriority <- r .: "drop_priority"
+    specialLocationId <- r .: "special_location_id"
+    isQueueEnabled <- optional (r .: "is_queue_enabled")
+    supportNumber <- optional (r .: "support_number")
+    gateInfoEntryFeeAmount <- optional (r .: "gate_info_entry_fee_amount")
+    gateInfoMinDriverThreshold <- optional (r .: "gate_info_min_driver_threshold")
+    gateInfoDemandThreshold <- optional (r .: "gate_info_demand_threshold")
+    gateInfoNotificationCooldownInSec <- optional (r .: "gate_info_notification_cooldown_in_sec")
+    gateInfoMaxRideSkipsBeforeQueueRemoval <- optional (r .: "gate_info_max_ride_skips_before_queue_removal")
+    gateInfoPickupZoneArrivalTimeoutInSec <- optional (r .: "gate_info_pickup_zone_arrival_timeout_in_sec")
+    gateInfoPickupRequestResponseTimeoutInSec <- optional (r .: "gate_info_pickup_request_response_timeout_in_sec")
+    gateInfoMaxDriverThreshold <- optional (r .: "gate_info_max_driver_threshold")
+    gateInfoMinDriverThresholdsJson <- optional (r .: "gate_info_min_driver_thresholds")
+    gateInfoMaxDriverThresholdsJson <- optional (r .: "gate_info_max_driver_thresholds")
+    gateInfoDemandThresholdsJson <- optional (r .: "gate_info_demand_thresholds")
+    gateInfoId <- optional (r .: "gate_info_id")
+    gateInfoNotificationActiveTillInSec <- optional (r .: "gate_info_notification_active_till_in_sec")
+    enforceTollRoute <- optional (r .: "enforce_toll_route")
+    render <- optional (r .: "render")
+    fetchAllGateFareProduct <- optional (r .: "fetch_all_gate_fare_product")
+    enableQueueFilter <- optional (r .: "enable_queue_filter")
+    paymentModes <- optional (r .: "payment_modes")
+    fareSettlementType <- optional (r .: "fare_settlement_type")
+    pure SpecialLocationCSVRow {..}
 
 postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
