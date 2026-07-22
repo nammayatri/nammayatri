@@ -59,7 +59,8 @@ sendSpecialZonePayout ::
     HasKafkaProducer r,
     RideEnd.EndRideFlow m r,
     LocationUpdateFlow m r c,
-    HasField "activeDriversListKeyShards" r Int
+    HasField "activeDriversListKeyShards" r Int,
+    HasField "enableDriverFeeShardedFanOut" r Bool
   ) =>
   Job 'SpecialZonePayout ->
   m ExecutionResult
@@ -86,7 +87,8 @@ handleNewFlow ::
     HasKafkaProducer r,
     RideEnd.EndRideFlow m r,
     LocationUpdateFlow m r c,
-    HasField "activeDriversListKeyShards" r Int
+    HasField "activeDriversListKeyShards" r Int,
+    HasField "enableDriverFeeShardedFanOut" r Bool
   ) =>
   Id DPR.PayoutRequest ->
   m ExecutionResult
@@ -116,7 +118,8 @@ executeSpecialZonePayout ::
     HasKafkaProducer r,
     RideEnd.EndRideFlow m r,
     LocationUpdateFlow m r c,
-    HasField "activeDriversListKeyShards" r Int
+    HasField "activeDriversListKeyShards" r Int,
+    HasField "enableDriverFeeShardedFanOut" r Bool
   ) =>
   DPR.PayoutRequest ->
   m ExecutionResult
@@ -171,7 +174,8 @@ handleOldFlow ::
     HasKafkaProducer r,
     RideEnd.EndRideFlow m r,
     LocationUpdateFlow m r c,
-    HasField "activeDriversListKeyShards" r Int
+    HasField "activeDriversListKeyShards" r Int,
+    HasField "enableDriverFeeShardedFanOut" r Bool
   ) =>
   Id DSP.ScheduledPayout ->
   m ExecutionResult
@@ -227,7 +231,8 @@ executeOldSpecialZonePayout ::
     HasKafkaProducer r,
     RideEnd.EndRideFlow m r,
     LocationUpdateFlow m r c,
-    HasField "activeDriversListKeyShards" r Int
+    HasField "activeDriversListKeyShards" r Int,
+    HasField "enableDriverFeeShardedFanOut" r Bool
   ) =>
   DSP.ScheduledPayout ->
   m ExecutionResult

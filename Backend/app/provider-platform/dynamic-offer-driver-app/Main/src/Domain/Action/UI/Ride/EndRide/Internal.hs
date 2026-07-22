@@ -170,6 +170,7 @@ endRideTransaction ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
     HasField "activeDriversListKeyShards" r Int,
+    HasField "enableDriverFeeShardedFanOut" r Bool,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasField "rideEventsPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
@@ -279,6 +280,7 @@ processEndRideFinance ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
     HasField "activeDriversListKeyShards" r Int,
+    HasField "enableDriverFeeShardedFanOut" r Bool,
     Redis.HedisLTSFlowEnv r,
     BeamFlow m r
   ) =>
@@ -990,6 +992,7 @@ createDriverFee ::
     JobCreatorEnv r,
     HasField "schedulerType" r SchedulerType,
     HasField "activeDriversListKeyShards" r Int,
+    HasField "enableDriverFeeShardedFanOut" r Bool,
     HasKafkaProducer r,
     Redis.HedisLTSFlowEnv r
   ) =>
@@ -1130,7 +1133,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
       let driverFeeToCreate = driverFee{siblingFeeId = elderSiblingId}
       QDF.create driverFeeToCreate
 
-scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType, HasField "activeDriversListKeyShards" r Int) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Id MerchantOperatingCity -> UTCTime -> m ()
+scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType, HasField "activeDriversListKeyShards" r Int, HasField "enableDriverFeeShardedFanOut" r Bool) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Id MerchantOperatingCity -> UTCTime -> m ()
 scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now = do
   logDebug $ "scheduleJobs: for driverFee" <> show driverFee
   void $
