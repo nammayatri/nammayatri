@@ -50,7 +50,6 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingExtra as QRBE
@@ -164,7 +163,7 @@ onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
     when (booking.isDashboardRequest == Just True) $
       fork "sending Booking confirmed dasboard sms" $ do
         let merchantOperatingCityId = booking.merchantOperatingCityId
-        merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+        merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
         if merchantConfig.enableDashboardSms
           then do
             customer <- B.runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)

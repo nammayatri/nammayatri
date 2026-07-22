@@ -22,7 +22,6 @@ import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QInvoiceExtra
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import Storage.Beam.Payment ()
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
@@ -45,7 +44,7 @@ getFinanceInvoicePdf ::
 getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mbOffset mbReferenceId mbTo = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId))
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
 
   let fromTime = toUTCTimeFrom <$> mbFrom
       toTime = toUTCTimeTo <$> mbTo

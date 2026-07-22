@@ -54,7 +54,6 @@ import qualified SharedLogic.DriverOnboarding as SLogicOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
@@ -104,10 +103,10 @@ idfyWebhookHandler merchantShortId secret val = do
   let merchantId = merchant.id
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant Nothing
   merchantServiceUsageConfig <-
-    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Just merchantId.getId, serviceName = Just (DMSC.VerificationService merchantServiceUsageConfig.verificationService)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.VerificationService merchantServiceUsageConfig.verificationService) merchantOpCityId))
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Just merchantId.getId, serviceName = Just (DMSC.VerificationService merchantServiceUsageConfig.verificationService)}) Nothing
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantId:" <> merchantId.getId)
   case merchantServiceConfig.serviceConfig of
     DMSC.VerificationServiceConfig vsc -> do
@@ -141,10 +140,10 @@ idfyWebhookV2Handler merchantShortId opCity secret val = do
   let merchantId = merchant.id
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   merchantServiceUsageConfig <-
-    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Just merchantId.getId, serviceName = Just (DMSC.VerificationService merchantServiceUsageConfig.verificationService)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.VerificationService merchantServiceUsageConfig.verificationService) merchantOpCityId))
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Just merchantId.getId, serviceName = Just (DMSC.VerificationService merchantServiceUsageConfig.verificationService)}) Nothing
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantId:" <> merchantId.getId)
   case merchantServiceConfig.serviceConfig of
     DMSC.VerificationServiceConfig vsc -> do

@@ -38,7 +38,6 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Maps.PlaceNameCache as CM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMOC
@@ -60,7 +59,7 @@ data AutoCompleteReq = AutoCompleteReq
 
 expirePlaceNameCache :: ServiceFlow m r => [PlaceNameCache] -> Id DMOC.MerchantOperatingCity -> m ()
 expirePlaceNameCache placeNameCache merchantOpCityId = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
   whenJust transporterConfig.placeNameCacheExpiryDays $ \cacheExpiry -> do
     currentTime <- liftIO DT.getCurrentTime
     let expiryDate = DT.addUTCTime (DT.nominalDay * fromIntegral (- cacheExpiry)) currentTime

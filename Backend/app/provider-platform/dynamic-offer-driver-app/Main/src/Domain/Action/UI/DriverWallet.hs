@@ -90,7 +90,6 @@ import qualified Lib.Payment.Payout.Request as PayoutRequest
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.Payment as SPayment
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.LedgerEntry as CHLE
@@ -155,7 +154,7 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
         case mbAssocFleetOwnerId of
           Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId, Just driverId.getId)
           Nothing -> (counterpartyFromRole person.role, driverId.getId, Nothing)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (SCTC.findByMerchantOpCityId mocId Nothing)) >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
   now <- getCurrentTime
   let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
       fromDate = fromMaybe (Data.Time.UTCTime (Data.Time.utctDay now) 0) mbFromDate
@@ -538,7 +537,7 @@ loadPayoutContext ::
   m PayoutContext
 loadPayoutContext mbPersonId merchantId mocId = do
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (SCTC.findByMerchantOpCityId mocId Nothing)) >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   payoutVpa <- case person.role of
     DP.FLEET_OWNER -> do

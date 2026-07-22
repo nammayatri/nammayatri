@@ -72,7 +72,6 @@ import SharedLogic.FareCalculator as FareCalculator
 import SharedLogic.FarePolicy as SFP
 import SharedLogic.Ride
 import qualified SharedLogic.SearchTryLocker as CS
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -120,7 +119,7 @@ cancel ::
 cancel req merchant booking mbActiveSearchTry = do
   CS.whenBookingCancellable booking.id $ do
     mbRide <- QRide.findActiveByRBId req.bookingId
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
     let prepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
     when prepaidSubscriptionAndWalletEnabled $ whenJust mbRide $ \ride -> releaseLien booking ride
     whenJust mbRide $ \ride -> do

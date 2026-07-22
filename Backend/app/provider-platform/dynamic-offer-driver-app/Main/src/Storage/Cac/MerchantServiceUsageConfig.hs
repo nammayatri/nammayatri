@@ -13,7 +13,12 @@
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Cac.MerchantServiceUsageConfig where
+module Storage.Cac.MerchantServiceUsageConfig
+  {-# WARNING
+    "This module contains direct calls to the table and redis. \
+  \ But most likely you need a version from ConfigPilot with inMem results feature."
+    #-}
+where
 
 import qualified Client.Main as CM
 import Data.Aeson as A

@@ -241,7 +241,7 @@ getMerchantServiceUsageConfig ::
   Flow Common.ServiceUsageConfigRes
 getMerchantServiceUsageConfig merchantShortId city = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
-  config <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCity.id)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCity.id.getId)
+  config <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCity.id.getId)
   pure $ mkServiceUsageConfigRes config
 
 mkServiceUsageConfigRes :: DMSUC.MerchantServiceUsageConfig -> Common.ServiceUsageConfigRes
@@ -325,7 +325,7 @@ postMerchantServiceUsageConfigMapsUpdate merchantShortId city req = do
     when (Common.mapsServiceUsedInReq req service) $ do
       let mscDims = MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = Just (DMSC.MapsService service)}
       void $
-        listToMaybe <$> getConfig mscDims (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantOperatingCity.merchantId merchantOperatingCity.id (DMSC.MapsService service)))
+        listToMaybe <$> getConfig mscDims Nothing
           >>= fromMaybeM (InvalidRequest $ "Merchant config for maps service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
@@ -358,7 +358,7 @@ postMerchantServiceUsageConfigSmsUpdate merchantShortId city req = do
     when (Common.smsServiceUsedInReq req service) $ do
       let mscDims = MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = Just (DMSC.SmsService service)}
       void $
-        listToMaybe <$> getConfig mscDims (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantOperatingCity.merchantId merchantOperatingCity.id (DMSC.SmsService service)))
+        listToMaybe <$> getConfig mscDims Nothing
           >>= fromMaybeM (InvalidRequest $ "Merchant config for sms service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
@@ -590,9 +590,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- merchant service usage config
   mbMerchantServiceUsageConfig <-
-    getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId newMerchantOperatingCityId)) >>= \case
+    getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) Nothing >>= \case
       Nothing -> do
-        merchantServiceUsageConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId baseOperatingCityId)) >>= fromMaybeM (InvalidRequest "Merchant Service Usage Config not found")
+        merchantServiceUsageConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest "Merchant Service Usage Config not found")
         let newMerchantServiceUsageConfig = buildMerchantServiceUsageConfig newMerchantId newMerchantOperatingCityId now merchantServiceUsageConfig
         return $ Just newMerchantServiceUsageConfig
       _ -> return Nothing
@@ -609,9 +609,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- rider_config
   mbRiderConfig <- do
-    getConfig (RiderConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) (Just (QRC.findByMerchantOperatingCityId newMerchantOperatingCityId)) >>= \case
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) Nothing >>= \case
       Nothing -> do
-        riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) (Just (QRC.findByMerchantOperatingCityId baseOperatingCityId)) >>= fromMaybeM (InvalidRequest "Rider Config not found")
+        riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest "Rider Config not found")
         let newRiderConfig = buildRiderConfig newMerchantId newMerchantOperatingCityId now riderConfig
         return $ Just newRiderConfig
       _ -> return Nothing
@@ -650,9 +650,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- issue config
   mbIssueConfig <-
-    getConfig (IssueConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, identifier = show ICommon.CUSTOMER}) (Just (CQIssueConfig.findByMerchantOpCityId (cast newMerchantOperatingCityId) ICommon.CUSTOMER)) >>= \case
+    getConfig (IssueConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, identifier = show ICommon.CUSTOMER}) Nothing >>= \case
       Nothing -> do
-        issueConfig <- getConfig (IssueConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, identifier = show ICommon.CUSTOMER}) (Just (CQIssueConfig.findByMerchantOpCityId (cast baseOperatingCityId) ICommon.CUSTOMER)) >>= fromMaybeM (InvalidRequest "Issue Config not found")
+        issueConfig <- getConfig (IssueConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, identifier = show ICommon.CUSTOMER}) Nothing >>= fromMaybeM (InvalidRequest "Issue Config not found")
         newIssueConfig <- buildIssueConfig newMerchantId newMerchantOperatingCityId now issueConfig
         return $ Just newIssueConfig
       _ -> return Nothing
@@ -2077,7 +2077,7 @@ getMerchantRiderConfigEstimatesOrder merchantShortId city = do
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
 
   riderConfig <-
-    getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (QRC.findByMerchantOperatingCityId merchantOperatingCity.id))
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
       >>= fromMaybeM (InvalidRequest "RiderConfig not found for this merchant operating city")
 
   pure $
@@ -2098,7 +2098,7 @@ postMerchantRiderConfigEstimatesOrderUpdate merchantShortId city req = do
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
 
   riderConfig <-
-    getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (QRC.findByMerchantOperatingCityId merchantOperatingCity.id))
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
       >>= fromMaybeM (InvalidRequest "RiderConfig not found for this merchant operating city")
 
   let updatedConfig =

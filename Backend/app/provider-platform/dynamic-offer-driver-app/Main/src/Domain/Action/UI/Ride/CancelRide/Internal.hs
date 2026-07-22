@@ -90,7 +90,6 @@ import SharedLogic.Ride (releaseLien, updateOnRideStatusWithAdvancedRideCheck)
 import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified SharedLogic.UserCancellationDues as UserCancellationDues
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -185,7 +184,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             merchant <-
               CQM.findById merchantId
                 >>= fromMaybeM (MerchantNotFound merchantId.getId)
-            transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+            transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
             rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig
             noShowCharges <- withTryCatch "noShowCharges:cancelRideImpl" $ do
               if transporterConfig.canAddCancellationFee
@@ -454,7 +453,7 @@ customerCancellationChargesCalculation ::
   Maybe Int ->
   m (Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe Int, Maybe HighPrecMoney, Maybe HighPrecMoney)
 customerCancellationChargesCalculation booking ride riderDetails cancellationType reasonCode mbExistingVersion = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   (cancellationDisToPickup, _mbLocation) <- getDistanceToPickup booking (Just ride)
   now <- getCurrentTime
   durationToPickup <- (maybe (fromMaybe 0 booking.dqDurationToPickup) (.durationToPickup)) <$> (QDQ.findById (Id booking.quoteId))
@@ -570,7 +569,7 @@ getCancellationCharges ::
   Maybe DTCR.CancellationReasonCode ->
   m (Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe Int, Maybe HighPrecMoney, Maybe HighPrecMoney)
 getCancellationCharges booking ride cancellationType reasonCode = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   case booking.riderId of
     Nothing -> return (Nothing, Nothing, Nothing, Nothing, Nothing)
     Just rid -> do

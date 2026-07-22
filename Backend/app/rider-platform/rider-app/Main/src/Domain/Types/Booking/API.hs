@@ -59,7 +59,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
@@ -75,10 +75,10 @@ import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.JourneyLeg as QJL
@@ -571,7 +571,7 @@ buildBookingAPIEntity booking personId dontNeedFareBreakup = do
       else return Nothing
   -- Surface refunds only when the city has payment refunds enabled; otherwise the feature is off, so
   -- return none. Same flag RidePayment guards refund initiation with (enablePaymentRefunds).
-  mbRiderConfig <- CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
   let refundsEnabled = fromMaybe False (mbRiderConfig >>= (.enablePaymentRefunds))
   refunds <- if refundsEnabled then maybe (pure []) (getRideRefunds . (.id)) mbRide else pure []
   makeBookingAPIEntity personId booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon (makeCancellationReasonAPIEntity <$> mbCancellationReason) refunds

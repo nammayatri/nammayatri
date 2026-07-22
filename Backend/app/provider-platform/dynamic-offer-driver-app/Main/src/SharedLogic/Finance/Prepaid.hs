@@ -53,7 +53,6 @@ import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Finance.EInvoice
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
 import SharedLogic.Finance.Wallet (computeTdsRateReason)
-import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
@@ -126,7 +125,7 @@ resolvePrepaidScope ::
   Maybe DVC.VehicleCategory ->
   m (Maybe DVC.VehicleCategory)
 resolvePrepaidScope merchantOpCityId mbVehicleCategory = do
-  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
   let scopedEnabled = maybe False (fromMaybe False . (.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled)) mbTransporterConfig
   pure $ if scopedEnabled then mbVehicleCategory else Nothing
 
@@ -949,7 +948,7 @@ handleSubscriptionExpiry purchase = do
     when (purchase.ownerType == DSP.DRIVER) $
       void $
         withTryCatch "decrementOperatorTotalActiveDriversOnSubscriptionExpiry" $ do
-          mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = purchase.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId purchase.merchantOperatingCityId Nothing))
+          mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = purchase.merchantOperatingCityId.getId}) Nothing
           whenJust mbTransporterConfig $ \tc ->
             AnalyticsExtra.decrementOperatorTotalActiveDriversIfDriverHasNoActiveSubscription tc purchase.ownerId
 

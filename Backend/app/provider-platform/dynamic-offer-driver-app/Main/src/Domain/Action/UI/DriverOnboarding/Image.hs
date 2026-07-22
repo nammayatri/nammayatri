@@ -57,7 +57,6 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified SharedLogic.DriverFleetOperatorAssociation as DFOA
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CFQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -167,7 +166,7 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
           throwError (InvalidRequesterRole $ show uploaderRole)
   when (isJust validationStatus && imageType == DVC.ProfilePhoto) $ checkIfGenuineReq merchantId req
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   imageSizeInBytes <- fromMaybeM (InvalidRequest "Failed to decode base64 image") $ base64Decode image
   let maxSizeInBytes = fromMaybe 100 transporterConfig.maxAllowedDocSizeInMB * 1024 * 1024 -- Should be set for all merchants, taking 100 if not set
   when (BS.length imageSizeInBytes > maxSizeInBytes) $

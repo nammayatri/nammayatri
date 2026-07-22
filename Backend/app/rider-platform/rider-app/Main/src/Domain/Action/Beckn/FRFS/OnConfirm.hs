@@ -66,7 +66,6 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
-import qualified Storage.CachedQueries.FRFSConfig as CQFRFS
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -468,7 +467,7 @@ mkTransitObjects pOrgId booking ticket person serviceAccount className sortIndex
     DPOC.getWalletQRTypeConfig qrCfg.config
   let mbPeriodMillis = lookup booking.merchantOperatingCityId.getId walletQRTypeCfg.qrType
   let mbRotatingBarcode = mkRotatingBarcode ticket.qrData mbPeriodMillis
-  frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = fromStation.merchantOperatingCityId.getId}) (Just (CQFRFS.findByMerchantOperatingCityId fromStation.merchantOperatingCityId (Just []))) >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
+  frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = fromStation.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
   let passengerName' = fromMaybe "-" person.firstName
   let istTimeText = GWSA.showTimeIst ticket.validTill
   let textModuleTicketNumber = TC.TextModule {TC._header = "Ticket number", TC.body = ticket.ticketNumber, TC.id = "myfield1"}

@@ -29,7 +29,6 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, isExpired)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import Storage.CachedQueries.Maps.LocationMapCache
 import Storage.ConfigPilot.Config.HotSpotConfig (HotSpotConfigDimensions (..))
 
@@ -45,7 +44,7 @@ frequencyUpdator ::
   Maybe HotSpotConfig ->
   m ()
 frequencyUpdator merchantId latLong _ movement mbHotSpotConfig = do
-  mbHotSpotConfig' <- maybe (getOneConfig (HotSpotConfigDimensions {merchantOperatingCityId = "", merchantId = merchantId.getId}) (Just (QHotSpotConfig.findConfigByMerchantId merchantId))) (pure . Just) mbHotSpotConfig
+  mbHotSpotConfig' <- maybe (getOneConfig (HotSpotConfigDimensions {merchantOperatingCityId = "", merchantId = merchantId.getId}) Nothing) (pure . Just) mbHotSpotConfig
   case mbHotSpotConfig' of
     Just HotSpotConfig {..} -> when shouldTakeHotSpot do
       mbHotSpot <- convertToHotSpot latLong Nothing merchantId mbHotSpotConfig'

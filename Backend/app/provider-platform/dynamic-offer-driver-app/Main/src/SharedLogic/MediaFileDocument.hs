@@ -39,7 +39,6 @@ import SharedLogic.Allocator
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Error
@@ -54,7 +53,7 @@ mediaFileDocumentUploadLink ::
 mediaFileDocumentUploadLink merchantShortId opCity _requestorId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   fileExtension <- validateContentType req.fileType req.reqContentType
   fileId <- generateGUID
   filePath <- S3.createFilePath "/inspection-media/" fileId.getId req.fileType fileExtension
@@ -137,7 +136,7 @@ checkVideoFileSize ::
   Id DMF.MediaFile ->
   m (Either Text ())
 checkVideoFileSize mbMerchantOpCityId fileSizeInBytes fileId = do
-  mbTransporterConfig <- forM mbMerchantOpCityId $ \merchantOpCityId -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  mbTransporterConfig <- forM mbMerchantOpCityId $ \merchantOpCityId -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let maxSizeInMB = fromMaybe 500 $ mbTransporterConfig >>= (.maxAllowedVideoDocSizeInMB)
       maxSizeInBytes = toInteger maxSizeInMB * 1024 * 1024
   if fileSizeInBytes > maxSizeInBytes

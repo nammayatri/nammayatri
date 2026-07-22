@@ -63,11 +63,8 @@ import Lib.DriverCoins.Types
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Yudhishthira.Types as LYT
-import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -159,7 +156,7 @@ findFCMConfigWithFallback merchantOpCityId personId = do
   mbClientConfig <- QMCC.findByPackageOSAndService (ClientFCMService) (driver >>= (.clientDevice) <&> (.deviceType)) (fromMaybe "" (driver >>= (.clientId)))
   case mbClientConfig of
     Just clientConfig -> let (DMCC.ClientFCMServiceConfig fcmCfg) = clientConfig.clientServiceConfig in pure fcmCfg
-    Nothing -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId) <&> (.fcmConfig)
+    Nothing -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId) <&> (.fcmConfig)
 
 -- dynamicFCMNotifyPerson
 --     merchantOpCityId
@@ -1589,7 +1586,7 @@ notifyWithGRPCProvider ::
   m ()
 notifyWithGRPCProvider merchantOpCityId category title body clientId mbTtl entityData = do
   merchantNotificationServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.NotificationService Notification.GRPC)}) (Just (maybeToList <$> QMSC.findByServiceAndCity (DMSC.NotificationService Notification.GRPC) merchantOpCityId))
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.NotificationService Notification.GRPC)}) Nothing
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Notification" "GRPC")
   case merchantNotificationServiceConfig.serviceConfig of
     DMSC.NotificationServiceConfig (Notification.GRPCConfig cfg) -> do
@@ -1649,7 +1646,7 @@ runWithServiceConfigForProviders merchantOpCityId clientId clientDevice req iosM
     handler mbClientConfig = Notification.NotficationServiceHandler {..}
       where
         getNotificationServiceList = do
-          merchantServiceUsageConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+          merchantServiceUsageConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
           let sendSearchReqNotificationList = merchantServiceUsageConfig.sendSearchRequestToDriver
           when (null sendSearchReqNotificationList) $ throwError $ InternalError ("No notification service provider configured for the merchant Op city : " <> merchantOpCityId.getId)
           pure sendSearchReqNotificationList
@@ -1659,14 +1656,14 @@ runWithServiceConfigForProviders merchantOpCityId clientId clientDevice req iosM
             Just clientConfig -> let (DMCC.ClientFCMServiceConfig fcmCfg) = clientConfig.clientServiceConfig in pure $ Notification.FCMConfig fcmCfg
             Nothing -> do
               merchantNotificationServiceConfig <-
-                getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.NotificationService FCM)}) (Just (maybeToList <$> QMSC.findByServiceAndCity (DMSC.NotificationService FCM) merchantOpCityId))
+                getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.NotificationService FCM)}) Nothing
                   >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Notification" (show FCM))
               case merchantNotificationServiceConfig.serviceConfig of
                 DMSC.NotificationServiceConfig nsc -> pure nsc
                 _ -> throwError $ InternalError "Unknow Service Config"
         getServiceConfig service = do
           merchantNotificationServiceConfig <-
-            getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.NotificationService service)}) (Just (maybeToList <$> QMSC.findByServiceAndCity (DMSC.NotificationService service) merchantOpCityId))
+            getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.NotificationService service)}) Nothing
               >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Notification" (show service))
           case merchantNotificationServiceConfig.serviceConfig of
             DMSC.NotificationServiceConfig nsc -> pure nsc

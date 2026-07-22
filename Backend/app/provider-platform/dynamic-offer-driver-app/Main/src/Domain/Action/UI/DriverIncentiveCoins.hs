@@ -30,7 +30,6 @@ import qualified Lib.DriverCoins.IncentiveMetrics as IncentiveMetrics
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Yudhishthira.Types as LYT
 import Servant (Header, Headers, addHeader)
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.CoinsConfig as CQCoinsConfig
 import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -122,7 +121,7 @@ loadDriverContext mbPersonId merchantId merchantOpCityId = do
   transporterConfig <-
     getOneConfig
       (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
-      (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
+      Nothing
       >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless transporterConfig.coinFeature $
     throwError $ CoinServiceUnavailable merchantId.getId

@@ -38,3 +38,4 @@ instance ConfigDimensions VehicleConfigDimensions where
       (QVC.findAllByBecknConfigId (Id a.becknConfigId))
       ([] :: [LCP.DimMatcher VehicleConfigDimensions DVC.VehicleConfig])
       Nothing
+  configFallback a = Just (QVC.findAllByBecknConfigId (Id a.becknConfigId))

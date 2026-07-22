@@ -64,7 +64,6 @@ import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.Ride
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.Toll ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -225,7 +224,7 @@ handler (UAddBaggageReq AddBaggageReq {..}) = do
 
   -- BPP-side cap check (defense in depth; BAP already validates against riderConfig)
   transporterCfg <-
-    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing))
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
       >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   whenJust transporterCfg.maxNumberOfLuggages $ \maxN ->
     when (numberOfLuggages > maxN) $ throwError (AddBaggageExceedsMax maxN)
@@ -327,7 +326,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     if hasAdvancedRide
       then sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId "Trip Update Request Not Available" "Driver has an upcoming ride near your drop location. "
       else do
-        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
         now <- getCurrentTime
         QL.create dropLocation
         let dropLatLong = Maps.LatLong {lat = dropLocation.lat, lon = dropLocation.lon}

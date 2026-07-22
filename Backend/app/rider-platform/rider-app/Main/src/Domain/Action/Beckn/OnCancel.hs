@@ -42,7 +42,6 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
@@ -74,7 +73,7 @@ onCancel ValidatedBookingCancelledReq {..} = do
   logTagInfo ("BookingId-" <> getId booking.id) ""
   whenJust cancellationSource $ \source -> logTagInfo ("Cancellation source " <> source) ""
   let castedCancellationSource = castCancellatonSource cancellationSource_
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   -- Immediate-capture is configured separately for rider- vs driver-initiated cancellations.
   -- When the flag is true we capture the fee now; when false the fee becomes a pending due.
   -- Defaults to true to preserve prior behaviour (rider-cancel always immediate, driver no-show immediate).

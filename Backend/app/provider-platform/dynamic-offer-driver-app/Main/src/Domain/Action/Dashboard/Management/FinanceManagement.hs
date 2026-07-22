@@ -81,7 +81,6 @@ import qualified SharedLogic.Finance.Wallet as WalletService
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Plan as CQPlan
@@ -1425,7 +1424,7 @@ getFinanceManagementFinanceWalletLedgerImpl ::
 getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mbFleetOperatorId mbConcernedIndividualId mbFrom mbLimit mbOffset mbSourceType mbTo = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
   let limit = mkPageLimit mbLimit
       offset = mkPageOffset mbOffset
@@ -1604,7 +1603,7 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   when (null invoices) $
     throwError $ InvalidRequest "No invoices found for the given criteria"
 
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCity.id Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   let lang = fromMaybe ENGLISH mbLanguage
       tz = DT.minutesToTimeZone (fromIntegral transporterConfig.timeDiffFromUtc `div` 60)
       tmplLogoUrl = transporterConfig.invoiceConfig >>= (.logoUrl) <&> showBaseUrl

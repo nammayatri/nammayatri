@@ -37,3 +37,4 @@ instance ConfigDimensions FRFSConfigDimensions where
         (maybeToList <$> SQ.findByMerchantOperatingCityId (Id a.merchantOperatingCityId) (Just []))
         (([] :: [LCP.DimMatcher FRFSConfigDimensions DT.FRFSConfig]))
         Nothing
+  configFallback a = Just (SQ.findByMerchantOperatingCityId (Id a.merchantOperatingCityId) (Just []))

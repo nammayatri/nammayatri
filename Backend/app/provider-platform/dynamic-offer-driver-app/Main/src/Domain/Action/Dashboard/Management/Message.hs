@@ -47,7 +47,6 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.DriverInformation as QDI
@@ -91,7 +90,7 @@ postMessageUploadFile merchantShortId opCity Common.UploadFileRequest {..} = do
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
   filePath <- S3.createFilePath "/message-media/" ("org-" <> merchant.id.getId) fileType ""
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let fileUrl =
         transporterConfig.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "message"

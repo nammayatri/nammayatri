@@ -21,7 +21,6 @@ import qualified Lib.JourneyModule.Utils as JMU
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Storage.Queries.Person as QP
@@ -59,7 +58,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
             logInfo $ "possibleRoutes between two stops: " <> show routeCodes
             pure $ List.nub $ [routeCode] <> routeCodes
       _ -> pure [routeCode]
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = personCityInfo.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId personCityInfo.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist personCityInfo.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = personCityInfo.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist personCityInfo.merchantOperatingCityId.getId)
   let maxBuses = fromMaybe 5 $ mbMaxBuses <|> riderConfig.maxNearbyBuses
   mbSourceStop <- maybe (pure Nothing) (\stopCode -> OTPRest.getStationByGtfsIdAndStopCode stopCode integratedBPPConfig) mbSelectedSourceStopId
   let currentLocation = (\ss -> LatLong <$> ss.lat <*> ss.lon) =<< mbSourceStop

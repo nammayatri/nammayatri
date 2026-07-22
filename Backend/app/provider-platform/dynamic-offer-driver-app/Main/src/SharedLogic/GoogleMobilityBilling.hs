@@ -29,7 +29,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 
 reportNavBillableEvent ::
@@ -60,7 +59,7 @@ getMerchantGoogleMapsCfg ::
   Id DMOC.MerchantOperatingCity ->
   m (Maybe GoogleCfg)
 getMerchantGoogleMapsCfg merchantOpCityId = do
-  mbServiceConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DOSC.MapsService MapsTypes.Google)}) (Just (maybeToList <$> QOMSC.findByServiceAndCity (DOSC.MapsService MapsTypes.Google) merchantOpCityId))
+  mbServiceConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DOSC.MapsService MapsTypes.Google)}) Nothing
   pure $ case mbServiceConfig of
     Just sc -> case sc.serviceConfig of
       DOSC.MapsServiceConfig (MapsIface.GoogleConfig googleCfg) -> Just googleCfg

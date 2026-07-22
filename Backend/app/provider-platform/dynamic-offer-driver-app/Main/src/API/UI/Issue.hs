@@ -18,7 +18,6 @@ import qualified IssueManagement.Domain.Types.Issue.IssueCategory as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueOption as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as Domain
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
-import qualified IssueManagement.Storage.CachedQueries.Issue.IssueConfig as CQIssueConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Ticket.Interface.Types as TIT
@@ -33,7 +32,6 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Servant hiding (throwError)
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.IssueConfig (IssueConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -134,7 +132,7 @@ driverIssueHandle =
       mbShouldForwardChatToTicketService = Nothing,
       mbFetchMediaBase64 = Just fetchMediaBase64FromS3,
       findIssueConfig = \mocId issueIdentifier ->
-        getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId.getId, identifier = show issueIdentifier}) (Just (CQIssueConfig.findByMerchantOpCityId mocId Common.DRIVER)),
+        getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId.getId, identifier = show issueIdentifier}) Nothing,
       mbUpdateTicketOnService = Nothing,
       mbUpdateTicketStatus = Just castUpdateTicketStatus,
       mbUpdateTicketCsat = Just castUpdateTicketCsat
@@ -345,7 +343,7 @@ castUpdateTicketCsat merchantId merchantOperatingCityId = TT.updateTicketCsat (c
 
 buildMerchantConfig :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Maybe (Id Common.Person) -> Flow Common.MerchantConfig
 buildMerchantConfig _merchantId merchantOpCityId _mbPersonId = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId (cast merchantOpCityId) Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   appBackendBapInternal <- asks (.appBackendBapInternal)
   return
     Common.MerchantConfig

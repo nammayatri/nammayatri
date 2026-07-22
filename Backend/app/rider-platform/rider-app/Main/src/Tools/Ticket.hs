@@ -42,8 +42,6 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 
@@ -220,7 +218,7 @@ callServiceSpecific func merchantId merchantOperatingCityId service req = do
   merchantIssueTicketServiceConfig <-
     getOneConfig
       (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.IssueTicketService service)})
-      (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.IssueTicketService service)))
+      Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   case merchantIssueTicketServiceConfig.serviceConfig of
     DMSC.IssueTicketServiceConfig msc -> func msc req
@@ -233,7 +231,7 @@ fetchUsageConfig ::
 fetchUsageConfig merchantOperatingCityId =
   getConfig
     (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
-    (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId))
+    Nothing
     >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
 
 resolveAndCallTicketService ::

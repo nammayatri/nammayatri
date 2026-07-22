@@ -11,8 +11,6 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 
@@ -21,7 +19,7 @@ getChallanProvidersPriorityList ::
   Id DMOC.MerchantOperatingCity ->
   m (Maybe [ChallanSearchServiceTypes.ChallanSearchService])
 getChallanProvidersPriorityList merchantOpCityId = do
-  mbUsageConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
+  mbUsageConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
   pure $ mbUsageConfig >>= (.challanProvidersPriorityList)
 
 getServiceConfig ::
@@ -31,7 +29,7 @@ getServiceConfig ::
   m ChallanSearchTypes.ChallanSearchServiceConfig
 getServiceConfig merchantOpCityId provider = do
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.ChallanSearchService provider)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.ChallanSearchService provider) merchantOpCityId))
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.ChallanSearchService provider)}) Nothing
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "ChallanSearch" (show provider))
   case merchantServiceConfig.serviceConfig of
     DMSC.ChallanSearchServiceConfig cfg -> pure cfg

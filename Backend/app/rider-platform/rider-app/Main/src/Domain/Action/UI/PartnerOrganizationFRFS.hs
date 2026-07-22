@@ -86,7 +86,6 @@ import qualified SharedLogic.FRFSUtils as Utils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.BecknConfig as CQBC
-import qualified Storage.CachedQueries.FRFSConfig as CQFRFS
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -389,7 +388,7 @@ getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId integratedBPPCo
         fromStation' <- CQPOS.findStationWithPOrgIdAndStationId fromStationId'.getId partnerOrg.orgId integratedBPPConfig
         toStation' <- CQPOS.findStationWithPOrgIdAndStationId toStationId'.getId partnerOrg.orgId integratedBPPConfig
         return (fromStation', toStation')
-  frfsConfig' <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = fromStation'.merchantOperatingCityId.getId}) (Just (CQFRFS.findByMerchantOperatingCityId fromStation'.merchantOperatingCityId (Just []))) >>= fromMaybeM (FRFSConfigNotFound fromStation'.merchantOperatingCityId.getId)
+  frfsConfig' <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = fromStation'.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (FRFSConfigNotFound fromStation'.merchantOperatingCityId.getId)
 
   unless (frfsConfig'.merchantId == partnerOrg.merchantId) $
     throwError . InvalidRequest $ "apiKey of partnerOrgId:" +|| partnerOrg.orgId.getId ||+ " not valid for merchantId:" +|| frfsConfig'.merchantId.getId ||+ ""
@@ -481,7 +480,7 @@ getFareV2 :: MerchantOperatingCity -> PartnerOrganization -> Station -> Station 
 getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTransactionId routeCode integratedBPPConfig = do
   let merchantId = fromStation.merchantId
       frfsVehicleType = fromStation.vehicleType
-  frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = fromStation.merchantOperatingCityId.getId}) (Just (CQFRFS.findByMerchantOperatingCityId fromStation.merchantOperatingCityId (Just []))) >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
+  frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = fromStation.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   bapConfig <-
     getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType)))
@@ -783,7 +782,7 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   fromStation <- OTPRest.getStationByGtfsIdAndStopCode quote.fromStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound $ "Station not found for fromStationCode:" +|| quote.fromStationCode ||+ "")
   toStation <- OTPRest.getStationByGtfsIdAndStopCode quote.toStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound $ "Station not found for toStationCode:" +|| quote.toStationCode ||+ "")
-  frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = fromStation.merchantOperatingCityId.getId}) (Just (CQFRFS.findByMerchantOperatingCityId fromStation.merchantOperatingCityId (Just []))) >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
+  frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = fromStation.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
   redisLockSearchId <- Redis.tryLockRedis lockKey 10
   if not redisLockSearchId
     then throwError $ RedisLockStillProcessing lockKey

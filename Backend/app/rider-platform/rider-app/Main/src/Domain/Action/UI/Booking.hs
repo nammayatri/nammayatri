@@ -76,7 +76,6 @@ import SharedLogic.Type as SLT
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -168,7 +167,7 @@ callOnStatus currBooking = do
 
 checkBookingsForStatus :: [SRB.Booking] -> Flow ()
 checkBookingsForStatus (currBooking : bookings) = do
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = currBooking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId currBooking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist currBooking.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = currBooking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist currBooking.merchantOperatingCityId.getId)
   case (riderConfig.bookingSyncStatusCallSecondsDiffThreshold, currBooking.estimatedDuration) of
     (Just timeDiffThreshold, Just estimatedEndDuration) -> do
       now <- getCurrentTime
@@ -422,7 +421,7 @@ data MergedItem = MBooking SRB.Booking | MJourney DJ.Journey | MPass DPurchasedP
 buildApiEntityForRideOrJourneyOrPassWithCounts :: Id Person.Person -> Int -> [SRB.Booking] -> [DJ.Journey] -> [DPurchasedPass.PurchasedPass] -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Bool -> Flow ([BookingAPIEntityV2], Int, Int, Int)
 buildApiEntityForRideOrJourneyOrPassWithCounts personId finalLimit bookings journeys passes initialBookingOffset initialJourneyOffset initialPassOffset dontNeedFareBreakup = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId))
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
   istTime <- getLocalCurrentTime timeDiffFromUtc
   let today = DT.utctDay istTime
@@ -596,7 +595,7 @@ editLocationForBooking (personId, merchantId) bookingId req = do
   mbRide <- B.runInReplica $ QR.findActiveByRBId booking.id
   when (isNothing mbRide) $ do
     riderConfig <-
-      getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId))
+      getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
         >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
     unless (fromMaybe False riderConfig.enableEditLocationWithoutRide) $
       throwError $ InvalidRequest "Edit location without an assigned ride is not enabled for this city"

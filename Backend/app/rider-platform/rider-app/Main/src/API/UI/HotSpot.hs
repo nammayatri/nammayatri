@@ -34,7 +34,6 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import Storage.CachedQueries.Maps.LocationMapCache
 import Storage.ConfigPilot.Config.HotSpotConfig (HotSpotConfigDimensions (..))
 import Tools.Auth
@@ -97,7 +96,7 @@ getHotspot ::
   Id Merchant.Merchant ->
   m HotSpotResponse
 getHotspot Maps.LatLong {..} merchantId = do
-  mbHotSpotConfig <- getOneConfig (HotSpotConfigDimensions {merchantOperatingCityId = "", merchantId = merchantId.getId}) (Just (QHotSpotConfig.findConfigByMerchantId merchantId))
+  mbHotSpotConfig <- getOneConfig (HotSpotConfigDimensions {merchantOperatingCityId = "", merchantId = merchantId.getId}) Nothing
   case mbHotSpotConfig of
     (Just HotSpotConfig {..}) ->
       if shouldTakeHotSpot

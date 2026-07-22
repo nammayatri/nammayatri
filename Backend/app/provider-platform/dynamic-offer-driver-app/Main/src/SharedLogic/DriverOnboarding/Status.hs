@@ -89,7 +89,6 @@ import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
 import SharedLogic.DriverOnboarding.VehicleDocs
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Beam.IssueManagement ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -391,7 +390,7 @@ refreshVehicleDocsVerificationStatusForRC mbTransporterConfig rcId = do
   merchantOpCityId <- rc.merchantOperatingCityId & fromMaybeM (InternalError $ "merchantOperatingCityId missing for RC " <> rc.id.getId)
   transporterConfig <-
     maybe
-      (getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId))
+      (getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId))
       pure
       mbTransporterConfig
   when (transporterConfig.enableManualDocumentStatusCheck == Just True) $ do
@@ -513,7 +512,7 @@ loadPersonStatusContext mbPerson mbTransporterConfig personId = do
   person <- maybe (runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)) pure mbPerson
   transporterConfig <-
     maybe
-      (getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId))
+      (getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId))
       pure
       mbTransporterConfig
   merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)

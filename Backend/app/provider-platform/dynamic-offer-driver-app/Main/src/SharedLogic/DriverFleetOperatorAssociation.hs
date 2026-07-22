@@ -45,7 +45,6 @@ import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Association.Change as AC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
@@ -344,7 +343,7 @@ performAssociationChange merchant merchantOpCity requestorId subjectId operatorC
       isValid <- isAssociationBetweenTwoPerson requestor subject
       unless isValid $ throwError AccessDenied
   newOperator <- resolveOperatorByCode merchantOpCityId operatorCode
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   case changeType of
     ChangeDriverOperator -> changeDriverOperator merchant merchantOpCity transporterConfig subject newOperator
     ChangeFleetOperator -> changeFleetOperator merchant merchantOpCity transporterConfig subject newOperator

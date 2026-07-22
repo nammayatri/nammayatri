@@ -71,11 +71,8 @@ import qualified SharedLogic.Search as SLS
 import qualified SharedLogic.Serviceability as Serviceability
 import Storage.Beam.Toll ()
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import qualified Storage.CachedQueries.Merchant as QMerc
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
-import qualified Storage.CachedQueries.MerchantConfig as CQMerchantCfg
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedReqLocation as CSavedLocation
 import Storage.ConfigPilot.Config.HotSpotConfig (HotSpotConfigDimensions (..))
@@ -402,7 +399,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   when (isMeterRide == Just True && person.role /= Person.METER_RIDE_DUMMY) $
     throwError (InvalidRequest $ "Only meter dummy guy is allowed to do this")
   configVersionMap <- pure [] -- getConfigVersionMapForStickiness (cast merchantOperatingCityId) -- TODO: we aren't using it as such for now, will put proper values later
-  riderCfg <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
+  riderCfg <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
   whenJust numberOfLuggages $ \n ->
     when (n < 0) $ throwError (InvalidRequest "Number of luggages must be non-negative")
   whenJust numberOfLuggages $ \n ->
@@ -695,7 +692,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     updateRideSearchHotSpot :: SearchRequestFlow m r => DPerson.Person -> SearchReqLocation -> Merchant -> Maybe Bool -> Maybe Bool -> m ()
     updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation = do
       fork "ride search geohash frequencyUpdater" $ do
-        HotSpotConfig {..} <- getOneConfig (HotSpotConfigDimensions {merchantOperatingCityId = "", merchantId = merchant.id.getId}) (Just (QHotSpotConfig.findConfigByMerchantId merchant.id)) >>= fromMaybeM (InternalError "config not found for merchant")
+        HotSpotConfig {..} <- getOneConfig (HotSpotConfigDimensions {merchantOperatingCityId = "", merchantId = merchant.id.getId}) Nothing >>= fromMaybeM (InternalError "config not found for merchant")
         when (shouldSaveSearchHotSpot && shouldTakeHotSpot) do
           let mbHotSpotConfig = Just $ HotSpotConfig {..}
           mbFavourite <- CSavedLocation.findByLatLonAndRiderId person.id origin.gps
@@ -704,7 +701,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
 
     fraudCheck :: SearchRequestFlow m r => DPerson.Person -> DMOC.MerchantOperatingCity -> SearchRequest.SearchRequest -> m ()
     fraudCheck person merchantOperatingCity searchRequest = do
-      merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQMerchantCfg.findAllByMerchantOperatingCityId person.merchantOperatingCityId (Just [])))
+      merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
       SMC.updateSearchFraudCounters person.id merchantConfigs
       mFraudDetected <- SMC.anyFraudDetected person.id merchantOperatingCity.id merchantConfigs (Just searchRequest)
       whenJust mFraudDetected $ \mc -> SMC.blockCustomer person.id (Just mc.id)

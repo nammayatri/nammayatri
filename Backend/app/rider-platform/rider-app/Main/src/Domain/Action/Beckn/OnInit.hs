@@ -38,7 +38,6 @@ import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRideB
@@ -136,7 +135,7 @@ onInit req = do
   city <-
     CQMOC.findById booking.merchantOperatingCityId
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = decRider.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId decRider.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = decRider.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
   let fromLocation = booking.fromLocation
       mbToLocation = getToLocationFromBookingDetails booking.bookingDetails
@@ -225,7 +224,7 @@ buildOnInitResFromBooking bookingId = do
   city <-
     CQMOC.findById booking.merchantOperatingCityId
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = decRider.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId decRider.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = decRider.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
   let fromLocation = booking.fromLocation
       mbToLocation = getToLocationFromBookingDetails booking.bookingDetails

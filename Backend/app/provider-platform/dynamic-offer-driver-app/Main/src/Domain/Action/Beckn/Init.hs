@@ -54,8 +54,6 @@ import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.RiderDetails as SRD
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified SharedLogic.Type as SLT
-import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -198,7 +196,7 @@ handler merchantId req validatedReq = do
     let lat = searchRequest.fromLocation.lat
         lon = searchRequest.fromLocation.lon
         merchantOpCityId = searchRequest.merchantOperatingCityId
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     DemandHotspots.updateDemandHotspotsOnBooking searchRequest.id merchantOpCityId transporterConfig (Maps.LatLong lat lon)
   let paymentMethodInfo = req.paymentMethodInfo
       bppSubscriberId = req.bppSubscriberId
@@ -377,7 +375,7 @@ handler merchantId req validatedReq = do
 
 findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DSR.SearchRequest -> DExophone.ExophoneType -> m DExophone.Exophone
 findRandomExophone merchantOpCityId _ exoType = do
-  merchantServiceUsageConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  merchantServiceUsageConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   exophones <- getConfig (ExophoneDimensions {merchantOperatingCityId = merchantOpCityId.getId, phoneNumber = Nothing, callService = Just merchantServiceUsageConfig.getExophone, exophoneType = Just exoType}) (Just (CQExophone.findByMerchantOpCityIdServiceAndExophoneType merchantOpCityId merchantServiceUsageConfig.getExophone exoType))
   nonEmptyExophones <- case exophones of
     [] -> throwError $ ExophoneNotFound merchantOpCityId.getId

@@ -59,7 +59,6 @@ import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Seat as QSeat
 import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
@@ -90,7 +89,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
   mbBooking <- QFRFSTicketBooking.findBySearchId quote.searchId
   riderConfig <-
-    getConfig (RiderConfigDimensions {merchantOperatingCityId = integratedBppConfig.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId integratedBppConfig.merchantOperatingCityId))
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = integratedBppConfig.merchantOperatingCityId.getId}) Nothing
       >>= fromMaybeM
         (RiderConfigNotFound $ "merchantOpCityid: " <> integratedBppConfig.merchantOperatingCityId.getId)
   isMultiInitAllowed <-

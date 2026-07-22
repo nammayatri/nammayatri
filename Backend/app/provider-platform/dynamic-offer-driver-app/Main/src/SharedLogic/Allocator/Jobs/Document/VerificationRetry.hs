@@ -42,7 +42,6 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.GoogleTranslate (TranslateFlow)
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
@@ -93,7 +92,7 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
   where
     callVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r, Redis.HedisLTSFlowEnv r) => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
     callVerifyRC documentNum person verificationReq = do
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
       verifyRes <-
         Verification.verifyRC person.merchantId person.merchantOperatingCityId (fromMaybe True transporterConfig.useCategoryBasedVerificationPriorityList) Nothing verificationReq.vehicleCategory (Verification.VerifyRCReq {rcNumber = documentNum, driverId = person.id.getId, token = Nothing, udinNo = Nothing, engineNumber = Nothing, chassisNumber = Nothing, applicantMobile = Nothing})
       case verifyRes.verifyRCResp of

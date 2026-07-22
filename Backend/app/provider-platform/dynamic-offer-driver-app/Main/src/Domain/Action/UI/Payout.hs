@@ -77,9 +77,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Ride as SharedRide
 import Storage.Beam.Finance ()
 import Storage.Beam.Payment ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
@@ -274,7 +272,7 @@ fetchPaymentServiceConfig merchantShortId mbOpCity mbServiceName service = do
         _ -> throwError $ InternalError "Unknown Payout Service"
     Nothing -> return $ DEMSC.PayoutService service
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = Nothing, serviceName = Just payoutServiceName'}) (Just (maybeToList <$> CQMSC.findByServiceAndCity payoutServiceName' merchantOperatingCityId))
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = Nothing, serviceName = Just payoutServiceName'}) Nothing
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payout" (show service))
   psc <- case merchantServiceConfig.serviceConfig of
     DMSC.PayoutServiceConfig psc' -> pure psc'
@@ -447,7 +445,7 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
         person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
         let counterparty = counterpartyFromRole person.role
         when (isPayoutOrderSuccess updPayoutStatus) $ do
-          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
           let metadata =
                 A.object
                   [ "driverPayable" A..= (-1 * amount),
@@ -564,7 +562,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
   dInfo <- QDI.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   when (payoutConfig.isPayoutEnabled && redisLockDriverId && dInfo.isBlockedForReferralPayout /= Just True) do
     dailyStats_ <- QDailyStats.findAllByPayoutStatusAndReferralEarningsAndDriver DS.PendingForVpa personId
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchOpCity.getId}) (Just (SCTC.findByMerchantOpCityId merchOpCity Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchOpCity.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchOpCity.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchOpCity.getId)
     localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
     let dailyStats = filter (\ds -> (ds.activatedValidRides <= transporterConfig.maxPayoutReferralForADay) && ds.merchantLocalDate /= (utctDay localTime)) dailyStats_ -- filter out the flagged payouts and current day payout earning
     when (length dailyStats > 0) $ do

@@ -87,8 +87,6 @@ import SharedLogic.FarePolicy
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.PersonBankAccount as SPBA
 import SharedLogic.VehicleServiceTier
-import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -177,7 +175,7 @@ getOnboardingConfigs' ::
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Environment.Flow API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
 getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandatory mbOnlyVehicle = do
-  mbMerchantServiceUsageConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
+  mbMerchantServiceUsageConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
   let verificationProvidersPriorityList = (.verificationProvidersPriorityList) <$> mbMerchantServiceUsageConfig
   let mkDims cat = DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, vehicleCategory = Just cat}
       mkFallback cat = Just (CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId cat Nothing)
@@ -280,7 +278,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
   let mbDistance = reqDistance
       mbDuration = reqDuration
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing))
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
   driverInfo <- runInReplica $ QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   (mbTripCategory, mbPickup, mbVehicleServiceType) <-
     if driverInfo.onRide
@@ -700,7 +698,7 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchantServiceUsageConfig <-
-    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let mbPanVerificationService =
         (if isDashboard then merchantServiceUsageConfig.dashboardPanVerificationService else merchantServiceUsageConfig.panVerificationService)
@@ -716,7 +714,7 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
     when (panInfo.verificationStatus == Documents.VALID) $ do
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentAlreadyValidated "PAN"
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   SDO.validateIndividualPANCheck transporterConfig person req.panNumber
   (verificationStatus, mbNameFromGovtDB) <-
     if isDigiLockerFlow
@@ -887,11 +885,11 @@ postDriverRegisterGstin (mbPersonId, merchantId, merchantOpCityId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchantServiceUsageConfig <-
-    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let mbGstVerificationService = merchantServiceUsageConfig.gstVerificationService
 
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mbGstInfo <- QDGTIN.findUnInvalidByGstNumber req.gstNumber
   whenJust mbGstInfo $ \gstInfo -> do
     when (gstInfo.driverId /= personId) $ do
@@ -1021,7 +1019,7 @@ postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) 
       "PanAadhaarLink postDriverRegisterAadhaarCard: skipped (no aadhaarNumber after upsert) driverId="
         <> personId.getId
   whenJust mbAadhaarNumber $ \aadhaarNumber -> do
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
     let allowPanAadhaarLink = fromMaybe True transporterConfig.allowPanAadhaarLinkage
     unless allowPanAadhaarLink $
       logInfo $
@@ -1323,7 +1321,7 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
 getDriverFleetRcs :: (Maybe (Id Domain.Types.Person.Person), Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Maybe Int -> Maybe Int -> Maybe Text -> Flow APITypes.FleetRCListRes
 getDriverFleetRcs (mbDriverId, _, merchantOpCityId) limit offset mbSearchString = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   mbSearchStringHash <- mapM getDbHash mbSearchString
   driverLinkedRcs <- DAQuery.findAllLinkedByDriverId driverId
@@ -1425,11 +1423,11 @@ rcVerifyStatus caller mbRegistrationNo mbRcId enableDocumentMetadata = do
       let merchantOpCityId = case caller of
             DriverCaller _ cityId -> cityId
             DashboardCaller cityId -> cityId
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       when (transporterConfig.enablePullPendingDocVerification == Just True) $
         whenJust mbRegistrationNo $ \regNo -> do
           merchantServiceUsageConfig <-
-            getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
+            getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
               >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
           let sources = SyncV.pullSourcesFor merchantServiceUsageConfig DTO.VehicleRegistrationCertificate
           rcHash <- getDbHash regNo
@@ -1495,7 +1493,7 @@ rcVerifyStatusForRC caller rc enableDocumentMetadata = do
   whenJust mbPassedCityId $ \passedCityId ->
     when (passedCityId /= merchantOpCityId) $
       throwError (InvalidRequest $ "RC belongs to city: " <> show merchantOperatingCity.city)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   (vehicleDocItem, configs) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig ENGLISH registrationNo Nothing enableDocumentMetadata
   -- Re-pull a stuck RC verification when it renders pending — keyed by this RC's image so a fleet
   -- driver's other RCs are untouched; the synced result shows on the next hit.

@@ -57,14 +57,13 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.DriverPool as DP
-import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import SharedLogic.Finance.Prepaid
+import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.ScheduledNotifications as SN
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCRRNC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -108,7 +107,7 @@ initializeRide ::
 initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide mFleetOwnerId = do
   let merchantId = merchant.id
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   when isPrepaidSubscriptionAndWalletEnabled $ do
     let (counterpartyType, ownerId) = case mFleetOwnerId of
           Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
@@ -276,7 +275,7 @@ releaseLien booking ride = do
     let (counterpartyType, ownerId) = case ride.fleetOwnerId of
           Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
           Nothing -> (counterpartyDriver, ride.driverId.getId)
-    mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing))
+    mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
     let vehicleCategoryScopedPrepaidEnabled = fromMaybe False $ mbTransporterConfig >>= (.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled)
         mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (castServiceTierToVehicleCategory booking.vehicleServiceTier) else Nothing
     Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 $ do
@@ -599,7 +598,7 @@ deactivateExistingQuotes merchantOpCityId merchantId quoteDriverId searchTryId e
   QSRD.setInactiveBySTId (Just driverSearchReqs) searchTryId.getId
   transporterConfig <- case mbTransporterConfig of
     Just transporterConfig -> pure transporterConfig
-    Nothing -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    Nothing -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDriverId estimatedFare transporterConfig
   return driverSearchReqs
 

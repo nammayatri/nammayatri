@@ -58,7 +58,6 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.Sos ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QP
@@ -267,7 +266,7 @@ postSosCreate (mbPersonId, _merchantId, _merchantOperatingCityId) req = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (personId == ride.driverId) $ throwError $ InvalidRequest "Ride does not belong to this person"
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   let enableSupportForSafety = fromMaybe False transporterConfig.enableSupportForSafety
       kaptureDisposition = transporterConfig.kaptureDisposition
       kaptureQueue = transporterConfig.kaptureQueue
@@ -321,7 +320,7 @@ uploadMedia :: Id SafetyDSos.Sos -> Id Person.Person -> SOSVideoUploadReq -> Env
 uploadMedia sosId personId SOSVideoUploadReq {..} = do
   sosDetails <- runInReplica $ SafetySos.findSosById sosId >>= fromMaybeM (SosIdDoesNotExist sosId.getId)
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound (getId personId))
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   fileSize <- L.runIO $ withFile payload ReadMode hFileSize
   when (fileSize > fromIntegral transporterConfig.mediaFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)

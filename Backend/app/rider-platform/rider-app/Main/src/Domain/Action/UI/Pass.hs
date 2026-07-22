@@ -89,7 +89,6 @@ import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Pass as CQPass
 import qualified Storage.CachedQueries.PassCategory as CQPassCategory
@@ -215,7 +214,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
   paymentOrderShortId <- generateShortId
   let deviceId = fromMaybe defaultDashboardDeviceId mbDeviceId
 
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId))
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
   istTime <- getLocalCurrentTime timeDiffFromUtc
   passNumber <- getNextPassNumber
@@ -760,7 +759,7 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
   logInfo $ "Pass payment webhook handler called for paymentOrderId: " <> paymentOrderId.getId
   mbPurchasedPassPayment <- QPurchasedPassPayment.findOneByPaymentOrderId paymentOrderId
   mbPurchasedPass <- maybe (pure Nothing) (QPurchasedPass.findById . (.purchasedPassId)) mbPurchasedPassPayment
-  mbRiderConfig <- maybe (pure Nothing) (\purchasedPass -> getConfig (RiderConfigDimensions {merchantOperatingCityId = purchasedPass.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId purchasedPass.merchantOperatingCityId))) mbPurchasedPass
+  mbRiderConfig <- maybe (pure Nothing) (\purchasedPass -> getConfig (RiderConfigDimensions {merchantOperatingCityId = purchasedPass.merchantOperatingCityId.getId}) Nothing) mbPurchasedPass
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
   istTime <- getLocalCurrentTime timeDiffFromUtc
   let today = DT.utctDay istTime
@@ -968,7 +967,7 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
         Just s -> Just [s]
         Nothing -> Nothing
 
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId))
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
   istTime <- getLocalCurrentTime timeDiffFromUtc
   let today = DT.utctDay istTime
@@ -1034,7 +1033,7 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
   unless (purchasedPass.personId == personId) $ throwError AccessDenied
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId))
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
   istTime <- getLocalCurrentTime timeDiffFromUtc
   unless (purchasedPass.startDate <= DT.utctDay istTime) $ throwError (PassActivationNotReady purchasedPassId.getId $ "Pass will be active from " <> show purchasedPass.startDate)
@@ -1060,7 +1059,7 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
       then do
         case (passVerifyReq.currentLat, passVerifyReq.currentLon) of
           (Just lat, Just lon) -> do
-            riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+            riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
             case integratedBPPConfigs of
               [] -> throwAndReleaseSlot (PassVerificationFailed purchasedPassId.getId "No integrated BPP config available for auto activation")
               (nearbyConfig : _) -> do
@@ -1119,7 +1118,7 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
       case mbStudentPassDetails of
         Nothing -> pure $ Just DPassVerifyTransaction.NOT_VERIFIED
         Just passDetails -> do
-          riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+          riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
           pure $ Just $ verifyStudentPass passDetails vehicleInfo.routeCode routeStopMapping riderConfig
     _ -> pure Nothing
 
@@ -1250,7 +1249,7 @@ postMultimodalPassSwitchDeviceId (mbCallerPersonId, merchantId) req = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   deviceId <- getDeviceId person req.deviceId req.imeiNumber
   allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId (Just [DPurchasedPass.Active, DPurchasedPass.PreBooked]) Nothing Nothing
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId))
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
   istTime <- getLocalCurrentTime timeDiffFromUtc
   let today = DT.utctDay istTime
@@ -1478,7 +1477,7 @@ postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) 
   unless isDashboard $ do
     personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
     unless (purchasedPass.personId == personId) $ throwError AccessDenied
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = purchasedPass.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId purchasedPass.merchantOperatingCityId))
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = purchasedPass.merchantOperatingCityId.getId}) Nothing
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
   istTime <- getLocalCurrentTime timeDiffFromUtc
   let today = DT.utctDay istTime

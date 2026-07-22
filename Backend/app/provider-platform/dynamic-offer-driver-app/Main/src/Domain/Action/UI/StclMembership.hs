@@ -38,8 +38,6 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.Payment
 import Storage.Beam.Payment ()
-import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QP
@@ -108,7 +106,7 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = Ac
 
   -- Fetch gatewayReferenceId from merchant service config
   mbGatewayReferenceId <- do
-    mbServiceConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.MembershipPaymentService PaymentService.Juspay)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.MembershipPaymentService PaymentService.Juspay) merchantOperatingCityId))
+    mbServiceConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.MembershipPaymentService PaymentService.Juspay)}) Nothing
     case mbServiceConfig of
       Just serviceConfig -> case serviceConfig.serviceConfig of
         DMSC.MembershipPaymentServiceConfig paymentServiceConfig ->
@@ -240,7 +238,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
 
   -- Per-MOC tunables, with module-level defaults if stclConfig (or any inner field) is unset.
   transporterConfig <-
-    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing))
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
       >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   let stclCfg = transporterConfig.stclConfig
       maxSharesPerDriver = fromMaybe defaultMaxSharesPerDriver (stclCfg >>= (.maxSharesPerDriver))
@@ -272,7 +270,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
     decryptedMobile <- decrypt mbMobileNumber
 
     mbGatewayReferenceId <- do
-      mbServiceConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.MembershipPaymentService PaymentService.Juspay)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.MembershipPaymentService PaymentService.Juspay) merchantOperatingCityId))
+      mbServiceConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.MembershipPaymentService PaymentService.Juspay)}) Nothing
       case mbServiceConfig of
         Just serviceConfig -> case serviceConfig.serviceConfig of
           DMSC.MembershipPaymentServiceConfig paymentServiceConfig ->

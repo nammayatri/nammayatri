@@ -67,7 +67,6 @@ import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as SLOSO
 import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, jobDuplicationPreventionKey, roundToHalf, setCoinToCashUsedAmount, setCreateDriverFeeForServiceInSchedulerKey, toCreateDriverFeeForService)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Plan as CQP
@@ -117,7 +116,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
     now <- getCurrentTime
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
     driverFees <- getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOpCityId transporterConfig recalculateManualReview subscriptionConfigs jobData.shardNum
     when (jobData.shardNum == Just 0 || isNothing jobData.shardNum) $
@@ -884,7 +883,7 @@ sendManualPaymentLink Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       endTime = jobData.endTime
       serviceName = jobData.serviceName
   now <- getCurrentTime
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = opCityId.getId}) (Just (SCTC.findByMerchantOpCityId opCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound opCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = opCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound opCityId.getId)
   subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
   -- Validate that the time difference since endTime does not exceed the max delay threshold
   let nowLocalTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) now

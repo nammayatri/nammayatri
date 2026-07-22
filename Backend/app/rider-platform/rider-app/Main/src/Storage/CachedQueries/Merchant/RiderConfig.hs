@@ -14,6 +14,10 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.RiderConfig
+  {-# WARNING
+    "This module contains direct calls to the table and redis. \
+  \ But most likely you need a version from ConfigPilot with inMem results feature."
+    #-}
   ( create,
     clearCache,
     findByMerchantOperatingCityId,

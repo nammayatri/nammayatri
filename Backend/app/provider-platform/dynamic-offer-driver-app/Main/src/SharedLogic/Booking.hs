@@ -32,7 +32,6 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Ride
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.Booking as QRB
@@ -129,7 +128,7 @@ cancelBooking booking mbDriver transporter = do
 -- Removes from both sorted set and hash set to keep Redis state consistent.
 removeBookingFromRedis :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DRB.Booking -> m ()
 removeBookingFromRedis booking = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   let localStartTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) booking.startTime
       vehicleVariant = castServiceTierToVariant booking.vehicleServiceTier
       redisKey = createRedisKey localStartTime booking.merchantOperatingCityId booking.tripCategory vehicleVariant
@@ -195,7 +194,7 @@ createRedisKeysForCombinations time mocId tripCategories vehicleVariants =
 -- Stores in both a sorted set (for time-range queries) and hash set (for ID lookup).
 addScheduledBookingInRedis :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => DRB.Booking -> m ()
 addScheduledBookingInRedis booking = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   localNow <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let localStartTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) booking.startTime
       bookingLocalDay = utctDay localStartTime

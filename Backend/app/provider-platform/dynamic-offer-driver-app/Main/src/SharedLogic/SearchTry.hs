@@ -51,8 +51,6 @@ import SharedLogic.GoogleTranslate (TranslateFlow)
 import SharedLogic.Pricing
 import qualified SharedLogic.Type as SLT
 import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
-import qualified Storage.Cac.GoHomeConfig as CGHC
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQDVST
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
@@ -139,7 +137,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
     "initiateDriverSearchBatch"
     ( do
         driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) searchReq.estimatedDistance searchTry.searchRepeatType searchTry.searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
-        goHomeCfg <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) (Just (Just <$> CGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId Nothing)) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> searchReq.merchantOperatingCityId.getId)
+        goHomeCfg <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> searchReq.merchantOperatingCityId.getId)
         singleBatchProcessingTempDelay <- asks (.singleBatchProcessingTempDelay)
         now <- getCurrentTime
         let batchTime = fromIntegral driverPoolConfig.singleBatchProcessTime + singleBatchProcessingTempDelay
@@ -261,7 +259,7 @@ buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare sea
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow serviceTier searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTier))
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
   if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer && transporterConfig.isDynamicPricingQARCalEnabled == Just True
     then
       fork "updateDynamicPricingDemandCounters" $

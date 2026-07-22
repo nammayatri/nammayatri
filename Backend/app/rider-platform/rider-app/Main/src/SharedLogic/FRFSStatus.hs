@@ -59,7 +59,6 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.Person as CQPerson
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -265,7 +264,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                                     }
                           buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentObj
         when (isMultiModalBooking && paymentBookingStatus == FRFSTicketService.SUCCESS) $ do
-          riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCity.id)) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
+          riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
           allFrfsBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just "FRFS", vehicleCategory = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just merchant.id) "FRFS" (Just merchantOperatingCity.id)))
           let initTTLs = map (.initTTLSec) allFrfsBecknConfigs
           let maxInitTTL = intToNominalDiffTime $ case catMaybes initTTLs of

@@ -41,7 +41,6 @@ import SharedLogic.DriverPool
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import Storage.Beam.SpecialZone ()
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -159,7 +158,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
       return $ fst <$> batches
 
     prepareDriverPoolBatch' previousBatchesDrivers batchNum merchantOpCityId txnId isValueAddNP = withLogTag ("BatchNum - " <> show batchNum <> " and txnId:- " <> show txnId) $ do
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
       airportEntryFee <- AirportEntryFee.requiredEntryFeeForBooking (fromMaybe False transporterConfig.airportEntryFeeEnabled) searchReq.pickupGateId
       isAirportRequest <- AirportEntryFee.isAirportPickupArea searchReq.area
       blockListedDriversForSearch <- Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversKey searchReq.id)

@@ -35,7 +35,6 @@ import qualified Lib.Finance.Invoice.Service as InvoiceSvc
 import qualified Lib.Finance.Ledger.Service as LedgerSvc
 import qualified SharedLogic.Finance.InvoiceRegeneration as InvoiceRegen
 import qualified SharedLogic.Finance.Wallet as Wallet
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -63,7 +62,7 @@ populateTipAmount rideId tipAmount apiKey = ActorInfo.withRequestIdActorInfo $ d
   let previousTipAmount = fromMaybe 0 ride.tipAmount
       tipAmountDelta = tipAmount - previousTipAmount
   QRide.updateTipAmountField (Just tipAmount) ride.id
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   mbDailyStats <- QDailyStats.findByDriverIdAndDate ride.driverId (utctDay localTime)
   case mbDailyStats of

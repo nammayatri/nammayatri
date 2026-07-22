@@ -34,7 +34,6 @@ import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.RefundRequest as QRefundRequest
@@ -158,7 +157,7 @@ postPaymentRefundRequestRespond merchantShortId opCity refundRequestId req = do
       -- Per-city kill-switch: approving/retrying is rejected too, so rows predating a
       -- city being switched off can't be pushed through.
       riderConfig <-
-        getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId))
+        getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
           >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
       unless (fromMaybe False riderConfig.enablePaymentRefunds) $
         throwError (InvalidRequest "Payment refunds are not enabled for this city")

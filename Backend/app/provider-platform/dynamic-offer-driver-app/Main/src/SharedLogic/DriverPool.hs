@@ -108,7 +108,6 @@ import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
 import Storage.Cac.DriverPoolConfig as Reexport
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverGoHomeRequest as QDGR
@@ -1158,7 +1157,7 @@ computeActualDistance ::
   m (NonEmpty DriverPoolWithActualDistResult)
 computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pickup driverPoolResults searchInfo = do
   let pickupLatLong = getCoordinates pickup
-  transporter <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+  transporter <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   getDistanceResults <-
     withShortRetry $
       Maps.getEstimatedPickupDistances orgId merchantOpCityId (Just $ getId searchInfo.searchTry.id) $
@@ -1209,7 +1208,7 @@ computeActualDistanceOneToOneSrcAndDestMapping ::
   DST.CurrentSearchInfo ->
   m (NonEmpty DriverPoolWithActualDistResult)
 computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCityId destinationLatLons previousDropPoints driverPoolResults searchInfo = do
-  transporter <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+  transporter <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   getDistanceResults <-
     withShortRetry $
       Maps.getEstimatedPickupDistances orgId merchantOpCityId (Just $ getId searchInfo.searchTry.id) $

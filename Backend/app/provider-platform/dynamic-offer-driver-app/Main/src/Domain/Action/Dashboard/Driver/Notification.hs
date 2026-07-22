@@ -48,7 +48,6 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDI
@@ -127,7 +126,7 @@ triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
           skipWithLog "GPS issue" (Just $ "latestGpsAt:-" <> show latestGpsAt <> ",gpsFreshnessCutoff:-" <> show gpsFreshnessCutoff)
         else do
           vehicle <- B.runInReplica $ QVehicle.findById driver.id >>= fromMaybeM (VehicleDoesNotExist driver.id.getId)
-          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOperatingCityId.getId)
+          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOperatingCityId.getId)
           let dummyFromLocation = transporterConfig.dummyFromLocation
               dummyToLocation = transporterConfig.dummyToLocation
               dummyShowDriverAdditions = fromMaybe True transporterConfig.dummyShowDriverAdditions

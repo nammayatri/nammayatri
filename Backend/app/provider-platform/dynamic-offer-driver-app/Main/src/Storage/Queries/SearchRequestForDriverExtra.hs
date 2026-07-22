@@ -20,7 +20,6 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestForDriver as BeamSRFD
-import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.OrphanInstances.SearchRequestForDriver ()
 import qualified Storage.Queries.Person as QP
@@ -40,7 +39,7 @@ createMany = traverse_ createOne
     createOne srd = do
       now <- getCurrentTime
       (personOS, merchantOpCityId) <- getDriverMobileType (Domain.driverId srd)
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       isDriverValid <- isDriverValidToCache (transporterConfig <&> TC.cachedDevicesOSForSearchRequest) personOS
       when (isDriverValid && srd.status == Domain.Active) $ do
         let driverId = getId $ Domain.driverId srd
@@ -66,7 +65,7 @@ setInactiveBySTId mbSrfds searchTryId = do
     mapM_
       ( \s -> do
           (personOS, merchantOpCityId) <- getDriverMobileType (Domain.driverId s)
-          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
+          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
           isDriverValid <- isDriverValidToCache (transporterConfig <&> TC.cachedDevicesOSForSearchRequest) personOS
           when isDriverValid do
             void $ Hedis.withCrossAppRedis $ Hedis.zRem (searchReqestForDriverkey $ getId $ Domain.driverId s) [getId $ Domain.id s]
@@ -82,7 +81,7 @@ setInactiveAndPulledByIds srfds = do
   mapM_
     ( \s -> do
         (personOS, merchantOpCityId) <- getDriverMobileType (Domain.driverId s)
-        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
+        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
         isDriverValid <- isDriverValidToCache (transporterConfig <&> TC.cachedDevicesOSForSearchRequest) personOS
         when isDriverValid do
           void $ Hedis.withCrossAppRedis $ Hedis.zRem (searchReqestForDriverkey $ getId $ Domain.driverId s) [getId $ Domain.id s]
@@ -99,7 +98,7 @@ findByDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HedisFlow m r) => Id
 findByDriver (Id driverId) = do
   now <- getCurrentTime
   (personOS, merchantOpCityId) <- getDriverMobileType (Id driverId)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
   isDriverValid <- isDriverValidToCache (transporterConfig <&> TC.cachedDevicesOSForSearchRequest) personOS
   if isDriverValid
     then do
@@ -122,7 +121,7 @@ findByDriverAndSearchTryId (Id driverId) (Id searchTryId) =
 deleteByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HedisFlow m r) => Id Person -> m ()
 deleteByDriverId (Id personId) = do
   (personOS, merchantOpCityId) <- getDriverMobileType (Id personId)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
   isDriverValid <- isDriverValidToCache (transporterConfig <&> TC.cachedDevicesOSForSearchRequest) personOS
   when isDriverValid $
     void $ Hedis.withCrossAppRedis $ Hedis.del (searchReqestForDriverkey personId)

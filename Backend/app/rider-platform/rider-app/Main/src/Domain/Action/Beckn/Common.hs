@@ -127,10 +127,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPayoutCfg
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
-import qualified Storage.CachedQueries.MerchantConfig as CQMerchantCfg
 import qualified Storage.CachedQueries.Person as CQPerson
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CQRRNC
@@ -671,7 +668,7 @@ rideAssignedReqHandler req = do
       notifyRideRelatedNotificationOnEvent booking ride now DRN.RIDE_ASSIGNED
       notifyRideRelatedNotificationOnEvent booking ride now DRN.PICKUP_TIME
 
-      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
       when (booking.isDashboardRequest == Just True && riderConfig.autoSendBookingDetailsViaWhatsapp == Just True) $ do
         fork "Sending Dashboard Ride Flow Booking Details" $ do
           sendRideBookingDetailsViaWhatsapp booking.riderId ride booking riderConfig
@@ -754,7 +751,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
   rideRelatedNotificationConfigList <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, timeDiffEvent = Just DRN.START_TIME}) (Just (CQRRNC.findAllByMerchantOperatingCityIdAndTimeDiffEvent booking.merchantOperatingCityId DRN.START_TIME (Just [])))
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updRideForStartReq (fromMaybe now rideStartTime))
   person <- QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   fork "convert pending non-ride sos to ride sos on ride start" $ convertNonRideSosToRide person riderConfig
   unless isInitiatedByCronJob $ do
     fork "notify emergency contacts" $ Notify.notifyRideStartToEmergencyContacts booking ride
@@ -797,7 +794,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
 
     sendRideEndOTPMessage person = fork "sending ride end otp sms" $ do
       let merchantOperatingCityId = booking.merchantOperatingCityId
-      merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+      merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
       if merchantConfig.enableDashboardSms
         then do
           case endOtp_ of
@@ -888,7 +885,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
       Just location -> frequencyUpdator booking.merchantId location Nothing TripEnd Nothing
       Nothing -> return ()
   fork "updating total rides count" $ SMC.updateTotalRidesCounters person
-  merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQMerchantCfg.findAllByMerchantOperatingCityId booking.merchantOperatingCityId (Just [])))
+  merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
   mbDriverPhoneNumber <- mapM decrypt ride.driverPhoneNumber
   let driverPhoneNumber = fromMaybe driverMobileNumber mbDriverPhoneNumber
@@ -937,7 +934,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         case minTripDistanceForReferralCfg of
           Just distance -> updRide.chargeableDistance >= Just distance && not person.hasTakenValidRide
           Nothing -> True
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
   fork "update first ride info" $ do
     mbPersonFirstRideInfo <- QCP.findByPersonIdAndVehicleCategory booking.riderId $ Just (Utils.mapServiceTierToCategory booking.vehicleServiceTierType)
     case mbPersonFirstRideInfo of
@@ -1324,7 +1321,7 @@ cancellationTransaction ::
   m ()
 cancellationTransaction booking mbRide cancellationSource cancellationFee cancellationFeeTax immediateCharge = do
   bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) cancellationSource
-  merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQMerchantCfg.findAllByMerchantOperatingCityId booking.merchantOperatingCityId (Just [])))
+  merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
   fork "incrementing fraud counters" $ do
     case mbRide of
       Just ride -> do
@@ -1355,7 +1352,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
     fork "mark pending sos as not resolved on ride cancel" $
       SafetyCQSos.updateStatusToNotResolvedIfPendingByRideId (cast ride.id)
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (InternalError "RiderConfig not found")
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (InternalError "RiderConfig not found")
   fork "Cancellation Settlement" $ do
     whenJust cancellationFee $ \fee -> do
       logDebug $ "[CancellationSettlement] cancellationFee present: " <> show fee.amount <> " immediateCharge=" <> show immediateCharge <> " settleCancellationFeeBeforeNextRide=" <> show riderConfig.settleCancellationFeeBeforeNextRide <> " mbRide=" <> show (fmap (.id) mbRide)

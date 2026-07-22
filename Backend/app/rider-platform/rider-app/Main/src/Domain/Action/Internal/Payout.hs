@@ -39,7 +39,6 @@ import SharedLogic.Merchant
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPayoutCfg
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
@@ -67,7 +66,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
   let merchantId = merchant.id
       serviceName' = DEMSC.PayoutService TPayout.Juspay
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName'}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchanOperatingCityId (serviceName')))
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName'}) Nothing
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payout" (show TPayout.Juspay))
   psc <- case merchantServiceConfig.serviceConfig of
     DMSC.PayoutServiceConfig psc' -> pure psc'

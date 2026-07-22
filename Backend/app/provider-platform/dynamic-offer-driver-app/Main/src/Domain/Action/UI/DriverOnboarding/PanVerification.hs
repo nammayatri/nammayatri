@@ -67,8 +67,6 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.Finance.Wallet as Wallet
-import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
@@ -82,7 +80,6 @@ import qualified Storage.Queries.Person as Person
 import Tools.Error
 import qualified Tools.Utils as Utils
 import qualified Tools.Verification as Verification
-import Utils.Common.Cac.KeyNameConstants
 
 data DriverPanReq = DriverPanReq
   { panNumber :: Text,
@@ -122,7 +119,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   (blocked, driverDocument) <- getDriverDocumentInfo person
   when blocked $ throwError AccountBlocked
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   validateIndividualPANCheck transporterConfig person req.panNumber
   case transporterConfig.allowDuplicatePan of
     Just False -> do
@@ -139,7 +136,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
     _ -> pure ()
 
   merchantServiceUsageConfig <-
-    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let mbPanVerificationService =
         (if isDashboard then merchantServiceUsageConfig.dashboardPanVerificationService else merchantServiceUsageConfig.panVerificationService)
@@ -480,7 +477,7 @@ shouldTriggerPanAadhaarLinkage ::
   Flow Bool
 shouldTriggerPanAadhaarLinkage _ merchantOpCityId docType panNumber = do
   transporterConfig <-
-    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let allowed = fromMaybe True transporterConfig.allowPanAadhaarLinkage
       isBusiness = docType == Just DPan.BUSINESS || isBusinessPan (Just panNumber)
@@ -524,7 +521,7 @@ materializeTdsRateFor person = do
   transporterConfig <-
     getOneConfig
       (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
-      (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id)))))
+      Nothing
       >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   -- No-op unless PAN-Aadhaar-link TDS is enabled for the merchant; otherwise
   -- leave tds_rate alone so other merchants' rate resolution is unchanged.

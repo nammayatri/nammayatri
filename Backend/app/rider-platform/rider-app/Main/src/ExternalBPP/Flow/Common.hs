@@ -39,7 +39,6 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyModule.Utils as JMU
 import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.FRFSCancellationConfig as CQFRFSCancellationConfig
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error
@@ -136,7 +135,7 @@ searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPCo
       fromLon <- fromStation.lon & fromMaybeM (InternalError $ "Longitude not found for station: " <> fromStation.code)
       toLat <- toStation.lat & fromMaybeM (InternalError $ "Latitude not found for station: " <> toStation.code)
       toLon <- toStation.lon & fromMaybeM (InternalError $ "Longitude not found for station: " <> toStation.code)
-      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCity.id)) >>= fromMaybeM (RiderConfigNotFound merchantOperatingCity.id.getId)
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound merchantOperatingCity.id.getId)
       transitServiceReq <- TMultiModal.getTransitServiceReq merchant.id merchantOperatingCity.id
       now <- getCurrentTime
       let expectedMode = case searchReq.vehicleType of

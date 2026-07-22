@@ -52,7 +52,6 @@ import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import SharedLogic.DriverFee (delCoinAdjustedInSubscriptionByDriverIdKey, getCoinAdjustedInSubscriptionByDriverIdKey)
 import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.Payment ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPC
 import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
@@ -145,7 +144,7 @@ data CoinInfo = CoinInfo
 
 getCoinEventSummary :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> UTCTime -> Flow CoinTransactionRes
 getCoinEventSummary (driverId, merchantId_, merchantOpCityId) dateInUTC = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
@@ -210,7 +209,7 @@ getCoinUsageSummary ::
   Maybe CoinRedemptionType ->
   m CoinsUsageRes
 getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) mbLimit mbOffset mbCoinRedemptionType = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
@@ -316,7 +315,7 @@ handler ::
   ConvertCoinToCashReq ->
   m APISuccess
 handler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {..} = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
@@ -432,7 +431,7 @@ refundCoins ::
   Text ->
   m ()
 refundCoins driverId merchantId merchantOperatingCityId payoutOrderId = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
   mbVehicle <- QVeh.findById driverId
   let vehCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
@@ -456,7 +455,7 @@ castPayoutOrderStatus payoutOrderStatus =
 
 getRideStatusPastDays :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow RideStatusPastDaysRes
 getRideStatusPastDays (driverId, merchantId_, merchantOpCityId) = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
   localTimeToday <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
@@ -471,7 +470,7 @@ getRideStatusPastDays (driverId, merchantId_, merchantOpCityId) = do
 
 getCoinsInfo :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow CoinInfoRes
 getCoinsInfo (driverId, merchantId, merchantOpCityId) = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $ throwError $ CoinServiceUnavailable merchantId.getId
   driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   vehCategory <-

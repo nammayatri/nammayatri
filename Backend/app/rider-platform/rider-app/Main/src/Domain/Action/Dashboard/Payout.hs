@@ -22,7 +22,6 @@ import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
@@ -52,7 +51,7 @@ resolveMerchantOpCityAndTz merchantShortId opCity = do
   riderConfig <-
     getConfig
       (RiderConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId})
-      (Just (CQRC.findByMerchantOperatingCityId merchantOpCity.id))
+      Nothing
       >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOpCity.id.getId)
   pure (merchant, merchantOpCity, secondsToMinutes riderConfig.timeDiffFromUtc)
 

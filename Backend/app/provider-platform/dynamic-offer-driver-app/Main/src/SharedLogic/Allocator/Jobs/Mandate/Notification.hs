@@ -33,7 +33,6 @@ import qualified SharedLogic.ActiveDriversList as ADL
 import SharedLogic.Allocator
 import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual, jobDuplicationPreventionKey, roundToHalf, setIsNotificationSchedulerRunningKey)
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
@@ -76,7 +75,7 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
     setIsNotificationSchedulerRunningKey startTime endTime merchantOpCityId serviceName True
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     subscriptionConfig <-
       CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
         >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)

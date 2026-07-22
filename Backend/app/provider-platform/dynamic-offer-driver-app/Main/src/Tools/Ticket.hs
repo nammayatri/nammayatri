@@ -36,8 +36,6 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 
@@ -76,9 +74,9 @@ runWithServiceConfig ::
   req ->
   m resp
 runWithServiceConfig func merchantId merchantOpCityId req = do
-  merchantConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  merchantConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantIssueTicketServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.IssueTicketService merchantConfig.issueTicketService)}) (Just (maybeToList <$> QMSC.findByServiceAndCity (DMSC.IssueTicketService merchantConfig.issueTicketService) merchantOpCityId))
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.IssueTicketService merchantConfig.issueTicketService)}) Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   case merchantIssueTicketServiceConfig.serviceConfig of
     DMSC.IssueTicketServiceConfig msc -> func msc req

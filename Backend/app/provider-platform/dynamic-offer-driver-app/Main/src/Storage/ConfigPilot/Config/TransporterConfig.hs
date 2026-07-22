@@ -37,3 +37,4 @@ instance ConfigDimensions TransporterConfigDimensions where
         (maybeToList <$> SQ.getTransporterConfigFromDB (Id a.merchantOperatingCityId))
         (([] :: [LCP.DimMatcher TransporterConfigDimensions DT.TransporterConfig]))
         Nothing
+  configFallback a = Just (SQ.getTransporterConfigFromDB (Id a.merchantOperatingCityId))

@@ -35,7 +35,6 @@ import qualified IssueManagement.Domain.Types.Issue.IssueOption as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as Domain
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueCategory as QIC
-import qualified IssueManagement.Storage.CachedQueries.Issue.IssueConfig as CQIssueConfig
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueOption as QIO
 import qualified IssueManagement.Storage.Queries.Issue.IGMConfig as QIGMConfig
 import qualified IssueManagement.Storage.Queries.Issue.IGMIssue as QIGM
@@ -62,8 +61,6 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQPerson
 import Storage.ConfigPilot.Config.IssueConfig (IssueConfigDimensions (..))
@@ -136,7 +133,7 @@ customerIssueHandle =
       mbShouldForwardChatToTicketService = Just isXyneTicketService,
       mbFetchMediaBase64 = Just fetchMediaBase64FromS3,
       findIssueConfig = \mocId issueIdentifier ->
-        getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId.getId, identifier = show issueIdentifier}) (Just (CQIssueConfig.findByMerchantOpCityId mocId Common.CUSTOMER)),
+        getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId.getId, identifier = show issueIdentifier}) Nothing,
       mbUpdateTicketOnService = Just castUpdateTicketOnService,
       mbUpdateTicketStatus = Just castUpdateTicketStatus,
       mbUpdateTicketCsat = Just castUpdateTicketCsat
@@ -162,7 +159,7 @@ fetchMediaBase64FromS3 mf = case mf.s3FilePath of
 -- is running alongside another provider as a secondary.
 isXyneTicketService :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Flow Bool
 isXyneTicketService _merchantId mocId = do
-  mbUsage <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId (cast mocId)))
+  mbUsage <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing
   pure $ maybe False xyneInUse mbUsage
   where
     xyneInUse c =
@@ -451,7 +448,7 @@ reportIssue driverOfferBaseUrl driverOfferApiKey bppRideId issueReportType = do
 buildMerchantConfig :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Maybe (Id Common.Person) -> Flow MerchantConfig
 buildMerchantConfig merchantId merchantOpCityId _mbPersonId = do
   merchant <- CQM.findById (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId (cast merchantOpCityId))) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   return
     MerchantConfig
       { mediaFileSizeUpperLimit = merchant.mediaFileSizeUpperLimit,
@@ -506,7 +503,7 @@ createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ d
     throwError $ InvalidRequest "Only one issue can be raised at a time."
 
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
 
   mbIGMReq <- case (req.rideId, req.ticketBookingId) of
     (Just rideId, _) -> buildOnDemandIGMIssueReq rideId

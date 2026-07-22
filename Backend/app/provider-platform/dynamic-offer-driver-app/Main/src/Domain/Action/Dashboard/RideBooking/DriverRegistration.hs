@@ -25,7 +25,6 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverBankAccount as QDBA
@@ -67,7 +66,7 @@ postDriverRegistrationVerify :: ShortId DM.Merchant -> Context.City -> Text -> B
 postDriverRegistrationVerify merchantShortId opCity authId mbFleet fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   verify authId mbFleet fleetOwnerId Nothing transporterConfig req
 
 verify :: Text -> Bool -> Text -> Maybe (Id SP.Person) -> TransporterConfig -> Common.AuthVerifyReq -> Flow APISuccess

@@ -34,7 +34,6 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.MessageBuilder (buildMessageWithKey, buildSendSmsReq)
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error (RiderError (RiderConfigDoesNotExist))
@@ -67,7 +66,7 @@ postMultiModalSendDirectMessage merchantShortId opCity req = do
           Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq req.destination merchantMessage.templateId variables Nothing Nothing
     API.Types.Dashboard.RideBooking.MultiModal.EMAIL -> do
       riderConfig <-
-        getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOpCityId))
+        getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
           >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
       let fromEmail = maybe "noreply@nammayatri.in" (.fromEmail) riderConfig.emailOtpConfig
       emailServiceConfig <- asks (.emailServiceConfig)

@@ -26,7 +26,6 @@ import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtr
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import Storage.Beam.Payment ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
@@ -163,7 +162,7 @@ getFinanceInvoicePdf ::
 getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLimit mbOffset _mbReferenceId mbTo = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
   mbDriver <- QPerson.findById driverId
-  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
 
   let fromTime = toUTCTimeFrom <$> mbFrom
       toTime = toUTCTimeTo <$> mbTo

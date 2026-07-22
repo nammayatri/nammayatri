@@ -55,7 +55,6 @@ import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.SearchTry as SST
 import qualified SharedLogic.Type as SLT
 import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
-import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
@@ -114,7 +113,7 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   searchReq <- B.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) jobData.estimatedRideDistance searchTry.searchRepeatType searchTry.searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
-  goHomeCfg <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) (Just (Just <$> CGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId Nothing)) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> searchReq.merchantOperatingCityId.getId)
+  goHomeCfg <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> searchReq.merchantOperatingCityId.getId)
   tripQuoteDetailsWithoutUpgrades <- do
     let estimateIds = if length searchTry.estimateIds == 0 then [searchTry.estimateId] else searchTry.estimateIds
     estimateIds `forM` \estimateId -> do

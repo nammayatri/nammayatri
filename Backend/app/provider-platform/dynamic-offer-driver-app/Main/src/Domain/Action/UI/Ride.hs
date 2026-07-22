@@ -85,7 +85,6 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import SharedLogic.Ride
 import Storage.Beam.IssueManagement ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import Storage.CachedQueries.Merchant as QM
@@ -204,7 +203,7 @@ listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay 
   let driverLanguage = fromMaybe L.ENGLISH driverPerson.language
       rideEarningsEnabled = mbFinanceData == Just True
   transporterConfig <- case mocId of
-    Just id -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = id.getId}) (Just (SCTC.findByMerchantOpCityId id Nothing))
+    Just id -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = id.getId}) Nothing
     Nothing -> pure Nothing
   mbEarningsLabels <- if rideEarningsEnabled then Just <$> RideCommon.fetchEarningsLabels driverLanguage else pure Nothing
   rides <- case (driverInfo.onRide, mbOnlyActive) of
@@ -234,7 +233,7 @@ getDriverRideById driverId mocId rideId mbFinanceData = do
   let driverLanguage = fromMaybe L.ENGLISH driverPerson.language
       rideEarningsEnabled = mbFinanceData == Just True
   transporterConfig <- case mocId of
-    Just id -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = id.getId}) (Just (SCTC.findByMerchantOpCityId id Nothing))
+    Just id -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = id.getId}) Nothing
     Nothing -> pure Nothing
   mbEarningsLabels <- if rideEarningsEnabled then Just <$> RideCommon.fetchEarningsLabels driverLanguage else pure Nothing
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
@@ -272,7 +271,7 @@ arrivedAtPickup rideId req = do
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let pickupLoc = getCoordinates booking.fromLocation
   let distance = distanceBetweenInMeters req pickupLoc
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   unless (distance < transporterConfig.arrivedPickupThreshold) $ throwError $ DriverNotAtPickupLocation ride.driverId.getId
   unless (isJust ride.driverArrivalTime) $ do
     now <- getCurrentTime
@@ -300,7 +299,7 @@ otpRideCreate driver otpCode booking clientId = do
     QM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   isVehicleVariantNotAllowed <- isNotAllowedVehicleVariant vehicle.variant booking.vehicleServiceTier
   when isVehicleVariantNotAllowed $ throwError $ InvalidRequest "Wrong Vehicle Variant"
   let isVehicleServiceNotAllowed = booking.vehicleServiceTier `notElem` vehicle.selectedServiceTiers
@@ -355,7 +354,7 @@ arrivedAtStop rideId pt = do
       stopLoc <- runInReplica $ QLoc.findById nextStopId >>= fromMaybeM (InvalidRequest $ "Stop location doesn't exist for ride " <> ride.id.getId)
       let curPt = LatLong stopLoc.lat stopLoc.lon
           distance = distanceBetweenInMeters pt curPt
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
       unless (distance < fromMaybe 500 transporterConfig.arrivedStopThreshold) $ throwError $ InvalidRequest ("Driver is not at stop location for ride " <> ride.id.getId)
       QBooking.updateStopArrival booking.id
       BP.sendStopArrivalUpdateToBAP booking ride driver vehicle
@@ -419,7 +418,7 @@ uploadOdometerReading ::
   Flow UploadOdometerResp
 uploadOdometerReading merchantOpCityId rideId UploadOdometerReq {..} = do
   contentType <- validateContentType
-  config <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  config <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   fileSize <- L.runIO $ withFile file ReadMode hFileSize
   when (fileSize > fromIntegral config.mediaFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
@@ -475,7 +474,7 @@ uploadDeliveryImage merchantOpCityId rideId DeliveryImageUploadReq {..} = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (ride.status == DRide.NEW) $ throwError $ InvalidRequest "Cannot upload image due to unexpected ride status"
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  config <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  config <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   fileSize <- L.runIO $ withFile file ReadMode hFileSize
   when (fileSize > fromIntegral config.mediaFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
@@ -529,7 +528,7 @@ arrivedAtDestination rideId pt = do
   destLoc <- booking.toLocation & fromMaybeM (InvalidRequest "To location doesn't exist for ride")
   let curPt = LatLong destLoc.lat destLoc.lon
       distance = distanceBetweenInMeters pt curPt
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   let dropLocThreshold = metersToHighPrecMeters transporterConfig.dropLocThreshold
   unless (distance < dropLocThreshold) $ throwError $ InvalidRequest ("Driver is not at destination location for ride " <> ride.id.getId)
   unless (isJust ride.destinationReachedAt) $ do

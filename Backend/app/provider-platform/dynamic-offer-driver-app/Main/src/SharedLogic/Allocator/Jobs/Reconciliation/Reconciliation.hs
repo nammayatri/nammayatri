@@ -90,7 +90,6 @@ import qualified SharedLogic.Finance.Reconciliation as DomainRecon
   )
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Plan as CQPlan
@@ -138,7 +137,7 @@ runReconciliationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId (Just merchantOperatingCityId) merchant Nothing
 
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
     -- Check if reconciliation is enabled for this merchant
     unless (fromMaybe False transporterConfig.reconciliationJobsEnabled) $ do

@@ -32,7 +32,6 @@ import Lib.Finance.Invoice.Interface (InvoiceLineItem, LineItemDescription (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import qualified Storage.Queries.DriverGstin as QDriverGstin
 
@@ -76,7 +75,7 @@ generateEInvoiceForInvoice invoice = do
       mbServiceConfig <-
         getOneConfig
           (MerchantServiceConfigDimensions {merchantOperatingCityId = invoice.merchantOperatingCityId, merchantId = Nothing, serviceName = Just (DMSC.GSTEInvoiceService GSTEInvoiceTypes.CharteredInfo)})
-          (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.GSTEInvoiceService GSTEInvoiceTypes.CharteredInfo) (Id invoice.merchantOperatingCityId)))
+          Nothing
       let mbCfg = do
             sc <- mbServiceConfig
             case sc.serviceConfig of
