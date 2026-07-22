@@ -92,6 +92,7 @@ calculateDriverFeeForDrivers ::
     HasShortDurationRetryCfg r c,
     HasField "maxShards" r Int,
     HasField "activeDriversListKeyShards" r Int,
+    HasField "enableDriverFeeShardedFanOut" r Bool,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
@@ -694,7 +695,7 @@ mkInvoiceAgainstDriverFee driverFee (isCoinCleared, isAutoPay) = do
       }
 
 scheduleJobs ::
-  (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType, HasField "activeDriversListKeyShards" r Int) =>
+  (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType, HasField "activeDriversListKeyShards" r Int, HasField "enableDriverFeeShardedFanOut" r Bool) =>
   TransporterConfig ->
   UTCTime ->
   UTCTime ->
