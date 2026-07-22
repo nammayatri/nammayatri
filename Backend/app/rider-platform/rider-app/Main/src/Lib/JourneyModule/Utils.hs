@@ -1513,6 +1513,7 @@ data VehicleLiveRouteInfo = VehicleLiveRouteInfo
     vehicleNumber :: Text,
     routeNumber :: Maybe Text,
     waybillId :: Maybe Text,
+    waybillNo :: Maybe Text,
     scheduleNo :: Maybe Text,
     tripNumber :: Maybe Int,
     depot :: Maybe Text,
@@ -1611,7 +1612,7 @@ getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber mbPassVerifyReq
         mbResult
           <&> ( \result ->
                   ( integratedBPPConfig,
-                    VehicleLiveRouteInfo {routeNumber = result.route_number, vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type, waybillId = result.waybill_id, scheduleNo = result.schedule_no, depot = result.depot, isActuallyValid = result.is_actually_valid, remaining_trip_details = result.remaining_trip_details, tripNumber = result.trip_number, busConductorId = result.conductor_id, busDriverId = result.driver_id, busTagNumber = result.busTagNumber, eligiblePassIds = result.eligible_pass_ids, serviceSubTypes = result.service_sub_types, seatLayoutId = Id <$> result.seatLayoutId, isHistoric = result.is_historic, scheduleBasedActiveTrip = result.schedule_based_active_trip, waybillStatus = result.waybill_status}
+                    VehicleLiveRouteInfo {routeNumber = result.route_number, vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type, waybillId = result.waybill_id, waybillNo = result.waybill_no, scheduleNo = result.schedule_no, depot = result.depot, isActuallyValid = result.is_actually_valid, remaining_trip_details = result.remaining_trip_details, tripNumber = result.trip_number, busConductorId = result.conductor_id, busDriverId = result.driver_id, busTagNumber = result.busTagNumber, eligiblePassIds = result.eligible_pass_ids, serviceSubTypes = result.service_sub_types, seatLayoutId = Id <$> result.seatLayoutId, isHistoric = result.is_historic, scheduleBasedActiveTrip = result.schedule_based_active_trip, waybillStatus = result.waybill_status}
                   )
               )
 
