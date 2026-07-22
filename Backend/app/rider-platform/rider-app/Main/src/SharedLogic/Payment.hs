@@ -265,7 +265,18 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
               DPayment.FulfillmentPending -> do
                 when (paymentOrder.status /= updatedPaymentOrder.status && updatedPaymentOrder.status == Payment.CHARGED) $ do
                   TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_PENDING paymentOrder.id personId paymentService
-              DPayment.FulfillmentSucceeded -> TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_SUCCESS paymentOrder.id personId paymentService
+              DPayment.FulfillmentSucceeded -> do
+                -- FRFS shuttle bookings get a dedicated shuttle-only reassurance (push + opt-in WhatsApp),
+                -- gated on RiderConfig.busTrackingNotificationTiers. The status handler's domain entity id is
+                -- the journeyId (not a booking id), so resolve the booking(s) from the payment order and
+                -- notify per booking. handledByShuttle = True if any shuttle booking was notified, so the
+                -- generic FULFILLMENT_SUCCESS push still fires for everything else.
+                bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId paymentOrder.id
+                handledByShuttle <-
+                  fmap or $
+                    mapM (\bp -> TNotifications.notifyShuttleBookingConfirmed personId bp.frfsTicketBookingId) bookingPayments
+                unless handledByShuttle $
+                  TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_SUCCESS paymentOrder.id personId paymentService
               _ -> pure ()
         -- Invalidate the Offer List Cache
         case newPaymentFulfillmentStatus of

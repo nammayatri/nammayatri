@@ -774,3 +774,14 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN non_allowed_override_fleet_no_serv
 ALTER TABLE atlas_app.rider_config ADD COLUMN immediate_capture_rider_cancellation_fee boolean ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN immediate_capture_driver_cancellation_fee boolean ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_payment_refunds boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN bus_tracking_notification_tiers text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ALTER COLUMN bus_tracking_notification_tiers TYPE text [];

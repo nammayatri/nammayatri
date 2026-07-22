@@ -1667,27 +1667,10 @@ postFrfsFleetOperatorTripAction (mbPersonId, merchantId) req = do
       let epochNow = round (utcTimeToPOSIXSeconds now * 1000) :: Int64
       void $ NandiFlow.gimsTripAction baseUrl gtfsId GimsTripActionReq {action = GimsTripActionStart, trip_number = Just nextTrip, timestamp = Just epochNow, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
       Hedis.setExp redisKey nextTrip 172800 -- 2 days TTL for the trip number in Redis
-      fork "NotifyTripStart" $ do
-        let tripId = JMU.makeTripIdFromWaybillNoAndTripNo waybillNo nextTrip
-        -- Fetch all confirmed bookings for this trip
-        bookings <- QFRFSTicketBooking.findAllConfirmedByTripId tripId
-        unless (null bookings) $ do
-          -- Fetch person details for each booking
-          let riderIds = map (.riderId) bookings
-          persons <- QP.findAllByIds riderIds
-          let personMap = Map.fromList $ map (\p -> (p.id, p)) persons
-          -- Process all passengers sequentially in this single thread
-          forM_ bookings $ \booking -> do
-            -- Get journeyId for this booking
-            mbJourneyId <- CQJourneyLeg.findJourneyIdByLegSearchId booking.searchId.getId
-            case Map.lookup booking.riderId personMap of
-              Nothing -> pure ()
-              Just person -> do
-                -- Send trip start notification sequentially
-                let routeName = fromMaybe "" booking.routeName
-                let vehicleNo = fromMaybe "" booking.vehicleNumber
-                logInfo $ "Notifying passenger " <> person.id.getId <> " that bus trip has started on route " <> routeName <> "for journeyId" <> show mbJourneyId
-                Notifications.notifyBusTripStarted person vehicleNo routeName tripId mbJourneyId
+      -- Trip-start passenger notifications are now triggered from the provider (BPP) tripAction
+      -- over the internal API (see `notifyBusTripStartedForTrip` + FRFSInternal), since the
+      -- fleet-operator flow is migrating to the provider side. Keeping it only there avoids
+      -- double-notifying riders when both endpoints exist during migration.
       pure
         FRFSTicketService.FleetOperatorTripActionResp
           { currentTripNumber = nextTrip,
@@ -1728,6 +1711,38 @@ postFrfsFleetOperatorTripAction (mbPersonId, merchantId) req = do
           { currentTripNumber = 0, -- no active trip after a rollback
             hasUpcomingTrips = not (null (filter (> newCursor) allTripNumbers))
           }
+
+-- | Notify every confirmed passenger of a trip that their bus has started.
+-- Lives on the rider app because it needs rider `Person` device tokens (atlas_app);
+-- the provider (BPP) tripAction triggers it over the internal API in `FRFSInternal`.
+notifyBusTripStartedForTrip :: Text -> Environment.Flow ()
+notifyBusTripStartedForTrip tripId = do
+  -- Fetch all confirmed bookings for this trip
+  bookings <- QFRFSTicketBooking.findAllConfirmedByTripId tripId
+  unless (null bookings) $ do
+    -- Fetch person details for each booking
+    let riderIds = map (.riderId) bookings
+    persons <- QP.findAllByIds riderIds
+    let personMap = Map.fromList $ map (\p -> (p.id, p)) persons
+    -- Process all passengers sequentially in this single thread
+    forM_ bookings $ \booking -> do
+      -- Get journeyId for this booking
+      mbJourneyId <- CQJourneyLeg.findJourneyIdByLegSearchId booking.searchId.getId
+      case Map.lookup booking.riderId personMap of
+        Nothing -> pure ()
+        Just person -> do
+          -- Only notify for shuttle/premium tiers configured per city (RiderConfig.busTrackingNotificationTiers).
+          mbRiderConfig <- CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId
+          let allowedTiers = fromMaybe [] (mbRiderConfig >>= (.busTrackingNotificationTiers))
+              isShuttle = maybe False (`elem` allowedTiers) booking.serviceTierType
+          when isShuttle $ do
+            -- Send trip start notification sequentially
+            let routeName = fromMaybe "" booking.routeName
+            let vehicleNo = fromMaybe "" booking.vehicleNumber
+            logInfo $ "Notifying passenger " <> person.id.getId <> " that bus trip has started on route " <> routeName <> "for journeyId" <> show mbJourneyId
+            -- Sends push (primary) + opt-in WhatsApp (secondary), both handled inside notifyBusTripStarted.
+            -- The WhatsApp `trip_tracking_enabled` template carries a static deep link, so no URL variable is passed.
+            Notifications.notifyBusTripStarted person vehicleNo routeName tripId mbJourneyId
 
 postFrfsFleetOperatorCurrentOperation ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

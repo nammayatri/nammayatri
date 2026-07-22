@@ -158,6 +158,7 @@ RiderConfig:
     permissibleModes: "Maybe [GeneralVehicleType]"
     busTransitTypes: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
     subwayTransitTypes: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
+    busTrackingNotificationTiers: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
     journeyOptionsSortingType: Maybe JourneyOptionsSortingType
     maxAllowedPublicTransportLegs: Int
     driverReferredSearchReqExpiry: Maybe Seconds
@@ -544,6 +545,7 @@ RiderConfig:
     permissibleModes: text []
     busTransitTypes: text []
     subwayTransitTypes: text []
+    busTrackingNotificationTiers: text []
     domainRouteCalculationEnabledModes: text []
     excludedVehicleVariants: text []
     rentalsConfig: text []
