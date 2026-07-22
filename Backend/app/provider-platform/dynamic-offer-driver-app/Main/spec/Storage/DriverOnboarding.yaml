@@ -1298,6 +1298,7 @@ FleetOwnerDocumentVerificationConfig:
     order: Int
     role: Role
     documentCategory: Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory
+    documentOnboardingStage: Maybe DocumentOnboardingStage
     rolesAllowedToUploadDocument: Maybe [Role]
   default:
     order: "0"

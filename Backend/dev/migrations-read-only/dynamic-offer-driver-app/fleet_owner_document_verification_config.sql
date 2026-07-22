@@ -53,3 +53,9 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD COLUMN mark_image_valid_on_validation_skip boolean ;
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD COLUMN roles_allowed_to_upload_document_text text[] ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD COLUMN document_onboarding_stage text ;
