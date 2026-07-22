@@ -50,6 +50,7 @@ import qualified API.Action.UI.TrackRoute as TrackRoute
 import qualified API.Action.UI.TriggerFCM as TriggerFCM
 import qualified API.Action.UI.ZendeskSdkToken as ZendeskSdkToken
 import qualified API.UI.AadhaarVerification as AadhaarVerification
+import qualified API.UI.Aarokya as Aarokya
 import qualified API.UI.AddBaggage as AddBaggage
 import qualified API.UI.AppInstalls as AppInstalls
 import qualified API.UI.Booking as Booking
@@ -138,6 +139,7 @@ type API =
            :<|> Disability.API
            :<|> AadhaarVerification.API
            :<|> File.API
+           :<|> Aarokya.API
            :<|> Issue.API
            :<|> TicketService.API
            :<|> FinanceInvoice.API
@@ -225,6 +227,7 @@ handler =
     :<|> Disability.handler
     :<|> AadhaarVerification.handler
     :<|> File.handler
+    :<|> Aarokya.handler
     :<|> Issue.handler
     :<|> TicketService.handler
     :<|> FinanceInvoice.handler

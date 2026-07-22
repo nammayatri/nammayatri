@@ -82,6 +82,7 @@ library
       API.Types.UI.Payment
       API.UI
       API.UI.AadhaarVerification
+      API.UI.Aarokya
       API.UI.AddBaggage
       API.UI.AppInstalls
       API.UI.Booking
@@ -259,6 +260,7 @@ library
       Domain.Action.Rewards.Coupon
       Domain.Action.Rewards.Evaluator
       Domain.Action.UI.AadhaarVerification
+      Domain.Action.UI.Aarokya
       Domain.Action.UI.AddBaggage
       Domain.Action.UI.AlertWebhook
       Domain.Action.UI.AppInstalls
@@ -824,6 +826,7 @@ library
       Tools.Metrics.BAPMetrics.Types
       Tools.MultiModal
       Tools.Notifications
+      Tools.PartnerSdk
       Tools.Payment
       Tools.Payout
       Tools.Rewards.RedisPool
