@@ -40,6 +40,7 @@ import Kernel.External.MultiModal.Interface.Types as MultiModal
 import Kernel.External.MultiModal.Types as MultiModal
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
+import qualified Kernel.External.PartnerSdk.Interface.Types as PartnerSdk
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Stripe.Config as Stripe
 import qualified Kernel.External.Payout.Interface as Payout
@@ -216,6 +217,8 @@ getServiceName msc = case msc.serviceConfig of
     EventTrackingInterface.MoengageConfig _ -> EventTrackingService EventTracking.Moengage
     EventTrackingInterface.ClevertapConfig _ -> EventTrackingService EventTracking.Clevertap
   FleetEngineServiceConfig _ -> FleetEngineService GoogleFleetEngine
+  PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
+    PartnerSdk.AarokyaPartnerSdkConfig _ -> PartnerSdkService Aarokya
 
 upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig cfg = do

@@ -18,6 +18,7 @@ import Kernel.External.MultiModal.Interface.Types as MultiModal
 import Kernel.External.MultiModal.Types as MultiModal
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types
+import qualified Kernel.External.PartnerSdk.Interface.Types as PartnerSdk
 import Kernel.External.Payment.Interface as Payment
 import Kernel.External.Payout.Interface as Payout
 import Kernel.External.SMS as Sms
@@ -35,6 +36,10 @@ import Utils.Common.JWT.Config as GW
 -- Extra code goes here --
 
 data FleetEngineProvider = GoogleFleetEngine
+  deriving stock (Eq, Ord, Show, Read, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+data PartnerSdkProvider = Aarokya
   deriving stock (Eq, Ord, Show, Read, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -66,6 +71,7 @@ data ServiceName
   | SettlementService Settlement.SettlementService
   | EventTrackingService EventTracking.EventTrackingService
   | FleetEngineService FleetEngineProvider
+  | PartnerSdkService PartnerSdkProvider
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -99,6 +105,7 @@ instance Show ServiceName where
   show (SettlementService s) = "Settlement_" <> show s
   show (EventTrackingService s) = "EventTracking_" <> show s
   show (FleetEngineService s) = "FleetEngine_" <> show s
+  show (PartnerSdkService s) = "PartnerSdk_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -213,6 +220,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "FleetEngine_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (PartnerSdkService v1, r2)
+                 | r1 <- stripPrefix "PartnerSdk_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -246,6 +257,7 @@ data ServiceConfigD (s :: UsageSafety)
   | SettlementServiceConfig !Settlement.SettlementServiceConfig
   | EventTrackingServiceConfig !EventTrackingInterface.EventTrackingServiceConfig
   | FleetEngineServiceConfig !FleetEngineCfg
+  | PartnerSdkServiceConfig !PartnerSdk.PartnerSdkConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -286,6 +298,7 @@ instance Show (ServiceConfigD 'Safe) where
   show (SettlementServiceConfig cfg) = "SettlementServiceConfig " <> show cfg
   show (EventTrackingServiceConfig cfg) = "EventTrackingServiceConfig " <> show cfg
   show (FleetEngineServiceConfig cfg) = "FleetEngineServiceConfig " <> show cfg
+  show (PartnerSdkServiceConfig cfg) = "PartnerSdkServiceConfig " <> show cfg
 
 instance Show (ServiceConfigD 'Unsafe) where
   show (FleetEngineServiceConfig cfg) = "FleetEngineServiceConfig " <> show cfg
@@ -315,3 +328,4 @@ instance Show (ServiceConfigD 'Unsafe) where
   show (SOSServiceConfig cfg) = "SOSServiceConfig " <> show cfg
   show (SettlementServiceConfig cfg) = "SettlementServiceConfig " <> show cfg
   show (EventTrackingServiceConfig cfg) = "EventTrackingServiceConfig " <> show cfg
+  show (PartnerSdkServiceConfig cfg) = "PartnerSdkServiceConfig " <> show cfg
