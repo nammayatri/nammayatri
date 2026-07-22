@@ -1138,33 +1138,23 @@ getProcessedDriverDocuments role driverId entityImagesInfo mbCommonDoc docType u
           let hasImage = not . null $ IQuery.filterImageByEntityIdAndImageTypeAndVerificationStatus entityImagesInfo DVC.UDYAMCertificate [Documents.VALID, Documents.MANUAL_VERIFICATION_REQUIRED]
           return (if hasImage then Just MANUAL_VERIFICATION_REQUIRED else Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.TANCertificate -> do
-      let mbDoc = mbCommonDoc
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.TANCertificate
-      case mbDoc of
-        Just doc -> do
-          mbTanMetadata <-
-            if enableMetadata
-              then do
-                mbFoi <- QFOI.findByPrimaryKey driverId
-                pure $ Just $ TANMetadata TANDocumentMetadata {documentId = doc.id.getId, tdsRate = mbFoi >>= (.tdsRate)}
-              else pure Nothing
-          let (s3, iid) = maybe (mbS3Path, mbImageId) lookupImage doc.documentImageId
-          return (Just (mapStatus doc.verificationStatus), doc.rejectReason <|> reason, url, Nothing, s3, iid, Nothing, mbTanMetadata, Just doc.id.getId)
-        Nothing -> return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
+      mbTanMetadata <-
+        if enableMetadata
+          then do
+            mbFoi <- QFOI.findByPrimaryKey driverId
+            pure $ Just $ TANMetadata TANDocumentMetadata {tdsRate = mbFoi >>= (.tdsRate)}
+          else pure Nothing
+      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, mbTanMetadata, Nothing)
     DVC.LDCCertificate -> do
-      let mbDoc = mbCommonDoc
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.LDCCertificate
-      case mbDoc of
-        Just doc -> do
-          mbLdcMetadata <-
-            if enableMetadata
-              then do
-                mbFoi <- QFOI.findByPrimaryKey driverId
-                pure $ Just $ LDCMetadata LDCDocumentMetadata {documentId = doc.id.getId, tdsRate = mbFoi >>= (.tdsRate)}
-              else pure Nothing
-          let (s3, iid) = maybe (mbS3Path, mbImageId) lookupImage doc.documentImageId
-          return (Just (mapStatus doc.verificationStatus), doc.rejectReason <|> reason, url, Nothing, s3, iid, Nothing, mbLdcMetadata, Just doc.id.getId)
-        Nothing -> return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
+      mbLdcMetadata <-
+        if enableMetadata
+          then do
+            mbFoi <- QFOI.findByPrimaryKey driverId
+            pure $ Just $ LDCMetadata LDCDocumentMetadata {tdsRate = mbFoi >>= (.tdsRate)}
+          else pure Nothing
+      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, mbLdcMetadata, Nothing)
     DVC.BusinessRegistrationExtract -> do
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.BusinessRegistrationExtract
       return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)

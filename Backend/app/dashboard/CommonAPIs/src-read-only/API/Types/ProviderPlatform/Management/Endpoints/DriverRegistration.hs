@@ -133,7 +133,7 @@ data CommonDocumentListItem = CommonDocumentListItem
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data CommonDocumentRejectDetails = CommonDocumentRejectDetails {reason :: Kernel.Prelude.Text, documentId :: Kernel.Types.Id.Id Dashboard.Common.CommonDriverOnboardingDocuments, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
+data CommonDocumentRejectDetails = CommonDocumentRejectDetails {reason :: Kernel.Prelude.Text, documentId :: Kernel.Types.Id.Id Dashboard.Common.CommonDriverOnboardingDocuments}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -373,7 +373,7 @@ data GetDocumentResponse = GetDocumentResponse
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ImageDocumentsRejectDetails = ImageDocumentsRejectDetails {reason :: Kernel.Prelude.Text, documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image}
+data ImageDocumentsRejectDetails = ImageDocumentsRejectDetails {reason :: Kernel.Prelude.Text, documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -381,7 +381,7 @@ data InspectionHubRejectDetails = InspectionHubRejectDetails {reason :: Kernel.P
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LDCApproveDetails = LDCApproveDetails {documentId :: Kernel.Types.Id.Id Dashboard.Common.CommonDriverOnboardingDocuments, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
+data LDCApproveDetails = LDCApproveDetails {documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -550,7 +550,7 @@ data StatusRes = StatusRes
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TANApproveDetails = TANApproveDetails {documentId :: Kernel.Types.Id.Id Dashboard.Common.CommonDriverOnboardingDocuments, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
+data TANApproveDetails = TANApproveDetails {documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
