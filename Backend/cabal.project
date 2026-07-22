@@ -8,6 +8,7 @@ packages:
   app/rider-platform/rider-app/Scheduler
   app/dashboard/rider-dashboard
   app/dashboard/provider-dashboard
+  app/dashboard/dashboard-repl-check
   app/dashboard/Lib
   app/dashboard/CommonAPIs
   app/special-zone
