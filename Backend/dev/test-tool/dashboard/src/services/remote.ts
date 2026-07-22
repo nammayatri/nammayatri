@@ -107,6 +107,19 @@ export const remoteCabalClean = (t: RemoteTarget): Promise<RemoteSessionResponse
 export const resolveDevbox = (forceNew = false): Promise<DevboxAssignment> =>
   json(`/api/devbox/resolve${forceNew ? '?new=1' : ''}`);
 
+export interface LogListResponse { files?: string[]; error?: string }
+export interface LogTailResponse { file?: string; content?: string; truncated?: boolean; error?: string }
+export interface LogClearResponse { cleared?: boolean; file?: string; error?: string }
+
+export const remoteLogList = (t: RemoteTarget): Promise<LogListResponse> =>
+  json('/api/remote/logs', t);
+
+export const remoteLogTail = (t: RemoteTarget & { file: string; lines?: number; full?: boolean }): Promise<LogTailResponse> =>
+  json('/api/remote/log-tail', t);
+
+export const remoteLogClear = (t: RemoteTarget & { file: string }): Promise<LogClearResponse> =>
+  json('/api/remote/log-clear', t);
+
 export interface MachineInfo {
   name: string;
   role: 'base' | 'worker';

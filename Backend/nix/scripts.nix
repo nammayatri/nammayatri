@@ -421,6 +421,23 @@ _:
             DEVBOX_REGISTRY_FILE="$REGISTRY"
             export DEVBOX_KEY DEVBOX_REGISTRY_FILE
 
+            # Kill this workspace's stale process-compose first (it has no port,
+            # so the port kill below can't reach it, but it respawns children
+            # onto the ports we free). cwd under FLAKE_ROOT scopes it to us.
+            _pcs=$(${pkgs.procps}/bin/pgrep -x process-compose 2>/dev/null || true)
+            _superseded=""
+            for p in $_pcs; do
+              cwd=$(readlink /proc/"$p"/cwd 2>/dev/null || true)
+              case "$cwd" in
+                "''${FLAKE_ROOT}"*)
+                  echo "── Pre-flight: superseding stale stack (process-compose pid $p) ──"
+                  kill -TERM "$p" 2>/dev/null || true
+                  _superseded=1
+                  ;;
+              esac
+            done
+            [[ -n "$_superseded" ]] && sleep 3
+
             # Free up ports from the PREVIOUS run FIRST — so resolve-ports sees
             # them free and can reuse the same numbers. The previous run's ports
             # live in our registry slice (devbox-registry.json[KEY]).

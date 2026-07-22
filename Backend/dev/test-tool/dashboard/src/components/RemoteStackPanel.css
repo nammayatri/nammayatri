@@ -75,3 +75,124 @@
   border: 1px dashed #2a2a2a; border-radius: 4px;
   text-align: center;
 }
+
+/* ── Service-log viewer modal ── */
+.rsp-log-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.rsp-log-modal {
+  width: 90vw;
+  max-width: 1100px;
+  height: 80vh;
+  background: #1a1d23;
+  border: 1px solid #333;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.rsp-log-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #333;
+}
+.rsp-log-title { font-weight: 600; white-space: nowrap; }
+.rsp-log-select { min-width: 240px; }
+/* Header buttons — bigger hit area so the ✕ isn't a thin sliver. */
+.rsp-log-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid #3a3f47;
+  border-radius: 5px;
+  background: #262a31;
+  color: #d4d4d4;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.rsp-log-btn:hover { background: #30353d; }
+.rsp-log-btn:disabled { opacity: 0.5; cursor: default; }
+.rsp-log-btn-danger { border-color: #7a2a2a; color: #ff9d9d; }
+.rsp-log-btn-danger:hover { background: #3a1f1f; }
+.rsp-log-close { font-size: 15px; font-weight: 600; }
+.rsp-log-searchbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #333;
+}
+.rsp-log-search {
+  flex: 1;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid #3a3f47;
+  border-radius: 5px;
+  background: #0e1013;
+  color: #d4d4d4;
+  font-size: 13px;
+}
+.rsp-log-matches {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82em;
+  color: #9ab;
+  white-space: nowrap;
+}
+.rsp-log-follow {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85em;
+  color: #aaa;
+}
+.rsp-log-src { font-size: 0.8em; color: #888; }
+.rsp-log-error {
+  padding: 6px 12px;
+  color: #ff8080;
+  background: #2a1a1a;
+  font-size: 0.85em;
+}
+.rsp-log-body {
+  flex: 1;
+  margin: 0;
+  padding: 10px 12px;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #d4d4d4;
+  background: #0e1013;
+}
+.rsp-log-foot {
+  padding: 6px 12px;
+  border-top: 1px solid #333;
+  font-size: 0.78em;
+  color: #888;
+}
+.rsp-log-foot code { color: #9cc; }
+
+.rsp-log-sortlabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.82em;
+  color: #9ab;
+  white-space: nowrap;
+}
+.rsp-log-sort { height: 28px; }
