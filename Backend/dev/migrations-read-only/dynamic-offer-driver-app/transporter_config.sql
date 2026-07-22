@@ -1006,7 +1006,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fraud_auth_coun
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fraud_auth_count_threshold integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_ip_blocked_until_in_mins integer ;
 
-
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN mandate_email_verification boolean ;
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_invalid_rc_deletion_on_replacement boolean ;

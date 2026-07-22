@@ -860,6 +860,9 @@ partialFindLastVehicleRCFleetMF certNumber (Id merchantId') merchantOperatingCit
 deleteByFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m ()
 deleteByFleetOwnerId fleetOwnerId = deleteWithKV [Se.Is BeamVRC.fleetOwnerId (Se.Eq $ Just fleetOwnerId)]
 
+deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> m ()
+deleteById rcId = deleteWithKV [Se.Is BeamVRC.id (Se.Eq $ getId rcId)]
+
 -- | Update documentImageId, verificationStatus, and rejectReason keyed on the
 -- RC's own id. Used in the reject path when the row's documentImageId is stale
 -- (re-upload case) so the image pointer is re-pointed atomically.

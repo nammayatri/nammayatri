@@ -578,7 +578,8 @@ postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId req = do
             vehicleClass = Nothing,
             isRCImageValidated = Nothing,
             engineNumber = req.engineNumber,
-            chassisNumber = req.chassisNumber
+            chassisNumber = req.chassisNumber,
+            previousRcNumber = Nothing
           }
   void $ DomainRC.verifyRC False (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq False (Just personId)
   logTagInfo "dashboard -> Register RC For Fleet : " (show driver.id)
@@ -1095,6 +1096,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
               udinNumber = Nothing,
               engineNumber = Nothing,
               chassisNumber = Nothing,
+              previousRcNumber = Nothing,
               ..
             },
           vehicleNumberHash,
@@ -3964,7 +3966,8 @@ convertToAddVehicleReq rcReq =
       skipFleetChecks = Nothing,
       vehicleTags = Nothing,
       fuelType = Nothing,
-      udinNumber = rcReq.udinNumber
+      udinNumber = rcReq.udinNumber,
+      previousRcNumber = rcReq.previousRcNumber
     }
 
 getDriverDashboardInternalHelperGetFleetOwnerId :: (ShortId DM.Merchant -> Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.Flow Text)

@@ -450,6 +450,7 @@ types:
     - udinNumber: Maybe Text
     - engineNumber: Maybe Text
     - chassisNumber: Maybe Text
+    - previousRcNumber: Maybe Text
     - derive: "'HideSecrets"
   RegisterPanReq:
     - panNumber: Text

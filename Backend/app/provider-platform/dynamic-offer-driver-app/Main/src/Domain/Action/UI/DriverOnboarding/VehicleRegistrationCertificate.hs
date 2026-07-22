@@ -144,7 +144,8 @@ data DriverRCReq = DriverRCReq
     vehicleDetails :: Maybe DriverVehicleDetails,
     isRCImageValidated :: Maybe Bool, -- updatable
     engineNumber :: Maybe Text,
-    chassisNumber :: Maybe Text
+    chassisNumber :: Maybe Text,
+    previousRcNumber :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -290,6 +291,10 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
     Redis.set (makeFleetOwnerKey req.vehicleRegistrationCertNumber) fleetOwnerId.getId
     -- Optionally update existing RC's fleetOwnerId in DB if enabled via transporterConfig
     updateExistingRCFleetOwnerIfEnabled transporterConfig req.vehicleRegistrationCertNumber fleetOwnerId
+  whenJust req.previousRcNumber $ \prevRcNo ->
+    when (transporterConfig.allowInvalidRcDeletionOnReplacement == Just True) $
+      fork "delete previous invalid RC and associations" $
+        deleteVehicleWithAllAssociations personId mbFleetOwnerId prevRcNo
   encryptedRC <- encrypt req.vehicleRegistrationCertNumber
   let imageExtractionValidation = bool Domain.Skipped Domain.Success (isNothing req.dateOfRegistration && documentVerificationConfig.checkExtraction && not isTtenCertificate)
   Redis.whenWithLockRedis (rcVerificationLockKey req.vehicleRegistrationCertNumber) 60 $ do

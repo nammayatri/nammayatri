@@ -83,7 +83,8 @@ data AddVehicleReq = AddVehicleReq
     vehicleTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     fuelType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     skipFleetChecks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    udinNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    udinNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    previousRcNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

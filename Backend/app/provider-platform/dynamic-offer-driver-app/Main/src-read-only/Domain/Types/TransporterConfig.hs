@@ -48,6 +48,7 @@ data TransporterConfig = TransporterConfig
     allowDuplicateUdyam :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowFarePolicyUpdateBelowMinBaseFare :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowGstReupload :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    allowInvalidRcDeletionOnReplacement :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowMultiFleetOperatorLink :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowPanAadhaarLinkage :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowPanReupload :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

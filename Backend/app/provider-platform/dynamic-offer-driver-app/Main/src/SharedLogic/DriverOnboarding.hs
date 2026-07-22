@@ -97,11 +97,13 @@ import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Image as Query
+import qualified Storage.Queries.ImageExtra as ImageQueryExtra
 import qualified Storage.Queries.Message as MessageQuery
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
+import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCExtra
 import Text.Regex.Posix ((=~))
 import Tools.Error
 import qualified Tools.Ticket as TT
@@ -1402,3 +1404,104 @@ endFleetRCAssociationIfPossible fleetOwnerId rcId = do
   now <- getCurrentTime
   mbFleetRc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId fleetOwnerId rcId now
   whenJust mbFleetRc $ \fleetRc -> FRCAssoc.endById fleetRc.id
+
+deleteVehicleWithAllAssociations ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    EncFlow m r
+  ) =>
+  Id Person.Person ->
+  Maybe (Id Person.Person) ->
+  Text ->
+  m ()
+deleteVehicleWithAllAssociations personId mbFleetOwnerId rcNumber = do
+  rc <- QRC.findLastVehicleRCWrapper rcNumber >>= fromMaybeM (RCNotFound rcNumber)
+  canDeleteRcAndAssociations <- validateRCStatusAndOwnershipForDeletion personId mbFleetOwnerId rc
+  when canDeleteRcAndAssociations $ do
+    endDriverAssociationForRC personId rc.id
+    endFleetAssociationForRC mbFleetOwnerId rc.id
+    unlessM (checkOtherActiveAssociations personId mbFleetOwnerId rc.id) $ do
+      deleteImagesLinkedWithRC rc.id
+      hardDeleteRC rc.id
+  where
+    validateRCStatusAndOwnershipForDeletion ::
+      (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+      Id Person.Person ->
+      Maybe (Id Person.Person) ->
+      VehicleRegistrationCertificate ->
+      m Bool
+    validateRCStatusAndOwnershipForDeletion personId' mbFleetOwnerId' rc = do
+      let rcId = rc.id.getId
+      if rc.verificationStatus `elem` [Documents.VALID, Documents.MANUAL_VERIFICATION_REQUIRED]
+        then do
+          logError $ "RC deletion skipped for rcId: " <> rcId <> " - status is " <> show rc.verificationStatus
+          pure False
+        else
+          checkRCOwnership personId' mbFleetOwnerId' rc >>= \case
+            True -> pure True
+            False -> do
+              logError $ "RC deletion skipped for personId: " <> personId'.getId <> " rcId: " <> rcId <> " - ownership check failed"
+              pure False
+
+    checkRCOwnership ::
+      (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+      Id Person.Person ->
+      Maybe (Id Person.Person) ->
+      VehicleRegistrationCertificate ->
+      m Bool
+    checkRCOwnership pId mbFlOwnId rc = do
+      now <- getCurrentTime
+      hasDriverAssoc <- isJust <$> DAQuery.findLinkedByRCIdAndDriverId pId rc.id now
+      hasFleetCheck <- case mbFlOwnId of
+        Just fleetOwnerId -> do
+          hasFleetDriverAssoc <- isJust <$> QFDA.findByDriverIdAndFleetOwnerId pId fleetOwnerId.getId True
+          hasFleetAssoc <- isJust <$> FRCAssoc.findLinkedByRCIdAndFleetOwnerId fleetOwnerId rc.id now
+          pure (hasFleetDriverAssoc && hasFleetAssoc)
+        Nothing -> pure True
+      pure (hasDriverAssoc && hasFleetCheck)
+
+    checkOtherActiveAssociations ::
+      (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+      Id Person.Person ->
+      Maybe (Id Person.Person) ->
+      Id VehicleRegistrationCertificate ->
+      m Bool
+    checkOtherActiveAssociations personId' mbFleetOwnerId' rcId = do
+      remainingDriverAssocs <- filter (\a -> a.driverId /= personId') <$> DAQuery.findAllActiveAssociationByRCId rcId
+      remainingFleetAssocs <- case mbFleetOwnerId' of
+        Just fleetOwnerId -> filter (\a -> a.fleetOwnerId /= fleetOwnerId) <$> FRCAssoc.findAllActiveAssociationByRCId rcId
+        Nothing -> FRCAssoc.findAllActiveAssociationByRCId rcId
+      let hasOthersDriverOrFleetAssoc = not (null remainingDriverAssocs && null remainingFleetAssocs)
+      when hasOthersDriverOrFleetAssoc $
+        logError $ "RC " <> rcId.getId <> " still has other active associations, skipping hard delete"
+      pure hasOthersDriverOrFleetAssoc
+
+    endDriverAssociationForRC ::
+      (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+      Id Person.Person ->
+      Id VehicleRegistrationCertificate ->
+      m ()
+    endDriverAssociationForRC driverId rcId =
+      DAQuery.endAssociationForRC driverId rcId
+
+    endFleetAssociationForRC ::
+      (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+      Maybe (Id Person.Person) ->
+      Id VehicleRegistrationCertificate ->
+      m ()
+    endFleetAssociationForRC mbFleetOwnerId' rcId =
+      whenJust mbFleetOwnerId' $ \fleetOwnerId ->
+        endFleetRCAssociationIfPossible fleetOwnerId rcId
+
+    deleteImagesLinkedWithRC ::
+      (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+      Id VehicleRegistrationCertificate ->
+      m ()
+    deleteImagesLinkedWithRC = ImageQueryExtra.deleteByRcId
+
+    hardDeleteRC ::
+      (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+      Id VehicleRegistrationCertificate ->
+      m ()
+    hardDeleteRC = VRCExtra.deleteById
