@@ -1388,6 +1388,7 @@ TransporterConfig:
     mandateEmailVerification: Maybe Bool
     forceDirectCalling: Maybe Bool
     allowNonFleetDriverLiveMap: Maybe Bool
+    allowInvalidRcDeletionOnReplacement: Maybe Bool # When True, allows deleting an invalid RC and its driver/fleet associations when a replacement RC is submitted
 
   beamType:
     currency: Maybe Currency
