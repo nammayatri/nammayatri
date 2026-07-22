@@ -2102,9 +2102,13 @@ notifyShuttleBookingConfirmed personId bookingId = do
             [("routeName", routeName)]
             Nothing
             Nothing
-          -- WhatsApp (secondary, opt-in): template `shuttle_booking_confirmation`.
-          let origin = fromMaybe "" booking.fromStationName
+          -- WhatsApp (secondary, opt-in): template `shuttle_booking_confirmation` expects 5 vars,
+          -- in order: name, source, destination, departure, vehicle. Non-empty fallbacks because
+          -- Meta rejects empty template variables (drops the whole message).
+          let riderName = fromMaybe "Rider" person.firstName
+              origin = fromMaybe "" booking.fromStationName
               destination = fromMaybe "" booking.toStationName
               departure = maybe "" showTimeIst booking.startTime
-          sendWhatsAppTemplateIfOptedIn person DMM.WHATSAPP_SHUTTLE_BOOKING_CONFIRMED [Just routeName, Just origin, Just destination, Just departure]
+              vehicle = fromMaybe "your shuttle" booking.vehicleNumber
+          sendWhatsAppTemplateIfOptedIn person DMM.WHATSAPP_SHUTTLE_BOOKING_CONFIRMED [Just riderName, Just origin, Just destination, Just departure, Just vehicle]
           pure True
