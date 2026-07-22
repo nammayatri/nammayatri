@@ -126,6 +126,7 @@ import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.PersonExtra as PersonExtra
 import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
+import qualified System.Environment as SE
 import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
 import qualified Tools.MultiModal as MM
@@ -274,6 +275,21 @@ data AuthVerifyRes = AuthVerifyRes
 authHitsCountKey :: SP.Person -> Text
 authHitsCountKey person = "BAP:Registration:auth" <> getId person.id <> ":hitsCount"
 
+lookupClientIPPositionFromRight :: IO Int
+lookupClientIPPositionFromRight = fromMaybe 3 . (>>= readMaybe) <$> SE.lookupEnv "XFF_CLIENT_IP_POSITION_FROM_RIGHT"
+
+extractClientIP :: MonadIO m => Maybe Text -> m (Maybe Text)
+extractClientIP mbXForwardedFor = do
+  clientIPPosition <- liftIO lookupClientIPPositionFromRight
+  pure $
+    mbXForwardedFor
+      >>= \headerValue ->
+        let ips = filter (not . T.null) $ map T.strip $ T.splitOn "," headerValue
+            idx = length ips - clientIPPosition
+         in (if idx >= 0 then listToMaybe (drop idx ips) else Nothing) >>= \clientIP ->
+              let ipWithoutPort = T.takeWhile (/= ':') clientIP
+               in if T.null ipWithoutPort then Nothing else Just ipWithoutPort
+
 findReusableToken :: (CacheFlow m r, EsqDBFlow m r, MonadTime m) => Id SP.Person -> m (Maybe SR.RegistrationToken)
 findReusableToken personId = do
   regTokens <- RegistrationToken.findAllByPersonId personId
@@ -309,12 +325,7 @@ auth ::
   m AuthRes
 auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor mbSenderHash mbIsDashboardRequest = do
   let req = if req'.merchantId.getShortId == "YATRI" then req' {merchantId = ShortId "NAMMA_YATRI"} else req'
-  let mbClientIP =
-        mbXForwardedFor
-          >>= \headerValue ->
-            (listToMaybe $ T.splitOn "," headerValue) >>= \firstIP ->
-              let ipWithoutPort = T.takeWhile (/= ':') $ T.strip firstIP
-               in if T.null ipWithoutPort then Nothing else Just ipWithoutPort
+  mbClientIP <- extractClientIP mbXForwardedFor
   whenJust mbClientIP $ \clientIP -> do
     logInfo $ "Auth request from IP: " <> clientIP <> " for identifier: " <> show req'.mobileNumber
     ipBlocked <- SMC.isIPBlocked clientIP
@@ -939,8 +950,9 @@ verify ::
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
   Maybe Text ->
+  Maybe Text ->
   m AuthVerifyRes
-verify tokenId req mbClientId = do
+verify tokenId req mbClientId mbXForwardedFor = do
   runRequestValidation validateAuthVerifyReq req
   regToken@SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
   checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
@@ -958,6 +970,11 @@ verify tokenId req mbClientId = do
     merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
     when merchantConfig.useFraudDetection $ SMC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken)
   void $ RegistrationToken.setVerified True tokenId
+  fork "Decrement Auth IP Counter" $ do
+    mbClientIP <- extractClientIP mbXForwardedFor
+    whenJust mbClientIP $ \clientIP -> do
+      merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMerchantCfg.findAllByMerchantOperatingCityId merchantOperatingCityId (Just [])))
+      SMC.decrementCustomerAuthCountersByIP clientIP merchantConfigs
   void $ Person.updateDeviceToken deviceToken person.id
   personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
   whenJust req.userPasswordString $ \userPasswordString -> do
