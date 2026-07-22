@@ -505,7 +505,6 @@ domainTableDocumentTypes =
       DVC.VehicleFitnessCertificate,
       DVC.VehicleNOC,
       DVC.DriverVehicleNOC,
-      DVC.BusinessLicense,
       DVC.SocialSecurityNumber,
       DVC.BackgroundVerification,
       DVC.GSTCertificate,
@@ -643,7 +642,7 @@ postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.Com
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   when (mapDocumentType documentType `Set.member` domainTableDocumentTypes) $
-    throwError $ InvalidRequest $ "Document type " <> show documentType <> " cannot be registered as a common document. Please use the corresponding metadata variant."
+    throwError $ InvalidRequest $ "Document type " <> show documentType <> " cannot be registered as a common document."
   let driverPersonId = cast @Common.Driver @DP.Person driverId
   void $ QPerson.findById driverPersonId >>= fromMaybeM (PersonNotFound driverPersonId.getId)
   whenJust imageId $ \imgId -> do
