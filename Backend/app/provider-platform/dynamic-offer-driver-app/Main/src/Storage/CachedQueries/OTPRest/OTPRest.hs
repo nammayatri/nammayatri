@@ -53,6 +53,17 @@ getExampleTrip integratedBPPConfig routeId = IM.withInMemCache ["ExampleTrip", i
   baseUrl <- getGimsBaseUrl integratedBPPConfig
   Flow.getExampleTrip baseUrl (integratedBPPConfig.feedKey) routeId
 
+getBusTripSchedule ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  Text ->
+  Int ->
+  Text ->
+  m BusScheduleDetails
+getBusTripSchedule integratedBPPConfig waybillNo tripNumber routeId = IM.withInMemCache ["BusTripSchedule", integratedBPPConfig.id.getId, waybillNo, show tripNumber, routeId] 300 $ do
+  baseUrl <- getGimsBaseUrl integratedBPPConfig
+  Flow.getBusTripSchedule baseUrl (integratedBPPConfig.feedKey) waybillNo tripNumber routeId
+
 -- Parse Functions
 
 parseRouteStopMappingInMemoryServer ::

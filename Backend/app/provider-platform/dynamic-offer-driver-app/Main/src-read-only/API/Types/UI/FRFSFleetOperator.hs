@@ -2,6 +2,7 @@
 
 module API.Types.UI.FRFSFleetOperator where
 
+import qualified BecknV2.FRFS.Enums
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.FleetOperatorTripAction
@@ -12,6 +13,10 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.TimeBound
 import Servant
 import Tools.Auth
+
+data BusTripScheduleResp = BusTripScheduleResp {schedules :: [FleetBusTripSchedule]}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSRouteAPI = FRFSRouteAPI
   { code :: Data.Text.Text,
@@ -48,6 +53,27 @@ data FRFSStationAPI = FRFSStationAPI
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSTripPassengerManifestResp = FRFSTripPassengerManifestResp {manifest :: [PassengerStopManifest]}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetBusStopETA = FleetBusStopETA
+  { arrivalTime :: Kernel.Prelude.UTCTime,
+    arrivalTimeUnix :: Kernel.Prelude.Int,
+    etaSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    stopCode :: Data.Text.Text,
+    stopName :: Kernel.Prelude.Maybe Data.Text.Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetBusTripSchedule = FleetBusTripSchedule
+  { eta :: [FleetBusStopETA],
+    isActiveTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    serviceTier :: BecknV2.FRFS.Enums.ServiceTierType,
+    tripNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    vehicleNo :: Data.Text.Text,
+    waybillNo :: Kernel.Prelude.Maybe Data.Text.Text
+  }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

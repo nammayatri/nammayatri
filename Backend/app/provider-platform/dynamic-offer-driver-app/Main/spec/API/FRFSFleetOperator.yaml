@@ -3,6 +3,7 @@ imports:
   LatLong: Kernel.External.Maps.Types
   City: Kernel.Types.Beckn.Context
   VehicleCategory: BecknV2.FRFS.Enums
+  ServiceTierType: BecknV2.FRFS.Enums
   TimeBound: Kernel.Types.TimeBound
   FleetOperatorTripAction: Domain.Types.FleetOperatorTripAction
 
@@ -98,6 +99,27 @@ types:
     manifest: "[PassengerStopManifest]"
     derive: "Show"
 
+  FleetBusStopETA:
+    stopCode: Text
+    stopName: Maybe Text
+    arrivalTime: UTCTime
+    arrivalTimeUnix: Int
+    etaSeconds: Maybe Int
+    derive: "Show"
+
+  FleetBusTripSchedule:
+    eta: "[FleetBusStopETA]"
+    vehicleNo: Text
+    serviceTier: ServiceTierType
+    tripNumber: Maybe Int
+    waybillNo: Maybe Text
+    isActiveTrip: Maybe Bool
+    derive: "Show"
+
+  BusTripScheduleResp:
+    schedules: "[FleetBusTripSchedule]"
+    derive: "Show"
+
 apis:
   - GET:
       endpoint: /v2/frfs/route/{routeCode}
@@ -137,3 +159,14 @@ apis:
         type: FleetOperatorCurrentOperationReq
       response:
         type: FleetOperatorCurrentOperationResp
+
+  - GET:
+      endpoint: /v2/frfs/busTripSchedule/{routeId}
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        routeId: Text
+      mandatoryQuery:
+        waybillNo: Text
+        tripNumber: Int
+      response:
+        type: BusTripScheduleResp
