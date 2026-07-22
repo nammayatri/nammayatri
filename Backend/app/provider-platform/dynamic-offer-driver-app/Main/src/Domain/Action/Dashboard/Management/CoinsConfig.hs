@@ -134,7 +134,7 @@ clearCache coinsConfig = do
   -- Drop ConfigPilot in-mem / Redis bucket so EndRide does not keep stale timeBounds.
   LCP.invalidateConfigInMem LYTCP.CoinsConfig
   -- Invalidate driver incentiveConfig ETag so clients refetch after create/update.
-  CQConfig.clearDriverIncentiveConfigHash merchantOpCityId coinsConfig.vehicleCategory coinsConfig.eventFunction
+  CQConfig.clearDriverIncentiveConfigHash merchantOpCityId coinsConfig.vehicleCategory
 
 processingTranslations :: DTCC.CoinsConfig -> [Common.EventMessage] -> Environment.Flow ()
 processingTranslations coinsConfig eventMessageLs = do

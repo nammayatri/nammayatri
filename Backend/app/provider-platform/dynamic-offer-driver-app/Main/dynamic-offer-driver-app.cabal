@@ -1033,8 +1033,8 @@ library
       API.Action.UI.CallFeedback
       API.Action.UI.CancellationReasonLookup
       API.Action.UI.DemandHotspots
-      API.Action.UI.DriverIncentiveCoins
       API.Action.UI.DriverDocument
+      API.Action.UI.DriverIncentiveCoins
       API.Action.UI.DriverOnboardingV2
       API.Action.UI.DriverProfile
       API.Action.UI.DriverProfileQuestions

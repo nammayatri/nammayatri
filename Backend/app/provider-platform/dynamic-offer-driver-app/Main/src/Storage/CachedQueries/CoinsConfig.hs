@@ -28,7 +28,6 @@ module Storage.CachedQueries.CoinsConfig
 where
 
 import Data.Text (pack)
-import qualified Data.Text as T
 import Domain.Types.Coins.CoinsConfig
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Merchant as DM
@@ -173,35 +172,28 @@ clearCityCache merchantOpCityId =
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- ETag Redis for GET /coins/incentiveConfig (same pattern as SpecialLocation list).
--- Keyed by city + vehicleCategory + eventFunction because the payload is cohort-specific.
+-- Keyed by city + vehicleCategory + EventName EndRide so any EndRide coins
+-- create/update can invalidate the hash in one del.
 
-driverIncentiveConfigHashRedisKey :: Text -> DTV.VehicleCategory -> Text -> Text
-driverIncentiveConfigHashRedisKey mocId vehicleCategory eventFunctionKey =
+driverIncentiveConfigHashRedisKey :: Text -> DTV.VehicleCategory -> Text
+driverIncentiveConfigHashRedisKey mocId vehicleCategory =
   "DriverIncentiveCoins:Config:Hash:MocId:"
     <> mocId
     <> ":VehicleCategory:"
     <> show vehicleCategory
-    <> ":EventFunction:"
-    <> eventFunctionKey
+    <> ":EventName:EndRide"
 
-getDriverIncentiveConfigHash :: (CacheFlow m r) => Text -> DTV.VehicleCategory -> Text -> m (Maybe Text)
-getDriverIncentiveConfigHash mocId vehicleCategory eventFunctionKey =
-  Hedis.safeGet (driverIncentiveConfigHashRedisKey mocId vehicleCategory eventFunctionKey)
+getDriverIncentiveConfigHash :: (CacheFlow m r) => Text -> DTV.VehicleCategory -> m (Maybe Text)
+getDriverIncentiveConfigHash mocId vehicleCategory =
+  Hedis.safeGet (driverIncentiveConfigHashRedisKey mocId vehicleCategory)
 
-setDriverIncentiveConfigHash :: (CacheFlow m r) => Text -> DTV.VehicleCategory -> Text -> Text -> m ()
-setDriverIncentiveConfigHash mocId vehicleCategory eventFunctionKey eTag =
-  Hedis.set (driverIncentiveConfigHashRedisKey mocId vehicleCategory eventFunctionKey) eTag
+setDriverIncentiveConfigHash :: (CacheFlow m r) => Text -> DTV.VehicleCategory -> Text -> m ()
+setDriverIncentiveConfigHash mocId vehicleCategory eTag =
+  Hedis.set (driverIncentiveConfigHashRedisKey mocId vehicleCategory) eTag
 
--- | Clear ETag for a specific cohort after CoinsConfig create/update.
-clearDriverIncentiveConfigHash :: (CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe DTV.VehicleCategory -> DCT.DriverCoinsFunctionType -> m ()
-clearDriverIncentiveConfigHash merchantOpCityId mbVehicleCategory eventFunction =
+-- | Clear ETag after CoinsConfig create/update for this city + vehicle.
+clearDriverIncentiveConfigHash :: (CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe DTV.VehicleCategory -> m ()
+clearDriverIncentiveConfigHash merchantOpCityId mbVehicleCategory =
   case mbVehicleCategory of
-    Just vc ->
-      void $
-        Hedis.del
-          ( driverIncentiveConfigHashRedisKey
-              merchantOpCityId.getId
-              vc
-              (T.pack (show eventFunction))
-          )
+    Just vc -> void $ Hedis.del (driverIncentiveConfigHashRedisKey merchantOpCityId.getId vc)
     Nothing -> pure ()
