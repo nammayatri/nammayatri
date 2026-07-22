@@ -66,6 +66,7 @@ import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.ActiveDriversList as ADL
+import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import SharedLogic.Allocator (AllocatorJobType (..), SpecialZonePayoutJobData (..))
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -186,6 +187,8 @@ startRideHandler ServiceHandle {..} rideId req = do
   driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
+  when (fromMaybe False transporterConfig.airportEntryFeeCheckAtStartRide) $
+    AirportEntryFee.checkAirportEntryFeeBalanceBeforeStartRide (fromMaybe False transporterConfig.airportEntryFeeEnabled) driverId booking
   (openMarketAllow, includeDriverCurrentlyOnRide) <-
     maybe
       (pure (False, False))
