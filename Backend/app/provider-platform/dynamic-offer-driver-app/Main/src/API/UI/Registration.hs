@@ -50,6 +50,7 @@ type API =
            :> Header "x-package" Text
            :> Header "x-device" Text
            :> Header "x-sender-hash" Text
+           :> Header "x-forwarded-for" Text
            :> Post '[JSON] DRegistration.AuthRes
            :<|> "signature"
              :> SignatureAuth DRegistration.AuthReq "x-sdk-authorization"
@@ -63,6 +64,7 @@ type API =
            :<|> Capture "authId" (Id SR.RegistrationToken)
              :> "verify"
              :> ReqBody '[JSON] DRegistration.AuthVerifyReq
+             :> Header "x-forwarded-for" Text
              :> Post '[JSON] DRegistration.AuthVerifyRes
            :<|> "otp"
              :> Capture "authId" (Id SR.RegistrationToken)
@@ -87,17 +89,17 @@ handler =
     :<|> logout
     :<|> marketingEvents
 
-auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
-auth req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash =
+auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
+auth req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash mbXForwardedFor =
   withFlowHandlerAPI $
-    DRegistration.auth False req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash
+    DRegistration.auth False req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash mbXForwardedFor
 
 signatureAuth :: SignatureAuthResult DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
 signatureAuth (SignatureAuthResult req) mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice =
   withFlowHandlerAPI $ DRegistration.signatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice mbClientId
 
-verify :: Id SR.RegistrationToken -> DRegistration.AuthVerifyReq -> FlowHandler DRegistration.AuthVerifyRes
-verify tokenId = withFlowHandlerAPI . DRegistration.verify tokenId
+verify :: Id SR.RegistrationToken -> DRegistration.AuthVerifyReq -> Maybe Text -> FlowHandler DRegistration.AuthVerifyRes
+verify tokenId req mbXForwardedFor = withFlowHandlerAPI $ DRegistration.verify tokenId req mbXForwardedFor
 
 resend :: Id SR.RegistrationToken -> Maybe Text -> FlowHandler DRegistration.ResendAuthRes
 resend tokenId mbSenderHash = withFlowHandlerAPI $ DRegistration.resend tokenId mbSenderHash
