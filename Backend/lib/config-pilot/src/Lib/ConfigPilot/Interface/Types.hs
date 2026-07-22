@@ -202,6 +202,9 @@ instance ToMaybeOne [a] where
 
 -- | Fetch a single config value after dimension filtering. Works for both @Maybe@ and @[]@ return types.
 -- Throws an error if multiple rows match the given dimensions.
+-- NOINLINE: prevents GHC from inlining this into every call site (e.g. Search.hs calls it 3x
+-- with TransporterConfig which has 390+ fields), which causes simplifier ticks exhaustion at -O2.
+{-# NOINLINE getOneConfig #-}
 getOneConfig ::
   (ConfigDimensions a, ToMaybeOne (ConfigValueTypeOf a), Show a, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   a ->
