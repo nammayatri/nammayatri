@@ -562,7 +562,10 @@ selectDriversAndMatchFarePolicies :: DM.Merchant -> Id DMOC.MerchantOperatingCit
 selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocation transporterConfig isScheduled area farePolicies now isValueAddNP sreq paymentMode = do
   driverPoolCfg <- CDP.getSearchDriverPoolConfig merchantOpCityId mbDistance area sreq
   cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow merchantOpCityId (SL.pickupSpecialZoneIdFromArea area)
-  airportEntryFee <- requiredEntryFeeForBooking (fromMaybe False transporterConfig.airportEntryFeeEnabled) sreq.pickupGateId
+  airportEntryFee <-
+    if fromMaybe False transporterConfig.airportEntryFeeCheckAtStartRide
+      then pure Nothing
+      else requiredEntryFeeForBooking (fromMaybe False transporterConfig.airportEntryFeeEnabled) sreq.pickupGateId
   isAirportRequest <- isAirportPickupArea (Just area)
   let driverPoolCfg' = fromJust driverPoolCfg
       currentRideTripCategoryValidForForwardBatching = driverPoolCfg'.currentRideTripCategoryValidForForwardBatching
