@@ -78,7 +78,7 @@ verifyUdyam (personId, merchantOpCityId) req = do
   cfg <- SStatus.getFleetDocVerificationConfig merchantOpCityId ODC.UDYAMCertificate person.role
   if cfg.doStrictVerifcation
     then verifyUdyamFlow person merchantOpCityId req.uamNumber req.imageId1
-    else upsertManualUdyamRecord person req.uamNumber req.imageId1 cfg.markImageValidOnValidationSkip
+    else upsertManualUdyamRecord person req.uamNumber req.imageId1
   res <- case person.role of
     Person.DRIVER -> do
       fork "enabling driver if all the mandatory document is verified" $ do
@@ -134,19 +134,18 @@ onVerifyUdyam verificationReq output serviceName = do
     _ -> throwError $ InternalError ("Unknown Service provider webhook encountered in onVerifyUdyam. Name of provider : " <> show serviceName)
   pure Ack
 
-upsertManualUdyamRecord :: Person.Person -> Text -> Id Image.Image -> Maybe Bool -> Flow ()
-upsertManualUdyamRecord person uamNumber imageId markValidOnSkip = do
+upsertManualUdyamRecord :: Person.Person -> Text -> Id Image.Image -> Flow ()
+upsertManualUdyamRecord person uamNumber imageId = do
   encryptedUam <- encrypt uamNumber
   existing <- DUQuery.findByDriverId person.id
   now <- getCurrentTime
-  let status = if markValidOnSkip == Just True then Documents.VALID else Documents.MANUAL_VERIFICATION_REQUIRED
   case existing of
     Just driverUdyam -> do
       let updated =
             driverUdyam
               { DUdyam.udyamNumber = encryptedUam,
                 DUdyam.documentImageId = imageId,
-                DUdyam.verificationStatus = status,
+                DUdyam.verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
                 DUdyam.rejectReason = Nothing,
                 DUdyam.enterpriseName = Nothing,
                 DUdyam.enterpriseType = Nothing,
@@ -154,7 +153,7 @@ upsertManualUdyamRecord person uamNumber imageId markValidOnSkip = do
               }
       DUQuery.updateByPrimaryKey updated
     Nothing -> do
-      udyamCardDetails <- buildDriverUdyamCard person encryptedUam Nothing Nothing status imageId
+      udyamCardDetails <- buildDriverUdyamCard person encryptedUam Nothing Nothing Documents.MANUAL_VERIFICATION_REQUIRED imageId
       DUQuery.create udyamCardDetails
 
 buildDriverUdyamCard :: Person.Person -> EncryptedHashedField 'AsEncrypted Text -> Maybe Text -> Maybe Text -> Documents.VerificationStatus -> Id Image.Image -> Flow DUdyam.DriverUdyam
