@@ -1473,6 +1473,114 @@ def _ssh_argv(user: str, host: str, port: int, identity: str | None, want_tty: b
     return argv
 
 
+# ── Service log viewer ────────────────────────────────────────────────────────
+# The stack writes each service's log as <workspace>/<name>.log. On a dev-box
+# those live on the remote machine (/tmp/<devId>/nammayatri/*.log), out of the
+# developer's reach — these two endpoints list them and tail a chosen one over
+# SSH (or read them locally when running the stack on this machine).
+_LOG_NAME_RE = re.compile(r"^[A-Za-z0-9._-]+\.log$")
+
+def _log_list(body: dict) -> dict:
+    """List the *.log files in the running stack's workspace."""
+    host = (body.get("host") or "localhost").strip()
+    if _is_localhost(host):
+        try:
+            return {"files": sorted(p.name for p in PROJECT_ROOT.glob("*.log"))}
+        except OSError as e:
+            return {"error": f"list logs failed: {e}"}
+    user = (body.get("user") or "").strip()
+    port = int(body.get("port") or 22)
+    identity = (body.get("identityFile") or "").strip() or None
+    remote_dir = (body.get("remoteDir") or "").strip()
+    if not remote_dir:
+        return {"error": "remoteDir required for a remote host"}
+    cmd = f"ls -1 {shlex.quote(remote_dir)}/*.log 2>/dev/null | xargs -n1 basename 2>/dev/null || true"
+    argv = _ssh_argv(user, host, port, identity, want_tty=False) + [cmd]
+    try:
+        r = subprocess.run(argv, capture_output=True, timeout=10)
+        files = sorted(x for x in r.stdout.decode(errors="replace").splitlines() if x.strip())
+        return {"files": files}
+    except Exception as e:
+        return {"error": f"list logs failed: {e}"}
+
+
+# Byte cap for a "full log" fetch — protects against multi-GB logs (the
+# driver-app log can balloon past 1 GB). We return at most the LAST cap bytes.
+_LOG_FULL_CAP = 25 * 1024 * 1024
+
+
+def _log_tail(body: dict) -> dict:
+    """Return log content: last N lines (follow mode) or the whole file
+    (full mode, capped at the last _LOG_FULL_CAP bytes)."""
+    fname = (body.get("file") or "").strip()
+    if not _LOG_NAME_RE.match(fname):
+        return {"error": f"invalid log file name: {fname!r}"}
+    full = bool(body.get("full"))
+    lines = max(1, min(int(body.get("lines") or 2000), 200000))
+    host = (body.get("host") or "localhost").strip()
+    if _is_localhost(host):
+        try:
+            p = PROJECT_ROOT / fname
+            with open(p, "rb") as f:
+                f.seek(0, os.SEEK_END)
+                size = f.tell()
+                if full:
+                    start = max(0, size - _LOG_FULL_CAP)
+                    f.seek(start)
+                    text = f.read().decode(errors="replace")
+                    return {"file": fname, "content": text, "truncated": start > 0}
+                f.seek(max(0, size - 512 * 1024))
+                text = f.read().decode(errors="replace")
+                return {"file": fname, "content": "\n".join(text.splitlines()[-lines:])}
+        except OSError as e:
+            return {"error": f"read failed: {e}"}
+    user = (body.get("user") or "").strip()
+    port = int(body.get("port") or 22)
+    identity = (body.get("identityFile") or "").strip() or None
+    remote_dir = (body.get("remoteDir") or "").strip()
+    if not remote_dir:
+        return {"error": "remoteDir required for a remote host"}
+    path = shlex.quote(remote_dir + "/" + fname)
+    cmd = (f"tail -c {_LOG_FULL_CAP} {path} 2>/dev/null || true" if full
+           else f"tail -n {lines} {path} 2>/dev/null || true")
+    argv = _ssh_argv(user, host, port, identity, want_tty=False) + [cmd]
+    try:
+        r = subprocess.run(argv, capture_output=True, timeout=30)
+        content = r.stdout.decode(errors="replace")
+        return {"file": fname, "content": content,
+                "truncated": full and len(r.stdout) >= _LOG_FULL_CAP}
+    except Exception as e:
+        return {"error": f"tail failed: {e}"}
+
+def _log_clear(body: dict) -> dict:
+    """Truncate one *.log to empty (remote via SSH, or local)."""
+    fname = (body.get("file") or "").strip()
+    if not _LOG_NAME_RE.match(fname):
+        return {"error": f"invalid log file name: {fname!r}"}
+    host = (body.get("host") or "localhost").strip()
+    if _is_localhost(host):
+        try:
+            open(PROJECT_ROOT / fname, "w").close()
+            return {"cleared": True, "file": fname}
+        except OSError as e:
+            return {"error": f"clear failed: {e}"}
+    user = (body.get("user") or "").strip()
+    port = int(body.get("port") or 22)
+    identity = (body.get("identityFile") or "").strip() or None
+    remote_dir = (body.get("remoteDir") or "").strip()
+    if not remote_dir:
+        return {"error": "remoteDir required for a remote host"}
+    cmd = f": > {shlex.quote(remote_dir + '/' + fname)}"
+    argv = _ssh_argv(user, host, port, identity, want_tty=False) + [cmd]
+    try:
+        r = subprocess.run(argv, capture_output=True, timeout=10)
+        if r.returncode == 0:
+            return {"cleared": True, "file": fname}
+        return {"error": r.stderr.decode(errors="replace").strip() or "clear failed"}
+    except Exception as e:
+        return {"error": f"clear failed: {e}"}
+
+
 def _compute_cache_commit(project_root: str, max_n: int = 30) -> str:
     def _git(args, timeout=20):
         return subprocess.run(
@@ -2700,6 +2808,21 @@ class LocalApiHandler(BaseHTTPRequestHandler):
         # POST /api/remote/sync-caddy-port  — read resolved caddy port from remote and update registry
         if method == "POST" and path == "/api/remote/sync-caddy-port":
             self._send_json(_remote_sync_caddy_port(self._read_json_body() or {}))
+            return True
+
+        # POST /api/remote/logs — list *.log files in the stack workspace
+        if method == "POST" and path == "/api/remote/logs":
+            self._send_json(_log_list(self._read_json_body() or {}))
+            return True
+
+        # POST /api/remote/log-tail — last N lines (or full) of a chosen *.log
+        if method == "POST" and path == "/api/remote/log-tail":
+            self._send_json(_log_tail(self._read_json_body() or {}))
+            return True
+
+        # POST /api/remote/log-clear — truncate a chosen *.log to empty
+        if method == "POST" and path == "/api/remote/log-clear":
+            self._send_json(_log_clear(self._read_json_body() or {}))
             return True
 
         # POST /api/remote/deploy

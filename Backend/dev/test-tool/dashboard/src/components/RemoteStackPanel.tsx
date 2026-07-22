@@ -16,6 +16,9 @@ import {
   remoteSyncCaddyPort,
   remoteCabalClean,
   resolveDevbox,
+  remoteLogList,
+  remoteLogTail,
+  remoteLogClear,
   setupSsh,
   RemoteTarget,
   DevboxAssignment,
@@ -88,6 +91,60 @@ export const RemoteStackPanel: React.FC = () => {
   const [devboxErr, setDevboxErr] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
   const [sshStatus, setSshStatus] = useState<{ ok: boolean; message?: string } | null>(null);
+
+  // ── Log viewer ──
+  const [logsOpen, setLogsOpen] = useState(false);
+  const [logFiles, setLogFiles] = useState<string[]>([]);
+  const [selectedLog, setSelectedLog] = useState<string>('');
+  const [logContent, setLogContent] = useState<string>('');
+  const [logError, setLogError] = useState<string | null>(null);
+  const [logLoading, setLogLoading] = useState(false);
+  const [logFollow, setLogFollow] = useState(true);
+  const [logTruncated, setLogTruncated] = useState(false);
+  const [logSearch, setLogSearch] = useState('');
+  const [logSort, setLogSort] = useState<'none' | 'asc' | 'desc'>('none');
+  const [logRefreshNonce, setLogRefreshNonce] = useState(0);
+  const [logClearing, setLogClearing] = useState(false);
+  const logBodyRef = React.useRef<HTMLPreElement | null>(null);
+  const logSortRef = React.useRef(logSort);
+  logSortRef.current = logSort;
+
+  // Matches "2026-07-21 12:53:09.269707939" (space or T separator, optional frac).
+  // The format is fixed-width + zero-padded, so lexicographic string order == time order.
+  const TS_RE = /(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?)/;
+
+  // Client-side view: filter by search, then optionally sort by timestamp.
+  const displayedLog = React.useMemo(() => {
+    let lines = logContent.split('\n');
+    const q = logSearch.trim().toLowerCase();
+    if (q) lines = lines.filter(l => l.toLowerCase().includes(q));
+    if (logSort !== 'none') {
+      // Each line's key = its own timestamp, else the previous line's (so a
+      // multi-line entry's continuation stays grouped with its parent).
+      let last = '';
+      const keyed = lines.map((line, i) => {
+        const m = line.match(TS_RE);
+        if (m) last = m[1];
+        return { line, i, ts: last };
+      });
+      keyed.sort((a, b) => {
+        if (a.ts !== b.ts) {
+          if (!a.ts) return 1;   // untimestamped lines sink to the end
+          if (!b.ts) return -1;
+          const cmp = a.ts < b.ts ? -1 : 1;
+          return logSort === 'asc' ? cmp : -cmp;
+        }
+        return a.i - b.i;        // stable
+      });
+      lines = keyed.map(k => k.line);
+    }
+    return lines.join('\n');
+  }, [logContent, logSearch, logSort, TS_RE]);
+  
+  const matchCount = React.useMemo(
+    () => (logSearch.trim() ? displayedLog.split('\n').filter(Boolean).length : 0),
+    [displayedLog, logSearch],
+  );
 
   const isLocalhost = !target.host || ['localhost', '127.0.0.1', '::1'].includes(target.host.trim());
   const hasDevName = isLocalhost || !!target.devName?.trim();
@@ -414,6 +471,81 @@ export const RemoteStackPanel: React.FC = () => {
 
   const onResetContextApi = () => setContextApiBase(null);
 
+  // Open the log viewer: fetch the list of *.log files from the stack workspace.
+  const onOpenLogs = async () => {
+    setLogsOpen(true);
+    setLogError(null);
+    setLogContent('');
+    setLogLoading(true);
+    try {
+      const res = await remoteLogList(target);
+      if (res.error) {
+        setLogError(res.error);
+        setLogFiles([]);
+      } else {
+        const files = res.files || [];
+        setLogFiles(files);
+        // Keep the previous selection if it's still present, else pick a sensible default.
+        const pref = files.includes(selectedLog)
+          ? selectedLog
+          : (files.find(f => f.includes('rider-app-exe')) || files[0] || '');
+        setSelectedLog(pref);
+        if (!files.length) setLogError('No *.log files found — is the stack running?');
+      }
+    } catch (e) {
+      setLogError(`Failed to list logs: ${e}`);
+    } finally {
+      setLogLoading(false);
+    }
+  };
+
+  // Fetch log content. follow ON → live tail (auto-refresh 2s, auto-scroll);
+  // follow OFF → the FULL log, fetched once (refresh via the ↻ button).
+  useEffect(() => {
+    if (!logsOpen || !selectedLog) return;
+    let cancelled = false;
+    let iv: number | undefined;
+    const fetchLog = async () => {
+      try {
+        const res = await remoteLogTail({ ...target, file: selectedLog, full: !logFollow, lines: 2000 });
+        if (cancelled) return;
+        if (res.error) {
+          setLogError(res.error);
+        } else {
+          setLogError(null);
+          setLogTruncated(!!res.truncated);
+          setLogContent(res.content || '(empty)');
+          if (logFollow && logSortRef.current === 'none' && logBodyRef.current) {
+            const el = logBodyRef.current;
+            requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
+          }
+        }
+      } catch (e) {
+        if (!cancelled) setLogError(`Tail failed: ${e}`);
+      }
+    };
+    fetchLog();
+    if (logFollow) iv = window.setInterval(fetchLog, 2000);
+    return () => { cancelled = true; if (iv != null) window.clearInterval(iv); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [logsOpen, selectedLog, logFollow, logRefreshNonce]);
+
+  // Truncate the selected log to empty on the box, then re-fetch.
+  const onClearLogs = async () => {
+    if (!selectedLog) return;
+    if (!window.confirm(`Clear ${selectedLog}? This empties the file on ${isLocalhost ? 'this machine' : target.host}.`)) return;
+    setLogClearing(true);
+    try {
+      const res = await remoteLogClear({ ...target, file: selectedLog });
+      if (res.error) setLogError(res.error);
+      else { setLogContent(''); setLogError(null); setLogRefreshNonce(n => n + 1); }
+    } catch (e) {
+      setLogError(`Clear failed: ${e}`);
+    } finally {
+      setLogClearing(false);
+    }
+  };
+
   return (
     <div className="remote-stack-panel">
       <div className="rsp-header">
@@ -508,6 +640,13 @@ export const RemoteStackPanel: React.FC = () => {
         >
           {busy === 'cabal-clean' ? 'Cleaning…' : 'Cabal Clean'}
         </button>
+        <button
+          onClick={onOpenLogs}
+          disabled={!state.startSession}
+          title="View a service log (rider-app-exe.log, …) from the running stack's workspace"
+        >
+          View Logs
+        </button>
         <span className="rsp-spacer" />
         <button onClick={onUseRemoteContextApi} disabled={!state.startSession} title="Point the dashboard at this host's test-context-api (port 7082) and reload">
           Use this context-api
@@ -597,6 +736,77 @@ export const RemoteStackPanel: React.FC = () => {
           </div>
         )}
       </div>
+
+      {logsOpen && (
+        <div className="rsp-log-overlay" onClick={() => setLogsOpen(false)}>
+          <div className="rsp-log-modal" onClick={e => e.stopPropagation()}>
+            <div className="rsp-log-head">
+              <span className="rsp-log-title">Service logs</span>
+              <select
+                className="rsp-log-select"
+                value={selectedLog}
+                onChange={e => { setSelectedLog(e.target.value); setLogContent(''); }}
+                disabled={logLoading || !logFiles.length}
+              >
+                {!logFiles.length && <option value="">(no logs)</option>}
+                {logFiles.map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+              <button className="rsp-log-btn" onClick={() => setLogRefreshNonce(n => n + 1)} title="Refresh now">↻</button>
+              <label className="rsp-log-follow" title="On: live tail (auto-refresh). Off: load the FULL log.">
+                <input type="checkbox" checked={logFollow} onChange={e => setLogFollow(e.target.checked)} />
+                follow
+              </label>
+              <button
+                className="rsp-log-btn rsp-log-btn-danger"
+                onClick={onClearLogs}
+                disabled={logClearing || !selectedLog}
+                title="Empty this log file on the box"
+              >
+                {logClearing ? 'Clearing…' : 'Clear Logs'}
+              </button>
+              <span className="rsp-spacer" />
+              <span className="rsp-log-src">{isLocalhost ? 'local' : `${target.user}@${target.host}`}</span>
+              <button className="rsp-log-btn rsp-log-close" onClick={() => setLogsOpen(false)} title="Close">✕</button>
+            </div>
+            <div className="rsp-log-searchbar">
+              <input
+                className="rsp-log-search"
+                type="text"
+                placeholder="Search this log (case-insensitive, filters matching lines)…"
+                value={logSearch}
+                onChange={e => setLogSearch(e.target.value)}
+              />
+              {logSearch.trim() && (
+                <span className="rsp-log-matches">
+                  {matchCount} match{matchCount === 1 ? '' : 'es'}
+                  <button className="rsp-log-btn" onClick={() => setLogSearch('')} title="Clear search">clear</button>
+                </span>
+              )}
+              <label className="rsp-log-sortlabel" title="Sort lines by their timestamp">
+                sort
+                <select
+                  className="rsp-log-sort"
+                  value={logSort}
+                  onChange={e => setLogSort(e.target.value as 'none' | 'asc' | 'desc')}
+                >
+                  <option value="none">file order</option>
+                  <option value="asc">time ↑ (oldest first)</option>
+                  <option value="desc">time ↓ (newest first)</option>
+                </select>
+              </label>
+            </div>
+            {logError && <div className="rsp-log-error">{logError}</div>}
+            <pre className="rsp-log-body" ref={logBodyRef}>
+              {logLoading ? 'Loading…' : (displayedLog || (logSearch.trim() ? '(no matching lines)' : '(waiting for output…)'))}
+            </pre>
+            <div className="rsp-log-foot">
+              {logFollow ? 'live tail · auto-refresh 2s' : 'full log' }
+              {logTruncated && ' (showing last 25 MB)'}
+              {selectedLog && !isLocalhost && <> · <code>{target.remoteDir}/{selectedLog}</code></>}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
