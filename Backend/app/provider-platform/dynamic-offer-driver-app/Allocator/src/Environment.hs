@@ -99,6 +99,7 @@ data HandlerEnv = HandlerEnv
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
     maxShards :: Int,
     activeDriversListKeyShards :: Int,
+    enableDriverFeeShardedFanOut :: Bool,
     maxNotificationShards :: Int,
     smsCfg :: SmsConfig,
     version :: DeploymentVersion,
@@ -179,6 +180,7 @@ buildHandlerEnv HandlerCfg {..} = do
   let internalEndPointHashMap = HMS.fromList $ MS.toList internalEndPointMap
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  enableDriverFeeShardedFanOut <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "ENABLE_DRIVER_FEE_SHARDED_FAN_OUT"
   let sessionId = Nothing
   let kafkaProducerForART = Just kafkaProducerTools
   hedisClusterEnv <-

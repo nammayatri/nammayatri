@@ -93,7 +93,8 @@ executeSpecialZonePayoutRequest ::
     HasKafkaProducer r,
     RideEnd.EndRideFlow m r,
     LocationUpdateFlow m r c,
-    HasField "activeDriversListKeyShards" r Int
+    HasField "activeDriversListKeyShards" r Int,
+    HasField "enableDriverFeeShardedFanOut" r Bool
   ) =>
   DPR.PayoutRequest ->
   m ()
