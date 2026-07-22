@@ -27,6 +27,7 @@ module SharedLogic.MerchantConfig
     customerAuthBlock,
     blockCustomerByIP,
     updateCustomerAuthCountersByIP,
+    decrementCustomerAuthCountersByIP,
     isIPBlocked,
     updateCustomerAuthCountersByPhone,
     checkAuthLimitExceededByPhone,
@@ -95,6 +96,12 @@ updateCustomerAuthCountersByIP clientIP merchantConfigs = Redis.withNonCriticalC
   mapM_ (\mc -> whenJust mc.fraudAuthCountWindow $ \window -> incrementCount mc.id.getId window) merchantConfigs
   where
     incrementCount ind = SWC.incrementWindowCount (mkAuthCounterKey ind clientIP)
+
+decrementCustomerAuthCountersByIP :: (CacheFlow m r, MonadFlow m) => Text -> [DMC.MerchantConfig] -> m ()
+decrementCustomerAuthCountersByIP clientIP merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
+  mapM_ (\mc -> whenJust mc.fraudAuthCountWindow $ \window -> decrementCount mc.id.getId window) merchantConfigs
+  where
+    decrementCount ind = SWC.decrementWindowCount (mkAuthCounterKey ind clientIP)
 
 updateTotalRidesCounters :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Person.Person -> m ()
 updateTotalRidesCounters rider = do
