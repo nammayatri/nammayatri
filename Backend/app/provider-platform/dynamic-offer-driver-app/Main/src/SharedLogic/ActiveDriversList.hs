@@ -39,14 +39,16 @@ mkActiveDriversSetKeyForShard :: Int -> UTCTime -> NominalDiffTime -> Text
 mkActiveDriversSetKeyForShard shardNum referenceTime diffTimeFromUTC =
   "ActiveDrivers:Set:" <> localDateStr referenceTime diffTimeFromUTC <> ":{shard-" <> show shardNum <> "}"
 
-getActiveDriversForShard :: Redis.HedisFlow m r => Int -> UTCTime -> NominalDiffTime -> m [Text]
+getActiveDriversForShard :: (Redis.HedisFlow m r, TryException m) => Int -> UTCTime -> NominalDiffTime -> m [Text]
 getActiveDriversForShard shardNum referenceTime diffTimeFromUTC =
-  Redis.sMembers (mkActiveDriversSetKeyForShard shardNum referenceTime diffTimeFromUTC)
+  Redis.runInMasterCloudRedisCell $
+    Redis.sMembers (mkActiveDriversSetKeyForShard shardNum referenceTime diffTimeFromUTC)
 
-getShardNumsForFanOut :: forall r m. (MonadReader r m, HasField "activeDriversListKeyShards" r Int) => m [Maybe Int]
+getShardNumsForFanOut :: forall r m. (MonadReader r m, HasField "activeDriversListKeyShards" r Int, HasField "enableDriverFeeShardedFanOut" r Bool) => m [Maybe Int]
 getShardNumsForFanOut = do
   n <- asks @r (.activeDriversListKeyShards)
-  pure $ if n <= 0 then [Nothing] else Just <$> [0 .. n - 1]
+  shardingEnabled <- asks @r (.enableDriverFeeShardedFanOut)
+  pure $ if shardingEnabled && n > 0 then Just <$> [0 .. n - 1] else [Nothing]
 
 getTTLForActiveDriversList :: MonadTime m => NominalDiffTime -> m Int
 getTTLForActiveDriversList diffTimeFromUTC = do
@@ -60,7 +62,7 @@ getTTLForActiveDriversList diffTimeFromUTC = do
 
 addDriverToActiveList ::
   forall r m.
-  (MonadThrow m, Log m, MonadTime m, Redis.HedisFlow m r, HasField "activeDriversListKeyShards" r Int) =>
+  (MonadThrow m, Log m, MonadTime m, Redis.HedisFlow m r, TryException m, HasField "activeDriversListKeyShards" r Int) =>
   Id DP.Person ->
   NominalDiffTime ->
   m ()
@@ -68,7 +70,7 @@ addDriverToActiveList driverId diffTimeFromUTC = do
   shards <- asks @r (.activeDriversListKeyShards)
   ttl <- getTTLForActiveDriversList diffTimeFromUTC
   key <- mkActiveDriversSetKey shards (driverId.getId) diffTimeFromUTC
-  void $ Redis.sAddExp key [driverId.getId] ttl
+  void $ Redis.runInMasterCloudRedisCell $ Redis.sAddExp key [driverId.getId] ttl
 
 mkDriverQueueKey :: Text -> Int -> UTCTime -> NominalDiffTime -> Text
 mkDriverQueueKey jobKeyPrefix shardNum referenceTime diffTimeFromUTC =
@@ -94,7 +96,7 @@ mkDriverQueueLockKey jobKeyPrefix shardNum referenceTime diffTimeFromUTC =
 --   concurrent caller still mid-populate, and drain an empty, not-yet-filled queue — silently
 --   treating an unprocessed shard as fully drained.
 getNextDriverBatch ::
-  (Redis.HedisFlow m r, MonadMask m) =>
+  (Redis.HedisFlow m r, MonadMask m, TryException m) =>
   Text ->
   Int ->
   UTCTime ->
@@ -102,14 +104,15 @@ getNextDriverBatch ::
   Int ->
   m [Text]
 getNextDriverBatch jobKeyPrefix shardNum referenceTime diffTimeFromUTC limit =
-  Redis.withWaitAndLockRedis (mkDriverQueueLockKey jobKeyPrefix shardNum referenceTime diffTimeFromUTC) 30 100000 $ do
-    let queueKey = mkDriverQueueKey jobKeyPrefix shardNum referenceTime diffTimeFromUTC
-        flagKey = mkDriverQueuePopulatedFlagKey jobKeyPrefix shardNum referenceTime diffTimeFromUTC
-    isFirstCall <- Redis.setNxExpire flagKey (2 * 24 * 3600) True
-    when isFirstCall $ do
-      activeDriverIds <- getActiveDriversForShard shardNum referenceTime diffTimeFromUTC
-      unless (null activeDriverIds) $
-        Redis.rPushExp queueKey activeDriverIds (2 * 24 * 3600)
-    batch <- Redis.lRange queueKey 0 (fromIntegral limit - 1)
-    Redis.lTrim queueKey (fromIntegral limit) (-1)
-    pure batch
+  Redis.runInMasterCloudRedisCell $
+    Redis.withWaitAndLockRedis (mkDriverQueueLockKey jobKeyPrefix shardNum referenceTime diffTimeFromUTC) 30 100000 $ do
+      let queueKey = mkDriverQueueKey jobKeyPrefix shardNum referenceTime diffTimeFromUTC
+          flagKey = mkDriverQueuePopulatedFlagKey jobKeyPrefix shardNum referenceTime diffTimeFromUTC
+      isFirstCall <- Redis.setNxExpire flagKey (2 * 24 * 3600) True
+      when isFirstCall $ do
+        activeDriverIds <- getActiveDriversForShard shardNum referenceTime diffTimeFromUTC
+        unless (null activeDriverIds) $
+          Redis.rPushExp queueKey activeDriverIds (2 * 24 * 3600)
+      batch <- Redis.lRange queueKey 0 (fromIntegral limit - 1)
+      Redis.lTrim queueKey (fromIntegral limit) (-1)
+      pure batch
