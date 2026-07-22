@@ -260,6 +260,7 @@ data AppEnv = AppEnv
     maxNotificationShards :: Int,
     gateNotifiedKeyShards :: Int,
     activeDriversListKeyShards :: Int,
+    enableDriverFeeShardedFanOut :: Bool,
     version :: Metrics.DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
@@ -379,6 +380,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
       Right env -> pure (Just env)
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  enableDriverFeeShardedFanOut <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "ENABLE_DRIVER_FEE_SHARDED_FAN_OUT"
   let sessionId = Nothing
   let kafkaProducerForART = Just kafkaProducerTools
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
