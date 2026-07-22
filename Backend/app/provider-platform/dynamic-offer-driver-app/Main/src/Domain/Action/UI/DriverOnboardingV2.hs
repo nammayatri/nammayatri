@@ -1496,7 +1496,7 @@ rcVerifyStatusForRC caller rc enableDocumentMetadata = do
     when (passedCityId /= merchantOpCityId) $
       throwError (InvalidRequest $ "RC belongs to city: " <> show merchantOperatingCity.city)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  (vehicleDocItem, configs) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig ENGLISH registrationNo Nothing enableDocumentMetadata
+  (vehicleDocItem, configs) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig ENGLISH registrationNo Nothing enableDocumentMetadata False
   -- Re-pull a stuck RC verification when it renders pending — keyed by this RC's image so a fleet
   -- driver's other RCs are untouched; the synced result shows on the next hit.
   let rcPending = any (\d -> d.documentType == DTO.VehicleRegistrationCertificate && SyncV.isPullableStatus d.verificationStatus) vehicleDocItem.documents
