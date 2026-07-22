@@ -537,13 +537,13 @@ types:
   ImageDocumentsRejectDetails:
     - reason: Text
     - documentImageId: Id Image
+    - tdsRate: Maybe Double            # Applied only for LDC documents; falls back to the configured default when Nothing
   SSNRejectDetails:
     - reason: Text
     - ssn: Text
   CommonDocumentRejectDetails:
     - reason: Text
     - documentId: Id CommonDriverOnboardingDocuments
-    - tdsRate: Maybe Double            # Applied only for LDC documents; falls back to the configured default when Nothing
   InspectionHubRejectDetails:
     - reason: Text
     - requestId: Text
@@ -670,10 +670,10 @@ types:
     - tdsRate: Maybe Double            # Persisted on FleetOwnerInformation on approval
     - udyamNumber: Maybe Text
   LDCApproveDetails:
-    - documentId: Id CommonDriverOnboardingDocuments
+    - documentImageId: Id Image
     - tdsRate: Maybe Double            # Persisted on FleetOwnerInformation on approval
   TANApproveDetails:
-    - documentId: Id CommonDriverOnboardingDocuments
+    - documentImageId: Id Image
     - tdsRate: Maybe Double
   AadhaarApproveDetails:
     - documentImageId: Id Image
