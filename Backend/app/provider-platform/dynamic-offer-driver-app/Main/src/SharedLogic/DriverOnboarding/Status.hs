@@ -51,7 +51,7 @@ import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DDL
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Types.AadhaarCard as DAadhaarCard
-import qualified Domain.Types.CommonDocumentData as DCommonDocData
+import Domain.Types.CommonDocumentData (renderCommonDocumentData)
 import qualified Domain.Types.CommonDriverOnboardingDocuments as DCDOD
 import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocsVerificationStatus as DDVS
@@ -1324,7 +1324,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
         if enableMetadata
           then forM mbDl $ \dl -> do
             licenseNumberDec <- decrypt dl.licenseNumber
-            pure $ DLMetadata DCommonDocData.DLDocumentMetadata {driverLicenseNumber = licenseNumberDec, driverDateOfBirth = dl.driverDob, dateOfExpiry = dl.licenseExpiry}
+            pure $ DLMetadata DLDocumentMetadata {driverLicenseNumber = licenseNumberDec, driverDateOfBirth = dl.driverDob, dateOfExpiry = dl.licenseExpiry}
           else pure Nothing
   case docType of
     DVC.DriverLicense -> do
@@ -1354,7 +1354,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
         if enableMetadata
           then forM mbAadhaarCard $ \aadhaar -> do
             aadhaarNumberDec <- mapM decrypt aadhaar.aadhaarNumber
-            pure $ AadhaarMetadata DCommonDocData.AadhaarDocumentMetadata {aadhaarNumber = aadhaarNumberDec, nameOnCard = aadhaar.nameOnCard, dateOfBirth = aadhaar.dateOfBirth, address = aadhaar.address}
+            pure $ AadhaarMetadata AadhaarDocumentMetadata {aadhaarNumber = aadhaarNumberDec, nameOnCard = aadhaar.nameOnCard, dateOfBirth = aadhaar.dateOfBirth, address = aadhaar.address}
           else pure Nothing
       return (mapStatus . (.verificationStatus) <$> mbAadhaarCard, reason, Nothing, Nothing, s3, iid, iid2, mbAadhaarMetadata)
     DVC.Permissions -> return (Just VALID, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
@@ -1376,7 +1376,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
         if enableMetadata
           then forM mbPanCard $ \pan -> do
             panNumberDec <- decrypt pan.panCardNumber
-            pure $ PanMetadata DCommonDocData.PanDocumentMetadata {panNumber = panNumberDec, panDocType = pan.docType, driverDob = pan.driverDob}
+            pure $ PanMetadata PanDocumentMetadata {panNumber = panNumberDec, panDocType = pan.docType, driverDob = pan.driverDob}
           else pure Nothing
       return (mapStatus . (.verificationStatus) <$> mbPanCard, reason, Nothing, Nothing, s3, iid, iid2, mbPanMetadata)
     DVC.GSTCertificate -> do
@@ -1388,7 +1388,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
         if enableMetadata
           then forM mbGSTCertificate $ \gst -> do
             gstNumberDec <- decrypt gst.gstin
-            pure $ GSTMetadata DCommonDocData.GSTDocumentMetadata {gstNumber = gstNumberDec}
+            pure $ GSTMetadata GSTDocumentMetadata {gstNumber = gstNumberDec}
           else pure Nothing
       return (mapStatus . (.verificationStatus) <$> mbGSTCertificate, reason, Nothing, Nothing, s3, iid, iid2, mbGstMetadata)
     DVC.BackgroundVerification -> do
@@ -1422,7 +1422,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
             if enableMetadata
               then
                 mbAddressFields <&> \(address, addressState, addressDocumentType) ->
-                  LocalAddressProofMetadata DCommonDocData.LocalAddressProofDocumentMetadata {state = addressState, proofDocumentType = addressDocumentType, address = address}
+                  LocalAddressProofMetadata LocalAddressProofDocumentMetadata {state = addressState, proofDocumentType = addressDocumentType, address = address}
               else Nothing
       let finalStatus = if hasAddressDetails then status else if isJust mbImageId then Just INVALID else Just NO_DOC_AVAILABLE
           rejectReason = if finalStatus == Just INVALID then (Id <$> mbImageId) >>= lookupImageFailReason else Nothing
@@ -1451,7 +1451,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
               then do
                 udyamNumberDec <- decrypt udyam.udyamNumber
                 mbFoi <- QFOI.findByPrimaryKey driverId
-                pure $ Just $ UDYAMMetadata DCommonDocData.UDYAMDocumentMetadata {udyamNumber = Just udyamNumberDec, tdsRate = mbFoi >>= (.tdsRate)}
+                pure $ Just $ UDYAMMetadata UDYAMDocumentMetadata {udyamNumber = Just udyamNumberDec, tdsRate = mbFoi >>= (.tdsRate)}
               else pure Nothing
           return (Just $ mapStatus udyam.verificationStatus, udyam.rejectReason, Nothing, Nothing, mbS3Path, mbImageId, Nothing, mbUdyamMetadata)
         Nothing -> do
@@ -1466,7 +1466,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
             if enableMetadata
               then do
                 mbFoi <- QFOI.findByPrimaryKey driverId
-                pure $ Just $ TANMetadata DCommonDocData.TANDocumentMetadata {documentId = doc.id.getId, tdsRate = mbFoi >>= (.tdsRate)}
+                pure $ Just $ TANMetadata TANDocumentMetadata {documentId = doc.id.getId, tdsRate = mbFoi >>= (.tdsRate)}
               else pure Nothing
           let (s3, iid) = maybe (mbS3Path, mbImageId) lookupImage doc.documentImageId
           return (Just (mapStatus doc.verificationStatus), doc.rejectReason <|> reason, url, Nothing, s3, iid, Nothing, mbTanMetadata)
@@ -1480,7 +1480,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
             if enableMetadata
               then do
                 mbFoi <- QFOI.findByPrimaryKey driverId
-                pure $ Just $ LDCMetadata DCommonDocData.LDCDocumentMetadata {documentId = doc.id.getId, tdsRate = mbFoi >>= (.tdsRate)}
+                pure $ Just $ LDCMetadata LDCDocumentMetadata {documentId = doc.id.getId, tdsRate = mbFoi >>= (.tdsRate)}
               else pure Nothing
           let (s3, iid) = maybe (mbS3Path, mbImageId) lookupImage doc.documentImageId
           return (Just (mapStatus doc.verificationStatus), doc.rejectReason <|> reason, url, Nothing, s3, iid, Nothing, mbLdcMetadata)
@@ -1500,7 +1500,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
             if enableMetadata
               then
                 mbIdentityInfo <&> \info ->
-                  NomineeDetailsMetadata DCommonDocData.NomineeDetailsDocumentMetadata {nomineeName = info.nomineeName, nomineeDob = info.nomineeDob, nomineeRelationship = info.nomineeRelationship}
+                  NomineeDetailsMetadata NomineeDetailsDocumentMetadata {nomineeName = info.nomineeName, nomineeDob = info.nomineeDob, nomineeRelationship = info.nomineeRelationship}
               else Nothing
       return (if hasNominee then Just VALID else Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, mbNomineeMetadata)
     DVC.FleetRegistration -> do
@@ -1518,7 +1518,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
                 if enableMetadata
                   then
                     mbFleetInfo <&> \fi ->
-                      BankingDetailsMetadata DCommonDocData.BankingDetailsDocumentMetadata {accountNumber = fi.payoutVpaBankAccount, ifscCode = Nothing, nameAtBank = Nothing, upiId = fi.payoutVpa}
+                      BankingDetailsMetadata BankingDetailsDocumentMetadata {accountNumber = fi.payoutVpaBankAccount, ifscCode = Nothing, nameAtBank = Nothing, upiId = fi.payoutVpa}
                   else Nothing
           return (if hasBankingDetails then Just VALID else Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, mbBankingMetadata)
         else do
@@ -1529,7 +1529,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
                   then
                     mbDriverInfo <&> \di ->
                       BankingDetailsMetadata
-                        DCommonDocData.BankingDetailsDocumentMetadata
+                        BankingDetailsDocumentMetadata
                           { accountNumber = di.driverBankAccountDetails >>= (.accountNumber),
                             ifscCode = di.driverBankAccountDetails >>= (.ifscCode),
                             nameAtBank = di.driverBankAccountDetails >>= (.nameAtBank),
@@ -1864,7 +1864,7 @@ mkCommonDocumentItem :: DCDOD.CommonDriverOnboardingDocuments -> CommonDocumentI
 mkCommonDocumentItem doc =
   CommonDocumentItem
     { documentType = doc.documentType,
-      documentData = DCommonDocData.renderCommonDocumentData doc.documentData,
+      documentData = renderCommonDocumentData doc.documentData,
       verificationStatus = mapVerificationStatus doc.verificationStatus,
       rejectReason = doc.rejectReason,
       documentImageId = getId <$> doc.documentImageId,
