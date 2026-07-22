@@ -540,23 +540,34 @@ arrivedAtDestination rideId pt = do
   where
     isValidRideStatus status = status == DRide.INPROGRESS
 
+-- | The rider's real number reaches the driver only when the merchant has enabled
+-- direct calling AND the rider consented to sharing it. Consent can restrict but
+-- never expand what the merchant configured.
+shouldShareRiderMobileNumber :: DTC.CallingOption -> Bool -> Bool
+shouldShareRiderMobileNumber option riderConsented =
+  riderConsented && (option == DTC.DirectCall || option == DTC.DualCall)
+
 getRiderMobileNumber ::
   (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   DRB.Booking ->
   DTC.CallingOption ->
   m (Maybe Text)
-getRiderMobileNumber booking option = do
-  mbRiderNumber <-
-    if option == DTC.DirectCall || option == DTC.DualCall
-      then case booking.riderId of
-        Nothing -> pure Nothing
-        Just riderId -> do
-          mbRider <- QRID.findById riderId
-          case mbRider of
-            Nothing -> pure Nothing
-            Just rider -> Just <$> decrypt rider.mobileNumber
-      else pure Nothing
-  pure mbRiderNumber
+getRiderMobileNumber booking option
+  -- If the calling option forbids sharing regardless of consent, skip the RiderDetails
+  -- read entirely: this path runs on every active-ride details fetch, and AnonymousCall
+  -- is the config default. Sharing must stay routed through shouldShareRiderMobileNumber.
+  | not (shouldShareRiderMobileNumber option True) = pure Nothing
+  | otherwise =
+    case booking.riderId of
+      Nothing -> pure Nothing
+      Just riderId -> do
+        mbRider <- QRID.findById riderId
+        case mbRider of
+          Nothing -> pure Nothing
+          Just rider ->
+            if shouldShareRiderMobileNumber option rider.consentToShareMobileNumber
+              then Just <$> decrypt rider.mobileNumber
+              else pure Nothing
 
 setDriverGpsTurnedOff :: Id DRide.Ride -> Flow APISuccess
 setDriverGpsTurnedOff rideId = do

@@ -20,6 +20,7 @@ data RiderDetailsT f = RiderDetailsT
     cancellationDuesPaid :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     cancelledRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     completedRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    consentToShareMobileNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     disputeChancesUsed :: B.C f Kernel.Prelude.Int,

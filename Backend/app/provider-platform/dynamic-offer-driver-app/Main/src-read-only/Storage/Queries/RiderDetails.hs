@@ -78,10 +78,15 @@ updateIsFlagConfirmed isFlagConfirmed id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isFlagConfirmed isFlagConfirmed, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateNightSafetyChecks :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
-updateNightSafetyChecks nightSafetyChecks id = do
+updateNightSafetyChecksAndConsent :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+updateNightSafetyChecksAndConsent nightSafetyChecks consentToShareMobileNumber id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.nightSafetyChecks nightSafetyChecks, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateOneWithKV
+    [ Se.Set Beam.nightSafetyChecks nightSafetyChecks,
+      Se.Set Beam.consentToShareMobileNumber (Kernel.Prelude.Just consentToShareMobileNumber),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateOtpCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
 updateOtpCode otpCode id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.otpCode otpCode, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -106,6 +111,7 @@ updateByPrimaryKey (Domain.Types.RiderDetails.RiderDetails {..}) = do
       Se.Set Beam.cancellationDuesPaid (Kernel.Prelude.Just cancellationDuesPaid),
       Se.Set Beam.cancelledRides (Kernel.Prelude.Just cancelledRides),
       Se.Set Beam.completedRides (Kernel.Prelude.Just completedRides),
+      Se.Set Beam.consentToShareMobileNumber (Kernel.Prelude.Just consentToShareMobileNumber),
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.disputeChancesUsed disputeChancesUsed,
       Se.Set Beam.firstRideId firstRideId,

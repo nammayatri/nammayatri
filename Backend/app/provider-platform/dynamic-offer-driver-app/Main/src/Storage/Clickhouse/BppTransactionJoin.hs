@@ -341,7 +341,8 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
                 RiderDetails.completedRides = bppTxn.riderDetailsCompletedRides,
                 RiderDetails.validCancellations = bppTxn.riderDetailsValidCancellations,
                 RiderDetails.cancellationDueRides = bppTxn.riderDetailsCancellationDueRides,
-                RiderDetails.riderFlaggedForDriverIncentives = False
+                RiderDetails.riderFlaggedForDriverIncentives = False,
+                RiderDetails.consentToShareMobileNumber = False -- not carried in the Clickhouse projection; not real consent data
               },
           customerName = bppTxn.bookingCustomerName,
           fareDiff = mkPrice bppTxn.rideCurrency <$> (bppTxn.rideFare - bppTxn.bookingEstimatedFare),

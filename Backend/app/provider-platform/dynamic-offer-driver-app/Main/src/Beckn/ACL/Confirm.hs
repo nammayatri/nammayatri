@@ -61,6 +61,7 @@ buildConfirmReqV2 req isValueAddNP = do
   let nightSafetyCheck = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getNightSafetyCheckTag isValueAddNP
       enableFrequentLocationUpdates = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableFrequentLocationUpdatesTag
       enableOtpLessRide = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableOtpLessRideTag
+      consentToShareMobileNumber = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getConsentToShareMobileNumberTag isValueAddNP
       driverPreference = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getDriverPreferenceTag
       customerLanguage = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getCustomerLanguageTag
   toAddress <- fulfillment.fulfillmentStops >>= Utils.getDropLocation >>= (.stopLocation) & maybe (pure Nothing) Utils.parseAddress
@@ -92,6 +93,15 @@ getEnableOtpLessRideTag = maybe False getTagValue
     getTagValue tagGroups =
       let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.ENABLE_OTP_LESS_RIDE (Just tagGroups)
        in fromMaybe False (readMaybe . T.unpack =<< tagValue)
+
+getConsentToShareMobileNumberTag :: Bool -> Maybe [Spec.TagGroup] -> Bool
+getConsentToShareMobileNumberTag isValueAddNP = maybe False getTagValue
+  where
+    getTagValue tagGroups
+      | not isValueAddNP = False
+      | otherwise =
+        let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CONSENT_TO_SHARE_MOBILE_NUMBER (Just tagGroups)
+         in fromMaybe False (readMaybe . T.unpack =<< tagValue)
 
 getDriverPreferenceTag :: Maybe [Spec.TagGroup] -> Maybe [Text]
 getDriverPreferenceTag Nothing = Nothing

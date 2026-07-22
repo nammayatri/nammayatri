@@ -78,6 +78,7 @@ data DConfirmReq = DConfirmReq
     toAddress :: Maybe DL.LocationAddress,
     mbRiderName :: Maybe Text,
     nightSafetyCheck :: Bool,
+    consentToShareMobileNumber :: Bool,
     enableFrequentLocationUpdates :: Bool,
     paymentId :: Maybe Text,
     enableOtpLessRide :: Bool,
@@ -118,8 +119,8 @@ handler merchant req validatedQuote = do
   unless (booking.status == DRB.NEW) $ throwError (BookingInvalidStatus $ show booking.status)
   let mbMerchantOperatingCityId = Just booking.merchantOperatingCityId
 
-  (riderDetails, isNewRider) <- SRD.getRiderDetails booking.currency merchant.id mbMerchantOperatingCityId req.customerMobileCountryCode req.customerPhoneNumber booking.bapId req.nightSafetyCheck
-  unless isNewRider $ QRD.updateNightSafetyChecks req.nightSafetyCheck riderDetails.id
+  (riderDetails, isNewRider) <- SRD.getRiderDetails booking.currency merchant.id mbMerchantOperatingCityId req.customerMobileCountryCode req.customerPhoneNumber booking.bapId req.nightSafetyCheck req.consentToShareMobileNumber
+  unless isNewRider $ QRD.updateNightSafetyChecksAndConsent req.nightSafetyCheck req.consentToShareMobileNumber riderDetails.id
 
   case validatedQuote of
     DriverQuote driver driverQuote -> handleDynamicOfferFlow isNewRider driver driverQuote booking riderDetails

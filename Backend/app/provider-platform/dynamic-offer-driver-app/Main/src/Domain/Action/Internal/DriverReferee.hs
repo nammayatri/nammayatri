@@ -162,6 +162,7 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
             hasTakenValidRideAt = Nothing,
             otpCode = Just otp,
             nightSafetyChecks = True,
+            consentToShareMobileNumber = False, -- no BECKN consent tag in this referral flow, so default to no consent
             cancellationDues = 0.0,
             cancellationDuesPaid = 0.0,
             noOfTimesCanellationDuesPaid = 0,

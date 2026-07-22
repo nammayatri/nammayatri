@@ -13,6 +13,7 @@ import qualified Safety.Domain.Types.Common
 data SafetySettingsT f = SafetySettingsT
   { aggregatedRideShareSetting :: B.C f (Kernel.Prelude.Maybe Safety.Domain.Types.Common.RideShareOptions),
     autoCallDefaultContact :: B.C f Kernel.Prelude.Bool,
+    consentToShareMobileNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableOtpLessRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enablePostRideSafetyCheck :: B.C f Safety.Domain.Types.Common.RideShareOptions,
     enableUnexpectedEventsCheck :: B.C f Safety.Domain.Types.Common.RideShareOptions,
