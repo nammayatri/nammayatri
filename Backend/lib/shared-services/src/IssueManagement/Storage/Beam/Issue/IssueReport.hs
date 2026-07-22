@@ -57,6 +57,6 @@ instance B.Table IssueReportT where
 
 type IssueReport = IssueReportT Identity
 
-$(enableKVPG ''IssueReportT ['id] [['personId], ['categoryId], ['ticketId], ['shortId], ['additionalTicketIds]])
+$(enableKVPG ''IssueReportT ['id] [['personId], ['categoryId], ['ticketId], ['shortId], ['becknIssueId], ['additionalTicketIds]])
 
 $(mkTableInstancesGenericSchema ''IssueReportT "issue_report")
