@@ -5,7 +5,6 @@
 module Domain.Types.TransporterConfig (module Domain.Types.TransporterConfig, module ReExport) where
 
 import Data.Aeson
-import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Extra.MerchantPaymentMethod
 import Domain.Types.Extra.TransporterConfig as ReExport
@@ -23,11 +22,12 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.City
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.SlidingWindowCounters
 import qualified Kernel.Types.Version
 import qualified SharedLogic.BehaviourManagement.IssueBreach
 import qualified Tools.Beam.UtilsTH
 
-data TransporterConfigD (s :: UsageSafety) = TransporterConfig
+data TransporterConfig = TransporterConfig
   { aaEnabledClientSdkVersion :: Kernel.Prelude.Text,
     aadhaarImageResizeConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.AadhaarImageResizeConfig,
     aadhaarVerificationRequired :: Kernel.Prelude.Bool,
@@ -60,6 +60,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     arrivedPickupThreshold :: Kernel.Types.Common.HighPrecMeters,
     arrivedStopThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     arrivingPickupThreshold :: Kernel.Types.Common.HighPrecMeters,
+    authIpBlockedUntilInMins :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes,
     automaticRCActivationCutOff :: Kernel.Types.Common.Seconds,
     badDebtBatchSize :: Kernel.Prelude.Int,
     badDebtRescheduleTime :: Kernel.Prelude.NominalDiffTime,
@@ -182,6 +183,8 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     fcmConfig :: Kernel.External.Notification.FCM.Types.FCMConfig,
     feedbackNotificationConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.FeedbackNotificationConfig,
     fleetAlertThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    fraudAuthCountThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    fraudAuthCountWindow :: Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
     freeTrialDays :: Kernel.Prelude.Int,
     generateReferralCodeForFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     generateReferralCodeForOperator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -321,7 +324,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     weeklyMinRidesForNudging :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     weeklyOffenceSuspensionTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
 data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
@@ -483,16 +486,6 @@ data TaxConfig = TaxConfig
     subscriptionTdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
-
-type TransporterConfig = TransporterConfigD 'Safe
-
-instance FromJSON (TransporterConfigD 'Unsafe)
-
-instance ToJSON (TransporterConfigD 'Unsafe)
-
-instance FromJSON (TransporterConfigD 'Safe)
-
-instance ToJSON (TransporterConfigD 'Safe)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CallingOption)
 

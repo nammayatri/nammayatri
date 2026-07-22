@@ -1,5 +1,5 @@
-{-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -O0 #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 

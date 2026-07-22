@@ -930,3 +930,14 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_tier_upg
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_mobility_billing boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fraud_auth_count_window json ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fraud_auth_count_threshold integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_ip_blocked_until_in_mins integer ;
+
+
+------- SQL updates -------
+
