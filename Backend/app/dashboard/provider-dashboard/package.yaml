@@ -173,3 +173,17 @@ executables:
       - special-zone
       - special-zone-a
       - shared-services
+
+tests:
+  provider-dashboard-test:
+    main: Main.hs
+    source-dirs: test
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - '"-with-rtsopts=-N -T"'
+    dependencies:
+      - provider-dashboard
+      - lib-dashboard
+      - mobility-core
+      - hspec

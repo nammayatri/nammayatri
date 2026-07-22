@@ -20,6 +20,7 @@ module Domain.Action.ProviderPlatform.RideBooking.Driver
     postDriverExemptCash,
     postDriverV2ExemptCash,
     getDriverInfo,
+    getRequestorFleetFlag,
     getDriverFeedbackList,
     postDriverUnlinkVehicle,
     postDriverEndRCAssociation,
@@ -123,10 +124,16 @@ getDriverInfo merchantShortId opCity apiTokenInfo mbMobileNumber mbMobileCountry
     throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\", \"dlNumber\", \"rcNumber\", \"email\", \"personId\", \"walletId\" is required"
   when (isJust mbMobileCountryCode && isNothing mbMobileNumber) $
     throwError $ InvalidRequest "\"mobileCountryCode\" can be used only with \"mobileNumber\""
+  mbFleet <- getRequestorFleetFlag apiTokenInfo
+  Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.getDriverInfo) apiTokenInfo.personId.getId mbFleet mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber mbEmail mbPersonId mbWalletId
+
+-- | True iff the calling dashboard user's role is a fleet-owner variant. The
+-- driver-app uses this to scope the lookup to the caller's own fleet.
+getRequestorFleetFlag :: ApiTokenInfo -> Flow Bool
+getRequestorFleetFlag apiTokenInfo = do
   encPerson <- QP.findById apiTokenInfo.personId >>= fromMaybeM (PersonNotFound apiTokenInfo.personId.getId)
   role <- QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
-  let mbFleet = role.dashboardAccessType == DRole.FLEET_OWNER || role.dashboardAccessType == DRole.RENTAL_FLEET_OWNER
-  Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.getDriverInfo) apiTokenInfo.personId.getId mbFleet mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber mbEmail mbPersonId mbWalletId
+  pure $ role.dashboardAccessType == DRole.FLEET_OWNER || role.dashboardAccessType == DRole.RENTAL_FLEET_OWNER
 
 postDriverUnlinkVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
 postDriverUnlinkVehicle merchantShortId opCity apiTokenInfo driverId = do
@@ -182,3 +189,4 @@ postDriverDeletePanCard merchantShortId opCity apiTokenInfo driverId = do
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverDeletePanCard) driverId
+
