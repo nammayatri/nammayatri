@@ -322,7 +322,11 @@ getOffers searchRequest enableRideHailingOffers providerLookup quoteList0 langua
         Nothing ->
           case searchRequest.isMeterRideSearch of
             Just True -> OnMeterRide <$> quoteEntities
-            _ -> OnRentalCab <$> quoteEntities
+            _ -> case searchRequest.riderPreferredOption of
+              -- EasyBooking is destination-less like Rental, but it's an on-demand cab
+              -- booking, not a rental — tag it accordingly so clients don't render rental-only UI.
+              DRPO.EasyBooking -> OnDemandCab <$> quoteEntities
+              _ -> OnRentalCab <$> quoteEntities
   return . sortBy (compare `on` offerCreationTime) $ quotes
 
 mkQuoteAPIEntitiesWithOffers ::

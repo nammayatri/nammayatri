@@ -49,7 +49,10 @@ Quote:
       quoteId: Text
 
     QuoteAPIDetails:
-      enum: OneWayAPIDetails OneWayQuoteAPIDetails, AmbulanceAPIDetails DriverOfferAPIEntity, InterCityAPIDetails InterCityDetailsAPIEntity, RentalAPIDetails RentalDetailsAPIEntity, DriverOfferAPIDetails DriverOfferAPIEntity, OneWaySpecialZoneAPIDetails SpecialZoneQuoteAPIEntity, DeliveryAPIDetails DriverOfferAPIEntity, MeterRideAPIDetails MeterRideQuoteAPIDetails
+      # EasyBookingAPIDetails reuses RentalDetailsAPIEntity's shape (same pattern as
+      # AmbulanceAPIDetails/DeliveryAPIDetails sharing DriverOfferAPIEntity above) but gets
+      # its own fareProductType tag ("EASY_BOOKING", see Tools/JSON.hs) instead of "RENTAL".
+      enum: OneWayAPIDetails OneWayQuoteAPIDetails, AmbulanceAPIDetails DriverOfferAPIEntity, InterCityAPIDetails InterCityDetailsAPIEntity, RentalAPIDetails RentalDetailsAPIEntity, DriverOfferAPIDetails DriverOfferAPIEntity, OneWaySpecialZoneAPIDetails SpecialZoneQuoteAPIEntity, DeliveryAPIDetails DriverOfferAPIEntity, MeterRideAPIDetails MeterRideQuoteAPIDetails, EasyBookingAPIDetails RentalDetailsAPIEntity
       derive': Generic,Show
 
     OneWayQuoteAPIDetails:
