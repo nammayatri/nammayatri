@@ -26,7 +26,6 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 
 generateToken ::
@@ -36,7 +35,7 @@ generateToken ::
   m PartnerSdk.GenerateTokenResp
 generateToken merchantOpCityId req = do
   msc <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.PartnerSdkService ExtraMSC.Aarokya)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.PartnerSdkService ExtraMSC.Aarokya) merchantOpCityId))
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.PartnerSdkService ExtraMSC.Aarokya)}) Nothing
       >>= fromMaybeM (InternalError $ "PartnerSdk Aarokya service config not found for merchantOpCityId: " <> merchantOpCityId.getId)
   case msc.serviceConfig of
     DMSC.PartnerSdkServiceConfig cfg -> PartnerSdk.generateToken cfg req

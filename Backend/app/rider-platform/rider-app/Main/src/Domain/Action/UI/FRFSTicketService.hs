@@ -105,12 +105,10 @@ import qualified SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper as SeatHold
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
-import qualified Storage.CachedQueries.FRFSConfig as CQFRFS
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.CachedQueries.Seat as CQSeat
@@ -710,7 +708,7 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ = do
   (quotes :: [DFRFSQuote.FRFSQuote]) <- B.runInReplica $ QFRFSQuote.findAllBySearchId searchId_
   quotesWithCategories <- mapM (\quote -> (quote,) <$> QFRFSQuoteCategory.findAllByQuoteId quote.id) quotes
   mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just searchId_.getId)
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = search.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId search.merchantOperatingCityId))
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = search.merchantOperatingCityId.getId}) Nothing
   let cbConfig = PTCircuitBreaker.parseCircuitBreakerConfig (mbRiderConfig >>= (.ptCircuitBreakerConfig))
       ptMode = PTCircuitBreaker.vehicleCategoryToPTMode search.vehicleType
   observingFailures <- PTCircuitBreaker.checkObservingFailures ptMode PTCircuitBreaker.BookingAPI search.merchantOperatingCityId cbConfig
@@ -1118,7 +1116,7 @@ getAbsoluteValue mbRefundAmount = case mbRefundAmount of
 getFrfsConfig :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Context.City -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
 getFrfsConfig (pId, mId) opCity = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity mId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> mId.getId <> " ,city: " <> show opCity)
-  Domain.Types.FRFSConfig.FRFSConfig {..} <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) (Just (CQFRFS.findByMerchantOperatingCityId merchantOpCity.id (Just []))) >>= fromMaybeM (InvalidRequest "FRFS Config not found")
+  Domain.Types.FRFSConfig.FRFSConfig {..} <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing >>= fromMaybeM (InvalidRequest "FRFS Config not found")
   stats <- maybe (pure Nothing) CQP.findPersonStatsById pId
   let isEventOngoing' = fromMaybe False isEventOngoing
       ticketsBookedInEvent = fromMaybe 0 ((.ticketsBookedInEvent) =<< stats)
@@ -1140,7 +1138,7 @@ getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset _platformType opCity origi
   merchantOpCity <- CQMOC.findByMerchantIdAndCity mId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> mId.getId <> " ,city: " <> show opCity)
   let platformType = fromMaybe DIBC.APPLICATION _platformType
   frfsConfig <-
-    getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) (Just (CQFRFS.findByMerchantOperatingCityId merchantOpCity.id (Just [])))
+    getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show merchantOpCity.id)
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicle) platformType
 
@@ -1434,7 +1432,7 @@ getFrfsTripRouteSeats ::
 getFrfsTripRouteSeats (mbPersonId, _merchantId) tripId routeId mbFromStopCode mbToStopCode vehicleNumber = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = personCityInfo.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId personCityInfo.merchantOperatingCityId))
+  mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = personCityInfo.merchantOperatingCityId.getId}) Nothing
   let seatBookingCleanupTtl' = mRiderConfig >>= (.seatBookingCleanupTtl)
   shouldRun <- Hedis.setNxExpire "frfs:seat_hold_reaper_lock" (fromMaybe 120 seatBookingCleanupTtl') ("1" :: Text)
   when shouldRun $
@@ -1737,7 +1735,7 @@ notifyBusTripStartedForTrip tripId = do
         Nothing -> pure ()
         Just person -> do
           -- Only notify for shuttle/premium tiers configured per city (RiderConfig.busTrackingNotificationTiers).
-          mbRiderConfig <- CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId
+          mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
           let allowedTiers = fromMaybe [] (mbRiderConfig >>= (.busTrackingNotificationTiers))
               isShuttle = maybe False (`elem` allowedTiers) booking.serviceTierType
           when isShuttle $ do

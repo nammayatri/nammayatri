@@ -37,3 +37,4 @@ instance ConfigDimensions IssueConfigDimensions where
         (maybeToList <$> Queries.findByMerchantOpCityId (Id a.merchantOperatingCityId))
         []
         Nothing
+  configFallback a = Just (Queries.findByMerchantOpCityId (Id a.merchantOperatingCityId))

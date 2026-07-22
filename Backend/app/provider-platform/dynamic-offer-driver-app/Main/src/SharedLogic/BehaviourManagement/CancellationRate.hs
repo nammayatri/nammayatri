@@ -35,7 +35,6 @@ import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.External.LocationTrackingService.Types
 import qualified SharedLogic.Person as SPerson
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDriverInformation
@@ -74,7 +73,7 @@ mkRideCancelledKey driverId = "driver-offer:CR:cancelled-dId:" <> driverId
 
 getWindowSize :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m Integer
 getWindowSize mocId = do
-  merchantConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (SCTC.findByMerchantOpCityId mocId Nothing)) >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  merchantConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
   pure $ toInteger $ fromMaybe 7 merchantConfig.cancellationRateWindow
 
 incrementCancelledCount ::
@@ -123,7 +122,7 @@ getCancellationRateData ::
   Id DP.Person ->
   m (Maybe CancellationRateData)
 getCancellationRateData mocId driverId = do
-  merchantConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (SCTC.findByMerchantOpCityId mocId Nothing)) >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  merchantConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
   let minimumRides = findMinimumRides merchantConfig
   let windowSize = findWindowSize merchantConfig
   assignedCount <- getAssignedCount windowSize driverId

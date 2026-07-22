@@ -65,7 +65,7 @@ returnConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LYTU.LogicDomain
 returnConfigs cfgType merchantOpCityId merchantId opCity = do
   case cfgType of
     LYTU.RIDER_CONFIG LYTU.RiderConfig -> do
-      riderCfg <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CQR.findByMerchantOperatingCityId (cast merchantOpCityId)))
+      riderCfg <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList riderCfg)}
     LYTU.RIDER_CONFIG LYTU.PayoutConfigRider -> do
       payoutCfg <- getConfigList (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, isPayoutEnabled = Nothing, payoutEntity = Nothing})
@@ -77,7 +77,7 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
       merchantCfg <- getConfigList (MerchantConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       return LYTU.TableDataResp {configs = map A.toJSON merchantCfg}
     LYTU.RIDER_CONFIG LYTU.MerchantServiceUsageConfigRider -> do
-      msucCfg <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId (cast merchantOpCityId)))
+      msucCfg <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList msucCfg)}
     LYTU.RIDER_CONFIG LYTU.MerchantServiceConfig -> do
       mscCfgs <- getConfigList (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Nothing})
@@ -92,10 +92,10 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
       exoCfgs <- getConfigList (ExophoneDimensions {merchantOperatingCityId = merchantOpCityId.getId, phoneNumber = Nothing, callService = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON exoCfgs}
     LYTU.RIDER_CONFIG LYTU.FRFSConfig -> do
-      frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CQFRFS.findByMerchantOperatingCityId (cast merchantOpCityId) (Just [])))
+      frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList frfsConfig)}
     LYTU.RIDER_CONFIG LYTU.HotSpotConfig -> do
-      hsCfg <- getConfig (HotSpotConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId}) (Just (SQHSC.findConfigByMerchantId (cast merchantId)))
+      hsCfg <- getConfig (HotSpotConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId}) Nothing
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList hsCfg)}
     LYTU.RIDER_CONFIG LYTU.MerchantPaymentMethod -> do
       mpmCfgs <- getConfigList (MerchantPaymentMethodDimensions {merchantOperatingCityId = merchantOpCityId.getId, configId = Nothing})
@@ -110,7 +110,7 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
       ibcCfgs <- getConfigList (IntegratedBPPConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, configId = Nothing, agencyKey = Nothing, domain = Nothing, vehicleCategory = Nothing, platformType = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON ibcCfgs}
     LYTU.RIDER_CONFIG LYTU.IssueConfig -> do
-      icCfg <- getConfig (IssueConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, identifier = ""}) (Just (SQIC.findByMerchantOpCityId (cast merchantOpCityId)))
+      icCfg <- getConfig (IssueConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, identifier = ""}) Nothing
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList icCfg)}
     LYTU.RIDER_CONFIG LYTU.PassCategory -> do
       pcCfgs <- getConfigList (PassCategoryDimensions {merchantOperatingCityId = merchantOpCityId.getId, configId = Nothing})

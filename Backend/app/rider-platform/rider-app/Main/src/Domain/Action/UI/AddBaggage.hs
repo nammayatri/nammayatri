@@ -18,7 +18,6 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import Tools.Error
@@ -48,7 +47,7 @@ postAddBaggageConfirm (_personId, merchantId) bookingId req = do
     throwError AddBaggageNegativeCount
 
   riderCfg <-
-    getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId))
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
       >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
   whenJust riderCfg.maxNumberOfLuggages $ \maxN ->
     when (req.numberOfLuggages > maxN) $ throwError (AddBaggageExceedsMax maxN)

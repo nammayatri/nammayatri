@@ -3,6 +3,7 @@
   - Images/PDF: direct upload (base64) -> S3 put -> store s3Path and fileType in knowledge_center.
   - SOP type names are stored as an array in transporter config (per merchantOpCity); documents are queried from knowledge_center table by sopType + merchantOpCityId.
 -}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module SharedLogic.KnowledgeCenter
   ( knowledgeCenterSopList,
@@ -50,7 +51,7 @@ knowledgeCenterSopList ::
   m [(Text, [(Text, Text)])]
 knowledgeCenterSopList merchantShortId opCity mbMerchantOperatingCityId mbSopType = do
   (_merchant, mocId) <- resolveMerchantAndCity merchantShortId opCity mbMerchantOperatingCityId
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (CCT.findByMerchantOpCityId mocId Nothing)) >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
   let sopTypes = Extra.unKnowledgeCenterSopTypesConfig transporterConfig.knowledgeCenterSopTypes
   let filteredTypes = case mbSopType of
         Nothing -> sopTypes
@@ -164,7 +165,7 @@ knowledgeCenterUploadImage ::
   m (Maybe (Id DKC.KnowledgeCenter))
 knowledgeCenterUploadImage merchantShortId opCity sopType mbImageBase64 mbDocumentName mbFileExtension mbMocId = do
   (merchant, merchantOpCityId) <- resolveMerchantAndCity merchantShortId opCity mbMocId
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CCT.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let sopTypes = Extra.unKnowledgeCenterSopTypesConfig transporterConfig.knowledgeCenterSopTypes
 
   case mbImageBase64 of
@@ -237,7 +238,7 @@ knowledgeCenterRenameSopType merchantShortId opCity newSopType oldSopType =
     then pure Success
     else do
       (_merchant, mocId) <- resolveMerchantAndCity merchantShortId opCity Nothing
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (CCT.findByMerchantOpCityId mocId Nothing)) >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
       let sopTypes = Extra.unKnowledgeCenterSopTypesConfig transporterConfig.knowledgeCenterSopTypes
       when (newSopType `elem` sopTypes) $
         throwError $ InvalidRequest "SOP type already exists; choose a different name or merge documents first"
@@ -279,7 +280,7 @@ knowledgeCenterDeleteBySopType merchantShortId opCity sopType = do
     catch (S3.delete (T.unpack r.s3Path)) $ \(err :: SomeException) ->
       logWarning $ "KnowledgeCenter: S3 delete failed for " <> r.s3Path <> ": " <> show err
   QKC.deleteBySopTypeAndMerchantOperatingCityId sopType mocId
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (CCT.findByMerchantOpCityId mocId Nothing)) >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
   let sopTypes = Extra.unKnowledgeCenterSopTypesConfig transporterConfig.knowledgeCenterSopTypes
   when (sopType `elem` sopTypes) $ do
     let updatedSopTypes = filter (/= sopType) sopTypes

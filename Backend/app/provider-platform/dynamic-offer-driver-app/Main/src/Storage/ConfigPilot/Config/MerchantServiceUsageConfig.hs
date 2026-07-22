@@ -37,3 +37,4 @@ instance ConfigDimensions MerchantServiceUsageConfigDimensions where
         (maybeToList <$> SQ.findByMerchantOpCityId (Id a.merchantOperatingCityId))
         (([] :: [LCP.DimMatcher MerchantServiceUsageConfigDimensions DT.MerchantServiceUsageConfig]))
         Nothing
+  configFallback a = Just (SQ.findByMerchantOpCityId (Id a.merchantOperatingCityId))

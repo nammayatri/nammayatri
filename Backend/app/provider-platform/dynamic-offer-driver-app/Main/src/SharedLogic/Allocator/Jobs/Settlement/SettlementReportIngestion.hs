@@ -45,7 +45,6 @@ import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator (AllocatorJobType (..), SettlementReportIngestionJobData (..))
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import qualified Storage.Queries.SubscriptionPurchase as QSP
 
@@ -160,7 +159,7 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
     getSettlementConfigs _mId mOpCityId = do
       let allSettlementServices = [minBound .. maxBound] :: [SettlementService]
       configs <- forM allSettlementServices $ \service -> do
-        mbConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.SettlementService service)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.SettlementService service) mOpCityId))
+        mbConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.SettlementService service)}) Nothing
         pure $ case mbConfig of
           Just cfg -> case cfg.serviceConfig of
             DMSC.SettlementServiceConfig settlementCfg -> Just settlementCfg
@@ -174,7 +173,7 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
       DMSC.ServiceName ->
       m (Maybe JuspayOrderStatusConfig)
     getJuspayOrderStatusConfig mOpCityId svcName = do
-      mbCfg <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mOpCityId.getId, merchantId = Nothing, serviceName = Just svcName}) (Just (maybeToList <$> CQMSC.findByServiceAndCity svcName mOpCityId))
+      mbCfg <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mOpCityId.getId, merchantId = Nothing, serviceName = Just svcName}) Nothing
       case mbCfg >>= extractPaymentServiceConfig . (.serviceConfig) of
         Just (Payment.JuspayConfig juspayCfg) ->
           pure . Just $

@@ -43,7 +43,6 @@ import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData (..), AllocatorJobType (..))
 import qualified SharedLogic.Finance.Wallet as Wallet
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -95,7 +94,7 @@ runAggregatedCommissionInvoiceCreationJob Job {id, jobInfo} = withLogTag ("JobId
   result <-
     Hedis.whenWithLockRedisAndReturnValue lockKey 1800 $ do
       transporterConfig <-
-        getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (SCTC.findByMerchantOpCityId mocId Nothing))
+        getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing
           >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
       let mbInvoiceConfig = transporterConfig.invoiceConfig
           enabled = fromMaybe False (mbInvoiceConfig >>= (.commissionAggregationEnabled))
@@ -355,7 +354,7 @@ bootstrapAggregatedCommissionChain ::
   m ()
 bootstrapAggregatedCommissionChain mId mocId issuedToId issuedToType = do
   transporterConfig <-
-    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (SCTC.findByMerchantOpCityId mocId Nothing))
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing
       >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
   let mbInvoiceConfig = transporterConfig.invoiceConfig
       enabled = fromMaybe False (mbInvoiceConfig >>= (.commissionAggregationEnabled))

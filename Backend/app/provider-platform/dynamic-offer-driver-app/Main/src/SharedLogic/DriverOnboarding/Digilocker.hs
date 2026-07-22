@@ -29,8 +29,6 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Network.HTTP.Types.URI as URI
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
-import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DigilockerVerification as QDV
@@ -39,7 +37,7 @@ import Tools.Error
 getDigiLockerConfig :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> m DigilockerTypes.DigiLockerCfg
 getDigiLockerConfig merchantOpCityId = do
   transporterConfig <-
-    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
   unless (transporterConfig.digilockerEnabled == Just True) $
@@ -47,7 +45,7 @@ getDigiLockerConfig merchantOpCityId = do
 
   let serviceName = DMSC.VerificationService Verification.DigiLocker
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just serviceName}) (Just (maybeToList <$> CQMSC.findByServiceAndCity serviceName merchantOpCityId))
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just serviceName}) Nothing
       >>= fromMaybeM (InternalError "DigiLocker service config not found. Please configure DigiLocker in merchant_service_config table.")
 
   case merchantServiceConfig.serviceConfig of
@@ -58,7 +56,7 @@ getDigiLockerConfig merchantOpCityId = do
 verifyDigiLockerEnabled :: Id DMOC.MerchantOperatingCity -> Flow ()
 verifyDigiLockerEnabled merchantOpCityId = do
   transporterConfig <-
-    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
   unless (fromMaybe False transporterConfig.digilockerEnabled) $

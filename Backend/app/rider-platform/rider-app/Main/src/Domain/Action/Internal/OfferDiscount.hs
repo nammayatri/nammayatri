@@ -16,7 +16,6 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified SharedLogic.Offer as SOffer
 import Storage.Beam.Payment ()
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
@@ -58,7 +57,7 @@ getOfferDiscount _token bppBookingId req = do
     (Just offerId, Just offerBase) -> do
       let productId = show booking.vehicleServiceTierType
           price = mkPrice (Just booking.estimatedTotalFare.currency) offerBase
-      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId))
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
       let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
       unless enableRideHailingOffers $ throwError $ InternalError "RideHailing offers disabled"
       mbRide <- B.runInReplica $ QRide.findByRBId booking.id

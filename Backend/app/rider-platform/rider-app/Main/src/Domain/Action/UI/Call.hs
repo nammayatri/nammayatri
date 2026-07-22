@@ -77,7 +77,6 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import qualified Storage.Queries.Booking as QB
@@ -451,7 +450,7 @@ getCallTwillioAccessToken rideId entity deviceType = do
       twillioCallConfig :: TwillioCallCfg <- getCfg cityId merId
       createJWT id twillioCallConfig deviceType
     getCfg cityId mercId = do
-      merchantServConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = cityId.getId, merchantId = mercId.getId, serviceName = Just (DMSC.CallService Call.TwillioCall)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService mercId cityId (DMSC.CallService Call.TwillioCall))) >>= fromMaybeM (MerchantServiceConfigNotFound cityId.getId "Call" "TwillioCall")
+      merchantServConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = cityId.getId, merchantId = mercId.getId, serviceName = Just (DMSC.CallService Call.TwillioCall)}) Nothing >>= fromMaybeM (MerchantServiceConfigNotFound cityId.getId "Call" "TwillioCall")
       case merchantServConfig.serviceConfig of
         DMSC.CallServiceConfig config ->
           case config of

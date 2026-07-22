@@ -131,7 +131,6 @@ import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import qualified SharedLogic.VehicleServiceTier as SVST
 import Storage.Beam.IssueManagement ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.FareProduct as CQFP
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -360,7 +359,7 @@ rideAssignedCommon booking ride driver veh = do
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
   driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
-  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) -- these two lines just for backfilling driver vehicleModel from idfy TODO: remove later
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing -- these two lines just for backfilling driver vehicleModel from idfy TODO: remove later
   mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
     CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)

@@ -16,7 +16,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Storage.Beam.IssueManagement ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Error
 
@@ -30,7 +29,7 @@ postFilesUpload ::
   )
 postFilesUpload (_mbPersonId, _merchantId, merchantOpCityId) req = do
   transporterConfig <-
-    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   DFile.fileUploadToS3 transporterConfig.mediaFileSizeUpperLimit transporterConfig.mediaFileUrlPattern req
 

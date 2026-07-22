@@ -25,8 +25,6 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant.Client.Core ()
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
-import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverIdentityInfo as QDII
@@ -57,14 +55,14 @@ triggerIffcoTokioInsurance ::
   Id DMOC.MerchantOperatingCity ->
   m ()
 triggerIffcoTokioInsurance driverId merchantId merchantOpCityId = do
-  msc <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (ExtraMSC.InsuranceDeclarationService ExtraMSC.IffcoTokio)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (ExtraMSC.InsuranceDeclarationService ExtraMSC.IffcoTokio) merchantOpCityId))
+  msc <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (ExtraMSC.InsuranceDeclarationService ExtraMSC.IffcoTokio)}) Nothing
   let mbIffcoExtCfg = case msc of
         Just x -> case x.serviceConfig of
           ExtraMSC.InsuranceDeclarationServiceConfig cfg -> Just cfg
           _ -> Nothing
         Nothing -> Nothing
   whenJust mbIffcoExtCfg $ \iffcoExtCfg -> do
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
     now <- getCurrentTime
     let todayLocal = utctDay localTime

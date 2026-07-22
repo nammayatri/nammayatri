@@ -21,7 +21,6 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
@@ -60,7 +59,7 @@ postEditResultConfirm (mbPersonId, merchantId) bookingUpdateReqId = do
   mbRide <- B.runInReplica $ QR.findActiveByRBId booking.id
   when (isNothing mbRide) $ do
     riderConfig <-
-      getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId))
+      getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
         >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
     unless (fromMaybe False riderConfig.enableEditLocationWithoutRide) $
       throwError $ InvalidRequest "Edit location without an assigned ride is not enabled for this city"

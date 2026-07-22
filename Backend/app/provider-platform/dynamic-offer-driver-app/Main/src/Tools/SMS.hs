@@ -40,9 +40,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
-import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
-import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -55,14 +52,14 @@ sendSMS merchantId merchantOpCityId = Sms.sendSMS handler
     handler = Sms.SmsHandler {..}
 
     getProvidersPriorityList = do
-      merchantConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+      merchantConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
       let smsServiceProviders = merchantConfig.smsProvidersPriorityList
       when (null smsServiceProviders) $ throwError $ InternalError ("No sms service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId)
       pure smsServiceProviders
 
     getProviderConfig provider = do
       merchantSmsServiceConfig <-
-        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.SmsService provider)}) (Just (maybeToList <$> QMSC.findByServiceAndCity (DMSC.SmsService provider) merchantOpCityId))
+        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.SmsService provider)}) Nothing
           >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
       case merchantSmsServiceConfig.serviceConfig of
         DMSC.SmsServiceConfig msc -> pure msc
@@ -84,7 +81,7 @@ sendDashboardSms ::
   HighPrecMoney ->
   m ()
 sendDashboardSms merchantId merchantOpCityId messageType mbRide driverId mbBooking amount = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   if transporterConfig.enableDashboardSms
     then do
       driver <- B.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)

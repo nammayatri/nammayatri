@@ -47,7 +47,6 @@ import SharedLogic.DriverPool.Config as DPC
 import SharedLogic.DriverPool.Types as Reexport
 import qualified Storage.Beam.DriverPoolConfig as SBMDPC
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.DriverPoolConfig ()
@@ -61,7 +60,7 @@ getSearchDriverPoolConfig ::
   DSR.SearchRequest ->
   m (Maybe DriverPoolConfig)
 getSearchDriverPoolConfig merchantOpCityId mbDist area sreq = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let currTimeOfDay = round (realToFrac (utcTimeToDiffTime localTime) :: Double)
       currentDay = utctDay localTime
@@ -177,7 +176,7 @@ getDriverPoolConfig ::
   DSR.SearchRequest ->
   m DriverPoolConfig
 getDriverPoolConfig merchantOpCityId serviceTier tripCategory area tripDistance searchRepeatType searchRepeatCounter srId sreq = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let currTimeOfDay = round (realToFrac (utcTimeToDiffTime localTime) :: Double)
       currentDay = utctDay localTime

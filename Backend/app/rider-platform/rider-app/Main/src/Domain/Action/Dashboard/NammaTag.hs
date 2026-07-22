@@ -346,7 +346,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   let mbMerchantid = Just $ cast merchant.id
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let merchantOpCityId = merchantOperatingCity.id
-  _riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SQRiderConfig.findByMerchantOperatingCityId merchantOpCityId)) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
+  _riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   resp <- case req.domain of
     LYTU.UI_RIDER dt pt -> do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchant.id, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
@@ -874,10 +874,10 @@ postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity req = do
       dims = parseDims req.dimensions
   case req.configType of
     LYTU.RiderConfig -> do
-      cfg <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId}) (Just (SQRiderConfig.findByMerchantOperatingCityId (Id mocId)))
+      cfg <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId}) Nothing
       pure LYTU.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
     LYTU.MerchantServiceUsageConfigRider -> do
-      cfg <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId}) (Just (SQMerchantSUC.findByMerchantOperatingCityId (Id mocId)))
+      cfg <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId}) Nothing
       pure LYTU.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
     LYTU.MerchantServiceConfig -> do
       cfgs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = dimLookup "serviceName" dims}) (Just (SQMSC.findAllByMerchantOperatingCityId (Id mocId)))
@@ -892,16 +892,16 @@ postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity req = do
       cfgs <- getConfig (ExophoneDimensions {merchantOperatingCityId = mocId, phoneNumber = Nothing, callService = dimLookup "callService" dims}) (Just (SQExophone.findAllByMerchantOperatingCityId (Id mocId)))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.FRFSConfig -> do
-      cfg <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = mocId}) (Just (SQFRFSConfig.findByMerchantOperatingCityId (Id mocId) (Just [])))
+      cfg <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = mocId}) Nothing
       pure LYTU.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
     LYTU.MerchantConfig -> do
-      cfgs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = mocId}) (Just (SQMerchantConfig.findAllByMerchantOperatingCityId (Id mocId) (Just [])))
+      cfgs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = mocId}) Nothing
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.RideRelatedNotificationConfigRider -> do
       cfgs <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = mocId, timeDiffEvent = Nothing}) (Just (SQRRNC.findAllByMerchantOperatingCityId (Id mocId) (Just [])))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.HotSpotConfig -> do
-      cfgs <- maybeToList <$> getConfig (HotSpotConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId}) (Just (SQHSC.findConfigByMerchantId (cast merchantOperatingCity.merchantId)))
+      cfgs <- maybeToList <$> getConfig (HotSpotConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId}) Nothing
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.MerchantPaymentMethod -> do
       cfgs <- getConfig (MerchantPaymentMethodDimensions {merchantOperatingCityId = mocId, configId = Nothing}) (Just (SQMPM.findAllByMerchantOperatingCityId (Id mocId)))
@@ -913,7 +913,7 @@ postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity req = do
       cfgs <- getConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = mocId, configId = Nothing, agencyKey = Nothing, domain = Nothing, vehicleCategory = Nothing, platformType = Nothing}) (Just (SQIBC.findAllByMerchantOperatingCityId (Id mocId)))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.IssueConfig -> do
-      cfgs <- maybeToList <$> getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId, identifier = ""}) (Just (SQIC.findByMerchantOpCityId (cast $ Id mocId)))
+      cfgs <- maybeToList <$> getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId, identifier = ""}) Nothing
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.PassCategory -> do
       cfgs <- getConfig (PassCategoryDimensions {merchantOperatingCityId = mocId, configId = Nothing}) (Just (SQPC.findAllByMerchantOperatingCityId (Id mocId)))

@@ -60,7 +60,6 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
@@ -183,7 +182,7 @@ computeValidTill ::
   Id.Id DMOC.MerchantOperatingCity ->
   Environment.Flow Data.Time.UTCTime
 computeValidTill now moid = do
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moid.getId}) (Just (CQRC.findByMerchantOperatingCityId moid)) >>= fromMaybeM (RiderConfigDoesNotExist moid.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moid.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist moid.getId)
   let durationDays = maybe 365 (.validityDurationDays) riderConfig.studentPassVerifyConfig
   pure $ Data.Time.addUTCTime (fromIntegral durationDays * Data.Time.nominalDay) now
 
@@ -229,7 +228,7 @@ processRouteDetails moid routeDetails = do
   case Kernel.Prelude.listToMaybe integratedBPPConfigs of
     Nothing -> pure (Nothing, [], Nothing)
     Just integratedBPPConfig -> do
-      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moid.getId}) (Just (CQRC.findByMerchantOperatingCityId moid)) >>= fromMaybeM (RiderConfigDoesNotExist moid.getId)
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moid.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist moid.getId)
       (allRouteIds, allRoutePairs, totalStages) <- foldM (processOneRouteDetail riderConfig integratedBPPConfig) ([], [], 0) dedupedRouteDetails
       pure (Just (L.nub allRouteIds), allRoutePairs, Just totalStages)
 

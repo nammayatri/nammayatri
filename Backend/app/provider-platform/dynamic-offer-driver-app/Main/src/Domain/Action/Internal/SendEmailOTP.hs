@@ -17,7 +17,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
@@ -44,7 +43,7 @@ sendEmailOTP apiKey merchantShortIdText city req = do
       transporterConfig <-
         getOneConfig
           (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
-          (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
+          Nothing
           >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       emailOTPConfig <-
         transporterConfig.emailOtpConfig

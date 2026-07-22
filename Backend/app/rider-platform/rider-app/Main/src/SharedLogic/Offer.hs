@@ -51,7 +51,6 @@ import SharedLogic.OfferTypes as Reexport
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPayoutCfg
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -134,7 +133,7 @@ $(YTH.generateGenericDefault ''OfferEligibilityInput)
 -------------------------------------------------------------------------------------------------------
 invalidateOfferListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> Price -> m ()
 invalidateOfferListCache person merchantOperatingCityId price = do
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
   req <- mkOfferListReq person price
   let customerId = fromMaybe person.id.getId (req.customer <&> (.customerId))
       version = fromMaybe "N/A" riderConfig.offerListCacheVersion
@@ -143,7 +142,7 @@ invalidateOfferListCache person merchantOperatingCityId price = do
 offerListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> Maybe Text -> m Payment.OfferListResp
 offerListCache merchantId personId merchantOperatingCityId paymentServiceType price mbServiceTierType = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
   req <- mkOfferListReq person price
   let customerId = fromMaybe person.id.getId (req.customer <&> (.customerId))
       version = fromMaybe "N/A" riderConfig.offerListCacheVersion
@@ -341,7 +340,7 @@ processRideOffer mbOfferStatsInput booking person ride offerBasePrice mbFareCtx 
   whenJust mbOfferStatsInput $ \offerStatsInput ->
     whenJust booking.selectedOfferId $ \offerId ->
       whenJust mbRideOfferEntity $ \rideOfferEntity -> do
-        riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+        riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
         when riderConfig.enableRideHailingOffers $ do
           useDomainOffers <- TPayment.useDomainOffers booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing
           let applyOfferCall = TPayment.offerApply booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing Nothing person.clientSdkVersion

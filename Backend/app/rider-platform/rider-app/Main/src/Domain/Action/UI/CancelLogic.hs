@@ -30,7 +30,6 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Tools.DynamicLogic as DynamicLogic
 
@@ -57,7 +56,7 @@ computeCancellationReasons ::
   Bool ->
   m [CancellationReasonConfig]
 computeCancellationReasons merchantOpCityId hasRideAssigned isAC = do
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOpCityId))
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
   localTime <- getLocalCurrentTime timeDiffFromUtc
   let inputData =

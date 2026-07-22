@@ -11,7 +11,6 @@ import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import Tools.Auth (verifyPerson)
@@ -25,7 +24,7 @@ postProfileZendeskSdkToken req = do
   merchantServiceConfig <-
     getOneConfig
       (MerchantServiceConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (IssueTicketService Ticket.Zendesk)})
-      (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId person.merchantOperatingCityId (IssueTicketService Ticket.Zendesk)))
+      Nothing
       >>= fromMaybeM (InternalError "Zendesk service config not found for this merchant")
   zendeskCfg <- case merchantServiceConfig.serviceConfig of
     IssueTicketServiceConfig (Ticket.ZendeskConfig cfg) -> return cfg
