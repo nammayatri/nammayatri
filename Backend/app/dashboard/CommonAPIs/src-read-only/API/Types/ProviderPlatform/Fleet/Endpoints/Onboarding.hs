@@ -165,7 +165,7 @@ data GSTDocumentMetadata = GSTDocumentMetadata {gstNumber :: Kernel.Prelude.Text
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LDCDocumentMetadata = LDCDocumentMetadata {documentId :: Kernel.Prelude.Text, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
+data LDCDocumentMetadata = LDCDocumentMetadata {tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -244,7 +244,7 @@ data StatusRes = StatusRes
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TANDocumentMetadata = TANDocumentMetadata {documentId :: Kernel.Prelude.Text, tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
+data TANDocumentMetadata = TANDocumentMetadata {tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

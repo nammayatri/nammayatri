@@ -649,10 +649,10 @@ types:
     - tdsRate: Maybe Double            # Persisted on FleetOwnerInformation on approval
     - udyamNumber: Maybe Text
   LDCApproveDetails:
-    - documentId: Id CommonDriverOnboardingDocuments
+    - documentImageId: Id Image
     - tdsRate: Maybe Double            # Persisted on FleetOwnerInformation on approval
   TANApproveDetails:
-    - documentId: Id CommonDriverOnboardingDocuments
+    - documentImageId: Id Image
     - tdsRate: Maybe Double
   AadhaarApproveDetails:
     - documentImageId: Id Image

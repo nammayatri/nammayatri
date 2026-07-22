@@ -145,14 +145,12 @@ data UDYAMDocumentMetadata = UDYAMDocumentMetadata
   deriving (Show, Eq, Ord, Generic, A.ToJSON, A.FromJSON, ToSchema)
 
 data TANDocumentMetadata = TANDocumentMetadata
-  { documentId :: T.Text,
-    tdsRate :: Maybe Double
+  { tdsRate :: Maybe Double
   }
   deriving (Show, Eq, Ord, Generic, A.ToJSON, A.FromJSON, ToSchema)
 
 data LDCDocumentMetadata = LDCDocumentMetadata
-  { documentId :: T.Text,
-    tdsRate :: Maybe Double
+  { tdsRate :: Maybe Double
   }
   deriving (Show, Eq, Ord, Generic, A.ToJSON, A.FromJSON, ToSchema)
 
