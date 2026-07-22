@@ -1,25 +1,6 @@
 name: Cabal PR Repl Check — Driver
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches:
-      - "main"
-    paths:
-      # Driver app sources
-      - "Backend/app/provider-platform/**"
-      # Shared libraries + dashboard packages that the driver repl pulls in
-      - "Backend/lib/**"
-      - "Backend/app/dashboard/CommonAPIs/**"
-      - "Backend/app/dashboard/provider-dashboard/**"
-      # Cabal / nix build inputs that affect compilation
-      - "Backend/cabal.project"
-      - "Backend/default.nix"
-      - "Backend/nix/**"
-      - "flake.nix"
-      - "flake.lock"
-      # This workflow itself
-      - ".github/workflows/cabal-pr-repl-check-driver.yaml"
   workflow_dispatch:
 
 concurrency:

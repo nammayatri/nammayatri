@@ -1,6 +1,21 @@
 name: Cabal PR Repl Check — Dashboard
 
 on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - "main"
+    paths:
+      - "Backend/app/rider-platform/**"
+      - "Backend/app/provider-platform/**"
+      - "Backend/lib/**"
+      - "Backend/app/dashboard/**"
+      - "Backend/cabal.project"
+      - "Backend/default.nix"
+      - "Backend/nix/**"
+      - "flake.nix"
+      - "flake.lock"
+      - ".github/workflows/cabal-pr-repl-check-dashboard.yaml"
   workflow_dispatch:
 
 concurrency:
