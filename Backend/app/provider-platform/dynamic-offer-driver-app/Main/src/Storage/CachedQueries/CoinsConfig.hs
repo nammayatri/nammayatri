@@ -24,6 +24,9 @@ module Storage.CachedQueries.CoinsConfig
     getDriverIncentiveConfigHash,
     setDriverIncentiveConfigHash,
     clearDriverIncentiveConfigHash,
+    clearDriverIncentiveConfigHashForDriver,
+    getDriverIncentiveConfigGeneration,
+    mkDriverIncentiveConfigETag,
   )
 where
 
@@ -33,6 +36,7 @@ import Domain.Types.Coins.CoinsConfig
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Person as DP
 import Domain.Types.VehicleCategory as DTV
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -172,36 +176,85 @@ clearCityCache merchantOpCityId =
     Nothing
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------
--- ETag Redis for GET /coins/incentiveConfig (same pattern as SpecialLocation list).
--- Keyed by city + vehicleCategory + eventFunction because the payload is cohort-specific.
+-- ETag Redis for GET /coins/incentiveConfig.
+--
+-- Payload depends on Person.driverTag, so content hashes are per-driver.
+-- CoinsConfig create/update bumps a city+vehicleCategory generation so all
+-- drivers refetch without deleting every per-driver key (bulk-safe).
+-- Person.driverTag update only deletes that driver's hash keys.
+
+allVehicleCategories :: [DTV.VehicleCategory]
+allVehicleCategories =
+  [ DTV.CAR,
+    DTV.MOTORCYCLE,
+    DTV.TRAIN,
+    DTV.BUS,
+    DTV.FLIGHT,
+    DTV.AUTO_CATEGORY,
+    DTV.AMBULANCE,
+    DTV.TRUCK,
+    DTV.BOAT,
+    DTV.TOTO
+  ]
+
+driverIncentiveConfigGenRedisKey :: Text -> DTV.VehicleCategory -> Text
+driverIncentiveConfigGenRedisKey mocId vehicleCategory =
+  "DriverIncentiveCoins:Config:Gen:MocId:"
+    <> mocId
+    <> ":VehicleCategory:"
+    <> show vehicleCategory
+    <> ":EventName:EndRide"
 
 driverIncentiveConfigHashRedisKey :: Text -> DTV.VehicleCategory -> Text -> Text
-driverIncentiveConfigHashRedisKey mocId vehicleCategory eventFunctionKey =
+driverIncentiveConfigHashRedisKey mocId vehicleCategory driverId =
   "DriverIncentiveCoins:Config:Hash:MocId:"
     <> mocId
     <> ":VehicleCategory:"
     <> show vehicleCategory
-    <> ":EventFunction:"
-    <> eventFunctionKey
+    <> ":DriverId:"
+    <> driverId
+    <> ":EventName:EndRide"
 
+getDriverIncentiveConfigGeneration :: (CacheFlow m r) => Text -> DTV.VehicleCategory -> m Integer
+getDriverIncentiveConfigGeneration mocId vehicleCategory =
+  fromMaybe 0 <$> Hedis.safeGet (driverIncentiveConfigGenRedisKey mocId vehicleCategory)
+
+-- | Returns cached ETag only when it was written under the current generation.
 getDriverIncentiveConfigHash :: (CacheFlow m r) => Text -> DTV.VehicleCategory -> Text -> m (Maybe Text)
-getDriverIncentiveConfigHash mocId vehicleCategory eventFunctionKey =
-  Hedis.safeGet (driverIncentiveConfigHashRedisKey mocId vehicleCategory eventFunctionKey)
+getDriverIncentiveConfigHash mocId vehicleCategory driverId = do
+  gen <- getDriverIncentiveConfigGeneration mocId vehicleCategory
+  mbETag <- Hedis.safeGet (driverIncentiveConfigHashRedisKey mocId vehicleCategory driverId)
+  pure $
+    mbETag >>= \eTag ->
+      if etagGeneration eTag == Just gen then Just eTag else Nothing
 
 setDriverIncentiveConfigHash :: (CacheFlow m r) => Text -> DTV.VehicleCategory -> Text -> Text -> m ()
-setDriverIncentiveConfigHash mocId vehicleCategory eventFunctionKey eTag =
-  Hedis.set (driverIncentiveConfigHashRedisKey mocId vehicleCategory eventFunctionKey) eTag
+setDriverIncentiveConfigHash mocId vehicleCategory driverId eTag = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.setExp (driverIncentiveConfigHashRedisKey mocId vehicleCategory driverId) eTag expTime
 
--- | Clear ETag for a specific cohort after CoinsConfig create/update.
-clearDriverIncentiveConfigHash :: (CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe DTV.VehicleCategory -> DCT.DriverCoinsFunctionType -> m ()
-clearDriverIncentiveConfigHash merchantOpCityId mbVehicleCategory eventFunction =
+-- | After CoinsConfig create/update: bump generation so all drivers miss cache
+-- without a city-wide delete of per-driver keys.
+clearDriverIncentiveConfigHash :: (CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe DTV.VehicleCategory -> m ()
+clearDriverIncentiveConfigHash merchantOpCityId mbVehicleCategory =
   case mbVehicleCategory of
-    Just vc ->
-      void $
-        Hedis.del
-          ( driverIncentiveConfigHashRedisKey
-              merchantOpCityId.getId
-              vc
-              (T.pack (show eventFunction))
-          )
-    Nothing -> pure ()
+    Just vc -> void $ Hedis.incr (driverIncentiveConfigGenRedisKey merchantOpCityId.getId vc)
+    Nothing -> mapM_ (\vc -> void $ Hedis.incr (driverIncentiveConfigGenRedisKey merchantOpCityId.getId vc)) allVehicleCategories
+
+-- | After Person.driverTag update: drop only this driver's cached ETags.
+clearDriverIncentiveConfigHashForDriver :: (CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Id DP.Person -> m ()
+clearDriverIncentiveConfigHashForDriver merchantOpCityId driverId =
+  mapM_
+    ( \vc -> void $ Hedis.del (driverIncentiveConfigHashRedisKey merchantOpCityId.getId vc driverId.getId)
+    )
+    allVehicleCategories
+
+-- | ETag format: "<generation>:<contentHash>"
+mkDriverIncentiveConfigETag :: Integer -> Text -> Text
+mkDriverIncentiveConfigETag gen contentHash = T.pack (show gen) <> ":" <> contentHash
+
+etagGeneration :: Text -> Maybe Integer
+etagGeneration eTag =
+  case T.break (== ':') eTag of
+    (genText, rest) | not (T.null rest) -> readMaybe (T.unpack genText)
+    _ -> Nothing
