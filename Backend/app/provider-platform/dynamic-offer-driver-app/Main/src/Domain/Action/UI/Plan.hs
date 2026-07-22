@@ -1682,12 +1682,13 @@ getCancellationPenalties driverId serviceName = do
   unbilledDriverFees <- QDF.findUnbilledCancellationPenaltiesForDriver driverId serviceName
   let unbilledPenalties = map (mkCancellationPenaltyInfo False Nothing) unbilledDriverFees
   billedDriverFees <- QDF.findSubscriptionFeesWithCancellationPenalties driverId serviceName
-  let rPenalties = filter (\billedDriverFee -> billedDriverFee.feeType == DF.RECURRING_INVOICE) billedDriverFees
-      rEPenaltiesSplitOfDriverFeeIds = mapMaybe (.splitOfDriverFeeId) $ filter (\billedDriverFee -> billedDriverFee.feeType == DF.RECURRING_EXECUTION_INVOICE && billedDriverFee.splitOfDriverFeeId /= Nothing) billedDriverFees
-  parentRecurringExecution <- QDF.findParentRecurringExecutionBySplitOfDriverFeeIds rEPenaltiesSplitOfDriverFeeIds
-  let allManualFeeIds = nub $ (.id) <$> rPenalties
-      allExecutionFeeIds = nub $ (.id) <$> parentRecurringExecution
-  let allSubscriptionFeeIds = allManualFeeIds <> allExecutionFeeIds
+  let rPenalties = filter (\billedDriverFee -> billedDriverFee.feeType == DF.RECURRING_INVOICE && isNothing billedDriverFee.splitOfDriverFeeId) billedDriverFees
+      rExecutionPenalties = filter (\billedDriverFee -> billedDriverFee.feeType == DF.RECURRING_EXECUTION_INVOICE && isNothing billedDriverFee.splitOfDriverFeeId) billedDriverFees
+      outstandingManualParentIds = nub $ mapMaybe (\df -> if df.feeType == DF.RECURRING_INVOICE then df.splitOfDriverFeeId else Nothing) billedDriverFees
+      outstandingExecutionParentIds = nub $ mapMaybe (\df -> if df.feeType == DF.RECURRING_EXECUTION_INVOICE then df.splitOfDriverFeeId else Nothing) billedDriverFees
+  let allManualFeeIds = nub $ ((.id) <$> rPenalties) <> outstandingManualParentIds
+      allExecutionFeeIds = nub $ ((.id) <$> rExecutionPenalties) <> outstandingExecutionParentIds
+  let allSubscriptionFeeIds = nub $ allManualFeeIds <> allExecutionFeeIds
   originalPenalties <- nub <$> QDF.findOriginalCancellationPenaltiesForSubscriptionFee allSubscriptionFeeIds
   let billedPenalties = map (\penalty -> let payType = penalty.addedToFeeId >>= \feeId -> if feeId `elem` allManualFeeIds then Just MANUAL else if feeId `elem` allExecutionFeeIds then Just AUTOPAY else Nothing in mkCancellationPenaltyInfo True payType penalty) originalPenalties
   return $ nubBy (\a b -> a.id == b.id) $ filter (\p -> p.amount > 0) $ unbilledPenalties <> billedPenalties
