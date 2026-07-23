@@ -28,15 +28,18 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
-import Tools.Maps (getTripRoutes)
+import qualified Tools.Maps
 
 mkGetLocation :: ShortId DM.Merchant -> Id Common.Ride -> Double -> Double -> Bool -> Flow GetRoutesResp
 mkGetLocation _ rideId pickupLocationLat pickupLocationLon isPickUpRoute = do
   ride <- runInReplica $ QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (ride.status == Ride.NEW || ride.status == Ride.INPROGRESS) $ throwError (RideInvalidStatus $ show ride.status)
   booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  let mbServiceOverride = Tools.Maps.getMapsServiceOverride "TripRouteServiceProvider" person.customerNammaTags
   let mbToLocation = case booking.bookingDetails of
         DRB.RentalDetails _ -> Nothing
         -- No destination to route to for EasyBooking either — same as Rental.
@@ -64,4 +67,6 @@ mkGetLocation _ rideId pickupLocationLat pickupLocationLon isPickUpRoute = do
             mode = Just CAR,
             calcPoints = True
           }
-  getTripRoutes booking.riderId booking.merchantId (Just merchantOperatingCityId) (Just rideId.getId) mkGetRoutesResp
+  case mbServiceOverride of
+    Just service -> Tools.Maps.getRoutesForService booking.merchantId merchantOperatingCityId service (Just rideId.getId) mkGetRoutesResp
+    Nothing -> Tools.Maps.getTripRoutes booking.riderId booking.merchantId (Just merchantOperatingCityId) (Just rideId.getId) mkGetRoutesResp
