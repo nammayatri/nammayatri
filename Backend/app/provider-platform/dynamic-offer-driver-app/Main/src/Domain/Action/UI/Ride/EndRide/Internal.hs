@@ -71,6 +71,7 @@ import qualified Domain.Types.RiderDetails as RD
 import Domain.Types.SubscriptionConfig as DSC
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import Domain.Types.TransporterConfig hiding (InvoiceConfig)
+import qualified Domain.Types.Trip as DTrip
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Variant
 import qualified Domain.Types.VendorFee as DVF
@@ -87,6 +88,7 @@ import Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (getCurrentTime)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -137,6 +139,7 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFare
 import Storage.Queries.FleetDriverAssociationExtra as QFDAE
 import Storage.Queries.FleetOwnerInformation as QFOI
+import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
@@ -250,6 +253,30 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   merchant <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
 
   fork "processEndRideFinance" $ processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig
+
+  -- Best-effort: keep the driver's operating city in sync with where they actually ended
+  -- the ride. Reuses the same geometry-lookup query that resolves lat/long -> city
+  -- elsewhere (e.g. Domain.Action.UI.Driver.getCity). Skipped for InterCity/CrossCity
+  -- rides, which are *expected* to end outside the driver's operating city and don't
+  -- imply the driver has relocated there. Forked so any failure here (e.g. no geofence
+  -- match for the end location) never affects ride completion.
+  let isInterOrCrossCityRide = case ride.tripCategory of
+        DTrip.InterCity _ _ -> True
+        DTrip.CrossCity _ _ -> True
+        _ -> False
+  unless isInterOrCrossCityRide $
+    fork "syncDriverOperatingCityWithRideEndLocation" $
+      whenJust ride.tripEndPos $ \tripEndPos -> do
+        geoms <- QGeometry.findGeometriesContainingGps tripEndPos
+        let mbEndCity = case filter (\geom -> geom.city /= Context.City "AnyCity") geoms of
+              (g : _) -> Just g.city
+              [] -> (.city) <$> find (\geom -> geom.city == Context.City "AnyCity") geoms
+        whenJust mbEndCity $ \endCity -> do
+          mbEndLocationOpCity <- CQMOC.findByMerchantIdAndCity merchant.id endCity
+          whenJust mbEndLocationOpCity $ \endLocationOpCity -> do
+            driverPerson <- QPerson.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+            when (driverPerson.merchantOperatingCityId /= endLocationOpCity.id) $
+              QPerson.updateMerchantOperatingCityId (cast driverId) endLocationOpCity.id
 
   let validRide = isValidRide ride
   -- Publish RideEndedEvent to Redis Stream "ride.events.shard<N>". kafka-consumers
