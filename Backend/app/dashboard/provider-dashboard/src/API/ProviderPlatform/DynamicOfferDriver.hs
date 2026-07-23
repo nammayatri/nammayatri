@@ -28,6 +28,7 @@ import qualified API.Action.ProviderPlatform.IssueManagement as IssueManagementD
 import qualified API.Action.ProviderPlatform.Management as ManagementDSL
 import qualified API.Action.ProviderPlatform.Operator as OperatorDSL
 import qualified API.Action.ProviderPlatform.RideBooking as RideBookingDSL
+import qualified API.ProviderPlatform.DriverInfoByPhoneNumber as DriverInfoByPhoneNumber
 import qualified API.ProviderPlatform.DynamicOfferDriver.CacAuth as CacAuth
 import qualified API.ProviderPlatform.DynamicOfferDriver.InternalAuth as InternalAuth
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -37,10 +38,15 @@ import Kernel.Types.Id
 import Servant
 
 -- TODO: Deprecated, Remove after successful deployment
+--
+-- DriverInfoByPhoneNumber.API hangs off this mount point rather than API' on purpose: it
+-- searches every city the caller can access, so a city in the path would be meaningless.
 type API =
   "driver-offer"
     :> Capture "merchantId" (ShortId DM.Merchant)
-    :> API'
+    :> ( API'
+           :<|> DriverInfoByPhoneNumber.API
+       )
 
 type APIV2 =
   "driver-offer"
@@ -66,12 +72,14 @@ type API' =
 handler :: FlowServer API
 handler merchantId = do
   let city = getCity merchantId.getShortId
-  FleetDSL.handler merchantId city
-    :<|> AppManagementDSL.handler merchantId city
-    :<|> ManagementDSL.handler merchantId city
-    :<|> IssueManagementDSL.handler merchantId city
-    :<|> RideBookingDSL.handler merchantId city
-    :<|> OperatorDSL.handler merchantId city
+  ( FleetDSL.handler merchantId city
+      :<|> AppManagementDSL.handler merchantId city
+      :<|> ManagementDSL.handler merchantId city
+      :<|> IssueManagementDSL.handler merchantId city
+      :<|> RideBookingDSL.handler merchantId city
+      :<|> OperatorDSL.handler merchantId city
+    )
+    :<|> DriverInfoByPhoneNumber.handler merchantId
   where
     getCity = \case
       "NAMMA_YATRI_PARTNER" -> City.City "Bangalore"
