@@ -31,9 +31,12 @@ module Tools.Maps
     getMultimodalWalkDistance,
     getMultimodalJourneyDistances,
     getInstructionRoute,
+    getMapsServiceOverrideFromTags,
+    getRoutesForService,
   )
 where
 
+import qualified Data.Text as T
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity (..))
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -55,6 +58,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Yudhishthira.Types as YTypes
 import qualified Storage.CachedQueries.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
@@ -162,6 +166,36 @@ getPickupRoutes merchantId merchantOperatingCityId service entityId req = do
   case merchantMapsServiceConfig.serviceConfig of
     DMSC.MapsServiceConfig msc -> Maps.getRoutes entityId merchant.isAvoidToll msc req
     _ -> throwError $ InternalError "Unknown Service Config"
+
+getRoutesForService :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> MapsService -> Maybe Text -> GetRoutesReq -> m GetRoutesResp
+getRoutesForService merchantId merchantOperatingCityId service entityId req = do
+  merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  runWithExplicitServiceConfig (callGetRoutesWrapper merchant.isAvoidToll) merchantId merchantOperatingCityId service entityId req
+
+runWithExplicitServiceConfig ::
+  ServiceFlow m r =>
+  (Maybe Text -> MapsServiceConfig -> req -> m resp) ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  MapsService ->
+  Maybe Text ->
+  req ->
+  m resp
+runWithExplicitServiceConfig mapsAction merchantId merchantOperatingCityId service entityId req = do
+  merchantMapsServiceConfig <-
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MapsService service)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.MapsService service)))
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show service))
+  case merchantMapsServiceConfig.serviceConfig of
+    DMSC.MapsServiceConfig msc -> mapsAction entityId msc req
+    _ -> throwError $ InternalError "Unknown Service Config"
+
+getMapsServiceOverrideFromTags :: Text -> Maybe [YTypes.TagNameValueExpiry] -> Maybe MapsService
+getMapsServiceOverrideFromTags tagName mbTags = do
+  tags <- mbTags
+  tagText <- find (T.isPrefixOf (tagName <> "#") . YTypes.getTagNameValueExpiry) tags
+  case T.splitOn "#" (YTypes.getTagNameValueExpiry tagText) of
+    _ : value : _ -> readMaybe (T.unpack value)
+    _ -> Nothing
 
 getFrfsAutocompleteDistances ::
   ( ServiceFlow m r,
