@@ -484,7 +484,8 @@ data RegisterRCReq = RegisterRCReq
     vehicleDetails :: Kernel.Prelude.Maybe Dashboard.Common.DriverVehicleDetails,
     udinNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     engineNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    chassisNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    chassisNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    previousRcNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

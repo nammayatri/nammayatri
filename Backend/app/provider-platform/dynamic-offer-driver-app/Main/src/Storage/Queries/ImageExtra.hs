@@ -22,6 +22,7 @@ module Storage.Queries.ImageExtra
     filterRecentByPersonRCAndImageType,
     updateVerificationStatusByRcIdAndImageTypes,
     deleteByPersonIdAndImageType,
+    deleteByRcId,
   )
 where
 
@@ -352,3 +353,6 @@ getRcImagesInfoFromEntityImagesInfo entityImagesInfo rcId documentTypes = do
     fallbackToDb = do
       rcImages <- findRecentByRcIdAndImageTypes entityImagesInfo.transporterConfig rcId documentTypes
       pure $ RcImagesInfo {rcId, rcImages, documentTypes}
+
+deleteByRcId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DReg.VehicleRegistrationCertificate -> m ()
+deleteByRcId rcId = deleteWithKV [Se.Is BeamI.rcId $ Se.Eq (Just rcId.getId)]
