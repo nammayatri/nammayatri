@@ -31,3 +31,8 @@ ALTER TABLE atlas_app.frfs_ticket_booking_payment_category ADD COLUMN seat_ids t
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking_payment_category ADD COLUMN hold_id text ;
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY frfs_ticket_booking_payment_category_idx_frfs_ticket_booking_payment_id ON atlas_app.frfs_ticket_booking_payment_category USING btree (frfs_ticket_booking_payment_id);

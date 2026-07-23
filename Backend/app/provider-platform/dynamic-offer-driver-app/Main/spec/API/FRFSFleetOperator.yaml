@@ -85,6 +85,7 @@ types:
     phone: Text
     bookingId: Text
     checkedIn: Bool
+    quantity: Int
     derive: "Show"
 
   PassengerStopManifest:

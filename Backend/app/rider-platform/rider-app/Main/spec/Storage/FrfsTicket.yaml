@@ -363,6 +363,10 @@ FRFSQuoteCategory:
       kvFunction: updateWithKV
       params: [offeredPrice, updatedAt]
       where: quoteId
+    findAllByQuoteIds:
+      kvFunction: findAllWithKV
+      where:
+        in: [quoteId]
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -821,6 +825,16 @@ FRFSTicketBookingPaymentCategory:
     findAllByPaymentId:
       kvFunction: findAllWithKV
       where: frfsTicketBookingPaymentId
+    findAllByPaymentIds:
+      kvFunction: findAllWithKV
+      where:
+        in: [frfsTicketBookingPaymentId]
+
+  extraIndexes:
+    - columns: [frfsTicketBookingPaymentId]
+
+  extraOperations:
+    - GENERATE_INDEXES
 
 FRFSRecon:
   tableName: frfs_recon
