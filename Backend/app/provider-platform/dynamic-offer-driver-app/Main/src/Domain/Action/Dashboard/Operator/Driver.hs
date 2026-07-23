@@ -692,8 +692,8 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       let phoneNumber = req.mobileCountryCode <> req.mobileNumber
       withLogTag ("personId_" <> getId person.id) $ do
         (mbSender, message, templateId, messageType) <-
-          MessageBuilder.buildOperatorJoinAndDownloadAppMessage merchantOpCityId $
-            MessageBuilder.BuildOperatorJoinAndDownloadAppMessageReq
+          MessageBuilder.buildOperatorDeepLinkAuthMessage merchantOpCityId $
+            MessageBuilder.BuildOperatorDeepLinkAuthMessage
               { operatorName = operator.firstName
               }
         let sender = fromMaybe smsCfg.sender mbSender
