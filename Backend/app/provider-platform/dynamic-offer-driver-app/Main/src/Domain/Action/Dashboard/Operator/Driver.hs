@@ -406,6 +406,11 @@ castHubRequests (hubReq, mbCreator, hub) = do
       driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       mapM decrypt driver.mobileNumber
     Nothing -> pure Nothing
+  operatorPhoneNo <- case hubReq.operatorId of
+    Just operatorId -> do
+      mbOperator <- QPerson.findById operatorId
+      maybe (pure Nothing) (\operator -> mapM decrypt operator.mobileNumber) mbOperator
+    Nothing -> pure Nothing
   rcId <- case hubReq.registrationNo of
     Just regNo -> do
       mbRc <- QVRCE.findLastVehicleRCWrapper regNo
@@ -425,6 +430,8 @@ castHubRequests (hubReq, mbCreator, hub) = do
         requestTime = hubReq.createdAt,
         requestType = castReqType hubReq.requestType,
         remarks = hubReq.remarks,
+        operatorPhoneNo,
+        fulfilledAt = hubReq.fulfilledAt,
         inspectionResponse =
           map
             ( \r ->

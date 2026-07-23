@@ -258,6 +258,8 @@ types:
     requestStatus: RequestStatus
     requestTime: UTCTime
     remarks: Maybe Text
+    operatorPhoneNo: Maybe Text
+    fulfilledAt: Maybe UTCTime
     inspectionResponse: Maybe [InspectionResponseItem]
   RespondHubRequest:
     status: RequestStatus
