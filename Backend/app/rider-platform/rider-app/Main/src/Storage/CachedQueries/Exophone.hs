@@ -16,6 +16,7 @@
 module Storage.CachedQueries.Exophone
   ( create,
     findByPhone,
+    findAllByPhone,
     findAllByMerchantOperatingCityId,
     findAllExophones,
     updateAffectedPhones,
