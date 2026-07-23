@@ -84,4 +84,6 @@
   metabase = 3001;
   redis-commander = 8431;
   victoria-metrics = 8428;
+  db-manager-backend = 3010;
+  db-manager-frontend = 5183;
 }

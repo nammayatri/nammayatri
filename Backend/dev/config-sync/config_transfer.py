@@ -164,6 +164,11 @@ def get_db_config(env_config, environment, schema):
     base = dict(env.get("default", {}))
     schema_cfg = env.get("schemas", {}).get(schema, {})
     base.update(schema_cfg)
+    if environment == "local":
+        if os.getenv("CONFIG_SYNC_LOCAL_DB_HOST"):
+            base["host"] = os.environ["CONFIG_SYNC_LOCAL_DB_HOST"]
+        if os.getenv("CONFIG_SYNC_LOCAL_DB_PORT"):
+            base["port"] = int(os.environ["CONFIG_SYNC_LOCAL_DB_PORT"])
     if "db_schema" not in base:
         base["db_schema"] = schema
     # Resolve execPod: schema-level overrides merge onto env-level

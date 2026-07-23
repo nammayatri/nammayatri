@@ -538,6 +538,22 @@
         "type": "github"
       }
     },
+    "db-manager-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784068184,
+        "narHash": "sha256-FmOV5dATivtMslphm0J6PiY5OoJKc/SI4ML8U+FB8PM=",
+        "owner": "nammayatri",
+        "repo": "Multi-Cloud-DB-Manager",
+        "rev": "5b4bafb60825a0f584a8646bbdc9b3e00b45fdee",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nammayatri",
+        "repo": "Multi-Cloud-DB-Manager",
+        "type": "github"
+      }
+    },
     "devenv": {
       "inputs": {
         "flake-compat": [
@@ -3721,6 +3737,7 @@
         "amazonka-git": "amazonka-git",
         "beckn-gateway": "beckn-gateway",
         "common": "common",
+        "db-manager-src": "db-manager-src",
         "easy-purescript-nix": "easy-purescript-nix",
         "google-cloud-haskell": "google-cloud-haskell",
         "haskell-cac": "haskell-cac",

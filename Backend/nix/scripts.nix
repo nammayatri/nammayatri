@@ -203,6 +203,7 @@ _:
               --exclude .direnv --exclude _build --exclude result --exclude 'result-*' \
               --exclude .cabal-dir --exclude .git --exclude .hie --exclude hie \
               --exclude .nix-deps --exclude .ci-project-root --exclude .ci-cabal-dir \
+              --exclude cabal.project.local \
               --exclude 'Frontend/android-native' --exclude 'Frontend/ios' \
               --exclude 'Frontend/build' --exclude 'Frontend/dist' \
               "$REPO_ROOT/" "$RUSER@$HOST:$REMOTE_DIR/"

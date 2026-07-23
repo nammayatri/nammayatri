@@ -917,6 +917,7 @@ REMOTE_EXCLUDES = [
     ".nix-deps",
     ".ci-project-root",
     ".ci-cabal-dir",
+    "cabal.project.local",
     "Frontend/android-native", "Frontend/ios",
     "Frontend/build", "Frontend/dist",
 ]

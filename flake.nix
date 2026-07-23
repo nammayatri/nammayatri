@@ -75,6 +75,12 @@
     osrm-pbf-finland.url = "https://download.geofabrik.de/europe/finland-260101.osm.pbf";
     osrm-pbf-finland.flake = false;
 
+    # Multi-Cloud DB Manager — a SQL console (Node backend + React/Vite frontend)
+    # fetched + pinned by Nix (no runtime clone), built by nix/db-manager.nix and
+    # run as stack services against the local nammayatri Postgres + Redis.
+    db-manager-src.url = "github:nammayatri/Multi-Cloud-DB-Manager";
+    db-manager-src.flake = false;
+
     easy-purescript-nix.url = "github:justinwoo/easy-purescript-nix/a90bd941297497c83205f0a64f30c5188a2a4fda";
     easy-purescript-nix.flake = false;
 

@@ -36,17 +36,22 @@ let
     "test-context-api"
     "metabase"
     "victoria-metrics"
+    "db-manager-frontend"
+    "db-manager-backend"
   ];
 
   caddyPort = ports.caddy-reverse-proxy or (throw "caddy-reverse-proxy port not defined in ports.nix");
 
   routeBlock = svc:
     if ports ? ${svc}
-    then ''
-      	handle_path /${svc}/* {
-      		reverse_proxy 127.0.0.1:${toString ports.${svc}}
-      	}
-    ''
+    then
+      let
+        addr = "127.0.0.1:${toString ports.${svc}}";
+        proxy =
+          if svc == "db-manager-backend"
+          then "reverse_proxy ${addr} {\n\t\t\theader_up -Origin\n\t\t}"
+          else "reverse_proxy ${addr}";
+      in "\thandle_path /${svc}/* {\n\t\t${proxy}\n\t}\n"
     else
     # builtins.trace prints to stderr at eval time, mirroring the old
     # `echo "  WARN: skipping $svc — not in ports file" >&2`.
