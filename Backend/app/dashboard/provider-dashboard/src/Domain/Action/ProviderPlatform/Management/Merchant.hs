@@ -482,23 +482,29 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
     let (City.City cityText) = req.city
     mbErr <- City.validateAndAppendCityStdCodeMapping cityText stdCode
     whenJust mbErr $ \err -> throwError (InvalidRequest err)
-  merchant <-
+  -- Resolve the target merchant WITHOUT persisting it yet, and reject illegal city/create usage upfront.
+  -- mbNewMerchant is Just only when a new dashboard merchant row still needs to be created.
+  (merchant, mbNewMerchant) <-
     case (merchantData, canCreateMerchant) of
       (Just merchantD, True) -> do
         SQM.findByShortId (ShortId merchantD.shortId) >>= \case
           Nothing -> do
             let newMerchant = buildMerchant now merchantD baseMerchant
-            SQM.create newMerchant
-            return newMerchant
-          Just newMerchant -> return newMerchant
+            return (newMerchant, Just newMerchant)
+          Just existingMerchant -> return (existingMerchant, Nothing)
       (Just merchantD, False) -> throwError (InvalidRequest $ "Merchant Cannot be created using city/create: " <> merchantD.shortId)
-      (Nothing, _) -> return baseMerchant
+      (Nothing, _) -> return (baseMerchant, Nothing)
+  -- Call the backend first: it validates the exophone before any write, so a duplicate exophone
+  -- blocks the dashboard merchant creation below instead of leaving an orphaned dashboard merchant.
+  res <- T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigOperatingCityCreate) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, geomGeoJson = geomGeoJson, ..}
+  -- Backend succeeded: now persist the dashboard-local entries.
+  whenJust mbNewMerchant SQM.create
   unless (req.city `elem` merchant.supportedOperatingCities) $
     SQM.updateSupportedOperatingCities merchant.shortId (merchant.supportedOperatingCities <> [req.city])
   whenJust cityStdCode $ \stdCode -> do
     id <- generateGUID
     KQMOC.createIfNotExist $ KMOC.MerchantOperatingCity {id = Id id, city = show req.city, stdCode = Just stdCode}
-  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigOperatingCityCreate) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, geomGeoJson = geomGeoJson, ..}
+  pure res
   where
     buildMerchant now merchantD baseMerchant =
       DM.Merchant
