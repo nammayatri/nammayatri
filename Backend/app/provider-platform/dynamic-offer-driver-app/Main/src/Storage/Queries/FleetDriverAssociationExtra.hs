@@ -566,9 +566,14 @@ findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds merchantId merch
                               else B.sqlBool_ (fleetDriverAssociation.fleetOwnerId `B.in_` (B.val_ <$> fleetOwnerIds))
                           )
                             B.&&?. driver.merchantId B.==?. B.val_ merchantId
-                            B.&&?. driver.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
-                            B.&&?. driverInformation.merchantId B.==?. B.val_ (Just merchantId)
-                            B.&&?. driverInformation.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
+                            B.&&?. ( B.sqlBool_ (B.isNothing_ driver.merchantOperatingCityId)
+                                       B.||?. driver.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
+                                   )
+                            B.&&?. ( B.sqlBool_ (B.isJust_ driver.merchantOperatingCityId)
+                                       B.||?. ( driverInformation.merchantId B.==?. B.val_ (Just merchantId)
+                                                  B.&&?. driverInformation.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
+                                              )
+                                   )
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverId -> driver.id B.==?. B.val_ driverId) mbDriverId
                             B.&&?. B.sqlBool_ (fleetDriverAssociation.associatedTill B.>=. B.val_ (Just now))
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\from -> B.sqlBool_ (fleetDriverAssociation.associatedOn B.>=. B.val_ (Just from))) mbFrom
@@ -608,8 +613,12 @@ findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds merchantId merch
                               then B.sqlBool_ (B.val_ True)
                               else B.sqlBool_ (fleetDriverAssociation.fleetOwnerId `B.in_` (B.val_ <$> fleetOwnerIds))
                           )
-                            B.&&?. driver.merchantId B.==?. B.val_ merchantId
-                            B.&&?. driver.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
+                            B.&&?. ( if null fleetOwnerIds
+                                       then
+                                         driver.merchantId B.==?. B.val_ merchantId
+                                           B.&&?. driver.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
+                                       else B.sqlBool_ (B.val_ True)
+                                   )
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverId -> driver.id B.==?. B.val_ driverId) mbDriverId
                             B.&&?. B.sqlBool_ (fleetDriverAssociation.associatedTill B.>=. B.val_ (Just now))
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\from -> B.sqlBool_ (fleetDriverAssociation.associatedOn B.>=. B.val_ (Just from))) mbFrom

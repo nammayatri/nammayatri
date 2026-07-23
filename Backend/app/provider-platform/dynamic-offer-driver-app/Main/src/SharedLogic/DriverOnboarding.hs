@@ -785,7 +785,7 @@ mkFleetOwnerDocumentVerificationConfigAPIEntity language Domain.Types.FleetOwner
         dependencyDocumentType = map castDocumentType dependencyDocumentType,
         documentCategory = castDocumentCategory <$> documentCategory,
         isMandatoryForEnabling = fromMaybe isMandatory isMandatoryForEnabling,
-        documentFields = Nothing,
+        documentFields = fmap (map castDocumentFieldInfo) documentFields,
         documentFlowGrouping = castDocumentFlowGrouping DVC.STANDARD,
         documentOnboardingStage = castDocumentOnboardingStage <$> documentOnboardingStage,
         isReminderSupported = Nothing,
@@ -821,7 +821,9 @@ castDocumentFieldInfo Domain.Types.DocumentVerificationConfig.FieldInfo {..} =
       regexValidation = regexValidation,
       description = description,
       placeholder = placeholder,
-      dropdownValues = dropdownValues
+      dropdownValues = dropdownValues,
+      requestKey = requestKey,
+      fields = fmap (map castDocumentFieldInfo) fields
     }
 
 castDocumentFieldType :: Domain.Types.DocumentVerificationConfig.FieldType -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldType
@@ -831,6 +833,8 @@ castDocumentFieldType = \case
   Domain.Types.DocumentVerificationConfig.FieldDouble -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldDouble
   Domain.Types.DocumentVerificationConfig.FieldDropdown -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldDropdown
   Domain.Types.DocumentVerificationConfig.FieldImage -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldImage
+  Domain.Types.DocumentVerificationConfig.FieldObject -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldObject
+  Domain.Types.DocumentVerificationConfig.FieldArray -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldArray
 
 castDocumentOnboardingStage :: Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.DocumentOnboardingStage
 castDocumentOnboardingStage = \case

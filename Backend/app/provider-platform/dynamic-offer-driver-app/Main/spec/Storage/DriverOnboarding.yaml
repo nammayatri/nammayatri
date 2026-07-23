@@ -629,7 +629,40 @@ DocumentVerificationConfig:
     DocumentApplicableType:
       enum: "FLEET,INDIVIDUAL,FLEET_AND_INDIVIDUAL"
     FieldType:
-      enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage"
+      # FieldObject: this node has no value of its own; its `fields` become a nested JSON object under `requestKey`.
+      # FieldArray:  this node is a JSON array under `requestKey`; its `fields` describe the shape of EACH element.
+      enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage,FieldObject,FieldArray"
+    # FieldInfo drives BOTH how the UI renders an input AND where the entered value lands in the `documentData`
+    # JSON that comes back on register (CommonDocumentReq.documentData). `requestKey` is that JSON key; `_type`
+    # governs the JSON value type. The assembled `documentData` is strict-decoded into a CommonDocumentData variant
+    # (Domain.Types.CommonDocumentData.parseCommonDocumentDataByType), so requestKeys must match that record's fields.
+    #
+    # HOW TO CONFIGURE ------------------------------------------------------------------------------------------
+    # 1) Simple/scalar field -> maps to one key.  Target record field `identifierNumber :: Text`:
+    #      { name: "Tax Id", _type: FieldText, isMandatory: true, requestKey: "identifierNumber" }
+    #    UI emits: { "identifierNumber": "ABCDE1234F" }
+    #    Value type follows _type: FieldText/FieldDropdown -> JSON string, FieldInt -> number, FieldDouble -> number.
+    #
+    # 2) Nested object -> use _type: FieldObject with children in `fields`. Target `registration :: RegistrationInfo`
+    #    where RegistrationInfo { number :: Text, dateOfIssue :: Maybe UTCTime }:
+    #      { name: "Registration", _type: FieldObject, requestKey: "registration",
+    #        fields: [ { name: "RC No", _type: FieldText, requestKey: "number" },
+    #                  { name: "Issued On", _type: FieldText, requestKey: "dateOfIssue" } ] }
+    #    UI emits: { "registration": { "number": "KA01AB1234", "dateOfIssue": "2020-01-01T00:00:00Z" } }
+    #
+    # 3) Array -> use _type: FieldArray; `fields` describes ONE element (repeat per row the UI collects).
+    #    - Array of scalars, target `classOfVehicles :: [Text]`: give the element one leaf whose requestKey is empty/omitted:
+    #        { name: "Classes", _type: FieldArray, requestKey: "classOfVehicles",
+    #          fields: [ { name: "Class", _type: FieldText } ] }
+    #      UI emits: { "classOfVehicles": ["LMV", "MCWG"] }
+    #    - Array of objects, target `owners :: [OwnerInfo]` where OwnerInfo { fullName :: Text, share :: Int }:
+    #        { name: "Owners", _type: FieldArray, requestKey: "owners",
+    #          fields: [ { name: "Name",  _type: FieldText, requestKey: "fullName" },
+    #                    { name: "Share", _type: FieldInt,  requestKey: "share" } ] }
+    #      UI emits: { "owners": [ { "fullName": "A", "share": 60 }, { "fullName": "B", "share": 40 } ] }
+    #
+    # VALIDATION: `regexValidation` + `isMandatory` are per-leaf (checked UI-side and re-checked backend-side);
+    # the whole-object shape is validated authoritatively by the strict decode into the target CommonDocumentData type.
     FieldInfo:
       name: Text
       _type: FieldType
@@ -638,6 +671,8 @@ DocumentVerificationConfig:
       description: Maybe Text
       placeholder: Maybe Text
       dropdownValues: Maybe [Text]
+      requestKey: Maybe Text
+      fields: Maybe [FieldInfo]
       derive': "Eq,Ord,Show,Read,Generic,ToJSON,FromJSON,ToSchema"
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -705,13 +740,13 @@ DocumentVerificationConfig:
       rolesAllowedToUploadDocumentText: Maybe [Text]
   toTType:
     supportedVehicleClassesJSON: getConfigJSON
-    documentFieldsJSON: Data.Aeson.toJSON <$> documentFields|E
+    documentFieldsJSON: mkDocumentFieldsJSON documentFields|E
     applicableTo: Kernel.Prelude.Just applicableTo|E
     rolesAllowedToUploadDocumentText: (Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show)) Kernel.Prelude.<$> rolesAllowedToUploadDocument|E
 
   fromTType:
     supportedVehicleClasses: (getConfigFromJSON documentType)|M
-    documentFields: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< documentFieldsJSON|E
+    documentFields: getDocumentFieldsFromJSON documentFieldsJSON|E
     applicableTo: fromMaybe Domain.Types.DocumentVerificationConfig.FLEET_AND_INDIVIDUAL applicableTo|E
     rolesAllowedToUploadDocument: rolesAllowedToUploadDocumentText >>= traverse (readMaybe . Data.Text.unpack)|E
 
@@ -1301,6 +1336,7 @@ FleetOwnerDocumentVerificationConfig:
     documentOnboardingStage: Maybe DocumentOnboardingStage
     rolesAllowedToUploadDocument: Maybe [Role]
     onlyImageVerificationStatusLookupRequired: Maybe Bool
+    documentFields: Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo]
   default:
     order: "0"
     role: "'FLEET_OWNER'"
@@ -1311,13 +1347,18 @@ FleetOwnerDocumentVerificationConfig:
   sqlType:
     dependencyDocumentType: text[]
     rolesAllowedToUploadDocumentText: text[]
+    documentFieldsJSON: json
   beamFields:
     rolesAllowedToUploadDocument:
       rolesAllowedToUploadDocumentText: Maybe [Text]
+    documentFields:
+      documentFieldsJSON: Maybe Value
   toTType:
     rolesAllowedToUploadDocumentText: (Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show)) Kernel.Prelude.<$> rolesAllowedToUploadDocument|E
+    documentFieldsJSON: Storage.Queries.Transformers.DocumentVerificationConfig.mkDocumentFieldsJSON documentFields|E
   fromTType:
     rolesAllowedToUploadDocument: rolesAllowedToUploadDocumentText >>= traverse (readMaybe . Data.Text.unpack)|E
+    documentFields: Storage.Queries.Transformers.DocumentVerificationConfig.getDocumentFieldsFromJSON documentFieldsJSON|E
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithOptionsKV

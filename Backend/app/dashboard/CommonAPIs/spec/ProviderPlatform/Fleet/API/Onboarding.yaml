@@ -183,8 +183,15 @@ types:
     enum: "Driver,Vehicle,Permission,Training"
   DocumentFlowGrouping:
     enum: "COMMON,STANDARD"
+  # FieldObject: children in `fields` become a nested object under `requestKey`.
+  # FieldArray:  `fields` describe the shape of EACH element of the array under `requestKey`.
   FieldType:
-    enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage"
+    enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage,FieldObject,FieldArray"
+  # `requestKey` = the JSON key this field's value occupies in register's documentData; `_type` = its JSON value type.
+  # Simple:  { _type: FieldText,   requestKey: "identifierNumber" }                    -> { "identifierNumber": "..." }
+  # Nested:  { _type: FieldObject, requestKey: "registration", fields: [ ...leaves ] } -> { "registration": { ... } }
+  # Array:   { _type: FieldArray,  requestKey: "owners",       fields: [ ...element ] }-> { "owners": [ { ... } ] }
+  # See the fuller guide beside FieldInfo in Main/spec/Storage/DriverOnboarding.yaml.
   FieldInfo:
     name: Text
     _type: FieldType
@@ -193,6 +200,8 @@ types:
     description: Maybe Text
     placeholder: Maybe Text
     dropdownValues: Maybe [Text]
+    requestKey: Maybe Text
+    fields: Maybe [FieldInfo]
   DocumentApplicableType:
     enum: "FLEET,INDIVIDUAL,FLEET_AND_INDIVIDUAL"
   StatusRes:
