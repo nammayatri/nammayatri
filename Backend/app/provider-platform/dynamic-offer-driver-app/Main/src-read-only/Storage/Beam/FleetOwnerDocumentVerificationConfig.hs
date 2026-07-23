@@ -33,6 +33,7 @@ data FleetOwnerDocumentVerificationConfigT f = FleetOwnerDocumentVerificationCon
     maxRetryCount :: B.C f Kernel.Prelude.Int,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    onlyImageVerificationStatusLookupRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     order :: B.C f Kernel.Prelude.Int,
     role :: B.C f Domain.Types.Person.Role,
     rolesAllowedToUploadDocumentText :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),

@@ -59,3 +59,8 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD COLUMN document_onboarding_stage text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD COLUMN only_image_verification_status_lookup_required boolean ;
