@@ -94,7 +94,7 @@ jobs:
           if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
             echo "Cache key changed, busting dist-newstyle, cabal store and HIE caches"
             rm -rf "$CACHE_ROOT/dist-newstyle"
-            rm -rf "$CACHE_ROOT/.cabal-dir"
+            rm -rf "$CACHE_ROOT/.cabal-dir/store"
             rm -rf "$CACHE_ROOT/hie"
           fi
 
@@ -138,6 +138,9 @@ jobs:
           set -o pipefail
           nix develop .#backend --command bash -c "
             export CABAL_DIR=$HOME/ny-cabal-prod-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir
+            mkdir -p \$CABAL_DIR
+            printf 'active-repositories: :none\n' > \$CABAL_DIR/config
+            export CABAL_CONFIG=\$CABAL_DIR/config
             cd Backend
             # Clear cabal store to prevent stale package registrations that
             # reference runner-local nix paths. Does not affect CI incrementality
