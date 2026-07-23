@@ -553,9 +553,7 @@ driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandate
   let amountForSpiltting = if isNothing mbCoinAmountUsed then Just $ roundToHalf driverFee.currency totalFee else roundToHalf driverFee.currency <$> (mandate <&> (.maxAmount))
       coinAmountUsed = fromMaybe 0 mbCoinAmountUsed
       totalFeeWithCoinDeduction = roundToHalf driverFee.currency $ totalFee - coinAmountUsed
-  allVendorFees <- runInMasterDbAndRedis $ QVF.findAllByDriverFeeId driverFee.id
-  -- Cancellation vendor fee must not be proportionally split; it stays wholly on the parent.
-  let vendorFees = maybe allVendorFees (\c -> filter (\vf -> vf.vendorId /= c) allVendorFees) transporterConfig.cancellationFeeVendor
+  vendorFees <- runInMasterDbAndRedis $ QVF.findAllByDriverFeeId driverFee.id
   splittedFeesWithRespectiveVendorFee <- splitPlatformFee feeWithoutDiscount totalFeeWithCoinDeduction plan driverFee amountForSpiltting mbCoinAmountUsed vendorFees now
   case splittedFeesWithRespectiveVendorFee of
     [] -> throwError (InternalError "No driver fee entity with non zero total fee")
