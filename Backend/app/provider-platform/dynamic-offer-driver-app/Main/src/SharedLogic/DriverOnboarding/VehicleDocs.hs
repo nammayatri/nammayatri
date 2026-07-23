@@ -365,11 +365,13 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
         case mbStatus of
           Just status -> do
             mbMessage <- documentStatusMessage status Nothing docType mbProcessedUrl language skipMessages
-            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> mbMessage, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = mbMetadata}
+            finalMessage <- appendRcFailedRules docType status language processedVehicle.failedRules (mbProcessedReason <|> mbMessage)
+            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = finalMessage, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = mbMetadata}
           Nothing -> do
             (status, mbReason, mbUrl, _, mbS3PathInProgress, mbImageIdInProgress) <- getInProgressVehicleDocuments entityImagesInfo (Just rcImagesInfo) docType docVerificationConfigs
             mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
-            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3PathInProgress, imageId = mbImageIdInProgress, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = Nothing}
+            finalMessage <- appendRcFailedRules docType status language processedVehicle.failedRules mbMessage
+            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = finalMessage, verificationUrl = mbUrl, s3Path = mbS3PathInProgress, imageId = mbImageIdInProgress, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = Nothing}
 
     let mbRcImage = find (\img -> img.id == processedVehicle.documentImageId) entityImagesInfo.entityImages
         rcS3Path = mbRcImage <&> (.s3Path)
@@ -867,6 +869,20 @@ documentStatusMessage status mbReason docType mbVerificationUrl language skipMes
             | otherwise -> toVerificationMessage Other language
           Nothing -> toVerificationMessage Other language
     pure $ Just msg
+
+appendRcFailedRules :: DDVC.DocumentType -> ResponseStatus -> Language -> [Text] -> Maybe Text -> Flow (Maybe Text)
+appendRcFailedRules docType status language failedRules mbMsg =
+  case (docType, mbMsg) of
+    (DDVC.VehicleRegistrationCertificate, Just msg)
+      | status /= VALID && not (null failedRules) -> do
+        translatedReasons <- forM failedRules $ \reason -> do
+          let (key, value) = T.breakOn ":" reason
+          translatedKey <- translateDynamicKey key language
+          if T.null value
+            then pure translatedKey
+            else pure $ translatedKey <> ": " <> T.drop 1 value
+        pure $ Just (msg <> T.intercalate ", " translatedReasons)
+    _ -> pure mbMsg
 
 mapStatus :: Documents.VerificationStatus -> ResponseStatus
 mapStatus = \case

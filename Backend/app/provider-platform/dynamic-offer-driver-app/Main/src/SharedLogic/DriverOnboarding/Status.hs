@@ -304,27 +304,7 @@ fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig language
   vehicleDoc <-
     find (\doc -> doc.registrationNo == reqRegistrationNo) vehicleDocumentsUnverified
       & fromMaybeM (InvalidRequest $ "Vehicle doc not found for vehicle with registartionNo " <> reqRegistrationNo)
-  -- Surface the RC validation failures (invalid fuel type / vehicle class / OEM / manufacturing year, as
-  -- computed by validateRCResponse and persisted in RC.failedRules) in the RC document's verificationMessage,
-  -- mirroring the /register/status behaviour (getRCAndStatus). Only messageful callers (skipMessages == False)
-  -- get this; the validity-only caller keeps skipping translations.
-  vehicleDocWithReasons <- appendRcFailedRulesToVehicleDoc language rc vehicleDoc
-  pure (vehicleDocWithReasons, allDocumentVerificationConfigs)
-
--- | Append this RC's @failedRules@ to the RC document's verificationMessage (only when it already has a base
---   message and is not VALID); every other document is left untouched.
-appendRcFailedRulesToVehicleDoc :: Language -> RC.VehicleRegistrationCertificate -> VehicleDocumentItem -> Flow VehicleDocumentItem
-appendRcFailedRulesToVehicleDoc language rc vehicleDoc
-  | null rc.failedRules = pure vehicleDoc
-  | otherwise = do
-    documents <- forM vehicleDoc.documents $ \doc ->
-      case (doc.documentType, doc.verificationStatus, doc.verificationMessage) of
-        (DVC.VehicleRegistrationCertificate, status, Just msg)
-          | status /= VALID -> do
-            msgWithReasons <- addVerificationReasons language (Just rc.failedRules) msg
-            pure doc {verificationMessage = Just msgWithReasons}
-        _ -> pure doc
-    pure vehicleDoc {documents = documents}
+  pure (vehicleDoc, allDocumentVerificationConfigs)
 
 -- | Fetch this RC's vehicle docs and check all enabling docs are VALID (non-BOT path; matches main's ForEnabling).
 fetchAndCheckVehicleDocsValidForEnabling ::
