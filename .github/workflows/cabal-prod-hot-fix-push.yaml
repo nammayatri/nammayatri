@@ -82,7 +82,7 @@ jobs:
       - name: Compute cache key
         id: cache-key
         run: |
-          KEY=$(cat flake.lock Backend/cabal.project Backend/cabal.project.driver Backend/cabal.project.rider | sha256sum | cut -c1-16)
+          KEY=$(cat flake.lock Backend/cabal.project | sha256sum | cut -c1-16)
           echo "key=$KEY" >> $GITHUB_OUTPUT
 
       - name: Restore cabal cache
@@ -136,12 +136,6 @@ jobs:
       - name: Build (incremental cabal)
         run: |
           set -o pipefail
-          case "${{ github.ref_name }}" in
-            prodHotPush-BPP) PROJECT=cabal.project.driver ;;
-            prodHotPush-BAP) PROJECT=cabal.project.rider ;;
-            *)               PROJECT=cabal.project ;;
-          esac
-          echo "Selected cabal project file for ${{ github.ref_name }}: $PROJECT"
           nix develop .#backend --command bash -c "
             export CABAL_DIR=$HOME/ny-cabal-prod-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir
             cd Backend
@@ -153,9 +147,9 @@ jobs:
             ghc-pkg init \$CABAL_DIR/store/ghc-\$(ghc --numeric-version)/package.db 2>/dev/null || true
             echo \"GHC libdir: \$(ghc --print-libdir)\"
             echo '--- cabal dry-run (what it plans to rebuild) ---'
-            cabal build all --project-file=$PROJECT --flags=-Local --dry-run 2>&1 | tail -20
+            cabal build all --flags=-Local --dry-run 2>&1 | tail -20
             echo '--- real build ---'
-            cabal build all --project-file=$PROJECT --flags=-Local 2>&1
+            cabal build all --flags=-Local 2>&1
             BUILD_EXIT=\$?
             if [ \$BUILD_EXIT -ne 0 ]; then
               # Stale cache detection: 'which is not loaded' or '<no location info>' means
@@ -164,7 +158,7 @@ jobs:
               if grep -qE 'which is not loaded|<no location info>' prod-build-log.txt 2>/dev/null; then
                 echo '--- stale cache detected, clearing dist-newstyle and retrying clean build ---'
                 rm -rf dist-newstyle
-                cabal build all --project-file=$PROJECT --flags=-Local 2>&1
+                cabal build all --flags=-Local 2>&1
                 BUILD_EXIT=\$?
               fi
             fi
