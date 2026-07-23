@@ -296,7 +296,7 @@ useCoinsHandler (driverId, merchantId, merchantOpCityId) ConvertCoinToCashReq {.
             Redis.unlockRedis mkLockKey
             logDebug $ "Coins Conversion for DriverId: " <> driverId.getId <> "Converted to Cash"
         )
-    else throwError (InternalError $ "Coins Conversion Inprogress")
+    else throwError (InvalidRequest "Coins conversion already in progress, please wait")
   where
     withLockDriverId = do
       isLocked <- Redis.tryLockRedis mkLockKey 30
