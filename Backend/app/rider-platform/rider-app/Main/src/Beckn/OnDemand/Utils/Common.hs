@@ -41,6 +41,7 @@ import Kernel.Types.Beckn.Domain as Domain
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Text as KUText
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import SharedLogic.Search as SLS
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
@@ -129,6 +130,22 @@ mkPaymentTags =
           Tags.mkTag Tags.STATIC_TERMS (Just "https://example-test-bap.com/static-terms.txt")
         ]
     ]
+
+-- | Carry the full structured pickup/drop address losslessly as JSON-encoded tag
+-- values (group LOCATION_ADDRESS), so the BPP can use them directly instead of
+-- positionally re-parsing the flat `location.address` string (which is lossy when
+-- fields are empty or contain commas). Attached to the fulfillment tags.
+mkLocationAddressTags :: DLoc.Location -> Maybe DLoc.Location -> Maybe [Spec.TagGroup]
+mkLocationAddressTags fromLocation mbToLocation =
+  let tags =
+        Tags.mkTag Tags.PICKUP_ADDRESS (Just $ encodeAddressTag fromLocation.address) :
+        maybe [] (\toLoc -> [Tags.mkTag Tags.DROP_ADDRESS (Just $ encodeAddressTag toLoc.address)]) mbToLocation
+   in Just [Tags.getFullTagGroup Tags.LOCATION_ADDRESS tags]
+
+encodeAddressTag :: DLoc.LocationAddress -> Text
+encodeAddressTag addr =
+  KUText.encodeToText $
+    Tags.LocationAddressTag addr.door addr.building addr.street addr.area addr.ward addr.city addr.state addr.country addr.areaCode
 
 castVehicleVariant :: VehVar.VehicleVariant -> (Text, Text)
 castVehicleVariant = \case

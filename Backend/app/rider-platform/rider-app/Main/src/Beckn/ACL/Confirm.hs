@@ -94,6 +94,7 @@ tfFulfillments res =
         { Spec.fulfillmentCustomer = tfCustomer res,
           Spec.fulfillmentId = res.fulfillmentId,
           Spec.fulfillmentStops = Utils.mkStops' (Just res.fromLocation) stops res.mbToLocation,
+          Spec.fulfillmentTags = Utils.mkLocationAddressTags res.fromLocation res.mbToLocation,
           Spec.fulfillmentType = Utils.tripCategoryToFulfillmentType <$> res.tripCategory,
           Spec.fulfillmentVehicle = tfVehicle res
         }

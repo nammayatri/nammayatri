@@ -318,6 +318,49 @@ parseAddress loc@Spec.Location {..} = do
     isEmpty :: Maybe Text -> Bool
     isEmpty = maybe True (T.null . T.replace " " "")
 
+-- | Prefer the lossless structured address carried in the LOCATION_ADDRESS tag
+-- (emitted by NY BAPs); fall back to the legacy flat-string parse for senders that
+-- don't include it (external BAPs / older builds).
+parseAddressWithTag :: MonadFlow m => Maybe [Spec.TagGroup] -> Tags.BecknTag -> Spec.Location -> m (Maybe DL.LocationAddress)
+parseAddressWithTag mbTags roleTag loc =
+  case addressFromTag mbTags roleTag of
+    Just address -> pure (Just address)
+    Nothing -> parseAddress loc
+
+addressFromTag :: Maybe [Spec.TagGroup] -> Tags.BecknTag -> Maybe DL.LocationAddress
+addressFromTag mbTags roleTag = do
+  raw <- Utils.getTagV2 Tags.LOCATION_ADDRESS roleTag mbTags
+  tag <- decodeFromText raw
+  pure $ locationAddressFromTag tag
+
+locationAddressFromTag :: Tags.LocationAddressTag -> DL.LocationAddress
+locationAddressFromTag tag =
+  let area' = replaceEmpty tag.area <|> replaceEmpty tag.ward
+      strictFields =
+        catMaybes
+          [ replaceEmpty tag.door,
+            replaceEmpty tag.building,
+            replaceEmpty tag.street,
+            area',
+            replaceEmpty tag.city,
+            replaceEmpty tag.state,
+            replaceEmpty tag.areaCode,
+            replaceEmpty tag.country
+          ]
+   in DL.LocationAddress
+        { area = area',
+          areaCode = replaceEmpty tag.areaCode,
+          building = replaceEmpty tag.building,
+          city = replaceEmpty tag.city,
+          country = replaceEmpty tag.country,
+          door = replaceEmpty tag.door,
+          extras = Nothing,
+          fullAddress = if null strictFields then Nothing else Just (T.intercalate ", " strictFields),
+          instructions = Nothing,
+          state = replaceEmpty tag.state,
+          street = replaceEmpty tag.street
+        }
+
 mkStops' :: DLoc.Location -> Maybe DLoc.Location -> [DLoc.Location] -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Text -> Maybe [Spec.Stop]
 mkStops' origin mbDestination intermediateStops mAuthorization mEndAuthorization mbStartTime mbScheduledPickupDuration =
   let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}

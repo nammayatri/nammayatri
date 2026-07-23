@@ -55,6 +55,23 @@ data Taggings = Taggings
 instance Default Taggings where
   def = Taggings [] [] [] [] [] [] [] [] []
 
+-- | Lossless wire representation of a structured location address, carried as the
+-- JSON-encoded value of a PICKUP_ADDRESS / DROP_ADDRESS tag (group LOCATION_ADDRESS).
+-- Both BAP (encode) and BPP (decode) share this type so field names always agree,
+-- avoiding the lossy positional re-parse of the flat `location.address` string.
+data LocationAddressTag = LocationAddressTag
+  { door :: Maybe Text,
+    building :: Maybe Text,
+    street :: Maybe Text,
+    area :: Maybe Text,
+    ward :: Maybe Text,
+    city :: Maybe Text,
+    state :: Maybe Text,
+    country :: Maybe Text,
+    areaCode :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 data BecknTagGroup
   = -- ONDC standard tag groups for ONDC:TRV10 domain
     FARE_POLICY
@@ -120,6 +137,8 @@ data BecknTagGroup
   | DISABILITY_DWARFISM -- dwarfism
   | DISABILITY_ACID_ATTACK -- acid attack survivor
   | DISABILITY_MULTIPLE_DIS -- multiple disabilities
+  | -- Lossless structured address (JSON-encoded per stop role); see LocationAddressTag
+    LOCATION_ADDRESS
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance CompleteTagGroup BecknTagGroup where
@@ -585,6 +604,9 @@ data BecknTag
     IS_TIER_UPGRADE -- GENERAL_INFO: "true" iff assigned tier ranks above booked tier
   | ASSIGNED_SERVICE_TIER_TYPE -- GENERAL_INFO: assigned tier enum (e.g. "SEDAN")
   | ASSIGNED_SERVICE_TIER_NAME -- GENERAL_INFO: merchant-configured display name (e.g. "Sedan")
+  | -- LOCATION_ADDRESS: JSON-encoded LocationAddressTag for the pickup / drop stop
+    PICKUP_ADDRESS
+  | DROP_ADDRESS
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -651,6 +673,8 @@ instance CompleteTag BecknTag where
   getFullTag tag = Spec.Tag (Just $ getTagDescriptor tag) (Just $ getTagDisplay tag)
 
   getTagGroup = \case
+    PICKUP_ADDRESS -> LOCATION_ADDRESS
+    DROP_ADDRESS -> LOCATION_ADDRESS
     DISTANCE_INFO_IN_M -> ROUTE_INFO
     DURATION_INFO_IN_S -> ROUTE_INFO
     RETURN_TIME -> ROUTE_INFO

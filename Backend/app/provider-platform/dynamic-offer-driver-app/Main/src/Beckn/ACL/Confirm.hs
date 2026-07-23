@@ -51,7 +51,7 @@ buildConfirmReqV2 req isValueAddNP = do
   fulfillment <- req.confirmReqMessage.confirmReqMessageOrder.orderFulfillments >>= listToMaybe & fromMaybeM (InvalidRequest "Fulfillment not found")
   customerPhoneNumber <- fulfillment.fulfillmentCustomer >>= (.customerContact) >>= (.contactPhone) & fromMaybeM (InvalidRequest "Customer Phone not found")
   let customerMobileCountryCode = "+91" -- TODO: check how to get countrycode via ONDC
-  fromAddress' <- fulfillment.fulfillmentStops >>= Utils.getStartLocation >>= (.stopLocation) & maybe (pure Nothing) Utils.parseAddress
+  fromAddress' <- fulfillment.fulfillmentStops >>= Utils.getStartLocation >>= (.stopLocation) & maybe (pure Nothing) (Utils.parseAddressWithTag fulfillment.fulfillmentTags Tag.PICKUP_ADDRESS)
   fromAddress <- fromAddress' & fromMaybeM (InvalidRequest "Start location not found")
   let mbRiderName = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personName)
   let vehCategory = fulfillment.fulfillmentVehicle >>= (.vehicleCategory)
@@ -61,7 +61,7 @@ buildConfirmReqV2 req isValueAddNP = do
       enableFrequentLocationUpdates = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableFrequentLocationUpdatesTag
       enableOtpLessRide = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableOtpLessRideTag
       driverPreference = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getDriverPreferenceTag
-  toAddress <- fulfillment.fulfillmentStops >>= Utils.getDropLocation >>= (.stopLocation) & maybe (pure Nothing) Utils.parseAddress
+  toAddress <- fulfillment.fulfillmentStops >>= Utils.getDropLocation >>= (.stopLocation) & maybe (pure Nothing) (Utils.parseAddressWithTag fulfillment.fulfillmentTags Tag.DROP_ADDRESS)
   let paymentId = req.confirmReqMessage.confirmReqMessageOrder.orderPayments >>= listToMaybe >>= (.paymentId)
       orderTags = req.confirmReqMessage.confirmReqMessageOrder.orderTags
       customerDiscountAmount = (Utils.getTagV2 Tag.OFFER_INFO Tag.DISCOUNT_AMOUNT orderTags) >>= (readMaybe . T.unpack) <&> HighPrecMoney
