@@ -120,7 +120,7 @@ instance IsBaseError FareProductError where
 
 instance IsHTTPError FareProductError where
   toErrorCode NoFareProduct = "NO_FARE_PRODUCT"
-  toHttpCode NoFareProduct = E500
+  toHttpCode NoFareProduct = E400
 
 instance IsAPIError FareProductError
 
