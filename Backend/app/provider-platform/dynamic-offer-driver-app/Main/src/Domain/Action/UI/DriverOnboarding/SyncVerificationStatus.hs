@@ -41,7 +41,9 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.DriverOnboarding.VehicleDocs (ResponseStatus (..))
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.HyperVergeVerificationExtra as HVQueryExtra
 import qualified Storage.Queries.IdfyVerification as IVQuery
@@ -66,10 +68,6 @@ isPullableStatus = \case
   LIMIT_EXCEED -> False
   UNAUTHORIZED -> False
   CONSENT_DENIED -> False
-
--- | Webhook head start: rows younger than this are left for the webhook to resolve.
-webhookGracePeriod :: NominalDiffTime
-webhookGracePeriod = 120 -- 2 minutes
 
 -- | Which provider tables can hold a pending row for a doc under the CURRENT config — an upper bound,
 --   ORed across driver-app + dashboard columns (a row doesn't record its surface). PAN/GST/UDYAM
@@ -118,9 +116,13 @@ reconcilePending ::
   (SDO.VerificationReqRecord -> KEV.GetTaskResp -> KEV.VerificationService -> Flow ()) ->
   Flow ()
 reconcilePending person docType mbImageIdTxt dispatch = do
+  transporterConfig <-
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing))
+      >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   -- Throttle before any lookup: a stuck doc costs one Redis op per render; reads + getTask run at most
-  -- once per window. A row still in the grace window consumes a window, so it heals one window later.
-  firstPullInWindow <- Redis.setNxExpire pullThrottleKey (round webhookGracePeriod) ()
+  -- once per window. Keep docPullThrottleWindowSec below docPullWebhookGraceSec — otherwise a row still
+  -- in its grace window consumes a throttle window and only heals one window later.
+  firstPullInWindow <- Redis.setNxExpire pullThrottleKey transporterConfig.docPullThrottleWindowSec ()
   when firstPullInWindow $ do
     merchantServiceUsageConfig <-
       getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CMSUC.findByMerchantOpCityId person.merchantOperatingCityId Nothing))
@@ -139,7 +141,7 @@ reconcilePending person docType mbImageIdTxt dispatch = do
         now <- getCurrentTime
         whenJust (newer idfyRow hvRow) $ \row ->
           -- Skip rows still within the webhook grace window — a fresh row is the webhook's to resolve.
-          when (diffUTCTime now row.rowCreatedAt > webhookGracePeriod) $ reconcileRow row
+          when (diffUTCTime now row.rowCreatedAt > fromIntegral transporterConfig.docPullWebhookGraceSec) $ reconcileRow transporterConfig row
   where
     pullThrottleKey = "verifyPull:" <> person.id.getId <> ":" <> show docType <> maybe "" (":" <>) mbImageIdTxt
 
@@ -157,12 +159,13 @@ reconcilePending person docType mbImageIdTxt dispatch = do
     newer (Just a) (Just b) = Just $ if a.rowCreatedAt >= b.rowCreatedAt then a else b
     newer a b = a <|> b
 
-    reconcileRow PendingRow {rowService, rowReq} =
+    reconcileRow transporterConfig PendingRow {rowService, rowReq} =
       void . withTryCatch ("reconcilePending:" <> rowReq.requestId) $ do
-        -- Cross-path dedupe: the sync DL backstop may have pulled this requestId moments ago.
-        firstReqPull <- Redis.setNxExpire (SDO.getTaskPullKey rowReq.requestId) (round SDO.getTaskPullWindow) ()
+        -- Cross-path dedupe: the sync DL backstop may have pulled this requestId moments ago. Both paths
+        -- must use docPullDedupeWindowSec from the same city's config, or the shared key desyncs.
+        firstReqPull <- Redis.setNxExpire (SDO.getTaskPullKey rowReq.requestId) transporterConfig.docPullDedupeWindowSec ()
         when firstReqPull $ do
-          allowed <- SDO.allowGetTaskAttempt rowReq.requestId
+          allowed <- SDO.allowGetTaskAttempt transporterConfig.docPullMaxAttempts transporterConfig.docPullAttemptWindowSec rowReq.requestId
           if not allowed
             then logInfo $ "reconcilePending: attempt cap hit for " <> rowReq.requestId <> ", cooling down"
             else do

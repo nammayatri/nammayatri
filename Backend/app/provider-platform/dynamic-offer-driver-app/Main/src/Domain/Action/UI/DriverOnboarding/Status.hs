@@ -82,10 +82,10 @@ statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMand
       language = if useDriverLanguage == Just True then fromMaybe merchantOperatingCity.language person.language else merchantOperatingCity.language
   (dlStatus, mDL, dlVerficationMessage) <- SStatus.getDLAndStatus personId entityImagesInfo language useHVSdkForDL
   (rcStatus, _, rcVerficationMessage) <- SStatus.getRCAndStatus personId entityImagesInfo language
-  (aadhaarStatus, _) <- SStatus.getAadhaarStatus personId
+  (aadhaarStatus, mbAadhaar) <- SStatus.getAadhaarStatus personId
   let shouldActivateRc = True
       skipMessages = False -- Need translations for API response
-  SStatus.StatusRes' {..} <- SStatus.statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs skipMessages
+  SStatus.StatusRes' {..} <- SStatus.statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL mbAadhaar useHVSdkForDL shouldActivateRc onlyMandatoryDocs skipMessages
 
   -- Re-pull the latest provider status for any doc whose verification webhook was dropped, at the point
   -- its status is rendered. Shared with the dashboard status endpoint via 'pullPendingDocStatuses'.

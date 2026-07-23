@@ -38,6 +38,7 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverUdyam as DUQuery
+import qualified Storage.Queries.DriverUdyamExtra as DUQueryExtra
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Person as PersonQuery
 import Tools.Error
@@ -110,19 +111,9 @@ onVerifyUdyam verificationReq output serviceName = do
     VT.Idfy -> do
       person <- PersonQuery.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
       mDriverUdyam <- DUQuery.findByDriverId person.id
-      now <- getCurrentTime
       case mDriverUdyam of
-        Just driverUdyam -> do
-          let updated =
-                driverUdyam
-                  { DUdyam.verificationStatus = Documents.VALID,
-                    DUdyam.documentImageId = verificationReq.documentImageId1,
-                    DUdyam.enterpriseName = output.enterpriseName,
-                    DUdyam.enterpriseType = output.enterpriseType,
-                    DUdyam.rejectReason = Nothing,
-                    DUdyam.updatedAt = now
-                  }
-          DUQuery.updateByPrimaryKey updated
+        Just driverUdyam ->
+          DUQueryExtra.updateVerificationResultById Documents.VALID verificationReq.documentImageId1 output.enterpriseName output.enterpriseType driverUdyam.id
         Nothing -> do
           udyamCardDetails <- buildDriverUdyamCard person verificationReq.documentNumber output.enterpriseName output.enterpriseType Documents.VALID verificationReq.documentImageId1
           DUQuery.create udyamCardDetails
