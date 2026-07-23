@@ -30,6 +30,7 @@ This directory contains chunked documentation for the Nammayatri backend. Each d
 | `16-status-definitions.md` | All status enums with state transition diagrams | Understanding booking/ride/ticket state machines |
 | `17-testing-framework.md` | Test-stack index → `Backend/dev/test-tool/README.md` | Running / extending the integration test stack |
 | `18-finance-module-guide.md` | Double-entry ledger, account types, driver wallet flow | Working on earnings, payouts, invoices, cancellation/refund accounting |
+| `19-stcl-membership-topup.md` | STCL Membership share top-up: one-row-per-purchase pattern, `/buyAdditionalShares` endpoint, cap / anti-overallocation logic, per-MOC `stclConfig` tunables | Working on STCL Membership top-up flow, share-range allocation, or the `get` / `update` API contract for multi-allotment drivers |
 
 ## Cross-Reference Guide
 
@@ -40,3 +41,4 @@ This directory contains chunked documentation for the Nammayatri backend. Each d
 - **FRFS feature**: Read `10-frfs-public-transport.md` → `05-beckn-protocol-flow.md`
 - **Multi-cloud bug**: Read `12-multi-cloud.md` → `08-database-patterns.md`
 - **Driver earnings / wallet / ledger**: Read `18-finance-module-guide.md` → `06-ride-flow.md`
+- **STCL membership share top-up**: Read `19-stcl-membership-topup.md` → `18-finance-module-guide.md` → `04-driver-app.md`
