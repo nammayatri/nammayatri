@@ -31,6 +31,15 @@ findByMobileNumberAndMerchantAndBapId mobileNumber_ (Id merchantId) bapId_ = do
 findByMobileNumberHashAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> Id Merchant -> m (Maybe RiderDetails)
 findByMobileNumberHashAndMerchant mobileNumberDbHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.merchantId $ Se.Eq merchantId]]
 
+findAllByMobileNumberHashesAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [DbHash] -> Id Merchant -> m [RiderDetails]
+findAllByMobileNumberHashesAndMerchant mobileNumberHashes (Id merchantId) =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamRD.mobileNumberHash $ Se.In mobileNumberHashes,
+          Se.Is BeamRD.merchantId $ Se.Eq merchantId
+        ]
+    ]
+
 updateReferralInfo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> Id Merchant -> Id DriverReferral -> Id Person -> m ()
 updateReferralInfo customerNumberHash merchantId referralId driverId = do
   now <- getCurrentTime
