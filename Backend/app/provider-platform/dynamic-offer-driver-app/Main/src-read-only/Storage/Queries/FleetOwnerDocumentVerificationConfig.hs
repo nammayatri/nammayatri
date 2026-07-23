@@ -18,6 +18,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FleetOwnerDocumentVerificationConfig as Beam
+import qualified Storage.Queries.Transformers.DocumentVerificationConfig
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig -> m ())
 create = createWithKV
@@ -64,6 +65,7 @@ updateByPrimaryKey (Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwner
       Se.Set Beam.disableWarning disableWarning,
       Se.Set Beam.doStrictVerifcation doStrictVerifcation,
       Se.Set Beam.documentCategory documentCategory,
+      Se.Set Beam.documentFieldsJSON (Storage.Queries.Transformers.DocumentVerificationConfig.mkDocumentFieldsJSON documentFields),
       Se.Set Beam.documentOnboardingStage documentOnboardingStage,
       Se.Set Beam.isDefaultEnabledOnManualVerification isDefaultEnabledOnManualVerification,
       Se.Set Beam.isDisabled isDisabled,
@@ -99,6 +101,7 @@ instance FromTType' Beam.FleetOwnerDocumentVerificationConfig Domain.Types.Fleet
             disableWarning = disableWarning,
             doStrictVerifcation = doStrictVerifcation,
             documentCategory = documentCategory,
+            documentFields = Storage.Queries.Transformers.DocumentVerificationConfig.getDocumentFieldsFromJSON documentFieldsJSON,
             documentOnboardingStage = documentOnboardingStage,
             documentType = documentType,
             isDefaultEnabledOnManualVerification = isDefaultEnabledOnManualVerification,
@@ -130,6 +133,7 @@ instance ToTType' Beam.FleetOwnerDocumentVerificationConfig Domain.Types.FleetOw
         Beam.disableWarning = disableWarning,
         Beam.doStrictVerifcation = doStrictVerifcation,
         Beam.documentCategory = documentCategory,
+        Beam.documentFieldsJSON = Storage.Queries.Transformers.DocumentVerificationConfig.mkDocumentFieldsJSON documentFields,
         Beam.documentOnboardingStage = documentOnboardingStage,
         Beam.documentType = documentType,
         Beam.isDefaultEnabledOnManualVerification = isDefaultEnabledOnManualVerification,
