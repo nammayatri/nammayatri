@@ -15,19 +15,27 @@ module Processor.RideEvents.Handlers
     handleRideEndNotifications,
     handleLeaderboard,
     handleReferral,
+    handleDriverCityMigration,
   )
 where
 
 import qualified Data.Aeson as A
+import qualified "dynamic-offer-driver-app" Domain.Action.UI.Registration as DReg
 import "dynamic-offer-driver-app" Domain.Action.UI.Ride.EndRide (RideInterpolationData (..))
 import qualified "dynamic-offer-driver-app" Domain.Types.Booking as SRB
+import qualified "dynamic-offer-driver-app" Domain.Types.DocumentVerificationConfig as DTO
 import "dynamic-offer-driver-app" Domain.Types.Event.RideEndedEvent (RideEndedEvent (..))
+import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as DM
+import qualified "dynamic-offer-driver-app" Domain.Types.MerchantOperatingCity as DMOC
+import qualified "dynamic-offer-driver-app" Domain.Types.Person as DP
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as Ride
 import qualified "dynamic-offer-driver-app" Domain.Types.RideRelatedNotificationConfig as DRN
 import "dynamic-offer-driver-app" Domain.Types.TransporterConfig (TransporterConfig)
+import qualified "beckn-spec" Domain.Types.Trip as DTrip
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Encryption (EncFlow)
 import qualified Kernel.External.Encryption as EncFlow
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CHConfig
@@ -38,10 +46,12 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerToo
 import qualified Kernel.Tools.Metrics.CoreMetrics as CoreMetrics
 import Kernel.Types.Common (MonadFlow)
 import Kernel.Types.Confidence (Confidence (..))
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
   ( CacheFlow,
     HasShortDurationRetryCfg,
+    Hours,
     fromMaybeM,
     getCurrentTime,
     getLocalCurrentTime,
@@ -58,6 +68,7 @@ import Lib.Scheduler.Environment (JobCreator)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import Lib.Yudhishthira.Storage.Beam.BeamFlow (HasYudhishthiraTablesSchema)
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
+import qualified Lib.Yudhishthira.Tools.Utils as YTUtils
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Processor.RideEvents.InternalHelpers as IH
 import qualified "dynamic-offer-driver-app" SharedLogic.Analytics as Analytics
@@ -66,19 +77,32 @@ import qualified "dynamic-offer-driver-app" SharedLogic.External.LocationTrackin
 import qualified "dynamic-offer-driver-app" SharedLogic.FleetVehicleStats as FVS
 import "dynamic-offer-driver-app" SharedLogic.Reminder.Helper (checkAndCreateRemindersForRidesThreshold)
 import qualified "dynamic-offer-driver-app" SharedLogic.ScheduledNotifications as SN
+import qualified "dynamic-offer-driver-app" Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified "dynamic-offer-driver-app" Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified "dynamic-offer-driver-app" Storage.CachedQueries.RideRelatedNotificationConfig as CRN
 import "dynamic-offer-driver-app" Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified "dynamic-offer-driver-app" Storage.Queries.Booking as QRB
+import qualified "dynamic-offer-driver-app" Storage.Queries.DailyStats as QDailyStats
+import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformationExtra as QDriverInfo
+import qualified "dynamic-offer-driver-app" Storage.Queries.DriverPlan as QDPlan
+import qualified "dynamic-offer-driver-app" Storage.Queries.DriverProfileQuestions as QDriverProfileQuestions
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverRCAssociation as QDRCA
+import qualified "dynamic-offer-driver-app" Storage.Queries.DriverReferral as QDriverReferral
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverStats as QDriverStats
+import qualified "dynamic-offer-driver-app" Storage.Queries.Image as QImage
+import qualified "dynamic-offer-driver-app" Storage.Queries.Person as QPerson
 import qualified "dynamic-offer-driver-app" Storage.Queries.RCStatsExtra as QRCStats
+import qualified "dynamic-offer-driver-app" Storage.Queries.RegistrationToken as QReg
 import qualified "dynamic-offer-driver-app" Storage.Queries.Ride as QRide
 import qualified "dynamic-offer-driver-app" Storage.Queries.RiderDetails as QRiderDetails
+import qualified "dynamic-offer-driver-app" Storage.Queries.Vehicle as QVehicle
+import qualified "dynamic-offer-driver-app" Storage.Queries.VehicleExtra as QVehicleExtra
 import qualified "dynamic-offer-driver-app" Tools.ActorInfo as ActorInfo
 import qualified Tools.DynamicLogic as DL
 import "dynamic-offer-driver-app" Tools.Error
 import "dynamic-offer-driver-app" Tools.Event (BookingEventData (..), RideEventData (..))
 import qualified "dynamic-offer-driver-app" Tools.Event as Event
+import "dynamic-offer-driver-app" Tools.Notifications (notifyDriver)
 
 ------------------------------------------------------------
 -- Helpers
@@ -365,3 +389,174 @@ handleReferral ev = ActorInfo.withMbActorInfo ev.actorInfo . withRideAndBooking 
   mbRiderDetails <- join <$> QRiderDetails.findById `mapM` booking.riderId
   IH.sendReferralFCM ev.isValidRide ride booking mbRiderDetails thresholdConfig
   IH.sendDriverToDriverReferralReward ev.isValidRide ride booking mbRiderDetails thresholdConfig
+
+------------------------------------------------------------
+-- P1b-11 : Driver operating-city migration on relocation
+------------------------------------------------------------
+
+-- | Keeps a driver's operating city in sync with where their rides actually originate.
+-- Reads ride.merchantOperatingCityId (the city the ride was booked/dispatched in) --
+-- for the same-city rides this handler processes, that's the city the driver is
+-- actually operating in for this ride. Skipped for InterCity/CrossCity rides, which are
+-- *expected* to run outside the driver's operating city and don't by themselves imply
+-- the driver has relocated there -- genuine relocation is still caught by the driver's
+-- subsequent *local* rides in the new city, which are never tagged either way.
+--
+-- The entire migration (auth-layer sync, notification, billing tag, doc-gap
+-- notifications, operational-table sync) is gated by ONE 1-day Redis lock keyed on the
+-- driver: the first qualifying ride of the rolling day runs the whole thing inline; any
+-- further city-changing ride for this driver within 24h is a clean no-op. This debounces
+-- NCR-style thrash (a stray local ride in a neighboring cross-travel city shouldn't yank
+-- a driver back and forth) without needing a separate delayed job -- the lock itself is
+-- the debounce.
+handleDriverCityMigration ::
+  ( CacheFlow m r,
+    Esq.EsqDBFlow m r,
+    MonadFlow m,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r
+  ) =>
+  RideEndedEvent ->
+  m ()
+handleDriverCityMigration ev = withRideAndBooking ev $ \ride booking -> do
+  let isInterOrCrossCityRide = case ride.tripCategory of
+        DTrip.InterCity _ _ -> True
+        DTrip.CrossCity _ _ -> True
+        _ -> False
+  unless isInterOrCrossCityRide $ do
+    let targetOpCityId = ride.merchantOperatingCityId
+    driverPerson <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+    when (driverPerson.merchantOperatingCityId /= targetOpCityId) $
+      Redis.whenWithLockRedis (driverCityMigrationLockKey ride.driverId) driverCityMigrationLockTtl $ do
+        -- --- auth layer: mirrors Dashboard.Driver.postDriverChangeOperatingCity's manual flow ---
+        QPerson.updateMerchantOperatingCityId ride.driverId targetOpCityId
+        QReg.updateMerchantOperatingCityId targetOpCityId.getId ride.driverId.getId booking.providerId.getId
+        DReg.cleanCachedTokens ride.driverId
+        targetOpCity <- CQMOC.findById targetOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist targetOpCityId.getId)
+        notifyDriver
+          targetOpCityId
+          FCM.NEW_MESSAGE
+          "Operating City Updated"
+          ("Your operating city has been updated to " <> show targetOpCity.city <> ".")
+          driverPerson
+          driverPerson.deviceToken
+
+        -- --- billing: tag only, never auto-switch (per-city pricing differs) ---
+        mbDriverPlan <- QDPlan.findByPrimaryKey ride.driverId
+        let mbBillingTag =
+              mbDriverPlan >>= \p ->
+                if p.merchantOpCityId /= targetOpCityId
+                  then
+                    Just
+                      ( LYT.TagNameValue "SubscriptionMigrationPending",
+                        "Your operating city has changed. Please visit the plan page to select a plan for your current city."
+                      )
+                  else Nothing
+
+        -- --- documents: diff required-vs-held, dedup-tag, notify. Uses the ForEnabling
+        -- notion (fromMaybe isMandatory isMandatoryForEnabling), not plain isMandatory --
+        -- isMandatory alone misses "enabling-only" docs (isMandatory=false,
+        -- isMandatoryForEnabling=true, e.g. MSDS/Medical), so a driver needing one of
+        -- those to go online in the new city would otherwise never be told. ---
+        mbVehicle <- QVehicle.findById ride.driverId
+        docTags <- case mbVehicle >>= (.category) of
+          Nothing -> pure []
+          Just vehicleCategory -> do
+            allConfigs <- CQDVC.findAllByMerchantOpCityId targetOpCityId Nothing
+            let requiredDocTypes =
+                  [ c.documentType
+                    | c <- allConfigs,
+                      fromMaybe c.isMandatory c.isMandatoryForEnabling,
+                      not c.isDisabled,
+                      c.vehicleCategory == vehicleCategory
+                  ]
+            missingDocTypes <- filterM (fmap not . isDocumentHeld ride.driverId booking.providerId) requiredDocTypes
+            pure
+              [ ( LYT.TagNameValue ("MissingDocumentForCity_" <> show docType <> "#" <> targetOpCityId.getId),
+                  "Please upload " <> show docType <> " to continue operating in your current city."
+                )
+                | docType <- missingDocTypes
+              ]
+
+        applyNewTags driverPerson targetOpCityId (maybeToList mbBillingTag <> docTags)
+
+        -- --- operational tables: sync directly, no gating. Document tables are
+        -- intentionally excluded -- nothing reads their city column. ---
+        QDriverInfo.updateMerchantIdAndCityIdByDriverId ride.driverId booking.providerId targetOpCityId
+        QVehicleExtra.updateMerchantIdAndCityIdByDriverId ride.driverId booking.providerId (Just targetOpCityId.getId)
+        QDailyStats.updateMerchantIdAndCityIdByDriverId (Just booking.providerId) (Just targetOpCityId) ride.driverId
+        QDriverReferral.updateMerchantIdAndCityIdByDriverId (Just booking.providerId) (Just targetOpCityId) ride.driverId
+        QDriverProfileQuestions.updateMerchantOperatingCityIdByDriverId targetOpCityId ride.driverId
+  where
+    isDocumentHeld :: (CacheFlow m r, Esq.EsqDBFlow m r, MonadFlow m) => Id DP.Person -> Id DM.Merchant -> DTO.DocumentType -> m Bool
+    isDocumentHeld personId merchantId docType = do
+      images <- QImage.findImagesByPersonAndType Nothing Nothing merchantId personId docType
+      pure $ any (\img -> img.verificationStatus == Just Documents.VALID) images
+
+    -- Applies every candidate tag against ONE accumulating view of the driver's tag
+    -- list, so a tag added earlier in this run is visible to the dedup check for a
+    -- later one in the same run. existingTags is expiry-filtered up front -- relying
+    -- on the read-side fromTType' filter alone isn't safe here, since EsqDBFlow reads
+    -- can be served from a Redis-cached Person snapshot taken before a tag's embedded
+    -- expiry passed, which would otherwise keep suppressing a fresh notification for
+    -- an already-expired-but-still-unresolved gap. The final write-comparison is
+    -- against this same filtered baseline, so a run that only prunes expired entries
+    -- (no new tag needed) still persists that cleanup. Sends exactly one notification
+    -- per genuinely new tag, targeted at the city the driver is migrating TO (not
+    -- person.merchantOperatingCityId, which is stale here -- driverPerson was loaded
+    -- before the city-update write above and is never refreshed).
+    applyNewTags ::
+      ( CacheFlow m r,
+        Esq.EsqDBFlow m r,
+        MonadFlow m,
+        Redis.HedisFlow m r,
+        Redis.HedisLTSFlowEnv r
+      ) =>
+      DP.Person ->
+      Id DMOC.MerchantOperatingCity ->
+      [(LYT.TagNameValue, Text)] ->
+      m ()
+    applyNewTags person targetOpCityId candidateTags = do
+      now <- getCurrentTime
+      let existingTags = YTUtils.filterExpiredTags' now (fromMaybe [] person.driverTag)
+      finalTags <- foldM (addTagIfAbsent person targetOpCityId now) existingTags candidateTags
+      when (YTUtils.showRawTags finalTags /= YTUtils.showRawTags existingTags) $
+        QPerson.updateDriverTag (Just finalTags) person.id
+
+    addTagIfAbsent ::
+      ( CacheFlow m r,
+        Esq.EsqDBFlow m r,
+        MonadFlow m,
+        Redis.HedisFlow m r,
+        Redis.HedisLTSFlowEnv r
+      ) =>
+      DP.Person ->
+      Id DMOC.MerchantOperatingCity ->
+      UTCTime ->
+      [LYT.TagNameValueExpiry] ->
+      (LYT.TagNameValue, Text) ->
+      m [LYT.TagNameValueExpiry]
+    addTagIfAbsent person targetOpCityId now acc (tag, body) =
+      if YTUtils.elemTagNameValue tag acc
+        then pure acc
+        else do
+          let tagWithExpiry = YTUtils.addTagExpiry tag (Just tagExpiryHours) now
+          notifyDriver
+            targetOpCityId
+            FCM.NEW_MESSAGE
+            "City Update"
+            body
+            person
+            person.deviceToken
+          pure $ YTUtils.replaceTagNameValue (Just acc) tagWithExpiry
+
+    tagExpiryHours :: Hours
+    tagExpiryHours = 336 -- 14 days
+
+driverCityMigrationLockKey :: Id DP.Person -> Text
+driverCityMigrationLockKey driverId = "DriverCityMigration:Lock:" <> driverId.getId
+
+driverCityMigrationLockTtl :: Int
+driverCityMigrationLockTtl = 86400 -- 1 day: debounces the entire migration (auth sync +
+-- notification + reconciliation) per driver, per the
+-- senior-review decision -- not just a job enqueue.

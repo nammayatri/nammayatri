@@ -251,6 +251,10 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
 
   fork "processEndRideFinance" $ processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig
 
+  -- Driver operating-city migration on relocation is handled by kafka-consumers'
+  -- RIDE_EVENTS_CONSUMER (Processor.RideEvents.Handlers.handleDriverCityMigration), off the
+  -- RideEndedEvent published below -- not here. See that module for the full design.
+
   let validRide = isValidRide ride
   -- Publish RideEndedEvent to Redis Stream "ride.events.shard<N>". kafka-consumers
   -- RIDE_EVENTS_CONSUMER fans this out to: analytics Kafka events, ride-interpolation,
