@@ -1,0 +1,216 @@
+name: Cabal CI (Optimized Build)
+
+on:
+  push:
+    branches:
+      - "Prod-release-branch-18-jul"
+      - "prodHotPush-Common"
+      - "prodHotPush-International"
+  workflow_dispatch:
+
+concurrency:
+  group: cabal-optimized-build-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+  packages: write
+
+jobs:
+  check-conditions:
+    runs-on: ubuntu-latest
+    outputs:
+      should-proceed: ${{ steps.evaluate.outputs.should_proceed }}
+      should-push-docker: ${{ steps.check-docker-push.outputs.should_push_docker }}
+    steps:
+      - name: Check global conditions
+        id: evaluate
+        run: |
+          echo "should_proceed=true" >> $GITHUB_OUTPUT
+
+      - name: Check docker push conditions
+        id: check-docker-push
+        run: |
+          echo "should_push_docker=true" >> $GITHUB_OUTPUT
+
+  cabal-build:
+    name: ${{ matrix.name }}
+    needs: [check-conditions]
+    continue-on-error: ${{ matrix.continue-on-error }}
+    if: needs.check-conditions.outputs.should-proceed == 'true'
+    strategy:
+      matrix:
+        include:
+          - system: x86_64-linux
+            host: x86_64_main_push
+            arch: amd64
+            name: Cabal Optimized Release Build
+            continue-on-error: false
+      fail-fast: false
+    runs-on: x86_64_prodHotPush-Common_push
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          KEY=$(cat flake.lock Backend/cabal.project | sha256sum | cut -c1-16)
+          echo "key=$KEY" >> $GITHUB_OUTPUT
+
+      - name: Restore cabal cache
+        run: |
+          CACHE_ROOT=$HOME/ny-cabal-optimized-cache/${RUNNER_NAME}/${{ github.ref_name }}
+          KEY_FILE="$CACHE_ROOT/.cache-key-optimized"
+          CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
+
+          if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
+            echo "Cache key changed, busting dist-newstyle, cabal store and HIE caches"
+            rm -rf "$CACHE_ROOT/dist-newstyle"
+            rm -rf "$CACHE_ROOT/.cabal-dir/store"
+            rm -rf "$CACHE_ROOT/hie"
+          fi
+
+          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir"
+          echo "$CURRENT_KEY" > "$KEY_FILE"
+          ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
+
+      - name: Link HIE dirs to persistent cache
+        run: |
+          CACHE_ROOT=$HOME/ny-cabal-optimized-cache/${RUNNER_NAME}/${{ github.ref_name }}
+          HIE_CACHE="$CACHE_ROOT/hie"
+          cd "$GITHUB_WORKSPACE/Backend"
+          grep -E '^[[:space:]]+(app|lib|test)' cabal.project | awk '{print $1}' | while read -r pkg; do
+            [ -d "$pkg" ] || continue
+            mkdir -p "$HIE_CACHE/$pkg"
+            rm -rf "$pkg/.hie"
+            ln -sfn "$HIE_CACHE/$pkg" "$pkg/.hie"
+          done
+          echo "Linked package .hie dirs under $HIE_CACHE"
+
+      - name: Cache diagnostics
+        run: |
+          echo "RUNNER_NAME      = $RUNNER_NAME"
+          echo "GITHUB_WORKSPACE = $GITHUB_WORKSPACE"
+          echo "pwd              = $(pwd)"
+          CACHE_ROOT=$HOME/ny-cabal-optimized-cache/${RUNNER_NAME}/${{ github.ref_name }}
+          echo "cache dir        = $CACHE_ROOT"
+          echo "dist-newstyle size at START:"; du -sh "$CACHE_ROOT/dist-newstyle" 2>/dev/null || echo "  (absent/empty)"
+          echo "build dirs already present:"; ls "$CACHE_ROOT/dist-newstyle/build" 2>/dev/null | head || echo "  none"
+
+      - name: Build (incremental cabal, optimized)
+        run: |
+          set -o pipefail
+          nix develop .#backend --command bash -c "
+            export CABAL_DIR=$HOME/ny-cabal-optimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir
+            mkdir -p \$CABAL_DIR
+            printf 'active-repositories: :none\n' > \$CABAL_DIR/config
+            export CABAL_CONFIG=\$CABAL_DIR/config
+            cd Backend
+            rm -rf \$CABAL_DIR/store
+            mkdir -p \$CABAL_DIR/store/ghc-\$(ghc --numeric-version)
+            ghc-pkg init \$CABAL_DIR/store/ghc-\$(ghc --numeric-version)/package.db 2>/dev/null || true
+            echo \"GHC libdir: \$(ghc --print-libdir)\"
+            echo '--- cabal dry-run (what it plans to rebuild) ---'
+            cabal build all --flags=-Local --dry-run 2>&1 | tail -20
+            echo '--- real build ---'
+            cabal build all --flags=-Local 2>&1
+            BUILD_EXIT=\$?
+            if [ \$BUILD_EXIT -ne 0 ]; then
+              if grep -qE 'which is not loaded|<no location info>' optimized-build-log.txt 2>/dev/null; then
+                echo '--- stale cache detected, clearing dist-newstyle and retrying clean build ---'
+                rm -rf dist-newstyle
+                cabal build all --flags=-Local 2>&1
+                BUILD_EXIT=\$?
+              fi
+            fi
+            exit \$BUILD_EXIT
+          " | while IFS= read -r line; do
+            printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
+          done | tee optimized-build-log.txt
+
+      - name: Collect binaries to staging
+        run: |
+          STAGING=$HOME/ny-staging/${{ github.run_id }}
+          rm -rf "$STAGING"
+          mkdir -p "$STAGING/bin" "$STAGING/opt/app"
+
+          find Backend/dist-newstyle/build -type f | awk -F/ '$NF == $(NF-1) && !seen[$NF]++ {print}' | xargs -I{} cp {} "$STAGING/bin/"
+
+          for f in "$STAGING/bin/"*; do
+            ln -sf "../../bin/$(basename "$f")" "$STAGING/opt/app/$(basename "$f")"
+          done
+
+          cp -rT Backend/dhall-configs "$STAGING/opt/app/dhall-configs"
+          cp -rT Backend/swagger "$STAGING/opt/app/swagger"
+
+      - name: Upload optimized build log
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: optimized-build-log-${{ github.ref_name }}
+          path: optimized-build-log.txt
+          retention-days: 1
+
+      - name: Build And Push Docker image
+        id: docker
+        if: (matrix.system == 'x86_64-linux' || matrix.system == 'aarch64-linux') && needs.check-conditions.outputs.should-push-docker == 'true'
+        env:
+          DOCKER_REGISTRY: ghcr.io
+          DOCKER_TAG_PREFIX: "optimized-"
+        run: |
+          export LOCAL_BINARIES_PATH=$HOME/ny-staging/${{ github.run_id }}
+          nix build .#packages.${{ matrix.system }}.dockerImage --impure
+
+          BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName --impure):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag --impure)"
+          echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
+
+          gunzip -c ./result > image.tar || cp ./result image.tar
+          echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ${DOCKER_REGISTRY} -u "${{ github.actor }}" --password-stdin
+          crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
+          crane auth logout ${DOCKER_REGISTRY}
+
+      - name: Push build artifacts to MinIO
+        run: |
+          MINIO_ENDPOINT=$(jq -r '.minio_endpoint' /etc/service_discovery.json)
+          MINIO_ACCESS_KEY=$(jq -r '.minio_access_key' /etc/service_discovery.json)
+          MINIO_SECRET_KEY=$(jq -r '.minio_secret_key' /etc/service_discovery.json)
+          mc alias set minio "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+
+          CACHE_ROOT=$HOME/ny-cabal-optimized-cache/${RUNNER_NAME}/${{ github.ref_name }}
+          EXCLUDES=$(cd "$CACHE_ROOT" && find dist-newstyle/build -mindepth 4 -maxdepth 4 -name "x" | sed 's|^|--exclude=|')
+
+          rm -rf "$CACHE_ROOT/.nix-deps"
+          mkdir -p "$CACHE_ROOT/.nix-deps"
+          cd "$CACHE_ROOT"
+          for hi in $(find dist-newstyle/build -name "*.hi" -print -quit 2>/dev/null); do
+            strings "$hi" | grep -oE '/nix/store/[^ ]+\.a$' | sort -u | while read -r dep; do
+              if [ -f "$dep" ]; then
+                rel="${dep#/}"
+                mkdir -p ".nix-deps/$(dirname "$rel")"
+                cp --no-preserve=mode,ownership "$dep" ".nix-deps/$rel"
+                echo "Cached nix dep: $dep"
+              fi
+            done
+            break
+          done
+          cd -
+
+          tar -I 'zstd -T0 -3' -cf dist-newstyle.tar.zst -C "$CACHE_ROOT" $EXCLUDES --exclude='.cabal-dir/logs' --exclude='.cabal-dir/store' dist-newstyle/ hie/ .cabal-dir/ .nix-deps/
+          echo "$GITHUB_WORKSPACE" > build-path.txt
+          echo "$HOME/ny-cabal-optimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir" > cabal-dir-path.txt
+          mc cp dist-newstyle.tar.zst "minio/haskell-cache/cabal-optimized-build/${{ github.sha }}/dist-newstyle.tar.zst"
+          mc cp build-path.txt "minio/haskell-cache/cabal-optimized-build/${{ github.sha }}/build-path.txt"
+          mc cp cabal-dir-path.txt "minio/haskell-cache/cabal-optimized-build/${{ github.sha }}/cabal-dir-path.txt"
+          rm -f dist-newstyle.tar.zst build-path.txt cabal-dir-path.txt
+
+      - name: Mark commit as minio-optimized-pushed
+        run: |
+          git tag "minio-optimized-pushed/${{ github.sha }}"
+          git push origin "minio-optimized-pushed/${{ github.sha }}"
+
+      - name: Cleanup staging dir
+        if: always()
+        run: rm -rf $HOME/ny-staging/${{ github.run_id }}
