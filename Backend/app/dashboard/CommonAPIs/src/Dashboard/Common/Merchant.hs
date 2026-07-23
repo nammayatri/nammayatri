@@ -203,6 +203,7 @@ data GoogleCfgUpdateReq = GoogleCfgUpdateReq
     googleRouteConfig :: Maps.GoogleRouteConfig,
     googlePlaceNewUrl :: BaseUrl,
     useNewPlaces :: Bool,
+    useNewPlaceDetails :: Maybe Bool,
     googleAutocompleteParams :: Maybe [Text],
     mobilityBillingUrl :: Maybe BaseUrl
   }
