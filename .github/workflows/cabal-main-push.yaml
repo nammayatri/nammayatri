@@ -3,7 +3,7 @@ name: Cabal CI (Main Push)
 on:
   push:
     branches:
-      - "main"
+      - "Prod-release-branch-18-jul"
   workflow_dispatch:
 
 concurrency:
@@ -263,7 +263,7 @@ jobs:
     name: Analyze Cabal Build Times
     needs: [cabal-build, check-conditions]
     if: needs.check-conditions.outputs.should-proceed == 'true'
-    runs-on: x86_64_main_push
+    runs-on: x86_64_prodHotPush-Common_push
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
