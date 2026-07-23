@@ -187,7 +187,13 @@ xyneAttachmentToMediaFile att = do
             DMF._type = mimeTypeToFileType att.mimeType,
             DMF.url = att.url,
             DMF.s3FilePath = Nothing,
-            DMF.status = Just DMF.CONFIRMED,
+            -- COMPLETED, not CONFIRMED: the readiness checks that gate media on
+            -- the way out (toChatMessageItem, mkMediaFiles, recreateIssueChats)
+            -- only accept COMPLETED or a null status, so anything else is
+            -- silently filtered out of the chat response. There is no async
+            -- upload to wait on here — the Xyne URL is stored as-is — so the
+            -- row is ready the moment it is written.
+            DMF.status = Just DMF.COMPLETED,
             DMF.fileHash = Nothing,
             DMF.createdAt = now,
             DMF.updatedAt = Just now
