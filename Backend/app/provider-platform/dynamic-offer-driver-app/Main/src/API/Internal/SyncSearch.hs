@@ -58,7 +58,7 @@ syncSearch merchantIdRaw mbToken reqV2 = withFlowHandlerAPI $ do
     bapUri <- Utils.getContextBapUri context
     bapId <- context.contextBapId & fromMaybeM (InvalidRequest "bapId is missing")
     city <- Utils.getContextCity context
-    moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InternalError $ "Operating City" <> show city <> "not supported or not found ")
+    moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
     void $ Utils.validateSearchContext context transporterId moc.id
     dSearchReq <- ACL.buildSearchReqV2Raw bapId bapUri reqV2 bapUri
     msgId <- Utils.getMessageId context

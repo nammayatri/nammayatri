@@ -170,7 +170,7 @@ startRide handle rideId req = withLogTag ("rideId-" <> rideId.getId) $ do
             Redis.unlockRedis mkLockKey
             logDebug $ "Start ride for RideId: " <> rideId.getId <> " Unlocked"
         )
-    else throwError (InternalError "Start ride inprogress")
+    else throwError (InvalidRequest "Start ride already in progress, please wait")
   where
     mkLockKey = "StartTransaction:RID:-" <> rideId.getId
 

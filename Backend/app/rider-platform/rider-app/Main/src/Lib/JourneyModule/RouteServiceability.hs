@@ -149,9 +149,14 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
       -- Batch-fetch all live info in one Redis HMGET instead of N individual calls
       let vehicleNos = map (.vehicle_no) busScheduleDetails'
       liveInfoResults <-
-        JMU.measureLatency
-          (JLCF.getVehicleMetadata vehicleNos integratedBPPConfig')
-          ("getBusScheduleInfo: getVehicleMetadata routeId=" <> routeId' <> " vehicles=" <> show (length vehicleNos))
+        if null vehicleNos
+          then do
+            logDebug $ "getBusScheduleInfo: No vehicles found for routeId=" <> routeId' <> ", returning empty list"
+            pure []
+          else
+            JMU.measureLatency
+              (JLCF.getVehicleMetadata vehicleNos integratedBPPConfig')
+              ("getBusScheduleInfo: getVehicleMetadata routeId=" <> routeId' <> " vehicles=" <> show (length vehicleNos))
       let busLiveInfoMap = zip vehicleNos liveInfoResults
       -- Hoist stop index lookup once (same cache key for all vehicles)
       mStopIndices <-

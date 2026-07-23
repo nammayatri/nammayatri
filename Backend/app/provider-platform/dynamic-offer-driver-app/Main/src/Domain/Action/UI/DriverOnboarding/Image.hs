@@ -318,7 +318,7 @@ validateImage isDashboard mbUploaderRole mbDocConfigs (personId, merchantId, mer
             Redis.unlockRedis mkLockKey
             logDebug $ "Create Image Lock for PersonId: " <> personId.getId <> " Unlocked"
         )
-    else throwError (InternalError $ "Image Upload In Progress")
+    else throwError (InvalidRequest "Image upload already in progress, please wait")
   where
     withLockPersonId = do
       isLocked <- Redis.tryLockRedis mkLockKey 45

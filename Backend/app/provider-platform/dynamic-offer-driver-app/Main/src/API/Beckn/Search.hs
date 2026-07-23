@@ -101,7 +101,7 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
         city <- Utils.getContextCity context
         merchant <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
         unless merchant.enabled $ throwError (AgencyDisabled transporterId.getId)
-        moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InternalError $ "Operating City" <> show city <> "not supported or not found ")
+        moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
         void $ Utils.validateSearchContext context transporterId moc.id
         dSearchReq <- ACL.buildSearchReqV2 authResult.subscriber reqV2 bapUri
         msgId <- Utils.getMessageId context
