@@ -259,6 +259,10 @@ data DocumentType
   | NomineeDetails
   | DriverVehicleNOC
   | FleetRegistration
+  | NationalID
+  | CompanyDetails
+  | LegalEntityId
+  | WorkingHoursMeter
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 

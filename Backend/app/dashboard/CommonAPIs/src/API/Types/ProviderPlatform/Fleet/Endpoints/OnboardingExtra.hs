@@ -14,18 +14,18 @@ data LegalStructure
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DocumentOnboardingStage
-  = DriverOnboarding
+  = PersonalOnboarding
   | VehicleDetailsStage
-  | OperatorPermit
+  | CompanyOnboarding
   | TaxAndLegal LegalStructure
   | BankDetails
   deriving stock (Eq, Ord, Show, Read, Generic)
   deriving anyclass (ToSchema)
 
 instance ToJSON DocumentOnboardingStage where
-  toJSON DriverOnboarding = object ["tag" .= ("DriverOnboarding" :: Text), "contents" .= Null]
+  toJSON PersonalOnboarding = object ["tag" .= ("PersonalOnboarding" :: Text), "contents" .= Null]
   toJSON VehicleDetailsStage = object ["tag" .= ("VehicleDetailsStage" :: Text), "contents" .= Null]
-  toJSON OperatorPermit = object ["tag" .= ("OperatorPermit" :: Text), "contents" .= Null]
+  toJSON CompanyOnboarding = object ["tag" .= ("CompanyOnboarding" :: Text), "contents" .= Null]
   toJSON (TaxAndLegal legalStructure) = object ["tag" .= ("TaxAndLegal" :: Text), "contents" .= legalStructure]
   toJSON BankDetails = object ["tag" .= ("BankDetails" :: Text), "contents" .= Null]
 
@@ -33,9 +33,9 @@ instance FromJSON DocumentOnboardingStage where
   parseJSON = withObject "DocumentOnboardingStage" $ \v -> do
     tag <- v .: "tag"
     case tag :: Text of
-      "DriverOnboarding" -> pure DriverOnboarding
+      "PersonalOnboarding" -> pure PersonalOnboarding
       "VehicleDetailsStage" -> pure VehicleDetailsStage
-      "OperatorPermit" -> pure OperatorPermit
+      "CompanyOnboarding" -> pure CompanyOnboarding
       "TaxAndLegal" -> TaxAndLegal <$> v .: "contents"
       "BankDetails" -> pure BankDetails
       _ -> fail $ "Unknown DocumentOnboardingStage tag: " <> T.unpack tag

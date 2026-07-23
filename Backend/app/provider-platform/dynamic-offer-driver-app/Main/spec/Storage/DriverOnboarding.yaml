@@ -619,7 +619,7 @@ DocumentVerificationConfig:
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,DriverInspectionForm,TrainingForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer,InspectionHub,DriverInspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLinkage,VoterIdCard,OperatorPartnerCode,MedicalCertificate,Rating,BotApproval,NomineeDetails,DriverVehicleNOC,FleetRegistration"
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,DriverInspectionForm,TrainingForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer,InspectionHub,DriverInspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLinkage,VoterIdCard,OperatorPartnerCode,MedicalCertificate,Rating,BotApproval,NomineeDetails,DriverVehicleNOC,FleetRegistration,NationalID,CompanyDetails,LegalEntityId,WorkingHoursMeter"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix,Exact"
     DocumentCategory:
@@ -702,7 +702,7 @@ DocumentVerificationConfig:
     filterForOldApks: Maybe Bool
     documentCategory: Maybe DocumentCategory
     documentFlowGrouping: Maybe DocumentFlowGrouping
-    documentOnboardingStage: Maybe DocumentOnboardingStage
+    documentOnboardingStage: DocumentOnboardingStage
     applicableTo: DocumentApplicableType
     # For RC: read regex from FieldInfo.regexValidation; prefix list remains fallback.
     documentFields: Maybe [FieldInfo]
@@ -720,10 +720,12 @@ DocumentVerificationConfig:
     filterForOldApks: false
     applicableTo: "'FLEET_AND_INDIVIDUAL'"
     documentFlowGrouping: "'STANDARD'"
+    documentOnboardingStage: "'PersonalOnboarding'"
   constraints:
     merchantOperatingCityId: PrimaryKey
     vehicleCategory: PrimaryKey
     documentType: PrimaryKey
+    documentOnboardingStage: PrimaryKey
   sqlType:
     dependencyDocumentType: text[]
     supportedVehicleClassesJSON: json
@@ -1333,17 +1335,19 @@ FleetOwnerDocumentVerificationConfig:
     order: Int
     role: Role
     documentCategory: Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory
-    documentOnboardingStage: Maybe DocumentOnboardingStage
+    documentOnboardingStage: DocumentOnboardingStage
     rolesAllowedToUploadDocument: Maybe [Role]
     onlyImageVerificationStatusLookupRequired: Maybe Bool
     documentFields: Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo]
   default:
     order: "0"
     role: "'FLEET_OWNER'"
+    documentOnboardingStage: "'PersonalOnboarding'"
   constraints:
     merchantOperatingCityId: PrimaryKey
     documentType: PrimaryKey
     role: PrimaryKey
+    documentOnboardingStage: PrimaryKey
   sqlType:
     dependencyDocumentType: text[]
     rolesAllowedToUploadDocumentText: text[]

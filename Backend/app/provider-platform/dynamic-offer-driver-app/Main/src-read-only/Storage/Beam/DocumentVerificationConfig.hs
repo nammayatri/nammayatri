@@ -26,7 +26,7 @@ data DocumentVerificationConfigT f = DocumentVerificationConfigT
     documentCategory :: (B.C f (Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory)),
     documentFieldsJSON :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     documentFlowGrouping :: (B.C f (Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentFlowGrouping)),
-    documentOnboardingStage :: (B.C f (Kernel.Prelude.Maybe Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage)),
+    documentOnboardingStage :: (B.C f Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage),
     documentType :: (B.C f Domain.Types.DocumentVerificationConfig.DocumentType),
     faceMatchSourceDoc :: (B.C f (Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentType)),
     filterForOldApks :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
@@ -57,12 +57,16 @@ data DocumentVerificationConfigT f = DocumentVerificationConfigT
 
 instance B.Table DocumentVerificationConfigT where
   data PrimaryKey DocumentVerificationConfigT f
-    = DocumentVerificationConfigId (B.C f Domain.Types.DocumentVerificationConfig.DocumentType) (B.C f Kernel.Prelude.Text) (B.C f Domain.Types.VehicleCategory.VehicleCategory)
+    = DocumentVerificationConfigId
+        (B.C f Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage)
+        (B.C f Domain.Types.DocumentVerificationConfig.DocumentType)
+        (B.C f Kernel.Prelude.Text)
+        (B.C f Domain.Types.VehicleCategory.VehicleCategory)
     deriving (Generic, B.Beamable)
-  primaryKey = DocumentVerificationConfigId <$> documentType <*> merchantOperatingCityId <*> vehicleCategory
+  primaryKey = DocumentVerificationConfigId <$> documentOnboardingStage <*> documentType <*> merchantOperatingCityId <*> vehicleCategory
 
 type DocumentVerificationConfig = DocumentVerificationConfigT Identity
 
-$(enableKVPG (''DocumentVerificationConfigT) [('documentType), ('merchantOperatingCityId), ('vehicleCategory)] [])
+$(enableKVPG (''DocumentVerificationConfigT) [('documentOnboardingStage), ('documentType), ('merchantOperatingCityId), ('vehicleCategory)] [])
 
 $(mkTableInstances (''DocumentVerificationConfigT) "document_verification_config")

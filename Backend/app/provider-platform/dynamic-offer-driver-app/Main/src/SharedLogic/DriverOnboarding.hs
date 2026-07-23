@@ -787,7 +787,7 @@ mkFleetOwnerDocumentVerificationConfigAPIEntity language Domain.Types.FleetOwner
         isMandatoryForEnabling = fromMaybe isMandatory isMandatoryForEnabling,
         documentFields = fmap (map castDocumentFieldInfo) documentFields,
         documentFlowGrouping = castDocumentFlowGrouping DVC.STANDARD,
-        documentOnboardingStage = castDocumentOnboardingStage <$> documentOnboardingStage,
+        documentOnboardingStage = Just (castDocumentOnboardingStage documentOnboardingStage),
         isReminderSupported = Nothing,
         isApprovalSupported = Nothing,
         rolesAllowedToUploadDocument = fmap (mapMaybe castPersonRoleToDashboardAccessType) rolesAllowedToUploadDocument,
@@ -838,9 +838,9 @@ castDocumentFieldType = \case
 
 castDocumentOnboardingStage :: Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.DocumentOnboardingStage
 castDocumentOnboardingStage = \case
-  Domain.Types.DocumentOnboardingStage.DriverOnboarding -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.DriverOnboarding
+  Domain.Types.DocumentOnboardingStage.PersonalOnboarding -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.PersonalOnboarding
   Domain.Types.DocumentOnboardingStage.VehicleDetailsStage -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.VehicleDetailsStage
-  Domain.Types.DocumentOnboardingStage.OperatorPermit -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.OperatorPermit
+  Domain.Types.DocumentOnboardingStage.CompanyOnboarding -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.CompanyOnboarding
   Domain.Types.DocumentOnboardingStage.TaxAndLegal legalStructure -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.TaxAndLegal (castLegalStructure legalStructure)
   Domain.Types.DocumentOnboardingStage.BankDetails -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.BankDetails
 
@@ -855,6 +855,19 @@ castLegalStructure :: Domain.Types.DocumentOnboardingStage.LegalStructure -> API
 castLegalStructure = \case
   Domain.Types.DocumentOnboardingStage.IndividualLegalStructure -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.IndividualLegalStructure
   Domain.Types.DocumentOnboardingStage.LegalEntityStructure -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.LegalEntityStructure
+
+castDocumentOnboardingStageFromCommon :: API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.DocumentOnboardingStage -> Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage
+castDocumentOnboardingStageFromCommon = \case
+  API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.PersonalOnboarding -> Domain.Types.DocumentOnboardingStage.PersonalOnboarding
+  API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.VehicleDetailsStage -> Domain.Types.DocumentOnboardingStage.VehicleDetailsStage
+  API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.CompanyOnboarding -> Domain.Types.DocumentOnboardingStage.CompanyOnboarding
+  API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.TaxAndLegal legalStructure -> Domain.Types.DocumentOnboardingStage.TaxAndLegal (castLegalStructureFromCommon legalStructure)
+  API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.BankDetails -> Domain.Types.DocumentOnboardingStage.BankDetails
+
+castLegalStructureFromCommon :: API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.LegalStructure -> Domain.Types.DocumentOnboardingStage.LegalStructure
+castLegalStructureFromCommon = \case
+  API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.IndividualLegalStructure -> Domain.Types.DocumentOnboardingStage.IndividualLegalStructure
+  API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.LegalEntityStructure -> Domain.Types.DocumentOnboardingStage.LegalEntityStructure
 
 castDocumentType :: Domain.Types.DocumentVerificationConfig.DocumentType -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType
 castDocumentType = \case
@@ -921,6 +934,10 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.BotApproval -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BotApproval
   Domain.Types.DocumentVerificationConfig.NomineeDetails -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.NomineeDetails
   Domain.Types.DocumentVerificationConfig.FleetRegistration -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.FleetRegistration
+  Domain.Types.DocumentVerificationConfig.NationalID -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.NationalID
+  Domain.Types.DocumentVerificationConfig.CompanyDetails -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.CompanyDetails
+  Domain.Types.DocumentVerificationConfig.LegalEntityId -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.LegalEntityId
+  Domain.Types.DocumentVerificationConfig.WorkingHoursMeter -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.WorkingHoursMeter
 
 -- Shared document-onboarding helpers (moved from Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate):
 -- these are used across RC, PAN, Aadhaar, DL, GST and Idfy webhook flows.

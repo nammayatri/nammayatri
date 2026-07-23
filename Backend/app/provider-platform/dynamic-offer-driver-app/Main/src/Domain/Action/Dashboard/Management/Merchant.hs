@@ -107,6 +107,7 @@ import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import Domain.Types.CancellationFarePolicy as DTCFP
 import qualified Domain.Types.ConditionalCharges as DAC
+import qualified Domain.Types.DocumentOnboardingStage as DDOS
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverIntelligentPoolConfig as DDIPC
 import qualified Domain.Types.DriverPoolConfig as DDPC
@@ -186,6 +187,7 @@ import qualified Registry.Beckn.Interface.Types as RegistryT
 import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, ReconciliationJobData, ScheduledBatchPayoutJobData, SupplyDemandRequestJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.DriverFee as SDF
+import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
@@ -1086,6 +1088,10 @@ castDDocumentType = \case
   DVC.BotApproval -> Common.BotApproval
   DVC.NomineeDetails -> Common.NomineeDetails
   DVC.FleetRegistration -> Common.FleetRegistration
+  DVC.NationalID -> Common.NationalID
+  DVC.CompanyDetails -> Common.CompanyDetails
+  DVC.LegalEntityId -> Common.LegalEntityId
+  DVC.WorkingHoursMeter -> Common.WorkingHoursMeter
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentUpdate ::
@@ -1197,6 +1203,10 @@ castDocumentType = \case
   Common.BotApproval -> DVC.BotApproval
   Common.NomineeDetails -> DVC.NomineeDetails
   Common.FleetRegistration -> DVC.FleetRegistration
+  Common.NationalID -> DVC.NationalID
+  Common.CompanyDetails -> DVC.CompanyDetails
+  Common.LegalEntityId -> DVC.LegalEntityId
+  Common.WorkingHoursMeter -> DVC.WorkingHoursMeter
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentCreate ::
@@ -1262,7 +1272,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         onlyImageVerificationStatusLookupRequired = Nothing,
         faceMatchSourceDoc = Nothing,
         markImageValidOnValidationSkip = Nothing,
-        documentOnboardingStage = Nothing,
+        documentOnboardingStage = maybe DDOS.PersonalOnboarding SDO.castDocumentOnboardingStageFromCommon documentOnboardingStage,
         ..
       }
   where
