@@ -1,0 +1,35 @@
+imports:
+  UTCTime: Kernel.Prelude
+
+module: SearchTry
+
+apis:
+  - POST:
+      endpoint: /recentSearchTries
+      auth: ApiAuthV2
+      request:
+        type: RecentSearchTriesReq
+      response:
+        type: RecentSearchTriesRes
+
+types:
+  RecentSearchTriesReq:
+    - phoneNumbers: "[Text]"
+    - limit: Maybe Int
+    - derive: "'HideSecrets"
+
+  RecentSearchTriesRes:
+    - searchTries: "[RecentSearchTryItem]"
+
+  RecentSearchTryItem:
+    - phoneNumber: Text
+    - riderId: Text
+    - searchRequestId: Text
+    - searchTryId: Text
+    - status: Text
+    - vehicleServiceTier: Text
+    - searchRepeatCounter: Int
+    - searchRepeatType: Text
+    - tripCategory: Text
+    - createdAt: UTCTime
+    - validTill: UTCTime
