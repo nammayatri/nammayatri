@@ -313,7 +313,7 @@ createDriverRCAssociationIfPossible transporterConfig driverId rc = do
 
 createFleetRCAssociationIfPossible ::
   forall m r.
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   DTC.TransporterConfig ->
   Id Person ->
   VehicleRegistrationCertificate ->
@@ -322,7 +322,7 @@ createFleetRCAssociationIfPossible transporterConfig fleetOwnerId rc = do
   if canCreateRCAssociation transporterConfig rc
     then do
       when (transporterConfig.blockDriverOwnRCForFleetDrivers == Just True) $
-        AC.guardRCNotActiveWithAnotherDriver rc.id
+        AC.guardRCNotActiveWithAnotherDriver rc.id rc.certificateNumber
       fleetRCAssoc <- makeFleetRCAssociation transporterConfig.merchantId transporterConfig.merchantOperatingCityId rc.id defaultAssociationEnd
       FRCAssoc.create fleetRCAssoc
     else do
