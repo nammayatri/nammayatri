@@ -658,7 +658,10 @@ initiateWalletPayout ctx payoutableBalance payoutType coverageFrom coverageTo re
     IPayout.JuspayFlow -> Just <$> resolvePayoutVpa ctx
     IPayout.StripeFlow -> pure Nothing
   let fee = computePayoutFee ctx.transporterConfig.driverWalletConfig.payoutFee payoutableBalance
-      netAmount = SPayment.roundToTwoDecimalPlaces (payoutableBalance - fee)
+      -- Floor (not round-half-up) to whole cents so the disbursed amount never exceeds the
+      -- wallet balance; otherwise the webhook debit can overdraw the wallet by a sub-cent
+      -- rounding delta and leave the balance slightly negative.
+      netAmount = SPayment.floorToTwoDecimalPlaces (payoutableBalance - fee)
       submission =
         PayoutRequest.PayoutSubmission
           { beneficiaryId = ctx.driverId.getId,
