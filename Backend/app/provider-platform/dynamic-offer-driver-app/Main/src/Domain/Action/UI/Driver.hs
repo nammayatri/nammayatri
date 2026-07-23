@@ -246,6 +246,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Payment.Domain.Types.PaymentTransaction
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQTransaction
+import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
@@ -1099,12 +1100,13 @@ activateGoHomeFeature (driverId, merchantId, merchantOpCityId) driverHomeLocatio
             driverHomeLocation <- QDHL.findById driverHomeLocationId >>= fromMaybeM (DriverHomeLocationDoesNotExist driverHomeLocationId.getId)
             when (driverHomeLocation.driverId /= driverId) $ throwError DriverHomeLocationDoesNotBelongToDriver
             let homePos = LatLong {lat = driverHomeLocation.lat, lon = driverHomeLocation.lon}
-            unless (distanceBetweenInMeters homePos currPos > fromIntegral goHomeConfig.destRadiusMeters) $ throwError DriverCloseToHomeLocation
-            dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantOpCityId (Just goHomeConfig)
-            unless (dghInfo.cnt > 0) $ throwError DriverGoHomeRequestDailyUsageLimitReached
-            unlessM (checkIfGoToInDifferentGeometry merchant driverLocation homePos) $ throwError CannotEnableGoHomeForDifferentCity
-            whenM (fmap ((dghInfo.status == Just DDGR.ACTIVE) ||) (isJust <$> QDGR.findActive driverId)) $ throwError DriverGoHomeRequestAlreadyActive
-            activateDriverGoHomeRequest merchantId merchantOpCityId driverId driverHomeLocation goHomeConfig dghInfo
+            unlessM (isHomeLocationInBlockedSpecialLocation (fromMaybe [] goHomeConfig.blockedHomeSpecialLocationIds) homePos) $ do
+              unless (distanceBetweenInMeters homePos currPos > fromIntegral goHomeConfig.destRadiusMeters) $ throwError DriverCloseToHomeLocation
+              dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantOpCityId (Just goHomeConfig)
+              unless (dghInfo.cnt > 0) $ throwError DriverGoHomeRequestDailyUsageLimitReached
+              unlessM (checkIfGoToInDifferentGeometry merchant driverLocation homePos) $ throwError CannotEnableGoHomeForDifferentCity
+              whenM (fmap ((dghInfo.status == Just DDGR.ACTIVE) ||) (isJust <$> QDGR.findActive driverId)) $ throwError DriverGoHomeRequestAlreadyActive
+              activateDriverGoHomeRequest merchantId merchantOpCityId driverId driverHomeLocation goHomeConfig dghInfo
             pure ()
         )
         ( do
@@ -1141,7 +1143,7 @@ deactivateGoHomeFeature (personId, _, merchantOpCityId) = do
     else CQDGR.deactivateDriverGoHomeRequest merchantOpCityId driverId DDGR.FAILED ghInfo Nothing
   pure APISuccess.Success
 
-addHomeLocation :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> AddHomeLocationReq -> m APISuccess.APISuccess
+addHomeLocation :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> AddHomeLocationReq -> m APISuccess.APISuccess
 addHomeLocation (driverId, merchantId, merchantOpCityId) req = do
   cfg <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (Just <$> CGHC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> merchantOpCityId.getId)
   unless (cfg.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
@@ -1150,10 +1152,12 @@ addHomeLocation (driverId, merchantId, merchantOpCityId) req = do
   when (driverInfo.blocked) $ throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   unlessM (rideServiceable merchant.geofencingConfig QGeometry.someGeometriesContain req.position Nothing) $ throwError DriverHomeLocationOutsideServiceArea
-  oldHomeLocations <- QDHL.findAllByDriverId driverId
-  unless (length oldHomeLocations < cfg.numHomeLocations) $ throwError DriverHomeLocationLimitReached
-  when (any (\homeLocation -> highPrecMetersToMeters (distanceBetweenInMeters req.position (LatLong {lat = homeLocation.lat, lon = homeLocation.lon})) <= cfg.newLocAllowedRadius) oldHomeLocations) $ throwError NewLocationTooCloseToPreviousHomeLocation
-  QDHL.create =<< buildDriverHomeLocation driverId req
+  -- Silently skip persisting a home location that falls inside a blocked special location (e.g. airports).
+  unlessM (isHomeLocationInBlockedSpecialLocation (fromMaybe [] cfg.blockedHomeSpecialLocationIds) req.position) $ do
+    oldHomeLocations <- QDHL.findAllByDriverId driverId
+    unless (length oldHomeLocations < cfg.numHomeLocations) $ throwError DriverHomeLocationLimitReached
+    when (any (\homeLocation -> highPrecMetersToMeters (distanceBetweenInMeters req.position (LatLong {lat = homeLocation.lat, lon = homeLocation.lon})) <= cfg.newLocAllowedRadius) oldHomeLocations) $ throwError NewLocationTooCloseToPreviousHomeLocation
+    QDHL.create =<< buildDriverHomeLocation driverId req
   pure APISuccess.Success
 
 buildDriverHomeLocation :: (CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> AddHomeLocationReq -> m DDHL.DriverHomeLocation
@@ -1171,7 +1175,17 @@ buildDriverHomeLocation driverId req = do
         ..
       }
 
-updateHomeLocation :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisLTSFlowEnv r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> UpdateHomeLocationReq -> m APISuccess.APISuccess
+-- | True when @position@ falls inside an enabled special location whose id is in
+-- @blockedIds@ (per-city @go_home_config.blockedHomeSpecialLocationIds@). Skips the
+-- geometry lookup entirely when nothing is configured, so it is a no-op by default.
+isHomeLocationInBlockedSpecialLocation :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => [Text] -> LatLong -> m Bool
+isHomeLocationInBlockedSpecialLocation blockedIds position
+  | null blockedIds = pure False
+  | otherwise = do
+    mbSpecialLoc <- QSpecialLocation.findSpecialLocationByLatLong' position
+    pure $ maybe False (\specialLoc -> specialLoc.id.getId `elem` blockedIds) mbSpecialLoc
+
+updateHomeLocation :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, Redis.HedisLTSFlowEnv r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> UpdateHomeLocationReq -> m APISuccess.APISuccess
 updateHomeLocation (driverId, merchantId, merchantOpCityId) homeLocationId req = do
   goHomeConfig <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (Just <$> CGHC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> merchantOpCityId.getId)
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
@@ -1182,12 +1196,14 @@ updateHomeLocation (driverId, merchantId, merchantOpCityId) homeLocationId req =
   when (dghInfo.status == Just DDGR.ACTIVE) $ throwError DriverHomeLocationUpdateWhileActiveError
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   unlessM (rideServiceable merchant.geofencingConfig QGeometry.someGeometriesContain req.position Nothing) $ throwError DriverHomeLocationOutsideServiceArea
-  oldHomeLocation <- QDHL.findById homeLocationId >>= fromMaybeM (DriverHomeLocationDoesNotExist (T.pack "The given driver home location ID is invalid"))
-  oldHomeLocations <- QDHL.findAllByDriverId driverId
-  when (any (\homeLocation -> highPrecMetersToMeters (distanceBetweenInMeters req.position (LatLong {lat = homeLocation.lat, lon = homeLocation.lon})) <= goHomeConfig.newLocAllowedRadius) oldHomeLocations) $ throwError NewLocationTooCloseToPreviousHomeLocation
-  currTime <- getCurrentTime
-  when (diffUTCTime currTime oldHomeLocation.updatedAt < fromIntegral goHomeConfig.updateHomeLocationAfterSec) $ throwError DriverHomeLocationUpdateBeforeTime
-  QDHL.updateHomeLocationById homeLocationId buildDriverHomeLocationUpdate
+  -- Silently skip updating to a home location that falls inside a blocked special location (e.g. airports).
+  unlessM (isHomeLocationInBlockedSpecialLocation (fromMaybe [] goHomeConfig.blockedHomeSpecialLocationIds) req.position) $ do
+    oldHomeLocation <- QDHL.findById homeLocationId >>= fromMaybeM (DriverHomeLocationDoesNotExist (T.pack "The given driver home location ID is invalid"))
+    oldHomeLocations <- QDHL.findAllByDriverId driverId
+    when (any (\homeLocation -> highPrecMetersToMeters (distanceBetweenInMeters req.position (LatLong {lat = homeLocation.lat, lon = homeLocation.lon})) <= goHomeConfig.newLocAllowedRadius) oldHomeLocations) $ throwError NewLocationTooCloseToPreviousHomeLocation
+    currTime <- getCurrentTime
+    when (diffUTCTime currTime oldHomeLocation.updatedAt < fromIntegral goHomeConfig.updateHomeLocationAfterSec) $ throwError DriverHomeLocationUpdateBeforeTime
+    QDHL.updateHomeLocationById homeLocationId buildDriverHomeLocationUpdate
   return APISuccess.Success
   where
     buildDriverHomeLocationUpdate =

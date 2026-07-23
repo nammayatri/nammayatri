@@ -1,0 +1,238 @@
+{
+  "info": {
+    "name": "GoHomeSpecialLocationFlow",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "E2E for the Go-Home 'blocked special location' feature. A driver whose home point falls inside a special location listed in go_home_config.blocked_home_special_location_ids must be silently ignored (API returns Success, but nothing is persisted). Verifies: (1) add-home inside the blocked airport special location -> 200 Success but NOT saved; (2) add-home outside -> 200 Success and saved. Random driver per run (idempotent, repeatable). Requires setup-gohome-special-location.sql to have blocked the airport special location for Bangalore."
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Generate random per-run identifiers ONCE.",
+          "if (!pm.collectionVariables.get('_test_driver_number')) {",
+          "  var dNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+          "  var regNo = 'KA' + String(Math.floor(10 + Math.random() * 89)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String(Math.floor(1000 + Math.random() * 8999));",
+          "  pm.collectionVariables.set('_test_driver_number', dNum);",
+          "  pm.collectionVariables.set('_test_reg_no', regNo);",
+          "  console.log('Test driver:', dNum, 'reg:', regNo);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "_test_driver_number", "value": "" },
+    { "key": "_test_reg_no", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Driver Auth",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseURL_namma_P}}/auth",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_driver_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{driver_merchant_id}}\", \"merchantOperatingCity\": \"{{city}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('auth 200', function(){ pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.expect(d.authId, 'authId').to.be.a('string');",
+              "pm.collectionVariables.set('driver_authId', d.authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver OTP",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-device-gohome\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('verify 200', function(){ pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.expect(d.token, 'token').to.be.a('string');",
+              "pm.collectionVariables.set('driver_token', d.token);",
+              "pm.collectionVariables.set('driver_id', d.person.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Switch City (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "url": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('switch city 200', function(){ pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.collectionVariables.set('dashboard_token', d.authToken);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Add Vehicle (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"3w\", \"colour\": \"Green\", \"model\": \"AUTO RICKSHAW\", \"make\": \"Bajaj\", \"vehicleCategory\": \"AUTO_CATEGORY\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('vehicle added', function(){ pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Enable Driver (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('driver enabled', function(){ pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Add Home INSIDE Blocked Special Location",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "url": "{{baseURL_namma_P}}/driver/goHome/add",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"position\": {\"lat\": {{blocked_home_lat}}, \"lon\": {{blocked_home_lon}}}, \"address\": \"Airport - should be blocked\", \"tag\": \"GoHomeBlockedAirport\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Silent no-op: the API succeeds even though the location is inside a blocked special location.",
+              "pm.test('add-inside returns 200 (silent no-op, no error)', function(){ pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Add Home OUTSIDE Special Location",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "url": "{{baseURL_namma_P}}/driver/goHome/add",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"position\": {\"lat\": {{allowed_home_lat}}, \"lon\": {{allowed_home_lon}}}, \"address\": \"Koramangala - allowed\", \"tag\": \"GoHomeAllowedHome\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('add-outside returns 200', function(){ pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Home Locations (Verify)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "token", "value": "{{driver_token}}" }],
+        "url": "{{baseURL_namma_P}}/driver/goHome/get"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('get 200', function(){ pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var locs = (d && d.locations) || [];",
+              "var blocked = locs.filter(function(l){ return l.tag === 'GoHomeBlockedAirport'; });",
+              "var allowed = locs.filter(function(l){ return l.tag === 'GoHomeAllowedHome'; });",
+              "pm.test('home inside blocked special location was NOT persisted', function(){ pm.expect(blocked.length, 'blocked-home count').to.eql(0); });",
+              "pm.test('home outside special location WAS persisted', function(){ pm.expect(allowed.length, 'allowed-home count').to.eql(1); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
