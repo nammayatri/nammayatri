@@ -497,7 +497,8 @@ def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: b
                 full, cwd=str(CONFIG_SYNC_DIR),
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, bufsize=1,
-                env={**os.environ, "PYTHONUNBUFFERED": "1"},
+                env={**os.environ, "PYTHONUNBUFFERED": "1",
+                     "CONFIG_SYNC_LOCAL_DB_PORT": str(_svc_port("db-primary", 5434))},
             )
             for line in p.stdout:
                 line = line.rstrip()

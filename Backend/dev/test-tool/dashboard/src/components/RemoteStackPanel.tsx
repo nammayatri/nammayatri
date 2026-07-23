@@ -674,6 +674,20 @@ export const RemoteStackPanel: React.FC = () => {
             )}
           </div>
         )}
+        {state.startSession && state.caddyPort != null && (
+          <div>
+            <span className="rsp-label">DB Manager:</span>{' '}
+            <a
+              href={`http://${isLocalhost ? 'localhost' : target.host}:${state.caddyPort}/db-manager-frontend/`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Multi-Cloud DB Manager — SQL console for atlas_app + atlas_driver_offer_bpp (login admin / admin)"
+            >
+              🛢 Open DB-Manager
+            </a>{' '}
+            <span className="rsp-hint">(login admin / admin)</span>
+          </div>
+        )}
         {state.status && <div className="rsp-status">{state.status}</div>}
         {state.error && <div className="rsp-error">{state.error}</div>}
         {sshStatus && !isLocalhost && (

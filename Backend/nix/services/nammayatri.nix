@@ -272,12 +272,22 @@ in
         fi
       '';
 
+      runCabalTarget = pkgs.writeShellScript "run-cabal-target" ''
+        GHC_FLAG=""
+        if [ -f dist-newstyle/.ci-ghc-path ]; then
+          CI_GHC=$(cat dist-newstyle/.ci-ghc-path)
+          [ -x "$CI_GHC" ] && GHC_FLAG="-w $CI_GHC"
+        fi
+        # shellcheck disable=SC2086
+        exec cabal run $GHC_FLAG "$1"
+      '';
+
       haskellProcessFor = name:
         if cfg.profile != "full" && cfg.profile != "backend"
         then { command = ":"; }
         else if cfg.useCabal
         then {
-          command = "set -x; pwd; " + wrapInCiNamespace "cabal run ${cabalTargetForExe.${name}}";
+          command = "set -x; pwd; " + wrapInCiNamespace "${runCabalTarget} ${cabalTargetForExe.${name}}";
           environment.CABAL_TARGET = cabalTargetForExe.${name};
         }
         else {
@@ -356,6 +366,8 @@ in
           "mock-server"
           "test-context-api"
           "victoria-metrics"
+          "db-manager-backend"
+          "db-manager-frontend"
         ];
       # Force-disable a process: also clobber its command + depends_on with
       # mkForce. Clobbering the command matters because the original command
@@ -943,6 +955,84 @@ in
             osrm-server = {
               imports = [ common ];
               command = self'.packages.osrm-server;
+            };
+
+            # ── Multi-Cloud DB Manager (SQL console) ──────────────────────────
+            # Built by nix/db-manager.nix from the pinned db-manager-src input
+            # (no runtime clone), run against the local Postgres (atlas_dev,
+            # schemas atlas_app + atlas_driver_offer_bpp) + the stack Redis.
+            # Two processes: backend → frontend. The dual_db_manager metadata
+            # schema + admin/admin login are seeded declaratively at atlas_dev
+            # init (dev/sql-seed/db-manager-seed.sql) — no runtime init process.
+            db-manager-backend = {
+              imports = [ common ];
+              namespace = lib.mkForce "test";
+              environment = {
+                PORT = toString ports.db-manager-backend;
+                NODE_ENV = "development";
+                REDIS_HOST = "localhost";
+                REDIS_PORT = toString ports.redis;
+                REDIS_CLUSTER_MODE = "false";
+                SYNC_TO_CLICKHOUSE = "false";
+                RUN_MIGRATIONS = "false";
+                SESSION_SECRET = "local-dev-db-manager";
+                FRONTEND_URL = "http://localhost:${toString ports.db-manager-frontend}";
+                BACKEND_URL = "http://localhost:${toString ports.db-manager-backend}";
+              };
+              command = pkgs.writeShellApplication {
+                name = "db-manager-backend";
+                runtimeInputs = [ pkgs.nodejs_20 pkgs.coreutils ];
+                text = ''
+                  DBJSON='{"primary":{"cloudName":"local","db_configs":[{"name":"bap","label":"Rider (atlas_app)","host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev","schemas":["atlas_app"],"defaultSchema":"atlas_app"},{"name":"bpp","label":"Driver (atlas_driver_offer_bpp)","host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev","schemas":["atlas_driver_offer_bpp"],"defaultSchema":"atlas_driver_offer_bpp"}]},"secondary":[],"history":{"host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev"}}'
+                  DATABASE_CONFIGS=$(printf '%s' "$DBJSON" | base64 | tr -d '\n')
+                  export DATABASE_CONFIGS
+                  exec node ${self'.packages.db-manager-backend}/dist/server.js
+                '';
+              };
+              depends_on = {
+                "db-primary".condition = "process_healthy";
+                "redis".condition = "process_healthy";
+              };
+              readiness_probe = {
+                http_get = { host = "127.0.0.1"; port = ports.db-manager-backend; path = "/health"; };
+                initial_delay_seconds = 3;
+                period_seconds = 3;
+                failure_threshold = 30;
+                timeout_seconds = 3;
+              };
+            };
+
+            db-manager-frontend = {
+              imports = [ common ];
+              namespace = lib.mkForce "test";
+              command = pkgs.writeShellApplication {
+                name = "db-manager-frontend";
+                runtimeInputs = [ pkgs.python3 pkgs.coreutils pkgs.gnused ];
+                text = ''
+                  # Serve the nix-built static bundle from a writable copy so we
+                  # can drop in a runtime config.js. Caddy fronts this at
+                  # /db-manager-frontend/*, so the browser's origin is the caddy
+                  # origin — point the API at that same origin + /db-manager-backend
+                  # (same-origin ⇒ no CORS, session cookies work; host/port agnostic
+                  # so it works identically for localhost and a dev-box).
+                  DIR="$(mkdir -p ../data/db-manager-frontend && cd ../data/db-manager-frontend && pwd)"
+                  cp -rf ${self'.packages.db-manager-frontend}/* "$DIR"/
+                  chmod -R u+w "$DIR"
+                  printf '%s\n' "window.__APP_CONFIG__ = { BACKEND_URL: window.location.origin + '/db-manager-backend' };" > "$DIR/config.js"
+                  cd "$DIR"
+                  exec python3 -m http.server ${toString ports.db-manager-frontend} --bind 127.0.0.1
+                '';
+              };
+              depends_on = {
+                "db-manager-backend".condition = "process_healthy";
+              };
+              readiness_probe = {
+                http_get = { host = "127.0.0.1"; port = ports.db-manager-frontend; path = "/"; };
+                initial_delay_seconds = 2;
+                period_seconds = 3;
+                failure_threshold = 20;
+                timeout_seconds = 3;
+              };
             };
 
             kafka-consumers-exe = {
@@ -1644,6 +1734,7 @@ in
                     ../../dev/sql-seed/safety-dashboard-seed.sql
                     ../../dev/sql-seed/special-zone-seed.sql
                     ../../dev/sql-seed/kaal-chakra-seed.sql
+                    ../../dev/sql-seed/db-manager-seed.sql
                   ];
                 }
               ];

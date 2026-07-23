@@ -54,6 +54,8 @@ const DEFAULT_PORTS: Record<string, number> = {
   'metabase': 3001,
   'redis-commander': 8431,
   'victoria-metrics': 8428,
+  'db-manager-frontend': 5183,
+  'db-manager-backend': 3010,
 };
 
 let _portsTable: Record<string, number> = (() => {
