@@ -1300,6 +1300,7 @@ FleetOwnerDocumentVerificationConfig:
     documentCategory: Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory
     documentOnboardingStage: Maybe DocumentOnboardingStage
     rolesAllowedToUploadDocument: Maybe [Role]
+    onlyImageVerificationStatusLookupRequired: Maybe Bool
   default:
     order: "0"
     role: "'FLEET_OWNER'"

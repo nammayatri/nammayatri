@@ -1655,7 +1655,8 @@ getInProgressDriverDocuments role driverId entityImagesInfo docType possibleVehi
         Right driverConfs ->
           let relevantDriverConfs = filter (\c -> c.vehicleCategory `elem` possibleVehicleCategories) driverConfs
            in maybe False (fromMaybe False . (.onlyImageVerificationStatusLookupRequired)) $ find (\c -> c.documentType == docType) relevantDriverConfs
-        Left _fleetConfs -> True
+        Left fleetConfs ->
+          maybe False (fromMaybe False . (.onlyImageVerificationStatusLookupRequired)) $ find (\c -> c.documentType == docType) fleetConfs
   (status, mbReason, mbUrl) <- case docType of
     DDVC.DriverLicense -> checkIfUnderProgress entityImagesInfo DDVC.DriverLicense
     DDVC.BackgroundVerification -> checkBackgroundVerificationStatus driverId merchantId merchantOpCityId
