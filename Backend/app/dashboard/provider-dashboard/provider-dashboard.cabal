@@ -30,6 +30,7 @@ library
       API.Exotel
       API.Fleet.Registration
       API.ProviderPlatform
+      API.ProviderPlatform.DriverInfoByPhoneNumber
       API.ProviderPlatform.DynamicOfferDriver
       API.ProviderPlatform.DynamicOfferDriver.CacAuth
       API.ProviderPlatform.DynamicOfferDriver.InternalAuth
@@ -83,6 +84,7 @@ library
       Domain.Action.ProviderPlatform.Operator.FleetManagement
       Domain.Action.ProviderPlatform.Operator.Registration
       Domain.Action.ProviderPlatform.RideBooking.Driver
+      Domain.Action.ProviderPlatform.RideBooking.DriverInfoByPhoneNumber
       Domain.Action.ProviderPlatform.RideBooking.DriverRegistration
       Domain.Action.ProviderPlatform.RideBooking.Maps
       Domain.Action.ProviderPlatform.RideBooking.MeterRide

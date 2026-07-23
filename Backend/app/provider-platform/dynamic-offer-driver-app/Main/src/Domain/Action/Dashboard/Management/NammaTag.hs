@@ -169,6 +169,21 @@ import qualified Storage.Queries.UiDriverConfig as SQU
 import qualified Tools.ConfigPilot as TC
 import qualified Tools.DynamicLogic as TDL
 
+instance YTH.GenericDefaults DDVC.FieldInfo where
+  genDef _ =
+    [ DDVC.FieldInfo
+        { DDVC._type = DDVC.FieldText,
+          DDVC.description = Just "defaultText",
+          DDVC.dropdownValues = Just ["defaultText"],
+          DDVC.fields = Nothing,
+          DDVC.isMandatory = True,
+          DDVC.name = "defaultText",
+          DDVC.placeholder = Just "defaultText",
+          DDVC.regexValidation = Just "defaultText",
+          DDVC.requestKey = Just "defaultText"
+        }
+    ]
+
 $(YTH.generateGenericDefault ''DTP.PayoutConfig)
 $(YTH.generateGenericDefault ''DTRN.RideRelatedNotificationConfig)
 $(YTH.generateGenericDefault ''DTT.TransporterConfig) -- TODO ERROR

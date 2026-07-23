@@ -3,6 +3,7 @@
 
 module Storage.Beam.FleetOwnerDocumentVerificationConfig where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.DocumentOnboardingStage
@@ -21,6 +22,7 @@ data FleetOwnerDocumentVerificationConfigT f = FleetOwnerDocumentVerificationCon
     disableWarning :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     doStrictVerifcation :: B.C f Kernel.Prelude.Bool,
     documentCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory),
+    documentFieldsJSON :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     documentOnboardingStage :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage),
     documentType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,
     isDefaultEnabledOnManualVerification :: B.C f Kernel.Prelude.Bool,
