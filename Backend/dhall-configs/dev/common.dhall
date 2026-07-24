@@ -101,6 +101,7 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , authServiceUrl = "http://localhost:${riderAppPort}/"
     , consumerType = globalCommon.consumerType
     , schedulerType = SchedulerType
+    , transportKind = globalCommon.transportKind
     , internalEndPointMap
     , urlShortnerConfig
     , ondcRegistryUrl

@@ -363,7 +363,6 @@ in
           "caddy-reverse-proxy"
           "metabase"
           "metabase-setup"
-          "redis-commander"
           "mock-server"
           "test-context-api"
           "victoria-metrics"
@@ -1100,12 +1099,14 @@ in
               namespace = lib.mkForce "test";
               # So server.py reads resolved ports from the registry slice
               # instead of falling back to base ports.nix (wrong on a devbox).
-              environment.DEVBOX_KEY = devKey;
-              environment.DEVBOX_REGISTRY_FILE = registryPath;
-              # Push integration-test metrics into the locally-running VictoriaMetrics.
-              # The dashboard then reads them back via /api/metrics/query.
-              environment.VICTORIA_METRICS_URL = "http://127.0.0.1:${toString ports.victoria-metrics}/api/v1/import/prometheus";
-              environment.VICTORIA_METRICS_QUERY_URL = "http://127.0.0.1:${toString ports.victoria-metrics}";
+              environment = {
+                DEVBOX_KEY = devKey;
+                DEVBOX_REGISTRY_FILE = registryPath;
+                # Push integration-test metrics into the locally-running VictoriaMetrics.
+                # The dashboard then reads them back via /api/metrics/query.
+                VICTORIA_METRICS_URL = "http://127.0.0.1:${toString ports.victoria-metrics}/api/v1/import/prometheus";
+                VICTORIA_METRICS_QUERY_URL = "http://127.0.0.1:${toString ports.victoria-metrics}";
+              };
               # Start once infra is up. The startup config-sync runs in a background thread,
               # so we DON'T block on dashboards — if a dashboard is still settling, the API
               # is still serving and the config-sync will succeed against the DB regardless.
@@ -1339,58 +1340,6 @@ in
               availability = {
                 restart = "no";
                 max_restarts = 5;
-              };
-            };
-
-            redis-commander = {
-              imports = [ common ];
-              command = pkgs.writeShellApplication {
-                name = "redis-commander";
-                runtimeInputs = [ pkgs.nodejs ];
-                text = ''
-                  set -x  # debug output
-                  # Same convention as metabase: persist under <repo-root>/data/
-                  # (gitignored) instead of ~/.cache. working_dir is `Backend/`.
-                  RC_WORK="$(mkdir -p ../data/redis-commander && cd ../data/redis-commander && pwd)"
-                  RC_PKG="$RC_WORK/node_modules/redis-commander"
-
-                  # Install only if not already present
-                  if [ ! -d "$RC_PKG" ]; then
-                    mkdir -p "$RC_WORK"
-                    cd "$RC_WORK"
-                    npm init -y
-                    npm install redis-commander@0.9.0
-                  fi
-
-                  # Always rewrite default.json with our connections (idempotent).
-                  # redis-commander reads TOP-LEVEL config.connections — not config.redis.connections!
-                  node <<NODE_SCRIPT
-                  const fs = require('fs');
-                  const p = '$RC_PKG/config/default.json';
-                  const c = JSON.parse(fs.readFileSync(p, 'utf8'));
-                  c.connections = [
-                    { label: 'standalone', host: '127.0.0.1', port: ${toString ports.redis}, dbIndex: 0 },
-                    { label: 'cluster',    host: '127.0.0.1', port: ${toString ports.redis-cluster-n1}, dbIndex: 0, isCluster: true, clusterNoTlsValidation: true }
-                  ];
-                  c.server.address = '0.0.0.0';
-                  c.server.port = ${toString ports.redis-commander};
-                  fs.writeFileSync(p, JSON.stringify(c, null, 2));
-                  console.log('Patched default.json top-level connections:', c.connections.length);
-                  NODE_SCRIPT
-
-                  cd "$RC_PKG"
-                  exec node bin/redis-commander.js --noauth
-                '';
-              };
-              namespace = lib.mkForce "tools";
-              depends_on = {
-                "redis".condition = "process_healthy";
-                "cluster1-cluster-create".condition = "process_completed_successfully";
-              };
-              availability = {
-                restart = "on_failure";
-                backoff_seconds = 50;
-                max_restarts = 50;
               };
             };
 

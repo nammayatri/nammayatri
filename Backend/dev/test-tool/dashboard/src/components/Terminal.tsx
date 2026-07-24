@@ -5,11 +5,16 @@ import '@xterm/xterm/css/xterm.css';
 import './Terminal.css';
 import { PROXY_BASE } from '../config';
 
+// Background is pure black on purpose. Full-screen TUIs (process-compose)
+// paint every cell with an explicit black background on their first draw, but
+// after a re-attach only *changed* cells are repainted — every untouched cell
+// falls back to this default. Anything other than #000 makes the screen look
+// washed out until the TUI happens to redraw those cells.
 const MONOKAI_THEME = {
-  background: '#1e1e1e',
+  background: '#000000',
   foreground: '#d4d4d4',
   cursor: '#aeafad',
-  cursorAccent: '#1e1e1e',
+  cursorAccent: '#000000',
   selectionBackground: '#264f78',
   black: '#000000',
   red: '#f44747',
@@ -66,6 +71,7 @@ export const Terminal: React.FC<TerminalProps> = ({
   const sessionRef = useRef<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
   const resizeTimerRef = useRef<number | null>(null);
+  const serverRepaintTimerRef = useRef<number | null>(null);
   const disposedRef = useRef(false);
 
   useEffect(() => {
@@ -106,10 +112,60 @@ export const Terminal: React.FC<TerminalProps> = ({
       }
     } catch { /* if _core/viewport aren't accessible, fall through */ }
 
-    // Defer the first fit() to the next animation frame so the flex container
+    // ── Sizing ──
+    // Tabs are hidden with `display: none`, which makes the container measure
+    // 0×0. Fitting against that yields a 1–2 cell geometry, and term.onResize
+    // would push it to the PTY — the remote TUI then really does redraw itself
+    // at that size, which is what showed up as a mangled screen after a tab
+    // switch. So: never fit unless the element has a real layout box, and
+    // ignore nonsense proposals. On hidden → visible, re-fit and repaint from
+    // xterm's own buffer (it keeps the screen while hidden; no server involved).
+    const hasLayout = () => {
+      const el = containerRef.current;
+      return !!el && el.isConnected && el.offsetWidth > 0 && el.offsetHeight > 0;
+    };
+
+    const safeFit = () => {
+      if (!hasLayout()) return false;
+      try {
+        const dims = fit.proposeDimensions();
+        if (!dims || !Number.isFinite(dims.cols) || !Number.isFinite(dims.rows)) return false;
+        if (dims.cols < 20 || dims.rows < 5) return false;
+        if (dims.cols !== term.cols || dims.rows !== term.rows) fit.fit();
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    const repaint = () => {
+      try { term.refresh(0, term.rows - 1); } catch { /* ignore */ }
+    };
+
+    // Server-side repaint: ask the TUI itself to redraw every cell. term.refresh
+    // only re-renders what xterm already holds, which cannot remove junk the
+    // TUI does not know it left behind (the stray border column after a
+    // re-attach). Debounced, because it is only correct once the geometry has
+    // stopped moving — a pulse at an intermediate fit width recreates the very
+    // artefact it is meant to clear.
+    const requestServerRepaint = () => {
+      const sid = sessionRef.current;
+      if (!sid) return;
+      if (serverRepaintTimerRef.current) window.clearTimeout(serverRepaintTimerRef.current);
+      serverRepaintTimerRef.current = window.setTimeout(() => {
+        if (disposedRef.current) return;
+        fetch(`${apiBase}/repaint`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session: sessionRef.current }),
+        }).catch(() => { /* endpoint may not exist for this prefix — harmless */ });
+      }, 450);
+    };
+
+    // Defer the first fit to the next animation frame so the flex container
     // has settled its dimensions before FitAddon measures it.
     requestAnimationFrame(() => {
-      if (!disposedRef.current) { try { fit.fit(); } catch { /* ignore */ } }
+      if (!disposedRef.current) safeFit();
     });
 
     termRef.current = term;
@@ -144,7 +200,7 @@ export const Terminal: React.FC<TerminalProps> = ({
         sessionRef.current = sessionId;
 
         // Re-fit now that we have a session so the PTY gets the real geometry.
-        try { fit.fit(); } catch { /* ignore */ }
+        safeFit();
         try {
           await fetch(`${apiBase}/resize`, {
             method: 'POST',
@@ -155,6 +211,9 @@ export const Terminal: React.FC<TerminalProps> = ({
 
         const es = new EventSource(`${apiBase}/stream?session=${encodeURIComponent(sessionId)}`);
         esRef.current = es;
+        // Re-attach: the stream's own pulse fires at whatever geometry the PTY
+        // had when it opened. Follow up once this terminal's fit has settled.
+        if (attachSessionId) requestServerRepaint();
         es.onmessage = (ev) => {
           try {
             const msg = JSON.parse(ev.data);
@@ -199,16 +258,35 @@ export const Terminal: React.FC<TerminalProps> = ({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session: sid, cols, rows }),
         }).catch(() => { /* swallow */ });
+        requestServerRepaint();
       }, 120);
     });
 
-    const onWindowResize = () => {
-      try { fit.fit(); } catch { /* ignore */ }
-    };
+    const onWindowResize = () => { safeFit(); };
     window.addEventListener('resize', onWindowResize);
 
+    // Browser-level tab switches don't resize anything, but the renderer can
+    // come back with a stale texture atlas — repaint from the buffer.
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible' && hasLayout()) {
+        safeFit();
+        requestAnimationFrame(repaint);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    const hiddenRef = { current: !hasLayout() };
     const ro = (typeof ResizeObserver !== 'undefined')
-      ? new ResizeObserver(() => { try { fit.fit(); } catch { /* ignore */ } })
+      ? new ResizeObserver(() => {
+        if (!hasLayout()) { hiddenRef.current = true; return; }
+        const wasHidden = hiddenRef.current;
+        hiddenRef.current = false;
+        safeFit();
+        if (wasHidden) {
+          requestAnimationFrame(repaint);
+          requestServerRepaint();
+        }
+      })
       : null;
     if (ro && containerRef.current) ro.observe(containerRef.current);
 
@@ -220,8 +298,10 @@ export const Terminal: React.FC<TerminalProps> = ({
       onData.dispose();
       onResize.dispose();
       window.removeEventListener('resize', onWindowResize);
+      document.removeEventListener('visibilitychange', onVisibility);
       if (ro) ro.disconnect();
       if (resizeTimerRef.current) window.clearTimeout(resizeTimerRef.current);
+      if (serverRepaintTimerRef.current) window.clearTimeout(serverRepaintTimerRef.current);
       const sid = sessionRef.current;
       if (esRef.current) { try { esRef.current.close(); } catch { /* ignore */ } }
       // Only kill sessions we created. When `attachSessionId` was provided,

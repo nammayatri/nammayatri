@@ -15,7 +15,7 @@ import { callStep, startLocationPinger, stopLocationPinger, setGlobalLog, startN
 import { buildApiCatalog } from './api-catalog';
 import { getLocationsForCity } from './mock-data/locations';
 import { Config, LogEntry, Step, StepResult } from './types';
-import { PROXY_BASE, refreshPortsTable } from './config';
+import { PROXY_BASE, refreshPortsTable, syncContextApiBase } from './config';
 import './App.css';
 
 const defaultConfig: Config = {
@@ -613,6 +613,9 @@ function App() {
   // etc.) is picked up without a dashboard reload. Failures are silent —
   // getServicePort() falls back to cached / build-time defaults.
   useEffect(() => {
+    // Also re-point the context-api base at the targeted stack (local or
+    // devbox) — it reloads the page once if the host/port moved.
+    void syncContextApiBase();
     void refreshPortsTable();
     const id = setInterval(() => { void refreshPortsTable(); }, 5000);
     return () => clearInterval(id);

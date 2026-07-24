@@ -25,7 +25,7 @@ export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, is
   const [contextLoaded, setContextLoaded] = useState(false);
   const [contextError, setContextError] = useState(false);
   // Note: Flush Redis + Sync Data have moved to <TopBarActions /> in the
-  // top bar (next to DB Explorer / Redis Explorer).
+  // top bar (next to DB Manager / Metabase).
 
   const [selectedMerchant, setSelectedMerchant] = useState('');
   const [selectedCity, setSelectedCity] = useState('');

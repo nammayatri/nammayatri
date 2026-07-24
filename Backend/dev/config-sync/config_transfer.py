@@ -127,7 +127,16 @@ EXPORT_STATEMENT_TIMEOUT_MS = int(os.getenv("CONFIG_SYNC_EXPORT_STATEMENT_TIMEOU
 def load_json_file(path, label=""):
     if not path.exists():
         example = path.with_suffix(".json.example")
-        sys.exit(f"Missing {path}\n  cp {example} {path}")
+        if not example.exists():
+            sys.exit(f"Missing {path}\n  cp {example} {path}")
+        # Seed it from the template instead of dying — a fresh checkout (or a
+        # rsynced dev-box, where the gitignored file never existed) would
+        # otherwise fail every sync until someone ran the cp by hand.
+        try:
+            shutil.copyfile(example, path)
+        except OSError as exc:
+            sys.exit(f"Missing {path}\n  cp {example} {path}\n  (auto-copy failed: {exc})")
+        print(f"Missing {path} — copied from {example.name}", flush=True)
     with open(path) as f:
         return json.load(f)
 

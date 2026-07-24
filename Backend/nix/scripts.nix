@@ -28,6 +28,16 @@ _:
         let ports = import ./services/ports.nix; in
         killPortsSnippet (lib.attrValues ports);
       resolvePorts = import ./services/resolve-ports.nix { inherit pkgs lib; };
+      # Nix's glibc resolves locale names ONLY through LOCALE_ARCHIVE. On a
+      # non-NixOS host that variable points at the system archive
+      # (/usr/lib/locale/locale-archive), which has no C.UTF-8 entry — glibc
+      # >= 2.35 compiles that locale in instead of shipping it in the archive.
+      # Nix still hands every child LC_ALL=C.UTF-8, so each service's shell
+      # prints "setlocale: LC_ALL: cannot change locale (C.UTF-8)" at startup.
+      # Pointing at a nix-built archive that *does* contain C.UTF-8 fixes it at
+      # the source, for every process, without downgrading anyone to LC_ALL=C.
+      # Lazily evaluated — only forced on Linux (see the isLinux guard below).
+      localeArchive = "${pkgs.glibcLocalesUtf8 or pkgs.glibcLocales}/lib/locale/locale-archive";
       # Ports owned by , run-local-test-dashboard (test-dashboard UI + test-local-api
       # + config-sync-server).
       localTestDashboardPorts = [ 7070 7083 8090 ];
@@ -387,8 +397,12 @@ _:
               ulimit -s "$_hard" 2>/dev/null || true
               ulimit -n "$_hard" 2>/dev/null || true
             fi
-            # -S NAME forces stable sort by process name (no re-ordering on status change)
-            nix run .#run-mobility-stack-nix -- -S NAME "$@"
+            # -S NAME forces stable sort by process name (no re-ordering on status change).
+            # -d hides `disabled = true` processes (the ones this profile never
+            # starts) so the list only shows what the profile actually runs;
+            # they are still defined, so `process-compose process start <name>`
+            # can bring one up on demand.
+            nix run .#run-mobility-stack-nix -- -S NAME -d "$@"
           '';
         };
 
@@ -406,6 +420,14 @@ _:
             # registration token, so drivers never enter the geo pool and never get
             # nearbyRideRequest). Integration-test collections now send {{driver_token}}
             # to the LTS, so they work in authenticated (non-DEV) mode too.
+            # Give nix's glibc a locale archive that actually contains the
+            # C.UTF-8 it hands to every child (see `localeArchive` above).
+            # process-compose passes its environment to each service, so this
+            # one export silences the setlocale warning for the whole stack.
+            ${lib.optionalString pkgs.stdenv.isLinux ''
+              export LOCALE_ARCHIVE="${localeArchive}"
+            ''}
+
             REGISTRY="/tmp/devbox-registry.json"
             DEVBOX_KEY=""
             if [[ -f "''${FLAKE_ROOT}/.devbox-id.json" ]]; then
@@ -538,6 +560,30 @@ _:
               exit 1
             fi
             echo "Generated Caddyfile at ''${FLAKE_ROOT}/data/Caddyfile"
+
+            # ── Publish our slice at data/devbox-ports.json — the single source
+            #    of truth for anything outside this machine. The local
+            #    test-dashboard SSHes in and cats this one file (host + workspace
+            #    dir come from .devbox-id.json); test-context-api prefers it over
+            #    the registry. data/ is never rsynced, so a redeploy can't clobber
+            #    the stack host's copy, and every preflight rewrites it.
+            #    caddyRoutes is scraped from the freshly generated Caddyfile,
+            #    keeping caddyfile.nix the only place the exposed-service list is
+            #    maintained. ──
+            PORTS_PUBLISH="''${FLAKE_ROOT}/data/devbox-ports.json"
+            CADDY_ROUTES=$(${pkgs.gnused}/bin/sed -n 's|^[[:space:]]*handle_path /\([^/]*\)/\*.*|\1|p' \
+              "''${FLAKE_ROOT}/data/Caddyfile" | ${pkgs.jq}/bin/jq -R -s -c 'split("\n") | map(select(length > 0))')
+            ${pkgs.jq}/bin/jq -n \
+              --arg dev "$DEVBOX_KEY" \
+              --arg dir "''${FLAKE_ROOT}" \
+              --argjson ports "$PORTS_JSON" \
+              --argjson caddy "''${CADDY_PORT:-null}" \
+              --argjson routes "''${CADDY_ROUTES:-[]}" \
+              '{devKey: $dev, dir: $dir, caddyPort: $caddy, caddyRoutes: $routes, ports: $ports}' \
+              > "$PORTS_PUBLISH.tmp.$$"
+            mv -f "$PORTS_PUBLISH.tmp.$$" "$PORTS_PUBLISH"
+            echo "Published resolved ports at $PORTS_PUBLISH"
+
             # Bump soft stack to the hard max. `nix run` spawns a fresh shell
             # that doesn't inherit the devshell's shellHook, so set it here too.
             # Required by process-compose / some Haskell exes that want >= 60 MB stack.
@@ -546,8 +592,12 @@ _:
               ulimit -s "$_hard" 2>/dev/null || true
               ulimit -n "$_hard" 2>/dev/null || true
             fi
-            # -S NAME forces stable sort by process name (no re-ordering on status change)
-            nix run --impure .#run-mobility-stack-dev -- -S NAME "$@"
+            # -S NAME forces stable sort by process name (no re-ordering on status change).
+            # -d hides `disabled = true` processes (the ones this profile never
+            # starts) so the list only shows what the profile actually runs;
+            # they are still defined, so `process-compose process start <name>`
+            # can bring one up on demand.
+            nix run --impure .#run-mobility-stack-dev -- -S NAME -d "$@"
           '';
         };
 
@@ -564,7 +614,7 @@ _:
               ulimit -s "$_hard" 2>/dev/null || true
               ulimit -n "$_hard" 2>/dev/null || true
             fi
-            nix run .#run-mobility-stack-full -- -S NAME "$@"
+            nix run .#run-mobility-stack-full -- -S NAME -d "$@"
           '';
         };
 
@@ -579,7 +629,7 @@ _:
               ulimit -s "$_hard" 2>/dev/null || true
               ulimit -n "$_hard" 2>/dev/null || true
             fi
-            nix run .#run-local-test-dashboard -- -S NAME "$@"
+            nix run .#run-local-test-dashboard -- -S NAME -d "$@"
           '';
         };
 

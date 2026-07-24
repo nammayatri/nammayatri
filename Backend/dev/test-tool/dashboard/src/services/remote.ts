@@ -21,11 +21,19 @@ export interface RemoteSessionResponse {
   rows?: number;
 }
 
-export interface RegistryResponse {
-  devName?: string;
-  caddyPort?: number;
-  contextApiPort?: number | null;
+// Resolved port map of the stack this checkout points at. local-api reads it
+// straight off the stack host's .devbox-ports.json (over SSH for a devbox), so
+// this is the only place ports come from — nothing is mirrored locally.
+export interface DevboxPortsResponse {
+  source?: string;
+  host?: string;
+  devKey?: string;
   dir?: string;
+  ports?: Record<string, number>;
+  /** Services reverse-proxied by caddy at /<name>/* — scraped from the Caddyfile. */
+  caddyRoutes?: string[];
+  caddyPort?: number | null;
+  contextApiPort?: number | null;
   error?: string;
 }
 
@@ -98,11 +106,51 @@ export interface RemoteSessionSummary {
 export const remoteSessions = (): Promise<RemoteSessionSummary[]> =>
   fetch(`${LOCAL_API_BASE}/api/remote/sessions`).then(r => r.json());
 
-export const remoteSyncCaddyPort = (t: RemoteTarget): Promise<RegistryResponse> =>
-  json('/api/remote/sync-caddy-port', t);
+export const fetchDevboxPorts = (
+  opts: { host?: string; refresh?: boolean } = {},
+): Promise<DevboxPortsResponse> => {
+  const qs = new URLSearchParams();
+  if (opts.host) qs.set('host', opts.host);
+  if (opts.refresh) qs.set('refresh', '1');
+  const q = qs.toString();
+  return fetch(`${LOCAL_API_BASE}/api/devbox/ports${q ? `?${q}` : ''}`, { cache: 'no-store' })
+    .then(r => r.json());
+};
 
 export const remoteCabalClean = (t: RemoteTarget): Promise<RemoteSessionResponse> =>
   json('/api/remote/cabal-clean', t);
+
+export interface PreflightResponse {
+  key?: string;
+  needsDeploy?: boolean;
+  deployReason?: string;
+  needsCabalClean?: boolean;
+  cabalCleanReason?: string;
+  gitHead?: string;
+  storedGitHead?: string;
+  workspaceHash?: string;
+  storedWorkspaceHash?: string;
+  deployedAt?: number;
+  startedAt?: number;
+  checkedAt?: number;
+  autoDeploy?: AutoDeployStatus;
+  error?: string;
+}
+
+export interface AutoDeployStatus {
+  busy?: boolean;
+  pollSeconds?: number;
+  lastCheckAt?: number | null;
+  lastDeployAt?: number | null;
+  lastResult?: string | null;
+  lastSession?: string | null;
+}
+
+export const remotePreflight = (t: RemoteTarget): Promise<PreflightResponse> =>
+  json('/api/remote/preflight', t);
+
+export const remoteMark = (t: RemoteTarget, stage: 'deploy' | 'start'): Promise<{ error?: string }> =>
+  json('/api/remote/mark', { ...t, stage });
 
 export const resolveDevbox = (forceNew = false): Promise<DevboxAssignment> =>
   json(`/api/devbox/resolve${forceNew ? '?new=1' : ''}`);
@@ -141,5 +189,21 @@ export const fetchMachines = (): Promise<MachinesResponse> =>
   fetch(`${LOCAL_API_BASE}/api/remote/machines`).then(r => r.json());
 
 export const setupSsh = (host: string, user: string, port?: number): Promise<{
-  status?: string; message?: string; publicKey?: string; error?: string;
+  status?: string; message?: string; command?: string; publicKey?: string;
+  viaRelay?: string; error?: string;
 }> => json('/api/remote/setup-ssh', { host, user, port: port || 22 });
+
+// Interactive one-time key install: runs ssh-copy-id in a PTY the panel attaches
+// its terminal to, so the devbox password is typed inside the dashboard.
+export const remoteSshCopyId = (t: RemoteTarget): Promise<RemoteSessionResponse> =>
+  json('/api/remote/ssh-copy-id', t);
+
+export const openRemoteEditor = (
+  t: RemoteTarget,
+): Promise<{ opened?: string; error?: string }> =>
+  json('/api/remote/open-editor', t);
+
+// `code` on PATH? The panel only offers the open-in-editor button when it is.
+export const editorAvailable = (): Promise<{
+  available?: boolean; cli?: string; path?: string; error?: string;
+}> => fetch(`${LOCAL_API_BASE}/api/remote/editor-available`).then(r => r.json());

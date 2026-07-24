@@ -1,6 +1,6 @@
 /* Top-bar action controls.
    Visual hierarchy: three labelled groups separated by faint dividers.
-     1. Systems              — DB Explorer, Redis Explorer, Flush Redis
+     1. Systems              — DB Manager, Metabase, Flush Redis
      2. Data Pipeline        — Sync Data
      3. Client Applications  — Control Center, Customer App, Driver App
    Each launcher button surfaces its current state inline (variant, elapsed
@@ -56,7 +56,7 @@
 
 
 
-/* Match the neutral look of `.tool-link` (DB Explorer / Redis Explorer) */
+/* Match the neutral look of `.tool-link` (DB Manager / Metabase) */
 .tb-btn {
   background: transparent;
   color: #8b949e;

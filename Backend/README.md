@@ -293,12 +293,24 @@ python config_transfer.py import --from master --to local
 ##### Local vs devbox & dynamic ports
 
 The backend stack can run on your laptop or on a separate **devbox**.
-`nix/services/resolve-ports.nix` probes for free ports and writes the resolved
-set to `/data/ports-resolved.nix`, so several stacks can coexist without port
-clashes. To drive a stack running on another host, use the dashboard's **Remote
-Stack** tab to rsync the repo and start `, run-mobility-stack-dev` over SSH, then
-point the dashboard at that host's context-api (stored in
-`localStorage.ny.contextApiBase`).
+`nix/services/resolve-ports.nix` probes for free ports, so several stacks can
+coexist without port clashes. The `, run-mobility-stack-dev` preflight publishes
+the resolved map two ways: a slice in `/tmp/devbox-registry.json` (used for
+cross-developer port exclusion and by the Nix eval) and — the source of truth for
+everything outside the stack host — `<workspace>/data/devbox-ports.json`.
+
+Nothing is mirrored on the client side. `test-context-api` reads
+`data/devbox-ports.json` for `GET /api/ports`, and the test-dashboard reads it
+through local-api's `GET /api/devbox/ports`, which SSHes into the devbox using
+the host and workspace path recorded in the local `<repo-root>/.devbox-id.json`.
+`data/` is never rsynced, so a redeploy can't clobber the stack host's copy, and
+every preflight rewrites it.
+
+To drive a stack running on another host, use the dashboard's **Remote Stack**
+tab to rsync the repo and start `, run-mobility-stack-dev` over SSH, then point
+the dashboard at that host's context-api (stored in
+`localStorage.ny.contextApiBase`). **Tools → Service Ports** lists every resolved
+port, the direct URLs and the Caddy `/<service>/` routes, with copy buttons.
 
 ##### Usage
 

@@ -79,6 +79,8 @@ let ServerName =
 
 let SchedulerType = < RedisBased | DbBased >
 
+let TransportKind = < Kafka | RedisStream >
+
 let loggerConfigT =
       { level : LogLevel
       , logToFile : Bool
@@ -138,4 +140,5 @@ in  { smsSessionConfig
     , eventStreamNameType
     , eventType
     , schedulerType = SchedulerType
+    , transportKind = TransportKind
     }
