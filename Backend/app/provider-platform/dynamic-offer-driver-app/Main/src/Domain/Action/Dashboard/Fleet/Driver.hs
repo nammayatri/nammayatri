@@ -331,13 +331,14 @@ postDriverFleetAddVehicleHelper isBulkUpload merchantShortId opCity reqDriverPho
   case (getEntityData.role, getMbFleetOwnerId) of
     (DP.DRIVER, Nothing) -> do
       -- DCO case
-      void $ checkRCAssociationForDriver getEntityData.id rc True
+      let skipDriverChecks = fromMaybe False transporterConfig.skipRCAssociationCheckForDCO
+      unless skipDriverChecks $ void $ checkRCAssociationForDriver getEntityData.id rc True
       void $ DCommon.runVerifyRCFlow False getEntityData.id merchant merchantOpCityId opCity req True isBulkUpload Nothing -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
       logTagInfo "dashboard -> addVehicleUnderDCO : " (show getEntityData.id)
       pure Success
     (_, Just fleetOwnerId) -> do
       -- fleet and fleetDriver case
-      let skipFleetChecks = fromMaybe False req.skipFleetChecks
+      let skipFleetChecks = fromMaybe False transporterConfig.skipRCAssociationCheckForFleet
       whenJust rc $ \rcert -> do
         unless skipFleetChecks $ checkRCAssociationForFleet fleetOwnerId rcert
       void $ DCommon.runVerifyRCFlow skipFleetChecks getEntityData.id merchant merchantOpCityId opCity req True isBulkUpload (Just $ Id @DP.Person fleetOwnerId) -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
@@ -3970,7 +3971,6 @@ convertToAddVehicleReq rcReq =
       dateOfRegistration = rcReq.dateOfRegistration,
       mYManufacturing = Nothing,
       vehicleModelYear = Nothing,
-      skipFleetChecks = Nothing,
       vehicleTags = Nothing,
       fuelType = Nothing,
       udinNumber = rcReq.udinNumber

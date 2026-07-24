@@ -1374,6 +1374,8 @@ TransporterConfig:
     blockDriverOwnRCForFleetDrivers: Maybe Bool # When True, fleet-linked drivers cannot onboard/activate their own (non-fleet) RC
     overrideOperatorDriverJoiningWithDeepLink: Maybe Bool
     mandateEmailVerification: Maybe Bool
+    skipRCAssociationCheckForDCO: Maybe Bool
+    skipRCAssociationCheckForFleet: Maybe Bool
 
   beamType:
     currency: Maybe Currency

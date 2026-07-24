@@ -126,7 +126,6 @@ createTestVehicleRequest =
       Common.vehicleModelYear = Just 2023,
       Common.vehicleTags = Just ["Premium", "AC"],
       Common.fuelType = Just "Petrol",
-      Common.skipFleetChecks = Nothing,
       Common.udinNumber = Nothing
     }
 
@@ -153,7 +152,6 @@ createCustomVehicleRequest regNo vehicleClass capacity colour energyType model m
       Common.vehicleModelYear = Just 2023,
       Common.vehicleTags = Just ["Premium", "AC"],
       Common.fuelType = Just "Petrol",
-      Common.skipFleetChecks = Nothing,
       Common.udinNumber = Nothing
     }
 
