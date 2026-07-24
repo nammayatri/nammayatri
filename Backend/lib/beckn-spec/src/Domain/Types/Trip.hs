@@ -385,6 +385,20 @@ isEndOtpRequired (Delivery _) = True
 isEndOtpRequired (EasyBooking _) = False -- hardcoded (not config-driven); flip this one word + redeploy if you want it True instead
 isEndOtpRequired _ = False
 
+-- Category and mode as separate Text values (unlike TripCategory's own combined Show
+-- instance, e.g. "EasyBooking_RideOtp") for EndOtpConfig's two-column (tripCategory,
+-- tripMode) DB lookup key. InterCity/CrossCity's optional city Text is dropped here since
+-- isEndOtpRequired never depends on it.
+tripCategoryAndModeText :: TripCategory -> (Text, Text)
+tripCategoryAndModeText (OneWay mode) = ("OneWay", show mode)
+tripCategoryAndModeText (Rental mode) = ("Rental", show mode)
+tripCategoryAndModeText (RideShare mode) = ("RideShare", show mode)
+tripCategoryAndModeText (InterCity mode _) = ("InterCity", show mode)
+tripCategoryAndModeText (CrossCity mode _) = ("CrossCity", show mode)
+tripCategoryAndModeText (Ambulance mode) = ("Ambulance", show mode)
+tripCategoryAndModeText (Delivery mode) = ("Delivery", show mode)
+tripCategoryAndModeText (EasyBooking mode) = ("EasyBooking", show mode)
+
 isRideOtpTrip :: TripCategory -> Bool
 isRideOtpTrip (OneWay OneWayRideOtp) = True
 isRideOtpTrip (CrossCity OneWayRideOtp _) = True
