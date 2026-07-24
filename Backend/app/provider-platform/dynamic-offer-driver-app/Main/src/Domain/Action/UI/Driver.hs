@@ -2133,11 +2133,10 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
   booking <- maybe (QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)) pure mbBooking
   when booking.isScheduled $ removeBookingFromRedis booking
-  isBookingAssignmentInprogress' <- CS.isBookingAssignmentInprogress booking.id
-  when isBookingAssignmentInprogress' $ throwError RideRequestAlreadyAccepted
   isBookingCancelled' <- CS.isBookingCancelled booking.id
   when isBookingCancelled' $ throwError (InternalError "BOOKING_CANCELLED")
-  CS.markBookingAssignmentInprogress booking.id -- this is to handle booking assignment and user cancellation at same time
+  assignmentClaimed <- CS.tryMarkBookingAssignmentInprogress booking.id
+  unless assignmentClaimed $ throwError RideRequestAlreadyAccepted
   unless (booking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
   mFleetAssociation <- QFDA.findByDriverId driver.id True
   whenJust mbSearchTry $ \searchTry -> do
