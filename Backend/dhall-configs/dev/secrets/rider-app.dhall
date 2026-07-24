@@ -28,6 +28,7 @@ in  { dbUserId = "atlas_app_user"
     , encHashSalt =
         "How wonderful it is that nobody need wait a single moment before starting to improve the world"
     , dashboardToken = "some-secret-dashboard-token-for-rider-app"
+    , driverDashboardToken = "some-secret-dashboard-token-for-driver-offer-bpp"
     , internalAPIKey = "test-bap-api-key"
     , internalClickhouseAPIKey = "test-clickhosue-api-key"
     , clickHouseUsername = "default"

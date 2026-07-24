@@ -4,7 +4,10 @@ import qualified AWS.S3 as S3
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -16,6 +19,7 @@ import GHC.IO.IOMode (IOMode (..))
 import IssueManagement.Common as Reexport
 import qualified IssueManagement.Common.UI.Issue as Common
 import qualified IssueManagement.Domain.Types.Issue.ChatMessage as DCM
+import qualified IssueManagement.Domain.Types.Issue.IssueApiIntegration as DAI
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as D
 import qualified IssueManagement.Domain.Types.Issue.IssueConfig as D
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage as D
@@ -29,9 +33,12 @@ import qualified IssueManagement.Storage.CachedQueries.Issue.IssueMessage as CQI
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueOption as CQIO
 import qualified IssueManagement.Storage.CachedQueries.MediaFile as CQMF
 import qualified IssueManagement.Storage.Queries.Issue.ChatMessage as QCM
+import qualified IssueManagement.Storage.Queries.Issue.IssueApiIntegration as QAI
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
+import qualified IssueManagement.Tools.ApiIntegrationExecutor as Executor
 import IssueManagement.Tools.Error
+import qualified IssueManagement.Tools.JsonLogic as JsonLogic
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (DbHash, decrypt)
 import qualified Kernel.External.Ticket.Interface.Types as TIT
@@ -75,6 +82,10 @@ data ServiceHandle m = ServiceHandle
     kaptureGetTicket :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.GetTicketReq -> m [TIT.GetTicketResp]),
     getTicketStatus :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.SearchTicketByIdReq -> m [TIT.GetTicketStatusResp]),
     findMerchantConfig :: Id Merchant -> Id MerchantOperatingCity -> Maybe (Id Person) -> m MerchantConfig,
+    -- | rider-app: resolves driver-app's dashboard base URL + dashboard token
+    -- for a merchant so InternalDriver lookups can call across; Nothing where
+    -- unsupported (driver-app itself, or deployments without the config).
+    mbCounterpartDashboardInfo :: Maybe (Id Merchant -> m (Maybe (BaseUrl, Text))),
     mbReportACIssue :: Maybe (BaseUrl -> Text -> Text -> m APISuccess), -- Deprecated
     mbReportIssue :: Maybe (BaseUrl -> Text -> Text -> IssueReportType -> m APISuccess),
     mbFindLatestBookingByPersonId :: Maybe (Id Person -> m (Maybe Booking)),
@@ -190,7 +201,9 @@ getIssueCategory (personId, _, merchantOpCityId) mbLanguage issueHandle identifi
 getIssueOption ::
   ( BeamFlow m r,
     EsqDBReplicaFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasField "selfBaseUrl" r BaseUrl,
+    HasField "dashboardToken" r Text
   ) =>
   (Id Person, Id Merchant, Id MerchantOperatingCity) ->
   Id D.IssueCategory ->
@@ -215,10 +228,17 @@ getIssueOption (personId, merchantId, merchantOpCityId) issueCategoryId issueOpt
   issueConfig <- issueHandle.findIssueConfig adjMerchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound adjMerchantOpCityId.getId)
   let mbIssueReportType = mbIssueOption >>= (.label) >>= A.decode . A.encode
   processIssueReportTypeActions (personId, merchantId) mbIssueReportType Nothing Nothing False identifier issueHandle
-  issueMessageTranslationList <- case issueOptionId of
+  initialMessageTranslationList <- case issueOptionId of
     Nothing -> CQIM.findAllActiveByCategoryIdAndLanguage issueCategoryId language identifier
     Just optionId -> CQIM.findAllActiveByOptionIdAndLanguage optionId language identifier
-  let issueMessages = mkIssueMessageList (Just issueMessageTranslationList) language issueConfig mbRideInfoRes
+  -- ApiCall engine: when a step's message is a lookup node, run the declared
+  -- integration server-side, stash extracted fields in the per-chat flow
+  -- context, and auto-descend into the branch option whose condition matches.
+  -- The app only ever sees the resolved step's ordinary messages.
+  mbMerchantOpCity <- issueHandle.findMOCityById adjMerchantOpCityId
+  (issueMessageTranslationList, flowCtx) <-
+    resolveApiCallSteps personId issueCategoryId mbRideId mbMerchantOpCity language identifier issueHandle initialMessageTranslationList (3 :: Int)
+  let issueMessages = map (interpolateMessage flowCtx) $ mkIssueMessageList (Just issueMessageTranslationList) language issueConfig mbRideInfoRes
   issueOptionTranslationList <- do
     case (issueOptionId, issueReportId) of
       (Just optionId, Just iReportId) -> do
@@ -1638,3 +1658,164 @@ mkMediaFiles =
 
 makeIssueReportKey :: Id D.IssueReport -> Text
 makeIssueReportKey id = "IssueReport:IssueReportId-" <> id.getId
+
+---------------------------------------------------------
+-- ApiCall engine (chat lookups) -------------------------
+
+-- | Per-chat flow context: extracted response fields + builtins, keyed by
+-- person + category so a fresh category flow starts clean. 24h TTL - the
+-- lifetime of a support conversation, not durable state.
+flowContextKey :: Id Person -> Id D.IssueCategory -> Text
+flowContextKey personId categoryId = "issueFlowCtx:" <> personId.getId <> ":" <> categoryId.getId
+
+loadFlowContext :: BeamFlow m r => Id Person -> Id D.IssueCategory -> m (Map.Map Text A.Value)
+loadFlowContext personId categoryId =
+  fromMaybe Map.empty <$> Redis.safeGet (flowContextKey personId categoryId)
+
+saveFlowContext :: BeamFlow m r => Id Person -> Id D.IssueCategory -> Map.Map Text A.Value -> m ()
+saveFlowContext personId categoryId ctx =
+  Redis.setExp (flowContextKey personId categoryId) ctx 86400
+
+-- | Walks ApiCall steps until an ordinary step is reached. Every failure mode
+-- (bad config, missing integration, HTTP error, no matching branch) resolves
+-- to the action's onError/default branch - a lookup may fail, the chat may not.
+resolveApiCallSteps ::
+  ( BeamFlow m r,
+    HasField "selfBaseUrl" r BaseUrl,
+    HasField "dashboardToken" r Text
+  ) =>
+  Id Person ->
+  Id D.IssueCategory ->
+  Maybe (Id Ride) ->
+  Maybe MerchantOperatingCity ->
+  Language ->
+  Identifier ->
+  ServiceHandle m ->
+  [(D.IssueMessage, D.DetailedTranslation, [Text])] ->
+  Int ->
+  m ([(D.IssueMessage, D.DetailedTranslation, [Text])], Map.Map Text A.Value)
+resolveApiCallSteps personId categoryId mbRideId mbMerchantOpCity language identifier issueHandle initialList maxHops = do
+  let builtins =
+        Map.fromList $
+          [ ("personId", A.String personId.getId),
+            ("categoryId", A.String categoryId.getId)
+          ]
+            <> maybe [] (\rideId -> [("rideId", A.String rideId.getId)]) mbRideId
+            <> maybe
+              []
+              ( \moCity ->
+                  [ ("merchantShortId", A.String moCity.merchantShortId.getShortId),
+                    ("city", A.String (show moCity.city)),
+                    ("merchantOperatingCityId", A.String moCity.id.getId)
+                  ]
+              )
+              mbMerchantOpCity
+  -- Fast path: most steps have no lookup, so skip the Redis read of stored
+  -- flow context entirely; the pure builtins are still available for {{var}}
+  -- interpolation on ordinary messages.
+  if not (any (\(msg, _, _) -> msg.messageType == D.ApiCall) initialList)
+    then pure (initialList, builtins)
+    else do
+      storedCtx <- loadFlowContext personId categoryId
+      go initialList maxHops (Map.union storedCtx builtins)
+  where
+    go list hops ctx = case find (\(msg, _, _) -> msg.messageType == D.ApiCall) list of
+      Nothing -> pure (list, ctx)
+      Just (apiMsg, _, _)
+        | hops <= 0 -> do
+          logError $ "ApiCall engine: hop budget exhausted at message " <> apiMsg.id.getId <> "; serving non-lookup messages only"
+          pure (filter (\(msg, _, _) -> msg.messageType /= D.ApiCall) list, ctx)
+        | otherwise -> case A.decode . BSL.fromStrict . TE.encodeUtf8 =<< apiMsg.apiAction of
+          Nothing -> do
+            logError $ "ApiCall engine: message " <> apiMsg.id.getId <> " has messageType ApiCall but no decodable apiAction; skipping"
+            pure (filter (\(msg, _, _) -> msg.messageType /= D.ApiCall) list, ctx)
+          Just (action :: D.ApiCallAction) -> do
+            (targetOptionId, ctx') <- runLookup action ctx
+            saveFlowContext personId categoryId ctx'
+            nextList <- CQIM.findAllActiveByOptionIdAndLanguage (Id targetOptionId) language identifier
+            go nextList (hops - 1) ctx'
+
+    runLookup action ctx = do
+      mbIntegration <- QAI.findById (Id action.integrationId)
+      case mbIntegration of
+        Just integration | integration.isActive -> do
+          let params = buildParams action.paramMapping ctx
+              headers = maybe [] (map (\h -> (h.key, h.value))) (decodeJsonText =<< integration.headersJson :: Maybe [DAI.ApiHeaderSpec])
+              fields = maybe [] (map (\f -> (f.name, f.path))) (decodeJsonText integration.responseFieldsJson :: Maybe [DAI.ResponseFieldSpec])
+          result <- case integration.kind of
+            DAI.External ->
+              Executor.executeIntegration (show integration.method) integration.urlTemplate headers integration.bodyTemplate integration.timeoutMs fields params
+            DAI.InternalDriver -> case mbMerchantOpCity of
+              Nothing -> pure (internalFailure "Internal lookup: merchant operating city could not be resolved")
+              Just moCity -> do
+                counterpart <- maybe (pure Nothing) (\f -> f moCity.merchantId) issueHandle.mbCounterpartDashboardInfo
+                case counterpart of
+                  Nothing -> pure (internalFailure "Driver-side internal lookups are not configured on this deployment")
+                  Just (driverBase, driverToken) -> do
+                    let base = showBaseUrl driverBase
+                        basePadded = if "/" `T.isSuffixOf` base then base else base <> "/"
+                        url = basePadded <> "dashboard/" <> moCity.merchantShortId.getShortId <> "/" <> show moCity.city <> "/" <> integration.urlTemplate
+                        internalHeaders = ("token", driverToken) : filter (\(k, _) -> T.toLower k /= "token") headers
+                    Executor.executeIntegration (show integration.method) url internalHeaders integration.bodyTemplate integration.timeoutMs fields params
+            DAI.InternalRider -> case mbMerchantOpCity of
+              Nothing -> pure (internalFailure "Internal lookup: merchant operating city could not be resolved")
+              Just moCity -> do
+                selfBaseUrl <- asks (.selfBaseUrl)
+                dashboardToken <- asks (.dashboardToken)
+                let base = showBaseUrl selfBaseUrl
+                    basePadded = if "/" `T.isSuffixOf` base then base else base <> "/"
+                    url = basePadded <> "dashboard/" <> moCity.merchantShortId.getShortId <> "/" <> show moCity.city <> "/" <> integration.urlTemplate
+                    -- The engine's token must win: drop any author-supplied token header.
+                    internalHeaders = ("token", dashboardToken) : filter (\(k, _) -> T.toLower k /= "token") headers
+                Executor.executeIntegration (show integration.method) url internalHeaders integration.bodyTemplate integration.timeoutMs fields params
+          case result.errorMessage of
+            Nothing -> do
+              let extracted = Map.mapMaybe identity result.extractedFields
+                  ctx' = Map.union extracted ctx
+                  matched = find (\branch -> JsonLogic.evalBool branch.condition ctx') action.branches
+              pure (maybe (fromMaybe action.onErrorNextOptionId action.defaultNextOptionId) (.nextOptionId) matched, ctx')
+            Just err -> do
+              logError $ "ApiCall engine: integration " <> action.integrationId <> " failed: " <> err
+              pure (action.onErrorNextOptionId, ctx)
+        _ -> do
+          logError $ "ApiCall engine: integration " <> action.integrationId <> " missing or inactive"
+          pure (action.onErrorNextOptionId, ctx)
+
+    internalFailure msg =
+      Executor.ExecutionResult
+        { statusCode = Nothing,
+          latencyMs = 0,
+          extractedFields = Map.empty,
+          rawResponse = Nothing,
+          errorMessage = Just msg
+        }
+
+    buildParams mbMapping ctx = case mbMapping of
+      Nothing -> Map.map valueToParamText ctx
+      Just mapping -> Map.mapMaybe (\ctxKey -> valueToParamText <$> Map.lookup ctxKey ctx) mapping
+
+    decodeJsonText :: A.FromJSON a => Text -> Maybe a
+    decodeJsonText = A.decode . BSL.fromStrict . TE.encodeUtf8
+
+    valueToParamText :: A.Value -> Text
+    valueToParamText (A.String s) = s
+    valueToParamText (A.Number n) = T.pack (show n)
+    valueToParamText (A.Bool b) = bool "false" "true" b
+    valueToParamText v = TL.toStrict (TLE.decodeUtf8 (A.encode v))
+
+-- | Fills {{var}} placeholders in served message text from the flow context,
+-- so a resolved step can say "Your fare was {{fare}}". Unresolved placeholders
+-- are left visible deliberately: they indicate a flow-config bug, and hiding
+-- them would mask it.
+interpolateMessage :: Map.Map Text A.Value -> Common.Message -> Common.Message
+interpolateMessage ctx msg =
+  msg{Common.message = substitute msg.message,
+      Common.messageTitle = substitute <$> msg.messageTitle
+     }
+  where
+    params = Map.map valueText ctx
+    substitute = Executor.substituteTemplate params
+    valueText (A.String s) = s
+    valueText (A.Number n) = T.pack (show n)
+    valueText (A.Bool b) = bool "false" "true" b
+    valueText v = TL.toStrict (TLE.decodeUtf8 (A.encode v))

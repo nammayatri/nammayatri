@@ -38,6 +38,11 @@ module Domain.Action.Dashboard.IssueManagement.Issue
     postIssueChatMessage,
     getIssueChatMessages,
     postIssueChatRead,
+    getIssueApiIntegrationList,
+    postIssueApiIntegrationUpsert,
+    postIssueApiIntegrationDelete,
+    postIssueApiIntegrationTest,
+    getIssueFlowSimulate,
     postIssueChatUpload,
   )
 where
@@ -54,6 +59,7 @@ import qualified IssueManagement.Common.Dashboard.Issue
 import qualified IssueManagement.Common.UI.Issue
 import qualified IssueManagement.Domain.Action.Dashboard.Issue as DIssue
 import qualified IssueManagement.Domain.Action.UI.Issue as DAI
+import qualified IssueManagement.Domain.Types.Issue.IssueApiIntegration
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage
 import qualified IssueManagement.Domain.Types.Issue.IssueOption
@@ -459,3 +465,45 @@ postIssueChatRead (Kernel.Types.Id.ShortId merchantShortId) city issueReportId r
     (Kernel.Types.Id.cast issueReportId)
     dashboardIssueHandle
     req
+
+getIssueApiIntegrationList ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.ApiIntegrationListRes
+getIssueApiIntegrationList (Kernel.Types.Id.ShortId merchantShortId) city =
+  DIssue.getIssueApiIntegrationList (Kernel.Types.Id.ShortId merchantShortId) city dashboardIssueHandle Common.CUSTOMER
+
+postIssueApiIntegrationUpsert ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  IssueManagement.Common.Dashboard.Issue.UpsertApiIntegrationReq ->
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.UpsertApiIntegrationRes
+postIssueApiIntegrationUpsert (Kernel.Types.Id.ShortId merchantShortId) city req =
+  DIssue.postIssueApiIntegrationUpsert (Kernel.Types.Id.ShortId merchantShortId) city req dashboardIssueHandle Common.CUSTOMER
+
+postIssueApiIntegrationDelete ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueApiIntegration.IssueApiIntegration ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postIssueApiIntegrationDelete (Kernel.Types.Id.ShortId merchantShortId) city apiIntegrationId =
+  DIssue.postIssueApiIntegrationDelete (Kernel.Types.Id.ShortId merchantShortId) city apiIntegrationId dashboardIssueHandle Common.CUSTOMER
+
+postIssueApiIntegrationTest ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  IssueManagement.Common.Dashboard.Issue.TestApiIntegrationReq ->
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.TestApiIntegrationRes
+postIssueApiIntegrationTest (Kernel.Types.Id.ShortId merchantShortId) city req =
+  DIssue.postIssueApiIntegrationTest (Kernel.Types.Id.ShortId merchantShortId) city req dashboardIssueHandle Common.CUSTOMER
+
+getIssueFlowSimulate ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption) ->
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Common.Ride) ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory ->
+  Environment.Flow IssueManagement.Common.UI.Issue.IssueOptionListRes
+getIssueFlowSimulate (Kernel.Types.Id.ShortId merchantShortId) city mbOptionId mbRideId mbSessionId categoryId =
+  DIssue.getIssueFlowSimulate (Kernel.Types.Id.ShortId merchantShortId) city categoryId mbOptionId mbRideId mbSessionId dashboardIssueHandle Common.CUSTOMER

@@ -117,6 +117,7 @@ driverIssueHandle =
       kaptureGetTicket = Nothing,
       getTicketStatus = Nothing,
       findMerchantConfig = buildMerchantConfig,
+      mbCounterpartDashboardInfo = Nothing,
       mbReportACIssue = Nothing,
       mbReportIssue = Nothing,
       mbFindLatestBookingByPersonId = Nothing,
