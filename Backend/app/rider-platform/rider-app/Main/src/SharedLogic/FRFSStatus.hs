@@ -385,6 +385,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
       staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
       nwAddress <- asks (.nwAddress)
       udf1 <- SLUtils.getPersonUdf1 person
+      offerBasket <- Payment.mkOfferBasket merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType) paymentOrder.amount 1
       let createOrderReq =
             Payment.CreateOrderReq
               { orderId = paymentOrder.id.getId,
@@ -405,7 +406,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                 metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
                 webhookUrl = Just nwAddress,
                 splitSettlementDetails = splitSettlementDetails,
-                basket = Nothing,
+                basket = offerBasket,
                 paymentRules = Nothing,
                 autoRefundPostSuccess = Nothing,
                 paymentFilter = Nothing,

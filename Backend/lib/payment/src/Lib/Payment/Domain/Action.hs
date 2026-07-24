@@ -336,7 +336,7 @@ data CreatePaymentServiceReq = CreatePaymentServiceReq
     metadataGatewayReferenceId :: Maybe Text,
     optionsGetUpiDeepLinks :: Maybe Bool,
     metadataExpiryInMins :: Maybe Int,
-    basket :: Maybe [Payment.Basket],
+    basket :: [Payment.Basket],
     paymentRules :: Maybe Payment.PaymentRules,
     webhookUrl :: Maybe BaseUrl,
     udf1 :: Maybe Text,
@@ -857,7 +857,7 @@ buildSDKPayloadDetails req order = do
               mandateMaxAmount = show <$> order.mandateMaxAmount,
               mandateStartDate = show . utcTimeToPOSIXSeconds <$> (order.mandateStartDate),
               mandateEndDate = show . utcTimeToPOSIXSeconds <$> order.mandateEndDate,
-              basket = Just $ TU.encodeToText req.basket
+              basket = if null req.basket then Nothing else Just (TU.encodeToText req.basket)
             }
     (_, _) -> return Nothing
 
@@ -1279,7 +1279,7 @@ applyOfferService paymentOrderId offerStatsInput useDomainOffers applyOfferCall 
               dutyDate = now,
               paymentMode = "dummy-not-required",
               numOfRides = 0,
-              basket = Nothing,
+              basket = [],
               staticCustomerId = offerStatsInput.staticPersonId,
               deviceImei = offerStatsInput.deviceId
             }
@@ -1312,7 +1312,7 @@ applyOfferWithoutPaymentService referenceId offerId offerCode offerStatsInput di
   when (null existingOffers) $ do
     now <- getCurrentTime
     unless useDomainOffers $ do
-      let basket = mbProduct <&> \(productId, amount) -> [Payment.Basket {id = productId, unitPrice = amount, quantity = 1}]
+      let basket = maybe [] (\(productId, amount) -> [Payment.Basket {id = productId, unitPrice = amount, quantity = 1}]) mbProduct
           customer =
             PInterface.OfferCustomer
               { customerId = offerStatsInput.personId,

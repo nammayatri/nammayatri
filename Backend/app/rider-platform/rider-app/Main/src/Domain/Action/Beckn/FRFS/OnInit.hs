@@ -130,7 +130,7 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
     Redis.withLockRedis (key (maybe booking.id.getId (.getId) mbJourneyId)) 60 $ do
       let paymentType = getPaymentType (integratedBPPConfig.platformType == DIBC.MULTIMODAL) booking.vehicleType
       (vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
-      baskets <- Just <$> createBasketFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType mbEnableOffer
+      baskets <- createBasketFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType mbEnableOffer
       createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId
   where
     key journeyId = "initJourney-" <> journeyId
@@ -151,7 +151,7 @@ createPayments ::
   DP.Person ->
   Payment.PaymentServiceType ->
   [Payment.VendorSplitDetails] ->
-  Maybe [Payment.Basket] ->
+  [Payment.Basket] ->
   Maybe Bool ->
   Maybe (Id DJ.Journey) ->
   m ()
