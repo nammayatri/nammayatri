@@ -453,7 +453,12 @@ handler ValidatedDSearchReq {..} sReq = do
             logInfo $ "VST " <> show fp.vehicleServiceTier <> " skipped due to area restrictions for area: " <> show mbAreaForVST
           if isAllowed
             then case tripCategoryToPricingPolicy fp'.tripCategory of
-              EstimateBased {..} -> buildEstimateHelper nightShiftOverlapChecking vehicleServiceTierItem fp' >>= \est -> pure (est : estimates, quotes)
+              EstimateBased {..} ->
+                withTryCatch "buildEstimate:processPolicy" (buildEstimateHelper nightShiftOverlapChecking vehicleServiceTierItem fp') >>= \case
+                  Right est -> pure (est : estimates, quotes)
+                  Left err -> do
+                    logError $ "Skipping fare policy " <> fp'.id.getId <> " (" <> show fp'.vehicleServiceTier <> ", " <> show fp'.tripCategory <> "): estimate build failed: " <> show err
+                    pure (estimates, quotes)
               QuoteBased {..} -> buildQuoteHelper nightShiftOverlapChecking vehicleServiceTierItem fp' >>= \quote -> pure (estimates, quote : quotes)
             else pure (estimates, quotes)
         Nothing -> do
