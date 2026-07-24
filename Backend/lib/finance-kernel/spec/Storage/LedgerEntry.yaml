@@ -8,6 +8,7 @@ imports:
   Value: Data.Aeson
   Account: Lib.Finance.Domain.Types.Account
   ActorType: Lib.Finance.Core.Types
+  LedgerEntryMetadata: Lib.Finance.Domain.Types.Extra.LedgerEntry
 
 LedgerEntry:
   tableName: finance_ledger_entry
@@ -50,7 +51,7 @@ LedgerEntry:
     reversalOf: Maybe (Id LedgerEntry)
     voidReason: Maybe Text
     settledAt: Maybe UTCTime
-    metadata: Maybe Value # SENSITIVE
+    metadata: Maybe LedgerEntryMetadata
     fromStartingBalance: Maybe HighPrecMoney
     toStartingBalance: Maybe HighPrecMoney
     fromEndingBalance: Maybe HighPrecMoney
@@ -68,6 +69,15 @@ LedgerEntry:
     createdById: Maybe Text                        # requestId for UNKNOWN/SYSTEM, jobId for JOB, personId for PERSON/DASHBOARD_PERSON
     updatedBy: Maybe ActorType                     # Who updated this record
     updatedById: Maybe Text                        # requestId for UNKNOWN/SYSTEM, jobId for JOB, personId for PERSON/DASHBOARD_PERSON
+
+  beamType:
+    metadata: Maybe Value
+
+  fromTType:
+    metadata: metadata >>= Kernel.Utils.JSON.valueToMaybe|E
+
+  toTType:
+    metadata: Data.Aeson.toJSON <$> metadata|E
 
   constraints:
     id: PrimaryKey
@@ -148,6 +158,7 @@ LedgerEntry:
 
   extraOperations:
     - GENERATE_INDEXES
+    - EXTRA_DOMAIN_TYPE_FILE
 
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

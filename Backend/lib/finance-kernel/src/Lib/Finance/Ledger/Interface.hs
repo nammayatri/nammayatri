@@ -11,12 +11,11 @@ module Lib.Finance.Ledger.Interface
   )
 where
 
-import Data.Aeson (Value)
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id (Id)
 import Lib.Finance.Domain.Types.Account (Account)
-import Lib.Finance.Domain.Types.LedgerEntry (EntityReferenceType, EntryStatus, EntryType, SettlementStatus)
+import Lib.Finance.Domain.Types.LedgerEntry (EntityReferenceType, EntryStatus, EntryType, LedgerEntryMetadata, SettlementStatus)
 
 -- | Input for creating a ledger entry
 data LedgerEntryInput = LedgerEntryInput
@@ -32,7 +31,7 @@ data LedgerEntryInput = LedgerEntryInput
     -- | Sub-domain entity this entry belongs to (e.g. a refund request); Nothing when there is none.
     entityReferenceId :: Maybe Text,
     entityReferenceType :: Maybe EntityReferenceType,
-    metadata :: Maybe Value,
+    metadata :: Maybe LedgerEntryMetadata,
     merchantId :: Text,
     merchantOperatingCityId :: Text,
     settlementStatus :: Maybe SettlementStatus

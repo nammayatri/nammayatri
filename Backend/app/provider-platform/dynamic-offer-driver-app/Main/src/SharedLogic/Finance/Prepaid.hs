@@ -20,6 +20,8 @@ module SharedLogic.Finance.Prepaid
     voidPrepaidHold,
     creditPrepaidBalance,
     debitPrepaidBalance,
+    computeFifoSubscriptionAllocations,
+    attributableRideDebitAmount,
     handleSubscriptionExpiry,
     checkAndMarkExhaustedSubscriptions,
     activateNextQueuedPurchaseExpiry,
@@ -27,7 +29,6 @@ module SharedLogic.Finance.Prepaid
   )
 where
 
-import Data.Aeson (Value)
 import qualified Data.List as DL
 import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.Extra.Plan (ServiceNames (..))
@@ -40,13 +41,14 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
-import Kernel.Types.Common (Currency (..), HighPrecMoney)
+import Kernel.Types.Common (Currency (..), HighPrecMoney, MonadFlow)
 import Kernel.Types.Id
-import Kernel.Utils.Common (HasRequestId, addUTCTime, fork, getCurrentTime, logError, logInfo, withTryCatch)
+import Kernel.Utils.Common (HasRequestId, addUTCTime, fork, getCurrentTime, logError, logInfo, logWarning, withTryCatch)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance hiding (TransactionType (SubscriptionPurchase))
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
+import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
@@ -397,7 +399,7 @@ createPrepaidHold ::
   Text -> -- Merchant ID
   Text -> -- Merchant operating city ID
   Text -> -- Reference ID
-  Maybe Value ->
+  Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntryMetadata ->
   Maybe DVC.VehicleCategory -> -- Sub-ledger scope (Nothing = pooled)
   m (Either FinanceError ())
 createPrepaidHold counterpartyType ownerId amount currency merchantId merchantOperatingCityId referenceId metadata mbVehicleCategory = do
@@ -471,8 +473,9 @@ settlePrepaidHoldByReference ::
   Text ->
   HighPrecMoney -> -- Final amount to settle at (may differ from hold amount)
   Maybe DVC.VehicleCategory -> -- Sub-ledger scope (Nothing = pooled)
+  Maybe LedgerEntryMetadata ->
   m (Either FinanceError ())
-settlePrepaidHoldByReference counterpartyType ownerId referenceId finalAmount mbVehicleCategory = do
+settlePrepaidHoldByReference counterpartyType ownerId referenceId finalAmount mbVehicleCategory mbMetadata = do
   mbOwnerAccount <- getPrepaidAccountByOwner counterpartyType ownerId mbVehicleCategory
   case mbOwnerAccount of
     Nothing -> pure $ Right ()
@@ -496,7 +499,7 @@ settlePrepaidHoldByReference counterpartyType ownerId referenceId finalAmount mb
                 case resTo of
                   Left err -> pure $ Left err
                   Right toEndBal -> do
-                    settleEntryWithBalancesAndAmount entry.id settleAmount fromStartBal fromEndBal toStartBal toEndBal
+                    settleEntryWithBalancesAndAmount entry.id settleAmount fromStartBal fromEndBal toStartBal toEndBal mbMetadata
                     pure $ Right ()
         )
         (Right ())
@@ -520,7 +523,7 @@ creditPrepaidBalance ::
   Text -> -- Merchant ID
   Text -> -- Merchant operating city ID
   Text -> -- Reference ID
-  Maybe Value ->
+  Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntryMetadata ->
   Maybe InvoiceCreationParams -> -- Optional invoice creation params
   Maybe DPanCard.DriverPanCard -> -- Optional PAN card data
   Maybe DVC.VehicleCategory -> -- Sub-ledger scope (Nothing = pooled)
@@ -804,16 +807,16 @@ debitPrepaidBalance ::
   Text -> -- Merchant ID
   Text -> -- Merchant operating city ID
   Text -> -- Reference ID (booking ID)
-  Maybe Value ->
+  Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntryMetadata ->
   Maybe DVC.VehicleCategory -> -- Sub-ledger scope (Nothing = pooled)
   m (Either FinanceError HighPrecMoney)
-debitPrepaidBalance counterpartyType ownerId finalFare revenueAmount currency merchantId merchantOperatingCityId referenceId _metadata mbVehicleCategory = do
+debitPrepaidBalance counterpartyType ownerId finalFare revenueAmount currency merchantId merchantOperatingCityId referenceId mbMetadata mbVehicleCategory = do
   mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId mbVehicleCategory
   mbSellerLiability <- getOrCreateSellerLiabilityAccount currency merchantId merchantOperatingCityId
   mbSellerRevenue <- getOrCreateSellerRevenueAccount currency merchantId merchantOperatingCityId
   case (mbOwnerAccount, mbSellerLiability, mbSellerRevenue) of
     (Right ownerAccount, Right sellerLiability, Right sellerRevenue) -> do
-      holdRes <- settlePrepaidHoldByReference counterpartyType ownerId referenceId finalFare mbVehicleCategory
+      holdRes <- settlePrepaidHoldByReference counterpartyType ownerId referenceId finalFare mbVehicleCategory mbMetadata
       case holdRes of
         Left err -> pure $ Left err
         Right _ -> do
@@ -843,6 +846,76 @@ debitPrepaidBalance counterpartyType ownerId finalFare revenueAmount currency me
     (Left err, _, _) -> pure $ Left err
     (_, Left err, _) -> pure $ Left err
     (_, _, Left err) -> pure $ Left err
+
+-- | FIFO-split a ride debit across ACTIVE subscriptions (oldest first).
+-- Uses the same wallet-slice idea as exhaustion: remaining on oldest =
+-- max(0, balanceBefore − Σ planRideCredit of newer ACTIVE).
+-- Always writes at least one allocation when there is a contributing purchase
+-- (including the single-subscription case). Remainder after the walk is folded
+-- into the last allocation so sum(allocations) == debitAmount when funds exist.
+computeFifoSubscriptionAllocations ::
+  HighPrecMoney -> -- debit / settled fare
+  HighPrecMoney -> -- wallet balance before debit
+  [DSP.SubscriptionPurchase] -> -- ACTIVE, purchaseTimestamp ASC
+  [SubscriptionCreditAllocation]
+computeFifoSubscriptionAllocations debitAmount balanceBefore sortedActive =
+  let allocs = reverse $ go sortedActive debitAmount balanceBefore []
+   in case (allocs, debitAmount - sum (map (.amount) allocs)) of
+        (a : rest, leftover)
+          | leftover > 0 ->
+            SubscriptionCreditAllocation
+              { subscriptionPurchaseId = a.subscriptionPurchaseId,
+                amount = a.amount + leftover
+              } :
+            rest
+        _ -> allocs
+  where
+    go [] _ _ acc = acc
+    go _ remFare _ acc | remFare <= 0 = acc
+    go (oldest : rest) remFare bal acc =
+      let restCredits = sum $ map (.planRideCredit) rest
+          available = max 0 (bal - restCredits)
+          takeAmt = min remFare available
+       in if takeAmt > 0
+            then
+              go
+                rest
+                (remFare - takeAmt)
+                (bal - takeAmt)
+                ( SubscriptionCreditAllocation
+                    { subscriptionPurchaseId = oldest.id.getId,
+                      amount = takeAmt
+                    } :
+                  acc
+                )
+            else go rest remFare bal acc
+
+-- | Amount of a RideSubscriptionDebit attributable to one subscription.
+-- Validates sum(allocations) == entry.amount (finance amount is source of truth).
+-- On missing/invalid metadata: logWarning and fall back to full entry.amount.
+attributableRideDebitAmount ::
+  MonadFlow m =>
+  Id DSP.SubscriptionPurchase ->
+  Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry ->
+  m HighPrecMoney
+attributableRideDebitAmount (Id subPurchaseId) entry =
+  case entry.metadata >>= (.subscriptionAllocations) of
+    Just allocs
+      | sum (map (.amount) allocs) == entry.amount ->
+        pure $ maybe 0 (.amount) $ find (\a -> a.subscriptionPurchaseId == subPurchaseId) allocs
+      | otherwise -> do
+        logWarning $
+          "RideSubscriptionDebit allocation sum mismatch for referenceId="
+            <> entry.referenceId
+            <> " entry.id="
+            <> show entry.id
+            <> " entry.amount="
+            <> show entry.amount
+            <> " allocationSum="
+            <> show (sum $ map (.amount) allocs)
+            <> "; falling back to full entry.amount"
+        pure entry.amount
+    Nothing -> pure entry.amount
 
 -- | Handle subscription expiry: compute expired credits, create revenue recognition
 -- and credit transfer entries, then mark the subscription as EXPIRED.

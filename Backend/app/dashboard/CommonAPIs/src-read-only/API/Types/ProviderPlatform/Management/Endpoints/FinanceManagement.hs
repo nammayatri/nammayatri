@@ -20,6 +20,7 @@ import Kernel.Utils.TH
 import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.AuditEntry
 import qualified Lib.Finance.Domain.Types.Invoice
+import qualified Lib.Finance.Domain.Types.LedgerEntry
 import qualified Lib.Finance.Domain.Types.ReconciliationSummary
 import Servant
 import Servant.Client
@@ -453,7 +454,8 @@ data WalletLedgerItem = WalletLedgerItem
     creditAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     debitAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     openingBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    closingBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
+    closingBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    subscriptionAllocations :: Kernel.Prelude.Maybe [Lib.Finance.Domain.Types.LedgerEntry.SubscriptionCreditAllocation]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

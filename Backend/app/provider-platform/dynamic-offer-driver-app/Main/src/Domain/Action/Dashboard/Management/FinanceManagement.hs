@@ -316,7 +316,7 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
 
       -- Get linked rides with rideId, bookingId, rideCreatedAt, rideSubscriptionDebitAmount
       rides <- QRide.findAllBySubscriptionPurchaseId subscription.id
-      linkedRides <- mapM buildLinkedRideItem rides
+      linkedRides <- mapM (buildLinkedRideItem subscription.id) rides
 
       pure $
         API.SubscriptionPurchaseListItem
@@ -370,7 +370,7 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
       utilized <- fmap sum $
         forM bookingIds $ \bId -> do
           entries <- QLedgerEntry.findByReference "RideSubscriptionDebit" bId
-          pure $ sum $ map (.amount) entries
+          fmap sum $ forM entries $ FinancePrepaid.attributableRideDebitAmount subId
 
       pure utilized
 
@@ -388,11 +388,10 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
 
       pure revenue
 
-    buildLinkedRideItem :: DRide.Ride -> Flow API.LinkedRideItem
-    buildLinkedRideItem ride = do
-      -- Fetch RideSubscriptionDebit entries from finance_ledger_entry: rideId -> bookingId -> reference_type=RideSubscriptionDebit, reference_id=bookingId
+    buildLinkedRideItem :: Id DSP.SubscriptionPurchase -> DRide.Ride -> Flow API.LinkedRideItem
+    buildLinkedRideItem subId ride = do
       entries <- QLedgerEntry.findByReference "RideSubscriptionDebit" ride.bookingId.getId
-      let rideSubscriptionDebitAmount = sum $ map (.amount) entries
+      rideSubscriptionDebitAmount <- fmap sum $ forM entries $ FinancePrepaid.attributableRideDebitAmount subId
 
       pure $
         API.LinkedRideItem
@@ -1362,7 +1361,8 @@ buildWalletLedgerItem walletAccountId entry =
           creditAmount = creditAmount,
           debitAmount = debitAmount,
           openingBalance = openingBalance,
-          closingBalance = closingBalance
+          closingBalance = closingBalance,
+          subscriptionAllocations = entry.metadata >>= (.subscriptionAllocations)
         }
 
 paginateWalletLedgerEntries :: Int -> Int -> [a] -> [a]

@@ -1,7 +1,8 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Lib.Finance.Domain.Types.LedgerEntry where
+module Lib.Finance.Domain.Types.LedgerEntry (module Lib.Finance.Domain.Types.LedgerEntry, module ReExport) where
 
 import Data.Aeson
 import Kernel.Prelude
@@ -10,6 +11,8 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.TH
 import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.Account
+import Lib.Finance.Domain.Types.Extra.LedgerEntry as ReExport
+import qualified Lib.Finance.Domain.Types.Extra.LedgerEntry
 import qualified Tools.Beam.UtilsTH
 
 data LedgerEntry = LedgerEntry
@@ -28,7 +31,7 @@ data LedgerEntry = LedgerEntry
     id :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry,
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Text,
-    metadata :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    metadata :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Extra.LedgerEntry.LedgerEntryMetadata,
     reconciliationStatus :: Kernel.Prelude.Maybe Data.Aeson.Value,
     referenceId :: Kernel.Prelude.Text,
     referenceType :: Kernel.Prelude.Text,
