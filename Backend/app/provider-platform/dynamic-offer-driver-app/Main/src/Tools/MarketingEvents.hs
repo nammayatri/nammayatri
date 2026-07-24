@@ -43,7 +43,7 @@ notifyMarketingEvents driverId deviceToken marketingEventsType vehicleCategory c
 
   notification <- setNotificationData events merchantOpCityId driverId eventDestination deviceToken
   driver <- QPerson.findById driverId
-  runWithServiceConfigForProviders merchantOpCityId (driver >>= (.clientId)) (driver >>= (.clientDevice)) notification EulerHS.Prelude.id (clearDeviceToken driverId)
+  runWithServiceConfigForProviders (.notifyMarketingEventsToDriver) merchantOpCityId (driver >>= (.clientId)) (driver >>= (.clientDevice)) notification EulerHS.Prelude.id (clearDeviceToken driverId)
   where
     splitFirstChars :: T.Text -> T.Text
     splitFirstChars shortId = T.concat $ map (T.take 1) $ T.splitOn "_" shortId

@@ -1,0 +1,9 @@
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN IF NOT EXISTS notify_on_cancel_to_driver text[] DEFAULT '{FCM}';
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN IF NOT EXISTS edit_location_to_driver text[] DEFAULT '{FCM}';
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN IF NOT EXISTS notify_exotel_call_status_to_driver text[] DEFAULT '{FCM}';
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN IF NOT EXISTS notify_emergency_contacts_to_driver text[] DEFAULT '{FCM}';
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN IF NOT EXISTS notify_marketing_events_to_driver text[] DEFAULT '{FCM}';
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN IF NOT EXISTS notify_ride_related_update_to_driver text[] DEFAULT '{FCM}';
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN IF NOT EXISTS notify_issue_chat_message_to_driver text[] DEFAULT '{FCM}';
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN IF NOT EXISTS notify_scheduled_ride_alert_to_driver text[] DEFAULT '{FCM}';
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN IF NOT EXISTS notify_driver_stop_detection_to_driver text[] DEFAULT '{FCM}';

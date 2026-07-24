@@ -648,6 +648,15 @@ MerchantServiceUsageConfig:
     rectifyDistantPointsFailure: MapsService
     getExophone: CallService
     sendSearchRequestToDriver: "[NotificationService]"
+    notifyOnCancelToDriver: "[NotificationService]"
+    editLocationToDriver: "[NotificationService]"
+    notifyExotelCallStatusToDriver: "[NotificationService]"
+    notifyEmergencyContactsToDriver: "[NotificationService]"
+    notifyMarketingEventsToDriver: "[NotificationService]"
+    notifyRideRelatedUpdateToDriver: "[NotificationService]"
+    notifyIssueChatMessageToDriver: "[NotificationService]"
+    notifyScheduledRideAlertToDriver: "[NotificationService]"
+    notifyDriverStopDetectionToDriver: "[NotificationService]"
     updatedAt: UTCTime
     createdAt: UTCTime
     verificationProvidersPriorityList: "[VerificationService]"
@@ -670,6 +679,15 @@ MerchantServiceUsageConfig:
     createPayoutOrder: Maybe PayoutService
     payoutOrderStatus: Maybe PayoutService
     faceMatchService: Maybe VerificationService
+    notifyOnCancelToDriver: "Maybe [NotificationService]"
+    editLocationToDriver: "Maybe [NotificationService]"
+    notifyExotelCallStatusToDriver: "Maybe [NotificationService]"
+    notifyEmergencyContactsToDriver: "Maybe [NotificationService]"
+    notifyMarketingEventsToDriver: "Maybe [NotificationService]"
+    notifyRideRelatedUpdateToDriver: "Maybe [NotificationService]"
+    notifyIssueChatMessageToDriver: "Maybe [NotificationService]"
+    notifyScheduledRideAlertToDriver: "Maybe [NotificationService]"
+    notifyDriverStopDetectionToDriver: "Maybe [NotificationService]"
 
   fromTType:
     llmChatCompletion: Kernel.Prelude.fromMaybe ChatCompletion.Types.AzureOpenAI|I
@@ -677,6 +695,15 @@ MerchantServiceUsageConfig:
     createPayoutOrder: fromMaybe (Kernel.External.Payout.Types.Juspay)|I
     payoutOrderStatus: fromMaybe (Kernel.External.Payout.Types.Juspay)|I
     faceMatchService: Kernel.Prelude.fromMaybe Kernel.External.Verification.Types.Idfy|I
+    notifyOnCancelToDriver: fromMaybe [Kernel.External.Notification.Types.FCM]|I
+    editLocationToDriver: fromMaybe [Kernel.External.Notification.Types.FCM]|I
+    notifyExotelCallStatusToDriver: fromMaybe [Kernel.External.Notification.Types.FCM]|I
+    notifyEmergencyContactsToDriver: fromMaybe [Kernel.External.Notification.Types.FCM]|I
+    notifyMarketingEventsToDriver: fromMaybe [Kernel.External.Notification.Types.FCM]|I
+    notifyRideRelatedUpdateToDriver: fromMaybe [Kernel.External.Notification.Types.FCM]|I
+    notifyIssueChatMessageToDriver: fromMaybe [Kernel.External.Notification.Types.FCM]|I
+    notifyScheduledRideAlertToDriver: fromMaybe [Kernel.External.Notification.Types.FCM]|I
+    notifyDriverStopDetectionToDriver: fromMaybe [Kernel.External.Notification.Types.FCM]|I
 
   toTType:
     llmChatCompletion: Kernel.Prelude.Just|I
@@ -684,6 +711,15 @@ MerchantServiceUsageConfig:
     createPayoutOrder: Kernel.Prelude.Just|I
     payoutOrderStatus: Kernel.Prelude.Just|I
     faceMatchService: Kernel.Prelude.Just|I
+    notifyOnCancelToDriver: Kernel.Prelude.Just|I
+    editLocationToDriver: Kernel.Prelude.Just|I
+    notifyExotelCallStatusToDriver: Kernel.Prelude.Just|I
+    notifyEmergencyContactsToDriver: Kernel.Prelude.Just|I
+    notifyMarketingEventsToDriver: Kernel.Prelude.Just|I
+    notifyRideRelatedUpdateToDriver: Kernel.Prelude.Just|I
+    notifyIssueChatMessageToDriver: Kernel.Prelude.Just|I
+    notifyScheduledRideAlertToDriver: Kernel.Prelude.Just|I
+    notifyDriverStopDetectionToDriver: Kernel.Prelude.Just|I
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -722,6 +758,15 @@ MerchantServiceUsageConfig:
     getExophone: character varying(255)
     snapToRoadProvidersList: "text[]"
     sendSearchRequestToDriver: "text[]"
+    notifyOnCancelToDriver: "text[]"
+    editLocationToDriver: "text[]"
+    notifyExotelCallStatusToDriver: "text[]"
+    notifyEmergencyContactsToDriver: "text[]"
+    notifyMarketingEventsToDriver: "text[]"
+    notifyRideRelatedUpdateToDriver: "text[]"
+    notifyIssueChatMessageToDriver: "text[]"
+    notifyScheduledRideAlertToDriver: "text[]"
+    notifyDriverStopDetectionToDriver: "text[]"
     verificationProvidersPriorityList: "text[]"
     categoryBasedVerificationPriorityList: jsonb
     imageExtractionProvidersPriorityList: "text[]"
@@ -738,6 +783,15 @@ MerchantServiceUsageConfig:
     issueTicketService: "'Kapture'"
     getExophone: "'Exotel'"
     snapToRoadProvidersList: "'{\"OSRM\", \"Google\"}'"
+    notifyOnCancelToDriver: "'{\"FCM\"}'"
+    editLocationToDriver: "'{\"FCM\"}'"
+    notifyExotelCallStatusToDriver: "'{\"FCM\"}'"
+    notifyEmergencyContactsToDriver: "'{\"FCM\"}'"
+    notifyMarketingEventsToDriver: "'{\"FCM\"}'"
+    notifyRideRelatedUpdateToDriver: "'{\"FCM\"}'"
+    notifyIssueChatMessageToDriver: "'{\"FCM\"}'"
+    notifyScheduledRideAlertToDriver: "'{\"FCM\"}'"
+    notifyDriverStopDetectionToDriver: "'{\"FCM\"}'"
     verificationProvidersPriorityList: "'{\"Idfy\"}'"
     categoryBasedVerificationPriorityList: "'{\"TOTO_UDIN\":[\"Tten\"],\"TOTO\":[\"\
       Idfy\"],\"CAR\":[\"Idfy\",\"HyperVergeRCDL\"],\"AUTO_CATEGORY\":[\"Idfy\",\
